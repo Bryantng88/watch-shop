@@ -1,0 +1,15 @@
+.container {
+    height: auto;
+    margin: 80px 0px;
+    background-color: #ffffff;
+    padding-top: 120px;
+    width: 70vw;
+}
+
+.footer {
+    background-image: url("/footer.jpg");
+}
+
+.contactWrap {
+    max-width: 650px;
+}

@@ -1,44 +1,61 @@
-import Link from "next/link";
-import CartIcon from "../icons/CartIcon";
-import SearchIcon from "../icons/SearchIcon";
-import styles from "../../styles/common/footer.module.css"
+import React from "react";
+import EmailIcon from "../icons/EmailIcon";
 
 function Footer() {
-    return (
-      <>
-        <footer className="bg-black text-white py-5 mx-5">
-            <div className="mx-5">
-                <div className="d-flex justify-content-center gap-4 ">
-                    <Link href="#">Home</Link>
-                    <Link href="#">Available Watches</Link>
-                    <Link href="#">Recently Sold</Link>
-                    <Link href="#">FAQ</Link>
-                    <Link href="#">About Us</Link>
-                    <Link href="#">Contact</Link>
-                </div>
-                <div className="mt-4 d-flex justify-content-between">
-                    <div>
-                        <h5 className={`${styles.headerFooter}`} >Subscribe to our monthly watch drop:</h5>
-                        <input type="email" name="email" />
-                    </div>
-                    <div>
-                        <div className="d-flex gap-2">
-                            <div className="d-flex align-items-center justify-content-center">
-                                <CartIcon width={40} height={40} color="#ffffff" />
-                            </div>
-                            <div className="d-flex align-items-center justify-content-center">
-                                <SearchIcon width={20} height={20} color="#ffffff" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <p>© 2025 My Shop. All rights reserved.</p>
-            </div>
-        </footer>
-      </>
-    );
-  }
-  
-  export default Footer;
+  return (
+    <footer className="bg-black text-white py-5">
+      <div className="container text-center">
+        <h5>Subscribe to our monthly watch drop:</h5>
+        <form className="d-flex justify-content-center mt-3">
+          <input
+            type="email"
+            className="form-control w-25 me-2"
+            placeholder="Email"
+          />
+          <button type="submit" className="btn btn-light">
+            <EmailIcon />
+          </button>
+        </form>
+
+        <ul className="nav justify-content-center mt-4">
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              Home
+            </a>
+          </li>
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              Available Watches
+            </a>
+          </li>
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              Recently Sold
+            </a>
+          </li>
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              FAQ
+            </a>
+          </li>
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              About Us
+            </a>
+          </li>
+          <li className="nav-item">
+            <a href="#" className="nav-link px-2 text-white">
+              Contact
+            </a>
+          </li>
+        </ul>
+
+        <p className="mt-4 mb-0">
+          © 2025, The Vintage Watch Collection Powered by Next.js
+        </p>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

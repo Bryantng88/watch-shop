@@ -1,10 +1,10 @@
-import Image from "next/image";
+import React from "react";
 import styles from "./page.module.css";
 
-export default function Home() {
+const Products: React.FC = () => {
   return (
-    <div className={`${styles.page}`}>
-      <main className="container my-5">
+    <>
+      <main className={`${styles.container} text-black mx-auto`}>
         <h1 className="mb-3">Available Watches</h1>
         <p className="text-muted">
           Welcome to The Vintage Watch Collection; where each timepiece tells a
@@ -42,7 +42,7 @@ export default function Home() {
             <div key={i} className="col-md-3 mb-4">
               <div className="card h-100">
                 <img
-                  src="https://via.placeholder.com/400x300?text=Watch+Image"
+                  src="/temp_watch.jpg"
                   className="card-img-top"
                   alt="Watch"
                 />
@@ -81,12 +81,16 @@ export default function Home() {
         </div>
 
         {/* Call to Action */}
-        <div className="text-center bg-light p-5 my-5">
-          <h2>Looking for Something Specific?</h2>
-          <p>If you're hunting down your grail, we may have a few gems.</p>
-          <button className="btn btn-dark">Contact Us</button>
-        </div>
       </main>
-    </div>
+        <div className={`${styles.footer} text-center text-black bg-light py-5`}>
+          <div className={`${styles.contactWrap} bg-white py-5 mx-auto`}>
+            <h2>Looking for Something Specific?</h2>
+            <p>If you're hunting down your grail, we may have a few gems.</p>
+            <button className="btn btn-dark">Contact Us</button>
+          </div>
+        </div>
+    </>
   );
-}
+};
+
+export default Products;
