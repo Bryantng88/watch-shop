@@ -6,6 +6,96 @@
     width: 70vw;
 }
 
+
+/* ===== Catalog header ===== */
+/* Sidebar filter card */
+.filterCard {
+    position: sticky;
+    top: 16px;
+    /* bám đỉnh khi cuộn */
+    background: #fff;
+    border: 1px solid rgba(17, 24, 39, .08);
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+    padding: 16px;
+}
+
+.filterHeader {
+    font-weight: 800;
+    letter-spacing: -.02em;
+    margin-bottom: 10px;
+    font-size: 1.05rem;
+}
+
+.filterLabel {
+    font-size: .9rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.chip {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(17, 24, 39, .15);
+    background: #f9fafb;
+    font-weight: 600;
+    font-size: .95rem;
+    text-align: left;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+}
+
+.chip:hover {
+    background: #f3f4f6;
+    border-color: rgba(17, 24, 39, .25);
+    transform: translateY(-1px);
+}
+
+/* Sort bar on the right */
+.sortBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.sortLabel {
+    color: #6b7280;
+    font-weight: 600;
+    font-size: .95rem;
+}
+
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .catalog-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .toolbar-right {
+        justify-content: space-between;
+    }
+
+    .catalog-subtitle {
+        margin-bottom: 14px;
+    }
+}
+
+/* ===== Optional: subtle divider after header (if bạn muốn) ===== */
+.catalog-header::after {
+    content: "";
+    display: block;
+    height: 1px;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0));
+    margin-top: 16px;
+}
+
+
+
 .footer {
     background-image: url("/footer.jpg");
 }
