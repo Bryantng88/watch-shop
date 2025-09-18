@@ -1,0 +1,77 @@
+.header {
+    background: #fafafa;
+    color: #fff;
+    font-size: 14px;
+    font-family: sans-serif;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 30px;
+    background: #fafafa;
+}
+
+.slogan {
+    font-size: 12px;
+    line-height: 1.3;
+    color: #444;
+}
+
+.topRight {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.cart {
+    font-weight: 600;
+}
+
+.cartBox {
+    background: none;
+    border: 1px solid #fff;
+    padding: 2px 5px;
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.navbar {
+    background: #3f4d58;
+    display: flex;
+    justify-content: center;
+    /* căn giữa theo chiều ngang */
+    align-items: center;
+    /* căn giữa theo chiều dọc */
+    /* hoặc màu nền bạn chọn */
+    padding: 0.5rem 0;
+}
+
+.menu {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+    font-weight: 600;
+}
+
+.menu li {
+    cursor: pointer;
+}
+
+.breadcrumb {
+    background: #fafafa;
+    padding: 12px 30px;
+    font-size: 13px;
+    color: #444;
+}
