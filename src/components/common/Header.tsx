@@ -30,14 +30,21 @@ function Header() {
     <header className={styles.header}>
       {/* Top bar */}
       <div className={styles.topbar}>
-        <span className={styles.slogan}>
-          An online platform <br /> for pre-owned vintage watches
-        </span>
-        <div className={styles.topRight}>
-          <button className={styles.iconBtn}>🔍</button>
-          <button className={styles.iconBtn}>👤</button>
-          <span className={styles.cart}>0 VND <span className={styles.cartBox}>0</span></span>
+        <div className="container">
+          <div className="col-lg-9 col-md-8">
+            <span className={styles.slogan}>
+              An online platform <br /> for pre-owned vintage watches
+            </span>
+          </div>
+          <div className="col-lg-3 col-md-4">
+            <div className={styles.topRight}>
+              <button className={styles.iconBtn}>🔍</button>
+              <button className={styles.iconBtn}>👤</button>
+              <span className={styles.cart}>0 VND <span className={styles.cartBox}>0</span></span>
+            </div>
+          </div>
         </div>
+
       </div>
 
       {/* Middle nav */}
@@ -54,9 +61,14 @@ function Header() {
       </nav>
 
       {/* Breadcrumb */}
-      <div className={styles.breadcrumb}>
-        <span>HOME</span> / <strong>ĐỒNG HỒ VINTAGE</strong>
+      <div className="container">
+        <div className="col-lg-12 col-md-8">
+          <div className={styles.breadcrumb}>
+            <span>HOME</span> / <strong>ĐỒNG HỒ VINTAGE</strong>
+          </div>
+        </div>
       </div>
+
     </header>
   );
 }

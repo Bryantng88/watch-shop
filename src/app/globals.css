@@ -19,7 +19,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -27,7 +27,7 @@ body {
 .row {
   row-gap: 12px;
   /* khoảng cách dọc */
-
+  padding-top: 5px
 }
 
 * {
@@ -38,7 +38,7 @@ body {
 
 .img-wrapper {
   position: relative;
-  height: 240px;
+  height: 400px;
   /* tuỳ thiết kế (220–280px) */
   background: #f9f9f9;
   display: flex;
@@ -113,12 +113,12 @@ body {
 }
 
 .product-title {
-  font-family: 'Merriweather', serif;
-  font-size: 0.85rem;
+  /*font-family: var(--font-merriweather, sans-serif);*/
+  font-size: 0.9rem;
   font-weight: 400;
   margin: 6px 0 0;
   line-height: 1.3;
-  color: #4b5563;
+  color: #777;
 
   /* tuỳ chọn: giới hạn 2–3 dòng để hàng thẳng hơn */
   display: -webkit-box;
@@ -132,11 +132,11 @@ body {
 }
 
 .product-price {
-  font-family: 'Merriweather', serif;
+  /*font-family: var(--font-geist-sans, sans-serif);*/
   font-size: 0.9rem;
   font-weight: 700;
   margin: 0;
-  color: #111;
+  color: #444444;
   margin: 6px 0 0;
 }
 

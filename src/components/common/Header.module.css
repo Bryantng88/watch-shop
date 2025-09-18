@@ -1,5 +1,5 @@
 .header {
-    background: #111;
+    background: #fafafa;
     color: #fff;
     font-size: 14px;
     font-family: sans-serif;
@@ -9,14 +9,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 40px;
-    background: #1a1a1a;
+    padding: 6px 30px;
+    background: #fafafa;
 }
 
 .slogan {
     font-size: 12px;
     line-height: 1.3;
-    color: #d1d5db;
+    color: #444;
 }
 
 .topRight {
@@ -47,7 +47,13 @@
 
 .navbar {
     background: #3f4d58;
-    padding: 10px 40px;
+    display: flex;
+    justify-content: center;
+    /* căn giữa theo chiều ngang */
+    align-items: center;
+    /* căn giữa theo chiều dọc */
+    /* hoặc màu nền bạn chọn */
+    padding: 0.5rem 0;
 }
 
 .menu {
@@ -64,8 +70,8 @@
 }
 
 .breadcrumb {
-    background: #111;
-    padding: 12px 40px;
+    background: #fafafa;
+    padding: 12px 30px;
     font-size: 13px;
-    color: #d1d5db;
+    color: #444;
 }
