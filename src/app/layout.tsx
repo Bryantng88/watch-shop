@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./globals.css";
+import BootstrapClient from "./BootstrapClient";
 
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -45,6 +46,8 @@ export default function RootLayout({
         <Header />
           {children}
         <Footer />
+        <BootstrapClient />   {/* load bootstrap JS chỉ ở client */}
+        {children}
       </body>
     </html>
   );

@@ -1,9 +1,10 @@
 .container {
     height: auto;
-    margin: 0ch 0px;
+    margin-top: 0;
+    padding-top: 0;
     background-color: #ffffff;
-    padding-top: 20px;
-    width: 100%;
+    padding-top: 0px;
+    max-width: 1400px
 }
 
 
@@ -101,7 +102,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #666;
+    background: #3F4D58;
     cursor: pointer;
     margin-top: -6px;
     /* căn giữa track */
@@ -141,7 +142,7 @@
     font-weight: 700;
     letter-spacing: .5px;
     color: #fff;
-    background: #6b6b6b;
+    background: #3F4D58;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
@@ -192,6 +193,8 @@
     position: sticky;
     /*top: 18px;*/
     padding: 0px 30px;
+    padding-left: 0px;
+    padding-right: 35px;
     /* rộng rãi hơn */
     font-size: 16px;
     /* chữ to hơn chút */
@@ -291,6 +294,76 @@
     height: 14px;
     border-radius: 999px;
     border: 1px solid #e5e7eb;
+}
+
+/*roduct-tag {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background: #333;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    
+  }*/
+.sortBarText,
+.sortSelect {
+    color: #444;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.sortSelect {
+    padding: 8px 32px 8px 12px;
+    /* chừa khoảng trống bên phải cho caret */
+    /* padding trong */
+    border: none;
+    /* viền nhẹ */
+    border-radius: 6px;
+    /* bo góc mềm hơn */
+    background-color: #fff;
+    /* nền trắng sạch */
+    color: #444;
+    appearance: none;
+    /* ẩn mặc định */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.sortSelectWrapper {
+    position: relative;
+    display: inline-block;
+
+    border: 1px solid #e5e7eb;
+
+}
+
+.sortSelectWrapper::after {
+
+    content: "";
+    position: absolute;
+    color: #888;
+    top: 50%;
+    right: 12px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid #666;
+    border-bottom: 2px solid #666;
+    transform: translateY(-50%) rotate(45deg);
+    pointer-events: none;
+}
+
+.sortSelect:focus {
+    outline: none;
+    border-color: #333;
+    /* khi focus nổi bật */
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
 }
 
 
