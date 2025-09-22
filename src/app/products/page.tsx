@@ -261,7 +261,7 @@ const Products: React.FC = () => {
       <div className={`${styles.footer} text-center text-black bg-light py-5`}>
         <div className={`${styles.contactWrap} bg-white py-5 mx-auto`}>
           <h2>Looking for Something Specific?</h2>
-          <p>If you're hunting down your grail, we may have a few gems.</p>
+          <p>{`If you're hunting down your grail, we may have a few gems.`}</p>
           <button className="btn btn-dark">Contact Us</button>
         </div>
       </div>

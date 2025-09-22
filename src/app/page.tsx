@@ -8,9 +8,9 @@ export default function Home() {
         <h1 className="mb-3">Available Watches</h1>
         <p className="text-muted">
           Welcome to The Vintage Watch Collection; where each timepiece tells a
-          unique story of craftsmanship, history, and design. Whether you're
+          unique story of craftsmanship, history, and design. Whether youre
           seeking a piece to enjoy daily or a grail to finish your collection,
-          we're here to help you discover your next favorite.
+          were here to help you discover your next favorite.
         </p>
 
         {/* Filter + Sort */}
@@ -83,7 +83,7 @@ export default function Home() {
         {/* Call to Action */}
         <div className="text-center bg-light p-5 my-5">
           <h2>Looking for Something Specific?</h2>
-          <p>If you're hunting down your grail, we may have a few gems.</p>
+          <p>If youre hunting down your grail, we may have a few gems</p>
           <button className="btn btn-dark">Contact Us</button>
         </div>
       </main>

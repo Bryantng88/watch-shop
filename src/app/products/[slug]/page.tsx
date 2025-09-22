@@ -1,7 +1,6 @@
 // app/products/[slug]/page.tsx
-"use client";
-import { use } from "react";
-import React, { useMemo, useState } from "react";
+
+import ProductGallery from "@/components/product/ProductGallery";
 import styles from "./detail.module.css";
 import Link from "next/link";
 import ProductCard from "@/components/common/ProductCard";
@@ -34,13 +33,10 @@ type Product = {
     // ...bạn có thể bổ sung
 };
 
-export default function ProductDetailPage({ params, }: { params: Promise<{ slug: string }> }) {
-    const { slug } = use(params);
-    const item = useMemo<Product | undefined>(() => {
-        return products.find((p) => slugify(p.title) === slug) as Product | undefined;
-    }, [slug]);
+export default async function ProductDetailPage({ params, }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    const item = products.find((p) => slugify(p.title) === slug) as Product | undefined;
 
-    // fallback đơn giản
     if (!item) {
         return (
             <main className="container py-5">
@@ -51,16 +47,18 @@ export default function ProductDetailPage({ params, }: { params: Promise<{ slug:
             </main>
         );
     }
+    const gallery = [
+        item.img,
+        "http://longnd.myqnapcloud.com:8253/share.cgi/0016-3934373111160883639%2016.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353027270&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0016-3934373111160883639%2016.png",
+    ]
 
-    const gallery = [item.img, "http://longnd.myqnapcloud.com:8253/share.cgi/0016-3934373111160883639%2016.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353027270&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0016-3934373111160883639%2016.png"]; // nếu bạn có nhiều ảnh, push thêm tại đây
-    const [activeIdx, setActiveIdx] = useState(0);
+    const isSold = item?.status === "sold";
+    const isHold = item?.status === "on hold";
 
-    const isSold = item.status === "sold";
-    const isHold = item.status === "on hold";
 
     const priceText =
         isSold ? "Contact Us"
-            : Intl.NumberFormat("en-US").format(Number(item.price)) + " VND";
+            : Intl.NumberFormat("en-US").format(Number(item?.price ?? 0)) + " VND";
 
     // Related (lấy đại 3 món khác brand/tựa)
     const related = products
@@ -80,31 +78,22 @@ export default function ProductDetailPage({ params, }: { params: Promise<{ slug:
 
             <section className={styles.top}>
                 {/* Gallery */}
-                <div className={styles.gallery}>
-                    <div className={styles.media}>
-                        <img
-                            src={gallery[activeIdx]}
-                            alt={item.title}
-                            className={styles.heroImg}
-                        />
-                        {isSold && <div className={`${styles.banner} ${styles.sold}`}>OUT OF STOCK</div>}
-                        {isHold && <div className={`${styles.banner} ${styles.hold}`}>ON HOLD</div>}
-                    </div>
-
-                    <div className={styles.thumbs}>
-                        {gallery.map((src, i) => (
-                            <button
-                                key={i}
-                                type="button"
-                                onClick={() => setActiveIdx(i)}
-
-                                className={`${styles.thumbBtn} ${i === activeIdx ? styles.active : ""}`}
-                            >
-                                <img src={src} alt={`thumb-${i}`} />
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <ProductGallery
+                    images={gallery}
+                    title={item.title}
+                    status={item.status}
+                    classes={{
+                        gallery: styles.gallery,
+                        media: styles.media,
+                        heroImg: styles.heroImg,
+                        thumbs: styles.thumbs,
+                        thumbBtn: styles.thumbBtn,
+                        active: styles.active,
+                        banner: styles.banner,
+                        sold: styles.sold,
+                        hold: styles.hold,
+                    }}
+                />
 
                 {/* Summary */}
                 <div className={styles.summary}>
