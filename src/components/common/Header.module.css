@@ -1,5 +1,5 @@
 .header {
-    background: #fafafa;
+    background: #F6F6F6;
     color: #fff;
     font-size: 14px;
     font-family: sans-serif;
@@ -10,7 +10,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 6px 30px;
-    background: #fafafa;
+    background: #F6F6F6;
 }
 
 .slogan {
@@ -46,7 +46,7 @@
 }
 
 .navbar {
-    background: #3f4d58;
+    background: #141414;
     display: flex;
     justify-content: center;
     /* căn giữa theo chiều ngang */
@@ -70,7 +70,7 @@
 }
 
 .breadcrumb {
-    background: #fafafa;
+    background: #F6F6F6;
     padding: 12px 30px;
     font-size: 13px;
     color: #444;

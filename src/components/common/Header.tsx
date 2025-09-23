@@ -61,15 +61,17 @@ function Header() {
       </nav>
 
       {/* Breadcrumb */}
-      <div className="container">
+      <div className="container-fluid px-4">
         <div className="col-lg-12 col-md-8">
+
           <div className={styles.breadcrumb}>
             <span>HOME</span> / <strong>ĐỒNG HỒ VINTAGE</strong>
           </div>
+
         </div>
       </div>
 
-    </header>
+    </header >
   );
 }
 

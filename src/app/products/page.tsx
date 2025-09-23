@@ -25,7 +25,7 @@ const Products: React.FC = () => {
       <main className={`${styles.container} text-black mx-auto`}>
 
         {/* Layout 2 cột: trái = filter, phải = sort + grid */}
-        <section className="container my05">
+        <section className="container-fluid px-4 my05">
           <div className="row">
             {/* Hàng 1: Sort bar full width */}
             {/* Sidebar filter */}

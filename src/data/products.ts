@@ -27,13 +27,13 @@ export const products: Product[] = [
     status: "sold",
   },
   {
-    img: "http://longnd.myqnapcloud.com:8253/share.cgi/8.png?ssid=990a577a7ce74c9eab8ebc43800f9fee&openfolder=normal&ep=&_dc=1757992183732&fid=990a577a7ce74c9eab8ebc43800f9fee&filename=8.png",
+    img: "https://drive.usercontent.google.com/download?id=1aHLgSSaro12aepH9nHFrINdn3ikPusm2&export=view&authuser=0",
     title: "Bulova",
     price: "2000000",
     status: "available",
   },
   {
-    img: "http://longnd.myqnapcloud.com:8253/share.cgi/DSCF0300.JPG?ssid=990a577a7ce74c9eab8ebc43800f9fee&openfolder=normal&ep=&_dc=1757992382830&fid=990a577a7ce74c9eab8ebc43800f9fee&filename=DSCF0300.JPG",
+    img: "http://longnd.myqnapcloud.com:8253/share.cgi/DSCF3286(edited).JPG?ssid=62ec0b8d35f7429e88b61a5af12bdb69&openfolder=normal&ep=&_dc=1758251771376&fid=62ec0b8d35f7429e88b61a5af12bdb69&filename=DSCF3286(edited).JPG",
     title: "Cartier",
     price: "1000000",
     status: "on hold"
