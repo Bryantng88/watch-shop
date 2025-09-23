@@ -1,0 +1,61 @@
+.banner {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 30px 40px;
+    margin: 0rem 0 0rem 0;
+    /* trên 0.5rem, dưới 1rem */
+    /* Giảm khoảng cách trên dưới */
+
+}
+
+.content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.badge {
+    display: inline-block;
+    background: #343a40;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+}
+
+.title span {
+    color: #d9480f;
+    /* Accent color */
+}
+
+.desc {
+    font-size: 14px;
+    color: #495057;
+    margin-top: 4px;
+}
+
+.actions .cta {
+    background: #d9480f;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.actions .cta:hover {
+    background: #b9380b;
+}

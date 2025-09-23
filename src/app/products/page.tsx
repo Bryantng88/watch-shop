@@ -2,178 +2,234 @@
 import React from "react";
 import styles from "./page.module.css";
 import { products } from "../../data/products";
+import PromoBanner from "@/components/common/PromoBanner";
+import PromoBanner2 from "@/components/common/PromoBanner2";
 
+import Link from "next/link";
+import ProductCard from "@/components/common/ProductCard";;
+
+// helper slugify giống bên trang detail
+function slugify(input: string) {
+  return input
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+
+// ----- sort status: available → on hold → sold -----
 const statusOrder: Record<string, number> = {
-  "available": 1,   // mặc định nếu không có status
+  "available": 1,
   "on hold": 2,
   "sold": 3,
 };
-
-const sortedItems = products.sort((a, b) => {
-  const statusA = a.status || "available";
-  const statusB = b.status || "available";
+const sortedItems = [...products].sort((a, b) => {
+  const statusA = (a.status || "available") as keyof typeof statusOrder;
+  const statusB = (b.status || "available") as keyof typeof statusOrder;
   return statusOrder[statusA] - statusOrder[statusB];
 });
 
+// ----- tách nội dung Filter để tái sử dụng cho sidebar + offcanvas -----
+const FilterContent: React.FC = () => {
+  return (
+
+    <nav className={styles.simpleSidebar}>
+
+      {/* Price */}
+      <div className={styles.priceBlock}>
+        <div className={styles.priceHeader}>
+          <span>Price Range</span>
+          <i className={styles.priceRule} />
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={50_000_000}
+          step={100_000}
+          className={styles.rangeInput}
+        />
+        <div className={styles.priceBottomRow}>
+          <button className={styles.filterBtn} type="button">
+            FILTER
+          </button>
+          <span className={styles.priceValue}>0 VND — 50,000,000 VND</span>
+        </div>
+      </div>
+
+      <details className={styles.group} open>
+        <summary className={styles.summary}>Brand</summary>
+        <ul className={styles.list}>
+          {["Cartier", "Bulova", "Omega", "Longines"].map((s) => (
+            <li key={s}>
+              <label>
+                <input type="checkbox" /> {s}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className={styles.group}>
+        <summary className={styles.summary}>Style</summary>
+        <ul className={styles.list}>
+          {["Dress", "Sport", "Diver", "Pilot"].map((s) => (
+            <li key={s}>
+              <label>
+                <input type="checkbox" /> {s}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className={styles.group}>
+        <summary className={styles.summary}>Case size</summary>
+        <ul className={styles.list}>
+          {["<34mm", "34–36mm", "37–39mm", "≥40mm"].map((s) => (
+            <li key={s}>
+              <label>
+                <input type="checkbox" /> {s}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className={styles.group}>
+        <summary className={styles.summary}>Dial Color</summary>
+        <div className={styles.colorRow}>
+          {["#111", "#888", "#c00", "#0a7", "#0af", "#fff"].map((c) => (
+            <span key={c} className={styles.dot} style={{ background: c }} />
+          ))}
+        </div>
+      </details>
+
+      <details className={styles.group}>
+        <summary className={styles.summary}>Material</summary>
+        <ul className={styles.list}>
+          {["Steel", "Gold", "Two-tone", "Titanium"].map((s) => (
+            <li key={s}>
+              <button className={styles.linkBtn} type="button">
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className={styles.group}>
+        <summary className={styles.summary}>Complication</summary>
+        <ul className={styles.list}>
+          {["Date", "Chronograph", "Moonphase"].map((s) => (
+            <li key={s}>
+              <button className={styles.linkBtn} type="button">
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+      <details className={styles.group}>
+        <summary className={styles.summary}>Category</summary>
+        <ul className={styles.list}>
+          {["Pre-Owned", "Vintage", "New"].map((s) => (
+            <li key={s}>
+              <button className={styles.linkBtn} type="button">
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </nav>
+  );
+};
 
 const Products: React.FC = () => {
-  const [price, setPrice] = React.useState(0);              // giá min (ví dụ)
-  const MAX = 50_000_000;
-
   return (
     <>
       <main className={`${styles.container} text-black mx-auto`}>
 
-        {/* Layout 2 cột: trái = filter, phải = sort + grid */}
-        <section className="container-fluid px-4 my05">
+
+        <section className="container my-0 pt-2">
+          <div className="row mb-4">
+            <div className="col-12">
+              <PromoBanner2 />
+            </div>
+          </div>
+
           <div className="row">
-            {/* Hàng 1: Sort bar full width */}
-            {/* Sidebar filter */}
-            <aside className="col-lg-3 col-md-4">
-              <nav className={styles.simpleSidebar}>
-                <div className={styles.priceBlock}>
-                  <div className={styles.priceHeader}>
-                    <span>Price Range</span>
-                    <i className={styles.priceRule} />
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={50000000}
-                    step={100000}
-                    className={styles.rangeInput}
-                  /* value/onChange nếu bạn có state */
-                  />
-                  <div className={styles.priceBottomRow}>
-                    <button className={styles.filterBtn} type="button">FILTER</button>
-                    <span className={styles.priceValue}>0 VND — 50,000,000 VND</span>
-                  </div>
-                </div>
-                <details className={styles.group} open>
-                  <summary className={styles.summary}>Brand</summary>
-                  <ul className={styles.list}>
-                    {["XS", "S", "M", "L", "XL"].map(s => <li key={s}><label><input type="checkbox" /> {s}</label></li>)}
-                  </ul>
-                </details>
+            {/* ====== MOBILE: nút Lọc (chỉ hiện < md) ====== */}
+            <div className="col-12 d-md-none d-flex justify-content-end mb-3">
+              <button
+                className="btn btn-outline-dark"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#filterOffcanvas"
+              >
+                ☰ Lọc
+              </button>
+            </div>
 
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Style</summary>
-                  <ul className={styles.list}>
-                    {["1/4 Zip", "Full Zip", "Hard Shell", "Heavy Duty", "Hooded"].map(s => (
-                      <li key={s}><label><input type="checkbox" /> {s}</label></li>
-                    ))}
-                  </ul>
-                </details>
-
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Case size</summary>
-                  <ul className={styles.list}>
-                    {["Warm", "Cold", "All-season"].map(s => (
-                      <li key={s}><label><input type="checkbox" /> {s}</label></li>
-                    ))}
-                  </ul>
-                </details>
-
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Material</summary>
-                  <div className={styles.colorRow}>
-                    {["#111", "#888", "#c00", "#0a7", "#0af", "#fff"].map(c => (
-                      <span key={c} className={styles.dot} style={{ background: c }} />
-                    ))}
-                  </div>
-                </details>
-
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Strap style</summary>
-                  <ul className={styles.list}>
-                    {["Cotton", "Fleece", "Wool", "Nylon"].map(s => (
-                      <li key={s}>
-                        <button className={styles.linkBtn} type="button">{s}</button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Dial Color</summary>
-                  <ul className={styles.list}>
-                    {["Cotton", "Fleece", "Wool", "Nylon"].map(s => (
-                      <li key={s}>
-                        <button className={styles.linkBtn} type="button">{s}</button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-                <details className={styles.group}>
-                  <summary className={styles.summary}>Complication</summary>
-                  <ul className={styles.list}>
-                    {["Cotton", "Fleece", "Wool", "Nylon"].map(s => (
-                      <li key={s}>
-                        <button className={styles.linkBtn} type="button">{s}</button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              </nav>
+            {/* ====== DESKTOP SIDEBAR (ẩn trên mobile) ====== */}
+            <aside className="col-lg-3 col-md-4 d-none d-md-block">
+              <FilterContent />
             </aside>
 
+            {/* ====== Sort Select ====== */}
 
-            {/* Right content */}
             <div className="col-lg-9 col-md-8">
-              {/* Sort bar */}
-              <div className={`${styles.topbar} row align-items-center g-3 mb-3`}>
-                {/* <div className="col-12 col-md-6 d-flex align-items-center gap-2">
-                  <div className={styles.breadcrumb}>
-                    <span>HOME</span> / <strong >ĐỒNG HỒ VINTAGE</strong>
-                  </div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className={styles.sortBarText}>Showing 1–12 of 98 results</span>
+
+                <div className={styles.sortSelectWrapper}>
+                  <select className={styles.sortSelect} defaultValue="default">
+                    <option value="default">Default sorting</option>
+                    <option value="new">Newest</option>
+                    <option value="low">Price: Low → High</option>
+                    <option value="high">Price: High → Low</option>
+                  </select>
                 </div>
-                <div className="col-12 col-md-6 d-flex justify-content-md-end">
-                  <div className={styles.sortBox}>
-                    <span className={styles.sortLabel}>Sort by</span>
-                    <select className={styles.sortSelect} defaultValue="popular">
-                      <option value="popular">Popular</option>
-                      <option value="new">Newest</option>
-                      <option value="low">Price: Low → High</option>
-                      <option value="high">Price: High → Low</option>
-                    </select>
-                  </div>
-                </div>*/}
               </div>
-              {/* Products Grid */}
+
+              {/* ====== Product Grid ====== */}
+
               <div className="row g-4">
-                {products.map((item, index) => (
+                {sortedItems.map((item, index) => (
                   <div key={index} className="col-12 col-sm-6 col-lg-4">
-                    <div className="card product-card h-100">
-                      <div className={`img-wrapper ${item.status === "sold" ? "is-out" : ""}`}>
-                        <img
-                          src={item.img}
-                          className="card-img-top"
-                          alt="Watch"
-                        />
-                        {item.status === "sold" && (
-                          <div className="status-band is-sold">OUT OF STOCK</div>
-                        )}
-                        {item.status === "on hold" && (
-                          <div className="status-band is-hold">ON HOLD</div>
-                        )}
-
-                      </div>
-                      <div className="card-body">
-                        <h6 className="card-title product-title">
-                          {item.title}
-                        </h6>
-                        <div className="product-meta">
-
-                          {item.status === 'sold' ? (
-                            <p className="product-price">Contact Us</p>
-                          ) : (
-                            <p className="card-text product-price">{Intl.NumberFormat("en-US").format(Number(item.price))} VND</p>)}
-                        </div>
-                      </div>
-                    </div>
+                    <ProductCard item={item} />
                   </div>
                 ))}
               </div>
-              {/* /Products Grid */}
+            </div>
+            {/* ====== OFFCANVAS FILTER (Mobile) ====== */}
+            <div
+              className={`offcanvas offcanvas-start ${styles.offcanvasFilter}`}
+              tabIndex={-1}
+              id="filterOffcanvas"
+              aria-labelledby="filterOffcanvasLabel"
+            >
+              <div className="offcanvas-header">
+                <h5 className="offcanvas-title" id="filterOffcanvasLabel">
+                  Bộ lọc
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  data-bs-dismiss="offcanvas"
+                />
+              </div>
+              <div className="offcanvas-body">
+                <FilterContent />
+                <button
+                  className="btn btn-dark w-100 mt-3"
+                  data-bs-dismiss="offcanvas"
+                >
+                  Áp dụng
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -200,13 +256,12 @@ const Products: React.FC = () => {
             </ul>
           </nav>
         </div>
+      </main>
 
-        {/* Call to Action */}
-      </main >
       <div className={`${styles.footer} text-center text-black bg-light py-5`}>
         <div className={`${styles.contactWrap} bg-white py-5 mx-auto`}>
           <h2>Looking for Something Specific?</h2>
-          <p>If you're hunting down your grail, we may have a few gems.</p>
+          <p>{`If you're hunting down your grail, we may have a few gems.`}</p>
           <button className="btn btn-dark">Contact Us</button>
         </div>
       </div>
