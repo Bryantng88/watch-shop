@@ -4,8 +4,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import BootstrapClient from "./BootstrapClient";
 
-import Header from "@/components/common/Header";
-import Footer from "@/components/common/Footer";
+import Header from "@/components/common/Header/Header";
+import Footer from "@/components/common/Footer/Footer";
 
 import { Playfair_Display } from 'next/font/google';
 

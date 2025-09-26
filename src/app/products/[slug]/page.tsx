@@ -1,12 +1,16 @@
 // app/products/[slug]/page.tsx
-
-import ProductGallery from "@/components/product/ProductGallery";
+import ProductMeta from "@/components/product/ProductMeta/productMeta";
+import ProductGallery from "@/app/products/[slug]/ProductGallery";
+import Cart from "@/app/products/[slug]/Cart";
 import styles from "./detail.module.css";
 import Link from "next/link";
-import ProductCard from "@/components/common/ProductCard";
+import ProductCard from "@/components/product/ProductCard/ProductCard";
+import Accordion from "@/components/product/Accordion/Accordion";
 
 // dùng đúng đường dẫn data của bạn:
 import { products } from "@/data/products";
+import AddToCart from "@/app/products/[slug]/Cart";
+import type { Product } from "@/types/product";
 
 function slugify(input: string) {
     return input
@@ -17,21 +21,6 @@ function slugify(input: string) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 }
-
-type Product = {
-    img: string;
-    title: string;
-    price: string;
-    status?: "sold" | "on hold";
-    brand?: string;
-    year?: string;
-    ref?: string;
-    material?: string;
-    caseSize?: string;
-    dialColor?: string;
-    strap?: string;
-    // ...bạn có thể bổ sung
-};
 
 export default async function ProductDetailPage({ params, }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -113,43 +102,111 @@ export default async function ProductDetailPage({ params, }: { params: Promise<{
                             <a href="#contact" className={styles.btnOutline}>Contact us</a>
                         ) : (
                             <>
-                                <button className={styles.btnDark}>Add to cart</button>
+                                <AddToCart product={item} />
                                 <a href="#contact" className={styles.btnOutline}>Contact us</a>
                             </>
                         )}
                     </div>
 
+
                     <p className={styles.lead}>
                         Carefully curated vintage timepiece. Fully inspected and ready to wear.
                     </p>
+                    <Accordion
+                        defaultOpenId="tech"
+                        items={[
+                            {
+                                id: "curator",
+                                title: "From The Curator",
+                                content: <p>Curated description goes here…</p>,
+                            },
+                            {
+                                id: "tech",
+                                title: "Technical Details",
+                                content: (
+                                    <ul>
+                                        <li>Brand: {item.brand ?? "—"}</li>
+                                        <li>Case size: {item.caseSize ?? "—"}</li>
+                                        <li>Material: {item.material ?? "—"}</li>
+                                        <li>Dial color: {item.dialColor ?? "—"}</li>
+                                        <li>Reference: {item.ref ?? "—"}</li>
+                                        <li>Year: {item.year ?? "—"}</li>
+                                    </ul>
+                                ),
+                            },
+                            {
+                                id: "payments",
+                                title: "Trades + Payments",
+                                content: <p>Payment and trade information…</p>,
+                            },
+                            {
+                                id: "shipping",
+                                title: "Shipping",
+                                content: <p>Free domestic shipping for orders over 2,000,000 VND.</p>,
+                            },
+                            {
+                                id: "guarantee",
+                                title: "T&H Guarantee",
+                                content: <p>100% authentic. Each piece inspected and time-tested.</p>,
+                            },
+                            {
+                                id: "returns",
+                                title: "Returns",
+                                content: <p>7-day returns on eligible items.</p>,
+                            },
+                            {
+                                id: "reviews",
+                                title: "Recent Reviews",
+                                content: <p>No reviews yet.</p>,
+                            },
+                        ]}
+                    />
+                    <ProductMeta
+                        categories={["ĐỒNG HỒ VINTAGE", "VINTAGE WATCHES"]}
+                        tags={["omega", "vintage4life", "vintagewatch"]}
+                    />
+                    {/*<section className={styles.infoBlocks}>
+                        <details>
+                            <summary>From The Curator</summary>
+                            <p>Curated description goes here...</p>
+                        </details>
 
-                    {/* Specs */}
-                    <details className={styles.block} open>
-                        <summary className={styles.blockTitle}>Specifications</summary>
-                        <ul className={styles.specList}>
-                            <li><span>Brand</span><b>{item.brand ?? "—"}</b></li>
-                            <li><span>Case size</span><b>{item.caseSize ?? "—"}</b></li>
-                            <li><span>Material</span><b>{item.material ?? "—"}</b></li>
-                            <li><span>Dial color</span><b>{item.dialColor ?? "—"}</b></li>
-                            <li><span>Strap</span><b>{item.strap ?? "—"}</b></li>
-                            <li><span>Reference</span><b>{item.ref ?? "—"}</b></li>
-                            <li><span>Year</span><b>{item.year ?? "—"}</b></li>
-                        </ul>
-                    </details>
+                        <details>
+                            <summary>Technical Details</summary>
+                            <ul>
+                                <li>Brand: Cartier</li>
+                                <li>Case size: 36</li>
+                                <li>Material: 18KT WG</li>
+                                <li>Dial color: Black</li>
+                            </ul>
+                        </details>
 
-                    <details className={styles.block}>
-                        <summary className={styles.blockTitle}>Shipping & Returns</summary>
-                        <div className={styles.blockBody}>
-                            Free domestic shipping for orders over 2,000,000 VND. 7-day returns on eligible items.
-                        </div>
-                    </details>
+                        <details>
+                            <summary>Trades + Payments</summary>
+                            <p>Payment and trade information...</p>
+                        </details>
 
-                    <details className={styles.block}>
-                        <summary className={styles.blockTitle}>Condition & Guarantee</summary>
-                        <div className={styles.blockBody}>
-                            100% authentic. Each piece is inspected and time-tested prior to listing.
-                        </div>
-                    </details>
+                        <details>
+                            <summary>Shipping</summary>
+                            <p>Free domestic shipping for orders over 2,000,000 VND.</p>
+                        </details>
+
+                        <details>
+                            <summary>T&H Guarantee</summary>
+                            <p>100% authentic. Each piece inspected before listing.</p>
+                        </details>
+
+                        <details>
+                            <summary>Returns</summary>
+                            <p>7-day returns on eligible items.</p>
+                        </details>
+
+                        <details>
+                            <summary>Recent Reviews</summary>
+                            <p>No reviews yet.</p>
+                        </details>
+                    </section>*/}
+
                 </div>
             </section>
 

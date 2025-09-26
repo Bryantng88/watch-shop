@@ -209,29 +209,67 @@
 }
 
 .specList {
-    padding: 0 16px 16px;
     list-style: none;
     margin: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 16px;
+    padding: 0;
+    display: flex;
+    /* 2 cột */
+    row-gap: 10px;
+    /* khoảng cách dòng */
+    column-gap: 20px;
+    flex-direction: column;
+    /* khoảng cách giữa 2 cột */
 }
 
 .specList li {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed #f1f2f4;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    /* border mỏng dưới mỗi dòng */
+    font-size: 14px;
 }
 
 .specList li span {
-    color: #6b7280;
+    color: #555;
+    /* nhãn nhạt */
 }
 
 .specList li b {
+    font-weight: 600;
     color: #111;
+    /* giá trị đậm */
 }
+
+/* bỏ border/hộp cũ */
+.infoBlocks {
+    border-top: 1px solid #eee;
+}
+
+.infoBlocks details {
+    border-bottom: 1px solid #eee;
+    padding: 12px 0;
+}
+
+.infoBlocks summary {
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+}
+
+.infoBlocks summary::after {
+    content: "+";
+    font-weight: normal;
+    color: #666;
+}
+
+.infoBlocks details[open] summary::after {
+    content: "–";
+    /* khi mở thì đổi dấu */
+}
+
 
 /* ======= Related ======= */
 .related {

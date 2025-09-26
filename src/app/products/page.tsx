@@ -2,11 +2,11 @@
 import React from "react";
 import styles from "./page.module.css";
 import { products } from "../../data/products";
-import PromoBanner from "@/components/common/PromoBanner";
-import PromoBanner2 from "@/components/common/PromoBanner2";
+import PromoBanner from "@/components/product/PromoBanner/PromoBanner";
+import PromoBanner2 from "@/components/product/PromoBanner/PromoBanner2";
 
 import Link from "next/link";
-import ProductCard from "@/components/common/ProductCard";;
+import ProductCard from "@/components/product/ProductCard/ProductCard";;
 
 // helper slugify giống bên trang detail
 function slugify(input: string) {

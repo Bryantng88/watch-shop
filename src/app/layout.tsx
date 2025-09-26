@@ -4,11 +4,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import "./globals.css";
 import BootstrapClient from "./BootstrapClient";
 
-import Header from "@/components/common/Header";
-import Footer from "@/components/common/Footer";
+import Header from "@/components/common/Header/Header";
+import Footer from "@/components/common/Footer/Footer";
 
 import { Playfair_Display } from 'next/font/google';
-
+import ClientProviders from "@/app/ClientProvider";
 const playfair = Playfair_Display({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
@@ -43,11 +43,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} bg-white`}>
-        <Header />
+        <ClientProviders>
+          <Header />
           {children}
-        <Footer />
+          <Footer />
+        </ClientProviders>
         <BootstrapClient />   {/* load bootstrap JS chỉ ở client */}
-        {children}
       </body>
     </html>
   );

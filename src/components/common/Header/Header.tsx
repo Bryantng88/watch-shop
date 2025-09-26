@@ -1,8 +1,8 @@
-import CartIcon from "../icons/CartIcon";
-import MenuIcon from "../icons/MenuIcon";
-import SearchIcon from "../icons/SearchIcon";
+import CartIcon from "@/components/icons/CartIcon";
+import MenuIcon from "@/components/icons/MenuIcon";
+import SearchIcon from "@/components/icons/SearchIcon";
 import styles from "./Header.module.css";
-
+import CartBadge from "@/components/cart/CartBadge";
 function Header() {
   return (
     <header className={styles.header}>
@@ -15,9 +15,7 @@ function Header() {
           <div className={styles.topRight}>
             <button className={styles.iconBtn}><SearchIcon width={20} height={20} /></button>
             <button className={styles.iconBtn}>👤</button>
-            <span className={styles.cart}>
-              0 VND <span className={styles.cartBox}>0</span>
-            </span>
+            <CartBadge />
           </div>
         </div>
       </div>
