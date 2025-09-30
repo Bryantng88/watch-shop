@@ -447,3 +447,5 @@ bun-debug.log*
 # pnpm-lock.yaml
 # bun.lockb
 
+
+/generated/prisma

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./globals.css";
 import BootstrapClient from "./BootstrapClient";
-
+import CartDrawer from "@/components/cart/CartDrawer";
 import Header from "@/components/common/Header/Header";
 import Footer from "@/components/common/Footer/Footer";
 
@@ -47,6 +47,7 @@ export default function RootLayout({
           <Header />
           {children}
           <Footer />
+          <CartDrawer />
         </ClientProviders>
         <BootstrapClient />   {/* load bootstrap JS chỉ ở client */}
       </body>
