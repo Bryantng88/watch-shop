@@ -2,7 +2,7 @@ import CartIcon from "@/components/icons/CartIcon";
 import MenuIcon from "@/components/icons/MenuIcon";
 import SearchIcon from "@/components/icons/SearchIcon";
 import styles from "./Header.module.css";
-import CartBadge from "@/components/cart/CartBadge";
+import CartBadge from "@/features/cart/component/cart-badge";
 function Header() {
   return (
     <header className={styles.header}>

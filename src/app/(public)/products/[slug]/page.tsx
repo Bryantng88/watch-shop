@@ -1,14 +1,14 @@
 // app/products/[slug]/page.tsx
 
-import ProductGallery from "./ProductGallery";
+import ProductGallery from "../../../../features/catalog/components/product-gallery";
 import styles from "./detail.module.css";
 import Link from "next/link";
-import ProductCard from "@/components/product/ProductCard/Card";
+import ProductCard from "@/features/catalog/components/product-card";
 // dùng đúng đường dẫn data của bạn:
 import { products } from "@/data/products";
-import { Product } from "@/types/product";
+import { Product } from "@/features/catalog/product";
 
-import AddToCart from "./Cart";
+import AddToCart from "../../../../features/cart/component/add-to-cart-button";
 
 function slugify(input: string) {
     return input

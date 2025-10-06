@@ -1,12 +1,11 @@
 "use client";
 import React from "react";
 import styles from "./page.module.css";
-import { products } from "../../data/products";
+import { products } from "../../../data/products";
 import PromoBanner from "@/components/product/PromoBanner/PromoBanner";
-import PromoBanner2 from "@/components/product/PromoBanner/PromoBanner2";
 
 import Link from "next/link";
-import ProductCard from "@/components/product/ProductCard/Card";;
+import ProductCard from "@/features/catalog/components/product-card";;
 
 // helper slugify giống bên trang detail
 function slugify(input: string) {
