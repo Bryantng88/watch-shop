@@ -1,7 +1,7 @@
 "use client";
 
-import { useCartUI } from "@/context/CartUIContext";
-import { useCartContext } from "@/context/CartContext";
+import { useCartUI } from "@/features/cart/context/cart-UI-context";
+import { useCartContext } from "@/features/cart/context/cart-data-context";
 
 import styles from "./CartBadge.module.css"
 export default function CartBadge() {

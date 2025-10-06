@@ -1,7 +1,7 @@
 "use client";
 
-import { useCartContext } from "@/context/CartContext";
-import { useCartUI } from "@/context/CartUIContext";
+import { useCartContext } from "@/features/cart/context/cart-data-context";
+import { useCartUI } from "@/features/cart/context/cart-UI-context";
 import { useEffect } from "react";
 import styles from "./CartDrawer.module.css";
 export default function CartDrawer() {

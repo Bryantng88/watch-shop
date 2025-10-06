@@ -1,6 +1,6 @@
 
 "use client"
-import { useCartContext } from "@/context/CartContext";
+import { useCartContext } from "@/features/cart/context/cart-data-context";
 
 
 
@@ -24,3 +24,6 @@ export default function AddToCart({ product }: { product: any }) {
         </button>
     );
 }
+
+
+

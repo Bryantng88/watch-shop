@@ -16,7 +16,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const STORAGE_KEY = "cart:v1";
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartDataProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<CartState>({ items: [] });
     useEffect(() => {
         try {

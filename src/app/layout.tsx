@@ -3,12 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./globals.css";
 import BootstrapClient from "./BootstrapClient";
-import CartDrawer from "@/components/cart/CartDrawer";
+import CartDrawer from "@/features/cart/component/cart-drawer";
 import Header from "@/components/common/Header/Header";
 import Footer from "@/components/common/Footer/Footer";
 
 import { Playfair_Display } from 'next/font/google';
-import ClientProviders from "@/app/ClientProvider";
+import ClientProviders from "@/app/providers";
 const playfair = Playfair_Display({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
