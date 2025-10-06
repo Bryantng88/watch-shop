@@ -1,5 +1,4 @@
-import { PrismaClient, ProductType, ProductStatus, MovementType, CaseMaterial } from '@prisma/client';
-
+import { PrismaClient, ProductType, ProductStatus, MovementType, CaseMaterial, Strap, Glass, Gender } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
@@ -33,52 +32,6 @@ async function main() {
             description: 'Precision timepieces from Switzerland.',
         },
     });
-
-    // --- PRODUCT ---
-    const daytona = await prisma.product.create({
-        data: {
-            title: 'Rolex Cosmograph Daytona',
-            slug: 'rolex-daytona',
-            type: ProductType.WATCH,
-            status: ProductStatus.ACTIVE,
-            brandId: rolex.id,
-            primaryImageUrl: '/uploads/daytona-main.jpg',
-            isStockManaged: true,
-            maxQtyPerOrder: 1,
-
-            // Quan hệ WatchSpec
-            watchSpec: {
-                create: {
-                    movement: MovementType.AUTOMATIC,
-                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
-                    year: 2023,
-                    diametermm: 40,
-                    thicknessmm: 12.4,
-                    dialColor: 'Black',
-                    strap: 'Oystersteel',
-                },
-            },
-
-            // Quan hệ hình ảnh
-            image: {
-                create: [
-                    {
-                        fileKey: 'daytona-front.jpg',
-                        alt: 'Rolex Daytona front view',
-                        role: 'GALLERY',
-                        sortOrder: 0,
-                    },
-                    {
-                        fileKey: 'daytona-side.jpg',
-                        alt: 'Rolex Daytona side view',
-                        role: 'GALLERY',
-                        sortOrder: 1,
-                    },
-                ],
-            },
-        },
-    });
-
     const speedmaster = await prisma.product.create({
         data: {
             title: 'Omega Speedmaster Moonwatch',
@@ -91,17 +44,29 @@ async function main() {
             maxQtyPerOrder: 1,
             watchSpec: {
                 create: {
-                    movement: MovementType.MANUAL_WINDING,
+                    movement: MovementType.HAND_WOUND,
                     caseMaterial: CaseMaterial.STAINLESS_STEEL,
-                    year: 2022,
-                    diametermm: 42,
-                    thicknessmm: 13.2,
+                    year: '2022',
+                    length: 36,
+                    width: 36,
+                    thickness: 13.2,
                     dialColor: 'Black',
-                    strap: 'NATO Fabric',
-                },
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    gender: Gender.MEN,
+                    complication: {
+                        create: [
+                            { name: "Chronograph" }, { name: "Moonphase" }
+                        ]
+                    }
+                }
             },
         },
-    });
+    },
+    );
+
+    // --- PRODUCT ---
+
 
     console.log('✅ Seed completed successfully!');
 }
