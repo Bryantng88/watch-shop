@@ -1,21 +1,510 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-//-----------------------------------------------------------------------------------------
-// ----------------------------------------- Enum -----------------------------------------
+//--------------------------------------------Catalog-------------------------------------------------
+model MarketSegment {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  watchSpecs WatchSpec[] @relation("MarketSegmentToWatchSpec")
+}
+
+model Complication {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  watchSpecs WatchSpec[] @relation("ComplicationToWatchSpec")
+}
+
+model Brand {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  slug         String      @unique
+  country      String?
+  foundedYear  Int?
+  website      String?
+  logoUrl      String?
+  isAuthorized Boolean     @default(false)
+  status       BrandStatus @default(ACTIVE)
+  description  String?
+  sortOrder    Int         @default(0)
+  products     Product[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([country])
+  @@index([status, sortOrder])
+}
+
+model ProductImage {
+  id          String    @id @default(cuid())
+  productId   String
+  fileKey     String
+  role        ImageRole @default(GALLERY)
+  alt         String?
+  width       Int?
+  height      Int?
+  mime        String?
+  sizeBytes   Int?
+  sortOrder   Int       @default(0)
+  dominantHex String?
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  slug               String              @unique
+  title              String
+  status             ProductStatus       @default(ACTIVE)
+  primaryImageUrl    String?
+  type               ProductType
+  brandId            String?
+  seoTitle           String?
+  seoDescription     String?
+  isStockManaged     Boolean             @default(true)
+  maxQtyPerOrder     Int                 @default(99)
+  publishedAt        DateTime?
+  vendorId           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  AcquisitionItem    AcquisitionItem[]
+  InvoiceItem        InvoiceItem[]
+  maintenanceRecords MaintenanceRecord[]
+  orderItems         OrderItem[]
+  brand              Brand?              @relation(fields: [brandId], references: [id])
+  vendor             Vendor?             @relation(fields: [vendorId], references: [id])
+  image              ProductImage[]
+  variants           ProductVariant[]
+  ServiceRequest     ServiceRequest[]
+  watchSpec          WatchSpec?
+
+  @@index([status])
+  @@index([brandId])
+  @@index([type])
+  @@index([status, type, publishedAt])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model ProductVariant {
+  id                String              @id @default(cuid())
+  productId         String
+  sku               String?             @unique
+  name              String?
+  price             Decimal?            @db.Decimal(12, 2)
+  stockQty          Int                 @default(0)
+  isStockManaged    Boolean?            @default(true)
+  isActive          Boolean             @default(true)
+  maxQtyPerOrder    Int                 @default(99)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  AcquisitionItem   AcquisitionItem[]
+  InvoiceItem       InvoiceItem[]
+  MaintenancePart   MaintenancePart[]
+  MaintenanceRecord MaintenanceRecord[]
+  partSpec          PartVariantSpec?
+  product           Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ServiceRequest    ServiceRequest[]
+  strapSpec         StrapVariantSpec?
+
+  @@index([productId])
+  @@index([isActive])
+}
+
+model PartVariantSpec {
+  variantId String         @id
+  partType  PartType
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model WatchSpec {
+  productId       String          @id
+  brandId         String?
+  model           String?
+  year            String?
+  caseType        CaseType        @default(ROUND)
+  category        Category[]
+  gender          Gender          @default(MEN)
+  length          Decimal         @db.Decimal(12, 2)
+  width           Decimal         @db.Decimal(12, 2)
+  thickness       Decimal         @db.Decimal(12, 2)
+  movement        MovementType    @default(AUTOMATIC)
+  caliber         String?
+  caseMaterial    CaseMaterial    @default(STAINLESS_STEEL)
+  goldKarat       Int?
+  goldColor       GoldColor?
+  caseSize        String?
+  dialColor       String?
+  marketSegmentId String?
+  strap           Strap           @default(LEATHER)
+  glass           Glass           @default(MINERAL)
+  boxIncluded     Boolean         @default(false)
+  bookletIncluded Boolean         @default(false)
+  cardIncluded    Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  complication    Complication[]  @relation("ComplicationToWatchSpec")
+  marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
+}
+
+model StrapVariantSpec {
+  variantId    String         @id
+  widthMM      Int
+  lengthLabel  LengthLabel?
+  color        String?
+  material     Strap          @default(LEATHER)
+  quickRelease Boolean?       @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([widthMM])
+  @@index([material])
+  @@index([lengthLabel])
+}
+
+//--------------------------------------------Outbound-------------------------------------------------
+
+model Order {
+  id            String         @id @default(cuid())
+  orderCode     String         @unique
+  customerId    String?
+  shipName      String
+  shipPhone     String
+  shipEmail     String
+  shipAddress   String
+  shipWard      String?
+  shipCity      String
+  subtotal      Decimal        @db.Decimal(12, 2)
+  shippingFee   Decimal?       @db.Decimal(12, 2)
+  total         Decimal        @db.Decimal(12, 2)
+  status        OrderStatus    @default(PENDING)
+  paymentStatus PaymentStatus  @default(UNPAID)
+  paymentMethod PaymentMethod?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  Invoice       Invoice[]
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  items         OrderItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id              String            @id @default(cuid())
+  orderId         String
+  productId       String?
+  title           String
+  price           Decimal           @db.Decimal(12, 2)
+  quantity        Int
+  subtotal        Decimal           @db.Decimal(12, 2)
+  img             String?
+  createdAt       DateTime          @default(now())
+  AcquisitionItem AcquisitionItem[]
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product         Product?          @relation(fields: [productId], references: [id])
+  ServiceRequest  ServiceRequest[]
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+//--------------------------------------------Service-------------------------------------------------
+
+model ServiceCatalog {
+  id                  String             @id @default(cuid())
+  code                String             @unique
+  name                String
+  description         String?
+  defaultPrice        Decimal?           @db.Decimal(12, 2)
+  durationMin         Int?
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  maintenanceRecordId String?
+  MaintenanceRecord   MaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id])
+}
+
+model ServiceRequest {
+  id             String               @id @default(cuid())
+  type           ServiceType          @default(PAID)
+  billable       Boolean              @default(true)
+  orderItemId    String?
+  customerId     String?
+  productId      String?
+  variantId      String?
+  brandSnapshot  String?
+  modelSnapshot  String?
+  refSnapshot    String?
+  serialSnapshot String?
+  appointmentAt  DateTime?
+  status         ServiceRequestStatus @default(PENDING)
+  notes          String?
+  warrantyUntil  DateTime?
+  warrantyPolicy String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  Invoice        Invoice[]
+  maintenance    MaintenanceRecord[]
+  customer       Customer?            @relation(fields: [customerId], references: [id])
+  orderItem      OrderItem?           @relation(fields: [orderItemId], references: [id])
+  product        Product?             @relation(fields: [productId], references: [id])
+  variant        ProductVariant?      @relation(fields: [variantId], references: [id])
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([orderItemId])
+  @@index([status])
+}
+
+model MaintenanceRecord {
+  id               String            @id @default(cuid())
+  type             ServiceType       @default(PAID)
+  billable         Boolean           @default(true)
+  serviceRequestId String?
+  productId        String?
+  variantId        String?
+  brandSnapshot    String?
+  modelSnapshot    String?
+  refSnapshot      String?
+  serialSnapshot   String?
+  vendorId         String?
+  servicedByName   String?
+  vendorName       String?
+  servicedAt       DateTime?
+  notes            String?
+  totalCost        Decimal?          @db.Decimal(12, 2)
+  billed           Boolean           @default(false)
+  invoiceId        String?
+  revenueAmount    Decimal?          @db.Decimal(12, 2)
+  currency         String            @default("VND")
+  parts            MaintenancePart[]
+  product          Product?          @relation(fields: [productId], references: [id])
+  serviceRequest   ServiceRequest?   @relation(fields: [serviceRequestId], references: [id])
+  variant          ProductVariant?   @relation(fields: [variantId], references: [id])
+  vendor           Vendor?           @relation(fields: [vendorId], references: [id])
+  serviceDetail    ServiceCatalog[]
+
+  @@index([serviceRequestId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([vendorId])
+}
+
+model MaintenancePart {
+  id        String            @id @default(cuid())
+  recordId  String
+  variantId String?
+  name      String
+  quantity  Int               @default(1)
+  unitCost  Decimal?          @db.Decimal(12, 2)
+  notes     String?
+  record    MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  variant   ProductVariant?   @relation(fields: [variantId], references: [id])
+}
+
+//--------------------------------------------Inbound-------------------------------------------------
+
+model Vendor {
+  id           String              @id @default(cuid())
+  name         String
+  role         VendorRole          @default(SUPPLIER)
+  isAuthorized Boolean             @default(false)
+  email        String?
+  phone        String?
+  address      String?
+  note         String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  acquisitions Acquisition[]
+  Invoice      Invoice[]
+  services     MaintenanceRecord[]
+  Product      Product[]
+
+  @@unique([name, role])
+  @@index([role])
+}
+
+model Acquisition {
+  id              String            @id @default(cuid())
+  vendorId        String?
+  customerId      String?
+  type            AcquisitionType   @default(PURCHASE)
+  acquiredAt      DateTime
+  cost            Decimal?          @db.Decimal(12, 2)
+  currency        String?
+  payoutStatus    String?
+  refNo           String?
+  notes           String?
+  condition       String?
+  warrantyUntil   DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  vendor          Vendor?           @relation(fields: [vendorId], references: [id])
+  AcquisitionItem AcquisitionItem[]
+  Invoice         Invoice[]
+
+  @@index([vendorId, acquiredAt])
+  @@index([customerId, acquiredAt])
+}
+
+model AcquisitionItem {
+  id                String          @id @default(cuid())
+  acquisitionId     String
+  productId         String?
+  variantId         String?
+  quantity          Int             @default(1)
+  unitCost          Decimal?        @db.Decimal(12, 2)
+  currency          String?
+  notes             String?
+  sourceOrderItemId String?
+  createdAt         DateTime        @default(now())
+  acquisition       Acquisition     @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
+  product           Product?        @relation(fields: [productId], references: [id])
+  sourceOrderItem   OrderItem?      @relation(fields: [sourceOrderItemId], references: [id])
+  variant           ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([acquisitionId])
+  @@index([variantId])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?
+  name         String?
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  roleId       String?
+  customer     Customer?
+  roles        Role[]    @relation("UserRoles")
+
+  @@index([isActive])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]       @relation("UserRoles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  description String?
+  roles       Role[]  @relation("RolePermissions")
+}
+
+model Customer {
+  id             String           @id @default(cuid())
+  name           String
+  email          String?          @unique
+  phone          String?          @db.VarChar(32)
+  ward           String?
+  city           String?
+  userId         String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  Acquisition    Acquisition[]
+  user           User?            @relation(fields: [userId], references: [id])
+  Invoice        Invoice[]
+  orders         Order[]
+  ServiceRequest ServiceRequest[]
+
+  @@index([phone])
+}
+
+model Invoice {
+  id               String          @id @default(cuid())
+  code             String?         @unique
+  type             InvoiceType
+  status           InvoiceStatus   @default(DRAFT)
+  customerId       String?
+  vendorId         String?
+  orderId          String?
+  acquisitionId    String?
+  serviceRequestId String?
+  currency         String
+  subTotal         Decimal         @db.Decimal(12, 2)
+  taxTotal         Decimal         @default(0) @db.Decimal(12, 2)
+  discountTotal    Decimal         @default(0) @db.Decimal(12, 2)
+  grandTotal       Decimal         @db.Decimal(12, 2)
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  acquisition      Acquisition?    @relation(fields: [acquisitionId], references: [id])
+  customer         Customer?       @relation(fields: [customerId], references: [id])
+  order            Order?          @relation(fields: [orderId], references: [id])
+  serviceReq       ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  vendor           Vendor?         @relation(fields: [vendorId], references: [id])
+  items            InvoiceItem[]
+  payments         Payment[]
+
+  @@index([type, status])
+  @@index([customerId])
+  @@index([vendorId])
+  @@index([issuedAt])
+  @@index([orderId])
+  @@index([acquisitionId])
+  @@index([serviceRequestId])
+}
+
+model InvoiceItem {
+  id          String          @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  variantId   String?
+  title       String
+  description String?
+  quantity    Decimal         @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal         @db.Decimal(12, 2)
+  discount    Decimal         @default(0) @db.Decimal(12, 2)
+  taxRate     Decimal         @default(0) @db.Decimal(5, 2)
+  lineTotal   Decimal         @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product?        @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([invoiceId])
+  @@index([variantId])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(12, 2)
+  currency  String
+  paidAt    DateTime      @default(now())
+  reference String?
+  note      String?
+  createdAt DateTime      @default(now())
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, paidAt])
+}
+
 enum Category {
   ENTRY
   MID_RANGE
@@ -46,12 +535,12 @@ enum OrderStatus {
 }
 
 enum ServiceRequestStatus {
-  PENDING // tạo mới, chờ kiểm tra
-  DIAGNOSING // đang chẩn đoán
-  WAIT_APPROVAL // chờ khách duyệt báo giá
-  IN_PROGRESS // đang sửa
-  COMPLETED // hoàn tất kỹ thuật
-  DELIVERED // giao/trả xong
+  PENDING
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
   CANCELED
 }
 
@@ -106,6 +595,7 @@ enum ImageRole {
   PRIMARY
   GALLERY
   THUMB
+  COVER
 }
 
 enum BrandStatus {
@@ -138,10 +628,10 @@ enum Strap {
 }
 
 enum VendorRole {
-  SUPPLIER // nguồn mua/nhập hàng
-  SERVICE // trung tâm bảo hành/sửa chữa
+  SUPPLIER
+  SERVICE
   BOTH
-  PRIVATE_SELLER // người bán cá nhân
+  PRIVATE_SELLER
 }
 
 enum PaymentMethod {
@@ -154,16 +644,16 @@ enum PaymentMethod {
 }
 
 enum InvoiceType {
-  SALE // bán cho customer, thường map từ Order
-  PURCHASE // mua từ vendor (nhập hàng/buy-back)
-  SERVICE // thu phí dịch vụ
-  ADJUSTMENT // điều chỉnh, ghi nợ/ghi có
-  REFUND // hoàn tiền
+  SALE
+  PURCHASE
+  SERVICE
+  ADJUSTMENT
+  REFUND
 }
 
 enum InvoiceStatus {
   DRAFT
-  ISSUED // đã phát hành/số hóa đơn
+  ISSUED
   PARTIALLY_PAID
   PAID
   VOID
@@ -222,611 +712,15 @@ enum LengthLabel {
 }
 
 enum VendorType {
-  IN_HOUSE // kỹ thuật nội bộ
-  PARTNER // đối tác sửa chữa
-  AUTHORIZED // TTBH chính hãng
+  IN_HOUSE
+  PARTNER
+  AUTHORIZED
   OTHER
 }
 
 enum AcquisitionType {
-  PURCHASE // mua từ vendor
-  CONSIGNMENT // ký gửi
-  TRADE_IN // khách đổi – bù
-  BUY_BACK // mua lại từ khách (không kèm đổi)
-}
-
-//---------------------------------------------------------------------------------------------
-// ----------------------------------------- Metadata -----------------------------------------
-model MarketSegment {
-  id         String      @id @default(cuid())
-  name       String      @unique
-  watchSpecs WatchSpec[]
-}
-
-model Complication {
-  id         String      @id @default(cuid())
-  name       String      @unique
-  watchSpecs WatchSpec[]
-}
-
-model Brand {
-  id           String      @id @default(cuid())
-  name         String
-  slug         String      @unique // dùng cho URL
-  country      String? // "Japan", "Switzerland"...
-  foundedYear  Int?
-  website      String?
-  logoUrl      String?
-  isAuthorized Boolean     @default(false) // bạn là đại lý ủy quyền?
-  status       BrandStatus @default(ACTIVE)
-  description  String?
-
-  // optional: cho SEO / sắp xếp
-  sortOrder Int @default(0)
-
-  products  Product[]
-  WatchSpec WatchSpec[]
-
-  @@unique([name]) // chống trùng
-  @@index([country])
-  @@index([status, sortOrder])
-}
-
-model ProductImage {
-  id        String  @id @default(cuid())
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
-
-  // Khóa trong bucket (không gồm domain)
-  fileKey String // vd: "products/ck98.../a2f3-...-main.jpg"
-
-  // Metadata hữu ích
-  role        ImageRole @default(GALLERY)
-  alt         String?
-  width       Int?
-  height      Int?
-  mime        String?
-  sizeBytes   Int?
-  sortOrder   Int       @default(0)
-  dominantHex String? // dùng làm blur/placeholder
-
-  // Bất biến & kiểm soát cache
-  contentHash String? // dùng để kiểm tra trùng/đổi tên theo hash
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-//-------------------------------------------------------------------------------------------
-// ----------------------------------------- Orders -----------------------------------------
-model Order {
-  id         String    @id @default(cuid())
-  orderCode  String    @unique // ví dụ "ORD-123456"
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  customerId String?
-
-  // --- Snapshot thông tin giao hàng lúc đặt (không phụ thuộc Customer) ---
-  shipName      String
-  shipPhone     String
-  shipEmail     String
-  shipAddress   String
-  shipWard      String?
-  shipCity      String
-  // --- Tiền tệ ---
-  subtotal      Decimal        @db.Decimal(12, 2)
-  shippingFee   Decimal?       @db.Decimal(12, 2)
-  total         Decimal        @db.Decimal(12, 2)
-  status        OrderStatus    @default(PENDING)
-  paymentStatus PaymentStatus  @default(UNPAID)
-  paymentMethod PaymentMethod? // nếu biết được
-  items         OrderItem[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  Invoice       Invoice[]
-
-  @@index([customerId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model OrderItem {
-  id              String            @id @default(cuid())
-  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId         String
-  // --- Snapshot sản phẩm tại thời điểm đặt ---
-  productId       String? // nếu bạn có bảng products riêng
-  title           String
-  price           Decimal           @db.Decimal(12, 2)
-  quantity        Int
-  subtotal        Decimal           @db.Decimal(12, 2)
-  img             String? // ảnh minh hoạ lúc đặt (tuỳ chọn)
-  createdAt       DateTime          @default(now())
-  Product         Product?          @relation(fields: [productId], references: [id])
-  ServiceRequest  ServiceRequest[]
-  AcquisitionItem AcquisitionItem[]
-
-  @@index([orderId])
-  @@index([productId])
-}
-
-//---------------------------------------------------------------------------------------------
-// ----------------------------------------- Inventory -----------------------------------------
-model Product {
-  id                 String              @id @default(cuid())
-  slug               String              @unique // dùng cho URL
-  title              String
-  image              ProductImage[]
-  status             ProductStatus       @default(ACTIVE)
-  primaryImageUrl    String?
-  type               ProductType
-  orderItems         OrderItem[]
-  brandId            String?
-  brand              Brand?              @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  seoTitle           String?
-  seoDescription     String?
-  isStockManaged     Boolean             @default(true)
-  maxQtyPerOrder     Int                 @default(99)
-  publishedAt        DateTime?
-  variants           ProductVariant[]
-  watchSpec          WatchSpec?
-  vendor             Vendor?             @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  vendorId           String?
-  maintenanceRecords MaintenanceRecord[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // nếu có OrderItem trỏ về, bạn vẫn sửa product bình thường;
-  // snapshot trên OrderItem giúp hóa đơn không đổi.
-
-  ServiceRequest  ServiceRequest[]
-  AcquisitionItem AcquisitionItem[]
-  InvoiceItem     InvoiceItem[]
-
-  @@index([status])
-  @@index([brandId])
-  @@index([type])
-  @@index([status, type, publishedAt])
-  @@index([createdAt])
-  @@index([updatedAt])
-}
-
-model ProductVariant {
-  id                String              @id @default(cuid())
-  product           Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId         String
-  sku               String?             @unique
-  name              String? // ví dụ: "Đen 20mm"
-  price             Decimal?            @db.Decimal(12, 2) // override giá nếu khác product.price
-  strapSpec         StrapVariantSpec?
-  partSpec          PartVariantSpec?
-  stockQty          Int                 @default(0)
-  isStockManaged    Boolean?            @default(true)
-  isActive          Boolean             @default(true)
-  maxQtyPerOrder    Int                 @default(99) // khác product-level nếu cần
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  ServiceRequest    ServiceRequest[]
-  MaintenanceRecord MaintenanceRecord[]
-  MaintenancePart   MaintenancePart[]
-  AcquisitionItem   AcquisitionItem[]
-  InvoiceItem       InvoiceItem[]
-
-  @@index([productId])
-  @@index([isActive])
-}
-
-model PartVariantSpec {
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  variantId String         @id
-  partType  PartType
-}
-
-model WatchSpec {
-  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId       String          @id
-  brandId         String?
-  brand           Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  model           String?
-  year            String?
-  caseType        CaseType        @default(ROUND)
-  marketSegment   MarketSegment[]
-  complication    Complication[]
-  category        Category[]
-  gender          Gender          @default(MEN)
-  length          Decimal         @db.Decimal(12, 2)
-  width           Decimal         @db.Decimal(12, 2)
-  thickness       Decimal         @db.Decimal(12, 2)
-  movement        MovementType    @default(AUTOMATIC)
-  caliber         String?
-  caseMaterial    CaseMaterial    @default(STAINLESS_STEEL)
-  goldKarat       Int? // chỉ dùng khi caseMaterial = GOLD
-  goldColor       GoldColor? // chỉ dùng khi caseMaterial = GOLD
-  caseSize        String?
-  dialColor       String?
-  marketSegmentId String?
-  strap           Strap           @default(LEATHER)
-  glass           Glass           @default(MINERAL)
-  boxIncluded     Boolean         @default(false)
-  bookletIncluded Boolean         @default(false)
-  cardIncluded    Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-}
-
-model StrapVariantSpec {
-  // 1–1 với ProductVariant (variant-level)
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  variantId String         @id
-
-  widthMM      Int
-  lengthLabel  LengthLabel?
-  color        String?
-  material     Strap        @default(LEATHER)
-  quickRelease Boolean?     @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([widthMM])
-  @@index([material])
-  @@index([lengthLabel])
-}
-
-// -------------------------------------------------------------------------------------------
-// ----------------------------------------- Service -----------------------------------------
-
-model ServiceCatalog {
-  id           String   @id @default(cuid())
-  code         String   @unique // ví dụ: POLISH, OVERHAUL
-  name         String
-  description  String?
-  defaultPrice Decimal? @db.Decimal(12, 2)
-  durationMin  Int? // ước lượng phút/giờ
-
-  isActive            Boolean            @default(true)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  MaintenanceRecord   MaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id])
-  maintenanceRecordId String?
-}
-
-model ServiceRequest {
-  id          String      @id @default(cuid())
-  type        ServiceType @default(PAID) // 👈 phân biệt ngay từ đầu
-  billable    Boolean     @default(true) // PAID=true, WARRANTY=false
-  orderItem   OrderItem?  @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
-  orderItemId String?
-
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerId String?
-
-  // đồng hồ cần bảo trì:
-  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productId String?
-  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  variantId String?
-
-  // Nếu là hàng ngoài catalog → snapshot nhận diện
-  brandSnapshot  String?
-  modelSnapshot  String?
-  refSnapshot    String?
-  serialSnapshot String?
-
-  appointmentAt  DateTime?
-  status         ServiceRequestStatus @default(PENDING)
-  notes          String?
-  warrantyUntil  DateTime? // mốc bảo hành còn hiệu lực
-  warrantyPolicy String? // mô tả/policy áp dụng (nếu có)
-
-  maintenance MaintenanceRecord[]
-  // ...
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  Invoice     Invoice[]
-
-  @@index([customerId])
-  @@index([productId])
-  @@index([variantId])
-  @@index([orderItemId])
-  @@index([status])
-}
-
-model MaintenanceRecord {
-  id       String      @id @default(cuid())
-  type     ServiceType @default(PAID)
-  billable Boolean     @default(true)
-
-  // Quan hệ ngược về request (nếu tạo từ request)
-  serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
-  serviceRequestId String?
-
-  // Đồng hồ mục tiêu (trong catalog)
-  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productId String?
-  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  variantId String?
-
-  // Snapshot nhận diện (nếu không gắn catalog)
-  brandSnapshot  String?
-  modelSnapshot  String?
-  refSnapshot    String?
-  serialSnapshot String?
-
-  // dùng chung Vendor
-  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  vendorId String?
-
-  // snapshot để an toàn lịch sử
-  servicedByName String?
-  vendorName     String?
-
-  // Parts dùng trong service (trừ tồn khi có variantId)
-  parts         MaintenancePart[]
-  serviceDetail ServiceCatalog[]
-  // Mốc thời gian
-  servicedAt    DateTime?
-  notes         String?
-
-  totalCost     Decimal? @db.Decimal(12, 2) // labor + parts + outsource + shipping + tax
-  // nếu là dịch vụ thu phí khách:
-  billed        Boolean  @default(false)
-  invoiceId     String? // link tới Invoice nếu có
-  revenueAmount Decimal? @db.Decimal(12, 2) // số tiền thu khách cho service (nếu có)
-
-  currency String @default("VND")
-
-  @@index([serviceRequestId])
-  @@index([productId])
-  @@index([variantId])
-  @@index([vendorId])
-}
-
-model MaintenancePart {
-  id       String            @id @default(cuid())
-  record   MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  recordId String
-
-  // nếu lấy từ kho: link tới variant linh kiện
-  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  variantId String?
-
-  name     String // nếu không link variant thì snapshot tên
-  quantity Int      @default(1)
-  unitCost Decimal? @db.Decimal(12, 2)
-  notes    String?
-}
-
-//-------------------------------------------------------------------------------------------
-// ----------------------------------------- Acquisition ------------------------------------
-model Vendor {
-  id           String              @id @default(cuid())
-  name         String
-  role         VendorRole          @default(SUPPLIER)
-  isAuthorized Boolean             @default(false) // đại lý/TTBH chính hãng?
-  email        String?
-  phone        String?
-  address      String?
-  note         String?
-  // Liên kết 2 chiều
-  acquisitions Acquisition[] // nguồn nhập
-  services     MaintenanceRecord[] // dịch vụ bảo trì (nếu họ làm)
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  Product   Product[]
-  Invoice   Invoice[]
-
-  @@unique([name, role]) // tuỳ bạn, để tránh trùng
-  @@index([role])
-}
-
-model Acquisition {
-  id String @id @default(cuid())
-
-  // Nguồn: hoặc vendor hoặc customer
-  vendor     Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  vendorId   String?
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerId String?
-
-  type       AcquisitionType @default(PURCHASE)
-  acquiredAt DateTime
-
-  // tiền & giấy tờ
-  cost          Decimal?  @db.Decimal(12, 2) // số tiền bạn chi ra
-  currency      String? // "VND"
-  payoutStatus  String? // PENDING/PAID (nếu trả cho khách)
-  refNo         String? // mã chứng từ
-  notes         String?
-  condition     String? // tình trạng (VG, Good…)
-  warrantyUntil DateTime?
-
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  AcquisitionItem AcquisitionItem[]
-  Invoice         Invoice[]
-
-  @@index([vendorId, acquiredAt])
-  @@index([customerId, acquiredAt])
-}
-
-model AcquisitionItem {
-  id            String      @id @default(cuid())
-  acquisition   Acquisition @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
-  acquisitionId String
-
-  // Nhập cho sản phẩm/biến thể nào (khuyến nghị dùng variantId)
-  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productId String?
-  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  variantId String?
-
-  quantity Int      @default(1) // Đồng hồ = 1, dây/phụ kiện = N
-  unitCost Decimal? @db.Decimal(12, 2)
-  currency String? // "VND"
-  notes    String?
-
-  // Nếu là buy-back chiếc đã bán trước đó
-  sourceOrderItem   OrderItem? @relation(fields: [sourceOrderItemId], references: [id], onDelete: SetNull)
-  sourceOrderItemId String?
-
-  createdAt DateTime @default(now())
-
-  @@index([acquisitionId])
-  @@index([variantId])
-}
-
-//-------------------------------------------------------------------------------------------
-// ----------------------------------------- Account ----------------------------------------
-model User {
-  id           String  @id @default(cuid())
-  email        String  @unique
-  passwordHash String? // null nếu đăng nhập bằng OAuth
-  name         String?
-  avatarUrl    String?
-
-  // Liên kết 1–1 (tùy chọn) sang Customer
-  customer Customer?
-
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  roleId    String?
-  roles     Role[]   @relation("UserRoles")
-
-  @@index([isActive])
-}
-
-model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique // ví dụ: "ADMIN", "SALES", "CS"
-  description String?
-  permissions Permission[] @relation("RolePermissions")
-  users       User[]       @relation("UserRoles")
-}
-
-model Permission {
-  id          String  @id @default(cuid())
-  code        String  @unique // ví dụ: "PRODUCT_READ", "ORDER_UPDATE"
-  description String?
-  roles       Role[]  @relation("RolePermissions")
-}
-
-model Customer {
-  id     String  @id @default(cuid())
-  name   String
-  email  String? @unique
-  phone  String? @db.VarChar(32)
-  ward   String?
-  city   String?
-  // Nếu customer được tạo từ tài khoản đăng nhập
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId String? @unique // đảm bảo 1–1
-
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  orders         Order[]
-  ServiceRequest ServiceRequest[]
-  Acquisition    Acquisition[]
-  Invoice        Invoice[]
-
-  @@index([phone])
-}
-
-//-------------------------------------------------------------------------------------------
-// ----------------------------------------- Invoice ----------------------------------------
-
-model Invoice {
-  id     String        @id @default(cuid())
-  code   String?       @unique // số hóa đơn (nếu cần)
-  type   InvoiceType
-  status InvoiceStatus @default(DRAFT)
-
-  // Liên hệ: hoặc customer hoặc vendor
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerId String?
-  vendor     Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
-  vendorId   String?
-
-  // Liên kết nghiệp vụ gốc (tuỳ trường hợp)
-  order            Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  orderId          String?
-  acquisition      Acquisition?    @relation(fields: [acquisitionId], references: [id], onDelete: SetNull)
-  acquisitionId    String?
-  serviceReq       ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
-  serviceRequestId String?
-
-  // Tiền tệ
-  currency      String // "VND","USD"...
-  subTotal      Decimal @db.Decimal(12, 2)
-  taxTotal      Decimal @default(0) @db.Decimal(12, 2)
-  discountTotal Decimal @default(0) @db.Decimal(12, 2)
-  grandTotal    Decimal @db.Decimal(12, 2)
-
-  // Thanh toán & hạn
-  issuedAt DateTime? // ngày phát hành
-  dueAt    DateTime? // hạn thanh toán
-  notes    String?
-
-  // Dòng hàng
-  items    InvoiceItem[]
-  payments Payment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([type, status])
-  @@index([customerId])
-  @@index([vendorId])
-  @@index([issuedAt])
-  @@index([orderId])
-  @@index([acquisitionId])
-  @@index([serviceRequestId])
-}
-
-model InvoiceItem {
-  id        String  @id @default(cuid())
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
-
-  // Có thể link tới Product/Variant để tra cứu
-  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productId String?
-  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  variantId String?
-
-  // Snapshot mô tả
-  title       String // tên dòng hàng (ví dụ “Rolex Submariner 114060” / “Dịch vụ Overhaul”)
-  description String? // ghi chú
-
-  // Giá trị
-  quantity  Decimal @default(1) @db.Decimal(12, 2) // với đồng hồ thì 1; dây có thể >1
-  unitPrice Decimal @db.Decimal(12, 2)
-  discount  Decimal @default(0) @db.Decimal(12, 2)
-  taxRate   Decimal @default(0) @db.Decimal(5, 2) // % nếu bạn muốn
-  lineTotal Decimal @db.Decimal(12, 2) // sau discount + tax (tuỳ cách tính)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([invoiceId])
-  @@index([variantId])
-}
-
-model Payment {
-  id        String  @id @default(cuid())
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
-
-  method    PaymentMethod
-  amount    Decimal       @db.Decimal(12, 2)
-  currency  String
-  paidAt    DateTime      @default(now())
-  reference String? // số bút toán/transaction id
-  note      String?
-
-  createdAt DateTime @default(now())
-
-  @@index([invoiceId, paidAt])
+  PURCHASE
+  CONSIGNMENT
+  TRADE_IN
+  BUY_BACK
 }

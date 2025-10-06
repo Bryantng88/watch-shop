@@ -1,6 +1,6 @@
 
 "use client"
-import { useCartContext } from "@/features/cart/context/CartDataContext";
+import { useCartContext } from "@/features/cart/context/cart-data-context";
 
 
 
