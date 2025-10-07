@@ -8,6 +8,8 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// 👇 Thêm dòng này nếu chưa c
+
 //--------------------------------------------Catalog-------------------------------------------------
 model MarketSegment {
   id         String      @id @default(cuid())
@@ -127,7 +129,6 @@ model PartVariantSpec {
 
 model WatchSpec {
   productId       String          @id
-  brandId         String?
   model           String?
   year            String?
   caseType        CaseType        @default(ROUND)
@@ -523,6 +524,7 @@ enum ProductType {
   ACCESSORIES
   SERVICE
   PARTS
+  WATCH
 }
 
 enum OrderStatus {
@@ -623,7 +625,7 @@ enum Strap {
   BRACELET
   RUBBER
   NATO
-  CANVAS
+  CANVASS
   SPECIAL
 }
 
