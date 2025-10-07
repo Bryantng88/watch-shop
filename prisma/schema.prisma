@@ -8,9 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// 👇 Thêm dòng này nếu chưa c
-
-//--------------------------------------------Catalog-------------------------------------------------
 model MarketSegment {
   id         String      @id @default(cuid())
   name       String      @unique
@@ -35,9 +32,9 @@ model Brand {
   status       BrandStatus @default(ACTIVE)
   description  String?
   sortOrder    Int         @default(0)
-  products     Product[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  products     Product[]
 
   @@index([country])
   @@index([status, sortOrder])
@@ -173,8 +170,6 @@ model StrapVariantSpec {
   @@index([lengthLabel])
 }
 
-//--------------------------------------------Outbound-------------------------------------------------
-
 model Order {
   id            String         @id @default(cuid())
   orderCode     String         @unique
@@ -220,8 +215,6 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
 }
-
-//--------------------------------------------Service-------------------------------------------------
 
 model ServiceCatalog {
   id                  String             @id @default(cuid())
@@ -315,8 +308,6 @@ model MaintenancePart {
   record    MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
   variant   ProductVariant?   @relation(fields: [variantId], references: [id])
 }
-
-//--------------------------------------------Inbound-------------------------------------------------
 
 model Vendor {
   id           String              @id @default(cuid())

@@ -28,7 +28,7 @@ export async function listProducts({
                 skip,
                 take: pageSize,
                 orderBy: [{ createdAt: 'desc' }],
-                include: { images: true, variants: true },
+                include: { image: true, variants: true },
             }),
             prisma.product.count({ where }),
         ])
@@ -42,33 +42,30 @@ export async function listProducts({
     }
 
 
-    let grouped: Array<{ productId: string }>
+    const argsLow = {
+        by: ['productId'] as const,
+        where: wherePV,                  // kiểu: Prisma.ProductVariantWhereInput
+        _min: { price: true },
+        orderBy: [{ _min: { price: 'asc' } }], // hoặc 1 object cũng được
+        skip,
+        take: pageSize,
+    } satisfies Prisma.ProductVariantGroupByArgs;
 
-    if (sort === 'low') {
-        const argsLow = {
-            by: ['productId'] as const,
-            where: wherePV,
-            _min: { price: true },
-            orderBy: [{ _min: { price: 'asc' as const } }], // <-- MẢNG
-            skip,
-            take: pageSize,
-        } satisfies Prisma.ProductVariantGroupByArgs;
+    const groupedLow = await prisma.productVariant.groupBy(argsLow);
 
-        grouped = await prisma.productVariant.groupBy(argsLow);
-    } else {
-        const argsHigh = {
-            by: ['productId'] as const,
-            where: wherePV,
-            _max: { price: true },
-            orderBy: [{ _max: { price: 'desc' as const } }], // <-- MẢNG
-            skip,
-            take: pageSize,
-        } satisfies Prisma.ProductVariantGroupByArgs;
 
-        grouped = await prisma.productVariant.groupBy(argsHigh);
-    }
+    const argsHigh = {
+        by: ['productId'] as const,
+        where: wherePV,
+        _max: { price: true },
+        orderBy: [{ _max: { price: 'desc' } }],
+        skip,
+        take: pageSize,
+    } satisfies Prisma.ProductVariantGroupByArgs;
 
-    const ids = grouped.map(g => g.productId)
+    const groupedHigh = await prisma.productVariant.groupBy(argsHigh);
+
+    const ids = (sort === 'low' ? groupedLow : groupedHigh).map(g => g.productId);
 
     // 2.2. đếm tổng số product thỏa điều kiện (distinct theo productId)
     const total = await prisma.product.count({
@@ -84,7 +81,7 @@ export async function listProducts({
     const products = await prisma.product.findMany({
         where: { id: { in: ids } },
         include: {
-            images: true,
+            image: true,
             // nếu muốn chỉ lấy variant rẻ nhất/cao nhất:
             // variants: { orderBy: { price: 'asc' }, take: 1 }
             variants: true,

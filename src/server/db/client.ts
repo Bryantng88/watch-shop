@@ -15,4 +15,6 @@ export const prisma =
 // 👇 Ở môi trường development, giữ client lại trong global scope
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
+await prisma.$queryRaw`SELECT 1`; // nếu chạy OK là kết nối ổn
+
 export default prisma
