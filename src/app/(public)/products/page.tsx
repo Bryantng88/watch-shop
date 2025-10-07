@@ -1,3 +1,4 @@
+
 import { products } from "../../../data/products";
 import { ProductList } from "@/features/catalog/components/product-list";
 import FilterContent from "@/features/catalog/components/product-filter";
