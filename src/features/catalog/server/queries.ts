@@ -1,54 +1,49 @@
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/server/db/client'
+// features/catalog/server/queries.ts
+import { Prisma } from '@prisma/client';
+import prisma from '@/server/db/client';
+import type { Filters, Sort } from './types';
 
-type Params = {
-    page?: number
-    pageSize?: number
-    sort?: 'default' | 'low' | 'high' // low: rẻ->đắt, high: đắt->rẻ
-    brand?: string                    // brandId (hoặc đổi sang slug tuỳ bạn)
-}
+const PAGE_SIZE = 12;
 
-export async function listProducts({
-    page = 1,
-    pageSize = 12,
-    sort = 'default',
-    brand,
-}: Params) {
-    const skip = (page - 1) * pageSize
+export async function listProducts(filters: Filters) {
+    const page = Math.max(1, filters.page ?? 1);
+    const take = PAGE_SIZE;
+    const skip = (page - 1) * take;
+    const sort = filters.sort ?? 'default';
+    /* ----- where cho Product ----- */
+    const whereP: Prisma.ProductWhereInput = {
+        status: 'ACTIVE',
+        // brand
+        ...(filters.brands?.length ? { brandId: { in: filters.brands } } : {}),
+        // category / type (enum)
+        ...(filters.categories?.length ? { type: { in: filters.categories as any } } : {}),
+        // TODO: thêm các where khác trên Product (style, complication, …) nếu có cột/quan hệ
+    };
 
-    // ---- CASE 1: sort mặc định theo createdAt trực tiếp trên Product
-    if (sort === 'default') {
-        const where: Prisma.ProductWhereInput = {
-            ...(brand ? { brandId: brand } : {}),
-        }
-
-        const [items, total] = await Promise.all([
-            prisma.product.findMany({
-                where,
-                skip,
-                take: pageSize,
-                orderBy: [{ createdAt: 'desc' }],
-                include: { image: true, variants: true },
-            }),
-            prisma.product.count({ where }),
-        ])
-
-        return { items, total, pageSize }
-    }
-
+    /* ----- where cho ProductVariant (giá, biến thể…) ----- */
     const wherePV: Prisma.ProductVariantWhereInput = {
-        price: { not: null },
-        ...(brand ? { product: { brandId: brand } } : {}),
-    }
+        isActive: true,
+        ...(filters.priceMin != null || filters.priceMax != null
+            ? {
+                price: {
+                    ...(filters.priceMin != null ? { gte: new Prisma.Decimal(filters.priceMin) } : {}),
+                    ...(filters.priceMax != null ? { lte: new Prisma.Decimal(filters.priceMax) } : {}),
+                },
+            }
+            : {}),
+        // TODO: thêm dialColor / material / caseSize… nếu có cột tương ứng
+    };
 
-
+    /* ----- bước 1: groupBy để distinct product + sort theo giá ----- */
+    // Chỉ lấy các productId có variant match wherePV và product match whereP
+    // Turndown: groupBy không join Product; ta filter product ở bước 2
     const argsLow = {
         by: ['productId'] as const,
         where: wherePV,                  // kiểu: Prisma.ProductVariantWhereInput
         _min: { price: true },
         orderBy: [{ _min: { price: 'asc' } }], // hoặc 1 object cũng được
         skip,
-        take: pageSize,
+        take,
     } satisfies Prisma.ProductVariantGroupByArgs;
 
     const groupedLow = await prisma.productVariant.groupBy(argsLow);
@@ -60,36 +55,58 @@ export async function listProducts({
         _max: { price: true },
         orderBy: [{ _max: { price: 'desc' } }],
         skip,
-        take: pageSize,
+        take,
     } satisfies Prisma.ProductVariantGroupByArgs;
 
     const groupedHigh = await prisma.productVariant.groupBy(argsHigh);
 
     const ids = (sort === 'low' ? groupedLow : groupedHigh).map(g => g.productId);
 
-    // 2.2. đếm tổng số product thỏa điều kiện (distinct theo productId)
-    const total = await prisma.product.count({
+    /* ----- bước 1b: tổng số product khớp filter (distinct theo product) ----- */
+    // đếm distinct productId khớp wherePV & whereP
+    const distinctProducts = await prisma.product.findMany({
         where: {
-            ...(brand ? { brandId: brand } : {}),
-            variants: { some: { price: { not: null } } },
+            ...whereP,
+            variants: { some: wherePV },
         },
-    })
+        select: { id: true },
+    });
+    const total = distinctProducts.length;
 
-    if (ids.length === 0) return { items: [], total, pageSize }
-
-    // 2.3. lấy product theo danh sách id và giữ nguyên thứ tự đã sort ở trên
+    /* ----- bước 2: lấy product theo ids giữ nguyên thứ tự ----- */
     const products = await prisma.product.findMany({
-        where: { id: { in: ids } },
-        include: {
-            image: true,
-            // nếu muốn chỉ lấy variant rẻ nhất/cao nhất:
-            // variants: { orderBy: { price: 'asc' }, take: 1 }
-            variants: true,
-        },
-    })
-    // map để trả về đúng thứ tự ids
-    const byId = new Map(products.map(p => [p.id, p]))
-    const items = ids.map(id => byId.get(id)!).filter(Boolean)
+        where: { id: { in: ids }, ...whereP },
+        select: {
+            // lấy 1 variant rẻ nhất để hiển thị giá (hoặc ảnh nếu bạn lưu ảnh ở variant)
+            id: true,
+            slug: true,
+            variants: {
+                where: wherePV,
+                orderBy: { price: 'asc' },
+                take: 1,
+                select: { price: true },
+            },
+            title: true,
+            primaryImageUrl: true, // có sẵn rồi
+            brand: { select: { id: true, name: true } },
 
-    return { items, total, pageSize }
+        },
+    });
+    const orderMap = new Map(ids.map((id, i) => [id, i]));
+    // map theo thứ tự từ ids
+    const ordered = products
+        .map(p => {
+            const img = p.primaryImageUrl;
+            return {
+                id: p.id,
+                title: p.title,
+                slug: p.slug,
+                brand: p.brand?.name,
+                price: p.variants?.[0]?.price ? Number(p.variants[0].price) : null,
+                imageUrl: img  // <- build URL từ key
+            };
+        })
+        .sort((a, b) => orderMap.get(a.id)! - orderMap.get(b.id)!);
+
+    return { items: ordered, total, pageSize: take };
 }
