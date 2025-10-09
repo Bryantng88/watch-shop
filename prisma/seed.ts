@@ -32,13 +32,30 @@ async function main() {
             description: 'Precision timepieces from Switzerland.',
         },
     });
-    const speedmaster = await prisma.product.create({
-        data: {
+
+    const cartier = await prisma.brand.upsert({
+        where: { slug: 'cartier' },
+        update: {},
+        create: {
+            name: 'Cartier',
+            slug: 'cartier',
+            country: 'Switzerland',
+            foundedYear: 1848,
+            website: 'https://www.omegawatches.com',
+            logoUrl: '/uploads/omega-logo.png',
+            description: 'Precision timepieces from Switzerland.',
+        },
+    });
+    const speedmaster = await prisma.product.upsert({
+        where: { slug: 'omega-speedmaster' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+
             title: 'Omega Speedmaster Moonwatch',
             slug: 'omega-speedmaster',
             type: ProductType.WATCH,
             status: ProductStatus.ACTIVE,
-            brandId: omega.id,
+            brand: { connect: { slug: 'omega' } },
             primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0001-251554421167544185%201.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758272903658&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0001-251554421167544185%201.png",
             isStockManaged: true,
             maxQtyPerOrder: 1,
@@ -46,20 +63,77 @@ async function main() {
                 create: {
                     movement: MovementType.HAND_WOUND,
                     caseMaterial: CaseMaterial.STAINLESS_STEEL,
-                    year: '2022',
-                    length: 36,
-                    width: 36,
-                    thickness: 13.2,
-                    dialColor: 'Black',
                     strap: Strap.LEATHER,
                     glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
                     gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
                     complication: {
                         create: [
-                            { name: "Chronograph" }, { name: "Moonphase" }
-                        ]
-                    }
-                }
+                            { name: 'Chronograph' },
+                            { name: 'Moonphase' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'OMEGA-MOON-001',
+                        name: 'Omega Speedmaster Moonwatch Hesalite',
+                        price: 250000000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    });
+    const rolex_submariner = await prisma.product.upsert({
+        where: { slug: 'rolex-submariner' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'Rolex Submariner',
+            slug: 'rolex-submariner',
+            type: ProductType.WATCH,
+            status: ProductStatus.ACTIVE,
+            brand: { connect: { slug: 'rolex' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0002-3934373108306276665.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353299699&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0002-3934373108306276665.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        create: [
+                            { name: 'Chronograph' },
+                            { name: 'Moonphase' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'ROLEX-MOON-001',
+                        name: 'Rolex xyz',
+                        price: 25000000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
             },
         },
     },

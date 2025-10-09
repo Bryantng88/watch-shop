@@ -1,7 +1,7 @@
 // features/catalog/server/queries.ts
 import { Prisma } from '@prisma/client';
 import prisma from '@/server/db/client';
-import type { Filters, Sort } from './types';
+import type { Filters, Sort } from '../types';
 
 const PAGE_SIZE = 12;
 
@@ -10,6 +10,8 @@ export async function listProducts(filters: Filters) {
     const take = PAGE_SIZE;
     const skip = (page - 1) * take;
     const sort = filters.sort ?? 'default';
+
+    console.log("▶ filters:", filters);
     /* ----- where cho Product ----- */
     const whereP: Prisma.ProductWhereInput = {
         status: 'ACTIVE',
@@ -92,6 +94,10 @@ export async function listProducts(filters: Filters) {
 
         },
     });
+
+    console.log('🧩 Prisma products result:', JSON.stringify(products, null, 2));
+    console.log('🧩 Product count:', products.length);
+
     const orderMap = new Map(ids.map((id, i) => [id, i]));
     // map theo thứ tự từ ids
     const ordered = products

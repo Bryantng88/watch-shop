@@ -1,6 +1,7 @@
 // features/catalog/components/FilterSidebar.tsx
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from "react";
 
 function setQS(params: URLSearchParams, key: string, val?: string) {
     const next = new URLSearchParams(params.toString());
@@ -20,8 +21,8 @@ export default function FilterSidebar({
     const router = useRouter();
 
     const activeBrands = new Set((params.get('brands') ?? '').split(',').filter(Boolean));
-    const priceMin = Number(params.get('priceMin') ?? priceBounds.min);
-    const priceMax = Number(params.get('priceMax') ?? priceBounds.max);
+    const [min, setMin] = useState(Number(params.get("priceMin")) || priceBounds.min);
+    const [max, setMax] = useState(Number(params.get("priceMax")) || priceBounds.max);
 
     const toggleBrand = (id: string) => {
         const set = new Set(activeBrands);
@@ -30,7 +31,7 @@ export default function FilterSidebar({
         const v = [...set].join(',');
         v ? next.set('brands', v) : next.delete('brands');
         next.delete('page');
-        router.push(`/products?${next.toString()}`);
+        router.replace(`/products?${next.toString()}`);
     };
 
     const applyPrice = (min?: number, max?: number) => {
@@ -45,31 +46,33 @@ export default function FilterSidebar({
         <nav className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-6">
             {/* Price */}
             <section>
-                <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold">Price Range</span>
-                    <span className="text-xs text-gray-500">
-                        {priceMin.toLocaleString('vi-VN')} – {priceMax.toLocaleString('vi-VN')} VND
-                    </span>
-                </div>
-                {/* bạn có thể thay bằng slider lib; tạm dùng 2 input number */}
-                <div className="flex items-center gap-2">
+                <h4 className="font-semibold mb-2">Price Range</h4>
+                <div className="flex flex-col gap-2">
                     <input
-                        type="number"
-                        className="h-9 w-24 rounded-md border border-gray-300 px-2 text-sm"
-                        defaultValue={priceMin}
+                        type="range"
                         min={priceBounds.min}
-                        max={priceMax}
-                        onBlur={(e) => applyPrice(Number(e.target.value), priceMax)}
-                    />
-                    <span className="text-gray-400">–</span>
-                    <input
-                        type="number"
-                        className="h-9 w-24 rounded-md border border-gray-300 px-2 text-sm"
-                        defaultValue={priceMax}
-                        min={priceMin}
                         max={priceBounds.max}
-                        onBlur={(e) => applyPrice(priceMin, Number(e.target.value))}
+                        step={500000}
+                        value={min}
+                        onChange={(e) => setMin(Number(e.target.value))}
                     />
+                    <input
+                        type="range"
+                        min={priceBounds.min}
+                        max={priceBounds.max}
+                        step={500000}
+                        value={max}
+                        onChange={(e) => setMax(Number(e.target.value))}
+                    />
+                    <button
+                        className="mt-1 w-fit px-3 py-1 bg-gray-800 text-white rounded-md text-sm"
+                        onClick={() => applyPrice(min, max)}
+                    >
+                        Filter
+                    </button>
+                    <span className="text-xs text-gray-500">
+                        {min.toLocaleString("vi-VN")} – {max.toLocaleString("vi-VN")} VND
+                    </span>
                 </div>
             </section>
 
