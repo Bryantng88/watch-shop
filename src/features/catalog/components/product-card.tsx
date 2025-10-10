@@ -1,14 +1,6 @@
 'use client';
 import Link from 'next/link';
-
-export type Product = {
-    title: string;
-    primaryImageUrl: string;
-    price: number | string | null;
-    status?: 'sold' | 'on hold' | 'available';
-    tag?: string;
-    slug?: string;            // nếu có sẵn slug thì dùng, else từ title
-};
+import { ProductCardData } from '../server/types';
 
 const toSlug = (s: string) =>
     s.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
@@ -18,12 +10,14 @@ const fmtVND = (v?: number | null) =>
         ? new Intl.NumberFormat('vi-VN').format(v) + ' VND'
         : 'Contact Us';
 
-export default function ProductCard({ item }: { item: Product }) {
+export default function ProductCard({ item }: { item: ProductCardData }) {
     const priceNum =
         typeof item.price === 'string' ? Number(item.price) : item.price;
 
     const isSold = item.status === 'sold';
     const isHold = item.status === 'on hold';
+    const img = item.primaryImageUrl ?? undefined;
+    console.log('test nhanh hinh anh ' + img)
 
     return (
         <div className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">

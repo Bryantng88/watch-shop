@@ -11,10 +11,9 @@ export async function listProducts(filters: Filters) {
     const skip = (page - 1) * take;
     const sort = filters.sort ?? 'default';
 
-    console.log("▶ filters:", filters);
     /* ----- where cho Product ----- */
     const whereP: Prisma.ProductWhereInput = {
-        status: 'ACTIVE',
+
         // brand
         ...(filters.brands?.length ? { brandId: { in: filters.brands } } : {}),
         // category / type (enum)
@@ -91,12 +90,12 @@ export async function listProducts(filters: Filters) {
             title: true,
             primaryImageUrl: true, // có sẵn rồi
             brand: { select: { id: true, name: true } },
+            status: true,
 
         },
     });
 
-    console.log('🧩 Prisma products result:', JSON.stringify(products, null, 2));
-    console.log('🧩 Product count:', products.length);
+
 
     const orderMap = new Map(ids.map((id, i) => [id, i]));
     // map theo thứ tự từ ids
@@ -109,10 +108,12 @@ export async function listProducts(filters: Filters) {
                 slug: p.slug,
                 brand: p.brand?.name,
                 price: p.variants?.[0]?.price ? Number(p.variants[0].price) : null,
-                imageUrl: img  // <- build URL từ key
+                primaryImageUrl: img,  // <- build URL từ key
+                status: p.status
             };
         })
         .sort((a, b) => orderMap.get(a.id)! - orderMap.get(b.id)!);
 
     return { items: ordered, total, pageSize: take };
+
 }

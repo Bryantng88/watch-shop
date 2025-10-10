@@ -60,7 +60,7 @@ model ProductImage {
 
 model Product {
   id                 String              @id @default(cuid())
-  slug               String              @unique
+  slug               String?             @unique
   title              String
   status             ProductStatus       @default(ACTIVE)
   primaryImageUrl    String?
@@ -69,7 +69,7 @@ model Product {
   seoTitle           String?
   seoDescription     String?
   isStockManaged     Boolean             @default(true)
-  maxQtyPerOrder     Int                 @default(99)
+  maxQtyPerOrder     Int                 @default(1)
   publishedAt        DateTime?
   vendorId           String?
   createdAt          DateTime            @default(now())
@@ -84,6 +84,7 @@ model Product {
   variants           ProductVariant[]
   ServiceRequest     ServiceRequest[]
   watchSpec          WatchSpec?
+  Reservation        Reservation[]
 
   @@index([status])
   @@index([brandId])
@@ -213,6 +214,22 @@ model OrderItem {
   ServiceRequest  ServiceRequest[]
 
   @@index([orderId])
+  @@index([productId])
+}
+
+model Reservation {
+  id        String  @id @default(cuid())
+  productId String? // dùng khi scope = PRODUCT (độc bản)
+
+  orderId    String? // null khi mới giữ chỗ, set khi convert thành order
+  status     ReservationStatus @default(ACTIVE)
+  depositAmt Decimal?          @db.Decimal(12, 2)
+  expiresAt  DateTime? // ví dụ giữ 24–48h
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id])
+
   @@index([productId])
 }
 
@@ -716,4 +733,17 @@ enum AcquisitionType {
   CONSIGNMENT
   TRADE_IN
   BUY_BACK
+}
+
+enum AvailabilityStatus {
+  IN_STOCK // Đang sẵn hàng
+  RESERVED // Đã được đặt cọc (giữ hàng tạm thời)
+  SOLD // Đã bán
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CANCELLED
+  CONVERTED
+  EXPIRED
 }

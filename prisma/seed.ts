@@ -1,58 +1,52 @@
-import { PrismaClient, ProductType, ProductStatus, MovementType, CaseMaterial, Strap, Glass, Gender } from '@prisma/client';
-const prisma = new PrismaClient();
+import { ProductType, ProductStatus, MovementType, CaseMaterial, Strap, Glass, Gender } from '@prisma/client';
+import { prisma } from '@/server/db/client';
+import { brands } from '@/constants/constants';
+import { complications } from '@/constants/constants';
 
 async function main() {
     console.log('🌱 Seeding database...');
 
     // --- BRAND ---
-    const rolex = await prisma.brand.upsert({
-        where: { slug: 'rolex' },
-        update: {},
-        create: {
-            name: 'Rolex',
-            slug: 'rolex',
-            country: 'Switzerland',
-            foundedYear: 1905,
-            website: 'https://www.rolex.com',
-            logoUrl: '/uploads/rolex-logo.png',
-            description: 'Luxury Swiss watch manufacturer.',
-        },
-    });
+    await Promise.all(
+        brands.map((b) =>
+            prisma.brand.upsert({
+                where: { slug: b.slug },
+                update: {
+                    name: b.name,
+                    country: b.country,
+                    foundedYear: b.foundedYear,
+                    website: b.website,
+                    description: b.description,
+                    logoUrl: `/uploads/brands/${b.slug}.png`, // đổi theo nơi bạn lưu logo
+                },
+                create: {
+                    name: b.name,
+                    slug: b.slug,
+                    country: b.country,
+                    foundedYear: b.foundedYear,
+                    website: b.website,
+                    description: b.description,
+                    logoUrl: `/uploads/brands/${b.slug}.png`,
+                },
+            })
+        )
+    );
+    await Promise.all(
+        complications.map((name) =>
+            prisma.complication.upsert({
+                where: { name },
+                update: {},
+                create: { name },
+            })
+        )
+    );
 
-    const omega = await prisma.brand.upsert({
-        where: { slug: 'omega' },
-        update: {},
-        create: {
-            name: 'Omega',
-            slug: 'omega',
-            country: 'Switzerland',
-            foundedYear: 1848,
-            website: 'https://www.omegawatches.com',
-            logoUrl: '/uploads/omega-logo.png',
-            description: 'Precision timepieces from Switzerland.',
-        },
-    });
 
-    const cartier = await prisma.brand.upsert({
-        where: { slug: 'cartier' },
-        update: {},
-        create: {
-            name: 'Cartier',
-            slug: 'cartier',
-            country: 'Switzerland',
-            foundedYear: 1848,
-            website: 'https://www.omegawatches.com',
-            logoUrl: '/uploads/omega-logo.png',
-            description: 'Precision timepieces from Switzerland.',
-        },
-    });
     const speedmaster = await prisma.product.upsert({
         where: { slug: 'omega-speedmaster' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
-
             title: 'Omega Speedmaster Moonwatch',
-            slug: 'omega-speedmaster',
             type: ProductType.WATCH,
             status: ProductStatus.ACTIVE,
             brand: { connect: { slug: 'omega' } },
@@ -97,7 +91,6 @@ async function main() {
         update: {},
         create: {
             title: 'Rolex Submariner',
-            slug: 'rolex-submariner',
             type: ProductType.WATCH,
             status: ProductStatus.ACTIVE,
             brand: { connect: { slug: 'rolex' } },
@@ -117,7 +110,7 @@ async function main() {
                     length: 47,
                     thickness: 13.5,
                     complication: {
-                        create: [
+                        connect: [
                             { name: 'Chronograph' },
                             { name: 'Moonphase' },
                         ],
@@ -138,7 +131,140 @@ async function main() {
         },
     },
     );
+    const cartier_santos = await prisma.product.upsert({
+        where: { slug: 'cartier-santos' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'Cartier-santos',
+            type: ProductType.WATCH,
+            status: ProductStatus.HOLD,
+            brand: { connect: { slug: 'cartier' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0002-3934373108306276665.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353299699&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0002-3934373108306276665.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        connect: [
+                            { name: 'Chronograph' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'cartier-chp-1',
+                        name: 'cartier',
+                        price: 55000000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    },
+    );
 
+    const IWC = await prisma.product.upsert({
+        where: { slug: 'iwc-tpc' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'iwc',
+            slug: 'iwc-tpc',
+            type: ProductType.WATCH,
+            status: ProductStatus.SOLD,
+            brand: { connect: { slug: 'iwc' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0002-3934373108306276665.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353299699&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0002-3934373108306276665.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        connect: [
+                            { name: 'Chronograph' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'iwc-tpc-1',
+                        name: 'iwc',
+                        price: 55000000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    },
+    ); const hamilton = await prisma.product.upsert({
+        where: { slug: 'hamilton' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'iwc',
+            slug: 'iwc-tpc',
+            type: ProductType.WATCH,
+            status: ProductStatus.SOLD,
+            brand: { connect: { slug: 'iwc' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0002-3934373108306276665.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353299699&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0002-3934373108306276665.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        connect: [
+                            { name: 'Chronograph' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'iwc-tpc-1',
+                        name: 'iwc',
+                        price: 55000000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    },
+    );
     // --- PRODUCT ---
 
 

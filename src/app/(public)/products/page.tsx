@@ -3,7 +3,7 @@ import { ProductList } from "@/features/catalog/components/product-list";
 import FilterSidebar from "@/features/catalog/components/product-filter";
 import { parseFilters } from "@/features/catalog/server/types";
 import { listBrands } from "@/features/catalog/server/queries/brands";
-import { DEFAULT_PRICE_BOUNDS } from "@/constants/price-bouce";
+import { DEFAULT_PRICE_BOUNDS } from "@/constants/constants";
 
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -33,10 +33,10 @@ export default async function ProductsPage(
 
       <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] gap-8">
         <aside className="hidden md:block">
-          {/*<FilterSidebar
+          <FilterSidebar
             brands={brandOptions}
             priceBounds={DEFAULT_PRICE_BOUNDS}
-          />*/}
+          />
         </aside>
 
         <section className="min-w-0">

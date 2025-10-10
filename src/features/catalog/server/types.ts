@@ -19,6 +19,17 @@ export type Filters = {
     sort?: Sort;
 };
 
+export type ProductCardData = {
+    id: string;
+    slug: string;
+    title: string;
+    brand: string;
+    primaryImageUrl: string;
+    price: number | null;
+    status?: 'sold' | 'on hold' | 'available';
+
+};
+
 export function parseFilters(params: URLSearchParams): Filters {
     const arr = (v?: string | null) =>
         v ? v.split(',').map(s => s.trim()).filter(Boolean) : undefined;
