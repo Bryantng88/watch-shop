@@ -31,7 +31,7 @@ export default async function ProductsPage(
         Vintage Watches
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]  gap-8 items-start">
         <aside className="hidden md:block">
           <FilterSidebar
             brands={brandOptions}
@@ -40,7 +40,7 @@ export default async function ProductsPage(
         </aside>
 
         <section className="min-w-0">
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-5 flex items-center justify-between md:pl-4">
             <p className="text-sm text-gray-500">
               Showing {(page - 1) * pageSize + 1}–
               {Math.min(page * pageSize, total)} of {total} results

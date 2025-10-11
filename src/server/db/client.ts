@@ -1,51 +1,58 @@
-import { PrismaClient } from '@prisma/client'
-import slugify from 'slugify'
+// src/server/db/client.ts
 
+import { PrismaClient } from '@prisma/client';
+import slugify from 'slugify';
 
+function makePrisma() {
+    const base = new PrismaClient({
+        log: ['error', 'warn'], // bật 'query' khi cần debug
+    });
 
-// 👇 Tạo biến toàn cục để tránh multiple instance (khi hot reload trong dev)
-declare global {
-    // eslint-disable-next-line no-var
-    var prisma: PrismaClient | undefined;
+    // Tạo slug auto + đảm bảo unique cho Product khi create / upsert
+    return base.$extends({
+        query: {
+            product: {
+                async create({ args, query }) {
+                    const data = args.data as any;
+
+                    if (data?.title && !data.slug) {
+                        let baseSlug = slugify(String(data.title), { lower: true, strict: true });
+                        let slug = baseSlug;
+                        let i = 1;
+                        while (await base.product.findUnique({ where: { slug } })) {
+                            slug = `${baseSlug}-${i++}`;
+                        }
+                        data.slug = slug;
+                    }
+                    return query(args);
+                },
+
+                async upsert({ args, query }) {
+                    // upsert: chỉ set slug cho nhánh create nếu thiếu
+                    const create = args.create as any;
+                    if (create?.title && !create.slug) {
+                        let baseSlug = slugify(String(create.title), { lower: true, strict: true });
+                        let slug = baseSlug;
+                        let i = 1;
+                        while (await base.product.findUnique({ where: { slug } })) {
+                            slug = `${baseSlug}-${i++}`;
+                        }
+                        create.slug = slug;
+                    }
+                    return query(args);
+                },
+            },
+        },
+    });
 }
 
+declare global {
+    // giữ 1 instance duy nhất trong dev
+    // eslint-disable-next-line no-var
+    var prisma: ReturnType<typeof makePrisma> | undefined;
+}
 
-// 👇 Khởi tạo Prisma client (chỉ 1 instance)
-export const prisma =
-    global.prisma ??
-    new PrismaClient({
-        log: ['error', 'warn'], // thêm 'query' nếu bạn muốn log truy vấn SQL
-    })
+export const prisma = global.prisma ?? makePrisma();
 if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
 
-(prisma as any).$use(async (params: any, next: any) => {
-    // chỉ áp dụng cho bảng Product khi create
-    if (params.model === "Product" && params.action === "create") {
-        const data = params.args.data;
-
-        if (data.title && !data.slug) {
-            let baseSlug = slugify(data.title, { lower: true, strict: true });
-            let slug = baseSlug;
-            let counter = 1;
-
-            // Kiểm tra nếu slug đã tồn tại
-            while (await prisma.product.findUnique({ where: { slug } })) {
-                counter++;
-                slug = `${baseSlug}-${counter}`;
-            }
-
-            data.slug = slug;
-        }
-    }
-
-    return next(params);
-});
-
-
-
-// 👇 Ở môi trường development, giữ client lại trong global scope
-
-
-
-
-export default prisma
+export default prisma;

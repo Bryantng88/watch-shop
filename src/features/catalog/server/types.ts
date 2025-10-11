@@ -26,6 +26,7 @@ export type ProductCardData = {
     brand: string;
     primaryImageUrl: string;
     price: number | null;
+    tag: string;
     status?: 'sold' | 'on hold' | 'available';
 
 };

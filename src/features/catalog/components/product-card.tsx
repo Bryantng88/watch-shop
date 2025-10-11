@@ -14,13 +14,15 @@ export default function ProductCard({ item }: { item: ProductCardData }) {
     const priceNum =
         typeof item.price === 'string' ? Number(item.price) : item.price;
 
-    const isSold = item.status === 'sold';
-    const isHold = item.status === 'on hold';
+    const isSold = item.status === 'SOLD';
+    const isHold = item.status === 'HOLD';
+    const inactive = isSold || isHold
     const img = item.primaryImageUrl ?? undefined;
-    console.log('test nhanh hinh anh ' + img)
-
+    console.log('in status product: ' + item.tag)
     return (
-        <div className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+        <div className={`group relative overflow-hidden rounded-xl border-none transition hover:shadow-md
+       '}
+        `}>
             {/* image */}
             <Link href={`/products/${item.slug ?? toSlug(item.title)}`} className="block">
                 <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
@@ -49,7 +51,7 @@ export default function ProductCard({ item }: { item: ProductCardData }) {
                     {item.title}
                 </h3>
                 {item.tag && (
-                    <p className="mt-1 text-xs text-gray-500">{item.tag}</p>
+                    <p className="mt-1 text-xs text-gray-500">{item.tag} TAG</p>
                 )}
                 <div className="mt-3 text-base font-semibold text-gray-900">
                     {isSold ? 'Contact Us' : fmtVND(priceNum)}

@@ -224,11 +224,10 @@ async function main() {
         where: { slug: 'hamilton' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
-            title: 'iwc',
-            slug: 'iwc-tpc',
+            title: 'Hamilton XYZ',
             type: ProductType.WATCH,
             status: ProductStatus.SOLD,
-            brand: { connect: { slug: 'iwc' } },
+            brand: { connect: { slug: 'hamilton' } },
             primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0002-3934373108306276665.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353299699&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0002-3934373108306276665.png",
             isStockManaged: true,
             maxQtyPerOrder: 1,
@@ -254,8 +253,8 @@ async function main() {
             variants: {
                 create: [
                     {
-                        sku: 'iwc-tpc-1',
-                        name: 'iwc',
+                        sku: 'hamilton-abc-1',
+                        name: 'hamilton',
                         price: 55000000,
                         stockQty: 1,
                         isActive: true,
@@ -265,6 +264,96 @@ async function main() {
         },
     },
     );
+
+    const seiko = await prisma.product.upsert({
+        where: { slug: 'seiko' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'Seiko  XYZ The Most Beautiful',
+            type: ProductType.WATCH,
+            status: ProductStatus.HOLD,
+            brand: { connect: { slug: 'seiko' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0008-155853023759813919.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353355474&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0008-155853023759813919.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        connect: [
+                            { name: 'GMT' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'seiko-tpc-1',
+                        name: 'seiko',
+                        price: 6500000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    },
+    );
+    const glycine = await prisma.product.upsert({
+        where: { slug: 'glycine' },   // cần @unique trên Product.slug (bạn có)
+        update: {},
+        create: {
+            title: 'Seiko  XYZ The Most Beautiful',
+            type: ProductType.WATCH,
+            status: ProductStatus.ACTIVE,
+            brand: { connect: { slug: 'glycine' } },
+            primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0009-251554421167544185%209.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758273138456&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0009-251554421167544185%209.png",
+            isStockManaged: true,
+            maxQtyPerOrder: 1,
+            watchSpec: {
+                create: {
+                    movement: MovementType.AUTOMATIC,
+                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
+                    strap: Strap.LEATHER,
+                    glass: Glass.SAPPHIRE,
+                    year: '2022',
+                    dialColor: 'Black',
+                    gender: Gender.MEN,
+                    width: 39.7,
+                    length: 47,
+                    thickness: 13.5,
+                    complication: {
+                        connect: [
+                            { name: 'GMT' },
+                        ],
+                    },
+                },
+            },
+            variants: {
+                create: [
+                    {
+                        sku: 'glycine-tpc-1',
+                        name: 'glycine',
+                        price: 16500000,
+                        stockQty: 1,
+                        isActive: true,
+                    },
+                ],
+            },
+        },
+    },
+    );
+
     // --- PRODUCT ---
 
 

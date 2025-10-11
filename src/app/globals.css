@@ -73,6 +73,52 @@ body {
 
 }
 
+/* reset và làm mảnh thanh trượt */
+.price-slider {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+  /* gray-200 */
+}
+
+/* loại bỏ màu xanh mặc định */
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #374151;
+  /* gray-700 */
+  cursor: pointer;
+  margin-top: -6px;
+  /* canh giữa track */
+}
+
+.price-slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #374151;
+  border: none;
+  cursor: pointer;
+}
+
+/* track mảnh tinh tế */
+.price-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+}
+
+.price-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+}
+
+
+
 .card-body {
   display: flex;
   text-align: left;

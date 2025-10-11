@@ -65,6 +65,7 @@ model Product {
   status             ProductStatus       @default(ACTIVE)
   primaryImageUrl    String?
   type               ProductType
+  tag                Tag                 @default(PRE_OWNED)
   brandId            String?
   seoTitle           String?
   seoDescription     String?
@@ -518,6 +519,12 @@ enum Category {
   ENTRY
   MID_RANGE
   LUXURY
+}
+
+enum Tag {
+  PRE_OWNED
+  VINTAGE
+  NEW
 }
 
 enum UserRole {
