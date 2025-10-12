@@ -2,6 +2,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '@/server/db/client';
 import type { Filters, Sort } from '../types';
+import { complications } from '@/constants/constants';
 
 const PAGE_SIZE = 12;
 
@@ -11,9 +12,23 @@ export async function listProducts(filters: Filters) {
     const skip = (page - 1) * take;
     const sort = filters.sort ?? 'default';
 
+
+
     /* ----- where cho Product ----- */
     const whereP: Prisma.ProductWhereInput = {
-
+        ...(filters.complications?.length
+            ? {
+                watchSpec: {
+                    is: {
+                        complication: {
+                            some: { id: { in: filters.complications } },
+                            // hoặc nếu bạn lọc theo id:
+                            // some: { id: { in: filters.complications } },
+                        },
+                    },
+                },
+            }
+            : {}),
         // brand
         ...(filters.brands?.length ? { brandId: { in: filters.brands } } : {}),
         // category / type (enum)
@@ -91,6 +106,13 @@ export async function listProducts(filters: Filters) {
             primaryImageUrl: true, // có sẵn rồi
             brand: { select: { id: true, name: true } },
             status: true,
+            watchSpec: {
+                include: {
+                    complication: {
+                        select: { id: true, name: true },
+                    },
+                }
+            },
 
         },
     });
@@ -107,6 +129,7 @@ export async function listProducts(filters: Filters) {
                 title: p.title,
                 slug: p.slug,
                 brand: p.brand?.name,
+                complications: p.watchSpec?.complication,
                 price: p.variants?.[0]?.price ? Number(p.variants[0].price) : null,
                 primaryImageUrl: img,  // <- build URL từ key
                 status: p.status

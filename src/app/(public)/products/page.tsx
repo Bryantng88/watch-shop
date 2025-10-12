@@ -4,6 +4,7 @@ import FilterSidebar from "@/features/catalog/components/product-filter";
 import { parseFilters } from "@/features/catalog/server/types";
 import { listBrands } from "@/features/catalog/server/queries/brands";
 import { DEFAULT_PRICE_BOUNDS } from "@/constants/constants";
+import { listComplications } from "@/features/catalog/server/queries/watch-spec/complications";
 
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -21,6 +22,7 @@ export default async function ProductsPage(
   }
 
   const brandOptions = await listBrands();
+  const complicationOptions = await listComplications();
   const filters = parseFilters(urlParams);
   const page = filters.page ?? 1;
   const { items, total, pageSize } = await listProducts(filters);
@@ -34,6 +36,7 @@ export default async function ProductsPage(
       <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]  gap-8 items-start">
         <aside className="hidden md:block">
           <FilterSidebar
+            complications={complicationOptions}
             brands={brandOptions}
             priceBounds={DEFAULT_PRICE_BOUNDS}
           />

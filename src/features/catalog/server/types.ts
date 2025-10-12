@@ -7,7 +7,7 @@ export type Filters = {
     categories?: string[];  // ProductType[]  (enum -> giá trị enum)
     // TODO: styles?: string[];
     // TODO: complications?: string[];
-
+    complications?: string[];
     // ProductVariant
     priceMin?: number;
     priceMax?: number;
@@ -38,6 +38,7 @@ export function parseFilters(params: URLSearchParams): Filters {
     const n = (v?: string | null) => (v && !isNaN(+v) ? +v : undefined);
 
     return {
+        complications: arr(params.get('complications')),
         brands: arr(params.get('brands')),
         categories: arr(params.get('categories')),
         priceMin: n(params.get('priceMin')),
