@@ -134,6 +134,7 @@ model WatchSpec {
   category        Category[]
   gender          Gender          @default(MEN)
   length          Decimal         @db.Decimal(12, 2)
+  sizeCategory    String?
   width           Decimal         @db.Decimal(12, 2)
   thickness       Decimal         @db.Decimal(12, 2)
   movement        MovementType    @default(AUTOMATIC)

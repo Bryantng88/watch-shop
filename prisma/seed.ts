@@ -1,4 +1,4 @@
-import { ProductType, ProductStatus, MovementType, CaseMaterial, Strap, Glass, Gender } from '@prisma/client';
+import { ProductType, ProductStatus, MovementType, CaseMaterial, Strap, Glass, Gender, CaseType } from '@prisma/client';
 import { prisma } from '@/server/db/client';
 import { brands } from '@/constants/constants';
 import { complications } from '@/constants/constants';
@@ -221,7 +221,7 @@ async function main() {
         },
     },
     ); const hamilton = await prisma.product.upsert({
-        where: { slug: 'hamilton' },   // cần @unique trên Product.slug (bạn có)
+        where: { slug: 'hamilton-xyz' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
             title: 'Hamilton XYZ',
@@ -253,7 +253,7 @@ async function main() {
             variants: {
                 create: [
                     {
-                        sku: 'hamilton-abc-1',
+                        sku: 'hamilton-abcd-1',
                         name: 'hamilton',
                         price: 55000000,
                         stockQty: 1,
@@ -266,7 +266,7 @@ async function main() {
     );
 
     const seiko = await prisma.product.upsert({
-        where: { slug: 'seiko' },   // cần @unique trên Product.slug (bạn có)
+        where: { slug: 'seiko-xyz-the-most-beautiful' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
             title: 'Seiko  XYZ The Most Beautiful',
@@ -298,7 +298,7 @@ async function main() {
             variants: {
                 create: [
                     {
-                        sku: 'seiko-tpc-1',
+                        sku: 'seiko-tpzc-1',
                         name: 'seiko',
                         price: 6500000,
                         stockQty: 1,
@@ -309,14 +309,15 @@ async function main() {
         },
     },
     );
-    const glycine = await prisma.product.upsert({
-        where: { slug: 'glycine' },   // cần @unique trên Product.slug (bạn có)
+
+    const longines = await prisma.product.upsert({
+        where: { slug: 'longines' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
-            title: 'Seiko  XYZ The Most Beautiful',
+            title: 'longines abc',
             type: ProductType.WATCH,
             status: ProductStatus.ACTIVE,
-            brand: { connect: { slug: 'glycine' } },
+            brand: { connect: { slug: 'longines' } },
             primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0009-251554421167544185%209.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758273138456&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0009-251554421167544185%209.png",
             isStockManaged: true,
             maxQtyPerOrder: 1,
@@ -325,12 +326,13 @@ async function main() {
                     movement: MovementType.AUTOMATIC,
                     caseMaterial: CaseMaterial.STAINLESS_STEEL,
                     strap: Strap.LEATHER,
+                    caseType: CaseType.ROUND,
                     glass: Glass.SAPPHIRE,
                     year: '2022',
                     dialColor: 'Black',
                     gender: Gender.MEN,
                     width: 39.7,
-                    length: 47,
+                    length: 35,
                     thickness: 13.5,
                     complication: {
                         connect: [
@@ -342,9 +344,9 @@ async function main() {
             variants: {
                 create: [
                     {
-                        sku: 'glycine-tpc-1',
-                        name: 'glycine',
-                        price: 16500000,
+                        sku: 'longines-tpc-1',
+                        name: 'longines',
+                        price: 18760000,
                         stockQty: 1,
                         isActive: true,
                     },
@@ -353,7 +355,6 @@ async function main() {
         },
     },
     );
-
     // --- PRODUCT ---
 
 

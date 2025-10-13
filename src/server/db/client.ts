@@ -30,6 +30,7 @@ function makePrisma() {
                 async upsert({ args, query }) {
                     // upsert: chỉ set slug cho nhánh create nếu thiếu
                     const create = args.create as any;
+                    console.log("mo dau phan test 1")
                     if (create?.title && !create.slug) {
                         let baseSlug = slugify(String(create.title), { lower: true, strict: true });
                         let slug = baseSlug;
@@ -42,7 +43,53 @@ function makePrisma() {
                     return query(args);
                 },
             },
+            watchSpec: {
+                async create({ args, query }) {
+                    //đầu tiên cho xác định args là dữ liệu chưa dc định nghĩa
+                    const data = args.data as any;
+                    console.log("mo dau phan test")
+
+                    //nếu ko phải là 2 trường cần thao tác thì return luôn
+                    if (!data?.length) {
+                        return query(args)
+                    }
+                    type Rule = { min?: number; max?: number; category: string };
+                    type CaseKey = "round" | "nonRound";
+                    //định nghĩa quy luật về size
+                    const rules = {
+                        round: [
+                            { max: 33, category: "Small" },
+                            { min: 33, max: 39, category: "Medium" },
+                            { min: 39, category: "Large" },
+
+                        ],
+                        nonRound: [
+                            { max: 33, category: "Small" },
+                            { min: 33, max: 35, category: "Medium" },
+                            { min: 35, category: "Large" },
+                        ]
+                    } satisfies Record<CaseKey, ReadonlyArray<Rule>>;
+                    const raw = String(data.caseType).toLowerCase();
+
+                    if (raw in rules) {
+                        const typeRule = rules[raw as CaseKey];
+                        const found = typeRule.find((r) =>
+                            (r.min === undefined || data.length >= r.min) &&
+                            (r.max === undefined || data.length < r.max)
+                        )
+
+                        if (found) {
+                            data.sizeCategory = found.category;
+                            console.log("test nhanh" + found.category)
+                        }
+                    }
+                    return query(args)
+
+                }
+            }
         },
+
+
     });
 }
 
