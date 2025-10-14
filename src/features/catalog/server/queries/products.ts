@@ -12,7 +12,7 @@ export async function listProducts(filters: Filters) {
     const skip = (page - 1) * take;
     const sort = filters.sort ?? 'default';
 
-
+    console.log("in ra size trong query: " + filters.categories, filters.sizes, filters.complications)
 
     /* ----- where cho Product ----- */
     const whereP: Prisma.ProductWhereInput = {
@@ -33,6 +33,9 @@ export async function listProducts(filters: Filters) {
         ...(filters.brands?.length ? { brandId: { in: filters.brands } } : {}),
         // category / type (enum)
         ...(filters.categories?.length ? { type: { in: filters.categories as any } } : {}),
+        ...(filters.sizes?.length
+            ? { watchSpec: { is: { sizeCategory: { in: filters.sizes } } } }
+            : {}),
         // TODO: thêm các where khác trên Product (style, complication, …) nếu có cột/quan hệ
     };
 
@@ -107,14 +110,14 @@ export async function listProducts(filters: Filters) {
             brand: { select: { id: true, name: true } },
             status: true,
             watchSpec: {
-                include: {
-                    complication: {
-                        select: { id: true, name: true },
-                    },
-                }
-            },
+                select: {
+                    sizeCategory: true,                 // 👈 1 giá trị duy nhất
+                    complication: { select: { id: true, name: true } },
 
-        },
+                },
+            },
+        }
+        ,
     });
 
 
@@ -132,10 +135,14 @@ export async function listProducts(filters: Filters) {
                 complications: p.watchSpec?.complication,
                 price: p.variants?.[0]?.price ? Number(p.variants[0].price) : null,
                 primaryImageUrl: img,  // <- build URL từ key
-                status: p.status
+                status: p.status,
+                sizeCategory: p.watchSpec?.sizeCategory
             };
-        })
+        }
+        )
         .sort((a, b) => orderMap.get(a.id)! - orderMap.get(b.id)!);
+
+
 
     return { items: ordered, total, pageSize: take };
 

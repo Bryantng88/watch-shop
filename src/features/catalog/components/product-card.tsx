@@ -13,7 +13,7 @@ const fmtVND = (v?: number | null) =>
 export default function ProductCard({ item }: { item: ProductCardData }) {
     const priceNum =
         typeof item.price === 'string' ? Number(item.price) : item.price;
-
+    console.log("aaaaaaaaaaaaaa" + item.sizeCategory)
     const isSold = item.status === 'SOLD';
     const isHold = item.status === 'HOLD';
     const inactive = isSold || isHold

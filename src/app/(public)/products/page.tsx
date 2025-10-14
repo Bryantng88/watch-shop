@@ -5,6 +5,7 @@ import { parseFilters } from "@/features/catalog/server/types";
 import { listBrands } from "@/features/catalog/server/queries/brands";
 import { DEFAULT_PRICE_BOUNDS } from "@/constants/constants";
 import { listComplications } from "@/features/catalog/server/queries/watch-spec/complications";
+import { listSize } from "@/features/catalog/server/queries/watch-spec/case-size";
 
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -23,15 +24,13 @@ export default async function ProductsPage(
 
   const brandOptions = await listBrands();
   const complicationOptions = await listComplications();
+  const sizeOptions = await listSize();
   const filters = parseFilters(urlParams);
   const page = filters.page ?? 1;
   const { items, total, pageSize } = await listProducts(filters);
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-      <h1 className="mb-6 text-xl font-semibold tracking-tight">
-        Vintage Watches
-      </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]  gap-8 items-start">
         <aside className="hidden md:block">
@@ -39,11 +38,12 @@ export default async function ProductsPage(
             complications={complicationOptions}
             brands={brandOptions}
             priceBounds={DEFAULT_PRICE_BOUNDS}
+            sizes={sizeOptions}
           />
         </aside>
 
         <section className="min-w-0">
-          <div className="mb-5 flex items-center justify-between md:pl-4">
+          <div className="py-4 mb-3 flex items-center justify-between md:pl-4">
             <p className="text-sm text-gray-500">
               Showing {(page - 1) * pageSize + 1}–
               {Math.min(page * pageSize, total)} of {total} results

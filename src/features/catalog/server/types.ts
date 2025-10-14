@@ -17,6 +17,7 @@ export type Filters = {
 
     page?: number;
     sort?: Sort;
+    sizes?: string[]
 };
 
 export type ProductCardData = {
@@ -28,6 +29,7 @@ export type ProductCardData = {
     price: number | null;
     tag: string;
     status?: 'sold' | 'on hold' | 'available';
+    sizeCategory: string;
 
 };
 
@@ -46,5 +48,6 @@ export function parseFilters(params: URLSearchParams): Filters {
         sort: (['default', 'low', 'high'] as Sort[]).includes(params.get('sort') as Sort)
             ? (params.get('sort') as Sort) : 'default',
         page: n(params.get('page')) ?? 1,
+        sizes: arr(params.get('sizes'))
     };
 }

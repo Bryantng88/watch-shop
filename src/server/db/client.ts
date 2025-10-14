@@ -30,7 +30,7 @@ function makePrisma() {
                 async upsert({ args, query }) {
                     // upsert: chỉ set slug cho nhánh create nếu thiếu
                     const create = args.create as any;
-                    console.log("mo dau phan test 1")
+
                     if (create?.title && !create.slug) {
                         let baseSlug = slugify(String(create.title), { lower: true, strict: true });
                         let slug = baseSlug;
@@ -47,7 +47,7 @@ function makePrisma() {
                 async create({ args, query }) {
                     //đầu tiên cho xác định args là dữ liệu chưa dc định nghĩa
                     const data = args.data as any;
-                    console.log("mo dau phan test")
+
 
                     //nếu ko phải là 2 trường cần thao tác thì return luôn
                     if (!data?.length) {
@@ -83,6 +83,7 @@ function makePrisma() {
                             console.log("test nhanh" + found.category)
                         }
                     }
+                    console.log("watch spec create: " + data.sizeCategory)
                     return query(args)
 
                 }

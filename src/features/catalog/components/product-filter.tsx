@@ -3,9 +3,12 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import CollapsibleSection from './collapsible-section';
+import FilterList from './filter-list';
+
 
 type BrandItem = { id: string; name: string; count?: number; productCount?: number };
 type CompItem = { id: string; name: string; count?: number };
+type SizeItem = { id: string; name: string; count?: number; productCount?: number }
 
 function parseSet(params: URLSearchParams, key: string) {
     return new Set((params.get(key)?.split(',') ?? []).filter(Boolean));
@@ -18,6 +21,7 @@ function setQS(params: URLSearchParams, patch: Record<string, string | undefined
 }
 const useDebouncedCallback = (ms = 300) => {
     const t = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (t.current) clearTimeout(t.current); }, []);
     return useCallback((fn: () => void) => {
         if (t.current) clearTimeout(t.current);
         t.current = setTimeout(fn, ms);
@@ -28,10 +32,13 @@ export default function FilterSidebar({
     brands,
     complications,
     priceBounds,
+    sizes,
 }: {
     brands: BrandItem[];
     complications: CompItem[];
     priceBounds: { min: number; max: number };
+    sizes: SizeItem[];
+
 }) {
     const router = useRouter();
     const params = useSearchParams();
@@ -39,33 +46,43 @@ export default function FilterSidebar({
     // active selections
     const activeBrands = parseSet(params, 'brands');
     const activeComps = parseSet(params, 'complications');
-
+    const activeSizes = parseSet(params, 'sizes');
     // price state
     const [min, setMin] = useState(Number(params.get('priceMin')) || priceBounds.min);
     const [max, setMax] = useState(Number(params.get('priceMax')) || priceBounds.max);
     const debounced = useDebouncedCallback(350);
 
     // ----- actions -----
-    const pushPatch = (patch: Record<string, string | undefined>, replace = true) => {
+    const pushPatch = useCallback((patch: Record<string, string | undefined>, replace = true) => {
         const url = setQS(params, patch);
         replace ? router.replace(url) : router.push(url);
-    };
+    }, [params, router]);
 
-    const toggleToken = (setNow: Set<string>, key: string, id: string) => {
+    const toggleToken = useCallback((setNow: Set<string>, key: string, id: string) => {
         const s = new Set(setNow);
         s.has(id) ? s.delete(id) : s.add(id);
         pushPatch({ [key]: [...s].join(',') || undefined });
-    };
+    }, [pushPatch]);
 
-    const clearGroup = (key: 'brands' | 'complications') => pushPatch({ [key]: undefined });
-    const clearAll = () => pushPatch({ brands: undefined, complications: undefined, priceMin: undefined, priceMax: undefined });
-
-    const applyPrice = useCallback((mn?: number, mx?: number) => {
+    const clearGroup = (key: 'brands' | 'complications' | 'sizes') => pushPatch({ [key]: undefined });
+    const clearAll = useCallback(() => {
         pushPatch({
-            priceMin: mn != null ? String(mn) : undefined,
-            priceMax: mx != null ? String(mx) : undefined,
-        }, false);
-    }, [params]);
+            brands: undefined,
+            complications: undefined,
+            sizes: undefined,         // fixed: đúng key
+            priceMin: undefined,
+            priceMax: undefined,
+        });
+    }, [pushPatch]);
+    const applyPrice = useCallback((mn?: number, mx?: number) => {
+        pushPatch(
+            {
+                priceMin: mn != null ? String(mn) : undefined,
+                priceMax: mx != null ? String(mx) : undefined,
+            },
+            false // push vào history
+        );
+    }, [pushPatch]);
 
     // auto-apply price (debounced) khi kéo slider
     useEffect(() => {
@@ -73,11 +90,9 @@ export default function FilterSidebar({
     }, [min, max, debounced, applyPrice]);
 
     // ----- UI helpers -----
+    const VISIBLE = 6;
     const [brandQuery, setBrandQuery] = useState('');
     const [compQuery, setCompQuery] = useState('');
-    const [showMoreBrand, setShowMoreBrand] = useState(false);
-    const [showMoreComp, setShowMoreComp] = useState(false);
-    const VISIBLE = 6;
 
     const filteredBrands = useMemo(
         () => brands.filter(b => b.name.toLowerCase().includes(brandQuery.toLowerCase())),
@@ -87,10 +102,10 @@ export default function FilterSidebar({
         () => complications.filter(c => c.name.toLowerCase().includes(compQuery.toLowerCase())),
         [complications, compQuery]
     );
+    const filteredSizes = sizes;
 
     return (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-2">
-
+        <div className="rounded-xl border-none border-gray-200 bg-white p-4 space-y-2">
             {/* Header + Clear all */}
             <div className="flex items-center justify-between">
                 <h3 className="sr-only">Filters</h3>
@@ -103,7 +118,6 @@ export default function FilterSidebar({
                     </button>
                 )}
             </div>
-
             {/* Price */}
             <section className="space-y-2">
                 <h4 className="font-semibold">Price Range</h4>
@@ -139,46 +153,23 @@ export default function FilterSidebar({
                 title="Brand"
                 countSelected={activeBrands.size}
                 totalCount={brands.length}
-
-                onClear={() => pushPatch({ brands: undefined })} // dùng helper dưới
+                onClear={() => pushPatch({ brands: undefined })}
             >
-                {/* search */}
+                {/* Search + list */}
                 <input
                     value={brandQuery}
                     onChange={(e) => setBrandQuery(e.target.value)}
                     placeholder="Search brand…"
                     className="mb-2 w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                 />
-                <ul className="space-y-2">
-                    {(showMoreBrand ? filteredBrands : filteredBrands.slice(0, 6)).map(b => (
-                        <li key={b.id}>
-                            <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={activeBrands.has(b.id)}
-                                        onChange={() => toggleToken(activeBrands, 'brands', b.id)}
-                                        className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                                    />
-                                    <span>{b.name}</span>
-                                </div>
-
-                                {typeof b.productCount === 'number' && (
-                                    <span className="text-xs text-gray-400">({b.productCount})</span>
-                                )}
-                            </label>
-                        </li>
-                    ))}
-                </ul>
-
-                {filteredBrands.length > 6 && (
-                    <button
-                        onClick={() => setShowMoreBrand(s => !s)}
-                        className="mt-2 text-xs text-gray-600 hover:text-gray-800 underline underline-offset-2"
-                    >
-                        {showMoreBrand ? 'Show less' : `Show more (${filteredBrands.length - 6})`}
-                    </button>
-                )}
+                <FilterList
+                    items={filteredBrands}
+                    active={activeBrands}
+                    onToggle={(id) => toggleToken(activeBrands, 'brands', id)}
+                    countKey="productCount"
+                    withSearch={false}       // đã có ô search riêng ở trên
+                    visible={VISIBLE}
+                />
             </CollapsibleSection>
 
             {/* COMPLICATION */}
@@ -194,32 +185,30 @@ export default function FilterSidebar({
                     placeholder="Search complication…"
                     className="mb-2 w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
                 />
+                <FilterList
+                    items={filteredComps}
+                    active={activeComps}
+                    onToggle={(id) => toggleToken(activeComps, 'complications', id)}
+                    countKey="count"
+                    withSearch={false}       /* ô search đã tách riêng */
+                    visible={VISIBLE}
+                />
+            </CollapsibleSection>
 
-                <ul className="space-y-2">
-                    {(showMoreComp ? filteredComps : filteredComps.slice(0, 6)).map(c => (
-                        <li key={c.id}>
-                            <label className="flex cursor-pointer items-center gap-2 text-sm">
-                                <input
-                                    type="checkbox"
-                                    checked={activeComps.has(c.id)}
-                                    onChange={() => toggleToken(activeComps, 'complications', c.id)}
-                                    className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                                />
-                                <span className="flex-1">{c.name}</span>
-                                {typeof c.count === 'number' && <span className="text-xs text-gray-400">(({c.count}))</span>}
-                            </label>
-                        </li>
-                    ))}
-                </ul>
-
-                {filteredComps.length > 6 && (
-                    <button
-                        onClick={() => setShowMoreComp(s => !s)}
-                        className="mt-2 text-xs text-gray-600 hover:text-gray-800 underline underline-offset-2"
-                    >
-                        {showMoreComp ? 'Show less' : `Show more (${filteredComps.length - 6})`}
-                    </button>
-                )}
+            <CollapsibleSection
+                title="Size"
+                countSelected={activeSizes.size}
+                totalCount={sizes.length}
+                onClear={() => pushPatch({ sizes: undefined })}
+            >
+                <FilterList
+                    items={filteredSizes}
+                    active={activeSizes}
+                    onToggle={(id) => toggleToken(activeSizes, 'sizes', id)}
+                    countKey="productCount"
+                    withSearch={false}       // yêu cầu: Size không có search input
+                    visible={VISIBLE}
+                />
             </CollapsibleSection>
 
         </div>

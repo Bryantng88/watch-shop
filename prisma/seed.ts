@@ -310,37 +310,19 @@ async function main() {
     },
     );
 
+
     const longines = await prisma.product.upsert({
         where: { slug: 'longines' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
-            title: 'longines abc',
+            title: 'longines',
             type: ProductType.WATCH,
             status: ProductStatus.ACTIVE,
             brand: { connect: { slug: 'longines' } },
             primaryImageUrl: "http://longnd.myqnapcloud.com:8253/share.cgi/0009-251554421167544185%209.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758273138456&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0009-251554421167544185%209.png",
             isStockManaged: true,
             maxQtyPerOrder: 1,
-            watchSpec: {
-                create: {
-                    movement: MovementType.AUTOMATIC,
-                    caseMaterial: CaseMaterial.STAINLESS_STEEL,
-                    strap: Strap.LEATHER,
-                    caseType: CaseType.ROUND,
-                    glass: Glass.SAPPHIRE,
-                    year: '2022',
-                    dialColor: 'Black',
-                    gender: Gender.MEN,
-                    width: 39.7,
-                    length: 35,
-                    thickness: 13.5,
-                    complication: {
-                        connect: [
-                            { name: 'GMT' },
-                        ],
-                    },
-                },
-            },
+
             variants: {
                 create: [
                     {
@@ -353,8 +335,37 @@ async function main() {
                 ],
             },
         },
-    },
-    );
+        select: { id: true },
+    });
+
+    await prisma.watchSpec.create({
+        data: {
+
+            product: { connect: { slug: 'longines' } },
+            movement: MovementType.AUTOMATIC,
+            caseMaterial: CaseMaterial.STAINLESS_STEEL,
+            strap: Strap.LEATHER,
+            glass: Glass.SAPPHIRE,
+            caseType: CaseType.ROUND,
+            year: '2022',
+            dialColor: 'Black',
+            gender: Gender.MEN,
+            width: 39.7,
+            length: 35,
+            thickness: 13.5,
+            complication: {
+                connect: [
+                    { name: 'GMT' },
+                ],
+
+            },
+        },
+
+    })
+
+
+
+
     // --- PRODUCT ---
 
 
