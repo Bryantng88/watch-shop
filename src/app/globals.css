@@ -74,48 +74,49 @@ body {
 }
 
 /* reset và làm mảnh thanh trượt */
+/* Chỉ bắt sự kiện trên thumb, tránh input trên che input dưới */
 .price-slider {
-  height: 4px;
-  border-radius: 9999px;
-  background: #e5e7eb;
-  /* gray-200 */
-}
-
-/* loại bỏ màu xanh mặc định */
-.price-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
+  background: transparent;
+  outline: none;
+  pointer-events: none;
+  /* chỉ thumb nhận event */
+}
+
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
   background: #374151;
-  /* gray-700 */
-  cursor: pointer;
-  margin-top: -6px;
-  /* canh giữa track */
+  border: none;
+  margin-top: -5px;
+  pointer-events: auto;
+  /* cho phép kéo */
+  cursor: grab;
+}
+
+.price-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
 }
 
 .price-slider::-moz-range-thumb {
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
   background: #374151;
   border: none;
-  cursor: pointer;
+  pointer-events: auto;
+  cursor: grab;
 }
 
-/* track mảnh tinh tế */
-.price-slider::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 9999px;
-  background: #e5e7eb;
-}
-
+.price-slider::-webkit-slider-runnable-track,
 .price-slider::-moz-range-track {
-  height: 4px;
-  border-radius: 9999px;
-  background: #e5e7eb;
+  background: transparent;
+  height: 0;
 }
+
 
 
 

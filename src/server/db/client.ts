@@ -83,7 +83,6 @@ function makePrisma() {
                             console.log("test nhanh" + found.category)
                         }
                     }
-                    console.log("watch spec create: " + data.sizeCategory)
                     return query(args)
 
                 }

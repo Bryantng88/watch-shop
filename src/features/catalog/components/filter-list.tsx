@@ -2,30 +2,49 @@
 
 import { useMemo, useState, useEffect } from 'react';
 
-type BaseItem = { id: string; name: string } & Record<string, any>;
+type BaseItem = Record<string, any>;
+
+type StringKeyOf<T> = {
+    [K in keyof T]-?: T[K] extends string ? K : never
+}[keyof T];
 
 type Props<T extends BaseItem> = {
     items: T[];
     active: Set<string>;
-    onToggle: (id: string) => void;
+    onToggle: (key: string) => void;
     /** Khóa để hiển thị số đếm, ví dụ 'count' | 'productCount' */
     countKey?: keyof T;
     /** Bật/tắt ô search */
+    keyField?: StringKeyOf<T>;
+    /** Field hiển thị label (vd 'name' | 'sizeCategory'), mặc định 'name' */
+    labelField?: StringKeyOf<T>;
+    /** Field dùng để search (mặc định = labelField) */
+    searchField?: StringKeyOf<T>;
+
     withSearch?: boolean;
     placeholder?: string;
     /** Số item hiển thị trước khi show-more */
     visible?: number;
-};
-
+    alwaysOpen?: boolean;
+}
 export default function FilterList<T extends BaseItem>({
     items,
     active,
     onToggle,
     countKey,
+    keyField,
+    labelField,
+    searchField,
     withSearch = true,
     placeholder = 'Search…',
     visible = 6,
+    alwaysOpen = true,
+
 }: Props<T>) {
+    const kField = (keyField ?? ('id' as StringKeyOf<T>));
+    const lField = (labelField ?? ('name' as StringKeyOf<T>));
+    const sField = (searchField ?? lField);
+
     const [query, setQuery] = useState('');
     const [showMore, setShowMore] = useState(false);
 
@@ -37,8 +56,11 @@ export default function FilterList<T extends BaseItem>({
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!withSearch || !q) return items;
-        return items.filter((it) => it.name.toLowerCase().includes(q));
-    }, [items, query, withSearch]);
+        return items.filter((it) => {
+            const val = it[sField];
+            return typeof val === 'string' && val.toLowerCase().includes(q);
+        })
+    }, [items, query, withSearch, sField]);
 
     const list = showMore ? filtered : filtered.slice(0, visible);
 
@@ -54,23 +76,25 @@ export default function FilterList<T extends BaseItem>({
             )}
 
             <ul className="space-y-2">
-                {list.map((it) => {
+                {list.map((it, idx) => {
+                    const keyVal = String(it[kField]);      // khóa toggle (id hoặc name)
+                    const label = String(it[lField] ?? ''); // text hiển thị
                     const count =
                         countKey && typeof it[countKey] === 'number'
                             ? (it[countKey] as number)
                             : undefined;
-
+                    const reactKey = keyVal || `row-${idx}`;
                     return (
-                        <li key={it.id}>
+                        <li key={reactKey}>
                             <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
-                                        checked={active.has(it.id)}
-                                        onChange={() => onToggle(it.id)}
-                                        className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                        checked={active.has(keyVal)}
+                                        onChange={() => onToggle(keyVal)}
+                                        className="h-3 w-3 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                                     />
-                                    <span>{it.name}</span>
+                                    <span>{label}</span>
                                 </div>
                                 {typeof count === 'number' && (
                                     <span className="text-xs text-gray-400">({count})</span>

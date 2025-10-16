@@ -5,6 +5,9 @@ export type BrandOption = { id: string; name: string };
 
 export async function listBrands(): Promise<BrandOption[]> {
     const brands = await prisma.brand.findMany({
+        where: {
+            products: { some: {} }
+        },
         select: {
             name: true,
             id: true,

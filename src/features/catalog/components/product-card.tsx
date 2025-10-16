@@ -18,7 +18,6 @@ export default function ProductCard({ item }: { item: ProductCardData }) {
     const isHold = item.status === 'HOLD';
     const inactive = isSold || isHold
     const img = item.primaryImageUrl ?? undefined;
-    console.log('in status product: ' + item.tag)
     return (
         <div className={`group relative overflow-hidden rounded-xl border-none transition hover:shadow-md
        '}
@@ -46,15 +45,16 @@ export default function ProductCard({ item }: { item: ProductCardData }) {
             </Link>
 
             {/* body */}
-            <div className="p-4">
-                <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-gray-900">
+            <div className="mt-3 py-3">
+                <h3 className="text-[13px] text-gray-400 font-medium leading-snug line-clamp-2">
                     {item.title}
                 </h3>
-                {item.tag && (
-                    <p className="mt-1 text-xs text-gray-500">{item.tag} TAG</p>
-                )}
-                <div className="mt-3 text-base font-semibold text-gray-900">
-                    {isSold ? 'Contact Us' : fmtVND(priceNum)}
+                <div className="mt-0.5 text-[13px] font-semibold text-gray-900 tracking-tight">
+                    {isSold ? (
+                        <span className="italic text-gray-900">Contact Us</span>
+                    ) : (
+                        <span>{fmtVND(priceNum)}</span>
+                    )}
                 </div>
             </div>
         </div>

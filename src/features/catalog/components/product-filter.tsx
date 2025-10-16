@@ -4,10 +4,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import CollapsibleSection from './collapsible-section';
 import FilterList from './filter-list';
-
+import * as Slider from '@radix-ui/react-slider';
 
 type BrandItem = { id: string; name: string; count?: number; productCount?: number };
-type CompItem = { id: string; name: string; count?: number };
+type CompItem = { id: string; name: string; count?: number, productCount?: number };
 type SizeItem = { id: string; name: string; count?: number; productCount?: number }
 
 function parseSet(params: URLSearchParams, key: string) {
@@ -40,16 +40,28 @@ export default function FilterSidebar({
     sizes: SizeItem[];
 
 }) {
+
+
+
+
     const router = useRouter();
     const params = useSearchParams();
 
+    const STEP = 500_000;
+    const qMin = Number(params.get('priceMin'));
+    const qMax = Number(params.get('priceMax'));
+    const [range, setRange] = useState<[number, number]>([
+        Number.isFinite(qMin) ? qMin : priceBounds.min,
+        Number.isFinite(qMax) ? qMax : priceBounds.max,
+    ]);
+    const [min, max] = range; // <— dùng cho UI hiển thị
     // active selections
     const activeBrands = parseSet(params, 'brands');
     const activeComps = parseSet(params, 'complications');
     const activeSizes = parseSet(params, 'sizes');
     // price state
-    const [min, setMin] = useState(Number(params.get('priceMin')) || priceBounds.min);
-    const [max, setMax] = useState(Number(params.get('priceMax')) || priceBounds.max);
+    //const [min, setMin] = useState(Number(params.get('priceMin')) || priceBounds.min);
+    //const [max, setMax] = useState(Number(params.get('priceMax')) || priceBounds.max);
     const debounced = useDebouncedCallback(350);
 
     // ----- actions -----
@@ -121,24 +133,41 @@ export default function FilterSidebar({
             {/* Price */}
             <section className="space-y-2">
                 <h4 className="font-semibold">Price Range</h4>
-                <input
-                    type="range"
+                <Slider.Root
+                    value={range}
+                    onValueChange={([a, b]) => {
+                        const lo = Math.max(priceBounds.min, Math.min(a, b));
+                        const hi = Math.min(priceBounds.max, Math.max(a, b));
+                        // bắt buộc khoảng cách tối thiểu 1 STEP
+                        const gap = Math.max(hi - lo, STEP);
+                        setRange([hi - gap, hi]);
+                    }}
                     min={priceBounds.min}
                     max={priceBounds.max}
-                    step={500000}
-                    value={max}
-                    onChange={(e) => setMax(Number(e.target.value))}
-                    className="price-slider w-full appearance-none cursor-pointer"
-                    aria-label="Maximum price"
-                />
+                    step={STEP}
+                    // nếu dùng Radix ≥v1, có prop:
+                    // minStepsBetweenThumbs={1} // = 1 * STEP
+                    className="relative flex items-center w-full h-5"
+                >
+                    <Slider.Track className="bg-gray-200 relative grow rounded-full h-[4px]">
+                        <Slider.Range className="absolute bg-gray-500 rounded-full h-full" />
+                    </Slider.Track>
+                    <Slider.Thumb className="block w-3 h-3 bg-gray-700 rounded-full cursor-grab" />
+                    <Slider.Thumb className="block w-3 h-3 bg-gray-700 rounded-full cursor-grab" />
+                </Slider.Root>
+
                 <div className="flex items-center justify-between gap-3">
                     <span className="text-xs text-gray-500">
                         {min.toLocaleString('vi-VN')} VND — {max.toLocaleString('vi-VN')} VND
                     </span>
-                    {/* nút reset price */}
+
                     {(min !== priceBounds.min || max !== priceBounds.max) && (
                         <button
-                            onClick={() => { setMin(priceBounds.min); setMax(priceBounds.max); startTransition(() => applyPrice(priceBounds.min, priceBounds.max)); }}
+                            onClick={() => {
+                                const next: [number, number] = [priceBounds.min, priceBounds.max];
+                                setRange(next);
+                                startTransition(() => applyPrice(...next));
+                            }}
                             className="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2"
                         >
                             Reset
@@ -189,7 +218,7 @@ export default function FilterSidebar({
                     items={filteredComps}
                     active={activeComps}
                     onToggle={(id) => toggleToken(activeComps, 'complications', id)}
-                    countKey="count"
+                    countKey="productCount"
                     withSearch={false}       /* ô search đã tách riêng */
                     visible={VISIBLE}
                 />

@@ -11,33 +11,36 @@ export async function listProducts(filters: Filters) {
     const take = PAGE_SIZE;
     const skip = (page - 1) * take;
     const sort = filters.sort ?? 'default';
+    const compIds = filters.complications ?? [];
+    const sizeIds = filters.sizes ?? [];
+    const watchSpecAND: Prisma.WatchSpecWhereInput[] = [];
 
-    console.log("in ra size trong query: " + filters.categories, filters.sizes, filters.complications)
+    // Size (nếu có)
+    if (sizeIds.length) {
+        watchSpecAND.push({ sizeCategory: { in: sizeIds } });
+    }
 
+    // Complication
+    if (compIds.length) {
+
+        // AND (mặc định): phải có đủ tất cả comp đã tick
+        watchSpecAND.push(
+            ...compIds.map(id => ({ complication: { some: { id } } }))
+        );
+
+    }
     /* ----- where cho Product ----- */
     const whereP: Prisma.ProductWhereInput = {
-        ...(filters.complications?.length
-            ? {
-                watchSpec: {
-                    is: {
-                        complication: {
-                            some: { id: { in: filters.complications } },
-                            // hoặc nếu bạn lọc theo id:
-                            // some: { id: { in: filters.complications } },
-                        },
-                    },
-                },
-            }
-            : {}),
+
         // brand
         ...(filters.brands?.length ? { brandId: { in: filters.brands } } : {}),
         // category / type (enum)
         ...(filters.categories?.length ? { type: { in: filters.categories as any } } : {}),
-        ...(filters.sizes?.length
-            ? { watchSpec: { is: { sizeCategory: { in: filters.sizes } } } }
-            : {}),
-        // TODO: thêm các where khác trên Product (style, complication, …) nếu có cột/quan hệ
+        ...(watchSpecAND.length ? { watchSpec: { is: { AND: watchSpecAND } } } : {}),
     };
+
+    // TODO: thêm các where khác trên Product (style, complication, …) nếu có cột/quan hệ
+
 
     /* ----- where cho ProductVariant (giá, biến thể…) ----- */
     const wherePV: Prisma.ProductVariantWhereInput = {
