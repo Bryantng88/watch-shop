@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ComplicationWhereInputObjectSchema as ComplicationWhereInputObjectSchema } from './objects/ComplicationWhereInput.schema';
+import { ComplicationOrderByWithAggregationInputObjectSchema as ComplicationOrderByWithAggregationInputObjectSchema } from './objects/ComplicationOrderByWithAggregationInput.schema';
+import { ComplicationScalarWhereWithAggregatesInputObjectSchema as ComplicationScalarWhereWithAggregatesInputObjectSchema } from './objects/ComplicationScalarWhereWithAggregatesInput.schema';
+import { ComplicationScalarFieldEnumSchema } from './enums/ComplicationScalarFieldEnum.schema';
+import { ComplicationCountAggregateInputObjectSchema as ComplicationCountAggregateInputObjectSchema } from './objects/ComplicationCountAggregateInput.schema';
+import { ComplicationMinAggregateInputObjectSchema as ComplicationMinAggregateInputObjectSchema } from './objects/ComplicationMinAggregateInput.schema';
+import { ComplicationMaxAggregateInputObjectSchema as ComplicationMaxAggregateInputObjectSchema } from './objects/ComplicationMaxAggregateInput.schema';
+
+export const ComplicationGroupBySchema: z.ZodType<Prisma.ComplicationGroupByArgs> = z.object({ where: ComplicationWhereInputObjectSchema.optional(), orderBy: z.union([ComplicationOrderByWithAggregationInputObjectSchema, ComplicationOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ComplicationScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ComplicationScalarFieldEnumSchema), _count: z.union([ z.literal(true), ComplicationCountAggregateInputObjectSchema ]).optional(), _min: ComplicationMinAggregateInputObjectSchema.optional(), _max: ComplicationMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ComplicationGroupByArgs>;
+
+export const ComplicationGroupByZodSchema = z.object({ where: ComplicationWhereInputObjectSchema.optional(), orderBy: z.union([ComplicationOrderByWithAggregationInputObjectSchema, ComplicationOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ComplicationScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ComplicationScalarFieldEnumSchema), _count: z.union([ z.literal(true), ComplicationCountAggregateInputObjectSchema ]).optional(), _min: ComplicationMinAggregateInputObjectSchema.optional(), _max: ComplicationMaxAggregateInputObjectSchema.optional() }).strict();

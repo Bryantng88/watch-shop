@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './objects/ServiceRequestWhereInput.schema';
+import { ServiceRequestOrderByWithAggregationInputObjectSchema as ServiceRequestOrderByWithAggregationInputObjectSchema } from './objects/ServiceRequestOrderByWithAggregationInput.schema';
+import { ServiceRequestScalarWhereWithAggregatesInputObjectSchema as ServiceRequestScalarWhereWithAggregatesInputObjectSchema } from './objects/ServiceRequestScalarWhereWithAggregatesInput.schema';
+import { ServiceRequestScalarFieldEnumSchema } from './enums/ServiceRequestScalarFieldEnum.schema';
+import { ServiceRequestCountAggregateInputObjectSchema as ServiceRequestCountAggregateInputObjectSchema } from './objects/ServiceRequestCountAggregateInput.schema';
+import { ServiceRequestMinAggregateInputObjectSchema as ServiceRequestMinAggregateInputObjectSchema } from './objects/ServiceRequestMinAggregateInput.schema';
+import { ServiceRequestMaxAggregateInputObjectSchema as ServiceRequestMaxAggregateInputObjectSchema } from './objects/ServiceRequestMaxAggregateInput.schema';
+
+export const ServiceRequestGroupBySchema: z.ZodType<Prisma.ServiceRequestGroupByArgs> = z.object({ where: ServiceRequestWhereInputObjectSchema.optional(), orderBy: z.union([ServiceRequestOrderByWithAggregationInputObjectSchema, ServiceRequestOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ServiceRequestScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ServiceRequestScalarFieldEnumSchema), _count: z.union([ z.literal(true), ServiceRequestCountAggregateInputObjectSchema ]).optional(), _min: ServiceRequestMinAggregateInputObjectSchema.optional(), _max: ServiceRequestMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ServiceRequestGroupByArgs>;
+
+export const ServiceRequestGroupByZodSchema = z.object({ where: ServiceRequestWhereInputObjectSchema.optional(), orderBy: z.union([ServiceRequestOrderByWithAggregationInputObjectSchema, ServiceRequestOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ServiceRequestScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ServiceRequestScalarFieldEnumSchema), _count: z.union([ z.literal(true), ServiceRequestCountAggregateInputObjectSchema ]).optional(), _min: ServiceRequestMinAggregateInputObjectSchema.optional(), _max: ServiceRequestMaxAggregateInputObjectSchema.optional() }).strict();

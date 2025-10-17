@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PartVariantSpecOrderByWithRelationInputObjectSchema as PartVariantSpecOrderByWithRelationInputObjectSchema } from './objects/PartVariantSpecOrderByWithRelationInput.schema';
+import { PartVariantSpecWhereInputObjectSchema as PartVariantSpecWhereInputObjectSchema } from './objects/PartVariantSpecWhereInput.schema';
+import { PartVariantSpecWhereUniqueInputObjectSchema as PartVariantSpecWhereUniqueInputObjectSchema } from './objects/PartVariantSpecWhereUniqueInput.schema';
+import { PartVariantSpecCountAggregateInputObjectSchema as PartVariantSpecCountAggregateInputObjectSchema } from './objects/PartVariantSpecCountAggregateInput.schema';
+import { PartVariantSpecMinAggregateInputObjectSchema as PartVariantSpecMinAggregateInputObjectSchema } from './objects/PartVariantSpecMinAggregateInput.schema';
+import { PartVariantSpecMaxAggregateInputObjectSchema as PartVariantSpecMaxAggregateInputObjectSchema } from './objects/PartVariantSpecMaxAggregateInput.schema';
+
+export const PartVariantSpecAggregateSchema: z.ZodType<Prisma.PartVariantSpecAggregateArgs> = z.object({ orderBy: z.union([PartVariantSpecOrderByWithRelationInputObjectSchema, PartVariantSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: PartVariantSpecWhereInputObjectSchema.optional(), cursor: PartVariantSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PartVariantSpecCountAggregateInputObjectSchema ]).optional(), _min: PartVariantSpecMinAggregateInputObjectSchema.optional(), _max: PartVariantSpecMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.PartVariantSpecAggregateArgs>;
+
+export const PartVariantSpecAggregateZodSchema = z.object({ orderBy: z.union([PartVariantSpecOrderByWithRelationInputObjectSchema, PartVariantSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: PartVariantSpecWhereInputObjectSchema.optional(), cursor: PartVariantSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PartVariantSpecCountAggregateInputObjectSchema ]).optional(), _min: PartVariantSpecMinAggregateInputObjectSchema.optional(), _max: PartVariantSpecMaxAggregateInputObjectSchema.optional() }).strict();

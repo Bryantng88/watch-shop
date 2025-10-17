@@ -5,7 +5,7 @@ import { products } from "../../../data/products";
 import PromoBanner from "@/components/product/PromoBanner/PromoBanner";
 
 import Link from "next/link";
-import ProductCard from "@/features/catalog/components/product-card";;
+import ProductCard from "@/features/catalog/components/gallery/product-card";;
 
 // helper slugify giống bên trang detail
 function slugify(input: string) {

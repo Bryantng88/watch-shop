@@ -1,11 +1,11 @@
-import { listProducts } from "@/features/catalog/server/queries/products";
-import { ProductList } from "@/features/catalog/components/product-list";
-import FilterSidebar from "@/features/catalog/components/product-filter";
-import { parseFilters } from "@/features/catalog/server/types";
-import { listBrands } from "@/features/catalog/server/queries/brands";
+import { listProducts } from "@/features/catalog/server/product-list.repo";
+import { ProductList } from "@/features/catalog/components/gallery/product-list";
+import FilterSidebar from "@/features/catalog/components/filter/product-filter";
+import { parseFilters } from "@/features/catalog/types";
+import { listBrands } from "@/features/catalog/server/brands.repo";
 import { DEFAULT_PRICE_BOUNDS } from "@/constants/constants";
-import { listComplications } from "@/features/catalog/server/queries/watch-spec/complications";
-import { listSize } from "@/features/catalog/server/queries/watch-spec/case-size";
+import { listComplications } from "@/features/catalog/server/complications.repo";
+import { listSize } from "@/features/catalog/server/case-size.repo";
 
 
 type SearchParams = Record<string, string | string[] | undefined>;

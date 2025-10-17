@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MaintenanceRecordOrderByWithRelationInputObjectSchema as MaintenanceRecordOrderByWithRelationInputObjectSchema } from './objects/MaintenanceRecordOrderByWithRelationInput.schema';
+import { MaintenanceRecordWhereInputObjectSchema as MaintenanceRecordWhereInputObjectSchema } from './objects/MaintenanceRecordWhereInput.schema';
+import { MaintenanceRecordWhereUniqueInputObjectSchema as MaintenanceRecordWhereUniqueInputObjectSchema } from './objects/MaintenanceRecordWhereUniqueInput.schema';
+import { MaintenanceRecordCountAggregateInputObjectSchema as MaintenanceRecordCountAggregateInputObjectSchema } from './objects/MaintenanceRecordCountAggregateInput.schema';
+
+export const MaintenanceRecordCountSchema: z.ZodType<Prisma.MaintenanceRecordCountArgs> = z.object({ orderBy: z.union([MaintenanceRecordOrderByWithRelationInputObjectSchema, MaintenanceRecordOrderByWithRelationInputObjectSchema.array()]).optional(), where: MaintenanceRecordWhereInputObjectSchema.optional(), cursor: MaintenanceRecordWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), MaintenanceRecordCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.MaintenanceRecordCountArgs>;
+
+export const MaintenanceRecordCountZodSchema = z.object({ orderBy: z.union([MaintenanceRecordOrderByWithRelationInputObjectSchema, MaintenanceRecordOrderByWithRelationInputObjectSchema.array()]).optional(), where: MaintenanceRecordWhereInputObjectSchema.optional(), cursor: MaintenanceRecordWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), MaintenanceRecordCountAggregateInputObjectSchema ]).optional() }).strict();

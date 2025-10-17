@@ -1,70 +1,161 @@
-import ProductGallery from '@/features/catalog/components/product-gallery';
-import ProductCard from '@/features/catalog/components/product-card';
-import { getProductBySlug } from '@/features/product-detail/server/queries/get-product-by-slug';
-export const revalidate = 60; // ISR tùy chọn
-import { notFound } from 'next/navigation';
-import { getRelatedProducts } from '@/features/product-detail/server/queries/get-product-by-slug';
+// app/products/[slug]/page.tsx
 
-export default async function ProductDetailPage({
-    params,
-}: { params: { slug: string } }) {            // <-- không phải Promise
-    const { slug } = params;
+import ProductGallery from "../../../../features/catalog/components/gallery/product-gallery";
+import styles from "./detail.module.css";
+import Link from "next/link";
+import ProductCard from "@/features/catalog/components/gallery/product-card";
+// dùng đúng đường dẫn data của bạn:
 
-    const item = await getProductBySlug(slug);
-    if (!item) return notFound();
+import { Product } from "@/features/catalog/types";
 
-    const related = await getRelatedProducts(item.id, item.brand?.id);
+import AddToCart from "../../../../features/cart/component/add-to-cart-button";
+import { listProducts } from "@/features/catalog/server/product-list.repo";
 
-    const price = item.variants[0]?.price
-        ? Intl.NumberFormat('vi-VN').format(Number(item.variants[0].price)) + ' VND'
-        : 'Contact Us';
+function slugify(input: string) {
+    return input
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+}
 
-    const gallery = [item.primaryImageUrl].filter(Boolean) as string[];
+const products = await listProducts;
+
+export default async function ProductDetailPage({ params, }: { params: Promise<{ slug: string }> }) {
+    {/*gọi 1 hàm trả về promise */ }
+    const { slug } = await params;
+
+    const item = products.find((p) => slugify(p.title) === slug) as Product | undefined;
+
+    const cart = []
+
+    if (!item) {
+        return (
+            <main className="container py-5">
+                <p>Không tìm thấy sản phẩm.</p>
+                <Link href="/products" className="btn btn-dark mt-2">
+                    Quay về danh sách
+                </Link>
+            </main>
+        );
+    }
+    const gallery = [
+        item.img,
+        "http://longnd.myqnapcloud.com:8253/share.cgi/0016-3934373111160883639%2016.png?ssid=058cde3a6b5b4c318f17d74c58ff51d0&openfolder=normal&ep=&_dc=1758353027270&fid=058cde3a6b5b4c318f17d74c58ff51d0&filename=0016-3934373111160883639%2016.png",
+    ]
+
+    const isSold = item?.status === "sold";
+    const isHold = item?.status === "on hold";
+
+
+    const priceText =
+        isSold ? "Contact Us"
+            : Intl.NumberFormat("en-US").format(Number(item?.price ?? 0)) + " VND";
+
+    // Related (lấy đại 3 món khác brand/tựa)
+    const related = products
+        .filter((p) => p.title !== item.title)
+        .slice(0, 3);
 
     return (
-        <main className="container py-6">
-            {/* Gallery */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <main className={`${styles.wrap} container`}>
+            {/* Breadcrumb */}
+            <nav className={styles.breadcrumb}>
+                <Link href="/">HOME</Link>
+                <span>/</span>
+                <Link href="/products">VINTAGE WATCHES</Link>
+                <span>/</span>
+                <span className={styles.current}>{item.title}</span>
+            </nav>
+
+            <section className={styles.top}>
+                {/* Gallery */}
                 <ProductGallery
                     images={gallery}
                     title={item.title}
                     status={item.status}
-                    classes={{}}
+                    classes={{
+                        gallery: styles.gallery,
+                        media: styles.media,
+                        heroImg: styles.heroImg,
+                        thumbs: styles.thumbs,
+                        thumbBtn: styles.thumbBtn,
+                        active: styles.active,
+                        banner: styles.banner,
+                        sold: styles.sold,
+                        hold: styles.hold,
+                    }}
                 />
 
                 {/* Summary */}
-                <div>
-                    <h1 className="text-2xl font-semibold">{item.title}</h1>
-                    <div className="mt-2 text-sm text-gray-600">{item.brand?.name ?? '—'}</div>
-                    <div className="mt-3 text-xl font-bold">{price}</div>
+                <div className={styles.summary}>
+                    <h1 className={styles.title}>{item.title}</h1>
 
-                    <details className="mt-6">
-                        <summary className="font-medium">Specifications</summary>
-                        <ul className="mt-2 text-sm grid grid-cols-1 gap-1">
-                            <li>Size: {item.watchSpec?.sizeCategory ?? '—'}</li>
-                            <li>Material: {item.watchSpec?.caseMaterial ?? '—'}</li>
-                            <li>Dial: {item.watchSpec?.dialColor ?? '—'}</li>
-                            <li>Strap: {item.watchSpec?.strap ?? '—'}</li>
-                            <li>Year: {item.watchSpec?.year ?? '—'}</li>
-                            <li>
-                                Complications: {item.watchSpec?.complication?.map(c => c.name).join(', ') || '—'}
-                            </li>
+                    <div className={styles.metaRow}>
+                        <span className={styles.brand}>{item.brand ?? "—"}</span>
+                        {isHold && <span className={`${styles.tag} ${styles.tagHold}`}>On hold</span>}
+                        {isSold && <span className={`${styles.tag} ${styles.tagSold}`}>Sold</span>}
+                        {!isHold && !isSold && <span className={`${styles.tag}`}>Pre-owned</span>}
+                    </div>
+
+                    <div className={styles.price}>{priceText}</div>
+
+                    <div className={styles.actions}>
+                        {isSold ? (
+                            <a href="#contact" className={styles.btnOutline}>Contact us</a>
+                        ) : (
+                            <>
+                                <AddToCart product={item} />
+                                <a href="#contact" className={styles.btnOutline}>Contact us</a>
+                            </>
+                        )}
+                    </div>
+
+                    <p className={styles.lead}>
+                        Carefully curated vintage timepiece. Fully inspected and ready to wear.
+                    </p>
+
+                    {/* Specs */}
+                    <details className={styles.block} open>
+                        <summary className={styles.blockTitle}>Specifications</summary>
+                        <ul className={styles.specList}>
+                            <li><span>Brand</span><b>{item.brand ?? "—"}</b></li>
+                            <li><span>Case size</span><b>{item.caseSize ?? "—"}</b></li>
+                            <li><span>Material</span><b>{item.material ?? "—"}</b></li>
+                            <li><span>Dial color</span><b>{item.dialColor ?? "—"}</b></li>
+                            <li><span>Strap</span><b>{item.strap ?? "—"}</b></li>
+                            <li><span>Reference</span><b>{item.ref ?? "—"}</b></li>
+                            <li><span>Year</span><b>{item.year ?? "—"}</b></li>
                         </ul>
+                    </details>
+
+                    <details className={styles.block}>
+                        <summary className={styles.blockTitle}>Shipping & Returns</summary>
+                        <div className={styles.blockBody}>
+                            Free domestic shipping for orders over 2,000,000 VND. 7-day returns on eligible items.
+                        </div>
+                    </details>
+
+                    <details className={styles.block}>
+                        <summary className={styles.blockTitle}>Condition & Guarantee</summary>
+                        <div className={styles.blockBody}>
+                            100% authentic. Each piece is inspected and time-tested prior to listing.
+                        </div>
                     </details>
                 </div>
             </section>
 
             {/* Related */}
-            {related.length > 0 && (
-                <section className="mt-10">
-                    <h2 className="text-lg font-semibold mb-4">Related products</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                        {related.map(p => (
-                            <ProductCard key={p.id} item={p} />
-                        ))}
-                    </div>
-                </section>
-            )}
+            <section className={styles.related}>
+                <h2>Related products</h2>
+                <div className={styles.grid}>
+                    {related.map((p) => (
+                        <ProductCard key={p.id} item={p} />
+                    ))}
+                </div>
+            </section>
         </main>
     );
 }

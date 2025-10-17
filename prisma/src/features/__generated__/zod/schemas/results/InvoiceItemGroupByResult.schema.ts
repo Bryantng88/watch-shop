@@ -1,0 +1,78 @@
+import * as z from 'zod';
+export const InvoiceItemGroupByResultSchema = z.array(z.object({
+  id: z.string(),
+  invoiceId: z.string(),
+  productId: z.string(),
+  variantId: z.string(),
+  title: z.string(),
+  description: z.string(),
+  quantity: z.number(),
+  unitPrice: z.number(),
+  discount: z.number(),
+  taxRate: z.number(),
+  lineTotal: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  _count: z.object({
+    id: z.number(),
+    invoiceId: z.number(),
+    productId: z.number(),
+    variantId: z.number(),
+    title: z.number(),
+    description: z.number(),
+    quantity: z.number(),
+    unitPrice: z.number(),
+    discount: z.number(),
+    taxRate: z.number(),
+    lineTotal: z.number(),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    invoice: z.number(),
+    product: z.number(),
+    variant: z.number()
+  }).optional(),
+  _sum: z.object({
+    quantity: z.number().nullable(),
+    unitPrice: z.number().nullable(),
+    discount: z.number().nullable(),
+    taxRate: z.number().nullable(),
+    lineTotal: z.number().nullable()
+  }).nullable().optional(),
+  _avg: z.object({
+    quantity: z.number().nullable(),
+    unitPrice: z.number().nullable(),
+    discount: z.number().nullable(),
+    taxRate: z.number().nullable(),
+    lineTotal: z.number().nullable()
+  }).nullable().optional(),
+  _min: z.object({
+    id: z.string().nullable(),
+    invoiceId: z.string().nullable(),
+    productId: z.string().nullable(),
+    variantId: z.string().nullable(),
+    title: z.string().nullable(),
+    description: z.string().nullable(),
+    quantity: z.number().nullable(),
+    unitPrice: z.number().nullable(),
+    discount: z.number().nullable(),
+    taxRate: z.number().nullable(),
+    lineTotal: z.number().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional(),
+  _max: z.object({
+    id: z.string().nullable(),
+    invoiceId: z.string().nullable(),
+    productId: z.string().nullable(),
+    variantId: z.string().nullable(),
+    title: z.string().nullable(),
+    description: z.string().nullable(),
+    quantity: z.number().nullable(),
+    unitPrice: z.number().nullable(),
+    discount: z.number().nullable(),
+    taxRate: z.number().nullable(),
+    lineTotal: z.number().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional()
+}));

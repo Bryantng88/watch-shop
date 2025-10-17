@@ -1,9 +1,9 @@
 // app/products/[slug]/page.tsx
 
-import ProductGallery from "../../../../features/catalog/components/product-gallery";
+import ProductGallery from "../../../../features/catalog/components/gallery/product-gallery";
 import styles from "./detail.module.css";
 import Link from "next/link";
-import ProductCard from "@/features/catalog/components/product-card";
+import ProductCard from "@/features/catalog/components/gallery/product-card";
 // dùng đúng đường dẫn data của bạn:
 import { products } from "@/data/products";
 import { Product } from "@/features/catalog/product";

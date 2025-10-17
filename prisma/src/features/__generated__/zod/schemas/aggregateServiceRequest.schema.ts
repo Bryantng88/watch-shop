@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrderByWithRelationInputObjectSchema } from './objects/ServiceRequestOrderByWithRelationInput.schema';
+import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './objects/ServiceRequestWhereInput.schema';
+import { ServiceRequestWhereUniqueInputObjectSchema as ServiceRequestWhereUniqueInputObjectSchema } from './objects/ServiceRequestWhereUniqueInput.schema';
+import { ServiceRequestCountAggregateInputObjectSchema as ServiceRequestCountAggregateInputObjectSchema } from './objects/ServiceRequestCountAggregateInput.schema';
+import { ServiceRequestMinAggregateInputObjectSchema as ServiceRequestMinAggregateInputObjectSchema } from './objects/ServiceRequestMinAggregateInput.schema';
+import { ServiceRequestMaxAggregateInputObjectSchema as ServiceRequestMaxAggregateInputObjectSchema } from './objects/ServiceRequestMaxAggregateInput.schema';
+
+export const ServiceRequestAggregateSchema: z.ZodType<Prisma.ServiceRequestAggregateArgs> = z.object({ orderBy: z.union([ServiceRequestOrderByWithRelationInputObjectSchema, ServiceRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceRequestWhereInputObjectSchema.optional(), cursor: ServiceRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ServiceRequestCountAggregateInputObjectSchema ]).optional(), _min: ServiceRequestMinAggregateInputObjectSchema.optional(), _max: ServiceRequestMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ServiceRequestAggregateArgs>;
+
+export const ServiceRequestAggregateZodSchema = z.object({ orderBy: z.union([ServiceRequestOrderByWithRelationInputObjectSchema, ServiceRequestOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceRequestWhereInputObjectSchema.optional(), cursor: ServiceRequestWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ServiceRequestCountAggregateInputObjectSchema ]).optional(), _min: ServiceRequestMinAggregateInputObjectSchema.optional(), _max: ServiceRequestMaxAggregateInputObjectSchema.optional() }).strict();

@@ -1,10 +1,12 @@
 import React from "react";
 
-export default function AdminPage() {
+export default function AdminHome() {
     return (
-        <main className="container py-10">
-            <h1>Admin</h1>
-            <p>Welcome to admin.</p>
-        </main>
+        <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Welcome back 👋</h2>
+            <p className="text-sm text-gray-600">
+                Quick stats, shortcuts or recent activity can go here.
+            </p>
+        </div>
     );
 }
