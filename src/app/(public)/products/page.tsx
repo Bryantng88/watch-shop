@@ -1,4 +1,4 @@
-import { listProducts } from "@/features/catalog/server/product-list.repo";
+import { listProducts } from "@/features/catalog/server/product.repo";
 import { ProductList } from "@/features/catalog/components/gallery/product-list";
 import FilterSidebar from "@/features/catalog/components/filter/product-filter";
 import { parseFilters } from "@/features/catalog/types";

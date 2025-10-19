@@ -1,0 +1,245 @@
+import { Prisma } from "@prisma/client";
+import prisma from "@/server/db/client";
+
+export type AdminSort =
+    | "updatedDesc" | "updatedAsc"
+    | "createdDesc" | "createdAsc"
+    | "titleAsc" | "titleDesc";
+
+export interface AdminProductFilters {
+    page?: number;
+    pageSize?: number;
+    q?: string;
+
+    status?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
+    type?: Prisma.ProductWhereInput["type"][];     // ['PRE_OWNED',...]
+    brandIds?: string[];
+    hasImages?: "yes" | "no";
+    updatedFrom?: Date | string;
+    updatedTo?: Date | string;
+    sort?: AdminSort;
+}
+
+const DEFAULT_PAGE_SIZE = 50;
+
+function buildWhere(f: AdminProductFilters): Prisma.ProductWhereInput {
+    return {
+        ...(f.q
+            ? {
+                OR: [
+                    { title: { contains: f.q, mode: "insensitive" } },
+                    { slug: { contains: f.q, mode: "insensitive" } },
+                    { seoTitle: { contains: f.q, mode: "insensitive" } },
+                ],
+            }
+            : {}),
+        ...(f.status?.length ? { status: { in: f.status as any } } : {}),
+        ...(f.type?.length ? { type: { in: f.type as any } } : {}),
+        ...(f.brandIds?.length ? { brandId: { in: f.brandIds } } : {}),
+        ...(f.hasImages === "yes" ? { primaryImageUrl: { not: null } } : {}),
+        ...(f.hasImages === "no" ? { primaryImageUrl: null } : {}),
+        ...(f.updatedFrom || f.updatedTo
+            ? {
+                updatedAt: {
+                    ...(f.updatedFrom ? { gte: new Date(f.updatedFrom) } : {}),
+                    ...(f.updatedTo ? { lte: new Date(f.updatedTo) } : {}),
+                },
+            }
+            : {}),
+    };
+}
+
+function buildOrderBy(sort: AdminSort | undefined): Prisma.ProductOrderByWithRelationInput[] {
+    switch (sort) {
+        case "updatedAsc": return [{ updatedAt: "asc" }];
+        case "updatedDesc": return [{ updatedAt: "desc" }];
+        case "createdAsc": return [{ createdAt: "asc" }];
+        case "createdDesc": return [{ createdAt: "desc" }];
+        case "titleAsc": return [{ title: "asc" }];
+        case "titleDesc": return [{ title: "desc" }];
+        default: return [{ updatedAt: "desc" }];
+    }
+}
+
+/**
+ * Danh sách cho Admin Table + vài KPI vận hành
+ * - variants: lấy min price & tổng tồn (nếu bạn có cột stockQty)
+ * - _count: đếm số bản ghi liên quan
+ * - lastSoldAt: lấy OrderItem gần nhất
+ * - lastServicedAt: lấy MaintenanceRecord gần nhất
+ */
+export async function listAdminProducts(f: AdminProductFilters) {
+    const page = Math.max(1, f.page ?? 1);
+    const pageSize = Math.max(1, Math.min(200, f.pageSize ?? DEFAULT_PAGE_SIZE));
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    const where = buildWhere(f);
+
+    const [items, total] = await Promise.all([
+        prisma.product.findMany({
+            where,
+            skip,
+            take,
+            orderBy: buildOrderBy(f.sort),
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                status: true,
+                type: true,
+                brand: { select: { id: true, name: true } },
+                primaryImageUrl: true,
+                createdAt: true,
+                updatedAt: true,
+
+                // Lấy min price từ variants + (tuỳ có stockQty hay không)
+                variants: {
+                    orderBy: { price: "asc" },
+                    take: 1,
+                    select: { price: true /*, stockQty: true*/ }, // TODO: map field tồn kho nếu có
+                },
+
+                // Lấy bản ghi gần nhất của các lịch sử
+                orderItems: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: { createdAt: true },
+                },
+                maintenanceRecords: {
+                    orderBy: { servicedAt: "desc" }, // TODO: map field ngày bảo trì
+                    take: 1,
+                    select: { servicedAt: true },
+                },
+
+                // Đếm số bản ghi liên quan
+                _count: {
+                    select: {
+                        image: true,
+                        variants: true,
+                        orderItems: true,
+                        maintenanceRecords: true,
+                        InvoiceItem: true,
+                        AcquisitionItem: true,
+                        ServiceRequest: true,
+                        Reservation: true,
+                    },
+                },
+            },
+        }),
+        prisma.product.count({ where }),
+    ]);
+
+    const rows = items.map((p) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        status: p.status,
+        type: p.type,
+        brand: p.brand?.name ?? null,
+        image: p.primaryImageUrl ?? null,
+
+        minPrice: p.variants[0]?.price ?? null,
+        variantsCount: p._count.variants,
+        imagesCount: p._count.image,
+
+        ordersCount: p._count.orderItems,
+        lastSoldAt: p.orderItems[0]?.createdAt ?? null,
+
+        maintenanceCount: p._count.maintenanceRecords,
+        lastServicedAt: p.maintenanceRecords[0]?.servicedAt ?? null,
+
+        invoicesCount: p._count.InvoiceItem,
+        acquisitionsCount: p._count.AcquisitionItem,
+
+        serviceRequests: p._count.ServiceRequest,
+        reservations: p._count.Reservation,
+
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+    }));
+
+    return { items: rows, total, page, pageSize };
+}
+
+/**
+ * Chi tiết admin: include đầy đủ để mở tab
+ */
+export async function getAdminProductDetail(id: string) {
+    const product = await prisma.product.findUnique({
+        where: { id },
+        include: {
+            brand: true,
+            vendor: true,
+            watchSpec: {
+                include: {
+                    complication: true,
+                    marketSegment: true, // nếu có
+                },
+            },
+            image: true,
+            variants: { orderBy: { price: "asc" } },
+        },
+    });
+    return product;
+}
+
+/** Lịch sử theo tab – có phân trang & lọc ngày */
+export async function getProductOrders(id: string, page = 1, pageSize = 20, from?: Date, to?: Date) {
+    return prisma.orderItem.findMany({
+        where: {
+            productId: id,
+            ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        // select: { quantity: true, unitPrice: true, order: { select: { code: true, customerName: true } } },
+    });
+}
+
+export async function getProductInvoices(id: string, page = 1, pageSize = 20) {
+    return prisma.invoiceItem.findMany({
+        where: { productId: id },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+    });
+}
+
+export async function getProductAcquisitions(id: string, page = 1, pageSize = 20) {
+    return prisma.acquisitionItem.findMany({
+        where: { productId: id },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+    });
+}
+
+export async function getProductMaintenance(id: string, page = 1, pageSize = 20, from?: Date, to?: Date) {
+    return prisma.maintenanceRecord.findMany({
+        where: {
+            productId: id,
+            ...(from || to ? { servicedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+        },
+        orderBy: { servicedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+    });
+}
+export async function createAdminProduct(data: Prisma.ProductCreateInput) {
+    return prisma.product.create({ data });
+}
+export async function updateAdminProduct(id: string, data: Prisma.ProductUpdateInput) {
+    return prisma.product.update({ where: { id }, data });
+}
+export async function deleteAdminProduct(id: string) {
+    await prisma.product.delete({ where: { id } });
+    return { ok: true };
+}
+export async function publishProduct(id: string) {
+    return prisma.product.update({ where: { id }, data: { status: "ACTIVE" } as any });
+}
+export async function unpublishProduct(id: string) {
+    return prisma.product.update({ where: { id }, data: { status: "INACTIVE" } as any });
+}

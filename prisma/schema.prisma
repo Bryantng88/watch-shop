@@ -3,8 +3,14 @@ generator client {
 }
 
 generator zod {
-  provider = "zod-prisma-types"
-  output   = "../src/features/__generated__/zod"
+  provider         = "prisma-zod-generator"
+  output           = "../src/features/__generated__/zod"
+  relationModel    = true
+  createInputTypes = true // giữ
+  updateInputTypes = true // giữ
+  modelSchema      = true // giữ
+  aggregateTypes   = false // 👈 tắt mấy file aggregate*
+  whereInputTypes  = false // 👈 tắt bớt variant types nếu bạn không dùng
 }
 
 datasource db {

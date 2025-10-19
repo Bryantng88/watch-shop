@@ -1,17 +1,10 @@
 // src/features/products/schemas/product.schema.ts
 import { z } from 'zod';
-
+import { ProductArgsObjectSchema, ProductCreateInputObjectSchema, ProductUpdateInputObjectSchema } from '@/features/__generated__/zod/schemas';
 // Schema cho body create/update Product (tối giản – chỉnh theo model của bạn)
-export const CreateProductSchema = z.object({
-    title: z.string().min(1),
-    slug: z.string().optional(),
-    price: z.number().int().nonnegative().nullable().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE', 'DRAFT']).default('ACTIVE'),
-    primaryImageUrl: z.string().url().nullable().optional(),
-    brandId: z.string().nullable().optional(),
-});
-
-export const UpdateProductSchema = CreateProductSchema.partial();
+export const CreateProductSchema = ProductCreateInputObjectSchema
+export const ProductSchema = ProductArgsObjectSchema
+export const UpdateProductSchema = ProductUpdateInputObjectSchema
 
 // Schema parse query string -> Filters
 export const FiltersSchema = z.object({

@@ -9,7 +9,7 @@ import ProductCard from "@/features/catalog/components/gallery/product-card";
 import { Product } from "@/features/catalog/types";
 
 import AddToCart from "../../../../features/cart/component/add-to-cart-button";
-import { listProducts } from "@/features/catalog/server/product-list.repo";
+import { listProducts } from "@/features/catalog/server/product.repo";
 
 function slugify(input: string) {
     return input
