@@ -1,0 +1,10 @@
+// features/meta/server/enums.ts (file server-only)
+import 'server-only';
+import { ProductStatus, ProductType } from '@prisma/client';
+
+export const PRODUCT_STATUSES = Object.values(ProductStatus);
+export const PRODUCT_TYPES = Object.values(ProductType);
+
+// (tuỳ) export type cho client dùng khi nhận props
+export type ProductStatusDTO = ProductStatus;
+export type ProductTypeDTO = ProductType;

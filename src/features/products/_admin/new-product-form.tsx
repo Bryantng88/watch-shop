@@ -3,16 +3,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 type BrandOption = { id: string; name: string };
+type ProductStatus = string;
+type ProductType = string;
 
-const STATUSES = ["ACTIVE", "HOLD", "SOLD", "CONSIGNED", "HIDDEN"] as const;
-type ProductStatus = (typeof STATUSES)[number];
 
-export default function NewProductForm({ brands }: { brands: BrandOption[] }) {
+export default function NewProductForm({
+    brands,
+    statusOptions,
+    typeOptions,
+}: {
+    brands: BrandOption[];
+    statusOptions: readonly ProductStatus[];
+    typeOptions: readonly ProductType[];
+}) {
     const router = useRouter();
-
     const [title, setTitle] = useState("");
+    const [type, setType] = useState<ProductType>("WATCH");
     const [brandId, setBrandId] = useState<string>("");
     const [status, setStatus] = useState<ProductStatus>("ACTIVE");
     const [price, setPrice] = useState<string>(""); // nhập số, gửi lên server chuyển Number
@@ -43,6 +50,7 @@ export default function NewProductForm({ brands }: { brands: BrandOption[] }) {
                     title: title.trim(),
                     brandId: brandId || null,
                     status,
+                    type,
                     primaryImageUrl: primaryImageUrl || null,
                     price: Number(price), // sẽ tạo 1 variant mặc định
                 }),
@@ -105,14 +113,27 @@ export default function NewProductForm({ brands }: { brands: BrandOption[] }) {
                         value={status}
                         onChange={(e) => setStatus(e.target.value as ProductStatus)}
                     >
-                        {STATUSES.map((s) => (
+                        {statusOptions.map((s) => (
                             <option key={s} value={s}>
                                 {s}
                             </option>
                         ))}
                     </select>
                 </div>
-
+                <div>
+                    <label className="mb-1 block text-sm text-gray-600">Type</label>
+                    <select
+                        className="h-10 w-full rounded border px-2 text-sm"
+                        value={type}
+                        onChange={(e) => setType(e.target.value as ProductType)}
+                    >
+                        {typeOptions.map((s) => (
+                            <option key={s} value={s}>
+                                {s}
+                            </option>
+                        ))}
+                    </select>
+                </div>
                 <div>
                     <label className="mb-1 block text-sm text-gray-600">Giá (đ)</label>
                     <input

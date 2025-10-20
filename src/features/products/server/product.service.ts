@@ -1,20 +1,6 @@
 // src/features/products/admin/server/admin-product.service.ts
-
-
 import { z } from "zod";
-import {
-    listAdminProducts,
-    getAdminProductDetail,
-    getProductOrders,
-    getProductInvoices,
-    getProductAcquisitions,
-    getProductMaintenance,
-    createAdminProduct,
-    updateAdminProduct,
-    deleteAdminProduct,
-    publishProduct,
-    unpublishProduct,
-} from "./product.repo";
+import { listAdminProducts, getAdminProductDetail, getProductOrders, getProductInvoices, getProductAcquisitions, getProductMaintenance, createAdminProduct, updateAdminProduct, deleteAdminProduct, publishProduct, unpublishProduct, } from "./product.repo";
 import { ProductStatus } from "@prisma/client";
 import { ProductType } from "@prisma/client";
 /* -------------------------------------------------------
@@ -75,9 +61,12 @@ const BaseProductSchema = z
         slug: z.string().min(1).optional(),
         status: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
         type: z.string().optional(),   // ví dụ enum ProductType
-        brandId: z.string().optional(),
+        brand: z.string().optional(),
         vendorId: z.string().optional(),
-        primaryImageUrl: z.string().url().optional().or(z.literal("").transform(() => undefined)),
+        primaryImageUrl: z.preprocess(
+            (v) => (v === "" ? undefined : v), // "" -> undefined
+            z.string().url().nullable().optional()
+        ),
         seoTitle: z.string().optional(),
         seoDescription: z.string().optional(),
         tag: z.string().optional(),
@@ -124,10 +113,15 @@ export const adminProductService = {
             updatedFrom: asDate(raw.updatedFrom),
             updatedTo: asDate(raw.updatedTo),
         });
-       
+
         return listAdminProducts(parsed);
     },
-
+    /** Tạo Product (validate + gọi repo) */
+    async create(input: unknown) {
+        const data = CreateProductSchema.parse(input);
+        // TODO: nếu cần slug auto, bạn có thể xử lý ở đây hoặc ở prisma .$extends / middleware
+        return createAdminProduct(data as any);
+    },
     /** Lấy chi tiết đầy đủ để mở form admin */
     async detail(id: string) {
         return getAdminProductDetail(id);
@@ -165,12 +159,7 @@ export const adminProductService = {
         return getProductMaintenance(productId, page, pageSize, from, to);
     },
 
-    /** Tạo Product (validate + gọi repo) */
-    async create(input: unknown) {
-        const data = CreateProductSchema.parse(input);
-        // TODO: nếu cần slug auto, bạn có thể xử lý ở đây hoặc ở prisma .$extends / middleware
-        return createAdminProduct(data as any);
-    },
+
 
     /** Cập nhật Product */
     async update(id: string, input: unknown) {

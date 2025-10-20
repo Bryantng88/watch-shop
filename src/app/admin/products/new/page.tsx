@@ -1,12 +1,14 @@
 // app/admin/products/new/page.tsx
 import NewProductForm from "@/features/products/_admin/new-product-form";
-import { listBrands } from "@/features/catalog/server/brands.repo"; // <- repo có sẵn của bạn
+import { listBrands } from "@/features/catalog/server/brands.repo"; // <- repo có sẵn của bạn\
+import { PRODUCT_STATUSES, PRODUCT_TYPES } from "@/features/meta/server/enum";
 
 export const metadata = { title: "New Product · Admin" };
 
 export default async function NewProductPage() {
     // Lấy brand options cho select
     const brands = await listBrands(); // trả về [{id,name}]
+    console.log("product/new in ra: " + PRODUCT_STATUSES)
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -14,7 +16,11 @@ export default async function NewProductPage() {
             </div>
 
             <div className="rounded-lg border bg-white p-6 shadow-sm">
-                <NewProductForm brands={brands} />
+                <NewProductForm
+                    brands={brands}
+                    statusOptions={PRODUCT_STATUSES}
+                    typeOptions={PRODUCT_TYPES}
+                />
             </div>
         </div>
     );

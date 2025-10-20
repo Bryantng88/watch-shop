@@ -227,8 +227,18 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
         take: pageSize,
     });
 }
-export async function createAdminProduct(data: Prisma.ProductCreateInput) {
-    return prisma.product.create({ data });
+export async function createAdminProduct(data: any) {
+    const { brandId, vendorId, ...rest } = data;
+    const createData: Prisma.ProductCreateInput = {
+        ...rest,
+        ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
+        ...(vendorId ? { vendor: { connect: { id: vendorId } } } : {}),
+        primaryImageUrl: rest.primaryImageUrl ?? null,
+    };
+    return prisma.product.create({
+        data: createData,
+        select: { id: true, slug: true },
+    });
 }
 export async function updateAdminProduct(id: string, data: Prisma.ProductUpdateInput) {
     return prisma.product.update({ where: { id }, data });

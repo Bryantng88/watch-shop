@@ -28,47 +28,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { title, brandId, status, primaryImageUrl, price } = body as {
-            title: string;
-            brandId?: string | null;
-            status: "ACTIVE" | "HOLD" | "SOLD" | "CONSIGNED" | "HIDDEN";
-            primaryImageUrl?: string | null;
-            price: number;
-        };
+        const product = await adminProductService.create(body);
+        return NextResponse.json(product, { status: 201 });
+    } catch (err: any) {
+        console.error("Create product error:", err);
 
-        if (!title || typeof price !== "number") {
+        // Nếu lỗi từ Zod
+        if (err.name === "ZodError") {
             return NextResponse.json(
-                { message: "Thiếu dữ liệu: title/price" },
+                { message: "Dữ liệu không hợp lệ", errors: err.flatten?.() },
                 { status: 400 }
             );
         }
 
-        // Tạo sản phẩm + 1 biến thể mặc định để có giá
-        const created = await prisma.product.create({
-            data: {
-                title,
-                status,
-                primaryImageUrl: primaryImageUrl || null,
-                ...(brandId ? { brandId } : {}),
-                variants: {
-                    create: [
-                        {
-                            name: "Default",
-                            price,
-                            isActive: true,
-                            stockQty: 0,
-                        },
-                    ],
-                },
-            },
-            select: { id: true, slug: true },
-        });
-
-        return NextResponse.json(created, { status: 201 });
-    } catch (e: any) {
-        console.error(e);
+        // Lỗi khác
         return NextResponse.json(
-            { message: e?.message || "Tạo sản phẩm thất bại" },
+            { message: err.message || "Lỗi tạo sản phẩm" },
             { status: 500 }
         );
     }
