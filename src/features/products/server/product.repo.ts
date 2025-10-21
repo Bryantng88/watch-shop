@@ -228,12 +228,25 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
     });
 }
 export async function createAdminProduct(data: any) {
-    const { brandId, vendorId, ...rest } = data;
+    const { brandId, vendorId, title, status, type, price, seoTitle, primaryImageUrl, seoDescription } = data;
     const createData: Prisma.ProductCreateInput = {
-        ...rest,
+        title,
+        status,
+        type,
+        seoTitle,
+        seoDescription,
         ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
+        variants: {
+            create: [
+                {
+                    price,
+                    stockQty: 1,
+                    isActive: true
+                }
+            ]
+        },
         ...(vendorId ? { vendor: { connect: { id: vendorId } } } : {}),
-        primaryImageUrl: rest.primaryImageUrl ?? null,
+        primaryImageUrl: primaryImageUrl ?? null,
     };
     return prisma.product.create({
         data: createData,
