@@ -1,8 +1,14 @@
 // src/features/products/admin/server/admin-product.service.ts
 import { z } from "zod";
-import { listAdminProducts, getAdminProductDetail, getProductOrders, getProductInvoices, getProductAcquisitions, getProductMaintenance, createAdminProduct, updateAdminProduct, deleteAdminProduct, publishProduct, unpublishProduct, } from "./product.repo";
-import { ProductStatus } from "@prisma/client";
+import { listAdminProducts, getAdminProductDetail, getProductOrders, getProductInvoices, getProductAcquisitions, getProductMaintenance, createProduct, updateAdminProduct, deleteAdminProduct, publishProduct, unpublishProduct, } from "./product.repo";
+import { CaseMaterial, ProductStatus, CaseType } from "@prisma/client";
 import { ProductType } from "@prisma/client";
+import { complications } from "@/constants/constants";
+import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqInput, AdminFiltersSchema } from "./product.dto";
+import type { Prisma } from "@prisma/client";
+import prisma from "@/server/db/client";
+import { upsertSupplierByNameRole } from "@/features/vendors/server/vendor.repo";
+import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
 /* -------------------------------------------------------
  * Helpers
  * ----------------------------------------------------- */
@@ -21,68 +27,34 @@ const arrayify = (v: unknown): string[] => {
     return [String(v)];
 };
 
-/* -------------------------------------------------------
- * Zod schemas (validate đầu vào)
- * - Chỉ validate những gì service cần. Những field còn lại bạn có thể bổ sung dần.
- * - Nếu bạn đã dùng prisma-zod-generator, có thể import schema từ đó để thay thế.
- * ----------------------------------------------------- */
+const toCaseType = (s?: string): CaseType => {
+    if (!s) return CaseType.ROUND;
+    const k = s.toUpperCase() as keyof typeof CaseType;
+    return CaseType[k] ?? CaseType.ROUND;
+};
 
-export const AdminFiltersSchema = z.object({
-    page: z.coerce.number().min(1).default(1),
-    pageSize: z.coerce.number().min(1).max(200).default(50),
+const connect = (id?: string) => (id ? { connect: { id } } : undefined);
+const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
 
-    q: z.string().optional(),
-    sort: z
-        .enum([
-            "updatedDesc",
-            "updatedAsc",
-            "createdDesc",
-            "createdAsc",
-            "titleAsc",
-            "titleDesc",
-        ])
-        .optional(),
-
-    status: z.array(z.nativeEnum(ProductStatus)).optional(),
-    type: z.array(z.nativeEnum(ProductType)).optional(),
-    brandIds: z.array(z.string()).optional(),
-    hasImages: z.enum(["yes", "no"]).optional(),
-
-    updatedFrom: z.coerce.date().optional(),
-    updatedTo: z.coerce.date().optional(),
-});
-
-export type AdminFiltersInput = z.infer<typeof AdminFiltersSchema>;
-
-/** Tối thiểu cho create/update Product trong admin */
-const BaseProductSchema = z
-    .object({
-        title: z.string().min(1),
-        slug: z.string().min(1).optional(),
-        status: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
-        type: z.string().optional(),   // ví dụ enum ProductType
-        brand: z.string().optional(),
-        vendorId: z.string().optional(),
-        primaryImageUrl: z.preprocess(
-            (v) => (v === "" ? undefined : v), // "" -> undefined
-            z.string().url().nullable().optional()
-        ),
-        seoTitle: z.string().optional(),
-        seoDescription: z.string().optional(),
-        tag: z.string().optional(),
-        isStockManaged: z.boolean().optional(),
-        maxQtyPerOrder: z.number().int().positive().optional(),
-        publishedAt: z.coerce.date().optional(),
-    })
-    .passthrough(); // cho phép gửi thêm field khác (nếu có)
-
-export const CreateProductSchema = BaseProductSchema;
-export const UpdateProductSchema = BaseProductSchema.partial();
-
-/* -------------------------------------------------------
- * Service API (được route handlers gọi)
- * ----------------------------------------------------- */
-
+function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCreateInput {
+    const isWatch = (dto.type ?? "WATCH").toUpperCase() === "WATCH";
+    return {
+        title: dto.title,
+        status: dto.status as any,
+        type: dto.type as any,
+        brand: connect(dto.brandId),
+        vendor: connect(dto.vendorId),
+        variants: { create: [{ price: dto.price ?? 0, stockQty: dto.stockQty ?? 1, isActive: true }] },
+        watchSpec: createIf(isWatch, {
+            create: {
+                caseType: dto.caseType,
+                length: dto.length as any,
+                width: dto.width as any,
+                thickness: dto.thickness as any,
+            },
+        }),
+    };
+}
 export const adminProductService = {
     /**
      * List bảng admin + KPI (đếm liên quan, last dates…)
@@ -118,10 +90,47 @@ export const adminProductService = {
     },
     /** Tạo Product (validate + gọi repo) */
     async create(input: unknown) {
-        const data = CreateProductSchema.parse(input);
+        const data = CreateProductWithAcqSchema.parse(input);
         // TODO: nếu cần slug auto, bạn có thể xử lý ở đây hoặc ở prisma .$extends / middleware
-        return createAdminProduct(data as any);
+        return prisma.$transaction(async (tx) => {
+            // 2.1 resolve vendorId (chọn sẵn / quick-add)
+            let vendorId = data.vendorId;
+            if (!vendorId && data.vendorName) {
+                vendorId = await upsertSupplierByNameRole({
+                    name: data.vendorName,
+                    phone: data.vendorPhone ?? null,
+                    email: data.vendorEmail ?? null,
+                });
+            }
+            if (!vendorId) throw new Error("Vui lòng chọn hoặc tạo Vendor để ghi nhận giá mua.");
+
+            // 2.2 create product
+            await prisma.$transaction(async (tx) => {
+                const repo = createProduct(tx);       // ✅ hợp kiểu
+                await repo.create(mapDtoToProductCreate({ ...data, vendorId }));
+            });
+
+            // 2.3 create acquisition header
+            await prisma.$transaction(async (tx) => {
+                const acqRepo = acquisitionRepo(tx);
+                await acqRepo.create({
+                    vendorId,
+                    acquiredAt: data.acquiredAt ? new Date(data.acquiredAt) : undefined,
+                    cost: data.purchasePrice,
+                    currency: data.currency,
+                    refNo: data.refNo ?? null,
+                    notes: data.notes ?? null,
+                    type: "PURCHASE",
+                });
+            })
+
+
+            // (tuỳ chọn) nếu có AcquisitionItem lines thì thêm ở đây
+
+            return { productId: product.id, acquisitionId: acquisition.id };
+        });
     },
+
     /** Lấy chi tiết đầy đủ để mở form admin */
     async detail(id: string) {
         return getAdminProductDetail(id);

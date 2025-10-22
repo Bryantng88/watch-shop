@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 interface Option {
@@ -20,18 +21,19 @@ interface Props {
     selectedType: string;
 }
 
-export default function NewProductForm2({
-    brands,
-    statusOptions,
-    typeOptions,
-    caseOptions,
-    selectedType,
+export default function NewProductForm2({ brands, statusOptions, typeOptions, caseOptions, selectedType,
 }: Props) {
+    const search = useSearchParams();
+    const router = useRouter();
     const [formData, setFormData] = useState<Record<string, any>>({});
-    console.log('in ra selected type: ' + selectedType)
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+    const [showQuickVendor, setShowQuickVendor] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+    const set = (name: string) => (e: any) =>
+        setFormData(prev => ({ ...prev, [name]: e?.target ? e.target.value : e }));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,9 +140,76 @@ export default function NewProductForm2({
                 </>
             )}
 
-            <button type="submit" className="rounded bg-black text-white px-5 py-2 hover:bg-gray-800">
-                Lưu sản phẩm
-            </button>
+            <div className="rounded-md border p-4">
+                <div className="font-medium mb-2">Ghi nhận mua vào</div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium">Vendor</label>
+                        <div className="flex gap-2">
+                            <select className="mt-1 w-full rounded border px-3 py-2"
+                                onChange={set('vendorId')}
+                                value={formData.vendorId ?? ''}>
+                                <option value="">-- Chọn Vendor có sẵn --</option>
+                                {/* nếu bạn muốn load vendors: truyền prop vendors từ page.tsx */}
+                            </select>
+                            <button type="button" className="mt-1 rounded border px-3"
+                                onClick={() => setShowQuickVendor(v => !v)}>
+                                {showQuickVendor ? 'Ẩn' : 'Thêm nhanh'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium">Giá mua</label>
+                        <input type="number" className="mt-1 w-full rounded border px-3 py-2" onChange={set('purchasePrice')} />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium">Tiền tệ</label>
+                        <input className="mt-1 w-full rounded border px-3 py-2" defaultValue="VND" onChange={set('currency')} />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium">Ngày mua</label>
+                        <input type="date" className="mt-1 w-full rounded border px-3 py-2"
+                            defaultValue={formData.acquiredAt} onChange={set('acquiredAt')} />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium">Ref/Invoice No</label>
+                        <input className="mt-1 w-full rounded border px-3 py-2" onChange={set('refNo')} />
+                    </div>
+                </div>
+
+                {showQuickVendor && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded">
+                        <div>
+                            <label className="block text-sm font-medium">Tên vendor (quick add)</label>
+                            <input className="mt-1 w-full rounded border px-3 py-2" onChange={set('vendorName')} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">Điện thoại</label>
+                            <input className="mt-1 w-full rounded border px-3 py-2" onChange={set('vendorPhone')} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">Email</label>
+                            <input className="mt-1 w-full rounded border px-3 py-2" onChange={set('vendorEmail')} />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {err && <div className="text-sm text-red-600">{err}</div>}
+
+            <div className="flex justify-end gap-3">
+                <button type="button" className="h-10 rounded border px-4" onClick={() => history.back()} disabled={submitting}>
+                    Hủy
+                </button>
+                <button type="submit" className="h-10 rounded bg-black px-5 text-white disabled:opacity-60" disabled={submitting}>
+                    {submitting ? 'Đang lưu…' : 'Lưu & quay lại'}
+                </button>
+            </div>
         </form>
     );
 }

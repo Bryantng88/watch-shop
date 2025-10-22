@@ -1,6 +1,6 @@
-import { Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, ProductType } from "@prisma/client";
 import prisma from "@/server/db/client";
-
+type Db = typeof prisma | Tx;
 
 export type AdminSort =
     | "updatedDesc" | "updatedAsc"
@@ -20,6 +20,7 @@ export interface AdminProductFilters {
     updatedTo?: Date | string;
     sort?: AdminSort;
 }
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -228,9 +229,23 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
         take: pageSize,
     });
 }
-export async function createAdminProduct(data: any) {
+{/*} export async function createAdminProduct(
+    tx: Prisma.TransactionClient,
+    data: {
+        title: string;
+        status: string;
+        type: ProductType | string;
+        brandId?: string;
+        vendorId?: string;
+        variant: { price?: number; stockQty?: number };
+        watchSpec?: { caseType?: string; length?: number; width?: number; thickness?: number };
+        gender?: string;
+        length?: string;
+        movement?: string;
+    }
+) {
+
     const { brandId, vendorId, title, status, gender, movement, caseType, type, price, seoTitle, primaryImageUrl, seoDescription } = data;
-    console.log('server/repo/ in ra : ' + data.price, data.caseType)
     const createData: Prisma.ProductCreateInput = {
         title,
         status,
@@ -266,7 +281,11 @@ export async function createAdminProduct(data: any) {
         data: createData,
         select: { id: true, slug: true },
     });
-}
+*/}
+export const createProduct = (db: Db) => ({
+    create: (data: Prisma.ProductCreateInput) => db.product.create({ data, select: { id: true, slug: true } }),
+});
+
 export async function updateAdminProduct(id: string, data: Prisma.ProductUpdateInput) {
     return prisma.product.update({ where: { id }, data });
 }

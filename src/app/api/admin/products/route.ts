@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminProductService } from "@/features/products/server/product.service";
-import prisma from "@/server/db/client";
+
 // GET /api/admin/products
 export async function GET(req: Request) {
     try {
@@ -27,24 +27,13 @@ export async function GET(req: Request) {
 // POST /api/admin/products
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const product = await adminProductService.create(body);
-        return NextResponse.json(product, { status: 201 });
+        const body = await req.json();            // service sẽ validate bằng Zod
+        const created = await adminProductService.create(body);
+        return NextResponse.json(created, { status: 201 });
     } catch (err: any) {
-        console.error("Create product error:", err);
-
-        // Nếu lỗi từ Zod
-        if (err.name === "ZodError") {
-            return NextResponse.json(
-                { message: "Dữ liệu không hợp lệ", errors: err.flatten?.() },
-                { status: 400 }
-            );
-        }
-
-        // Lỗi khác
         return NextResponse.json(
-            { message: err.message || "Lỗi tạo sản phẩm" },
-            { status: 500 }
+            { error: err?.message ?? "Failed to create product" },
+            { status: 400 },
         );
     }
 }
