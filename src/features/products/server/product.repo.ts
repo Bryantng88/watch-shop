@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 
+
+console.log('[SERVICE] prisma brand =', (globalThis as any).__PRISMA_BRAND__);
+console.log('[SERVICE] prisma has $extends? ', typeof (prisma as any).$extends === 'function');
+
 export type AdminSort =
     | "updatedDesc" | "updatedAsc"
     | "createdDesc" | "createdAsc"
@@ -228,7 +232,8 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
     });
 }
 export async function createAdminProduct(data: any) {
-    const { brandId, vendorId, title, status, type, price, seoTitle, primaryImageUrl, seoDescription } = data;
+    const { brandId, vendorId, title, status, gender, movement, caseType, type, price, seoTitle, primaryImageUrl, seoDescription } = data;
+    console.log('server/repo/ in ra : ' + data.price, data.caseType)
     const createData: Prisma.ProductCreateInput = {
         title,
         status,
@@ -244,6 +249,18 @@ export async function createAdminProduct(data: any) {
                     isActive: true
                 }
             ]
+        },
+        watchSpec: {
+            create: {
+                caseType,
+                movement,          // optional vì có @default
+                gender,            // optional vì có @default
+                category: [],      // khuyến nghị
+                length: 46.5,      // ✅ BẮT BUỘC
+                width: 39.7,       // ✅ BẮT BUỘC
+                thickness: 12.0,   // ✅ BẮT BUỘC
+            }
+
         },
         ...(vendorId ? { vendor: { connect: { id: vendorId } } } : {}),
         primaryImageUrl: primaryImageUrl ?? null,

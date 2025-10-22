@@ -2,6 +2,8 @@
 
 import { PrismaClient } from '@prisma/client';
 import slugify from 'slugify';
+// ⬇️ đặt ngay dưới import
+
 
 function ensureVariantSkuForSingleProduct(variantsCreate: any, skuBase: string) {
     if (!variantsCreate) return;
@@ -31,7 +33,6 @@ function makePrisma() {
             product: {
                 async create({ args, query }) {
                     const data = args.data as any;
-
                     if (data?.title && !data.slug) {
                         let baseSlug = slugify(String(data.title), { lower: true, strict: true });
                         let slug = baseSlug;
@@ -41,11 +42,45 @@ function makePrisma() {
                         }
                         data.slug = slug;
                     }
-                    if (data?.type == 'WATCH') {
+                    if (data?.type === 'WATCH') {
                         const vc = data?.variants?.create;
                         if (vc) {
                             const skuBase = data.slug ?? slugify(String(data.title ?? ''), { lower: true, strict: true });
                             ensureVariantSkuForSingleProduct(vc, skuBase);
+                        }
+                    }
+                    if (data?.watchSpec?.create) {
+                        const ws = data.watchSpec.create;
+                        console.log('watch spec created in ra ' + ws.length)
+                        type Rule = { min?: number; max?: number; category: string };
+                        type CaseKey = "round" | "nonRound";
+                        //định nghĩa quy luật về size
+                        const rules = {
+                            round: [
+                                { max: 33, category: "Small" },
+                                { min: 33, max: 39, category: "Medium" },
+                                { min: 39, category: "Large" },
+
+                            ],
+                            nonRound: [
+                                { max: 33, category: "Small" },
+                                { min: 33, max: 35, category: "Medium" },
+                                { min: 35, category: "Large" },
+                            ]
+                        } satisfies Record<CaseKey, ReadonlyArray<Rule>>;
+                        const raw = String(ws.caseType).toLowerCase();
+                        console.log('test case type: ' + raw)
+                        if (raw in rules) {
+                            const typeRule = rules[raw as CaseKey];
+                            const found = typeRule.find((r) =>
+                                (r.min === undefined || data.length >= r.min) &&
+                                (r.max === undefined || data.length < r.max)
+                            )
+
+                            if (found) {
+                                ws.sizeCategory = found.category;
+                                console.log("test nhanh" + found.category)
+                            }
                         }
                     }
                     return query(args);
@@ -64,87 +99,13 @@ function makePrisma() {
                         }
                         create.slug = slug;
                     }
-                    if (create?.type == 'WATCH') {
+                    if (create?.type === 'WATCH') {
                         const vc = create?.variants?.create;
+                        console.log('[MW] watchSpec.create present bbbbbbbbbbb');
                         if (vc) {
                             const skuBase = create.slug ?? slugify(String(create.title ?? ''), { lower: true, strict: true });
                             ensureVariantSkuForSingleProduct(vc, skuBase);
                         }
-                    }
-
-                    return query(args);
-                },
-            },
-            productVariant: {
-                async create({ args, query }) {
-                    const data = args.data as any;
-
-                    if (!data?.sku) {
-                        // Tìm product gắn với variant
-                        let productId: string | undefined;
-
-                        // case productId gán trực tiếp
-                        if (data.productId) productId = data.productId;
-
-                        // case connect by id/slug
-                        if (!productId && data.product?.connect) {
-                            const c = data.product.connect as any;
-                            if (c.id) productId = c.id;
-                            else if (c.slug) {
-                                const p = await base.product.findUnique({ where: { slug: c.slug }, select: { id: true } });
-                                productId = p?.id;
-                            }
-                        }
-
-                        if (productId) {
-                            const p = await base.product.findUnique({
-                                where: { id: productId },
-                                select: { type: true, slug: true },
-                            });
-
-                            if (p?.type == 'WATCH' && p.slug) {
-                                data.sku = p.slug; // SINGLE → sku = product.slug
-                            }
-                        }
-
-                    }
-
-                    return query(args);
-                },
-
-                async upsert({ args, query }) {
-                    const create = args.create as any;
-
-                    if (create && !create?.sku) {
-                        let productId: string | undefined = create.productId;
-
-                        if (!productId && create.product?.connect) {
-                            const c = create.product.connect as any;
-                            if (c.id) productId = c.id;
-                            else if (c.slug) {
-                                const p = await base.product.findUnique({ where: { slug: c.slug }, select: { id: true } });
-                                productId = p?.id;
-                            }
-                        }
-
-                        if (productId) {
-                            const p = await base.product.findUnique({
-                                where: { id: productId },
-                                select: { type: true, slug: true },
-                            });
-                            if (p?.type == 'WATCH' && p.slug) {
-                                create.sku = p.slug;
-                            }
-                        }
-                        if (create?.type == 'WATCH') {
-                            const vc = create?.variants?.create;
-                            if (vc) {
-                                const skuBase = create.slug ?? slugify(String(create.title ?? ''), { lower: true, strict: true });
-                                ensureVariantSkuForSingleProduct(vc, skuBase);
-                            }
-                        }
-
-
                     }
 
                     return query(args);

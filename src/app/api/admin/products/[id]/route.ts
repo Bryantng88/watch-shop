@@ -26,11 +26,12 @@ export async function PUT(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/admin/products/:id
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+    const { id } = await ctx.params;          // ✅ await params
     try {
-        const result = await adminProductService.remove(params.id);
+        const result = await adminProductService.remove(id);
         return NextResponse.json(result, { status: 200 });
     } catch (err: any) {
-        return NextResponse.json({ error: err?.message ?? "Failed to delete" }, { status: 400 });
+        return NextResponse.json({ error: err?.message ?? 'Failed to delete' }, { status: 400 });
     }
 }

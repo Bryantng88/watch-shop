@@ -3,7 +3,16 @@ import AdminProductList from "./admin-product-list";
 import Breadcrumbs from "@/features/admin/layout/breadcumbs";
 import AdminProductFilterBar from "@/features/admin/layout/filter-bar";
 import Link from "next/link";
+import NewProductButton from "./new_product_button";
+import { PRODUCT_TYPES } from "@/features/meta/server/enum";
+
 export default function AdminProductPage() {
+    const ProductType = Object.values(PRODUCT_TYPES).map(v => ({
+        label: v,
+        value: v,
+    }));
+
+
     return (
         <div className="space-y-6">
             {/* Breadcrumb */}
@@ -24,12 +33,7 @@ export default function AdminProductPage() {
                 <div className="flex-1">
                     <AdminProductFilterBar />
                 </div>
-                <Link
-                    href="/admin/products/new"
-                    className="rounded bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-                >
-                    + Thêm sản phẩm
-                </Link>
+                <NewProductButton productTypes={ProductType} />
             </div>
 
             {/* Bảng danh sách */}

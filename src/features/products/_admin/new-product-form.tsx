@@ -6,20 +6,28 @@ import { useRouter } from "next/navigation";
 type BrandOption = { id: string; name: string };
 type ProductStatus = string;
 type ProductType = string;
+type ProductCaseType = string;
+type SelectedType = string;
 
 
 export default function NewProductForm({
     brands,
     statusOptions,
     typeOptions,
+    caseOPtions,
+    selectedType,
+
 }: {
     brands: BrandOption[];
     statusOptions: readonly ProductStatus[];
     typeOptions: readonly ProductType[];
+    caseOPtions: readonly ProductCaseType[];
+    selectedType: SelectedType;
 }) {
     const router = useRouter();
     const [title, setTitle] = useState("");
     const [type, setType] = useState<ProductType>("WATCH");
+    const [caseType, setCaseType] = useState<ProductCaseType>("ROUND");
     const [brandId, setBrandId] = useState<string>("");
     const [status, setStatus] = useState<ProductStatus>("ACTIVE");
     const [price, setPrice] = useState<string>(""); // nhập số, gửi lên server chuyển Number
@@ -51,6 +59,7 @@ export default function NewProductForm({
                     brandId: brandId || null,
                     status,
                     type,
+                    caseType,
                     primaryImageUrl: primaryImageUrl || null,
                     price: Number(price), // sẽ tạo 1 variant mặc định
                 }),
@@ -128,6 +137,20 @@ export default function NewProductForm({
                         onChange={(e) => setType(e.target.value as ProductType)}
                     >
                         {typeOptions.map((s) => (
+                            <option key={s} value={s}>
+                                {s}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label className="mb-1 block text-sm text-gray-600">Case Type</label>
+                    <select
+                        className="h-10 w-full rounded border px-2 text-sm"
+                        value={caseType}
+                        onChange={(e) => setCaseType(e.target.value as ProductCaseType)}
+                    >
+                        {caseOPtions.map((s) => (
                             <option key={s} value={s}>
                                 {s}
                             </option>

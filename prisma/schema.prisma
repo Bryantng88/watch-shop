@@ -594,10 +594,8 @@ enum ServiceType {
 
 enum ProductStatus {
   ACTIVE
-  HOLD
-  SOLD
-  CONSIGNED
   HIDDEN
+  INACTIVE
 }
 
 enum PaymentStatus {
