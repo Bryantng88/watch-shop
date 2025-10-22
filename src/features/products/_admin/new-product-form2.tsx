@@ -28,7 +28,7 @@ export default function NewProductForm2({
     selectedType,
 }: Props) {
     const [formData, setFormData] = useState<Record<string, any>>({});
-
+    console.log('in ra selected type: ' + selectedType)
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -92,10 +92,25 @@ export default function NewProductForm2({
                             ))}
                         </select>
                     </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm text-gray-600">Trạng thái</label>
+                        <select
+                            className="h-10 w-full rounded border px-2 text-sm"
+
+                            onChange={handleChange}
+                        >
+                            {statusOptions.map((s) => (
+                                <option key={s.value} value={s.value}>
+                                    {s.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </>
             )}
 
-            {selectedType === 'STRAP' && (
+            {selectedType === 'WATCH_STRAP' && (
                 <>
                     <h3 className="font-semibold text-sm mt-4">Thông tin dây</h3>
                     <div>
@@ -109,7 +124,7 @@ export default function NewProductForm2({
                 </>
             )}
 
-            {selectedType === 'PART' && (
+            {selectedType === 'PARTS' && (
                 <>
                     <h3 className="font-semibold text-sm mt-4">Thông tin linh kiện</h3>
                     <div>

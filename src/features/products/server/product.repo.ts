@@ -2,9 +2,6 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 
 
-console.log('[SERVICE] prisma brand =', (globalThis as any).__PRISMA_BRAND__);
-console.log('[SERVICE] prisma has $extends? ', typeof (prisma as any).$extends === 'function');
-
 export type AdminSort =
     | "updatedDesc" | "updatedAsc"
     | "createdDesc" | "createdAsc"
