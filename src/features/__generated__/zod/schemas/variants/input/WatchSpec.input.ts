@@ -17,7 +17,6 @@ export const WatchSpecInputSchema = z.object({
     category: CategorySchema.array(),
     gender: GenderSchema,
     length: z.number(),
-    sizeCategory: z.string().optional().nullable(),
     width: z.number(),
     thickness: z.number(),
     movement: MovementTypeSchema,
@@ -35,6 +34,7 @@ export const WatchSpecInputSchema = z.object({
     cardIncluded: z.boolean(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    sizeCategory: z.string().optional().nullable(),
     product: z.unknown(),
     complication: z.array(z.unknown()),
     marketSegment: z.array(z.unknown())

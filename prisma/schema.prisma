@@ -1,16 +1,17 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "binary" // thêm dòng này
 }
 
 generator zod {
   provider         = "prisma-zod-generator"
   output           = "../src/features/__generated__/zod"
-  relationModel    = true
-  createInputTypes = true // giữ
-  updateInputTypes = true // giữ
-  modelSchema      = true // giữ
-  aggregateTypes   = false // 👈 tắt mấy file aggregate*
-  whereInputTypes  = false // 👈 tắt bớt variant types nếu bạn không dùng
+  aggregateTypes   = "false"
+  createInputTypes = "true"
+  modelSchema      = "true"
+  relationModel    = "true"
+  updateInputTypes = "true"
+  whereInputTypes  = "false"
 }
 
 datasource db {
@@ -76,7 +77,6 @@ model Product {
   status             ProductStatus       @default(ACTIVE)
   primaryImageUrl    String?
   type               ProductType
-  tag                Tag                 @default(PRE_OWNED)
   brandId            String?
   seoTitle           String?
   seoDescription     String?
@@ -86,6 +86,7 @@ model Product {
   vendorId           String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  tag                Tag                 @default(PRE_OWNED)
   AcquisitionItem    AcquisitionItem[]
   InvoiceItem        InvoiceItem[]
   maintenanceRecords MaintenanceRecord[]
@@ -94,9 +95,9 @@ model Product {
   vendor             Vendor?             @relation(fields: [vendorId], references: [id])
   image              ProductImage[]
   variants           ProductVariant[]
+  Reservation        Reservation[]
   ServiceRequest     ServiceRequest[]
   watchSpec          WatchSpec?
-  Reservation        Reservation[]
 
   @@index([status])
   @@index([brandId])
@@ -145,7 +146,6 @@ model WatchSpec {
   category        Category[]
   gender          Gender          @default(MEN)
   length          Decimal         @db.Decimal(12, 2)
-  sizeCategory    String?
   width           Decimal         @db.Decimal(12, 2)
   thickness       Decimal         @db.Decimal(12, 2)
   movement        MovementType    @default(AUTOMATIC)
@@ -163,6 +163,7 @@ model WatchSpec {
   cardIncluded    Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  sizeCategory    String?
   product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   complication    Complication[]  @relation("ComplicationToWatchSpec")
   marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
@@ -231,17 +232,15 @@ model OrderItem {
 }
 
 model Reservation {
-  id        String  @id @default(cuid())
-  productId String? // dùng khi scope = PRODUCT (độc bản)
-
-  orderId    String? // null khi mới giữ chỗ, set khi convert thành order
+  id         String            @id @default(cuid())
+  productId  String?
+  orderId    String?
   status     ReservationStatus @default(ACTIVE)
   depositAmt Decimal?          @db.Decimal(12, 2)
-  expiresAt  DateTime? // ví dụ giữ 24–48h
+  expiresAt  DateTime?
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
-
-  product Product? @relation(fields: [productId], references: [id])
+  product    Product?          @relation(fields: [productId], references: [id])
 
   @@index([productId])
 }
@@ -368,6 +367,7 @@ model Acquisition {
   cost            Decimal?          @db.Decimal(12, 2)
   currency        String?
   payoutStatus    String?
+  accquisitionStt AcquisitionStatus @default(DRAFT)
   refNo           String?
   notes           String?
   condition       String?
@@ -594,8 +594,10 @@ enum ServiceType {
 
 enum ProductStatus {
   ACTIVE
+  HOLD
+  SOLD
+  CONSIGNED
   HIDDEN
-  INACTIVE
 }
 
 enum PaymentStatus {
@@ -703,13 +705,7 @@ enum CaseMaterial {
   TITANIUM
   CERAMIC
   CARBON
-  YELLOW_GOLD_18KT
-  YELLOW_GOLD_14KT
-  WHITE_GOLD_18KT
-  WHITE_GOLD_14KT
-  ROSE_GOLD_18KT
-  ROSE_GOLD_14KT
-  SOLID_GOLD
+  GOLD
   PLATINUM
   SILVER
   BRASS
@@ -759,9 +755,9 @@ enum AcquisitionType {
 }
 
 enum AvailabilityStatus {
-  IN_STOCK // Đang sẵn hàng
-  RESERVED // Đã được đặt cọc (giữ hàng tạm thời)
-  SOLD // Đã bán
+  IN_STOCK
+  RESERVED
+  SOLD
 }
 
 enum ReservationStatus {
@@ -769,4 +765,10 @@ enum ReservationStatus {
   CANCELLED
   CONVERTED
   EXPIRED
+}
+
+enum AcquisitionStatus {
+  DRAFT
+  POSTED
+  CANCELED
 }

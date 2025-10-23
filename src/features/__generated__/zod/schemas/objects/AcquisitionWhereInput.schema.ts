@@ -6,6 +6,8 @@ import { EnumAcquisitionTypeFilterObjectSchema as EnumAcquisitionTypeFilterObjec
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
+import { EnumAcquisitionStatusFilterObjectSchema as EnumAcquisitionStatusFilterObjectSchema } from './EnumAcquisitionStatusFilter.schema';
+import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
@@ -26,6 +28,7 @@ const acquisitionwhereinputSchema = z.object({
   cost: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   currency: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   payoutStatus: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  accquisitionStt: z.union([z.lazy(() => EnumAcquisitionStatusFilterObjectSchema), AcquisitionStatusSchema]).optional(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   condition: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

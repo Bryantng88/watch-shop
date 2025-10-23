@@ -20,7 +20,6 @@ const makeSchema = () => z.object({
   category: z.union([z.lazy(() => WatchSpecCreatecategoryInputObjectSchema), CategorySchema.array()]),
   gender: GenderSchema.optional(),
   length: z.number(),
-  sizeCategory: z.string().optional().nullable(),
   width: z.number(),
   thickness: z.number(),
   movement: MovementTypeSchema.optional(),
@@ -37,6 +36,7 @@ const makeSchema = () => z.object({
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
+  sizeCategory: z.string().optional().nullable(),
   product: z.lazy(() => ProductCreateNestedOneWithoutWatchSpecInputObjectSchema),
   complication: z.lazy(() => ComplicationCreateNestedManyWithoutWatchSpecsInputObjectSchema),
   marketSegment: z.lazy(() => MarketSegmentCreateNestedManyWithoutWatchSpecsInputObjectSchema)

@@ -2,6 +2,7 @@
 import NewProductForm2 from "@/features/products/_admin/new-product-form2";
 import { listBrands } from "@/features/catalog/server/brands.repo"; // <- repo có sẵn của bạn\
 import { PRODUCT_STATUSES, PRODUCT_TYPES, CASE_TYPES } from "@/features/meta/server/enum";
+import { listVendor } from "@/features/vendors/server/vendor.repo";
 
 export const metadata = { title: "New Product · Admin" };
 type Option = { label: string; value: string };
@@ -10,6 +11,8 @@ const human = (s: string) => s.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c
 export default async function NewProductPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     // Lấy brand options cho select
     const brands = await listBrands(); // trả về [{id,name}]
+    const vendors = await listVendor()
+    console.log('test brand: ' + brands.length)
     const sp = await searchParams;                       // ✅ phải await
     const selectedTypeRaw = sp.type;
     const selectedType =
@@ -30,6 +33,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
 
             <div className="rounded-lg border bg-white p-6 shadow-sm">
                 <NewProductForm2
+                    vendors={vendors}
                     selectedType={selectedType}
                     brands={brands}
                     statusOptions={STATUS_OPTIONS}

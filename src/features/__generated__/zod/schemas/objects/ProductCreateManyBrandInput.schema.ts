@@ -11,7 +11,6 @@ const makeSchema = () => z.object({
   status: ProductStatusSchema.optional(),
   primaryImageUrl: z.string().optional().nullable(),
   type: ProductTypeSchema,
-  tag: TagSchema.optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   isStockManaged: z.boolean().optional(),
@@ -19,7 +18,8 @@ const makeSchema = () => z.object({
   publishedAt: z.coerce.date().optional().nullable(),
   vendorId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  tag: TagSchema.optional()
 }).strict();
 export const ProductCreateManyBrandInputObjectSchema: z.ZodType<Prisma.ProductCreateManyBrandInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateManyBrandInput>;
 export const ProductCreateManyBrandInputObjectZodSchema = makeSchema();

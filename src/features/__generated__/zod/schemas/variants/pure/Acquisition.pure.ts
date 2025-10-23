@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 import { AcquisitionTypeSchema } from '../../enums/AcquisitionType.schema';
+import { AcquisitionStatusSchema } from '../../enums/AcquisitionStatus.schema';
 // prettier-ignore
 export const AcquisitionModelSchema = z.object({
     id: z.string(),
@@ -11,6 +12,7 @@ export const AcquisitionModelSchema = z.object({
     cost: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
+    accquisitionStt: AcquisitionStatusSchema,
     refNo: z.string().nullable(),
     notes: z.string().nullable(),
     condition: z.string().nullable(),

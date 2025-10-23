@@ -8,9 +8,9 @@ import { BrandArgsObjectSchema as BrandArgsObjectSchema } from './BrandArgs.sche
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { ProductImageFindManySchema as ProductImageFindManySchema } from '../findManyProductImage.schema';
 import { ProductVariantFindManySchema as ProductVariantFindManySchema } from '../findManyProductVariant.schema';
+import { ReservationFindManySchema as ReservationFindManySchema } from '../findManyReservation.schema';
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
 import { WatchSpecArgsObjectSchema as WatchSpecArgsObjectSchema } from './WatchSpecArgs.schema';
-import { ReservationFindManySchema as ReservationFindManySchema } from '../findManyReservation.schema';
 import { ProductCountOutputTypeArgsObjectSchema as ProductCountOutputTypeArgsObjectSchema } from './ProductCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -22,9 +22,9 @@ const makeSchema = () => z.object({
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   image: z.union([z.boolean(), z.lazy(() => ProductImageFindManySchema)]).optional(),
   variants: z.union([z.boolean(), z.lazy(() => ProductVariantFindManySchema)]).optional(),
+  Reservation: z.union([z.boolean(), z.lazy(() => ReservationFindManySchema)]).optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   watchSpec: z.union([z.boolean(), z.lazy(() => WatchSpecArgsObjectSchema)]).optional(),
-  Reservation: z.union([z.boolean(), z.lazy(() => ReservationFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ProductCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ProductIncludeObjectSchema: z.ZodType<Prisma.ProductInclude> = makeSchema() as unknown as z.ZodType<Prisma.ProductInclude>;

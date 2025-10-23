@@ -9,7 +9,6 @@ const makeSchema = () => z.object({
   status: SortOrderSchema.optional(),
   primaryImageUrl: SortOrderSchema.optional(),
   type: SortOrderSchema.optional(),
-  tag: SortOrderSchema.optional(),
   brandId: SortOrderSchema.optional(),
   seoTitle: SortOrderSchema.optional(),
   seoDescription: SortOrderSchema.optional(),
@@ -18,7 +17,8 @@ const makeSchema = () => z.object({
   publishedAt: SortOrderSchema.optional(),
   vendorId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  tag: SortOrderSchema.optional()
 }).strict();
 export const ProductCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ProductCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCountOrderByAggregateInput>;
 export const ProductCountOrderByAggregateInputObjectZodSchema = makeSchema();

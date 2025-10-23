@@ -6,12 +6,12 @@ import { EnumProductStatusWithAggregatesFilterObjectSchema as EnumProductStatusW
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumProductTypeWithAggregatesFilterObjectSchema as EnumProductTypeWithAggregatesFilterObjectSchema } from './EnumProductTypeWithAggregatesFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumTagWithAggregatesFilterObjectSchema as EnumTagWithAggregatesFilterObjectSchema } from './EnumTagWithAggregatesFilter.schema';
-import { TagSchema } from '../enums/Tag.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { IntWithAggregatesFilterObjectSchema as IntWithAggregatesFilterObjectSchema } from './IntWithAggregatesFilter.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
-import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { EnumTagWithAggregatesFilterObjectSchema as EnumTagWithAggregatesFilterObjectSchema } from './EnumTagWithAggregatesFilter.schema';
+import { TagSchema } from '../enums/Tag.schema'
 
 const productscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ProductScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -23,7 +23,6 @@ const productscalarwherewithaggregatesinputSchema = z.object({
   status: z.union([z.lazy(() => EnumProductStatusWithAggregatesFilterObjectSchema), ProductStatusSchema]).optional(),
   primaryImageUrl: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumProductTypeWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional(),
-  tag: z.union([z.lazy(() => EnumTagWithAggregatesFilterObjectSchema), TagSchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   seoDescription: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
@@ -32,7 +31,8 @@ const productscalarwherewithaggregatesinputSchema = z.object({
   publishedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   vendorId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  tag: z.union([z.lazy(() => EnumTagWithAggregatesFilterObjectSchema), TagSchema]).optional()
 }).strict();
 export const ProductScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput> = productscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput>;
 export const ProductScalarWhereWithAggregatesInputObjectZodSchema = productscalarwherewithaggregatesinputSchema;

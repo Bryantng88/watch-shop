@@ -11,6 +11,7 @@ const makeSchema = () => z.object({
   cost: SortOrderSchema.optional(),
   currency: SortOrderSchema.optional(),
   payoutStatus: SortOrderSchema.optional(),
+  accquisitionStt: SortOrderSchema.optional(),
   refNo: SortOrderSchema.optional(),
   notes: SortOrderSchema.optional(),
   condition: SortOrderSchema.optional(),

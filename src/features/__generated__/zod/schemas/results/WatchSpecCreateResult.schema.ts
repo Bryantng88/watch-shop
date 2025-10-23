@@ -7,7 +7,6 @@ export const WatchSpecCreateResultSchema = z.object({
   category: z.array(z.unknown()),
   gender: z.unknown(),
   length: z.number(),
-  sizeCategory: z.string().optional(),
   width: z.number(),
   thickness: z.number(),
   movement: z.unknown(),
@@ -25,6 +24,7 @@ export const WatchSpecCreateResultSchema = z.object({
   cardIncluded: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  sizeCategory: z.string().optional(),
   product: z.unknown(),
   complication: z.array(z.unknown()),
   marketSegment: z.array(z.unknown())

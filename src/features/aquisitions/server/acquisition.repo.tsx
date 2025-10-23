@@ -1,36 +1,60 @@
-// src/features/aquisitions/server/acquisition.repo.ts
-import { Prisma, AcquisitionType } from "@prisma/client";
+// src/features/acquisitions/server/acquisition.repo.ts
+import { Prisma, AcquisitionStatus } from "@prisma/client";
 import { Tx } from "@/server/db/client";
 
 
+export type CreateAcqWithItemInput = {
+    vendorId: string;
+    acquiredAt?: Date;
+    cost?: number;
+    accquisitionStt?: AcquisitionStatus
+    currency?: string;
+    refNo?: string | null;
+    notes?: string | null;
+    // line:
+    productId: string;
+    unitCost?: number;  // nếu bạn muốn lưu đơn giá line (thường = cost)
+    qty?: number;       // mặc định 1
+};
+
 export const acquisitionRepo = (tx: Tx) => ({
-    create: (data: {
-        vendorId: string;
-        acquiredAt?: string | Date | null;
-        cost?: number | null;
-        currency?: string | null;
-        refNo?: string | null;
-        notes?: string | null;
-        type?: AcquisitionType | "PURCHASE" | "CONSIGN";
-    }) => {
-        const at =
-            typeof data.acquiredAt === "string"
-                ? new Date(data.acquiredAt)
-                : data.acquiredAt ?? undefined;
+    async createWithItem(data: CreateAcqWithItemInput) {
+        let acquisition = await tx.acquisition.findFirst({
+            where: {
+                vendorId: data.vendorId,
+                accquisitionStt: "DRAFT",
+                acquiredAt: {
+                    gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                    lte: new Date(new Date().setHours(23, 59, 59, 999)),
+                },
+            },
+            select: { id: true },
+        })
 
-        // Khởi tạo rỗng đúng kiểu rồi gán từng phần
-        const createData = {} as Prisma.AcquisitionCreateInput;
-        createData.vendor = { connect: { id: data.vendorId } };
-        if (at) createData.acquiredAt = at;
-        if (data.cost != null) createData.cost = data.cost;
-        if (data.currency) createData.currency = data.currency;
-        if (data.refNo !== undefined) createData.refNo = data.refNo;
-        if (data.notes !== undefined) createData.notes = data.notes;
-        createData.type =
-            (typeof data.type === "string"
-                ? (data.type as AcquisitionType)
-                : data.type) ?? AcquisitionType.PURCHASE;
+        if (!acquisition) {
+            acquisition = await tx.acquisition.create({
+                data: {
+                    vendor: { connect: { id: data.vendorId } },
+                    acquiredAt: data.acquiredAt ?? new Date(),
+                    cost: data.cost ?? data.unitCost ?? 0,
+                    accquisitionStt: "DRAFT",
+                    currency: data.currency ?? "VND",
+                    refNo: data.refNo ?? null,
+                    notes: data.notes ?? null,
+                    type: "PURCHASE",
+                },
+                select: { id: true },
+            });
+        }
+        await tx.acquisitionItem.create({
+            data: {
+                acquisition: { connect: { id: acquisition.id } },
+                product: { connect: { id: data.productId } },
+                quantity: 1,
+                unitCost: data.cost,
+            },
+        });
 
-        return tx.acquisition.create({ data: createData, select: { id: true } });
+        return acquisition; // { id }
     },
 });

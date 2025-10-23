@@ -6,12 +6,12 @@ import { EnumProductStatusFilterObjectSchema as EnumProductStatusFilterObjectSch
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumTagFilterObjectSchema as EnumTagFilterObjectSchema } from './EnumTagFilter.schema';
-import { TagSchema } from '../enums/Tag.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumTagFilterObjectSchema as EnumTagFilterObjectSchema } from './EnumTagFilter.schema';
+import { TagSchema } from '../enums/Tag.schema'
 
 const productscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductScalarWhereInputObjectSchema), z.lazy(() => ProductScalarWhereInputObjectSchema).array()]).optional(),
@@ -23,7 +23,6 @@ const productscalarwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumProductStatusFilterObjectSchema), ProductStatusSchema]).optional(),
   primaryImageUrl: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
-  tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoDescription: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
@@ -32,7 +31,8 @@ const productscalarwhereinputSchema = z.object({
   publishedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional()
 }).strict();
 export const ProductScalarWhereInputObjectSchema: z.ZodType<Prisma.ProductScalarWhereInput> = productscalarwhereinputSchema as unknown as z.ZodType<Prisma.ProductScalarWhereInput>;
 export const ProductScalarWhereInputObjectZodSchema = productscalarwhereinputSchema;

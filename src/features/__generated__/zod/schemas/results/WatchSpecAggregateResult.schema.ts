@@ -7,7 +7,6 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     category: z.number(),
     gender: z.number(),
     length: z.number(),
-    sizeCategory: z.number(),
     width: z.number(),
     thickness: z.number(),
     movement: z.number(),
@@ -25,6 +24,7 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     cardIncluded: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    sizeCategory: z.number(),
     product: z.number(),
     complication: z.number(),
     marketSegment: z.number()
@@ -46,7 +46,6 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     model: z.string().nullable(),
     year: z.string().nullable(),
     length: z.number().nullable(),
-    sizeCategory: z.string().nullable(),
     width: z.number().nullable(),
     thickness: z.number().nullable(),
     caliber: z.string().nullable(),
@@ -55,14 +54,14 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     dialColor: z.string().nullable(),
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sizeCategory: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     productId: z.string().nullable(),
     model: z.string().nullable(),
     year: z.string().nullable(),
     length: z.number().nullable(),
-    sizeCategory: z.string().nullable(),
     width: z.number().nullable(),
     thickness: z.number().nullable(),
     caliber: z.string().nullable(),
@@ -71,5 +70,6 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     dialColor: z.string().nullable(),
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sizeCategory: z.string().nullable()
   }).nullable().optional()});

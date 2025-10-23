@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
+import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema as CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema } from './CustomerCreateNestedOneWithoutAcquisitionInput.schema';
 import { VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionsInput.schema';
 import { AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutAcquisitionInput.schema'
@@ -12,6 +13,7 @@ const makeSchema = () => z.object({
   cost: z.number().optional().nullable(),
   currency: z.string().optional().nullable(),
   payoutStatus: z.string().optional().nullable(),
+  accquisitionStt: AcquisitionStatusSchema.optional(),
   refNo: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   condition: z.string().optional().nullable(),

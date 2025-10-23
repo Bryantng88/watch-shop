@@ -6,12 +6,12 @@ import { EnumProductStatusFilterObjectSchema as EnumProductStatusFilterObjectSch
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumTagFilterObjectSchema as EnumTagFilterObjectSchema } from './EnumTagFilter.schema';
-import { TagSchema } from '../enums/Tag.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumTagFilterObjectSchema as EnumTagFilterObjectSchema } from './EnumTagFilter.schema';
+import { TagSchema } from '../enums/Tag.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
@@ -22,10 +22,10 @@ import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarR
 import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema';
 import { ProductImageListRelationFilterObjectSchema as ProductImageListRelationFilterObjectSchema } from './ProductImageListRelationFilter.schema';
 import { ProductVariantListRelationFilterObjectSchema as ProductVariantListRelationFilterObjectSchema } from './ProductVariantListRelationFilter.schema';
+import { ReservationListRelationFilterObjectSchema as ReservationListRelationFilterObjectSchema } from './ReservationListRelationFilter.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
 import { WatchSpecNullableScalarRelationFilterObjectSchema as WatchSpecNullableScalarRelationFilterObjectSchema } from './WatchSpecNullableScalarRelationFilter.schema';
-import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './WatchSpecWhereInput.schema';
-import { ReservationListRelationFilterObjectSchema as ReservationListRelationFilterObjectSchema } from './ReservationListRelationFilter.schema'
+import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './WatchSpecWhereInput.schema'
 
 const productwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductWhereInputObjectSchema), z.lazy(() => ProductWhereInputObjectSchema).array()]).optional(),
@@ -37,7 +37,6 @@ const productwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumProductStatusFilterObjectSchema), ProductStatusSchema]).optional(),
   primaryImageUrl: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
-  tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoDescription: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
@@ -47,6 +46,7 @@ const productwhereinputSchema = z.object({
   vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
@@ -55,9 +55,9 @@ const productwhereinputSchema = z.object({
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   image: z.lazy(() => ProductImageListRelationFilterObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantListRelationFilterObjectSchema).optional(),
+  Reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  watchSpec: z.union([z.lazy(() => WatchSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecWhereInputObjectSchema)]).optional(),
-  Reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional()
+  watchSpec: z.union([z.lazy(() => WatchSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductWhereInputObjectSchema: z.ZodType<Prisma.ProductWhereInput> = productwhereinputSchema as unknown as z.ZodType<Prisma.ProductWhereInput>;
 export const ProductWhereInputObjectZodSchema = productwhereinputSchema;

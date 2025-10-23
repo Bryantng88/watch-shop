@@ -20,7 +20,6 @@ export const ProductGroupByResultSchema = z.array(z.object({
     status: z.number(),
     primaryImageUrl: z.number(),
     type: z.number(),
-    tag: z.number(),
     brandId: z.number(),
     seoTitle: z.number(),
     seoDescription: z.number(),
@@ -30,6 +29,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
     vendorId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    tag: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
@@ -38,9 +38,9 @@ export const ProductGroupByResultSchema = z.array(z.object({
     vendor: z.number(),
     image: z.number(),
     variants: z.number(),
+    Reservation: z.number(),
     ServiceRequest: z.number(),
-    watchSpec: z.number(),
-    Reservation: z.number()
+    watchSpec: z.number()
   }).optional(),
   _sum: z.object({
     maxQtyPerOrder: z.number().nullable()

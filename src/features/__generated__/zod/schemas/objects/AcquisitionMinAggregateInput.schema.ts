@@ -11,6 +11,7 @@ const makeSchema = () => z.object({
   cost: z.literal(true).optional(),
   currency: z.literal(true).optional(),
   payoutStatus: z.literal(true).optional(),
+  accquisitionStt: z.literal(true).optional(),
   refNo: z.literal(true).optional(),
   notes: z.literal(true).optional(),
   condition: z.literal(true).optional(),

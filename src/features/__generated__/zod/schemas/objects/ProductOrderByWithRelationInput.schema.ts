@@ -10,9 +10,9 @@ import { BrandOrderByWithRelationInputObjectSchema as BrandOrderByWithRelationIn
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { ProductImageOrderByRelationAggregateInputObjectSchema as ProductImageOrderByRelationAggregateInputObjectSchema } from './ProductImageOrderByRelationAggregateInput.schema';
 import { ProductVariantOrderByRelationAggregateInputObjectSchema as ProductVariantOrderByRelationAggregateInputObjectSchema } from './ProductVariantOrderByRelationAggregateInput.schema';
+import { ReservationOrderByRelationAggregateInputObjectSchema as ReservationOrderByRelationAggregateInputObjectSchema } from './ReservationOrderByRelationAggregateInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
-import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './WatchSpecOrderByWithRelationInput.schema';
-import { ReservationOrderByRelationAggregateInputObjectSchema as ReservationOrderByRelationAggregateInputObjectSchema } from './ReservationOrderByRelationAggregateInput.schema'
+import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './WatchSpecOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -21,7 +21,6 @@ const makeSchema = () => z.object({
   status: SortOrderSchema.optional(),
   primaryImageUrl: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   type: SortOrderSchema.optional(),
-  tag: SortOrderSchema.optional(),
   brandId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   seoTitle: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   seoDescription: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -31,6 +30,7 @@ const makeSchema = () => z.object({
   vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  tag: SortOrderSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
@@ -39,9 +39,9 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageOrderByRelationAggregateInputObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantOrderByRelationAggregateInputObjectSchema).optional(),
+  Reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
-  watchSpec: z.lazy(() => WatchSpecOrderByWithRelationInputObjectSchema).optional(),
-  Reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional()
+  watchSpec: z.lazy(() => WatchSpecOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ProductOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductOrderByWithRelationInput>;
 export const ProductOrderByWithRelationInputObjectZodSchema = makeSchema();

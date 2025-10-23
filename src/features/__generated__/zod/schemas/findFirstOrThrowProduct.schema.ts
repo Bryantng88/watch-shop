@@ -16,7 +16,6 @@ export const ProductFindFirstOrThrowSelectSchema: z.ZodType<Prisma.ProductSelect
     status: z.boolean().optional(),
     primaryImageUrl: z.boolean().optional(),
     type: z.boolean().optional(),
-    tag: z.boolean().optional(),
     brandId: z.boolean().optional(),
     seoTitle: z.boolean().optional(),
     seoDescription: z.boolean().optional(),
@@ -26,6 +25,7 @@ export const ProductFindFirstOrThrowSelectSchema: z.ZodType<Prisma.ProductSelect
     vendorId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    tag: z.boolean().optional(),
     AcquisitionItem: z.boolean().optional(),
     InvoiceItem: z.boolean().optional(),
     maintenanceRecords: z.boolean().optional(),
@@ -34,9 +34,9 @@ export const ProductFindFirstOrThrowSelectSchema: z.ZodType<Prisma.ProductSelect
     vendor: z.boolean().optional(),
     image: z.boolean().optional(),
     variants: z.boolean().optional(),
+    Reservation: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     watchSpec: z.boolean().optional(),
-    Reservation: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ProductSelect>;
 
@@ -47,7 +47,6 @@ export const ProductFindFirstOrThrowSelectZodSchema = z.object({
     status: z.boolean().optional(),
     primaryImageUrl: z.boolean().optional(),
     type: z.boolean().optional(),
-    tag: z.boolean().optional(),
     brandId: z.boolean().optional(),
     seoTitle: z.boolean().optional(),
     seoDescription: z.boolean().optional(),
@@ -57,6 +56,7 @@ export const ProductFindFirstOrThrowSelectZodSchema = z.object({
     vendorId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    tag: z.boolean().optional(),
     AcquisitionItem: z.boolean().optional(),
     InvoiceItem: z.boolean().optional(),
     maintenanceRecords: z.boolean().optional(),
@@ -65,9 +65,9 @@ export const ProductFindFirstOrThrowSelectZodSchema = z.object({
     vendor: z.boolean().optional(),
     image: z.boolean().optional(),
     variants: z.boolean().optional(),
+    Reservation: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     watchSpec: z.boolean().optional(),
-    Reservation: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

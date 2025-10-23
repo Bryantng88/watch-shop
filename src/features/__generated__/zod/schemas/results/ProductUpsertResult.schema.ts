@@ -6,7 +6,6 @@ export const ProductUpsertResultSchema = z.object({
   status: z.unknown(),
   primaryImageUrl: z.string().optional(),
   type: z.unknown(),
-  tag: z.unknown(),
   brandId: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
@@ -16,6 +15,7 @@ export const ProductUpsertResultSchema = z.object({
   vendorId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  tag: z.unknown(),
   AcquisitionItem: z.array(z.unknown()),
   InvoiceItem: z.array(z.unknown()),
   maintenanceRecords: z.array(z.unknown()),
@@ -24,7 +24,7 @@ export const ProductUpsertResultSchema = z.object({
   vendor: z.unknown().optional(),
   image: z.array(z.unknown()),
   variants: z.array(z.unknown()),
+  Reservation: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
-  watchSpec: z.unknown().optional(),
-  Reservation: z.array(z.unknown())
+  watchSpec: z.unknown().optional()
 });

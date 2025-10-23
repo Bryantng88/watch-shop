@@ -42,7 +42,7 @@ async function main() {
     );
 
 
-    const speedmaster = await prisma.product.upsert({
+    {/*const speedmaster = await prisma.product.upsert({
         where: { slug: 'omega-speedmaster' },   // cần @unique trên Product.slug (bạn có)
         update: {},
         create: {
@@ -363,7 +363,7 @@ async function main() {
 
     })
 
-
+*/}
 
 
     // --- PRODUCT ---

@@ -11,9 +11,9 @@ import { BrandCreateNestedOneWithoutProductsInputObjectSchema as BrandCreateNest
 import { VendorCreateNestedOneWithoutProductInputObjectSchema as VendorCreateNestedOneWithoutProductInputObjectSchema } from './VendorCreateNestedOneWithoutProductInput.schema';
 import { ProductImageCreateNestedManyWithoutProductInputObjectSchema as ProductImageCreateNestedManyWithoutProductInputObjectSchema } from './ProductImageCreateNestedManyWithoutProductInput.schema';
 import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as ProductVariantCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantCreateNestedManyWithoutProductInput.schema';
+import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema';
 import { ServiceRequestCreateNestedManyWithoutProductInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductInput.schema';
-import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema';
-import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema'
+import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,13 +22,13 @@ const makeSchema = () => z.object({
   status: ProductStatusSchema.optional(),
   primaryImageUrl: z.string().optional().nullable(),
   type: ProductTypeSchema,
-  tag: TagSchema.optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   isStockManaged: z.boolean().optional(),
   maxQtyPerOrder: z.number().int().optional(),
   publishedAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  tag: TagSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema),
   InvoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutProductInputObjectSchema),
   maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema),
@@ -37,9 +37,9 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorCreateNestedOneWithoutProductInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageCreateNestedManyWithoutProductInputObjectSchema),
   variants: z.lazy(() => ProductVariantCreateNestedManyWithoutProductInputObjectSchema),
+  Reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductInputObjectSchema),
-  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  Reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema)
+  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional()
 }).strict();
 export const ProductCreateInputObjectSchema: z.ZodType<Prisma.ProductCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateInput>;
 export const ProductCreateInputObjectZodSchema = makeSchema();

@@ -11,7 +11,6 @@ export const ProductResultSchema = z.object({
     status: ProductStatusSchema,
     primaryImageUrl: z.string().nullable(),
     type: ProductTypeSchema,
-    tag: TagSchema,
     brandId: z.string().nullable(),
     seoTitle: z.string().nullable(),
     seoDescription: z.string().nullable(),
@@ -21,6 +20,7 @@ export const ProductResultSchema = z.object({
     vendorId: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    tag: TagSchema,
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),
@@ -29,9 +29,9 @@ export const ProductResultSchema = z.object({
     vendor: z.unknown().nullable(),
     image: z.array(z.unknown()),
     variants: z.array(z.unknown()),
+    Reservation: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
-    watchSpec: z.unknown().nullable(),
-    Reservation: z.array(z.unknown())
+    watchSpec: z.unknown().nullable()
 }).strict();
 
 export type ProductResultType = z.infer<typeof ProductResultSchema>;

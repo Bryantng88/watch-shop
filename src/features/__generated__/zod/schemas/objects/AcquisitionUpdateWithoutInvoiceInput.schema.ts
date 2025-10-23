@@ -6,6 +6,8 @@ import { EnumAcquisitionTypeFieldUpdateOperationsInputObjectSchema as EnumAcquis
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
+import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
+import { EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema as EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema } from './EnumAcquisitionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema as CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './CustomerUpdateOneWithoutAcquisitionNestedInput.schema';
 import { VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema as VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema } from './VendorUpdateOneWithoutAcquisitionsNestedInput.schema';
@@ -18,6 +20,7 @@ const makeSchema = () => z.object({
   cost: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   currency: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   payoutStatus: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  accquisitionStt: z.union([AcquisitionStatusSchema, z.lazy(() => EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   condition: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

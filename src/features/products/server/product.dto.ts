@@ -33,6 +33,9 @@ export const CreateProductWithAcqSchema = z
         marketSegment: z.string().optional(),
         strap: z.string().optional(),
 
+        //variant
+        price: z.coerce.number().optional(),
+
         //general
         title: z.string().min(1),
         brandId: z.string().optional(),

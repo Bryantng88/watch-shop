@@ -12,8 +12,13 @@ interface Brand {
     id: string;
     name: string;
 }
+interface Vendor {
+    id: string;
+    name: string;
+}
 
 interface Props {
+    vendors: Vendor[]
     brands: Brand[];
     statusOptions: Option[];
     typeOptions: Option[];
@@ -21,10 +26,9 @@ interface Props {
     selectedType: string;
 }
 
-export default function NewProductForm2({ brands, statusOptions, typeOptions, caseOptions, selectedType,
+export default function NewProductForm2({ vendors, brands, statusOptions, typeOptions, caseOptions, selectedType,
 }: Props) {
-    const search = useSearchParams();
-    const router = useRouter();
+
     const [formData, setFormData] = useState<Record<string, any>>({});
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,6 +80,12 @@ export default function NewProductForm2({ brands, statusOptions, typeOptions, ca
                 </select>
             </div>
 
+            <div>
+
+                <label className="block text-sm font-medium">Giá bán</label>
+                <input type="number" className="mt-1 w-full rounded border px-3 py-2" onChange={set('price')} />
+
+            </div>
             {/* DYNAMIC FORM SECTION */}
             {selectedType === 'WATCH' && (
                 <>
@@ -151,7 +161,11 @@ export default function NewProductForm2({ brands, statusOptions, typeOptions, ca
                                 onChange={set('vendorId')}
                                 value={formData.vendorId ?? ''}>
                                 <option value="">-- Chọn Vendor có sẵn --</option>
-                                {/* nếu bạn muốn load vendors: truyền prop vendors từ page.tsx */}
+                                {vendors.map((b) => (
+                                    <option key={b.id} value={b.id}>
+                                        {b.name}
+                                    </option>
+                                ))}
                             </select>
                             <button type="button" className="mt-1 rounded border px-3"
                                 onClick={() => setShowQuickVendor(v => !v)}>

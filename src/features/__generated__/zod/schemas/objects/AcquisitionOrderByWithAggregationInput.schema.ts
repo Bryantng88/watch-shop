@@ -17,6 +17,7 @@ const makeSchema = () => z.object({
   cost: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   currency: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   payoutStatus: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  accquisitionStt: SortOrderSchema.optional(),
   refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   condition: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

@@ -22,6 +22,7 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     cost: z.number(),
     currency: z.number(),
     payoutStatus: z.number(),
+    accquisitionStt: z.number(),
     refNo: z.number(),
     notes: z.number(),
     condition: z.number(),

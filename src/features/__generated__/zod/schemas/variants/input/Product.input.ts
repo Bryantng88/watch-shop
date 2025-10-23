@@ -11,7 +11,6 @@ export const ProductInputSchema = z.object({
     status: ProductStatusSchema,
     primaryImageUrl: z.string().optional().nullable(),
     type: ProductTypeSchema,
-    tag: TagSchema,
     brandId: z.string().optional().nullable(),
     seoTitle: z.string().optional().nullable(),
     seoDescription: z.string().optional().nullable(),
@@ -21,6 +20,7 @@ export const ProductInputSchema = z.object({
     vendorId: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    tag: TagSchema,
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),
@@ -29,9 +29,9 @@ export const ProductInputSchema = z.object({
     vendor: z.unknown().optional().nullable(),
     image: z.array(z.unknown()),
     variants: z.array(z.unknown()),
+    Reservation: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
-    watchSpec: z.unknown().optional().nullable(),
-    Reservation: z.array(z.unknown())
+    watchSpec: z.unknown().optional().nullable()
 }).strict();
 
 export type ProductInputType = z.infer<typeof ProductInputSchema>;

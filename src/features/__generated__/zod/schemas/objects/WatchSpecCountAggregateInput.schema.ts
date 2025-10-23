@@ -10,7 +10,6 @@ const makeSchema = () => z.object({
   category: z.literal(true).optional(),
   gender: z.literal(true).optional(),
   length: z.literal(true).optional(),
-  sizeCategory: z.literal(true).optional(),
   width: z.literal(true).optional(),
   thickness: z.literal(true).optional(),
   movement: z.literal(true).optional(),
@@ -28,6 +27,7 @@ const makeSchema = () => z.object({
   cardIncluded: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  sizeCategory: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const WatchSpecCountAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCountAggregateInputType>;

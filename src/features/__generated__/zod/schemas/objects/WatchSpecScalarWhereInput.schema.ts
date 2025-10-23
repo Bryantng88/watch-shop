@@ -33,7 +33,6 @@ const watchspecscalarwhereinputSchema = z.object({
   category: z.lazy(() => EnumCategoryNullableListFilterObjectSchema).optional(),
   gender: z.union([z.lazy(() => EnumGenderFilterObjectSchema), GenderSchema]).optional(),
   length: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  sizeCategory: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   width: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   thickness: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   movement: z.union([z.lazy(() => EnumMovementTypeFilterObjectSchema), MovementTypeSchema]).optional(),
@@ -50,7 +49,8 @@ const watchspecscalarwhereinputSchema = z.object({
   bookletIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  sizeCategory: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const WatchSpecScalarWhereInputObjectSchema: z.ZodType<Prisma.WatchSpecScalarWhereInput> = watchspecscalarwhereinputSchema as unknown as z.ZodType<Prisma.WatchSpecScalarWhereInput>;
 export const WatchSpecScalarWhereInputObjectZodSchema = watchspecscalarwhereinputSchema;

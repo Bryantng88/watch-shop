@@ -9,7 +9,6 @@ const makeSchema = () => z.object({
   status: z.literal(true).optional(),
   primaryImageUrl: z.literal(true).optional(),
   type: z.literal(true).optional(),
-  tag: z.literal(true).optional(),
   brandId: z.literal(true).optional(),
   seoTitle: z.literal(true).optional(),
   seoDescription: z.literal(true).optional(),
@@ -18,7 +17,8 @@ const makeSchema = () => z.object({
   publishedAt: z.literal(true).optional(),
   vendorId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  tag: z.literal(true).optional()
 }).strict();
 export const ProductMinAggregateInputObjectSchema: z.ZodType<Prisma.ProductMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductMinAggregateInputType>;
 export const ProductMinAggregateInputObjectZodSchema = makeSchema();

@@ -164,14 +164,16 @@ export const adminProductService = {
 
             // 5) Acquisition (header)
             const acq = acquisitionRepo(tx);
-            const acquisition = await acq.create({
+            const acquisition = await acq.createWithItem({
                 vendorId,
                 acquiredAt: dto.acquiredAt ? new Date(dto.acquiredAt) : undefined,
                 cost: dto.purchasePrice,
                 currency: dto.currency,
                 refNo: dto.refNo ?? null,
                 notes: dto.notes ?? null,
-                type: "PURCHASE",
+                productId: product.id,
+                unitCost: dto.purchasePrice ?? 0,
+                qty: 1,
             });
 
             // 6) (Optional) AcquisitionItem link tới product

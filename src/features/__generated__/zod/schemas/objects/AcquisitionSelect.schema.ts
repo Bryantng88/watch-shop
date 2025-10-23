@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   cost: z.boolean().optional(),
   currency: z.boolean().optional(),
   payoutStatus: z.boolean().optional(),
+  accquisitionStt: z.boolean().optional(),
   refNo: z.boolean().optional(),
   notes: z.boolean().optional(),
   condition: z.boolean().optional(),

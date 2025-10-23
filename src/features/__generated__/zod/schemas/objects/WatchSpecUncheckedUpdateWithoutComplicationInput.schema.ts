@@ -32,7 +32,6 @@ const makeSchema = () => z.object({
   category: z.union([z.lazy(() => WatchSpecUpdatecategoryInputObjectSchema), CategorySchema.array()]).optional(),
   gender: z.union([GenderSchema, z.lazy(() => EnumGenderFieldUpdateOperationsInputObjectSchema)]).optional(),
   length: z.union([z.number(), z.lazy(() => DecimalFieldUpdateOperationsInputObjectSchema)]).optional(),
-  sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   width: z.union([z.number(), z.lazy(() => DecimalFieldUpdateOperationsInputObjectSchema)]).optional(),
   thickness: z.union([z.number(), z.lazy(() => DecimalFieldUpdateOperationsInputObjectSchema)]).optional(),
   movement: z.union([MovementTypeSchema, z.lazy(() => EnumMovementTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -50,6 +49,7 @@ const makeSchema = () => z.object({
   cardIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   marketSegment: z.lazy(() => MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
 }).strict();
 export const WatchSpecUncheckedUpdateWithoutComplicationInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedUpdateWithoutComplicationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedUpdateWithoutComplicationInput>;

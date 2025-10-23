@@ -6,6 +6,8 @@ import { EnumAcquisitionTypeWithAggregatesFilterObjectSchema as EnumAcquisitionT
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
+import { EnumAcquisitionStatusWithAggregatesFilterObjectSchema as EnumAcquisitionStatusWithAggregatesFilterObjectSchema } from './EnumAcquisitionStatusWithAggregatesFilter.schema';
+import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema'
 
 const acquisitionscalarwherewithaggregatesinputSchema = z.object({
@@ -20,6 +22,7 @@ const acquisitionscalarwherewithaggregatesinputSchema = z.object({
   cost: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
   currency: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   payoutStatus: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  accquisitionStt: z.union([z.lazy(() => EnumAcquisitionStatusWithAggregatesFilterObjectSchema), AcquisitionStatusSchema]).optional(),
   refNo: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   notes: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   condition: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
