@@ -31,13 +31,14 @@ function makePrisma() {
     return base.$extends({
         query: {
             product: {
-                async create({ args, query }) {
+                async create(this: typeof base, { args, query }) {
+                    const client = this;
                     const data = args.data as any;
                     if (data?.title && !data.slug) {
                         let baseSlug = slugify(String(data.title), { lower: true, strict: true });
                         let slug = baseSlug;
                         let i = 1;
-                        while (await base.product.findUnique({ where: { slug } })) {
+                        while (await client.product.findUnique({ where: { slug } })) {
                             slug = `${baseSlug}-${i++}`;
                         }
                         data.slug = slug;
@@ -51,7 +52,6 @@ function makePrisma() {
                     }
                     if (data?.watchSpec?.create) {
                         const ws = data.watchSpec.create;
-                        console.log('watch spec created in ra ' + ws.length)
                         type Rule = { min?: number; max?: number; category: string };
                         type CaseKey = "round" | "nonRound";
                         //định nghĩa quy luật về size

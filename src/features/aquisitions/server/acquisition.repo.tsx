@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, AcquisitionType } from "@prisma/client";
 import prisma from '@/server/db/client';
-type Db = typeof prisma | Prisma.TransactionClient;
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+type Db = typeof prisma | Tx;
 
 const toAcqType = (s?: string): AcquisitionType => {
     const key = (s ?? 'PURCHASE').toUpperCase() as keyof typeof AcquisitionType;

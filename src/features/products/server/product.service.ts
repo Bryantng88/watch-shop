@@ -7,7 +7,7 @@ import { complications } from "@/constants/constants";
 import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqInput, AdminFiltersSchema } from "./product.dto";
 import type { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
-import { upsertSupplierByNameRole } from "@/features/vendors/server/vendor.repo";
+import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
 import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
 /* -------------------------------------------------------
  * Helpers
@@ -27,12 +27,19 @@ const arrayify = (v: unknown): string[] => {
     return [String(v)];
 };
 
-const toCaseType = (s?: string): CaseType => {
-    if (!s) return CaseType.ROUND;
-    const k = s.toUpperCase() as keyof typeof CaseType;
-    return CaseType[k] ?? CaseType.ROUND;
+const toCaseType = (v?: unknown): CaseType => {
+    const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof CaseType;
+    return CaseType[key] ?? CaseType.ROUND;
+};
+const toStatus = (v?: unknown): ProductStatus => {
+    const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof ProductStatus;
+    return ProductStatus[key] ?? ProductStatus.HIDDEN;
 };
 
+const toProductType = (v?: unknown): ProductType => {
+    const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof ProductType;
+    return ProductType[key] ?? ProductType.WATCH;
+};
 const connect = (id?: string) => (id ? { connect: { id } } : undefined);
 const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
 
@@ -40,17 +47,17 @@ function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCr
     const isWatch = (dto.type ?? "WATCH").toUpperCase() === "WATCH";
     return {
         title: dto.title,
-        status: dto.status as any,
-        type: dto.type as any,
+        status: toStatus(dto.status),
+        type: toProductType(dto.type),
         brand: connect(dto.brandId),
         vendor: connect(dto.vendorId),
         variants: { create: [{ price: dto.price ?? 0, stockQty: dto.stockQty ?? 1, isActive: true }] },
         watchSpec: createIf(isWatch, {
             create: {
-                caseType: dto.caseType,
-                length: dto.length as any,
-                width: dto.width as any,
-                thickness: dto.thickness as any,
+                caseType: toCaseType(dto.caseType),                 // luôn enum hợp lệ
+                length: Number(dto.length ?? 40),                 // luôn là number
+                width: Number(dto.width ?? 40),
+                thickness: Number(dto.thickness ?? 12.0),
             },
         }),
     };
@@ -96,7 +103,8 @@ export const adminProductService = {
             // 2.1 resolve vendorId (chọn sẵn / quick-add)
             let vendorId = data.vendorId;
             if (!vendorId && data.vendorName) {
-                vendorId = await upsertSupplierByNameRole({
+                const upsert = upsertSupplierByNameRoleTx(tx);
+                vendorId = await upsert({
                     name: data.vendorName,
                     phone: data.vendorPhone ?? null,
                     email: data.vendorEmail ?? null,
@@ -105,30 +113,34 @@ export const adminProductService = {
             if (!vendorId) throw new Error("Vui lòng chọn hoặc tạo Vendor để ghi nhận giá mua.");
 
             // 2.2 create product
-            await prisma.$transaction(async (tx) => {
-                const repo = createProduct(tx);       // ✅ hợp kiểu
-                await repo.create(mapDtoToProductCreate({ ...data, vendorId }));
-            });
+
+            const repo = createProduct(tx);       // ✅ hợp kiểu
+            const product = await repo.create(mapDtoToProductCreate({ ...data, vendorId }));
+
 
             // 2.3 create acquisition header
-            await prisma.$transaction(async (tx) => {
-                const acqRepo = acquisitionRepo(tx);
-                await acqRepo.create({
-                    vendorId,
-                    acquiredAt: data.acquiredAt ? new Date(data.acquiredAt) : undefined,
-                    cost: data.purchasePrice,
-                    currency: data.currency,
-                    refNo: data.refNo ?? null,
-                    notes: data.notes ?? null,
-                    type: "PURCHASE",
-                });
-            })
 
+            {/*const acqRepo = acquisitionRepo(tx);
+            const acquisition = await acqRepo.create({
+                vendorId,
+                acquiredAt: data.acquiredAt ? new Date(data.acquiredAt) : undefined,
+                cost: data.purchasePrice,
+                currency: data.currency,
+                refNo: data.refNo ?? null,
+                notes: data.notes ?? null,
+                type: "PURCHASE",
+            });*/}
+
+            return {
+                productId: product.id,
+                //acquisitionId: acquisition.id,
+            };
 
             // (tuỳ chọn) nếu có AcquisitionItem lines thì thêm ở đây
 
-            return { productId: product.id, acquisitionId: acquisition.id };
-        });
+            //return { productId: product.id, acquisitionId: acquisition.id };
+        }, { timeout: 15_000, maxWait: 10_000 });
+        ;
     },
 
     /** Lấy chi tiết đầy đủ để mở form admin */
@@ -171,10 +183,10 @@ export const adminProductService = {
 
 
     /** Cập nhật Product */
-    async update(id: string, input: unknown) {
-        const data = UpdateProductSchema.parse(input);
-        return updateAdminProduct(id, data as any);
-    },
+    //async update(id: string, input: unknown) {
+    //const data = UpdateProductSchema.parse(input);
+    //return updateAdminProduct(id, data as any);
+    //},
 
     /** Xoá Product */
     async remove(id: string) {

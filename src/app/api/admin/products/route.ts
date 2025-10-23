@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         const created = await adminProductService.create(body);
         return NextResponse.json(created, { status: 201 });
     } catch (err: any) {
+        console.dir(err, { depth: 10 });
         return NextResponse.json(
             { error: err?.message ?? "Failed to create product" },
             { status: 400 },
