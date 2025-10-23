@@ -173,3 +173,4 @@ export const prisma = global.prisma ?? makePrisma();
 if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
 
 export default prisma;
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];

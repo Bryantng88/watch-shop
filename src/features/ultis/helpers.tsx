@@ -1,13 +1,13 @@
 // src/features/products/admin/server/_helpers.ts
 import { Prisma, CaseType, ProductType } from "@prisma/client";
 import slugify from "slugify";
+import { Tx } from "@/server/db/client";
 
-export async function genUniqueSlug(tx: Prisma.TransactionClient, title: string) {
-    const base = slugify(title, { lower: true, strict: true }) || "item";
+export async function genUniqueSlug(db: Tx, title: string) {
+    const base = slugify(title, { lower: true, strict: true });
     let slug = base;
     let i = 1;
-    // dùng findFirst thay vì findUnique để an toàn migration cũ
-    while (await tx.product.findFirst({ where: { slug }, select: { id: true } })) {
+    while (await db.product.findUnique({ where: { slug } })) {
         slug = `${base}-${i++}`;
     }
     return slug;
