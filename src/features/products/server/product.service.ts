@@ -9,6 +9,8 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
 import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
+import { genUniqueSlug, buildVariants, buildWatchSpec } from "@/features/ultis/helpers";
+
 /* -------------------------------------------------------
  * Helpers
  * ----------------------------------------------------- */
@@ -43,9 +45,9 @@ const toProductType = (v?: unknown): ProductType => {
 const connect = (id?: string) => (id ? { connect: { id } } : undefined);
 const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
 
-function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCreateInput {
+{/*function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCreateInput {
     const isWatch = (dto.type ?? "WATCH").toUpperCase() === "WATCH";
-    return {
+    const data: Prisma.ProductCreateInput = {
         title: dto.title,
         status: toStatus(dto.status),
         type: toProductType(dto.type),
@@ -61,7 +63,28 @@ function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCr
             },
         }),
     };
-}
+    if (isWatch) {
+        const sizeCategory = deriveSizeCategory({
+            caseType: dto.caseType as any,
+            width: dto.width ? Number(dto.width) : undefined,
+            length: dto.length ? Number(dto.length) : undefined,
+        });
+
+        data.watchSpec = {
+            create: {
+                caseType: (String(dto.caseType ?? 'ROUND').toUpperCase() as keyof typeof CaseType) in CaseType
+                    ? (String(dto.caseType ?? 'ROUND').toUpperCase() as CaseType)
+                    : CaseType.ROUND,
+                length: Number(dto.length ?? 40),
+                width: Number(dto.width ?? 40),
+                thickness: Number(dto.thickness ?? 12),
+                ...(sizeCategory ? { sizeCategory } : {}),
+            },
+        };
+    }
+    return data;
+}*/}
+
 export const adminProductService = {
     /**
      * List bảng admin + KPI (đếm liên quan, last dates…)
@@ -97,51 +120,74 @@ export const adminProductService = {
     },
     /** Tạo Product (validate + gọi repo) */
     async create(input: unknown) {
-        const data = CreateProductWithAcqSchema.parse(input);
-        // TODO: nếu cần slug auto, bạn có thể xử lý ở đây hoặc ở prisma .$extends / middleware
+        const dto = CreateProductWithAcqSchema.parse(input);
+
         return prisma.$transaction(async (tx) => {
-            // 2.1 resolve vendorId (chọn sẵn / quick-add)
-            let vendorId = data.vendorId;
-            if (!vendorId && data.vendorName) {
-                const upsert = upsertSupplierByNameRoleTx(tx);
-                vendorId = await upsert({
-                    name: data.vendorName,
-                    phone: data.vendorPhone ?? null,
-                    email: data.vendorEmail ?? null,
+            // 1) Vendor (select hoặc quick-add)
+            let vendorId = dto.vendorId;
+            if (!vendorId && dto.vendorName) {
+                vendorId = await upsertSupplierByNameRoleTx(tx)({
+                    name: dto.vendorName,
+                    phone: dto.vendorPhone ?? null,
+                    email: dto.vendorEmail ?? null,
                 });
             }
-            if (!vendorId) throw new Error("Vui lòng chọn hoặc tạo Vendor để ghi nhận giá mua.");
+            if (!vendorId) {
+                throw new Error("Vui lòng chọn hoặc tạo Vendor để ghi nhận giá mua.");
+            }
 
-            // 2.2 create product
+            // 2) Slug unique + SKU base
+            const slug = await genUniqueSlug(tx, dto.title);
+            const skuBase = slug; // single = slug
 
-            const repo = createProduct(tx);       // ✅ hợp kiểu
-            const product = await repo.create(mapDtoToProductCreate({ ...data, vendorId }));
-
-
-            // 2.3 create acquisition header
-
-            {/*const acqRepo = acquisitionRepo(tx);
-            const acquisition = await acqRepo.create({
-                vendorId,
-                acquiredAt: data.acquiredAt ? new Date(data.acquiredAt) : undefined,
-                cost: data.purchasePrice,
-                currency: data.currency,
-                refNo: data.refNo ?? null,
-                notes: data.notes ?? null,
-                type: "PURCHASE",
-            });*/}
-
-            return {
-                productId: product.id,
-                //acquisitionId: acquisition.id,
+            // 3) Map ProductCreateInput
+            const data: Prisma.ProductCreateInput = {
+                title: dto.title,
+                status: (dto.status as any) ?? "ACTIVE",
+                type: (dto.type as any) ?? "WATCH",
+                slug, // có thể để Prisma default unique nếu bạn muốn
+                brand: dto.brandId ? { connect: { id: dto.brandId } } : undefined,
+                vendor: { connect: { id: vendorId } },
+                variants: buildVariants(dto, skuBase),
+                watchSpec: buildWatchSpec(dto),
+                primaryImageUrl:
+                    dto.primaryImageUrl === "" ? null : dto.primaryImageUrl ?? null,
+                seoTitle: dto.seoTitle ?? undefined,
+                seoDescription: dto.seoDescription ?? undefined,
             };
 
-            // (tuỳ chọn) nếu có AcquisitionItem lines thì thêm ở đây
+            // 4) Create Product
+            const product = await tx.product.create({
+                data,
+                select: { id: true, slug: true },
+            });
 
-            //return { productId: product.id, acquisitionId: acquisition.id };
-        }, { timeout: 15_000, maxWait: 10_000 });
-        ;
+            // 5) Acquisition (header)
+            const acq = acquisitionRepo(tx);
+            const acquisition = await acq.create({
+                vendorId,
+                acquiredAt: dto.acquiredAt ? new Date(dto.acquiredAt) : undefined,
+                cost: dto.purchasePrice,
+                currency: dto.currency,
+                refNo: dto.refNo ?? null,
+                notes: dto.notes ?? null,
+                type: "PURCHASE",
+            });
+
+            // 6) (Optional) AcquisitionItem link tới product
+            // await tx.acquisitionItem.create({
+            //   data: {
+            //     acquisitionId: acquisition.id,
+            //     productId: product.id,
+            //     qty: 1,
+            //     unitCost: dto.purchasePrice ?? 0,
+            //   },
+            // });
+
+            return { productId: product.id, acquisitionId: acquisition.id };
+        });
     },
+
 
     /** Lấy chi tiết đầy đủ để mở form admin */
     async detail(id: string) {

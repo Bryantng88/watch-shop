@@ -1,6 +1,6 @@
 // src/server/db/client.ts
 
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import slugify from 'slugify';
 // ⬇️ đặt ngay dưới import
 
@@ -32,7 +32,8 @@ function makePrisma() {
         query: {
             product: {
                 async create(this: typeof base, { args, query }) {
-                    const client = this;
+                    const client = Prisma.getExtensionContext(this) as PrismaClient;
+
                     const data = args.data as any;
                     if (data?.title && !data.slug) {
                         let baseSlug = slugify(String(data.title), { lower: true, strict: true });
@@ -73,28 +74,27 @@ function makePrisma() {
                         if (raw in rules) {
                             const typeRule = rules[raw as CaseKey];
                             const found = typeRule.find((r) =>
-                                (r.min === undefined || data.length >= r.min) &&
-                                (r.max === undefined || data.length < r.max)
+                                (r.min === undefined || data.watchSpec.length >= r.min) &&
+                                (r.max === undefined || data.watchSpec.length < r.max)
                             )
 
                             if (found) {
                                 ws.sizeCategory = found.category;
-                                console.log("test nhanh" + found.category)
                             }
                         }
                     }
                     return query(args);
                 },
 
-                async upsert({ args, query }) {
+                async upsert(this: PrismaClient, { args, query }) {
                     // upsert: chỉ set slug cho nhánh create nếu thiếu
+                    const client = Prisma.getExtensionContext(this) as PrismaClient;
                     const create = args.create as any;
-
                     if (create?.title && !create.slug) {
                         let baseSlug = slugify(String(create.title), { lower: true, strict: true });
                         let slug = baseSlug;
                         let i = 1;
-                        while (await base.product.findUnique({ where: { slug } })) {
+                        while (await client.product.findUnique({ where: { slug } })) {
                             slug = `${baseSlug}-${i++}`;
                         }
                         create.slug = slug;
@@ -114,10 +114,9 @@ function makePrisma() {
 
 
             watchSpec: {
-                async create({ args, query }) {
+                async create(this: typeof base, { args, query }) {
                     //đầu tiên cho xác định args là dữ liệu chưa dc định nghĩa
                     const data = args.data as any;
-
 
                     //nếu ko phải là 2 trường cần thao tác thì return luôn
                     if (!data?.length) {
