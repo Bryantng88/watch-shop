@@ -19,6 +19,7 @@ export type CreateAcqWithItemInput = {
 
 export const acquisitionRepo = (tx: Tx) => ({
     async createWithItem(data: CreateAcqWithItemInput) {
+
         let acquisition = await tx.acquisition.findFirst({
             where: {
                 vendorId: data.vendorId,
@@ -30,7 +31,7 @@ export const acquisitionRepo = (tx: Tx) => ({
             },
             select: { id: true },
         })
-
+        console.log('test acquisition binding: ' + acquisition?.id)
         if (!acquisition) {
             acquisition = await tx.acquisition.create({
                 data: {
