@@ -2,6 +2,10 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import ImagePicker from '@/app/admin/products/components/ImagePicker';
+
+
+type Picked = { key: string; url: string };
 
 interface Option {
     label: string;
@@ -28,7 +32,7 @@ interface Props {
 
 export default function NewProductForm2({ vendors, brands, statusOptions, typeOptions, caseOptions, selectedType,
 }: Props) {
-
+    const [images, setImages] = useState<Picked[]>([]);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -79,6 +83,7 @@ export default function NewProductForm2({ vendors, brands, statusOptions, typeOp
                     ))}
                 </select>
             </div>
+            <ImagePicker value={images} onChange={setImages} />
 
             <div>
 
