@@ -10,6 +10,8 @@ import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
 import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
 import { genUniqueSlug, buildVariants, buildWatchSpec } from "@/features/ultis/helpers";
+import { toPublicUrl } from "@/features/ultis/helpers";
+
 
 /* -------------------------------------------------------
  * Helpers
@@ -143,7 +145,7 @@ export const adminProductService = {
             // 3) Map ProductCreateInput
             const data: Prisma.ProductCreateInput = {
                 title: dto.title,
-                status: (dto.status as any) ?? "ACTIVE",
+                status: (dto.status as any) ?? "HIDDEN",
                 type: (dto.type as any) ?? "WATCH",
                 slug, // có thể để Prisma default unique nếu bạn muốn
                 brand: dto.brandId ? { connect: { id: dto.brandId } } : undefined,
@@ -155,13 +157,42 @@ export const adminProductService = {
                 seoTitle: dto.seoTitle ?? undefined,
                 seoDescription: dto.seoDescription ?? undefined,
             };
-
+            console.log('testt ' + JSON.stringify(data.watchSpec, null, 2));
             // 4) Create Product
             const product = await tx.product.create({
                 data,
                 select: { id: true, slug: true },
             });
+            if (dto.image?.length) {
+                await tx.productImage.createMany({
+                    data: dto.image.map((img) => ({
+                        productId: product.id,
+                        fileKey: img.fileKey,
+                        alt: img.alt ?? null,
+                        width: img.width ?? null,
+                        height: img.height ?? null,
+                        mime: img.mime ?? null,
+                        sizeBytes: img.sizeBytes ?? null,
+                        dominantHex: img.dominantHex ?? null,
+                        sortOrder: img.sortOrder ?? 0,
+                    })),
+                    skipDuplicates: true, // tùy chọn
+                });
+            }
+            if (!data.primaryImageUrl) {
+                const first = (dto.image ?? [])
+                    .slice() // copy
+                    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))[0];
 
+                if (first) {
+                    await tx.product.update({
+                        where: { id: product.id },
+                        data: {
+                            primaryImageUrl: first.fileKey
+                        }
+                    });
+                }
+            }
             // 5) Acquisition (header)
             const acq = acquisitionRepo(tx);
             const acquisition = await acq.createWithItem({

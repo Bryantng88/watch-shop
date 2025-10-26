@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, ProductType } from "@prisma/client";
 import prisma from "@/server/db/client";
+import { toPublicUrl } from "@/features/ultis/helpers";
 type Db = typeof prisma | Tx;
 
 export type AdminSort =
@@ -11,7 +12,7 @@ export interface AdminProductFilters {
     page?: number;
     pageSize?: number;
     q?: string;
-
+    primaryImage?: string;
     status?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
     type?: Prisma.ProductWhereInput["type"][];     // ['PRE_OWNED',...]
     brandIds?: string[];
@@ -299,3 +300,4 @@ export async function publishProduct(id: string) {
 export async function unpublishProduct(id: string) {
     return prisma.product.update({ where: { id }, data: { status: "INACTIVE" } as any });
 }
+

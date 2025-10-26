@@ -52,7 +52,7 @@ export default function AdminSidebar() {
           top-0 left-0 h-full lg:h-auto
           w-72 -translate-x-full lg:translate-x-0
           ${open ? "translate-x-0" : ""}
-          bg-gray-950 text-gray-200
+          bg-[#11191f] text-gray-200
           transition-transform
         `}
       >

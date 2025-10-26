@@ -1,5 +1,5 @@
 // src/features/products/admin/server/_helpers.ts
-import { Prisma, CaseType, ProductType } from "@prisma/client";
+import { Prisma, CaseType, ProductType, Gender, MovementType } from "@prisma/client";
 import slugify from "slugify";
 import { Tx } from "@/server/db/client";
 
@@ -22,14 +22,14 @@ export function buildSizeCategory(
     const W = Number(width ?? NaN);
     const isRound = caseType === "ROUND";
 
-    if (isRound && Number.isFinite(W)) {
-        if (W < 33) return "Small";
-        if (W < 39) return "Medium";
+    if (isRound && Number.isFinite(L)) {
+        if (L < 33) return "Small";
+        if (L < 39) return "Medium";
         return "Large";
     }
-    if (!isRound && Number.isFinite(W)) {
-        if (W < 33) return "Small";
-        if (W < 35) return "Medium";
+    if (!isRound && Number.isFinite(L)) {
+        if (L < 33) return "Small";
+        if (L < 35) return "Medium";
         return "Large";
     }
     return undefined;
@@ -40,16 +40,29 @@ export function buildWatchSpec(dto: any) {
 
     const caseType: CaseType =
         (dto.caseType as CaseType) ?? CaseType.ROUND;
-
+    const compIds: string[] =
+        Array.isArray(dto.complicationIds) ? dto.complicationIds :
+            Array.isArray(dto.complications) ? dto.complications : [];
     const length = dto.length != null ? Number(dto.length) : 46.5;
     const width = dto.width != null ? Number(dto.width) : 39.7;
     const thickness = dto.thickness != null ? Number(dto.thickness) : 12.0;
-
+    const gender: Gender =
+        (dto.gender as Gender) ?? Gender.MEN;
+    const movement: MovementType =
+        (dto.movement as MovementType) ?? MovementType.AUTOMATIC;
     return {
         create: {
             caseType,
             length,
             width,
+            gender,
+            movement,
+            complication:
+                compIds.length
+                    ? {
+                        connect: compIds.map((id: string) => ({ id })),
+                    }
+                    : undefined,
             thickness,
             sizeCategory: buildSizeCategory(caseType, length, width),
         },
@@ -72,4 +85,14 @@ export function buildVariants(dto: any, skuBase: string) {
             },
         ],
     } satisfies Prisma.ProductVariantCreateNestedManyWithoutProductInput;
+}
+
+export function toPublicUrl(key?: string | null): string | undefined {
+    if (!key) return undefined;
+    const base = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE;
+    if (!base) return undefined;
+
+    // bỏ slash dư, encode tên file (giữ nguyên dấu '/')
+    const cleaned = String(key).replace(/^\/+/, '');
+    return `${base.replace(/\/$/, '')}/${encodeURI(cleaned)}`;
 }

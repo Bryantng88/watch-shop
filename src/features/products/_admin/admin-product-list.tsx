@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Edit, Trash2, Eye } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { toPublicUrl } from "@/features/ultis/helpers";
 
 interface Product {
     id: string;
     title: string;
     brand: { name: string } | null;
+    type: string;
     status: string;
     minPrice: number | null;
     image?: string | null;
@@ -53,9 +55,12 @@ export default function AdminProductList() {
                         <th className="px-4 py-2 text-left">Ảnh</th>
                         <th className="px-4 py-2 text-left">Tên</th>
                         <th className="px-4 py-2 text-left">Thương hiệu</th>
-                        <th className="px-4 py-2 text-left">Giá</th>
+                        <th className="px-4 py-2 text-left">Loại</th>
+
+                        <th className="px-4 py-2 text-left">Giá Bán</th>
                         <th className="px-4 py-2 text-left">Trạng thái</th>
                         <th className="px-4 py-2 text-right">Hành động</th>
+
                     </tr>
                 </thead>
 
@@ -78,7 +83,7 @@ export default function AdminProductList() {
                                 <td className="px-4 py-2">
                                     {p.image ? (
                                         <img
-                                            src={p.image}
+                                            src={`/api/media/sign?key=${encodeURIComponent(p.image)}`}
                                             alt={p.title}
                                             className="h-12 w-12 object-cover rounded"
                                         />
@@ -89,6 +94,7 @@ export default function AdminProductList() {
 
                                 <td className="px-4 py-2 font-medium">{p.title}</td>
                                 <td className="px-4 py-2">{p.brand?.name || "-"}</td>
+                                <td className="px-4 py-2 font-medium">{p.type}</td>
                                 <td className="px-4 py-2">
                                     {p.minPrice != null
                                         ? p.minPrice.toLocaleString("vi-VN") + " ₫"
@@ -98,10 +104,10 @@ export default function AdminProductList() {
                                 <td className="px-4 py-2">
                                     <span
                                         className={`px-2 py-1 rounded text-xs font-medium ${p.status === "ACTIVE"
-                                                ? "bg-green-100 text-green-700"
-                                                : p.status === "SOLD"
-                                                    ? "bg-red-100 text-red-700"
-                                                    : "bg-gray-100 text-gray-600"
+                                            ? "bg-green-100 text-green-700"
+                                            : p.status === "SOLD"
+                                                ? "bg-red-100 text-red-700"
+                                                : "bg-gray-100 text-gray-600"
                                             }`}
                                     >
                                         {p.status}

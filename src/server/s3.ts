@@ -15,4 +15,5 @@ export const s3 = new S3Client({
 
 
 export const S3_BUCKET = process.env.S3_BUCKET!;
+console.log(S3_BUCKET)
 export const PUBLIC_BASE = `${process.env.S3_ENDPOINT}/${S3_BUCKET}`;

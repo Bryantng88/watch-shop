@@ -1,4 +1,4 @@
-import { ProductStatus, ProductType, CaseType } from "@prisma/client";
+import { ProductStatus, ProductType, CaseType, Gender } from "@prisma/client";
 import { z } from "zod";
 export type CreateProductDTO = {
     title: string;
@@ -29,12 +29,25 @@ export const CreateProductWithAcqSchema = z
         caliber: z.string().optional(),
         glass: z.string().optional(),
         CaseMaterial: z.string().optional(),
-        complications: z.string().optional(),
+        complications: z.array(z.string()).optional(),
         marketSegment: z.string().optional(),
         strap: z.string().optional(),
 
         //variant
         price: z.coerce.number().optional(),
+        gender: z.nativeEnum(Gender).optional(),
+        image: z.array(
+            z.object({
+                fileKey: z.string().min(1),
+                alt: z.string().nullish(),
+                width: z.number().optional(),
+                height: z.number().optional(),
+                mime: z.string().optional(),
+                sizeBytes: z.number().optional(),
+                dominantHex: z.string().optional(),
+                sortOrder: z.number().default(0).optional(),
+            })
+        ).optional(),
 
         //general
         title: z.string().min(1),

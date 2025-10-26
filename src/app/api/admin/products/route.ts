@@ -29,6 +29,8 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();            // service sẽ validate bằng Zod
         const created = await adminProductService.create(body);
+
+        console.log("📥 Request body:", JSON.stringify(body, null, 2));
         return NextResponse.json(created, { status: 201 });
     } catch (err: any) {
         console.dir(err, { depth: 10 });
