@@ -47,45 +47,6 @@ const toProductType = (v?: unknown): ProductType => {
 const connect = (id?: string) => (id ? { connect: { id } } : undefined);
 const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
 
-{/*function mapDtoToProductCreate(dto: CreateProductWithAcqInput): Prisma.ProductCreateInput {
-    const isWatch = (dto.type ?? "WATCH").toUpperCase() === "WATCH";
-    const data: Prisma.ProductCreateInput = {
-        title: dto.title,
-        status: toStatus(dto.status),
-        type: toProductType(dto.type),
-        brand: connect(dto.brandId),
-        vendor: connect(dto.vendorId),
-        variants: { create: [{ price: dto.price ?? 0, stockQty: dto.stockQty ?? 1, isActive: true }] },
-        watchSpec: createIf(isWatch, {
-            create: {
-                caseType: toCaseType(dto.caseType),                 // luôn enum hợp lệ
-                length: Number(dto.length ?? 40),                 // luôn là number
-                width: Number(dto.width ?? 40),
-                thickness: Number(dto.thickness ?? 12.0),
-            },
-        }),
-    };
-    if (isWatch) {
-        const sizeCategory = deriveSizeCategory({
-            caseType: dto.caseType as any,
-            width: dto.width ? Number(dto.width) : undefined,
-            length: dto.length ? Number(dto.length) : undefined,
-        });
-
-        data.watchSpec = {
-            create: {
-                caseType: (String(dto.caseType ?? 'ROUND').toUpperCase() as keyof typeof CaseType) in CaseType
-                    ? (String(dto.caseType ?? 'ROUND').toUpperCase() as CaseType)
-                    : CaseType.ROUND,
-                length: Number(dto.length ?? 40),
-                width: Number(dto.width ?? 40),
-                thickness: Number(dto.thickness ?? 12),
-                ...(sizeCategory ? { sizeCategory } : {}),
-            },
-        };
-    }
-    return data;
-}*/}
 
 export const adminProductService = {
     /**
@@ -262,10 +223,10 @@ export const adminProductService = {
 
 
     /** Cập nhật Product */
-    //async update(id: string, input: unknown) {
-    //const data = UpdateProductSchema.parse(input);
-    //return updateAdminProduct(id, data as any);
-    //},
+    async update(id: string, input: unknown) {
+        const data = UpdateProductWithAcqInput.parse(input);
+        return updateAdminProduct(id, data as any);
+    },
 
     /** Xoá Product */
     async remove(id: string) {

@@ -1,249 +1,29 @@
-'use client';
+// app/admin/products/[id]/edit/page.tsx
+import EditProductForm from "@/features/products/_admin/product-edit-form";
+import { getOptions } from "@/features/products/components/options";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import ImagePicker from '@/app/admin/products/components/ImagePicker';
-import { listBrands } from "@/features/catalog/server/brands.repo"; // <- repo có sẵn của bạn\
+import { listBrands } from "@/features/catalog/server/brands.repo";
+import { listVendor } from "@/features/vendors/server/vendor.repo";
+import { getAdminProductDetail } from "@/features/products/server/product.repo";
 
-type Picked = { key: string; url: string };
-interface Option { label: string; value: string }
-interface Brand { id: string; name: string }
-interface Vendor { id: string; name: string }
-interface Complication { id: string; name: string }
-
-interface Props {
-    brands: Brand[];
-    vendors: Vendor[];
-    statusOptions: Option[];
-    typeOptions: Option[];
-    caseOptions: Option[];
-    movementOptions: Option[];
-    complicationOptions: Complication[];
-}
-
-const brands = await listBrands();
-
-export default function EditProductForm({
-    brands,
-    vendors,
-    statusOptions,
-    typeOptions,
-    caseOptions,
-    movementOptions,
-    complicationOptions,
-}: Props) {
-    const { id } = useParams();
-    const router = useRouter();
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [formData, setFormData] = useState<Record<string, any>>({});
-    const [images, setImages] = useState<Picked[]>([]);
-    const [showQuickVendor, setShowQuickVendor] = useState(false);
-    const [err, setErr] = useState<string | null>(null);
-
-    // Load data
-    useEffect(() => {
-        async function load() {
-            setLoading(true);
-            const res = await fetch(`/api/admin/products/${id}`);
-            const data = await res.json();
-
-            setFormData(data);
-            if (data.image) {
-                setImages(data.image.map((img: any) => ({
-                    key: img.fileKey,
-                    url: img.url,
-                })));
-            }
-            setLoading(false);
-        }
-        load();
-    }, [id]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    };
-
-    const set = (name: string) => (e: any) =>
-        setFormData(prev => ({ ...prev, [name]: e?.target ? e.target.value : e }));
-
-    const toggleComp = (id: string) => {
-        setFormData(prev => {
-            const arr: string[] = prev.complicationIds ?? [];
-            return arr.includes(id)
-                ? { ...prev, complicationIds: arr.filter(x => x !== id) }
-                : { ...prev, complicationIds: [...arr, id] };
-        });
-    };
-
-    const onImagesChange = (next: Picked[]) => {
-        setImages(next);
-        setFormData(prev => ({
-            ...prev,
-            image: next.map((p, i) => ({ fileKey: p.key, alt: null, sortOrder: i })),
-        }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSaving(true);
-        setErr(null);
-
-        const res = await fetch(`/api/admin/products/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData),
-        });
-
-        if (!res.ok) {
-            setErr('Cập nhật sản phẩm thất bại');
-            setSaving(false);
-            return;
-        }
-
-        router.push('/admin/products');
-    };
-
-    if (loading) return <div className="p-10 text-gray-500">Đang tải dữ liệu...</div>;
+export default async function Page({ params }: { params: { id: string } }) {
+    const [product, brands, vendors, opts] = await Promise.all([
+        getAdminProductDetail(params.id),
+        listBrands(),
+        listVendor(),
+        getOptions(), // gom statusOptions, typeOptions, caseOptions, movementOptions, complicationOptions
+    ]);
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {/* LAYOUT GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                {/* LEFT COLUMN */}
-                <div className="lg:col-span-8 space-y-4">
-                    {/* Thông tin sản phẩm */}
-                    <div className="rounded-md border border-gray-200 bg-white shadow p-5 space-y-4">
-                        <h3 className="font-semibold">Chỉnh sửa sản phẩm</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium">Tên sản phẩm</label>
-                                <input
-                                    name="title"
-                                    value={formData.title || ''}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border rounded px-3 py-2"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">Thương hiệu</label>
-                                <select
-                                    name="brandId"
-                                    value={formData.brandId || ''}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border rounded px-3 py-2"
-                                >
-                                    <option value="">-- Chọn thương hiệu --</option>
-                                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">Giá bán</label>
-                                <input
-                                    type="number"
-                                    name="price"
-                                    value={formData.price || ''}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border rounded px-3 py-2"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium">Mô tả sản phẩm</label>
-                            <textarea
-                                name="description"
-                                value={formData.description || ''}
-                                onChange={handleChange}
-                                className="mt-1 w-full rounded border px-3 py-2 min-h-[120px]"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Hình ảnh + Complications */}
-                    <div className="rounded-md border border-gray-200 bg-white shadow p-5">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                            <div><ImagePicker value={images} onChange={onImagesChange} /></div>
-                            <div className="rounded-md border border-gray-200 bg-white shadow p-5">
-                                <h3 className="font-semibold mb-3">Complications</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto">
-                                    {complicationOptions.map(c => (
-                                        <label key={c.id} className="inline-flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={(formData.complicationIds ?? []).includes(c.id)}
-                                                onChange={() => toggleComp(c.id)}
-                                            />
-                                            <span className="text-sm">{c.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* RIGHT COLUMN */}
-                <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
-                    <div className="rounded-md border border-gray-200 bg-white shadow p-5 space-y-4">
-                        <h3 className="font-semibold">Phiếu nhập hàng</h3>
-                        <div>
-                            <label className="block text-sm font-medium">Vendor</label>
-                            <div className="flex gap-2">
-                                <select
-                                    className="mt-1 w-full rounded border px-3 py-2"
-                                    onChange={set('vendorId')}
-                                    value={formData.vendorId ?? ''}
-                                >
-                                    <option value="">-- Chọn Vendor --</option>
-                                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium">Giá nhập</label>
-                                <input
-                                    type="number"
-                                    className="mt-1 w-full rounded border px-3 py-2"
-                                    value={formData.purchasePrice || ''}
-                                    onChange={set('purchasePrice')}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">Tiền tệ</label>
-                                <input
-                                    className="mt-1 w-full rounded border px-3 py-2"
-                                    defaultValue="VND"
-                                    onChange={set('currency')}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-
-            {err && <div className="text-sm text-red-600">{err}</div>}
-
-            <div className="flex justify-end gap-3">
-                <button
-                    type="button"
-                    className="mt-1 rounded-md border px-3 py-2"
-                    onClick={() => router.push('/admin/products')}
-                    disabled={saving}
-                >
-                    Hủy
-                </button>
-                <button
-                    type="submit"
-                    className="mt-1 rounded-md border border-gray-300 bg-[#11191f] text-gray-200 text-sm px-3 py-2 font-medium shadow-sm"
-                    disabled={saving}
-                >
-                    {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
-                </button>
-            </div>
-        </form>
+        <EditProductForm
+            initial={product}
+            brands={brands}
+            vendors={vendors}
+            statusOptions={opts.status}
+            typeOptions={opts.type}
+            caseOptions={opts.case}
+            movementOptions={opts.movement}
+            complicationOptions={opts.complication}
+        />
     );
 }
