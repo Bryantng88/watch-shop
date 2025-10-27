@@ -212,40 +212,47 @@ export default function NewProductForm2({ vendors, brands, statusOptions, compli
                                 </div>
 
                             </div>
-
                             {selectedType === "WATCH" && (
-                                <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] overflow-hidden p-5 space-y-4">
-                                    <h3 className="font-semibold mb-3">Complications</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto">
-                                        {complicationOptions.map((c) => (
-                                            <label key={c.id} className="inline-flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={(formData.complicationIds ?? []).includes(c.id)}
-                                                    onChange={() => toggleComp(c.id)}
-                                                />
-                                                <span className="text-sm">{c.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-
-                                    {(formData.complicationIds ?? []).length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2 " >
-                                            {complicationOptions
-                                                .filter((o) => (formData.complicationIds ?? []).includes(o.id))
-                                                .map((o) => (
-                                                    <span
-                                                        key={o.id}
-                                                        className="px-2 py-1 text-xs rounded bg-gray-100 border"
-                                                    >
-                                                        {o.name}
-                                                    </span>
-                                                ))}
+                                <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] p-5">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                        {/* LEFT: Image picker */}
+                                        <div>
+                                            <ImagePicker value={images} onChange={onImagesChange} />
                                         </div>
-                                    )}
+                                        <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] overflow-hidden p-5 space-y-4">
+                                            <h3 className="font-semibold mb-3">Complications</h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto">
+                                                {complicationOptions.map((c) => (
+                                                    <label key={c.id} className="inline-flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={(formData.complicationIds ?? []).includes(c.id)}
+                                                            onChange={() => toggleComp(c.id)}
+                                                        />
+                                                        <span className="text-sm">{c.name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+
+                                            {(formData.complicationIds ?? []).length > 0 && (
+                                                <div className="mt-3 flex flex-wrap gap-2 " >
+                                                    {complicationOptions
+                                                        .filter((o) => (formData.complicationIds ?? []).includes(o.id))
+                                                        .map((o) => (
+                                                            <span
+                                                                key={o.id}
+                                                                className="px-2 py-1 text-xs rounded bg-gray-100 border"
+                                                            >
+                                                                {o.name}
+                                                            </span>
+                                                        ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-                            <ImagePicker value={images} onChange={onImagesChange} />
+
                         </div>
 
 
