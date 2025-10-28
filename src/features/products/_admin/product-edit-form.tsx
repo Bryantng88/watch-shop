@@ -155,8 +155,8 @@ export default function EditProductForm({
                                 <label className="block text-sm font-medium">Giá bán</label>
                                 <input
                                     type="number"
-                                    name="price"
-                                    value={formData.price ?? ''}
+                                    name="purchasePrice"
+                                    value={formData.purchasePrice ?? ''}
                                     onChange={handleChange}
                                     className="mt-1 block w-full border rounded px-3 py-2"
                                 />
@@ -229,8 +229,8 @@ export default function EditProductForm({
                                 <input
                                     type="number"
                                     className="mt-1 w-full rounded border px-3 py-2"
-                                    value={formData.purchasePrice ?? ''}
-                                    onChange={set('purchasePrice')}
+                                    value={formData.variants.price ?? ''}
+                                    onChange={set('price')}
                                 />
                             </div>
 

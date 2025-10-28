@@ -1,7 +1,7 @@
 // src/features/products/admin/server/admin-product.service.ts
 import { z } from "zod";
 import { listAdminProducts, getAdminProductDetail, getProductOrders, getProductInvoices, getProductAcquisitions, getProductMaintenance, createProduct, updateAdminProduct, deleteAdminProduct, publishProduct, unpublishProduct, } from "./product.repo";
-import { CaseMaterial, ProductStatus, CaseType } from "@prisma/client";
+import { CaseMaterial, ProductStatus, CaseType, Gender, MovementType } from "@prisma/client";
 import { ProductType } from "@prisma/client";
 import { complications } from "@/constants/constants";
 import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqSchema, AdminFiltersSchema } from "./product.dto";
@@ -31,6 +31,8 @@ const arrayify = (v: unknown): string[] => {
     return [String(v)];
 };
 
+const clean = <T extends object>(o: T) =>
+    Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
 const toCaseType = (v?: unknown): CaseType => {
     const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof CaseType;
     return CaseType[key] ?? CaseType.ROUND;
@@ -80,7 +82,7 @@ function normalizeUpdateBody(raw: any) {
     }
 
     // 5) coerce price nếu cần
-    if (raw.price != null) out.price = Number(raw.price);
+    if (raw.purchasePrice != null) out.purchasePrice = Number(raw.purchasePrice);
 
     return out;
 }
@@ -156,7 +158,6 @@ export const adminProductService = {
                 seoTitle: dto.seoTitle ?? undefined,
                 seoDescription: dto.seoDescription ?? undefined,
             };
-            console.log('testt ' + JSON.stringify(data.watchSpec, null, 2));
             // 4) Create Product
             const product = await tx.product.create({
                 data,
@@ -262,12 +263,103 @@ export const adminProductService = {
 
     /** Cập nhật Product */
     async update(id: string, input: unknown) {
+        const dto = UpdateProductWithAcqSchema.parse(input);
 
+        const { image, complicationIds, price, stockQty, ...rest } = dto;
+        const watchUpdate: Prisma.WatchSpecUpdateWithoutProductInput = {
+            caseType: rest.caseType ? { set: rest.caseType as CaseType } : undefined,
+            gender: rest.gender ? { set: rest.gender as Gender } : undefined,
+            movement: rest.movement ? { set: rest.movement as MovementType } : undefined,
 
+            length: rest.length != null ? { set: Number(rest.length) } : undefined,
+            width: rest.width != null ? { set: Number(rest.width) } : undefined,
+            thickness: rest.thickness != null ? { set: Number(rest.thickness) } : undefined,
+        };
+        return prisma.$transaction(async (tx) => {
+            // 1) Update core fields + watchSpec + complications
+            const updated = await tx.product.update({
+                where: { id },
+                data: {
+                    ...clean({
+                        title: rest.title,
+                        status: rest.status,
+                        seoTitle: rest.seoTitle,
+                        seoDescription: rest.seoDescription,
+                        type: rest.productType,
+                        primaryImageUrl: rest.primaryImageUrl ?? undefined,
+                        brand: rest.brandId ? { connect: { id: rest.brandId } } : undefined,
+                    }),
+                    // watchSpec: update hoặc upsert (nếu có sản phẩm WATCH)
+                    watchSpec: rest.type === 'WATCH'
+                        ? {
+                            upsert: {
+                                update: clean({
+                                    caseType: rest.caseType,
+                                    gender: rest.gender,
+                                    length: rest.length != null ? Number(rest.length) : undefined,
+                                    width: rest.width != null ? Number(rest.width) : undefined,
+                                    thickness: rest.thickness != null ? Number(rest.thickness) : undefined,
+                                    movement: rest.movement,
+                                }),
+                                create: clean({
+                                    caseType: rest.caseType ?? 'ROUND',
+                                    gender: rest.gender ?? 'MEN',
+                                    length: rest.length != null ? Number(rest.length) : undefined,
+                                    width: rest.width != null ? Number(rest.width) : undefined,
+                                    thickness: rest.thickness != null ? Number(rest.thickness) : undefined,
+                                    movement: rest.movement ?? 'AUTOMATIC',
+                                }),
+                            },
+                        }
+                        : undefined,
+                    // complications: set lại toàn bộ từ danh sách id
+                    complication: complicationIds
+                        ? { set: complicationIds.map((cid) => ({ id: cid })) }
+                        : undefined,
+                },
+                select: { id: true },
+            });
 
-        const data = UpdateProductWithAcqSchema.parse(normalizeUpdateBody(input));
-        return updateAdminProduct(id, data as any);
-    },
+            // 2) Update giá/stock cho biến thể hiện có (nếu có gửi)
+            if (price != null || stockQty != null) {
+                await tx.productVariant.updateMany({
+                    where: { productId: id },
+                    data: clean({
+                        price: price != null ? Number(price) : undefined,
+                        stockQty: stockQty != null ? Number(stockQty) : undefined,
+                    }),
+                });
+            }
+
+            // 3) Đồng bộ ảnh: chiến lược đơn giản là replace
+            if (image) {
+                await tx.productImage.deleteMany({ where: { productId: id } });
+                if (image.length) {
+                    await tx.productImage.createMany({
+                        data: image.map((im, i) => ({
+                            productId: id,
+                            fileKey: im.fileKey,
+                            alt: im.alt ?? null,
+                            sortOrder: im.sortOrder ?? i,
+                        })),
+                    });
+                    // set primary từ ảnh đầu
+                    await tx.product.update({
+                        where: { id },
+                        data: { primaryImageUrl: image[0].fileKey },
+                    });
+                } else {
+                    await tx.product.update({
+                        where: { id },
+                        data: { primaryImageUrl: null },
+                    });
+                }
+            }
+
+            return updated;
+        });
+    }
+
 
     /** Xoá Product */
     async remove(id: string) {
