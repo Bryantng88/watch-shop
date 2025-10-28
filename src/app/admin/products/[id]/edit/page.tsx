@@ -6,17 +6,21 @@ import { listBrands } from "@/features/catalog/server/brands.repo";
 import { listVendor } from "@/features/vendors/server/vendor.repo";
 import { getAdminProductDetail } from "@/features/products/server/product.repo";
 
-export default async function Page({ params }: { params: { id: string } }) {
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
     const [product, brands, vendors, opts] = await Promise.all([
-        getAdminProductDetail(params.id),
+        getAdminProductDetail(id),
         listBrands(),
         listVendor(),
         getOptions(), // gom statusOptions, typeOptions, caseOptions, movementOptions, complicationOptions
     ]);
+    const parse = JSON.parse(JSON.stringify(product));
+
 
     return (
         <EditProductForm
-            initial={product}
+            initial={parse}
             brands={brands}
             vendors={vendors}
             statusOptions={opts.status}
