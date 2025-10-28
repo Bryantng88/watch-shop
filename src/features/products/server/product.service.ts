@@ -4,7 +4,7 @@ import { listAdminProducts, getAdminProductDetail, getProductOrders, getProductI
 import { CaseMaterial, ProductStatus, CaseType } from "@prisma/client";
 import { ProductType } from "@prisma/client";
 import { complications } from "@/constants/constants";
-import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqInput, AdminFiltersSchema } from "./product.dto";
+import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqSchema, AdminFiltersSchema } from "./product.dto";
 import type { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
@@ -46,6 +46,44 @@ const toProductType = (v?: unknown): ProductType => {
 };
 const connect = (id?: string) => (id ? { connect: { id } } : undefined);
 const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
+function normalizeUpdateBody(raw: any) {
+    const out: any = { ...raw };
+
+    // 1) Lấy id từ object
+    if (raw.brand?.id) out.brandId = raw.brand.id;
+    delete out.brand;
+
+    if (raw.vendor?.id) out.vendorId = raw.vendor.id;
+    delete out.vendor;
+
+    // 2) null -> undefined để qua .optional()
+    const nullToUndef = (v: any) => (v === null ? undefined : v);
+    out.primaryImageUrl = nullToUndef(raw.primaryImageUrl);
+    out.seoTitle = nullToUndef(raw.seoTitle);
+    out.seoDescription = nullToUndef(raw.seoDescription);
+
+    // 3) coerce số cho watchSpec
+    if (raw.watchSpec) {
+        out.watchSpec = {
+            ...raw.watchSpec,
+            length: raw.watchSpec.length != null ? Number(raw.watchSpec.length) : undefined,
+            width: raw.watchSpec.width != null ? Number(raw.watchSpec.width) : undefined,
+            thickness: raw.watchSpec.thickness != null ? Number(raw.watchSpec.thickness) : undefined,
+        };
+        // KHÔNG gửi complication object trong watchSpec khi update
+        delete out.watchSpec.complication;
+    }
+
+    // 4) chỉ giữ complicationIds (string[])
+    if (!Array.isArray(raw.complicationIds) && Array.isArray(raw.watchSpec?.complication)) {
+        out.complicationIds = raw.watchSpec.complication.map((c: any) => c.id);
+    }
+
+    // 5) coerce price nếu cần
+    if (raw.price != null) out.price = Number(raw.price);
+
+    return out;
+}
 
 
 export const adminProductService = {
@@ -224,7 +262,10 @@ export const adminProductService = {
 
     /** Cập nhật Product */
     async update(id: string, input: unknown) {
-        const data = UpdateProductWithAcqInput.parse(input);
+
+
+
+        const data = UpdateProductWithAcqSchema.parse(normalizeUpdateBody(input));
         return updateAdminProduct(id, data as any);
     },
 

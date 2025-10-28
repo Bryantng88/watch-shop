@@ -83,7 +83,7 @@ export const CreateProductWithAcqSchema = z
     .passthrough(); // cho phép gửi thêm field khác (nếu có)
 
 export type CreateProductWithAcqInput = z.infer<typeof CreateProductWithAcqSchema>;
-export const UpdateProductWithAcqInput = CreateProductWithAcqSchema.partial();
+export const UpdateProductWithAcqSchema = CreateProductWithAcqSchema.partial();
 
 
 export const AdminFiltersSchema = z.object({
@@ -111,3 +111,34 @@ export const AdminFiltersSchema = z.object({
 });
 
 export type AdminFiltersInput = z.infer<typeof AdminFiltersSchema>;
+export type UpdateProductWithAcqInput = z.infer<typeof UpdateProductWithAcqSchema>;
+// Update DTO
+{/*export const UpdateProductWithAcqSchema = z.object({
+    title: z.string().optional(),
+    brandId: z.string().optional().nullable(),
+    price: z.coerce.number().optional(),          // coerce từ "123" -> 123
+    description: z.string().optional().nullable(),
+    seoTitle: z.string().optional().nullable(),
+    seoDescription: z.string().optional().nullable(),
+
+    // watch spec
+    caseType: z.string().optional().nullable(),
+    length: z.coerce.number().optional().nullable(),
+    width: z.coerce.number().optional().nullable(),
+    thickness: z.coerce.number().optional().nullable(),
+    movement: z.string().optional().nullable(),
+
+    complicationIds: z.array(z.string()).optional(),
+
+    image: z.array(z.object({
+        fileKey: z.string(),
+        alt: z.string().nullable().optional(),
+        sortOrder: z.coerce.number().nullable().optional()
+    })).optional(),
+
+    // acquisition
+    purchasePrice: z.coerce.number().optional().nullable(),
+    currency: z.string().optional().nullable(),
+    acquiredAt: z.string().optional().nullable(), // yyyy-mm-dd
+    notes: z.string().optional().nullable(),
+}).partial(); */}
