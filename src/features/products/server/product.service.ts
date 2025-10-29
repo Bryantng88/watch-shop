@@ -264,19 +264,9 @@ export const adminProductService = {
     /** Cập nhật Product */
     async update(id: string, input: unknown) {
         const dto = UpdateProductWithAcqSchema.parse(input);
-
         const { image, complicationIds, price, stockQty, ...rest } = dto;
-        const watchUpdate: Prisma.WatchSpecUpdateWithoutProductInput = {
-            caseType: rest.caseType ? { set: rest.caseType as CaseType } : undefined,
-            gender: rest.gender ? { set: rest.gender as Gender } : undefined,
-            movement: rest.movement ? { set: rest.movement as MovementType } : undefined,
 
-            length: rest.length != null ? { set: Number(rest.length) } : undefined,
-            width: rest.width != null ? { set: Number(rest.width) } : undefined,
-            thickness: rest.thickness != null ? { set: Number(rest.thickness) } : undefined,
-        };
         return prisma.$transaction(async (tx) => {
-            // 1) Update core fields + watchSpec + complications
             const updated = await tx.product.update({
                 where: { id },
                 data: {
@@ -285,34 +275,67 @@ export const adminProductService = {
                         status: rest.status,
                         seoTitle: rest.seoTitle,
                         seoDescription: rest.seoDescription,
-                        type: rest.productType,
+                        type: rest.productType, // hoặc rest.type – thống nhất 1 tên!
                         primaryImageUrl: rest.primaryImageUrl ?? undefined,
                         brand: rest.brandId ? { connect: { id: rest.brandId } } : undefined,
                     }),
-                    // watchSpec: update hoặc upsert (nếu có sản phẩm WATCH)
-                    watchSpec: rest.type === 'WATCH'
-                        ? {
-                            upsert: {
-                                update: clean({
-                                    caseType: rest.caseType,
-                                    gender: rest.gender,
-                                    length: rest.length != null ? Number(rest.length) : undefined,
-                                    width: rest.width != null ? Number(rest.width) : undefined,
-                                    thickness: rest.thickness != null ? Number(rest.thickness) : undefined,
-                                    movement: rest.movement,
-                                }),
-                                create: clean({
-                                    caseType: rest.caseType ?? 'ROUND',
-                                    gender: rest.gender ?? 'MEN',
-                                    length: rest.length != null ? Number(rest.length) : undefined,
-                                    width: rest.width != null ? Number(rest.width) : undefined,
-                                    thickness: rest.thickness != null ? Number(rest.thickness) : undefined,
-                                    movement: rest.movement ?? 'AUTOMATIC',
-                                }),
-                            },
-                        }
-                        : undefined,
-                    // complications: set lại toàn bộ từ danh sách id
+
+                    watchSpec:
+                        rest.type === 'WATCH'
+                            ? ({
+                                upsert: {
+                                    // UPDATE: dùng { set: ... } và cast sang enum
+                                    update: clean({
+                                        caseType: rest.caseType
+                                            ? { set: rest.caseType as CaseType }
+                                            : undefined,
+                                        gender: rest.gender
+                                            ? { set: rest.gender as Gender }
+                                            : undefined,
+                                        movement: rest.movement
+                                            ? { set: rest.movement as MovementType }
+                                            : undefined,
+
+                                        length:
+                                            rest.length != null
+                                                ? { set: Number(rest.length) }
+                                                : undefined,
+                                        width:
+                                            rest.width != null
+                                                ? { set: Number(rest.width) }
+                                                : undefined,
+                                        thickness:
+                                            rest.thickness != null
+                                                ? { set: Number(rest.thickness) }
+                                                : undefined,
+                                    }) as Prisma.WatchSpecUpdateWithoutProductInput,
+
+                                    // CREATE: truyền đúng enum/number
+                                    create: clean({
+                                        caseType:
+                                            (rest.caseType as CaseType) ?? CaseType.ROUND,
+                                        gender: (rest.gender as Gender) ?? Gender.MEN,
+                                        movement:
+                                            (rest.movement as MovementType) ??
+                                            MovementType.AUTOMATIC,
+
+                                        length:
+                                            rest.length != null
+                                                ? Number(rest.length)
+                                                : undefined,
+                                        width:
+                                            rest.width != null
+                                                ? Number(rest.width)
+                                                : undefined,
+                                        thickness:
+                                            rest.thickness != null
+                                                ? Number(rest.thickness)
+                                                : undefined,
+                                    }) as Prisma.WatchSpecCreateWithoutProductInput,
+                                },
+                            } as Prisma.WatchSpecUpdateOneWithoutProductNestedInput)
+                            : undefined,
+
                     complication: complicationIds
                         ? { set: complicationIds.map((cid) => ({ id: cid })) }
                         : undefined,
@@ -320,7 +343,6 @@ export const adminProductService = {
                 select: { id: true },
             });
 
-            // 2) Update giá/stock cho biến thể hiện có (nếu có gửi)
             if (price != null || stockQty != null) {
                 await tx.productVariant.updateMany({
                     where: { productId: id },
@@ -331,7 +353,6 @@ export const adminProductService = {
                 });
             }
 
-            // 3) Đồng bộ ảnh: chiến lược đơn giản là replace
             if (image) {
                 await tx.productImage.deleteMany({ where: { productId: id } });
                 if (image.length) {
@@ -343,7 +364,6 @@ export const adminProductService = {
                             sortOrder: im.sortOrder ?? i,
                         })),
                     });
-                    // set primary từ ảnh đầu
                     await tx.product.update({
                         where: { id },
                         data: { primaryImageUrl: image[0].fileKey },
@@ -358,7 +378,7 @@ export const adminProductService = {
 
             return updated;
         });
-    }
+    },
 
 
     /** Xoá Product */

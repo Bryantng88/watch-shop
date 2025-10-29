@@ -97,5 +97,3 @@ export function toPublicUrl(key?: string | null): string | undefined {
     return `${base.replace(/\/$/, '')}/${encodeURI(cleaned)}`;
 }
 
-export function clean = <T extends object>(o: T) =>
-    Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
