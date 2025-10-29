@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ImagePicker from '@/app/admin/products/components/ImagePicker';
 
@@ -9,7 +9,89 @@ interface Option { label: string; value: string }
 interface Brand { id: string; name: string }
 interface Vendor { id: string; name: string }
 interface Complication { id: string; name: string }
+const isPrimitive = (v: any) => v === null || (typeof v !== "object" && typeof v !== "function");
+// helpers
+const PRODUCT_KEYS = [
+    "title", "brandId", "description", "vendorId", "currency",
+    "status", "type", "primaryImageUrl", "seoTitle", "seoDescription",
+    "isStockManaged", "maxQtyPerOrder", "tag", "complicationIds", "images",
+];
 
+const WATCHSPEC_KEYS = [
+    "model", "year", "caseType", "gender", "length", "width", "thickness",
+    "movement", "caliber", "caseMaterial", "dialColor", "strap", "glass",
+    "boxIncluded", "bookletIncluded",
+];
+
+const pickKeys = (obj: Record<string, any>, keys: string[]) =>
+    Object.fromEntries(Object.entries(obj).filter(([k]) => keys.includes(k)));
+
+const isEmpty = (o: any) => !o || Object.keys(o).length === 0;
+
+function sanitizeDeep<T extends Record<string, any>>(obj: T | undefined) {
+    if (!obj) return undefined;
+    const out: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+        if (v === "" || v === null) continue;
+        out[k] = v;
+    }
+    return isEmpty(out) ? undefined : out;
+}
+
+
+const isEqualShallow = (a: any, b: any) => {
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        return a.every((v, i) => JSON.stringify(v) === JSON.stringify(b[i]));
+    }
+    return a === b;
+};
+
+
+function diffFlat(from: Record<string, any>, to: Record<string, any>) {
+    const out: Record<string, any> = {};
+    const keys = Array.from(new Set([...Object.keys(from ?? {}), ...Object.keys(to ?? {})]));
+    for (const k of keys) {
+        const a = from?.[k];
+        const b = to?.[k];
+        if (!isEqualShallow(a, b)) {
+            if (isPrimitive(b) || Array.isArray(b)) out[k] = b;
+            else out[k] = b; // if you later nest objects in state, keep as-is
+        }
+    }
+    return out;
+}
+
+
+function sanitize(obj: Record<string, any>) {
+    const o: Record<string, any> = {};
+    for (const [k, v] of Object.entries(obj)) {
+        if (v === "" || v === null) continue; // drop null/empty
+        o[k] = v;
+    }
+    return o;
+}
+
+
+function normalizeInitial(initial: any) {
+    const firstVariant = initial?.variants?.[0] ?? null;
+    return {
+        ...initial,
+        // flatten complications to complicationIds for checkboxes UI
+        complicationIds:
+            initial?.complications?.map((c: any) => c.id) ?? initial?.complicationIds ?? [],
+        // normalize images for ImagePicker
+        images: (initial?.images ?? initial?.image ?? []).map((img: any, i: number) => ({
+            fileKey: img.fileKey ?? img.key,
+            alt: img.alt ?? null,
+            sortOrder: img.sortOrder ?? i,
+            url: img.url,
+        })),
+        // flatten first variant's price for the sidebar input
+        variantId: firstVariant?.id ?? undefined,
+        variantPrice: firstVariant?.price ?? undefined,
+    };
+}
 export default function EditProductForm({
     initial,
     brands, vendors,
@@ -25,20 +107,13 @@ export default function EditProductForm({
 
     // Lấy id từ initial (hoặc truyền qua prop riêng nếu bạn muốn)
     const id: string = initial?.id;
-
+    const normalizedInitial = useMemo(() => normalizeInitial(initial), [initial]);
+    const snapshotRef = useRef<any>(normalizedInitial);
     // Khởi tạo formData từ initial + mảng complicationIds
-    const [formData, setFormData] = useState<Record<string, any>>({
-        ...initial,
-        complicationIds:
-            initial?.complications?.map((c: any) => c.id) ?? initial?.complicationIds ?? [],
-    });
-
+    const [formData, setFormData] = useState<Record<string, any>>(normalizedInitial);
     // Khởi tạo ảnh đã có
     const [images, setImages] = useState<Picked[]>(
-        (initial?.images ?? initial?.image ?? []).map((img: any) => ({
-            key: img.fileKey ?? img.key,
-            url: img.url,
-        }))
+        (normalizedInitial.images ?? []).map((img: any) => ({ key: img.fileKey, url: img.url }))
     );
 
     const [saving, setSaving] = useState(false);
@@ -89,23 +164,41 @@ export default function EditProductForm({
 
         try {
             // Có thể “sanitize” body nếu cần
+            const changed = diffFlat(snapshotRef.current, formData);
+            const productPart = pickKeys(changed, PRODUCT_KEYS);
+            const watchSpecPart = pickKeys(changed, WATCHSPEC_KEYS);
+
+
+            // map to backend DTO shape (flat → nested) if needed
+            const variantsPart =
+                changed.variantPrice !== undefined
+                    ? [{ id: formData.variantId, price: formData.variantPrice }]
+                    : undefined;
+
+
             const body = {
-                ...formData,
-                price: formData.price === '' ? null : formData.price,
-                purchasePrice: formData.purchasePrice === '' ? null : formData.purchasePrice,
+                product: sanitizeDeep(productPart),
+                watchSpec: sanitizeDeep(watchSpecPart),
+                variants: variantsPart, // để undefined nếu không đổi giá
             };
 
+
             const res = await fetch(`/api/admin/products/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
 
+
             if (!res.ok) {
-                throw new Error(await res.text());
+                const txt = await res.text();
+                throw new Error(txt);
             }
 
-            router.push('/admin/products');
+
+            // update snapshot so further edits only send newly changed fields
+            snapshotRef.current = formData;
+            router.push("/admin/products");
         } catch (e: any) {
             setErr('Cập nhật sản phẩm thất bại');
             console.error(e);

@@ -2,22 +2,22 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
-import { EnumCaseTypeFilterObjectSchema as EnumCaseTypeFilterObjectSchema } from './EnumCaseTypeFilter.schema';
+import { EnumCaseTypeNullableFilterObjectSchema as EnumCaseTypeNullableFilterObjectSchema } from './EnumCaseTypeNullableFilter.schema';
 import { CaseTypeSchema } from '../enums/CaseType.schema';
 import { EnumCategoryNullableListFilterObjectSchema as EnumCategoryNullableListFilterObjectSchema } from './EnumCategoryNullableListFilter.schema';
-import { EnumGenderFilterObjectSchema as EnumGenderFilterObjectSchema } from './EnumGenderFilter.schema';
+import { EnumGenderNullableFilterObjectSchema as EnumGenderNullableFilterObjectSchema } from './EnumGenderNullableFilter.schema';
 import { GenderSchema } from '../enums/Gender.schema';
-import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './DecimalFilter.schema';
-import { EnumMovementTypeFilterObjectSchema as EnumMovementTypeFilterObjectSchema } from './EnumMovementTypeFilter.schema';
+import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
+import { EnumMovementTypeNullableFilterObjectSchema as EnumMovementTypeNullableFilterObjectSchema } from './EnumMovementTypeNullableFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumCaseMaterialFilterObjectSchema as EnumCaseMaterialFilterObjectSchema } from './EnumCaseMaterialFilter.schema';
 import { CaseMaterialSchema } from '../enums/CaseMaterial.schema';
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { EnumGoldColorNullableFilterObjectSchema as EnumGoldColorNullableFilterObjectSchema } from './EnumGoldColorNullableFilter.schema';
 import { GoldColorSchema } from '../enums/GoldColor.schema';
-import { EnumStrapFilterObjectSchema as EnumStrapFilterObjectSchema } from './EnumStrapFilter.schema';
+import { EnumStrapNullableFilterObjectSchema as EnumStrapNullableFilterObjectSchema } from './EnumStrapNullableFilter.schema';
 import { StrapSchema } from '../enums/Strap.schema';
-import { EnumGlassFilterObjectSchema as EnumGlassFilterObjectSchema } from './EnumGlassFilter.schema';
+import { EnumGlassNullableFilterObjectSchema as EnumGlassNullableFilterObjectSchema } from './EnumGlassNullableFilter.schema';
 import { GlassSchema } from '../enums/Glass.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
@@ -29,13 +29,13 @@ const watchspecscalarwhereinputSchema = z.object({
   productId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   model: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   year: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  caseType: z.union([z.lazy(() => EnumCaseTypeFilterObjectSchema), CaseTypeSchema]).optional(),
+  caseType: z.union([z.lazy(() => EnumCaseTypeNullableFilterObjectSchema), CaseTypeSchema]).optional().nullable(),
   category: z.lazy(() => EnumCategoryNullableListFilterObjectSchema).optional(),
-  gender: z.union([z.lazy(() => EnumGenderFilterObjectSchema), GenderSchema]).optional(),
-  length: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  width: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  thickness: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  movement: z.union([z.lazy(() => EnumMovementTypeFilterObjectSchema), MovementTypeSchema]).optional(),
+  gender: z.union([z.lazy(() => EnumGenderNullableFilterObjectSchema), GenderSchema]).optional().nullable(),
+  length: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  width: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  thickness: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  movement: z.union([z.lazy(() => EnumMovementTypeNullableFilterObjectSchema), MovementTypeSchema]).optional().nullable(),
   caliber: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   caseMaterial: z.union([z.lazy(() => EnumCaseMaterialFilterObjectSchema), CaseMaterialSchema]).optional(),
   goldKarat: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
@@ -43,8 +43,8 @@ const watchspecscalarwhereinputSchema = z.object({
   caseSize: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   dialColor: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   marketSegmentId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  strap: z.union([z.lazy(() => EnumStrapFilterObjectSchema), StrapSchema]).optional(),
-  glass: z.union([z.lazy(() => EnumGlassFilterObjectSchema), GlassSchema]).optional(),
+  strap: z.union([z.lazy(() => EnumStrapNullableFilterObjectSchema), StrapSchema]).optional().nullable(),
+  glass: z.union([z.lazy(() => EnumGlassNullableFilterObjectSchema), GlassSchema]).optional().nullable(),
   boxIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   bookletIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),

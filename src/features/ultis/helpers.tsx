@@ -97,5 +97,31 @@ export function toPublicUrl(key?: string | null): string | undefined {
     return `${base.replace(/\/$/, '')}/${encodeURI(cleaned)}`;
 }
 
-export function clean = <T extends object>(o: T) =>
-    Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+
+// helpers
+const PRODUCT_KEYS = [
+    "title", "brandId", "description", "vendorId", "currency",
+    "status", "type", "primaryImageUrl", "seoTitle", "seoDescription",
+    "isStockManaged", "maxQtyPerOrder", "tag", "complicationIds", "images",
+];
+
+const WATCHSPEC_KEYS = [
+    "model", "year", "caseType", "gender", "length", "width", "thickness",
+    "movement", "caliber", "caseMaterial", "dialColor", "strap", "glass",
+    "boxIncluded", "bookletIncluded",
+];
+
+const pickKeys = (obj: Record<string, any>, keys: string[]) =>
+    Object.fromEntries(Object.entries(obj).filter(([k]) => keys.includes(k)));
+
+const isEmpty = (o: any) => !o || Object.keys(o).length === 0;
+
+function sanitizeDeep<T extends Record<string, any>>(obj: T | undefined) {
+    if (!obj) return undefined;
+    const out: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+        if (v === "" || v === null) continue;
+        out[k] = v;
+    }
+    return isEmpty(out) ? undefined : out;
+}

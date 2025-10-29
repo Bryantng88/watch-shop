@@ -14,6 +14,7 @@ interface Product {
     status: string;
     minPrice: number | null;
     image?: string | null;
+    updatedAt: string;
 }
 
 export default function AdminProductList() {
@@ -59,6 +60,8 @@ export default function AdminProductList() {
 
                         <th className="px-4 py-2 text-left">Giá Bán</th>
                         <th className="px-4 py-2 text-left">Trạng thái</th>
+                        <th className="px-4 py-2 text-left">Cập nhật</th>
+
                         <th className="px-4 py-2 text-right">Hành động</th>
 
                     </tr>
@@ -113,6 +116,15 @@ export default function AdminProductList() {
                                         {p.status}
                                     </span>
                                 </td>
+                                <td className="px-4 py-2 font-medium">{new Date(p.updatedAt).toLocaleString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                })}</td>
+
 
                                 <td className="px-4 py-2 text-right">
                                     <div className="flex justify-end gap-2">
