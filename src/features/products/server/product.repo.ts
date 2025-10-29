@@ -1,6 +1,5 @@
 import { PrismaClient, Prisma, ProductType } from "@prisma/client";
 import prisma from "@/server/db/client";
-import { toPublicUrl } from "@/features/ultis/helpers";
 type Db = typeof prisma | Tx;
 
 export type AdminSort =
@@ -12,7 +11,7 @@ export interface AdminProductFilters {
     page?: number;
     pageSize?: number;
     q?: string;
-    primaryImage?: string;
+
     status?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
     type?: Prisma.ProductWhereInput["type"][];     // ['PRE_OWNED',...]
     brandIds?: string[];
@@ -230,6 +229,8 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
         take: pageSize,
     });
 }
+
+
 {/*} export async function createAdminProduct(
     tx: Prisma.TransactionClient,
     data: {
@@ -287,8 +288,13 @@ export const createProduct = (db: Db) => ({
     create: (data: Prisma.ProductCreateInput) => db.product.create({ data, select: { id: true, slug: true } }),
 });
 
+
 export async function updateAdminProduct(id: string, data: Prisma.ProductUpdateInput) {
-    return prisma.product.update({ where: { id }, data });
+    return prisma.product.update({
+        where: { id },
+        data
+    });
+
 }
 export async function deleteAdminProduct(id: string) {
     await prisma.product.delete({ where: { id } });
@@ -299,5 +305,56 @@ export async function publishProduct(id: string) {
 }
 export async function unpublishProduct(id: string) {
     return prisma.product.update({ where: { id }, data: { status: "INACTIVE" } as any });
+}
+
+
+export const adminProductRepo = {
+    async update(productId: string, args: {
+        productData?: Prisma.ProductUpdateInput;
+        watchSpecData?: Prisma.WatchSpecUpsertWithoutProductInput | Prisma.WatchSpecUpdateWithoutProductInput;
+        variantUpserts?: Array<{
+            where?: { id: string };
+            create: Prisma.ProductVariantCreateWithoutProductInput;
+            update: Prisma.ProductVariantUpdateWithoutProductInput;
+        }>;
+    }) {
+        return prisma.$transaction(async (tx) => {
+            // Product base fields
+            const updated = await tx.product.update({
+                where: { id: productId },
+                data: {
+                    ...(args.productData ?? {}),
+                    // Upsert / update watchSpec
+                    watchSpec: args.watchSpecData
+                        ? ("create" in (args.watchSpecData as any) || "update" in (args.watchSpecData as any)
+                            ? { upsert: args.watchSpecData as Prisma.WatchSpecUpsertWithoutProductInput }
+                            : { update: args.watchSpecData as Prisma.WatchSpecUpdateWithoutProductInput })
+                        : undefined,
+                },
+                include: { variants: true, watchSpec: true },
+            });
+
+
+            // Variants upsert
+            if (args.variantUpserts?.length) {
+                for (const v of args.variantUpserts) {
+                    if (v.where?.id) {
+                        await tx.productVariant.upsert({
+                            where: { id: v.where.id },
+                            update: v.update,
+                            create: { ...v.create, product: { connect: { id: productId } } },
+                        });
+                    } else {
+                        await tx.productVariant.create({
+                            data: { ...v.create, product: { connect: { id: productId } } },
+                        });
+                    }
+                }
+            }
+
+
+            return updated;
+        });
+    },
 }
 

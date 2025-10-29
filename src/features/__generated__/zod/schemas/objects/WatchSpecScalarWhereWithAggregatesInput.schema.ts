@@ -2,22 +2,22 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
-import { EnumCaseTypeWithAggregatesFilterObjectSchema as EnumCaseTypeWithAggregatesFilterObjectSchema } from './EnumCaseTypeWithAggregatesFilter.schema';
+import { EnumCaseTypeNullableWithAggregatesFilterObjectSchema as EnumCaseTypeNullableWithAggregatesFilterObjectSchema } from './EnumCaseTypeNullableWithAggregatesFilter.schema';
 import { CaseTypeSchema } from '../enums/CaseType.schema';
 import { EnumCategoryNullableListFilterObjectSchema as EnumCategoryNullableListFilterObjectSchema } from './EnumCategoryNullableListFilter.schema';
-import { EnumGenderWithAggregatesFilterObjectSchema as EnumGenderWithAggregatesFilterObjectSchema } from './EnumGenderWithAggregatesFilter.schema';
+import { EnumGenderNullableWithAggregatesFilterObjectSchema as EnumGenderNullableWithAggregatesFilterObjectSchema } from './EnumGenderNullableWithAggregatesFilter.schema';
 import { GenderSchema } from '../enums/Gender.schema';
-import { DecimalWithAggregatesFilterObjectSchema as DecimalWithAggregatesFilterObjectSchema } from './DecimalWithAggregatesFilter.schema';
-import { EnumMovementTypeWithAggregatesFilterObjectSchema as EnumMovementTypeWithAggregatesFilterObjectSchema } from './EnumMovementTypeWithAggregatesFilter.schema';
+import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
+import { EnumMovementTypeNullableWithAggregatesFilterObjectSchema as EnumMovementTypeNullableWithAggregatesFilterObjectSchema } from './EnumMovementTypeNullableWithAggregatesFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumCaseMaterialWithAggregatesFilterObjectSchema as EnumCaseMaterialWithAggregatesFilterObjectSchema } from './EnumCaseMaterialWithAggregatesFilter.schema';
 import { CaseMaterialSchema } from '../enums/CaseMaterial.schema';
 import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema';
 import { EnumGoldColorNullableWithAggregatesFilterObjectSchema as EnumGoldColorNullableWithAggregatesFilterObjectSchema } from './EnumGoldColorNullableWithAggregatesFilter.schema';
 import { GoldColorSchema } from '../enums/GoldColor.schema';
-import { EnumStrapWithAggregatesFilterObjectSchema as EnumStrapWithAggregatesFilterObjectSchema } from './EnumStrapWithAggregatesFilter.schema';
+import { EnumStrapNullableWithAggregatesFilterObjectSchema as EnumStrapNullableWithAggregatesFilterObjectSchema } from './EnumStrapNullableWithAggregatesFilter.schema';
 import { StrapSchema } from '../enums/Strap.schema';
-import { EnumGlassWithAggregatesFilterObjectSchema as EnumGlassWithAggregatesFilterObjectSchema } from './EnumGlassWithAggregatesFilter.schema';
+import { EnumGlassNullableWithAggregatesFilterObjectSchema as EnumGlassNullableWithAggregatesFilterObjectSchema } from './EnumGlassNullableWithAggregatesFilter.schema';
 import { GlassSchema } from '../enums/Glass.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
@@ -29,13 +29,13 @@ const watchspecscalarwherewithaggregatesinputSchema = z.object({
   productId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   model: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   year: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  caseType: z.union([z.lazy(() => EnumCaseTypeWithAggregatesFilterObjectSchema), CaseTypeSchema]).optional(),
+  caseType: z.union([z.lazy(() => EnumCaseTypeNullableWithAggregatesFilterObjectSchema), CaseTypeSchema]).optional().nullable(),
   category: z.lazy(() => EnumCategoryNullableListFilterObjectSchema).optional(),
-  gender: z.union([z.lazy(() => EnumGenderWithAggregatesFilterObjectSchema), GenderSchema]).optional(),
-  length: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
-  width: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
-  thickness: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
-  movement: z.union([z.lazy(() => EnumMovementTypeWithAggregatesFilterObjectSchema), MovementTypeSchema]).optional(),
+  gender: z.union([z.lazy(() => EnumGenderNullableWithAggregatesFilterObjectSchema), GenderSchema]).optional().nullable(),
+  length: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  width: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  thickness: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  movement: z.union([z.lazy(() => EnumMovementTypeNullableWithAggregatesFilterObjectSchema), MovementTypeSchema]).optional().nullable(),
   caliber: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   caseMaterial: z.union([z.lazy(() => EnumCaseMaterialWithAggregatesFilterObjectSchema), CaseMaterialSchema]).optional(),
   goldKarat: z.union([z.lazy(() => IntNullableWithAggregatesFilterObjectSchema), z.number().int()]).optional().nullable(),
@@ -43,8 +43,8 @@ const watchspecscalarwherewithaggregatesinputSchema = z.object({
   caseSize: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   dialColor: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   marketSegmentId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  strap: z.union([z.lazy(() => EnumStrapWithAggregatesFilterObjectSchema), StrapSchema]).optional(),
-  glass: z.union([z.lazy(() => EnumGlassWithAggregatesFilterObjectSchema), GlassSchema]).optional(),
+  strap: z.union([z.lazy(() => EnumStrapNullableWithAggregatesFilterObjectSchema), StrapSchema]).optional().nullable(),
+  glass: z.union([z.lazy(() => EnumGlassNullableWithAggregatesFilterObjectSchema), GlassSchema]).optional().nullable(),
   boxIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   bookletIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),

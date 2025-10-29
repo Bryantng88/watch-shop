@@ -5,17 +5,20 @@ import { CaseMaterial, ProductStatus, CaseType, Gender, MovementType } from "@pr
 import { ProductType } from "@prisma/client";
 import { complications } from "@/constants/constants";
 import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWithAcqSchema, AdminFiltersSchema } from "./product.dto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
 import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
 import { genUniqueSlug, buildVariants, buildWatchSpec } from "@/features/ultis/helpers";
 import { toPublicUrl } from "@/features/ultis/helpers";
-
+import { CreateProductWithAcqDTO, UpdateProductWithAcqDTO } from "../schemas/product.schema";
+import { adminProductRepo } from "./product.repo";
 
 /* -------------------------------------------------------
  * Helpers
  * ----------------------------------------------------- */
+
+
 
 /** Chuyển chuỗi rỗng -> undefined, đảm bảo number/date an toàn */
 const asDate = (v: unknown) =>
@@ -31,8 +34,7 @@ const arrayify = (v: unknown): string[] => {
     return [String(v)];
 };
 
-const clean = <T extends object>(o: T) =>
-    Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+
 const toCaseType = (v?: unknown): CaseType => {
     const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof CaseType;
     return CaseType[key] ?? CaseType.ROUND;
@@ -41,6 +43,7 @@ const toStatus = (v?: unknown): ProductStatus => {
     const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof ProductStatus;
     return ProductStatus[key] ?? ProductStatus.HIDDEN;
 };
+type UpdateProductWithAcqInput = z.infer<typeof UpdateProductWithAcqSchema>;
 
 const toProductType = (v?: unknown): ProductType => {
     const key = String(v ?? 'ROUND').toUpperCase() as keyof typeof ProductType;
@@ -48,6 +51,10 @@ const toProductType = (v?: unknown): ProductType => {
 };
 const connect = (id?: string) => (id ? { connect: { id } } : undefined);
 const createIf = <T>(cond: any, payload: T) => (cond ? payload : undefined);
+
+function toDecimal(v?: string) {
+    return typeof v === "string" ? new Prisma.Decimal(v) : undefined;
+}
 function normalizeUpdateBody(raw: any) {
     const out: any = { ...raw };
 
@@ -262,123 +269,6 @@ export const adminProductService = {
 
 
     /** Cập nhật Product */
-    async update(id: string, input: unknown) {
-        const dto = UpdateProductWithAcqSchema.parse(input);
-        const { image, complicationIds, price, stockQty, ...rest } = dto;
-
-        return prisma.$transaction(async (tx) => {
-            const updated = await tx.product.update({
-                where: { id },
-                data: {
-                    ...clean({
-                        title: rest.title,
-                        status: rest.status,
-                        seoTitle: rest.seoTitle,
-                        seoDescription: rest.seoDescription,
-                        type: rest.productType, // hoặc rest.type – thống nhất 1 tên!
-                        primaryImageUrl: rest.primaryImageUrl ?? undefined,
-                        brand: rest.brandId ? { connect: { id: rest.brandId } } : undefined,
-                    }),
-
-                    watchSpec:
-                        rest.type === 'WATCH'
-                            ? ({
-                                upsert: {
-                                    // UPDATE: dùng { set: ... } và cast sang enum
-                                    update: clean({
-                                        caseType: rest.caseType
-                                            ? { set: rest.caseType as CaseType }
-                                            : undefined,
-                                        gender: rest.gender
-                                            ? { set: rest.gender as Gender }
-                                            : undefined,
-                                        movement: rest.movement
-                                            ? { set: rest.movement as MovementType }
-                                            : undefined,
-
-                                        length:
-                                            rest.length != null
-                                                ? { set: Number(rest.length) }
-                                                : undefined,
-                                        width:
-                                            rest.width != null
-                                                ? { set: Number(rest.width) }
-                                                : undefined,
-                                        thickness:
-                                            rest.thickness != null
-                                                ? { set: Number(rest.thickness) }
-                                                : undefined,
-                                    }) as Prisma.WatchSpecUpdateWithoutProductInput,
-
-                                    // CREATE: truyền đúng enum/number
-                                    create: clean({
-                                        caseType:
-                                            (rest.caseType as CaseType) ?? CaseType.ROUND,
-                                        gender: (rest.gender as Gender) ?? Gender.MEN,
-                                        movement:
-                                            (rest.movement as MovementType) ??
-                                            MovementType.AUTOMATIC,
-
-                                        length:
-                                            rest.length != null
-                                                ? Number(rest.length)
-                                                : undefined,
-                                        width:
-                                            rest.width != null
-                                                ? Number(rest.width)
-                                                : undefined,
-                                        thickness:
-                                            rest.thickness != null
-                                                ? Number(rest.thickness)
-                                                : undefined,
-                                    }) as Prisma.WatchSpecCreateWithoutProductInput,
-                                },
-                            } as Prisma.WatchSpecUpdateOneWithoutProductNestedInput)
-                            : undefined,
-
-                    complication: complicationIds
-                        ? { set: complicationIds.map((cid) => ({ id: cid })) }
-                        : undefined,
-                },
-                select: { id: true },
-            });
-
-            if (price != null || stockQty != null) {
-                await tx.productVariant.updateMany({
-                    where: { productId: id },
-                    data: clean({
-                        price: price != null ? Number(price) : undefined,
-                        stockQty: stockQty != null ? Number(stockQty) : undefined,
-                    }),
-                });
-            }
-
-            if (image) {
-                await tx.productImage.deleteMany({ where: { productId: id } });
-                if (image.length) {
-                    await tx.productImage.createMany({
-                        data: image.map((im, i) => ({
-                            productId: id,
-                            fileKey: im.fileKey,
-                            alt: im.alt ?? null,
-                            sortOrder: im.sortOrder ?? i,
-                        })),
-                    });
-                    await tx.product.update({
-                        where: { id },
-                        data: { primaryImageUrl: image[0].fileKey },
-                    });
-                } else {
-                    await tx.product.update({
-                        where: { id },
-                        data: { primaryImageUrl: null },
-                    });
-                }
-            }
-
-            return updated;
-        });
-    },
 
 
     /** Xoá Product */
@@ -394,4 +284,79 @@ export const adminProductService = {
     async unpublish(id: string) {
         return unpublishProduct(id);
     },
+
+    async update(dto: UpdateProductWithAcqDTO) {
+        const { id, product, watchSpec, variants } = dto;
+        const productData: Prisma.ProductUpdateInput | undefined = product
+            ? {
+                title: product.title,
+                slug: product.slug,
+                status: (product.status as any) ?? undefined,
+                type: (product.type as any) ?? undefined,
+                primaryImageUrl: product.primaryImageUrl ?? undefined,
+                seoTitle: product.seoTitle ?? undefined,
+                seoDescription: product.seoDescription ?? undefined,
+                isStockManaged: product.isStockManaged,
+                maxQtyPerOrder: product.maxQtyPerOrder,
+                tag: (product.tag as any) ?? undefined,
+                brand: product.brandId ? { connect: { id: product.brandId } } : undefined,
+                vendor: product.vendorId ? { connect: { id: product.vendorId } } : undefined,
+            }
+            : undefined;
+
+
+        const watchSpecData = watchSpec
+            ? ({
+                update: {
+                    model: watchSpec.model,
+                    year: watchSpec.year,
+                    caseType: (watchSpec.caseType as any) ?? undefined,
+                    gender: (watchSpec.gender as any) ?? undefined,
+                    length: toDecimal(watchSpec.length),
+                    width: toDecimal(watchSpec.width),
+                    thickness: toDecimal(watchSpec.thickness),
+                    movement: (watchSpec.movement as any) ?? undefined,
+                    caliber: watchSpec.caliber,
+                    caseMaterial: (watchSpec.caseMaterial as any) ?? undefined,
+                    dialColor: watchSpec.dialColor,
+                    strap: (watchSpec.strap as any) ?? undefined,
+                    glass: (watchSpec.glass as any) ?? undefined,
+                    boxIncluded: watchSpec.boxIncluded,
+                    bookletIncluded: watchSpec.bookletIncluded,
+                },
+                create: {
+                    model: watchSpec.model,
+                },
+            } satisfies Prisma.WatchSpecUpsertWithoutProductInput)
+            : undefined;
+
+
+        const variantUpserts = (variants ?? []).map((v) => ({
+            where: v.id ? { id: v.id } : undefined,
+            create: {
+                sku: v.sku,
+                name: v.name,
+                price: v.price ? new Prisma.Decimal(v.price) : undefined,
+                stockQty: v.stockQty ?? 0,
+                isStockManaged: v.isStockManaged ?? true,
+                isActive: v.isActive ?? true,
+            } satisfies Prisma.ProductVariantCreateWithoutProductInput,
+            update: {
+                sku: v.sku ?? undefined,
+                name: v.name ?? undefined,
+                price: v.price ? new Prisma.Decimal(v.price) : undefined,
+                stockQty: v.stockQty,
+                isStockManaged: v.isStockManaged,
+                isActive: v.isActive,
+            } satisfies Prisma.ProductVariantUpdateWithoutProductInput,
+        }));
+        const adm = adminProductRepo;
+        return adm.update(id, {
+            productData,
+            watchSpecData,
+            variantUpserts,
+        });
+    },
+
+
 };
