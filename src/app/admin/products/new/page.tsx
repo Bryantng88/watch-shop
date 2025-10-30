@@ -1,7 +1,7 @@
 // app/admin/products/new/page.tsx
 import NewProductForm2 from "@/features/products/_admin/new-product-form2";
 import { listBrands } from "@/features/catalog/server/brands.repo"; // <- repo có sẵn của bạn\
-import { PRODUCT_STATUSES, PRODUCT_TYPES, CASE_TYPES, MOVEMENT_TYPES } from "@/features/meta/server/enum";
+import { AVAILABILITY_STATUS, PRODUCT_TYPES, CASE_TYPES, MOVEMENT_TYPES } from "@/features/meta/server/enum";
 import { listVendor } from "@/features/vendors/server/vendor.repo";
 import { listComplications } from "@/features/catalog/server/complications.repo";
 
@@ -18,7 +18,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
     const selectedTypeRaw = sp.type;
     const selectedType =
         Array.isArray(selectedTypeRaw) ? selectedTypeRaw[0] : selectedTypeRaw || 'WATCH';
-    const STATUS_OPTIONS: Option[] = (Object.values(PRODUCT_STATUSES) as string[])
+    const STATUS_OPTIONS: Option[] = (Object.values(AVAILABILITY_STATUS) as string[])
         .map(s => ({ label: human(s), value: s }));
     const MOVEMENT_OPTIONS: Option[] = (Object.values(MOVEMENT_TYPES) as string[])
         .map(s => ({ label: human(s), value: s }));
