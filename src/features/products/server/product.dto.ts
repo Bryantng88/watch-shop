@@ -1,8 +1,10 @@
-import { ProductStatus, ProductType, CaseType, Gender } from "@prisma/client";
+import { PriceVisibility, ProductType, CaseType, ContentStatus, Gender, AvailabilityStatus } from "@prisma/client";
 import { z } from "zod";
 export type CreateProductDTO = {
     title: string;
-    status: ProductStatus;
+    availabilityStatus: AvailabilityStatus;
+    contentStatus: ContentStatus;
+    priceVisibility: PriceVisibility;
     type: ProductType;
     price: number;
     brandId?: string;        // chỉ là id thuần
@@ -53,7 +55,9 @@ export const CreateProductWithAcqSchema = z
         title: z.string().min(1),
         brandId: z.string().optional(),
         slug: z.string().min(1).optional(),
-        status: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
+        contentStatus: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
+        availabilityStatus: z.string().optional(),
+        priceVisibility: z.string().optional(),
         type: z.string().optional(),   // ví dụ enum ProductType
         brand: z.string().optional(),
         primaryImageUrl: z.preprocess(
@@ -101,7 +105,7 @@ export const AdminFiltersSchema = z.object({
             "titleDesc",
         ])
         .optional(),
-    status: z.array(z.nativeEnum(ProductStatus)).optional(),
+    availabilitiStatus: z.array(z.nativeEnum(AvailabilityStatus)).optional(),
     type: z.array(z.nativeEnum(ProductType)).optional(),
     brandIds: z.array(z.string()).optional(),
     hasImages: z.enum(["yes", "no"]).optional(),

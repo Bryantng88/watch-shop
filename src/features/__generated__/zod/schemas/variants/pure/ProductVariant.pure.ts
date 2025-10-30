@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { AvailabilityStatusSchema } from '../../enums/AvailabilityStatus.schema';
 // prettier-ignore
 export const ProductVariantModelSchema = z.object({
     id: z.string(),
@@ -9,10 +10,10 @@ export const ProductVariantModelSchema = z.object({
     price: z.number().nullable(),
     stockQty: z.number().int(),
     isStockManaged: z.boolean().nullable(),
-    isActive: z.boolean(),
     maxQtyPerOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    availabilityStatuts: AvailabilityStatusSchema,
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     MaintenancePart: z.array(z.unknown()),

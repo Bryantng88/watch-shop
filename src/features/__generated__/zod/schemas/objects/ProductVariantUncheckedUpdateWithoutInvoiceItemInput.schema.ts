@@ -5,8 +5,9 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableBoolFieldUpdateOperationsInputObjectSchema as NullableBoolFieldUpdateOperationsInputObjectSchema } from './NullableBoolFieldUpdateOperationsInput.schema';
-import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
+import { EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema as EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema } from './EnumAvailabilityStatusFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUncheckedUpdateManyWithoutVariantNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutVariantNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutVariantNestedInput.schema';
 import { MaintenancePartUncheckedUpdateManyWithoutVariantNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutVariantNestedInput.schema';
 import { MaintenanceRecordUncheckedUpdateManyWithoutVariantNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutVariantNestedInput.schema';
@@ -22,10 +23,10 @@ const makeSchema = () => z.object({
   price: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   stockQty: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   isStockManaged: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   maxQtyPerOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  availabilityStatuts: z.union([AvailabilityStatusSchema, z.lazy(() => EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   MaintenancePart: z.lazy(() => MaintenancePartUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),

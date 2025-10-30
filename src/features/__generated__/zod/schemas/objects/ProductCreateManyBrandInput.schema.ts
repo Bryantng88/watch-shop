@@ -1,16 +1,18 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { TagSchema } from '../enums/Tag.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
   slug: z.string().optional().nullable(),
   title: z.string(),
-  status: ProductStatusSchema.optional(),
   primaryImageUrl: z.string().optional().nullable(),
+  contentStatus: ContentStatusSchema.optional(),
   type: ProductTypeSchema,
+  priceVisibility: PriceVisibilitySchema.optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   isStockManaged: z.boolean().optional(),

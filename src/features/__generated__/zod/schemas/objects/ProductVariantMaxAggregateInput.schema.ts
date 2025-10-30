@@ -10,10 +10,10 @@ const makeSchema = () => z.object({
   price: z.literal(true).optional(),
   stockQty: z.literal(true).optional(),
   isStockManaged: z.literal(true).optional(),
-  isActive: z.literal(true).optional(),
   maxQtyPerOrder: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  availabilityStatuts: z.literal(true).optional()
 }).strict();
 export const ProductVariantMaxAggregateInputObjectSchema: z.ZodType<Prisma.ProductVariantMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantMaxAggregateInputType>;
 export const ProductVariantMaxAggregateInputObjectZodSchema = makeSchema();

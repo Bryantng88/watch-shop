@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, ProductType } from "@prisma/client";
+import { PrismaClient, Prisma, ProductType, PriceVisibility } from "@prisma/client";
 import prisma from "@/server/db/client";
 type Db = typeof prisma | Tx;
 
@@ -88,7 +88,9 @@ export async function listAdminProducts(f: AdminProductFilters) {
                 id: true,
                 title: true,
                 slug: true,
-                status: true,
+                priceVisibility: true,
+                contentStatus: true,
+
                 type: true,
                 brand: { select: { id: true, name: true } },
                 primaryImageUrl: true,
@@ -99,7 +101,10 @@ export async function listAdminProducts(f: AdminProductFilters) {
                 variants: {
                     orderBy: { price: "asc" },
                     take: 1,
-                    select: { price: true /*, stockQty: true*/ }, // TODO: map field tồn kho nếu có
+                    select: {
+                        price: true,
+                        availabilityStatuts: true, /*, stockQty: true*/
+                    }, // TODO: map field tồn kho nếu có
                 },
 
                 // Lấy bản ghi gần nhất của các lịch sử
@@ -136,7 +141,9 @@ export async function listAdminProducts(f: AdminProductFilters) {
         id: p.id,
         title: p.title,
         slug: p.slug,
-        status: p.status,
+        avaibilityStatus: p.variants[0]?.availabilityStatuts,
+        contentStatus: p.contentStatus,
+        priceVisibility: p.priceVisibility,
         type: p.type,
         brand: p.brand?.name ?? null,
         image: p.primaryImageUrl ?? null,
@@ -300,11 +307,11 @@ export async function deleteAdminProduct(id: string) {
     await prisma.product.delete({ where: { id } });
     return { ok: true };
 }
-export async function publishProduct(id: string) {
-    return prisma.product.update({ where: { id }, data: { status: "ACTIVE" } as any });
+export async function activateProduct(id: string) {
+    return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "ACTIVE" } as any });
 }
-export async function unpublishProduct(id: string) {
-    return prisma.product.update({ where: { id }, data: { status: "INACTIVE" } as any });
+export async function hideProduct(id: string) {
+    return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "HIDDEN" } as any });
 }
 
 

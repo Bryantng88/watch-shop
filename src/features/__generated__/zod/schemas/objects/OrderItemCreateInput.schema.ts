@@ -7,8 +7,13 @@ import { ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema as Serv
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
+  variantId: z.string().optional().nullable(),
   title: z.string(),
-  price: z.number(),
+  listPriceAtOrder: z.number(),
+  discountType: z.string().optional().nullable(),
+  discountValue: z.number().optional().nullable(),
+  unitPriceAgreed: z.number(),
+  taxRate: z.number().optional().nullable(),
   quantity: z.number().int(),
   subtotal: z.number(),
   img: z.string().optional().nullable(),

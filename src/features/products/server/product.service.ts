@@ -114,6 +114,7 @@ export const adminProductService = {
         };
 
         const parsed = AdminFiltersSchema.parse({
+
             page: asNumber(raw.page) ?? 1,
             pageSize: asNumber(raw.pageSize) ?? 50,
             q: raw.q ?? undefined,
@@ -153,7 +154,7 @@ export const adminProductService = {
             // 3) Map ProductCreateInput
             const data: Prisma.ProductCreateInput = {
                 title: dto.title,
-                status: (dto.status as any) ?? "HIDDEN",
+                contentStatus: (dto.contentStatus as any) ?? "DRAFT",
                 type: (dto.type as any) ?? "WATCH",
                 slug, // có thể để Prisma default unique nếu bạn muốn
                 brand: dto.brandId ? { connect: { id: dto.brandId } } : undefined,

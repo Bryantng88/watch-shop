@@ -10,10 +10,10 @@ const makeSchema = () => z.object({
   price: z.literal(true).optional(),
   stockQty: z.literal(true).optional(),
   isStockManaged: z.literal(true).optional(),
-  isActive: z.literal(true).optional(),
   maxQtyPerOrder: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  availabilityStatuts: z.literal(true).optional()
 }).strict();
 export const ProductVariantMinAggregateInputObjectSchema: z.ZodType<Prisma.ProductVariantMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantMinAggregateInputType>;
 export const ProductVariantMinAggregateInputObjectZodSchema = makeSchema();

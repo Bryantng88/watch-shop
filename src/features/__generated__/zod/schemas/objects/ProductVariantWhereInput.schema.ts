@@ -5,8 +5,9 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema';
-import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumAvailabilityStatusFilterObjectSchema as EnumAvailabilityStatusFilterObjectSchema } from './EnumAvailabilityStatusFilter.schema';
+import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenancePartListRelationFilterObjectSchema as MaintenancePartListRelationFilterObjectSchema } from './MaintenancePartListRelationFilter.schema';
@@ -30,10 +31,10 @@ const productvariantwhereinputSchema = z.object({
   price: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   stockQty: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   isStockManaged: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
-  isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   maxQtyPerOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  availabilityStatuts: z.union([z.lazy(() => EnumAvailabilityStatusFilterObjectSchema), AvailabilityStatusSchema]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   MaintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),

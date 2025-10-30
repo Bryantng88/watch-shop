@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
+import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema as InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutVariantInput.schema';
 import { MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema as MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutVariantInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutVariantInput.schema';
@@ -15,10 +16,10 @@ const makeSchema = () => z.object({
   price: z.number().optional().nullable(),
   stockQty: z.number().int().optional(),
   isStockManaged: z.boolean().optional().nullable(),
-  isActive: z.boolean().optional(),
   maxQtyPerOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  availabilityStatuts: AvailabilityStatusSchema.optional(),
   InvoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   MaintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema).optional(),

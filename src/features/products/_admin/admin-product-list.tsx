@@ -9,12 +9,13 @@ import { toPublicUrl } from "@/features/ultis/helpers";
 interface Product {
     id: string;
     title: string;
-    brand: { name: string } | null;
-    type: string;
-    status: string;
+    contentStatus: string;
+    priceVisibility: string;
+    avaibilityStatus: string;
     minPrice: number | null;
     image?: string | null;
     updatedAt: string;
+    createdAt: string;
 }
 
 export default function AdminProductList() {
@@ -55,13 +56,12 @@ export default function AdminProductList() {
                     <tr>
                         <th className="px-4 py-2 text-left">Ảnh</th>
                         <th className="px-4 py-2 text-left">Tên</th>
-                        <th className="px-4 py-2 text-left">Thương hiệu</th>
-                        <th className="px-4 py-2 text-left">Loại</th>
-
                         <th className="px-4 py-2 text-left">Giá Bán</th>
-                        <th className="px-4 py-2 text-left">Trạng thái</th>
-                        <th className="px-4 py-2 text-left">Cập nhật</th>
-
+                        <th className="px-4 py-2 text-left">Hiển thị giá</th>
+                        <th className="px-4 py-2 text-left">Tình trạng duyệt</th>
+                        <th className="px-4 py-2 text-left">Khả dụng</th>
+                        <th className="px-4 py-2 text-left">Cập nhật lần cuối</th>
+                        <th className="px-4 py-2 text-left">Ngày tạo</th>
                         <th className="px-4 py-2 text-right">Hành động</th>
 
                     </tr>
@@ -96,27 +96,56 @@ export default function AdminProductList() {
                                 </td>
 
                                 <td className="px-4 py-2 font-medium">{p.title}</td>
-                                <td className="px-4 py-2">{p.brand?.name || "-"}</td>
-                                <td className="px-4 py-2 font-medium">{p.type}</td>
                                 <td className="px-4 py-2">
                                     {p.minPrice != null
                                         ? p.minPrice.toLocaleString("vi-VN") + " ₫"
                                         : "-"}
                                 </td>
-
                                 <td className="px-4 py-2">
                                     <span
-                                        className={`px-2 py-1 rounded text-xs font-medium ${p.status === "ACTIVE"
+                                        className={`px-2 py-1 rounded text-xs font-medium ${p.priceVisibility === "SHOW"
                                             ? "bg-green-100 text-green-700"
-                                            : p.status === "SOLD"
+                                            : p.priceVisibility === "HIDE"
                                                 ? "bg-red-100 text-red-700"
                                                 : "bg-gray-100 text-gray-600"
                                             }`}
                                     >
-                                        {p.status}
+                                        {p.priceVisibility}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-2">
+                                    <span
+                                        className={`px-2 py-1 rounded text-xs font-medium ${p.contentStatus === "PUBLISHED"
+                                            ? "bg-green-100 text-green-700"
+                                            : p.contentStatus === "DRAFT"
+                                                ? "bg-red-100 text-red-700"
+                                                : "bg-gray-100 text-gray-600"
+                                            }`}
+                                    >
+                                        {p.contentStatus}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-2">
+                                    <span
+                                        className={`px-2 py-1 rounded text-xs font-medium ${p.avaibilityStatus === "ACTIVE"
+                                            ? "bg-green-100 text-green-700"
+                                            : p.avaibilityStatus === "HIDDEN"
+                                                ? "bg-red-100 text-red-700"
+                                                : "bg-gray-100 text-gray-600"
+                                            }`}
+                                    >
+                                        {p.avaibilityStatus}
                                     </span>
                                 </td>
                                 <td className="px-4 py-2 font-medium">{new Date(p.updatedAt).toLocaleString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                })}</td>
+                                <td className="px-4 py-2 font-medium">{new Date(p.createdAt).toLocaleString("vi-VN", {
                                     day: "2-digit",
                                     month: "2-digit",
                                     year: "numeric",
