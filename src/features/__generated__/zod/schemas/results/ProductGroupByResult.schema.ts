@@ -20,6 +20,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
     primaryImageUrl: z.number(),
     contentStatus: z.number(),
     type: z.number(),
+    priceVisibility: z.number(),
     brandId: z.number(),
     seoTitle: z.number(),
     seoDescription: z.number(),

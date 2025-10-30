@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   primaryImageUrl: z.boolean().optional(),
   contentStatus: z.boolean().optional(),
   type: z.boolean().optional(),
+  priceVisibility: z.boolean().optional(),
   brandId: z.boolean().optional(),
   seoTitle: z.boolean().optional(),
   seoDescription: z.boolean().optional(),

@@ -6,6 +6,8 @@ import { EnumContentStatusWithAggregatesFilterObjectSchema as EnumContentStatusW
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { EnumProductTypeWithAggregatesFilterObjectSchema as EnumProductTypeWithAggregatesFilterObjectSchema } from './EnumProductTypeWithAggregatesFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumPriceVisibilityWithAggregatesFilterObjectSchema as EnumPriceVisibilityWithAggregatesFilterObjectSchema } from './EnumPriceVisibilityWithAggregatesFilter.schema';
+import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { IntWithAggregatesFilterObjectSchema as IntWithAggregatesFilterObjectSchema } from './IntWithAggregatesFilter.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
@@ -23,6 +25,7 @@ const productscalarwherewithaggregatesinputSchema = z.object({
   primaryImageUrl: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   contentStatus: z.union([z.lazy(() => EnumContentStatusWithAggregatesFilterObjectSchema), ContentStatusSchema]).optional(),
   type: z.union([z.lazy(() => EnumProductTypeWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional(),
+  priceVisibility: z.union([z.lazy(() => EnumPriceVisibilityWithAggregatesFilterObjectSchema), PriceVisibilitySchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   seoDescription: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),

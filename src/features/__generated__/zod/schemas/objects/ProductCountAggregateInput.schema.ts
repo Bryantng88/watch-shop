@@ -9,6 +9,7 @@ const makeSchema = () => z.object({
   primaryImageUrl: z.literal(true).optional(),
   contentStatus: z.literal(true).optional(),
   type: z.literal(true).optional(),
+  priceVisibility: z.literal(true).optional(),
   brandId: z.literal(true).optional(),
   seoTitle: z.literal(true).optional(),
   seoDescription: z.literal(true).optional(),

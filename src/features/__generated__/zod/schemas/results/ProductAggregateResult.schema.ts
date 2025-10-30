@@ -6,6 +6,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     primaryImageUrl: z.number(),
     contentStatus: z.number(),
     type: z.number(),
+    priceVisibility: z.number(),
     brandId: z.number(),
     seoTitle: z.number(),
     seoDescription: z.number(),

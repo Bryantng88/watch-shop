@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   primaryImageUrl: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   contentStatus: SortOrderSchema.optional(),
   type: SortOrderSchema.optional(),
+  priceVisibility: SortOrderSchema.optional(),
   brandId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   seoTitle: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   seoDescription: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

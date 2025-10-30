@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { ContentStatusSchema } from '../../enums/ContentStatus.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
+import { PriceVisibilitySchema } from '../../enums/PriceVisibility.schema';
 import { TagSchema } from '../../enums/Tag.schema';
 // prettier-ignore
 export const ProductModelSchema = z.object({
@@ -11,6 +12,7 @@ export const ProductModelSchema = z.object({
     primaryImageUrl: z.string().nullable(),
     contentStatus: ContentStatusSchema,
     type: ProductTypeSchema,
+    priceVisibility: PriceVisibilitySchema,
     brandId: z.string().nullable(),
     seoTitle: z.string().nullable(),
     seoDescription: z.string().nullable(),

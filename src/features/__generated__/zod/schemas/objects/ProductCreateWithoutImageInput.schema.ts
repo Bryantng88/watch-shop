@@ -2,6 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { TagSchema } from '../enums/Tag.schema';
 import { AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema as AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutProductInput.schema';
 import { InvoiceItemCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutProductInput.schema';
@@ -21,6 +22,7 @@ const makeSchema = () => z.object({
   primaryImageUrl: z.string().optional().nullable(),
   contentStatus: ContentStatusSchema.optional(),
   type: ProductTypeSchema,
+  priceVisibility: PriceVisibilitySchema.optional(),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
   isStockManaged: z.boolean().optional(),

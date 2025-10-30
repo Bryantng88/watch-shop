@@ -9,6 +9,7 @@ const makeSchema = () => z.object({
   primaryImageUrl: SortOrderSchema.optional(),
   contentStatus: SortOrderSchema.optional(),
   type: SortOrderSchema.optional(),
+  priceVisibility: SortOrderSchema.optional(),
   brandId: SortOrderSchema.optional(),
   seoTitle: SortOrderSchema.optional(),
   seoDescription: SortOrderSchema.optional(),

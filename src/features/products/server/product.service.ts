@@ -114,6 +114,7 @@ export const adminProductService = {
         };
 
         const parsed = AdminFiltersSchema.parse({
+
             page: asNumber(raw.page) ?? 1,
             pageSize: asNumber(raw.pageSize) ?? 50,
             q: raw.q ?? undefined,

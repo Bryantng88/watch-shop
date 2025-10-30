@@ -6,6 +6,8 @@ import { EnumContentStatusFilterObjectSchema as EnumContentStatusFilterObjectSch
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumPriceVisibilityFilterObjectSchema as EnumPriceVisibilityFilterObjectSchema } from './EnumPriceVisibilityFilter.schema';
+import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
@@ -37,6 +39,7 @@ const productwhereinputSchema = z.object({
   primaryImageUrl: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   contentStatus: z.union([z.lazy(() => EnumContentStatusFilterObjectSchema), ContentStatusSchema]).optional(),
   type: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
+  priceVisibility: z.union([z.lazy(() => EnumPriceVisibilityFilterObjectSchema), PriceVisibilitySchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoDescription: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

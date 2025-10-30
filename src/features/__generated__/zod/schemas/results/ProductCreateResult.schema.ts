@@ -6,6 +6,7 @@ export const ProductCreateResultSchema = z.object({
   primaryImageUrl: z.string().optional(),
   contentStatus: z.unknown(),
   type: z.unknown(),
+  priceVisibility: z.unknown(),
   brandId: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),

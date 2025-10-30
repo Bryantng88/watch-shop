@@ -77,6 +77,7 @@ model Product {
   primaryImageUrl    String?
   contentStatus      ContentStatus       @default(DRAFT)
   type               ProductType
+  priceVisibility    PriceVisibility     @default(SHOW)
   brandId            String?
   seoTitle           String?
   seoDescription     String?
@@ -213,19 +214,24 @@ model Order {
 }
 
 model OrderItem {
-  id              String            @id @default(cuid())
-  orderId         String
-  productId       String?
-  title           String
-  price           Decimal           @db.Decimal(12, 2)
-  quantity        Int
-  subtotal        Decimal           @db.Decimal(12, 2)
-  img             String?
-  createdAt       DateTime          @default(now())
-  AcquisitionItem AcquisitionItem[]
-  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  Product         Product?          @relation(fields: [productId], references: [id])
-  ServiceRequest  ServiceRequest[]
+  id               String            @id @default(cuid())
+  orderId          String
+  productId        String?
+  variantId        String?
+  title            String
+  listPriceAtOrder Decimal           @db.Decimal(12, 2)
+  discountType     String? // 'AMOUNT' | 'RATE' (tuỳ bạn)
+  discountValue    Decimal?          @db.Decimal(12, 2) // 200_000 hoặc 0.1 (=10%)
+  unitPriceAgreed  Decimal           @db.Decimal(12, 2) // = listPriceAtOrder - discount (hoặc list* (1-rate))
+  taxRate          Decimal?          @db.Decimal(12, 2)
+  quantity         Int
+  subtotal         Decimal           @db.Decimal(12, 2)
+  img              String?
+  createdAt        DateTime          @default(now())
+  AcquisitionItem  AcquisitionItem[]
+  order            Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product          Product?          @relation(fields: [productId], references: [id])
+  ServiceRequest   ServiceRequest[]
 
   @@index([orderId])
   @@index([productId])
@@ -592,15 +598,6 @@ enum ServiceType {
   PAID
 }
 
-enum ProductStatus {
-  ACTIVE
-  HOLD
-  SOLD
-  CONSIGNED
-  HIDDEN
-  DRAFT
-}
-
 enum PaymentStatus {
   UNPAID
   PAID
@@ -762,6 +759,7 @@ enum AvailabilityStatus {
   RESERVED
   SOLD
   HOLD
+  CONSIGNED
 }
 
 enum ReservationStatus {
@@ -781,4 +779,9 @@ enum ContentStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum PriceVisibility {
+  SHOW
+  HIDE
 }
