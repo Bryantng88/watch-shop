@@ -74,8 +74,8 @@ model Product {
   id                 String              @id @default(cuid())
   slug               String?             @unique
   title              String
-  status             ProductStatus       @default(ACTIVE)
   primaryImageUrl    String?
+  contentStatus      ContentStatus       @default(DRAFT)
   type               ProductType
   brandId            String?
   seoTitle           String?
@@ -99,37 +99,37 @@ model Product {
   ServiceRequest     ServiceRequest[]
   watchSpec          WatchSpec?
 
-  @@index([status])
+  @@index([contentStatus])
   @@index([brandId])
   @@index([type])
-  @@index([status, type, publishedAt])
+  @@index([contentStatus, type, publishedAt])
   @@index([createdAt])
   @@index([updatedAt])
 }
 
 model ProductVariant {
-  id                String              @id @default(cuid())
-  productId         String
-  sku               String?             @unique
-  name              String?
-  price             Decimal?            @db.Decimal(12, 2)
-  stockQty          Int                 @default(0)
-  isStockManaged    Boolean?            @default(true)
-  isActive          Boolean             @default(true)
-  maxQtyPerOrder    Int                 @default(99)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  AcquisitionItem   AcquisitionItem[]
-  InvoiceItem       InvoiceItem[]
-  MaintenancePart   MaintenancePart[]
-  MaintenanceRecord MaintenanceRecord[]
-  partSpec          PartVariantSpec?
-  product           Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ServiceRequest    ServiceRequest[]
-  strapSpec         StrapVariantSpec?
+  id                  String              @id @default(cuid())
+  productId           String
+  sku                 String?             @unique
+  name                String?
+  price               Decimal?            @db.Decimal(12, 2)
+  stockQty            Int                 @default(0)
+  isStockManaged      Boolean?            @default(true)
+  maxQtyPerOrder      Int                 @default(99)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  availabilityStatuts AvailabilityStatus  @default(HIDDEN)
+  AcquisitionItem     AcquisitionItem[]
+  InvoiceItem         InvoiceItem[]
+  MaintenancePart     MaintenancePart[]
+  MaintenanceRecord   MaintenanceRecord[]
+  partSpec            PartVariantSpec?
+  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ServiceRequest      ServiceRequest[]
+  strapSpec           StrapVariantSpec?
 
   @@index([productId])
-  @@index([isActive])
+  @@index([availabilityStatuts])
 }
 
 model PartVariantSpec {
@@ -598,6 +598,7 @@ enum ProductStatus {
   SOLD
   CONSIGNED
   HIDDEN
+  DRAFT
 }
 
 enum PaymentStatus {
@@ -755,9 +756,12 @@ enum AcquisitionType {
 }
 
 enum AvailabilityStatus {
-  IN_STOCK
+  INACTIVE
+  ACTIVE
+  HIDDEN
   RESERVED
   SOLD
+  HOLD
 }
 
 enum ReservationStatus {
@@ -771,4 +775,10 @@ enum AcquisitionStatus {
   DRAFT
   POSTED
   CANCELED
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }

@@ -2,8 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
-import { EnumProductStatusFilterObjectSchema as EnumProductStatusFilterObjectSchema } from './EnumProductStatusFilter.schema';
-import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { EnumContentStatusFilterObjectSchema as EnumContentStatusFilterObjectSchema } from './EnumContentStatusFilter.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
@@ -34,8 +34,8 @@ const productwhereinputSchema = z.object({
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   slug: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   title: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  status: z.union([z.lazy(() => EnumProductStatusFilterObjectSchema), ProductStatusSchema]).optional(),
   primaryImageUrl: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  contentStatus: z.union([z.lazy(() => EnumContentStatusFilterObjectSchema), ContentStatusSchema]).optional(),
   type: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
   brandId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   seoTitle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

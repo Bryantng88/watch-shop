@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { TagSchema } from '../enums/Tag.schema';
 import { InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemUncheckedCreateNestedManyWithoutProductInput.schema';
@@ -16,8 +16,8 @@ const makeSchema = () => z.object({
   id: z.string().optional(),
   slug: z.string().optional().nullable(),
   title: z.string(),
-  status: ProductStatusSchema.optional(),
   primaryImageUrl: z.string().optional().nullable(),
+  contentStatus: ContentStatusSchema.optional(),
   type: ProductTypeSchema,
   brandId: z.string().optional().nullable(),
   seoTitle: z.string().optional().nullable(),

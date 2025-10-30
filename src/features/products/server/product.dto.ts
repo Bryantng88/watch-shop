@@ -53,7 +53,7 @@ export const CreateProductWithAcqSchema = z
         title: z.string().min(1),
         brandId: z.string().optional(),
         slug: z.string().min(1).optional(),
-        status: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
+        contentStatus: z.string().optional(), // ví dụ: 'ACTIVE' | 'INACTIVE' | 'DRAFT'
         type: z.string().optional(),   // ví dụ enum ProductType
         brand: z.string().optional(),
         primaryImageUrl: z.preprocess(
