@@ -80,7 +80,7 @@ export function buildVariants(dto: any, skuBase: string) {
             {
                 price,
                 stockQty,
-                availabilityStatuts: "HIDDEN",
+                availabilityStatus: "HIDDEN",
                 sku: skuBase,
             },
         ],

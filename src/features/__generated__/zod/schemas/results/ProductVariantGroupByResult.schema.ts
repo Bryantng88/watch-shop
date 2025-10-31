@@ -21,7 +21,7 @@ export const ProductVariantGroupByResultSchema = z.array(z.object({
     maxQtyPerOrder: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    availabilityStatuts: z.number(),
+    availabilityStatus: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     MaintenancePart: z.number(),

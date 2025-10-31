@@ -11,7 +11,7 @@ export const ProductVariantFindManyResultSchema = z.object({
   maxQtyPerOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  availabilityStatuts: z.unknown(),
+  availabilityStatus: z.unknown(),
   AcquisitionItem: z.array(z.unknown()),
   InvoiceItem: z.array(z.unknown()),
   MaintenancePart: z.array(z.unknown()),

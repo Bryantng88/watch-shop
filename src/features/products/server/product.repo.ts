@@ -12,7 +12,7 @@ export interface AdminProductFilters {
     pageSize?: number;
     q?: string;
 
-    status?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
+    //sstatus?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
     type?: Prisma.ProductWhereInput["type"][];     // ['PRE_OWNED',...]
     brandIds?: string[];
     hasImages?: "yes" | "no";
@@ -35,7 +35,7 @@ function buildWhere(f: AdminProductFilters): Prisma.ProductWhereInput {
                 ],
             }
             : {}),
-        ...(f.status?.length ? { status: { in: f.status as any } } : {}),
+        // ...(f.status?.length ? { status: { in: f.status as any } } : {}),
         ...(f.type?.length ? { type: { in: f.type as any } } : {}),
         ...(f.brandIds?.length ? { brandId: { in: f.brandIds } } : {}),
         ...(f.hasImages === "yes" ? { primaryImageUrl: { not: null } } : {}),
@@ -75,9 +75,7 @@ export async function listAdminProducts(f: AdminProductFilters) {
     const pageSize = Math.max(1, Math.min(200, f.pageSize ?? DEFAULT_PAGE_SIZE));
     const skip = (page - 1) * pageSize;
     const take = pageSize;
-
     const where = buildWhere(f);
-
     const [items, total] = await Promise.all([
         prisma.product.findMany({
             where,
@@ -96,14 +94,13 @@ export async function listAdminProducts(f: AdminProductFilters) {
                 primaryImageUrl: true,
                 createdAt: true,
                 updatedAt: true,
-
                 // Lấy min price từ variants + (tuỳ có stockQty hay không)
                 variants: {
                     orderBy: { price: "asc" },
                     take: 1,
                     select: {
                         price: true,
-                        availabilityStatuts: true, /*, stockQty: true*/
+                        availabilityStatus: true, /*, stockQty: true*/
                     }, // TODO: map field tồn kho nếu có
                 },
 
@@ -141,29 +138,23 @@ export async function listAdminProducts(f: AdminProductFilters) {
         id: p.id,
         title: p.title,
         slug: p.slug,
-        avaibilityStatus: p.variants[0]?.availabilityStatuts,
+        avaibilityStatus: p.variants[0]?.availabilityStatus,
         contentStatus: p.contentStatus,
         priceVisibility: p.priceVisibility,
         type: p.type,
         brand: p.brand?.name ?? null,
         image: p.primaryImageUrl ?? null,
-
         minPrice: p.variants[0]?.price ?? null,
         variantsCount: p._count.variants,
         imagesCount: p._count.image,
-
         ordersCount: p._count.orderItems,
         lastSoldAt: p.orderItems[0]?.createdAt ?? null,
-
         maintenanceCount: p._count.maintenanceRecords,
         lastServicedAt: p.maintenanceRecords[0]?.servicedAt ?? null,
-
         invoicesCount: p._count.InvoiceItem,
         acquisitionsCount: p._count.AcquisitionItem,
-
-        serviceRequests: p._count.ServiceRequest,
+        serviceRquests: p._count.ServiceRequest,
         reservations: p._count.Reservation,
-
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
     }));
@@ -238,59 +229,7 @@ export async function getProductMaintenance(id: string, page = 1, pageSize = 20,
 }
 
 
-{/*} export async function createAdminProduct(
-    tx: Prisma.TransactionClient,
-    data: {
-        title: string;
-        status: string;
-        type: ProductType | string;
-        brandId?: string;
-        vendorId?: string;
-        variant: { price?: number; stockQty?: number };
-        watchSpec?: { caseType?: string; length?: number; width?: number; thickness?: number };
-        gender?: string;
-        length?: string;
-        movement?: string;
-    }
-) {
 
-    const { brandId, vendorId, title, status, gender, movement, caseType, type, price, seoTitle, primaryImageUrl, seoDescription } = data;
-    const createData: Prisma.ProductCreateInput = {
-        title,
-        status,
-        type,
-        seoTitle,
-        seoDescription,
-        ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
-        variants: {
-            create: [
-                {
-                    price,
-                    stockQty: 1,
-                    isActive: true
-                }
-            ]
-        },
-        watchSpec: {
-            create: {
-                caseType,
-                movement,          // optional vì có @default
-                gender,            // optional vì có @default
-                category: [],      // khuyến nghị
-                length: 46.5,      // ✅ BẮT BUỘC
-                width: 39.7,       // ✅ BẮT BUỘC
-                thickness: 12.0,   // ✅ BẮT BUỘC
-            }
-
-        },
-        ...(vendorId ? { vendor: { connect: { id: vendorId } } } : {}),
-        primaryImageUrl: primaryImageUrl ?? null,
-    };
-    return prisma.product.create({
-        data: createData,
-        select: { id: true, slug: true },
-    });
-*/}
 export const createProduct = (db: Db) => ({
     create: (data: Prisma.ProductCreateInput) => db.product.create({ data, select: { id: true, slug: true } }),
 });
@@ -307,15 +246,16 @@ export async function deleteAdminProduct(id: string) {
     await prisma.product.delete({ where: { id } });
     return { ok: true };
 }
-export async function activateProduct(id: string) {
-    return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "ACTIVE" } as any });
-}
-export async function hideProduct(id: string) {
-    return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "HIDDEN" } as any });
-}
 
 
 export const adminProductRepo = {
+    async activateProduct(id: string) {
+        return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "ACTIVE" } as any });
+    },
+    async hideProduct(id: string) {
+        return prisma.productVariant.update({ where: { id }, data: { availabilityStatus: "HIDDEN" } as any });
+    },
+
     async update(productId: string, args: {
         productData?: Prisma.ProductUpdateInput;
         watchSpecData?: Prisma.WatchSpecUpsertWithoutProductInput | Prisma.WatchSpecUpdateWithoutProductInput;
@@ -363,5 +303,32 @@ export const adminProductRepo = {
             return updated;
         });
     },
+    async getPublishSnapshot(productId: string) {
+        return prisma.product.findUnique({
+            where: { id: productId },
+            select: {
+                id: true,
+                brandId: true,
+                image: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+                variants: {
+                    select: {
+                        id: true,
+                        price: true,
+                        availabilityStatus: true,
+                        stockQty: true,
+                    },
+                },
+            },
+        });
+    },
+    async publishProduct(productId: string) {
+        return prisma.product.update({
+            where: { id: productId },
+            data: { contentStatus: "PUBLISHED" }, // enum ContentStatus trong schema của bạn
+            select: { id: true, contentStatus: true },
+        });
+    }
+
+
 }
 

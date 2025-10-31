@@ -21,7 +21,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
-  availabilityStatuts: z.boolean().optional(),
+  availabilityStatus: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
   MaintenancePart: z.union([z.boolean(), z.lazy(() => MaintenancePartFindManySchema)]).optional(),

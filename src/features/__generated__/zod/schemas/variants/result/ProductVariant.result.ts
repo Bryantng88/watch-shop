@@ -13,7 +13,7 @@ export const ProductVariantResultSchema = z.object({
     maxQtyPerOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    availabilityStatuts: AvailabilityStatusSchema,
+    availabilityStatus: AvailabilityStatusSchema,
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     MaintenancePart: z.array(z.unknown()),

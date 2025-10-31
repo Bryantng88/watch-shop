@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.boolean().optional().nullable(),
   maxQtyPerOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  availabilityStatuts: AvailabilityStatusSchema.optional(),
+  availabilityStatus: AvailabilityStatusSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutVariantInputObjectSchema),
   InvoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema),
   MaintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema),

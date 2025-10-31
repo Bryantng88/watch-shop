@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  availabilityStatuts: AvailabilityStatusSchema.optional(),
+  availabilityStatus: AvailabilityStatusSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   MaintenancePart: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutVariantInputObjectSchema).optional(),

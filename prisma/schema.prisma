@@ -109,28 +109,28 @@ model Product {
 }
 
 model ProductVariant {
-  id                  String              @id @default(cuid())
-  productId           String
-  sku                 String?             @unique
-  name                String?
-  price               Decimal?            @db.Decimal(12, 2)
-  stockQty            Int                 @default(0)
-  isStockManaged      Boolean?            @default(true)
-  maxQtyPerOrder      Int                 @default(99)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  availabilityStatuts AvailabilityStatus  @default(HIDDEN)
-  AcquisitionItem     AcquisitionItem[]
-  InvoiceItem         InvoiceItem[]
-  MaintenancePart     MaintenancePart[]
-  MaintenanceRecord   MaintenanceRecord[]
-  partSpec            PartVariantSpec?
-  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  ServiceRequest      ServiceRequest[]
-  strapSpec           StrapVariantSpec?
+  id                 String              @id @default(cuid())
+  productId          String
+  sku                String?             @unique
+  name               String?
+  price              Decimal?            @db.Decimal(12, 2)
+  stockQty           Int                 @default(0)
+  isStockManaged     Boolean?            @default(true)
+  maxQtyPerOrder     Int                 @default(99)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  availabilityStatus AvailabilityStatus  @default(HIDDEN)
+  AcquisitionItem    AcquisitionItem[]
+  InvoiceItem        InvoiceItem[]
+  MaintenancePart    MaintenancePart[]
+  MaintenanceRecord  MaintenanceRecord[]
+  partSpec           PartVariantSpec?
+  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ServiceRequest     ServiceRequest[]
+  strapSpec          StrapVariantSpec?
 
   @@index([productId])
-  @@index([availabilityStatuts])
+  @@index([availabilityStatus])
 }
 
 model PartVariantSpec {

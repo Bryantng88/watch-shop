@@ -22,7 +22,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  availabilityStatuts: SortOrderSchema.optional(),
+  availabilityStatus: SortOrderSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   MaintenancePart: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),

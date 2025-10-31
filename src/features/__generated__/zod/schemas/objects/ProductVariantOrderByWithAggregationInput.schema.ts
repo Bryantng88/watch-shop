@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  availabilityStatuts: SortOrderSchema.optional(),
+  availabilityStatus: SortOrderSchema.optional(),
   _count: z.lazy(() => ProductVariantCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => ProductVariantAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ProductVariantMaxOrderByAggregateInputObjectSchema).optional(),

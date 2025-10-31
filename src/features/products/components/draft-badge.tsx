@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import QuickPublishDemo from "./quick-publish-demo";// component modal ở trên
+import { QuickPublishModal } from "./quick-publish-demo";// component modal ở trên
 
 export default function ProductStatusBadge({
     product,
@@ -25,7 +25,7 @@ export default function ProductStatusBadge({
                         DRAFT
                     </button>
                     {open && (
-                        <QuickPublishDemo
+                        <QuickPublishModal
                             productId={product.id}
                             onClose={() => setOpen(false)}
                         />

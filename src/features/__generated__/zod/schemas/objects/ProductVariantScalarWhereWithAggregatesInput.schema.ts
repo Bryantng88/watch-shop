@@ -23,7 +23,7 @@ const productvariantscalarwherewithaggregatesinputSchema = z.object({
   maxQtyPerOrder: z.union([z.lazy(() => IntWithAggregatesFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  availabilityStatuts: z.union([z.lazy(() => EnumAvailabilityStatusWithAggregatesFilterObjectSchema), AvailabilityStatusSchema]).optional()
+  availabilityStatus: z.union([z.lazy(() => EnumAvailabilityStatusWithAggregatesFilterObjectSchema), AvailabilityStatusSchema]).optional()
 }).strict();
 export const ProductVariantScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductVariantScalarWhereWithAggregatesInput> = productvariantscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductVariantScalarWhereWithAggregatesInput>;
 export const ProductVariantScalarWhereWithAggregatesInputObjectZodSchema = productvariantscalarwherewithaggregatesinputSchema;

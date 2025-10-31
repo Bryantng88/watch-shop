@@ -26,7 +26,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  availabilityStatuts: z.union([AvailabilityStatusSchema, z.lazy(() => EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  availabilityStatus: z.union([AvailabilityStatusSchema, z.lazy(() => EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
