@@ -318,6 +318,17 @@ export const adminProductRepo = {
                         stockQty: true,
                     },
                 },
+                watchSpec: {
+                    select: {
+                        productId: true,
+                        model: true, year: true, caseType: true, category: true,
+                        length: true, width: true, thickness: true,
+                        movement: true, caliber: true, caseMaterial: true,
+                        goldKarat: true, goldColor: true, dialColor: true,
+                        strap: true, glass: true,
+                        boxIncluded: true, bookletIncluded: true, cardIncluded: true,
+                    },
+                },
             },
         });
     },

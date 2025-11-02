@@ -6,19 +6,21 @@ import {
   Package,
   Settings,
   LineChart,
+  FileSpreadsheet,
   Tags,
   Users2,
   Menu,
+  ClipboardList
 } from "lucide-react";
 import ActiveLink from "./active-link";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/brands", label: "Brands", icon: Tags },
-  { href: "/admin/orders", label: "Orders", icon: Tags },
-  { href: "/admin/customers", label: "Customers", icon: Users2 },
-  { href: "/admin/reports", label: "Reports", icon: LineChart },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/products", label: "Sản phẩm", icon: Package },
+  { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags },
+  { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
+  { href: "/admin/customers", label: "Khách hàng", icon: Users2 },
+  { href: "/admin/reports", label: "Báo cáo", icon: LineChart },
+  { href: "/admin/settings", label: "Thiết lập", icon: Settings },
 ];
 
 export default function AdminSidebar() {

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import ImagePicker from '@/app/admin/products/components/ImagePicker';
+import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 
 
 type Picked = { key: string; url: string };
@@ -50,6 +50,28 @@ export default function NewProductForm2({ vendors, brands, statusOptions, compli
                 : { ...prev, complicationIds: [...arr, id] };
         });
     };
+    const watchFields = [
+        { name: "length", label: "Chiều dài (mm)", type: "number" },
+        { name: "width", label: "Chiều rộng (mm)", type: "number" },
+        { name: "thickness", label: "Dày (mm)", type: "number" },
+        { name: "gender", label: "Cho nam/nữ", type: "text" },
+        { name: "box", label: "Box", type: "text" },
+        { name: "Card", label: "Card", type: "text" },
+        { name: "", label: "Glass", type: "text" },
+
+        {
+            name: "caseType",
+            label: "Loại vỏ",
+            type: "select",
+            options: caseOptions,
+        },
+        {
+            name: "movement",
+            label: "Movement",
+            type: "select",
+            options: movementOptions,
+        },
+    ];
 
 
     const [showQuickVendor, setShowQuickVendor] = useState(false);
@@ -143,122 +165,104 @@ export default function NewProductForm2({ vendors, brands, statusOptions, compli
                     {/* WATCH ONLY */}
                     {selectedType === "WATCH" && (
                         <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] overflow-hidden p-5 space-y-4">
-                            <div className="font-semibold">Thông số đồng hồ</div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm text-gray-600">Chiều dài (mm)</label>
-                                    <input
-                                        name="length"
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full border rounded px-3 py-2"
-                                    />
-
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-600">Chiều rộng (mm)</label>
-                                    <input
-                                        name="width"
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full border rounded px-3 py-2"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-600">Dày (mm)</label>
-                                    <input
-                                        name="width"
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full border rounded px-3 py-2"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm text-gray-600">Cho nam/nữ </label>
-                                    <input
-                                        name="gender"
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full border rounded px-3 py-2"
-                                    />
-
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-600">Loại vỏ</label>
-                                    <select
-                                        name="caseType"
-                                        onChange={handleChange}
-                                        className="mt-1 block w-full border rounded px-3 py-2"
-                                    >
-                                        {caseOptions.map((o) => (
-                                            <option key={o.value} value={o.value}>
-                                                {o.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm text-gray-600">Movement</label>
-                                    <select
-                                        className="h-10 w-full rounded border px-2 text-sm"
-                                        onChange={handleChange}
-                                        name="movement"
-                                    >
-                                        {movementOptions.map((s) => (
-                                            <option key={s.value} value={s.value}>
-                                                {s.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                            </div>
-                            {selectedType === "WATCH" && (
-                                <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] p-5">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                        {/* LEFT: Image picker */}
-                                        <div>
-                                            <ImagePicker value={images} onChange={onImagesChange} />
-                                        </div>
-                                        <div className="rounded-md border border-gray-200 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] overflow-hidden p-5 space-y-4">
-                                            <h3 className="font-semibold mb-3">Complications</h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto">
-                                                {complicationOptions.map((c) => (
-                                                    <label key={c.id} className="inline-flex items-center gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={(formData.complicationIds ?? []).includes(c.id)}
-                                                            onChange={() => toggleComp(c.id)}
-                                                        />
-                                                        <span className="text-sm">{c.name}</span>
-                                                    </label>
-                                                ))}
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+                                {/* LEFT SIDE (2/3) */}
+                                <div className="lg:col-span-2 space-y-5">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {watchFields.slice(0, 3).map((f) => (
+                                            <div key={f.name}>
+                                                <label className="block text-sm text-gray-600">
+                                                    {f.label}
+                                                </label>
+                                                <input
+                                                    type={f.type}
+                                                    name={f.name}
+                                                    onChange={handleChange}
+                                                    className="mt-1 block w-full border rounded px-3 py-2"
+                                                />
                                             </div>
-
-                                            {(formData.complicationIds ?? []).length > 0 && (
-                                                <div className="mt-3 flex flex-wrap gap-2 " >
-                                                    {complicationOptions
-                                                        .filter((o) => (formData.complicationIds ?? []).includes(o.id))
-                                                        .map((o) => (
-                                                            <span
-                                                                key={o.id}
-                                                                className="px-2 py-1 text-xs rounded bg-gray-100 border"
-                                                            >
-                                                                {o.name}
-                                                            </span>
-                                                        ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {watchFields.slice(3).map((f) =>
+                                            f.type === "select" ? (
+                                                <div key={f.name}>
+                                                    <label className="block text-sm text-gray-600">
+                                                        {f.label}
+                                                    </label>
+                                                    <select
+                                                        name={f.name}
+                                                        onChange={handleChange}
+                                                        className="mt-1 block w-full border rounded px-3 py-2"
+                                                    >
+                                                        {f.options?.map((o) => (
+                                                            <option key={o.value} value={o.value}>
+                                                                {o.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <div key={f.name}>
+                                                    <label className="block text-sm text-gray-600">
+                                                        {f.label}
+                                                    </label>
+                                                    <input
+                                                        type={f.type}
+                                                        name={f.name}
+                                                        onChange={handleChange}
+                                                        className="mt-1 block w-full border rounded px-3 py-2"
+                                                    />
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* IMAGE PICKER */}
+
                                 </div>
-                            )}
 
+                                {/* RIGHT SIDE (1/3) - COMPLICATIONS */}
+                                <div className="rounded-md border border-gray-200 bg-white shadow-sm p-5 space-y-3">
+                                    <h3 className="font-semibold mb-2">Complications</h3>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[330px] overflow-auto">
+                                        {complicationOptions.map((c) => (
+                                            <label key={c.id} className="inline-flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={(formData.complicationIds ?? []).includes(c.id)}
+                                                    onChange={() => toggleComp(c.id)}
+                                                />
+                                                <span className="text-sm">{c.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    {(formData.complicationIds ?? []).length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {complicationOptions
+                                                .filter((o) =>
+                                                    (formData.complicationIds ?? []).includes(o.id)
+                                                )
+                                                .map((o) => (
+                                                    <span
+                                                        key={o.id}
+                                                        className="px-2 py-1 text-xs rounded bg-gray-100 border"
+                                                    >
+                                                        {o.name}
+                                                    </span>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="mt-6">
+                                <ImagePicker value={images} onChange={onImagesChange} />
+                            </div>
                         </div>
-
-
-                    )
-                    }
-
+                    )}
                     {/* WATCH_STRAP */}
                     {selectedType === "WATCH_STRAP" && (
                         <div className="rounded-md border p-4 space-y-4">

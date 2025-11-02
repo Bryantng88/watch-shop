@@ -8,7 +8,7 @@ import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWit
 import { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
-import { acquisitionRepo } from "@/features/aquisitions/server/acquisition.repo";
+import { acquisitionRepo } from "@/app/(admin)/admin/acquisitions/_server/acquisition.repo";
 import { genUniqueSlug, buildVariants, buildWatchSpec } from "@/features/ultis/helpers";
 import { toPublicUrl } from "@/features/ultis/helpers";
 import { CreateProductWithAcqDTO, UpdateProductWithAcqDTO } from "../schemas/product.schema";
@@ -327,6 +327,7 @@ async function getPublishSnapshot(productId: string): Promise<PublishSnapshot> {
             (v.availabilityStatus === "ACTIVE" || (v.stockQty ?? 0) > 0)
     );
 
+
     return {
         imageCount: p.image.length,
         brandId: p.brandId,
@@ -375,7 +376,6 @@ async function updateProduct(dto: UpdateProductWithAcqDTO) {
         ? {
             title: product.title,
             slug: product.slug,
-            status: (product.status as any) ?? undefined,
             type: (product.type as any) ?? undefined,
             primaryImageUrl: product.primaryImageUrl ?? undefined,
             seoTitle: product.seoTitle ?? undefined,
@@ -423,7 +423,6 @@ async function updateProduct(dto: UpdateProductWithAcqDTO) {
             price: v.price ? new Prisma.Decimal(v.price) : undefined,
             stockQty: v.stockQty ?? 0,
             isStockManaged: v.isStockManaged ?? true,
-            isActive: v.isActive ?? true,
         } satisfies Prisma.ProductVariantCreateWithoutProductInput,
         update: {
             sku: v.sku ?? undefined,
@@ -431,7 +430,6 @@ async function updateProduct(dto: UpdateProductWithAcqDTO) {
             price: v.price ? new Prisma.Decimal(v.price) : undefined,
             stockQty: v.stockQty,
             isStockManaged: v.isStockManaged,
-            isActive: v.isActive,
         } satisfies Prisma.ProductVariantUpdateWithoutProductInput,
     }));
     const adm = adminProductRepo;

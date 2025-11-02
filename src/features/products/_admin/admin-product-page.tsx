@@ -5,13 +5,16 @@ import AdminProductFilterBar from "@/features/admin/layout/filter-bar";
 import Link from "next/link";
 import NewProductButton from "./new_product_button";
 import { PRODUCT_TYPES } from "@/features/meta/server/enum";
+import { brands } from "@/constants/constants";
+import { listBrands } from "@/features/catalog/server/brands.repo";
 
-export default function AdminProductPage() {
+export default async function AdminProductPage() {
     const ProductType = Object.values(PRODUCT_TYPES).map(v => ({
         label: v,
         value: v,
     }));
 
+    const brands = await listBrands();
 
     return (
         <div className="space-y-6">
@@ -38,7 +41,9 @@ export default function AdminProductPage() {
 
             {/* Bảng danh sách */}
             <div className="pt-4">
-                <AdminProductList />
+                <AdminProductList
+                    brands={brands}
+                />
             </div>
         </div>
     );
