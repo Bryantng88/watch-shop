@@ -11,3 +11,20 @@ export interface Filters {
     priceMin?: number;
     priceMax?: number;
 }
+
+
+export type BrandLite = { id: string; name: string };
+
+export type ProductListItem = {
+    id: string;
+    title: string;
+    contentStatus: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+    priceVisibility: "SHOW" | "HIDE";
+    availabilityStatus: "ACTIVE" | "HIDDEN";
+    minPrice: number | null;
+    image?: string | null;
+    updatedAt: string; // ISO
+    createdAt: string; // ISO
+};
+
+export type ApiList<T> = { items: T[]; total?: number };

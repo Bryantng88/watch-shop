@@ -24,7 +24,7 @@ export async function PATCH(_req: NextRequest, ctx: { params: Promise<{ id: stri
         console.dir("in cai body ra test + " + JSON.stringify(body) + "in cai id nưa + " + id)
 
         const dto = UpdateProductWithAcqSchema.parse({ id: id, ...body });
-        const updated = await adminProductService.update(dto);
+        const updated = await adminProductService.updateProduct(dto);
         return NextResponse.json(updated, { status: 200 });
     } catch (err: any) {
         console.error("❌ [PATCH /api/admin/products/:id] Update failed:", err);

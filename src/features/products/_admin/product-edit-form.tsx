@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import ImagePicker from '@/app/admin/products/components/ImagePicker';
+import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 
 type Picked = { key: string; url: string };
 interface Option { label: string; value: string }
