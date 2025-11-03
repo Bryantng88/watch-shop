@@ -374,10 +374,14 @@ model Acquisition {
   currency        String?
   payoutStatus    String?
   accquisitionStt AcquisitionStatus @default(DRAFT)
-  refNo           String?
+  refNo           String?           @unique
   notes           String?
   condition       String?
   warrantyUntil   DateTime?
+  mergedIntoId    String? // phiếu đích
+  mergedInto      Acquisition?      @relation("AcqMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom      Acquisition[]     @relation("AcqMerge")
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   customer        Customer?         @relation(fields: [customerId], references: [id])

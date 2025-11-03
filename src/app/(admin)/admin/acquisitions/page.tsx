@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getAdminAcquisitionList } from "./_server/acquisition.service";
 import { parseAcqSearchParams } from "./ultils/search-params";    // NOTE: utils (không phải ultils)
 import DrawerHost from "./components/Drawer";                      // <— Drawer client component
+import ItemsHover from "./components/ItemsHover";
+import AcqItemsPopover from "./components/ItemsPopover";
 
 type PageProps = {
     searchParams: { [key: string]: string | string[] | undefined };
@@ -142,8 +144,13 @@ export default async function AcquisitionListPage({ searchParams }: PageProps) {
                                     </td>
                                     <td className="px-3 py-2">{fmtDate(a.acquiredAt)}</td>
                                     <td className="px-3 py-2">{fmtMoney(Number(a.cost ?? 0), a.currency ?? "VND")}</td>
-                                    <td className="px-3 py-2">{(a as any).itemCount ?? "-"}</td>
-                                    <td className="px-3 py-2">{(a as any).hasInvoice ? "✓" : "-"}</td>
+                                    <td className="px-3 py-2">
+                                        <AcqItemsPopover
+                                            acqId={a.id}
+                                            count={(a as any).itemCount ?? 0}
+                                            currency={a.currency ?? "VND"}
+                                        />
+                                    </td>                                    <td className="px-3 py-2">{(a as any).hasInvoice ? "✓" : "-"}</td>
                                     <td className="px-3 py-2">{fmtDate((a as any).updatedAt)}</td>
                                     <td className="px-3 py-2">
                                         <div className="flex justify-end gap-3">
@@ -185,7 +192,7 @@ export default async function AcquisitionListPage({ searchParams }: PageProps) {
             </div>
 
             {/* Drawer: đọc ?view=<id> và fetch chi tiết */}
-            <DrawerHost />
+
         </div>
     );
 }

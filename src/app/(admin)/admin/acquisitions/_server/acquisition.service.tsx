@@ -5,7 +5,8 @@ import prisma from "@/server/db/client";
 import { acqFiltersSchema } from "./dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repo from "./acquisition.repo";
-
+import { acquisitionRepo } from "./acquisition.repo";
+import { CreateAcqWithItemInput } from "./dto";
 // List cho admin table
 export async function getAdminAcquisitionList(raw: unknown) {
     const f = acqFiltersSchema.parse(raw);
@@ -43,21 +44,30 @@ export async function getAcquisitionDetail(id: string) {
 }
 
 // Tạo mới (Draft)
-export async function createAcquisition(input: {
-    vendorId: string;
-    acquiredAt: Date;
-    cost?: number;
-    currency?: string;
-    notes?: string;
-}) {
-    // nghiệp vụ: default status là DRAFT
-    return repo.acqCreate({
-        vendor: { connect: { id: input.vendorId } },
-        acquiredAt: input.acquiredAt,
-        cost: input.cost ?? 0,
-        currency: input.currency ?? "VND",
-        acquisitionStt: "DRAFT",
-        notes: input.notes,
+export async function createAcquisitionWithItem(input: CreateAcqWithItemInput) {
+    return prisma.$transaction(async (tx) => {
+        const repo = acquisitionRepo(tx);
+
+        // 1) Gọi repo để tạo/tái sử dụng phiếu và thêm dòng
+        const acq = await repo.createWithItem(input); // { id }
+
+        // 2) (Khuyến nghị) Recalc tổng tiền từ tất cả item sau khi thêm
+        //    để cost luôn khớp khi người dùng thêm nhiều lần trong ngày
+        const items = await tx.acquisitionItem.findMany({
+            where: { acquisitionId: acq.id },
+            select: { quantity: true, unitCost: true },
+        });
+        const total = items.reduce(
+            (s, it) => s + Number(it.quantity) * Number(it.unitCost ?? 0),
+            0
+        );
+        await tx.acquisition.update({
+            where: { id: acq.id },
+            data: { cost: total },
+        });
+
+        // 3) Trả về kết quả gọn cho API/UI
+        return { acquisitionId: acq.id, cost: total };
     });
 }
 

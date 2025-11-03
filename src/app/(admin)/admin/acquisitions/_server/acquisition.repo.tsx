@@ -2,28 +2,18 @@
 import { Prisma, AcquisitionStatus } from "@prisma/client";
 import { acqFiltersSchema } from "./dto";
 import prisma from "@/server/db/client";
+import { CreateAcqWithItemInput } from "./acquisition.dto";
 
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
-export type Tx = Prisma.TransactionClient;
-const dbOrTx = (tx?: Tx) => (tx ?? prisma) as Prisma.TransactionClient;
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-export type CreateAcqWithItemInput = {
-    vendorId: string;
-    acquiredAt?: Date;
-    cost?: number;
-    accquisitionStt?: AcquisitionStatus
-    currency?: string;
-    refNo?: string | null;
-    notes?: string | null;
-    // line:
-    productId: string;
-    unitCost?: number;  // nếu bạn muốn lưu đơn giá line (thường = cost)
-    qty?: number;       // mặc định 1
-};
+type DB = Tx | typeof prisma;
+const dbOrTx = (tx?: Tx): DB => tx ?? prisma;
+
+
 
 export const acquisitionRepo = (tx: Tx) => ({
     async createWithItem(data: CreateAcqWithItemInput) {
-
         let acquisition = await tx.acquisition.findFirst({
             where: {
                 vendorId: data.vendorId,
@@ -41,12 +31,11 @@ export const acquisitionRepo = (tx: Tx) => ({
                 data: {
                     vendor: { connect: { id: data.vendorId } },
                     acquiredAt: data.acquiredAt ?? new Date(),
-                    cost: data.cost ?? data.unitCost ?? 0,
-                    accquisitionStt: "DRAFT",
                     currency: data.currency ?? "VND",
-                    refNo: data.refNo ?? null,
+                    accquisitionStt: "DRAFT",
+                    type: data.type ?? "PURCHASE",
                     notes: data.notes ?? null,
-                    type: "PURCHASE",
+                    cost: 0,
                 },
                 select: { id: true },
             });
@@ -54,9 +43,10 @@ export const acquisitionRepo = (tx: Tx) => ({
         await tx.acquisitionItem.create({
             data: {
                 acquisition: { connect: { id: acquisition.id } },
-                product: { connect: { id: data.productId } },
-                quantity: 1,
-                unitCost: data.cost,
+                product: { connect: { id: data.item.productId } },
+                ...(data.item.variantId ? { variant: { connect: { id: data.item.variantId } } } : {}),
+                quantity: data.item.quantity ?? 1,
+                unitCost: new Prisma.Decimal(data.item.unitCost ?? 0),
             },
         });
 
