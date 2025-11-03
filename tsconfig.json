@@ -34,7 +34,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "src/ult/S3.js", "src/ult/S3.js"  ],
   "exclude": [
     "node_modules"
   ]

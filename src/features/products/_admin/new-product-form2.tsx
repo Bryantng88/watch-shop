@@ -33,9 +33,10 @@ interface Props {
     movementOptions: Option[];
     complicationOptions: Complications[];
     selectedType: string;
+    lastUpdated: string;
 }
 
-export default function NewProductForm2({ vendors, brands, statusOptions, complicationOptions, movementOptions, typeOptions, caseOptions, selectedType,
+export default function NewProductForm2({ vendors, brands, statusOptions, complicationOptions, movementOptions, typeOptions, caseOptions, selectedType, lastUpdated
 }: Props) {
     const [images, setImages] = useState<Picked[]>([]);
     const [formData, setFormData] = useState<Record<string, any>>({});
