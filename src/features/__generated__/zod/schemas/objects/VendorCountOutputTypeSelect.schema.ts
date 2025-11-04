@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   acquisitions: z.boolean().optional(),
-  Invoice: z.boolean().optional(),
+  invoice: z.boolean().optional(),
   services: z.boolean().optional(),
   Product: z.boolean().optional()
 }).strict();

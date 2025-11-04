@@ -1,6 +1,6 @@
 generator client {
   provider   = "prisma-client-js"
-  engineType = "binary" // thêm dòng này
+  engineType = "binary"
 }
 
 generator zod {
@@ -220,9 +220,9 @@ model OrderItem {
   variantId        String?
   title            String
   listPriceAtOrder Decimal           @db.Decimal(12, 2)
-  discountType     String? // 'AMOUNT' | 'RATE' (tuỳ bạn)
-  discountValue    Decimal?          @db.Decimal(12, 2) // 200_000 hoặc 0.1 (=10%)
-  unitPriceAgreed  Decimal           @db.Decimal(12, 2) // = listPriceAtOrder - discount (hoặc list* (1-rate))
+  discountType     String?
+  discountValue    Decimal?          @db.Decimal(12, 2)
+  unitPriceAgreed  Decimal           @db.Decimal(12, 2)
   taxRate          Decimal?          @db.Decimal(12, 2)
   quantity         Int
   subtotal         Decimal           @db.Decimal(12, 2)
@@ -350,7 +350,7 @@ model Vendor {
   role         VendorRole          @default(SUPPLIER)
   isAuthorized Boolean             @default(false)
   email        String?
-  phone        String?             @unique
+  phone        String              @unique
   address      String?
   note         String?
   createdAt    DateTime            @default(now())
@@ -374,14 +374,10 @@ model Acquisition {
   currency        String?
   payoutStatus    String?
   accquisitionStt AcquisitionStatus @default(DRAFT)
-  refNo           String?           @unique
+  refNo           String?
   notes           String?
   condition       String?
   warrantyUntil   DateTime?
-  mergedIntoId    String? // phiếu đích
-  mergedInto      Acquisition?      @relation("AcqMerge", fields: [mergedIntoId], references: [id])
-  mergedFrom      Acquisition[]     @relation("AcqMerge")
-
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   customer        Customer?         @relation(fields: [customerId], references: [id])

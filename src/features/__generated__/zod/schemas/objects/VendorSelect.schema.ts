@@ -18,7 +18,7 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   acquisitions: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
-  Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
+  invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   services: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => VendorCountOutputTypeArgsObjectSchema)]).optional()

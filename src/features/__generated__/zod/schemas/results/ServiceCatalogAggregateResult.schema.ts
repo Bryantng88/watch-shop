@@ -10,7 +10,7 @@ export const ServiceCatalogAggregateResultSchema = z.object({  _count: z.object(
     createdAt: z.number(),
     updatedAt: z.number(),
     maintenanceRecordId: z.number(),
-    MaintenanceRecord: z.number()
+    maintenanceRecord: z.number()
   }).optional(),
   _sum: z.object({
     defaultPrice: z.number().nullable(),

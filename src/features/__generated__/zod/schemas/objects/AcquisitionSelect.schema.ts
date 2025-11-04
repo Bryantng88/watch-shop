@@ -24,8 +24,8 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
-  Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => AcquisitionCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionSelectObjectSchema: z.ZodType<Prisma.AcquisitionSelect> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSelect>;

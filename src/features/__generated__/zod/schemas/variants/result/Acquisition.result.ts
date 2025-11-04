@@ -21,8 +21,8 @@ export const AcquisitionResultSchema = z.object({
     updatedAt: z.date(),
     customer: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
-    AcquisitionItem: z.array(z.unknown()),
-    Invoice: z.array(z.unknown())
+    acquisitionItem: z.array(z.unknown()),
+    invoice: z.array(z.unknown())
 }).strict();
 
 export type AcquisitionResultType = z.infer<typeof AcquisitionResultSchema>;

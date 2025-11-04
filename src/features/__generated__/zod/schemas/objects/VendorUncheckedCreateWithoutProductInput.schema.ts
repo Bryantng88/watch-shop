@@ -11,13 +11,13 @@ const makeSchema = () => z.object({
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),
   email: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
+  phone: z.string(),
   address: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   acquisitions: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutVendorInputObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema).optional(),
+  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutVendorInputObjectSchema).optional()
 }).strict();
 export const VendorUncheckedCreateWithoutProductInputObjectSchema: z.ZodType<Prisma.VendorUncheckedCreateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUncheckedCreateWithoutProductInput>;

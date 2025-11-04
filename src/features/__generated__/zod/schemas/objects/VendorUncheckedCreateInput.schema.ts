@@ -12,12 +12,12 @@ const makeSchema = () => z.object({
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),
   email: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
+  phone: z.string(),
   address: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   acquisitions: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
   services: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
   Product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutVendorInputObjectSchema)
 }).strict();

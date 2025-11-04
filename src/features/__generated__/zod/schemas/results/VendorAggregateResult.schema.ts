@@ -11,7 +11,7 @@ export const VendorAggregateResultSchema = z.object({  _count: z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     acquisitions: z.number(),
-    Invoice: z.number(),
+    invoice: z.number(),
     services: z.number(),
     Product: z.number()
   }).optional(),

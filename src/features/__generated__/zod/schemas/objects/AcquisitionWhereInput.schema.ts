@@ -37,8 +37,8 @@ const acquisitionwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional()
+  acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional()
 }).strict();
 export const AcquisitionWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionWhereInput> = acquisitionwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionWhereInput>;
 export const AcquisitionWhereInputObjectZodSchema = acquisitionwhereinputSchema;

@@ -35,13 +35,13 @@ const productvariantwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   availabilityStatus: z.union([z.lazy(() => EnumAvailabilityStatusFilterObjectSchema), AvailabilityStatusSchema]).optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
-  InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
-  MaintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  invoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
+  maintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   partSpec: z.union([z.lazy(() => PartVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => PartVariantSpecWhereInputObjectSchema)]).optional(),
   product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   strapSpec: z.union([z.lazy(() => StrapVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => StrapVariantSpecWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductVariantWhereInputObjectSchema: z.ZodType<Prisma.ProductVariantWhereInput> = productvariantwhereinputSchema as unknown as z.ZodType<Prisma.ProductVariantWhereInput>;

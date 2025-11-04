@@ -15,7 +15,7 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   maintenanceRecordId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput>;
 export const ServiceCatalogOrderByWithRelationInputObjectZodSchema = makeSchema();

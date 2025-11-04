@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   maintenanceRecordId: z.boolean().optional(),
-  MaintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordArgsObjectSchema)]).optional()
+  maintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceCatalogSelectObjectSchema: z.ZodType<Prisma.ServiceCatalogSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 export const ServiceCatalogSelectObjectZodSchema = makeSchema();

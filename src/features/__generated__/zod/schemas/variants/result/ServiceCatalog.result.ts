@@ -12,7 +12,7 @@ export const ServiceCatalogResultSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     maintenanceRecordId: z.string().nullable(),
-    MaintenanceRecord: z.unknown().nullable()
+    maintenanceRecord: z.unknown().nullable()
 }).strict();
 
 export type ServiceCatalogResultType = z.infer<typeof ServiceCatalogResultSchema>;

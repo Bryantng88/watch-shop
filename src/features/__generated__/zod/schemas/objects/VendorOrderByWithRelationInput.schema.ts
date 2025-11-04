@@ -13,13 +13,13 @@ const makeSchema = () => z.object({
   role: SortOrderSchema.optional(),
   isAuthorized: SortOrderSchema.optional(),
   email: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  phone: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  phone: SortOrderSchema.optional(),
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   note: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   acquisitions: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
+  invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();

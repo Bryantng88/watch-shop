@@ -24,10 +24,10 @@ export const OrderItemFindManySelectSchema: z.ZodType<Prisma.OrderItemSelect> = 
     subtotal: z.boolean().optional(),
     img: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    AcquisitionItem: z.boolean().optional(),
+    acquisitionItem: z.boolean().optional(),
     order: z.boolean().optional(),
     Product: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.OrderItemSelect>;
 
@@ -46,10 +46,10 @@ export const OrderItemFindManySelectZodSchema = z.object({
     subtotal: z.boolean().optional(),
     img: z.boolean().optional(),
     createdAt: z.boolean().optional(),
-    AcquisitionItem: z.boolean().optional(),
+    acquisitionItem: z.boolean().optional(),
     order: z.boolean().optional(),
     Product: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

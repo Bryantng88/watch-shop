@@ -29,10 +29,10 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     subtotal: z.number(),
     img: z.number(),
     createdAt: z.number(),
-    AcquisitionItem: z.number(),
+    acquisitionItem: z.number(),
     order: z.number(),
     Product: z.number(),
-    ServiceRequest: z.number()
+    serviceRequest: z.number()
   }).optional(),
   _sum: z.object({
     listPriceAtOrder: z.number().nullable(),

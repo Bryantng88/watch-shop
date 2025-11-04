@@ -11,13 +11,13 @@ export const ProductVariantAggregateResultSchema = z.object({  _count: z.object(
     createdAt: z.number(),
     updatedAt: z.number(),
     availabilityStatus: z.number(),
-    AcquisitionItem: z.number(),
-    InvoiceItem: z.number(),
-    MaintenancePart: z.number(),
-    MaintenanceRecord: z.number(),
+    acquisitionItem: z.number(),
+    invoiceItem: z.number(),
+    maintenancePart: z.number(),
+    maintenanceRecord: z.number(),
     partSpec: z.number(),
     product: z.number(),
-    ServiceRequest: z.number(),
+    serviceRequest: z.number(),
     strapSpec: z.number()
   }).optional(),
   _sum: z.object({

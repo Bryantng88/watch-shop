@@ -21,7 +21,7 @@ export const VendorFindFirstOrThrowSelectSchema: z.ZodType<Prisma.VendorSelect> 
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     acquisitions: z.boolean().optional(),
-    Invoice: z.boolean().optional(),
+    invoice: z.boolean().optional(),
     services: z.boolean().optional(),
     Product: z.boolean().optional(),
     _count: z.boolean().optional()
@@ -39,7 +39,7 @@ export const VendorFindFirstOrThrowSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     acquisitions: z.boolean().optional(),
-    Invoice: z.boolean().optional(),
+    invoice: z.boolean().optional(),
     services: z.boolean().optional(),
     Product: z.boolean().optional(),
     _count: z.boolean().optional()

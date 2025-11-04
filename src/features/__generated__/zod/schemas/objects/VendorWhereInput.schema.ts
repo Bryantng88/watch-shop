@@ -20,13 +20,13 @@ const vendorwhereinputSchema = z.object({
   role: z.union([z.lazy(() => EnumVendorRoleFilterObjectSchema), VendorRoleSchema]).optional(),
   isAuthorized: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   email: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  phone: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  phone: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   address: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   acquisitions: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
+  invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   Product: z.lazy(() => ProductListRelationFilterObjectSchema).optional()
 }).strict();

@@ -29,7 +29,7 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema).optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
+  acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionUpdateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.AcquisitionUpdateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUpdateWithoutInvoiceInput>;
 export const AcquisitionUpdateWithoutInvoiceInputObjectZodSchema = makeSchema();

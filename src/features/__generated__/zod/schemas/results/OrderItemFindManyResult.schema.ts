@@ -15,10 +15,10 @@ export const OrderItemFindManyResultSchema = z.object({
   subtotal: z.number(),
   img: z.string().optional(),
   createdAt: z.date(),
-  AcquisitionItem: z.array(z.unknown()),
+  acquisitionItem: z.array(z.unknown()),
   order: z.unknown(),
   Product: z.unknown().optional(),
-  ServiceRequest: z.array(z.unknown())
+  serviceRequest: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

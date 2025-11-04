@@ -8,7 +8,7 @@ import { VendorCountOutputTypeArgsObjectSchema as VendorCountOutputTypeArgsObjec
 
 const makeSchema = () => z.object({
   acquisitions: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
-  Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
+  invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   services: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => VendorCountOutputTypeArgsObjectSchema)]).optional()

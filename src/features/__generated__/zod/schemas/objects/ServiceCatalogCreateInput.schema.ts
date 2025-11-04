@@ -11,7 +11,7 @@ const makeSchema = () => z.object({
   durationMin: z.number().int().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedOneWithoutServiceDetailInputObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedOneWithoutServiceDetailInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogCreateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCreateInput>;
 export const ServiceCatalogCreateInputObjectZodSchema = makeSchema();

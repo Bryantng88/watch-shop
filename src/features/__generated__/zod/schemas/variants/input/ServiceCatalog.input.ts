@@ -12,7 +12,7 @@ export const ServiceCatalogInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     maintenanceRecordId: z.string().optional().nullable(),
-    MaintenanceRecord: z.unknown().optional().nullable()
+    maintenanceRecord: z.unknown().optional().nullable()
 }).strict();
 
 export type ServiceCatalogInputType = z.infer<typeof ServiceCatalogInputSchema>;

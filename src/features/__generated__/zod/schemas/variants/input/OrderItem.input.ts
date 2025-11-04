@@ -16,10 +16,10 @@ export const OrderItemInputSchema = z.object({
     subtotal: z.number(),
     img: z.string().optional().nullable(),
     createdAt: z.date(),
-    AcquisitionItem: z.array(z.unknown()),
+    acquisitionItem: z.array(z.unknown()),
     order: z.unknown(),
     Product: z.unknown().optional().nullable(),
-    ServiceRequest: z.array(z.unknown())
+    serviceRequest: z.array(z.unknown())
 }).strict();
 
 export type OrderItemInputType = z.infer<typeof OrderItemInputSchema>;

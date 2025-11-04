@@ -10,5 +10,5 @@ export const ServiceCatalogCreateResultSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   maintenanceRecordId: z.string().optional(),
-  MaintenanceRecord: z.unknown().optional()
+  maintenanceRecord: z.unknown().optional()
 });

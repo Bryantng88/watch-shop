@@ -27,12 +27,12 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   availabilityStatus: z.union([AvailabilityStatusSchema, z.lazy(() => EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
-  InvoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  MaintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
+  invoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
+  maintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   partSpec: z.lazy(() => PartVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneRequiredWithoutVariantsNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   strapSpec: z.lazy(() => StrapVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema).optional()
 }).strict();
 export const ProductVariantUpdateWithoutAcquisitionItemInputObjectSchema: z.ZodType<Prisma.ProductVariantUpdateWithoutAcquisitionItemInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantUpdateWithoutAcquisitionItemInput>;

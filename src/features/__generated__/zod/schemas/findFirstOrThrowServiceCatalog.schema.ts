@@ -20,7 +20,7 @@ export const ServiceCatalogFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Servic
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional()
+    maintenanceRecord: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 
 export const ServiceCatalogFindFirstOrThrowSelectZodSchema = z.object({
@@ -34,7 +34,7 @@ export const ServiceCatalogFindFirstOrThrowSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional()
+    maintenanceRecord: z.boolean().optional()
   }).strict();
 
 export const ServiceCatalogFindFirstOrThrowSchema: z.ZodType<Prisma.ServiceCatalogFindFirstOrThrowArgs> = z.object({ select: ServiceCatalogFindFirstOrThrowSelectSchema.optional(), include: ServiceCatalogIncludeObjectSchema.optional(), orderBy: z.union([ServiceCatalogOrderByWithRelationInputObjectSchema, ServiceCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceCatalogWhereInputObjectSchema.optional(), cursor: ServiceCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ServiceCatalogScalarFieldEnumSchema, ServiceCatalogScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogFindFirstOrThrowArgs>;

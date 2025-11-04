@@ -16,10 +16,10 @@ export const OrderItemModelSchema = z.object({
     subtotal: z.number(),
     img: z.string().nullable(),
     createdAt: z.date(),
-    AcquisitionItem: z.array(z.unknown()),
+    acquisitionItem: z.array(z.unknown()),
     order: z.unknown(),
     Product: z.unknown().nullable(),
-    ServiceRequest: z.array(z.unknown())
+    serviceRequest: z.array(z.unknown())
 }).strict();
 
 export type OrderItemPureType = z.infer<typeof OrderItemModelSchema>;

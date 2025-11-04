@@ -17,7 +17,7 @@ const makeSchema = () => z.object({
   subtotal: z.number(),
   img: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema).optional(),
+  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutItemsInputObjectSchema),
   Product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemsInputObjectSchema).optional()
 }).strict();

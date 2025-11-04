@@ -22,8 +22,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema).optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema),
-  Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema)
+  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema),
+  invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema)
 }).strict();
 export const AcquisitionCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionCreateInput>;
 export const AcquisitionCreateInputObjectZodSchema = makeSchema();

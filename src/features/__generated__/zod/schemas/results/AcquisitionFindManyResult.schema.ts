@@ -18,8 +18,8 @@ export const AcquisitionFindManyResultSchema = z.object({
   updatedAt: z.date(),
   customer: z.unknown().optional(),
   vendor: z.unknown().optional(),
-  AcquisitionItem: z.array(z.unknown()),
-  Invoice: z.array(z.unknown())
+  acquisitionItem: z.array(z.unknown()),
+  invoice: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

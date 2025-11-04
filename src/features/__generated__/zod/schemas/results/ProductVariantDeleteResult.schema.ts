@@ -11,12 +11,12 @@ export const ProductVariantDeleteResultSchema = z.nullable(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   availabilityStatus: z.unknown(),
-  AcquisitionItem: z.array(z.unknown()),
-  InvoiceItem: z.array(z.unknown()),
-  MaintenancePart: z.array(z.unknown()),
-  MaintenanceRecord: z.array(z.unknown()),
+  acquisitionItem: z.array(z.unknown()),
+  invoiceItem: z.array(z.unknown()),
+  maintenancePart: z.array(z.unknown()),
+  maintenanceRecord: z.array(z.unknown()),
   partSpec: z.unknown().optional(),
   product: z.unknown(),
-  ServiceRequest: z.array(z.unknown()),
+  serviceRequest: z.array(z.unknown()),
   strapSpec: z.unknown().optional()
 }));

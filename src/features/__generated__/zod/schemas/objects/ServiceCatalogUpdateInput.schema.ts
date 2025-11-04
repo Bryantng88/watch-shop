@@ -18,7 +18,7 @@ const makeSchema = () => z.object({
   isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUpdateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUpdateInput>;
 export const ServiceCatalogUpdateInputObjectZodSchema = makeSchema();

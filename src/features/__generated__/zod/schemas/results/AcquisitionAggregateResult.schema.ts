@@ -17,8 +17,8 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     customer: z.number(),
     vendor: z.number(),
-    AcquisitionItem: z.number(),
-    Invoice: z.number()
+    acquisitionItem: z.number(),
+    invoice: z.number()
   }).optional(),
   _sum: z.object({
     cost: z.number().nullable()

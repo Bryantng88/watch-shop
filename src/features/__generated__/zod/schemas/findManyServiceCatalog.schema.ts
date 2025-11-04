@@ -20,7 +20,7 @@ export const ServiceCatalogFindManySelectSchema: z.ZodType<Prisma.ServiceCatalog
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional()
+    maintenanceRecord: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 
 export const ServiceCatalogFindManySelectZodSchema = z.object({
@@ -34,7 +34,7 @@ export const ServiceCatalogFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional()
+    maintenanceRecord: z.boolean().optional()
   }).strict();
 
 export const ServiceCatalogFindManySchema: z.ZodType<Prisma.ServiceCatalogFindManyArgs> = z.object({ select: ServiceCatalogFindManySelectSchema.optional(), include: ServiceCatalogIncludeObjectSchema.optional(), orderBy: z.union([ServiceCatalogOrderByWithRelationInputObjectSchema, ServiceCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceCatalogWhereInputObjectSchema.optional(), cursor: ServiceCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ServiceCatalogScalarFieldEnumSchema, ServiceCatalogScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogFindManyArgs>;

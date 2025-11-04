@@ -4,12 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Vendor = { id: string; name: string };
-type Product = { id: string; title: string };
-type Props = { vendors: Vendor[]; products: Product[] };
+type Props = { vendors: Vendor[] };
 
 type Line = {
     id: string;
-    productId: string;
+    title: string;     // tên sản phẩm mới
     quantity: number;
     unitCost: number;
 };
@@ -17,7 +16,7 @@ type Line = {
 const CURRENCIES = ["VND", "USD", "EUR"] as const;
 const TYPES = ["PURCHASE", "BUY_BACK", "TRADE_IN", "CONSIGNMENT"] as const;
 
-export default function NewAcqForm({ vendors, products }: Props) {
+export default function NewAcqForm({ vendors }: Props) {
     const [vendorId, setVendorId] = useState("");
     const [currency, setCurrency] = useState<(typeof CURRENCIES)[number]>("VND");
     const [type, setType] = useState<(typeof TYPES)[number]>("PURCHASE");
@@ -26,8 +25,9 @@ export default function NewAcqForm({ vendors, products }: Props) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     });
     const [notes, setNotes] = useState("");
-    const [lines, setLines] = useState<Line[]>([{ id: crypto.randomUUID(), productId: "", quantity: 1, unitCost: 0 }]);
-
+    const [lines, setLines] = useState<Line[]>([
+        { id: crypto.randomUUID(), title: "", quantity: 1, unitCost: 0 },
+    ]);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
     const [okMsg, setOkMsg] = useState<string | null>(null);
@@ -40,8 +40,10 @@ export default function NewAcqForm({ vendors, products }: Props) {
     function setLine<K extends keyof Line>(id: string, key: K, val: Line[K]) {
         setLines(prev => prev.map(l => l.id === id ? { ...l, [key]: val } : l));
     }
-    const addLine = () => setLines(p => [...p, { id: crypto.randomUUID(), productId: "", quantity: 1, unitCost: 0 }]);
-    const removeLine = (id: string) => setLines(p => p.length === 1 ? p : p.filter(l => l.id !== id));
+    const addLine = () =>
+        setLines(p => [...p, { id: crypto.randomUUID(), title: "", quantity: 1, unitCost: 0 }]);
+    const removeLine = (id: string) =>
+        setLines(p => p.length === 1 ? p : p.filter(l => l.id !== id));
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -49,8 +51,12 @@ export default function NewAcqForm({ vendors, products }: Props) {
 
         if (!vendorId) { setErr("Hãy chọn vendor."); setSaving(false); return; }
         const items = lines
-            .map(l => ({ productId: l.productId, quantity: Number(l.quantity) || 0, unitCost: Number(l.unitCost) || 0 }))
-            .filter(l => l.productId && l.quantity > 0);
+            .map(l => ({
+                title: l.title.trim(),
+                quantity: Number(l.quantity) || 0,
+                unitCost: Number(l.unitCost) || 0,
+            }))
+            .filter(l => l.title && l.quantity > 0);
 
         if (!items.length) { setErr("Cần ít nhất 1 dòng hợp lệ."); setSaving(false); return; }
 
@@ -66,7 +72,7 @@ export default function NewAcqForm({ vendors, products }: Props) {
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
             setOkMsg("Đã tạo phiếu DRAFT thành công.");
-            // ví dụ: router.push(`/admin/acquisitions/${data.id}`)
+            // có thể router.push(`/admin/acquisitions/${data.id}`)
         } catch (e: any) {
             setErr(e?.message || "Tạo phiếu thất bại");
         } finally {
@@ -116,7 +122,7 @@ export default function NewAcqForm({ vendors, products }: Props) {
 
                 <div className="rounded-md border bg-white p-5 shadow-sm">
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="font-semibold">Dòng sản phẩm</h3>
+                        <h3 className="font-semibold">Dòng sản phẩm mới</h3>
                         <button type="button" onClick={addLine} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">+ Thêm dòng</button>
                     </div>
 
@@ -124,7 +130,7 @@ export default function NewAcqForm({ vendors, products }: Props) {
                         <table className="min-w-full text-sm">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-3 py-2 text-left w-[40%]">Sản phẩm</th>
+                                    <th className="px-3 py-2 text-left w-[40%]">Tên sản phẩm</th>
                                     <th className="px-3 py-2 text-right">Số lượng</th>
                                     <th className="px-3 py-2 text-right">Đơn giá</th>
                                     <th className="px-3 py-2 text-right">Thành tiền</th>
@@ -137,16 +143,29 @@ export default function NewAcqForm({ vendors, products }: Props) {
                                     return (
                                         <tr key={ln.id} className="border-b">
                                             <td className="px-3 py-2">
-                                                <select value={ln.productId} onChange={(e) => setLine(ln.id, "productId", e.target.value)} className="w-full rounded border px-2 py-2">
-                                                    <option value="">-- Chọn sản phẩm --</option>
-                                                    {products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                                                </select>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Tên sản phẩm"
+                                                    value={ln.title}
+                                                    onChange={e => setLine(ln.id, "title", e.target.value)}
+                                                    className="w-full rounded border px-2 py-2"
+                                                />
                                             </td>
                                             <td className="px-3 py-2 text-right">
-                                                <input type="number" min={1} value={ln.quantity} onChange={(e) => setLine(ln.id, "quantity", Number(e.target.value))} className="w-24 rounded border px-2 py-2 text-right" />
+                                                <input
+                                                    type="number" min={1}
+                                                    value={ln.quantity}
+                                                    onChange={e => setLine(ln.id, "quantity", Number(e.target.value))}
+                                                    className="w-24 rounded border px-2 py-2 text-right"
+                                                />
                                             </td>
                                             <td className="px-3 py-2 text-right">
-                                                <input type="number" min={0} step="0.01" value={ln.unitCost} onChange={(e) => setLine(ln.id, "unitCost", Number(e.target.value))} className="w-32 rounded border px-2 py-2 text-right" />
+                                                <input
+                                                    type="number" min={0} step="0.01"
+                                                    value={ln.unitCost}
+                                                    onChange={e => setLine(ln.id, "unitCost", Number(e.target.value))}
+                                                    className="w-32 rounded border px-2 py-2 text-right"
+                                                />
                                             </td>
                                             <td className="px-3 py-2 text-right">{money.toLocaleString("vi-VN")} {currency}</td>
                                             <td className="px-3 py-2 text-right">

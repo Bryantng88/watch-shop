@@ -4,9 +4,9 @@ import prisma from "@/server/db/client";
 
 import { acqFiltersSchema } from "./dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
-import * as repo from "./acquisition.repo";
-import { acquisitionRepo } from "./acquisition.repo";
+import * as repoAcq from "./acquisition.repo";
 import { CreateAcqWithItemInput } from "./dto";
+import { AcquisitionType } from "@prisma/client";
 // List cho admin table
 export async function getAdminAcquisitionList(raw: unknown) {
     const f = acqFiltersSchema.parse(raw);
@@ -44,47 +44,44 @@ export async function getAcquisitionDetail(id: string) {
 }
 
 // Tạo mới (Draft)
-export async function createAcquisitionWithItem(input: CreateAcqWithItemInput) {
+
+
+// Tạo phiếu nhập mới (DRAFT) và thêm item đầu tiên
+export async function createAcquisitionWithItem(input: {
+    vendorId: string;
+    currency?: string;
+    type?: AcquisitionType;
+    acquiredAt?: Date;
+    notes?: string | null;
+    item: { productId: string; variantId?: string | null; quantity?: number; unitCost?: number; };
+}) {
     return prisma.$transaction(async (tx) => {
-        const repo = acquisitionRepo(tx);
-
-        // 1) Gọi repo để tạo/tái sử dụng phiếu và thêm dòng
-        const acq = await repo.createWithItem(input); // { id }
-
-        // 2) (Khuyến nghị) Recalc tổng tiền từ tất cả item sau khi thêm
-        //    để cost luôn khớp khi người dùng thêm nhiều lần trong ngày
-        const items = await tx.acquisitionItem.findMany({
-            where: { acquisitionId: acq.id },
-            select: { quantity: true, unitCost: true },
-        });
-        const total = items.reduce(
-            (s, it) => s + Number(it.quantity) * Number(it.unitCost ?? 0),
-            0
-        );
-        await tx.acquisition.update({
-            where: { id: acq.id },
-            data: { cost: total },
-        });
-
-        // 3) Trả về kết quả gọn cho API/UI
-        return { acquisitionId: acq.id, cost: total };
+        return repoAcq.upsertDraftAndAddItem(tx, input);
     });
 }
+
+// Chuyển phiếu sang POSTED
+export async function postAcquisition(acqId: string) {
+    return prisma.$transaction(async (tx) => {
+        return repoAcq.post(tx, acqId);
+    });
+}
+
 
 // Đăng (POSTED) – ví dụ có transaction
-export async function postAcquisition(id: string) {
-    return prisma.$transaction(async (tx) => {
-        const acq = await repo.acqGetById(id, tx);
-        if (!acq) throw new Error("Không tìm thấy phiếu nhập");
-        if (acq.acquisitionStt !== "DRAFT") throw new Error("Chỉ đăng phiếu DRAFT");
-        if (!acq.AcquisitionItem.length) throw new Error("Phiếu chưa có sản phẩm");
+//export async function postAcquisition(id: string) {
+//return prisma.$transaction(async (tx) => {
+//const acq = await repo.acqGetById(id, tx);
+//if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+//if (acq.acquisitionStt !== "DRAFT") throw new Error("Chỉ đăng phiếu DRAFT");
+//if (!acq.AcquisitionItem.length) throw new Error("Phiếu chưa có sản phẩm");
 
-        // (nếu bạn có ghi tồn kho, làm ở đây bằng repo StockIn, tất cả dùng chung tx)
-        // await stockRepo.createFromAcquisition(acq, tx);
+// (nếu bạn có ghi tồn kho, làm ở đây bằng repo StockIn, tất cả dùng chung tx)
+// await stockRepo.createFromAcquisition(acq, tx);
 
-        return repo.acqUpdate(id, { acquisitionStt: "POSTED" }, tx);
-    });
-}
+//return repo.acqUpdate(id, { acquisitionStt: "POSTED" }, tx);
+//});
+//}
 
 // Huỷ
 export async function cancelAcquisition(id: string) {
