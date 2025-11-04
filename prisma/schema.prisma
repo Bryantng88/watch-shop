@@ -350,7 +350,7 @@ model Vendor {
   role         VendorRole          @default(SUPPLIER)
   isAuthorized Boolean             @default(false)
   email        String?
-  phone        String?
+  phone        String?             @unique
   address      String?
   note         String?
   createdAt    DateTime            @default(now())

@@ -1,5 +1,5 @@
 // src/features/acquisitions/server/acquisition.repo.ts
-import { Prisma, AcquisitionStatus } from "@prisma/client";
+import { Prisma, AcquisitionStatus, AcquisitionType } from "@prisma/client";
 import { acqFiltersSchema } from "./dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
@@ -14,43 +14,83 @@ const dbOrTx = (tx?: Tx): DB => tx ?? prisma;
 
 export const acquisitionRepo = (tx: Tx) => ({
     async createWithItem(data: CreateAcqWithItemInput) {
-        let acquisition = await tx.acquisition.findFirst({
-            where: {
-                vendorId: data.vendorId,
-                accquisitionStt: "DRAFT",
-                acquiredAt: {
-                    gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                    lte: new Date(new Date().setHours(23, 59, 59, 999)),
-                },
-            },
-            select: { id: true },
-        })
-        console.log('test acquisition binding: ' + acquisition?.id)
-        if (!acquisition) {
-            acquisition = await tx.acquisition.create({
-                data: {
-                    vendor: { connect: { id: data.vendorId } },
-                    acquiredAt: data.acquiredAt ?? new Date(),
-                    currency: data.currency ?? "VND",
+        async function findDraftOfVendorToday(vendorId: string) {
+            const start = new Date(); start.setHours(0, 0, 0, 0);
+            const end = new Date(); end.setHours(23, 59, 59, 999);
+
+            return tx.acquisition.findFirst({
+                where: {
+                    vendorId,
                     accquisitionStt: "DRAFT",
-                    type: data.type ?? "PURCHASE",
-                    notes: data.notes ?? null,
-                    cost: 0,
+                    acquiredAt: { gte: start, lte: end },
                 },
                 select: { id: true },
             });
         }
-        await tx.acquisitionItem.create({
-            data: {
-                acquisition: { connect: { id: acquisition.id } },
-                product: { connect: { id: data.item.productId } },
-                ...(data.item.variantId ? { variant: { connect: { id: data.item.variantId } } } : {}),
-                quantity: data.item.quantity ?? 1,
-                unitCost: new Prisma.Decimal(data.item.unitCost ?? 0),
-            },
-        });
-
-        return acquisition; // { id }
+        async function createDraft(input: {
+            vendorId: string;
+            currency?: string;
+            type?: AcquisitionType;
+            acquiredAt?: Date;
+            notes?: string | null;
+        }) {
+            return tx.acquisition.create({
+                data: {
+                    vendor: { connect: { id: input.vendorId } },
+                    acquiredAt: input.acquiredAt ?? new Date(),
+                    currency: input.currency ?? "VND",
+                    accquisitionStt: "DRAFT",
+                    type: input.type ?? "PURCHASE",
+                    notes: input.notes ?? null,
+                    cost: new Prisma.Decimal(0),
+                },
+                select: { id: true },
+            });
+        }
+        async function addItem(acqId: string, item: {
+            productId: string;
+            variantId?: string | null;
+            quantity?: number;
+            unitCost?: number;
+        }) {
+            return tx.acquisitionItem.create({
+                data: {
+                    acquisition: { connect: { id: acqId } },
+                    product: { connect: { id: item.productId } },
+                    ...(item.variantId ? { variant: { connect: { id: item.variantId } } } : {}),
+                    quantity: item.quantity ?? 1,
+                    unitCost: new Prisma.Decimal(item.unitCost ?? 0),
+                },
+                select: { id: true },
+            });
+        }
+        async function recalcCost(acqId: string) {
+            const rows = await tx.acquisitionItem.findMany({
+                where: { acquisitionId: acqId },
+                select: { quantity: true, unitCost: true },
+            });
+            const total = rows.reduce((s, r) => s + (Number(r.quantity) * Number(r.unitCost ?? 0)), 0);
+            await tx.acquisition.update({
+                where: { id: acqId },
+                data: { cost: new Prisma.Decimal(total) },
+            });
+            return total;
+        }
+        async function upsertDraftAndAddItem(input: {
+            vendorId: string;
+            currency?: string;
+            type?: AcquisitionType;
+            acquiredAt?: Date;
+            notes?: string | null;
+            item: { productId: string; variantId?: string | null; quantity?: number; unitCost?: number; };
+        }) {
+            let draft = await findDraftOfVendorToday(input.vendorId);
+            if (!draft) draft = await createDraft(input);
+            await addItem(draft.id, input.item);
+            await recalcCost(draft.id);
+            return draft; // { id }
+        }
+        return { findDraftOfVendorToday, createDraft, addItem, recalcCost, upsertDraftAndAddItem };
     },
 
 
