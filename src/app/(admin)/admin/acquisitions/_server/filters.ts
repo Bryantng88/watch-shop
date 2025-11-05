@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { AdminAcqFiltersInput } from "./dto";
+import type { AdminAcqFiltersInput } from "./acquisition.dto";
 
 export const DEFAULT_PAGE_SIZE = 50 as const;
 

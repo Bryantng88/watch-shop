@@ -2,18 +2,20 @@
 
 import prisma from "@/server/db/client";
 
-import { acqFiltersSchema } from "./dto";
+import * as dto from "./acquisition.dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repoAcq from "./acquisition.repo";
-import { CreateAcqWithItemInput } from "./dto";
+import { CreateAcqWithItemInput } from "./acquisition.dto";
 import { AcquisitionType } from "@prisma/client";
+import { createProductDraft } from "../../products/_server/product.repo";
+
 // List cho admin table
 export async function getAdminAcquisitionList(raw: unknown) {
-    const f = acqFiltersSchema.parse(raw);
+    const f = dto.acqFiltersSchema.parse(raw);
     const page = Math.max(1, f.page ?? 1);
     const pageSize = Math.max(1, Math.min(200, f.pageSize ?? DEFAULT_PAGE_SIZE));
 
-    const { rows, total } = await repo.acqList(
+    const { rows, total } = await repoAcq.acqList(
         buildAcqWhere(f),
         buildAcqOrderBy(f.sort),
         (page - 1) * pageSize,
@@ -26,8 +28,8 @@ export async function getAdminAcquisitionList(raw: unknown) {
         type: a.type,
         status: a.accquisitionStt,
         vendorName: a.vendor?.name ?? null,
-        itemCount: a._count.AcquisitionItem,
-        hasInvoice: a._count.Invoice > 0,
+        itemCount: a._count.acquisitionItem,
+        hasInvoice: a._count.invoice > 0,
         acquiredAt: a.acquiredAt,
         cost: a.cost,
         currency: a.currency ?? "VND",
@@ -38,7 +40,7 @@ export async function getAdminAcquisitionList(raw: unknown) {
 
 // Chi tiết
 export async function getAcquisitionDetail(id: string) {
-    const acq = await repo.acqGetById(id);
+    const acq = await repoAcq.acqGetById(id);
     if (!acq) throw new Error("Không tìm thấy phiếu nhập");
     return acq;
 }
@@ -47,23 +49,32 @@ export async function getAcquisitionDetail(id: string) {
 
 
 // Tạo phiếu nhập mới (DRAFT) và thêm item đầu tiên
-export async function createAcquisitionWithItem(input: {
-    vendorId: string;
-    currency?: string;
-    type?: AcquisitionType;
-    acquiredAt?: Date;
-    notes?: string | null;
-    item: { productId: string; variantId?: string | null; quantity?: number; unitCost?: number; };
-}) {
-    return prisma.$transaction(async (tx) => {
-        return repoAcq.upsertDraftAndAddItem(tx, input);
+export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInput) {
+
+    return await prisma.$transaction(async (tx) => {
+        const acq = await repoAcq.createDraft(tx, {
+            vendorId: input.vendorId,
+            currency: input.currency,
+            type: input.type,
+            acquiredAt: input.acquiredAt ? new Date(input.acquiredAt) : undefined,
+            notes: input.notes,
+        })
+        let total = 0;
+
+        for (const it of input.items) {
+            const prod = await createProductDraft(tx, it.title);
+            await repoAcq.addAcqItem(tx, acq.id, prod.id, it.quantity, it.unitCost)
+            total += (it.quantity ?? 1) * (it.unitCost ?? 0);
+        }
+        await repoAcq.updateAcquisitionCost(tx, acq.id, total);
+        return { id: acq.id }
     });
 }
 
 // Chuyển phiếu sang POSTED
 export async function postAcquisition(acqId: string) {
     return prisma.$transaction(async (tx) => {
-        return repoAcq.post(tx, acqId);
+        return repoAcq.changeDraftToPost(tx, acqId);
     });
 }
 

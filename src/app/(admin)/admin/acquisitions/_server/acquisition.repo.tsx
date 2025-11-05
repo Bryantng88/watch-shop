@@ -1,6 +1,6 @@
 // src/features/acquisitions/server/acquisition.repo.ts
 import { Prisma, AcquisitionStatus, AcquisitionType } from "@prisma/client";
-import { acqFiltersSchema } from "./dto";
+import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
 
@@ -33,6 +33,9 @@ export async function createDraft(
         notes?: string | null;
     }
 ) {
+    const vendor = await tx.vendor.findUnique({ where: { id: input.vendorId } });
+    console.log('in vendor : ' + vendor?.name)
+    if (!vendor) throw new Error("Vendor không tồn tại!");
     return tx.acquisition.create({
         data: {
             vendor: { connect: { id: input.vendorId } },
@@ -46,7 +49,34 @@ export async function createDraft(
         select: { id: true },
     });
 }
+export async function addAcqItem(
+    tx: Tx,
+    acqId: string,
+    productId: string,
+    quantity: number,
+    unitCost: number
 
+) {
+    return tx.acquisitionItem.create({
+        data: {
+            acquisition: { connect: { id: acqId } },
+            product: { connect: { id: productId } },
+            quantity: quantity,
+            unitCost: unitCost
+        }
+    })
+}
+export async function updateAcquisitionCost(
+    tx: Tx,
+    acqId: string,
+    total: number
+) {
+    return tx.acquisition.update({
+        where: { id: acqId },
+        data: { cost: total },
+        select: { id: true, cost: true },
+    });
+}
 // 3. Thêm item vào phiếu nhập
 export async function addItem(
     tx: Tx,
@@ -104,7 +134,7 @@ export async function upsertDraftAndAddItem(
 }
 
 // 6. Chuyển phiếu sang trạng thái POSTED
-export async function post(tx: Tx, acqId: string) {
+export async function changeDraftToPost(tx: Tx, acqId: string) {
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
 
@@ -114,6 +144,7 @@ export async function post(tx: Tx, acqId: string) {
         select: { id: true, accquisitionStt: true },
     });
 }
+
 
 
 

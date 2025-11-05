@@ -51,3 +51,12 @@ export const acqFiltersSchema = z.object({
 });
 
 export type AdminAcqFiltersInput = z.infer<typeof acqFiltersSchema>;
+
+export type CreateAcquisitionInput = {
+    vendorId: string;
+    currency?: string;
+    type?: AcquisitionType;
+    acquiredAt?: Date | string;
+    notes?: string | null;
+    items: { title: string; quantity: number; unitCost: number }[];
+};
