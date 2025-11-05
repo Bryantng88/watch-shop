@@ -4,6 +4,7 @@ type Db = typeof prisma | Tx;
 
 export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 export type VendorOptions = { id: string; name: string };
+export type BrandOption = { id: string; name: string };
 //export const upsertSupplierByNameRoleTx = (db: Db) => async (p: {
 //name: string; phone?: string | null; email?: string | null;
 //}) => {
@@ -55,4 +56,24 @@ export async function findVendorByPhone(tx: Tx, phone: string) {
 // Tìm vendor theo id
 export async function getVendorById(tx: Tx, id: string) {
     return tx.vendor.findUnique({ where: { id }, select: { id: true, name: true, phone: true, email: true } });
+}
+export async function listBrands(): Promise<BrandOption[]> {
+    const brands = await prisma.brand.findMany({
+
+        select: {
+            name: true,
+            id: true,
+            _count: {
+                select: { products: true },
+            }
+        },
+        orderBy: { name: "asc" },
+    });
+    const brandsWithCount = brands.map(b => ({
+        id: b.id,
+        name: b.name,
+        productCount: b._count.products,
+    }));
+
+    return brandsWithCount;
 }

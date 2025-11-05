@@ -7,7 +7,8 @@ import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repoAcq from "./acquisition.repo";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
 import { AcquisitionType } from "@prisma/client";
-import { createProductDraft } from "../../products/_server/product.repo";
+import { createProductDraft } from "../../products/_server/product.service";
+import { convertOffsetToTimes } from "framer-motion";
 
 // List cho admin table
 export async function getAdminAcquisitionList(raw: unknown) {
@@ -63,10 +64,16 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
 
         for (const it of input.items) {
             const prod = await createProductDraft(tx, it.title);
-            await repoAcq.addAcqItem(tx, acq.id, prod.id, it.quantity, it.unitCost)
-            total += (it.quantity ?? 1) * (it.unitCost ?? 0);
+            console.log(' test proddddd ' + prod)
+            if (prod) {
+
+                await repoAcq.addAcqItem(tx, acq.id, prod.id, it.quantity, it.unitCost)
+                total += (it.quantity ?? 1) * (it.unitCost ?? 0);
+            }
+
         }
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
+
         return { id: acq.id }
     });
 }
