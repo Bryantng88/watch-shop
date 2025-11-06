@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import * as ultil from "./helper"
 import * as prodRepo from "./product.repo"
 
-export async function createProductDraft(input: unknown) {
+{/*export async function createProductDraft(input: unknown) {
     const dto = CreateProductWithOutAcqSchema.parse(input);
     return prisma.$transaction(async (tx) => {
         // 1) Vendor (select hoặc quick-add)
@@ -34,5 +34,12 @@ export async function createProductDraft(input: unknown) {
         );
 
         return { productId: product.id };
+    });
+}*/}
+
+export async function createProductDraft(title: string) {
+    return prisma.$transaction(async (tx) => {
+        const product = await prodRepo.createProductDraft(tx, { title })
+        return product;
     });
 }

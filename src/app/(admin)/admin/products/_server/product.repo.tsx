@@ -10,11 +10,17 @@ export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export async function createProductDraft(
     tx: Tx,
-    data: Prisma.ProductCreateInput, // hoặc ProductUncheckedCreateInput
+    title: string,
+    vendorId: string // hoặc ProductUncheckedCreateInput
 ) {
-    console.log("test dư lieu " + data)
+    console.log('typeof tx.product:', typeof tx.product)
     return tx.product.create({
-        data,
-        select: { id: true, slug: true },
+        data: {
+            title: title,
+            vendorId: vendorId,
+            contentStatus: "DRAFT",
+            type: "WATCH",
+        },
+        select: { id: true, slug: true }  // <-- đúng cấp với data
     });
 }

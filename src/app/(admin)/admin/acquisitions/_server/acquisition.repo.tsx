@@ -35,7 +35,8 @@ export async function createDraft(
 ) {
     const vendor = await tx.vendor.findUnique({ where: { id: input.vendorId } });
     console.log('in vendor : ' + vendor?.name)
-    if (!vendor) throw new Error("Vendor không tồn tại!");
+    console.log('typeof tx.vendor:', typeof tx.vendor); // function
+    console.log('typeof tx.acquisition:', typeof tx.acquisition);
     return tx.acquisition.create({
         data: {
             vendor: { connect: { id: input.vendorId } },
@@ -48,6 +49,7 @@ export async function createDraft(
         },
         select: { id: true },
     });
+
 }
 export async function addAcqItem(
     tx: Tx,
