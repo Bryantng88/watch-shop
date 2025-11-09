@@ -35,6 +35,7 @@ export const WatchSpecInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     sizeCategory: z.string().optional().nullable(),
+    ref: z.string().optional().nullable(),
     product: z.unknown(),
     complication: z.array(z.unknown()),
     marketSegment: z.array(z.unknown())

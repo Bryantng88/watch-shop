@@ -32,6 +32,7 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   sizeCategory: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  ref: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   complication: z.lazy(() => ComplicationOrderByRelationAggregateInputObjectSchema).optional(),
   marketSegment: z.lazy(() => MarketSegmentOrderByRelationAggregateInputObjectSchema).optional()

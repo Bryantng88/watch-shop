@@ -17,6 +17,7 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   sizeCategory: z.string(),
+  ref: z.string(),
   _count: z.object({
     productId: z.number(),
     model: z.number(),
@@ -43,6 +44,7 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     sizeCategory: z.number(),
+    ref: z.number(),
     product: z.number(),
     complication: z.number(),
     marketSegment: z.number()
@@ -73,7 +75,8 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    sizeCategory: z.string().nullable()
+    sizeCategory: z.string().nullable(),
+    ref: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     productId: z.string().nullable(),
@@ -89,6 +92,7 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    sizeCategory: z.string().nullable()
+    sizeCategory: z.string().nullable(),
+    ref: z.string().nullable()
   }).nullable().optional()
 }));

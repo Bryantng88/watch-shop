@@ -49,6 +49,7 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  ref: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   product: z.lazy(() => ProductUpdateOneRequiredWithoutWatchSpecNestedInputObjectSchema).optional(),
   marketSegment: z.lazy(() => MarketSegmentUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
 }).strict();

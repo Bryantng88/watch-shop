@@ -25,6 +25,7 @@ export const WatchSpecFindUniqueResultSchema = z.nullable(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   sizeCategory: z.string().optional(),
+  ref: z.string().optional(),
   product: z.unknown(),
   complication: z.array(z.unknown()),
   marketSegment: z.array(z.unknown())

@@ -25,6 +25,7 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     sizeCategory: z.number(),
+    ref: z.number(),
     product: z.number(),
     complication: z.number(),
     marketSegment: z.number()
@@ -55,7 +56,8 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    sizeCategory: z.string().nullable()
+    sizeCategory: z.string().nullable(),
+    ref: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     productId: z.string().nullable(),
@@ -71,5 +73,6 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     marketSegmentId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    sizeCategory: z.string().nullable()
+    sizeCategory: z.string().nullable(),
+    ref: z.string().nullable()
   }).nullable().optional()});

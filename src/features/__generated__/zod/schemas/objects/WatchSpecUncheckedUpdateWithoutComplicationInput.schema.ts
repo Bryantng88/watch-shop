@@ -50,6 +50,7 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  ref: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   marketSegment: z.lazy(() => MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
 }).strict();
 export const WatchSpecUncheckedUpdateWithoutComplicationInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedUpdateWithoutComplicationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedUpdateWithoutComplicationInput>;

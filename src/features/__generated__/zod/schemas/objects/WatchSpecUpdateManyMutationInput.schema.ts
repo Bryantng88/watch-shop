@@ -46,7 +46,8 @@ const makeSchema = () => z.object({
   cardIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  sizeCategory: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  ref: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const WatchSpecUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.WatchSpecUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUpdateManyMutationInput>;
 export const WatchSpecUpdateManyMutationInputObjectZodSchema = makeSchema();

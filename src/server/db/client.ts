@@ -1,8 +1,21 @@
-// src/server/db/client.ts
+import { PrismaClient, Prisma } from '@prisma/client';
+// ... các import khác (ví dụ slugify nếu bạn dùng)
 
-import { Prisma, PrismaClient } from '@prisma/client';
-import slugify from 'slugify';
-// ⬇️ đặt ngay dưới import
+declare global {
+    var prisma: PrismaClient | undefined;
+}
+
+export const prisma: PrismaClient = global.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") global.prisma = prisma;
+
+// "DB" là kiểu union, "Tx" là TransactionClient
+export type DB = PrismaClient | Prisma.TransactionClient;
+export type Tx = Prisma.TransactionClient;
+// Hàm lấy db hoặc transaction client
+export const dbOrTx = (tx?: DB) => tx ?? prisma;
+
+export default prisma;
 
 
 function ensureVariantSkuForSingleProduct(variantsCreate: any, skuBase: string) {
@@ -163,14 +176,4 @@ function makePrisma() {
     });
 }
 
-declare global {
-    // giữ 1 instance duy nhất trong dev
-    // eslint-disable-next-line no-var
-    var prisma: ReturnType<typeof makePrisma> | undefined;
-}
 
-export const prisma = global.prisma ?? makePrisma();
-if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
-
-export default prisma;
-export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];

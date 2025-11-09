@@ -34,6 +34,7 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   sizeCategory: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  ref: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => WatchSpecCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => WatchSpecAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => WatchSpecMaxOrderByAggregateInputObjectSchema).optional(),

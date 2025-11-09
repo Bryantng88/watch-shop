@@ -1,7 +1,6 @@
 "use server";
 
-import prisma from "@/server/db/client";
-
+import { prisma, DB } from "@/server/db/client";
 import * as dto from "./acquisition.dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repoAcq from "./acquisition.repo";
@@ -9,6 +8,7 @@ import * as repoAcq from "./acquisition.repo";
 import { AcquisitionType } from "@prisma/client";
 import * as repoProd from "../../products/_server/product.repo";
 import { convertOffsetToTimes } from "framer-motion";
+import { Prisma } from "@prisma/client";
 
 // List cho admin table
 export async function getAdminAcquisitionList(raw: unknown) {

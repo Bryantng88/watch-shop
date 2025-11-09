@@ -165,6 +165,7 @@ model WatchSpec {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   sizeCategory    String?
+  ref             String?
   product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   complication    Complication[]  @relation("ComplicationToWatchSpec")
   marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")

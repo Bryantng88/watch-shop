@@ -4,13 +4,12 @@ import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
 
+
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
-export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+import { DB, dbOrTx } from "@/server/db/client";
 
-type DB = Tx | typeof prisma;
-const dbOrTx = (tx?: Tx): DB => tx ?? prisma;
 
-export async function findDraftOfVendorToday(tx: Tx, vendorId: string) {
+export async function findDraftOfVendorToday(tx: Prisma.TransactionClient, vendorId: string) {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const end = new Date(); end.setHours(23, 59, 59, 999);
 
@@ -24,7 +23,7 @@ export async function findDraftOfVendorToday(tx: Tx, vendorId: string) {
     });
 }
 export async function createDraft(
-    tx: Tx,
+    tx: DB,
     input: {
         vendorId: string;
         currency?: string;
@@ -33,11 +32,10 @@ export async function createDraft(
         notes?: string | null;
     }
 ) {
-    const vendor = await tx.vendor.findUnique({ where: { id: input.vendorId } });
-    console.log('in vendor : ' + vendor?.name)
-    console.log('typeof tx.vendor:', typeof tx.vendor); // function
-    console.log('typeof tx.acquisition:', typeof tx.acquisition);
-    return tx.acquisition.create({
+    const db = dbOrTx(tx);
+    const vendor = await db.vendor.findUnique({ where: { id: input.vendorId } });
+    if (!vendor) throw new Error("Vendor không tồn tại!");
+    return db.acquisition.create({
         data: {
             vendor: { connect: { id: input.vendorId } },
             acquiredAt: input.acquiredAt ?? new Date(),
@@ -52,14 +50,15 @@ export async function createDraft(
 
 }
 export async function addAcqItem(
-    tx: Tx,
+    tx: DB,
     acqId: string,
     productId: string,
     quantity: number,
     unitCost: number
 
 ) {
-    return tx.acquisitionItem.create({
+    const db = dbOrTx(tx);
+    return db.acquisitionItem.create({
         data: {
             acquisition: { connect: { id: acqId } },
             product: { connect: { id: productId } },
@@ -81,7 +80,7 @@ export async function updateAcquisitionCost(
 }
 // 3. Thêm item vào phiếu nhập
 export async function addItem(
-    tx: Tx,
+    tx: Prisma.TransactionClient,
     acqId: string,
     item: {
         productId: string;
@@ -103,7 +102,7 @@ export async function addItem(
 }
 
 // 4. Cập nhật tổng cost của phiếu
-export async function recalcCost(tx: Tx, acqId: string) {
+export async function recalcCost(tx: Prisma.TransactionClient, acqId: string) {
     const rows = await tx.acquisitionItem.findMany({
         where: { acquisitionId: acqId },
         select: { quantity: true, unitCost: true },
@@ -152,7 +151,7 @@ export async function changeDraftToPost(tx: Tx, acqId: string) {
 
 export async function acqList(where: Prisma.AcquisitionWhereInput,
     orderBy: Prisma.AcquisitionOrderByWithRelationInput[],
-    skip: number, take: number, tx?: Tx) {
+    skip: number, take: number, tx?: DB) {
     const db = dbOrTx(tx);
     const [rows, total] = await Promise.all([
         db.acquisition.findMany({

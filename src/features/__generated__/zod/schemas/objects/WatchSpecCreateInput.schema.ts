@@ -37,6 +37,7 @@ const makeSchema = () => z.object({
   cardIncluded: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   sizeCategory: z.string().optional().nullable(),
+  ref: z.string().optional().nullable(),
   product: z.lazy(() => ProductCreateNestedOneWithoutWatchSpecInputObjectSchema),
   complication: z.lazy(() => ComplicationCreateNestedManyWithoutWatchSpecsInputObjectSchema),
   marketSegment: z.lazy(() => MarketSegmentCreateNestedManyWithoutWatchSpecsInputObjectSchema)

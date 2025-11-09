@@ -31,6 +31,7 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   sizeCategory: z.boolean().optional(),
+  ref: z.boolean().optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   complication: z.union([z.boolean(), z.lazy(() => ComplicationFindManySchema)]).optional(),
   marketSegment: z.union([z.boolean(), z.lazy(() => MarketSegmentFindManySchema)]).optional(),

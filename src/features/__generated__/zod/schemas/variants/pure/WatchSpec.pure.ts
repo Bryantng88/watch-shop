@@ -35,6 +35,7 @@ export const WatchSpecModelSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     sizeCategory: z.string().nullable(),
+    ref: z.string().nullable(),
     product: z.unknown(),
     complication: z.array(z.unknown()),
     marketSegment: z.array(z.unknown())

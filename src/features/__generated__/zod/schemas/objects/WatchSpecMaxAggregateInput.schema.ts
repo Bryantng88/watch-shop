@@ -26,7 +26,8 @@ const makeSchema = () => z.object({
   cardIncluded: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
-  sizeCategory: z.literal(true).optional()
+  sizeCategory: z.literal(true).optional(),
+  ref: z.literal(true).optional()
 }).strict();
 export const WatchSpecMaxAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecMaxAggregateInputType>;
 export const WatchSpecMaxAggregateInputObjectZodSchema = makeSchema();

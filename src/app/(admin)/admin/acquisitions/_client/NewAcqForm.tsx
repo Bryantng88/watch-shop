@@ -1,41 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 type Vendor = { id: string; name: string };
 type Props = { vendors: Vendor[] };
-
-type Line = {
-    id: string;
-    title: string;     // tên sản phẩm mới
-    quantity: number;
-    unitCost: number;
-};
+type Line = { id: string; title: string; quantity: number; unitCost: number };
 
 const CURRENCIES = ["VND", "USD", "EUR"] as const;
 const TYPES = ["PURCHASE", "BUY_BACK", "TRADE_IN", "CONSIGNMENT"] as const;
 
 export default function NewAcqForm({ vendors }: Props) {
-    const [vendorId, setVendorId] = useState("");
-    const [currency, setCurrency] = useState<(typeof CURRENCIES)[number]>("VND");
-    const [type, setType] = useState<(typeof TYPES)[number]>("PURCHASE");
-    const [acquiredAt, setAcquiredAt] = useState<string>(() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    // Gộp các trường đơn vào formData
+    const [formData, setFormData] = useState<Record<string, any>>({
+        currency: "VND",
+        type: "PURCHASE",
+        acquiredAt: (() => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        })(),
+        notes: "",
+        vendorId: "",
+        quickVendorName: "",
+        quickVendorPhone: "",
+        quickVendorEmail: "",
     });
-    const [notes, setNotes] = useState("");
+
+    // Thêm nhanh vendor
+    const [showQuickVendor, setShowQuickVendor] = useState(false);
+    const [quickVendor, setQuickVendor] = useState({ name: "", phone: "", email: "" });
+    const set = (name: string) => (e: any) =>
+        setFormData(prev => ({ ...prev, [name]: e?.target ? e.target.value : e }));
+
+    // Dòng sản phẩm mới
     const [lines, setLines] = useState<Line[]>([
         { id: crypto.randomUUID(), title: "", quantity: 1, unitCost: 0 },
     ]);
+
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
     const [okMsg, setOkMsg] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (showQuickVendor) setFormData(f => ({ ...f, vendorId: "" }));
+    }, [showQuickVendor]);
+
+    // Tổng tiền
     const total = useMemo(
         () => lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitCost) || 0), 0),
         [lines]
     );
+
+    function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
 
     function setLine<K extends keyof Line>(id: string, key: K, val: Line[K]) {
         setLines(prev => prev.map(l => l.id === id ? { ...l, [key]: val } : l));
@@ -49,7 +68,10 @@ export default function NewAcqForm({ vendors }: Props) {
         e.preventDefault();
         setErr(null); setOkMsg(null); setSaving(true);
 
-        if (!vendorId) { setErr("Hãy chọn vendor."); setSaving(false); return; }
+        // Nếu thêm vendor nhanh thì không cần vendorId
+        if (!formData.vendorId && !quickVendor.name) {
+            setErr("Hãy chọn hoặc nhập vendor."); setSaving(false); return;
+        }
         const items = lines
             .map(l => ({
                 title: l.title.trim(),
@@ -65,14 +87,16 @@ export default function NewAcqForm({ vendors }: Props) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    vendorId, currency, type, notes: notes || null,
-                    acquiredAt: new Date(acquiredAt), items,
+                    ...formData,
+                    notes: formData.notes || null,
+                    acquiredAt: new Date(formData.acquiredAt),
+                    quickVendor: showQuickVendor ? quickVendor : undefined,
+                    items,
                 }),
             });
             if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
             setOkMsg("Đã tạo phiếu DRAFT thành công.");
-            // có thể router.push(`/admin/acquisitions/${data.id}`)
+            // Có thể router.push(`/admin/acquisitions/${data.id}`)
         } catch (e: any) {
             setErr(e?.message || "Tạo phiếu thất bại");
         } finally {
@@ -88,44 +112,110 @@ export default function NewAcqForm({ vendors }: Props) {
             </div>
 
             <form onSubmit={onSubmit} className="space-y-6">
+                {/* Phần Vendor */}
                 <div className="rounded-md border bg-white p-5 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium">Vendor *</label>
-                            <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="mt-1 w-full rounded border px-3 py-2">
-                                <option value="">-- Chọn vendor --</option>
-                                {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                            </select>
-                        </div>
+                    <h3 className="font-semibold mb-3">Vendor</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                        {!showQuickVendor ? (
+                            <>
+                                <select
+                                    name="vendorId"
+                                    className="w-full rounded border px-3 py-2 mb-2"
+                                    value={formData.vendorId}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">-- Chọn vendor --</option>
+                                    {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                                </select>
+                                <button
+                                    type="button"
+                                    className="w-full rounded bg-black text-white px-3 py-2 text-sm font-medium"
+                                    onClick={() => {
+                                        setShowQuickVendor(true);
+                                        setFormData(f => ({ ...f, vendorId: "" }));
+                                    }}
+                                >
+                                    Thêm nhanh vendor mới
+                                </button>
+                            </>
+                        ) : (
+                            <div className="rounded bg-gray-50 p-3 mb-2 ">
+                                <div className="mb-2">
+                                    <label className="block text-xs font-medium mb-1">Tên vendor (quick add)</label>
+                                    <input
+                                        className="w-full rounded border px-3 py-2"
+                                        value={formData.quickVendorName}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-medium mb-1">Điện thoại</label>
+                                    <input
+                                        className="w-full rounded border px-3 py-2"
+                                        value={formData.quickVendorPhone}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-medium mb-1">Email</label>
+                                    <input
+                                        className="w-full rounded border px-3 py-2"
+                                        value={quickVendor.email}
+                                        onChange={e => setQuickVendor(v => ({ ...v, email: e.target.value }))}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="w-full rounded border px-3 py-2 text-sm font-medium mt-2"
+                                    onClick={() => setShowQuickVendor(false)}
+                                >
+                                    Huỷ thêm mới
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {/* Các trường còn lại */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-5">
                         <div>
                             <label className="block text-sm font-medium">Ngày nhập</label>
-                            <input type="datetime-local" value={acquiredAt} onChange={(e) => setAcquiredAt(e.target.value)} className="mt-1 w-full rounded border px-3 py-2" />
+                            <input
+                                name="acquiredAt"
+                                type="datetime-local"
+                                value={formData.acquiredAt}
+                                onChange={handleChange}
+                                className="mt-1 w-full rounded border px-3 py-2"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium">Tiền tệ</label>
-                            <select value={currency} onChange={(e) => setCurrency(e.target.value as any)} className="mt-1 w-full rounded border px-3 py-2">
+                            <select name="currency" value={formData.currency} onChange={handleChange} className="mt-1 w-full rounded border px-3 py-2">
                                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium">Loại phiếu</label>
-                            <select value={type} onChange={(e) => setType(e.target.value as any)} className="mt-1 w-full rounded border px-3 py-2">
+                            <select name="type" value={formData.type} onChange={handleChange} className="mt-1 w-full rounded border px-3 py-2">
                                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
-                        <div className="md:col-span-4">
+                        <div className="md:col-span-3">
                             <label className="block text-sm font-medium">Ghi chú</label>
-                            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 w-full rounded border px-3 py-2 min-h-[80px]" />
+                            <textarea
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleChange}
+                                className="mt-1 w-full rounded border px-3 py-2 min-h-[80px]"
+                            />
                         </div>
                     </div>
                 </div>
 
+                {/* Dòng sản phẩm */}
                 <div className="rounded-md border bg-white p-5 shadow-sm">
                     <div className="mb-3 flex items-center justify-between">
                         <h3 className="font-semibold">Dòng sản phẩm mới</h3>
                         <button type="button" onClick={addLine} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">+ Thêm dòng</button>
                     </div>
-
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
                             <thead className="bg-gray-50">
@@ -167,7 +257,7 @@ export default function NewAcqForm({ vendors }: Props) {
                                                     className="w-32 rounded border px-2 py-2 text-right"
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 text-right">{money.toLocaleString("vi-VN")} {currency}</td>
+                                            <td className="px-3 py-2 text-right">{money.toLocaleString("vi-VN")} {formData.currency}</td>
                                             <td className="px-3 py-2 text-right">
                                                 <button type="button" onClick={() => removeLine(ln.id)} className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50">Xoá</button>
                                             </td>
@@ -178,7 +268,7 @@ export default function NewAcqForm({ vendors }: Props) {
                             <tfoot>
                                 <tr>
                                     <td className="px-3 py-3 text-right font-semibold" colSpan={3}>Tổng cộng</td>
-                                    <td className="px-3 py-3 text-right font-semibold">{total.toLocaleString("vi-VN")} {currency}</td>
+                                    <td className="px-3 py-3 text-right font-semibold">{total.toLocaleString("vi-VN")} {formData.currency}</td>
                                     <td />
                                 </tr>
                             </tfoot>

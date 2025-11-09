@@ -37,6 +37,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   sizeCategory: z.string().optional().nullable(),
+  ref: z.string().optional().nullable(),
   complication: z.lazy(() => ComplicationUncheckedCreateNestedManyWithoutWatchSpecsInputObjectSchema).optional()
 }).strict();
 export const WatchSpecUncheckedCreateWithoutMarketSegmentInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedCreateWithoutMarketSegmentInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedCreateWithoutMarketSegmentInput>;

@@ -28,6 +28,7 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   sizeCategory: z.literal(true).optional(),
+  ref: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const WatchSpecCountAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCountAggregateInputType>;
