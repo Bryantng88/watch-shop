@@ -15,6 +15,8 @@ export const AcquisitionUpsertResultSchema = z.object({
   warrantyUntil: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  sentAt: z.date().optional(),
+  returnedAt: z.date().optional(),
   customer: z.unknown().optional(),
   vendor: z.unknown().optional(),
   acquisitionItem: z.array(z.unknown()),

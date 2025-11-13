@@ -20,6 +20,8 @@ const makeSchema = () => z.object({
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  sentAt: z.coerce.date().optional().nullable(),
+  returnedAt: z.coerce.date().optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema),
   invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema)
 }).strict();

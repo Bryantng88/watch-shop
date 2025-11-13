@@ -10,6 +10,13 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
   notes: z.string(),
   sourceOrderItemId: z.string(),
   createdAt: z.date(),
+  description: z.string(),
+  expectedReturnAt: z.date(),
+  returnedAt: z.date(),
+  vendorRmaNo: z.string(),
+  warrantyMonths: z.number().int(),
+  serviceRequestId: z.string(),
+  capitalizeToProduct: z.boolean(),
   _count: z.object({
     id: z.number(),
     acquisitionId: z.number(),
@@ -21,6 +28,15 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     notes: z.number(),
     sourceOrderItemId: z.number(),
     createdAt: z.number(),
+    kind: z.number(),
+    status: z.number(),
+    description: z.number(),
+    expectedReturnAt: z.number(),
+    returnedAt: z.number(),
+    vendorRmaNo: z.number(),
+    warrantyMonths: z.number(),
+    serviceRequestId: z.number(),
+    capitalizeToProduct: z.number(),
     acquisition: z.number(),
     product: z.number(),
     sourceOrderItem: z.number(),
@@ -28,11 +44,13 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
   }).optional(),
   _sum: z.object({
     quantity: z.number().nullable(),
-    unitCost: z.number().nullable()
+    unitCost: z.number().nullable(),
+    warrantyMonths: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     quantity: z.number().nullable(),
-    unitCost: z.number().nullable()
+    unitCost: z.number().nullable(),
+    warrantyMonths: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -44,7 +62,13 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     currency: z.string().nullable(),
     notes: z.string().nullable(),
     sourceOrderItemId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    description: z.string().nullable(),
+    expectedReturnAt: z.date().nullable(),
+    returnedAt: z.date().nullable(),
+    vendorRmaNo: z.string().nullable(),
+    warrantyMonths: z.number().int().nullable(),
+    serviceRequestId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -56,6 +80,12 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     currency: z.string().nullable(),
     notes: z.string().nullable(),
     sourceOrderItemId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    description: z.string().nullable(),
+    expectedReturnAt: z.date().nullable(),
+    returnedAt: z.date().nullable(),
+    vendorRmaNo: z.string().nullable(),
+    warrantyMonths: z.number().int().nullable(),
+    serviceRequestId: z.string().nullable()
   }).nullable().optional()
 }));

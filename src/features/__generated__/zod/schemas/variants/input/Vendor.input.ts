@@ -8,15 +8,18 @@ export const VendorInputSchema = z.object({
     role: VendorRoleSchema,
     isAuthorized: z.boolean(),
     email: z.string().optional().nullable(),
-    phone: z.string(),
+    phone: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     note: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    bankName: z.string().optional().nullable(),
+    bankAcc: z.string().optional().nullable(),
     acquisitions: z.array(z.unknown()),
     invoice: z.array(z.unknown()),
     services: z.array(z.unknown()),
-    Product: z.array(z.unknown())
+    Product: z.array(z.unknown()),
+    Bank: z.unknown().optional().nullable()
 }).strict();
 
 export type VendorInputType = z.infer<typeof VendorInputSchema>;

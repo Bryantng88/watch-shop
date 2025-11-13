@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate các trường bắt buộc
-    if (!body.vendorId) {
-        return NextResponse.json({ error: "Thiếu vendorId" }, { status: 400 });
+    if (!body.vendorId && !body.quickVendorName) {
+        return NextResponse.json({ error: "Thiếu vendorId hoặc tên vendor mới" }, { status: 400 });
     }
     if (!Array.isArray(body.items) || !body.items.length) {
         return NextResponse.json({ error: "Phải có ít nhất 1 sản phẩm" }, { status: 400 });

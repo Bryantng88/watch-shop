@@ -13,6 +13,15 @@ const makeSchema = () => z.object({
   notes: z.literal(true).optional(),
   sourceOrderItemId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
+  kind: z.literal(true).optional(),
+  status: z.literal(true).optional(),
+  description: z.literal(true).optional(),
+  expectedReturnAt: z.literal(true).optional(),
+  returnedAt: z.literal(true).optional(),
+  vendorRmaNo: z.literal(true).optional(),
+  warrantyMonths: z.literal(true).optional(),
+  serviceRequestId: z.literal(true).optional(),
+  capitalizeToProduct: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const AcquisitionItemCountAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCountAggregateInputType>;

@@ -27,6 +27,8 @@ const makeSchema = () => z.object({
   warrantyUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  sentAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  returnedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
 }).strict();

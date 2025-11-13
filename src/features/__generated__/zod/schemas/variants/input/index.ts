@@ -29,3 +29,4 @@ export { CustomerInputSchema } from './Customer.input';
 export { InvoiceInputSchema } from './Invoice.input';
 export { InvoiceItemInputSchema } from './InvoiceItem.input';
 export { PaymentInputSchema } from './Payment.input';
+export { BankInputSchema } from './Bank.input';

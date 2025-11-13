@@ -4,7 +4,14 @@ import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFi
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumAcquisitionItemKindNullableFilterObjectSchema as EnumAcquisitionItemKindNullableFilterObjectSchema } from './EnumAcquisitionItemKindNullableFilter.schema';
+import { AcquisitionItemKindSchema } from '../enums/AcquisitionItemKind.schema';
+import { EnumAcquisitionItemStatusNullableFilterObjectSchema as EnumAcquisitionItemStatusNullableFilterObjectSchema } from './EnumAcquisitionItemStatusNullableFilter.schema';
+import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
+import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema'
 
 const acquisitionitemscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionItemScalarWhereInputObjectSchema), z.lazy(() => AcquisitionItemScalarWhereInputObjectSchema).array()]).optional(),
@@ -19,7 +26,16 @@ const acquisitionitemscalarwhereinputSchema = z.object({
   currency: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   sourceOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  kind: z.union([z.lazy(() => EnumAcquisitionItemKindNullableFilterObjectSchema), AcquisitionItemKindSchema]).optional().nullable(),
+  status: z.union([z.lazy(() => EnumAcquisitionItemStatusNullableFilterObjectSchema), AcquisitionItemStatusSchema]).optional().nullable(),
+  description: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  expectedReturnAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  returnedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  vendorRmaNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  warrantyMonths: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
+  serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable()
 }).strict();
 export const AcquisitionItemScalarWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionItemScalarWhereInput> = acquisitionitemscalarwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemScalarWhereInput>;
 export const AcquisitionItemScalarWhereInputObjectZodSchema = acquisitionitemscalarwhereinputSchema;

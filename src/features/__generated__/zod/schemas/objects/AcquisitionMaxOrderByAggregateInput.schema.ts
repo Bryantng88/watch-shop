@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   condition: SortOrderSchema.optional(),
   warrantyUntil: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  sentAt: SortOrderSchema.optional(),
+  returnedAt: SortOrderSchema.optional()
 }).strict();
 export const AcquisitionMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionMaxOrderByAggregateInput>;
 export const AcquisitionMaxOrderByAggregateInputObjectZodSchema = makeSchema();

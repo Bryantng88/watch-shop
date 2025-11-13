@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   condition: z.literal(true).optional(),
   warrantyUntil: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  sentAt: z.literal(true).optional(),
+  returnedAt: z.literal(true).optional()
 }).strict();
 export const AcquisitionMaxAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionMaxAggregateInputType>;
 export const AcquisitionMaxAggregateInputObjectZodSchema = makeSchema();

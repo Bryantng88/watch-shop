@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   warrantyUntil: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  sentAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  returnedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => AcquisitionCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => AcquisitionAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => AcquisitionMaxOrderByAggregateInputObjectSchema).optional(),

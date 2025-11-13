@@ -9,6 +9,8 @@ export const VendorGroupByResultSchema = z.array(z.object({
   note: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  bankName: z.string(),
+  bankAcc: z.string(),
   _count: z.object({
     id: z.number(),
     name: z.number(),
@@ -20,10 +22,13 @@ export const VendorGroupByResultSchema = z.array(z.object({
     note: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    bankName: z.number(),
+    bankAcc: z.number(),
     acquisitions: z.number(),
     invoice: z.number(),
     services: z.number(),
-    Product: z.number()
+    Product: z.number(),
+    Bank: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -33,7 +38,9 @@ export const VendorGroupByResultSchema = z.array(z.object({
     address: z.string().nullable(),
     note: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    bankName: z.string().nullable(),
+    bankAcc: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -43,6 +50,8 @@ export const VendorGroupByResultSchema = z.array(z.object({
     address: z.string().nullable(),
     note: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    bankName: z.string().nullable(),
+    bankAcc: z.string().nullable()
   }).nullable().optional()
 }));

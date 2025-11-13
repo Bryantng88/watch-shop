@@ -4,6 +4,7 @@ import { AcquisitionFindManySchema as AcquisitionFindManySchema } from '../findM
 import { InvoiceFindManySchema as InvoiceFindManySchema } from '../findManyInvoice.schema';
 import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } from '../findManyMaintenanceRecord.schema';
 import { ProductFindManySchema as ProductFindManySchema } from '../findManyProduct.schema';
+import { BankArgsObjectSchema as BankArgsObjectSchema } from './BankArgs.schema';
 import { VendorCountOutputTypeArgsObjectSchema as VendorCountOutputTypeArgsObjectSchema } from './VendorCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -11,6 +12,7 @@ const makeSchema = () => z.object({
   invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   services: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
+  Bank: z.union([z.boolean(), z.lazy(() => BankArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => VendorCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const VendorIncludeObjectSchema: z.ZodType<Prisma.VendorInclude> = makeSchema() as unknown as z.ZodType<Prisma.VendorInclude>;

@@ -336,3 +336,16 @@ export { PaymentDeleteManyResultSchema } from './PaymentDeleteManyResult.schema'
 export { PaymentAggregateResultSchema } from './PaymentAggregateResult.schema';
 export { PaymentGroupByResultSchema } from './PaymentGroupByResult.schema';
 export { PaymentCountResultSchema } from './PaymentCountResult.schema';
+export { BankFindUniqueResultSchema } from './BankFindUniqueResult.schema';
+export { BankFindFirstResultSchema } from './BankFindFirstResult.schema';
+export { BankFindManyResultSchema } from './BankFindManyResult.schema';
+export { BankCreateResultSchema } from './BankCreateResult.schema';
+export { BankCreateManyResultSchema } from './BankCreateManyResult.schema';
+export { BankUpdateResultSchema } from './BankUpdateResult.schema';
+export { BankUpdateManyResultSchema } from './BankUpdateManyResult.schema';
+export { BankUpsertResultSchema } from './BankUpsertResult.schema';
+export { BankDeleteResultSchema } from './BankDeleteResult.schema';
+export { BankDeleteManyResultSchema } from './BankDeleteManyResult.schema';
+export { BankAggregateResultSchema } from './BankAggregateResult.schema';
+export { BankGroupByResultSchema } from './BankGroupByResult.schema';
+export { BankCountResultSchema } from './BankCountResult.schema';

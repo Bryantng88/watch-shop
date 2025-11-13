@@ -1,5 +1,5 @@
 // src/features/acquisitions/server/acquisition.repo.ts
-import { Prisma, AcquisitionStatus, AcquisitionType } from "@prisma/client";
+import { Prisma, AcquisitionStatus, AcquisitionType, Acquisition } from "@prisma/client";
 import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
@@ -49,26 +49,9 @@ export async function createDraft(
     });
 
 }
-export async function addAcqItem(
-    tx: DB,
-    acqId: string,
-    productId: string,
-    quantity: number,
-    unitCost: number
 
-) {
-    const db = dbOrTx(tx);
-    return db.acquisitionItem.create({
-        data: {
-            acquisition: { connect: { id: acqId } },
-            product: { connect: { id: productId } },
-            quantity: quantity,
-            unitCost: unitCost
-        }
-    })
-}
 export async function updateAcquisitionCost(
-    tx: Tx,
+    tx: DB,
     acqId: string,
     total: number
 ) {
@@ -78,31 +61,9 @@ export async function updateAcquisitionCost(
         select: { id: true, cost: true },
     });
 }
-// 3. Thêm item vào phiếu nhập
-export async function addItem(
-    tx: Prisma.TransactionClient,
-    acqId: string,
-    item: {
-        productId: string;
-        variantId?: string | null;
-        quantity?: number;
-        unitCost?: number;
-    }
-) {
-    return tx.acquisitionItem.create({
-        data: {
-            acquisition: { connect: { id: acqId } },
-            product: { connect: { id: item.productId } },
-            ...(item.variantId ? { variant: { connect: { id: item.variantId } } } : {}),
-            quantity: item.quantity ?? 1,
-            unitCost: new Prisma.Decimal(item.unitCost ?? 0),
-        },
-        select: { id: true },
-    });
-}
 
 // 4. Cập nhật tổng cost của phiếu
-export async function recalcCost(tx: Prisma.TransactionClient, acqId: string) {
+export async function recalcCost(tx: DB, acqId: string) {
     const rows = await tx.acquisitionItem.findMany({
         where: { acquisitionId: acqId },
         select: { quantity: true, unitCost: true },
@@ -115,27 +76,15 @@ export async function recalcCost(tx: Prisma.TransactionClient, acqId: string) {
     return total;
 }
 
-// 5. Tạo mới + thêm item (nếu chưa có)
-export async function upsertDraftAndAddItem(
-    tx: Tx,
-    input: {
-        vendorId: string;
-        currency?: string;
-        type?: AcquisitionType;
-        acquiredAt?: Date;
-        notes?: string | null;
-        item: { productId: string; variantId?: string | null; quantity?: number; unitCost?: number; };
-    }
-) {
-    let draft = await findDraftOfVendorToday(tx, input.vendorId);
-    if (!draft) draft = await createDraft(tx, input);
-    await addItem(tx, draft.id, input.item);
-    await recalcCost(tx, draft.id);
-    return draft; // { id }
+// 5. Cập nhật thông tin phiếu acquisition
+export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquisition>) {
+    const db = dbOrTx(tx);
+    return db.acquisition.update({ where: { id }, data });
 }
 
+
 // 6. Chuyển phiếu sang trạng thái POSTED
-export async function changeDraftToPost(tx: Tx, acqId: string) {
+export async function changeDraftToPost(tx: DB, acqId: string) {
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
 
@@ -146,9 +95,7 @@ export async function changeDraftToPost(tx: Tx, acqId: string) {
     });
 }
 
-
-
-
+// 7. lấy list acquisition
 export async function acqList(where: Prisma.AcquisitionWhereInput,
     orderBy: Prisma.AcquisitionOrderByWithRelationInput[],
     skip: number, take: number, tx?: DB) {
@@ -168,9 +115,10 @@ export async function acqList(where: Prisma.AcquisitionWhereInput,
     return { rows, total };
 }
 
-// DETAIL
-export async function acqGetById(id: string, tx?: Tx) {
+// 8. Lấy detail acquisition
+export async function acqGetById(id: string, tx?: DB) {
     const db = dbOrTx(tx);
+    //const db = dbOrTx(tx);
     return db.acquisition.findUnique({
         where: { id },
         include: {
@@ -180,4 +128,32 @@ export async function acqGetById(id: string, tx?: Tx) {
             invoice: true,
         },
     });
+}
+// thêm acquisition item
+export async function addAcqItem(
+    tx: DB,
+    acqId: string,
+    productId: string,
+    unitCost: number
+) {
+    const db = dbOrTx(tx);
+    return db.acquisitionItem.create({
+        data: {
+            acquisition: { connect: { id: acqId } },
+            product: { connect: { id: productId } },
+            quantity: 1,
+            unitCost: unitCost
+        }
+    })
+}
+
+//9 Xoá các item theo id
+export async function deleteAcquisitionItems(tx: Prisma.TransactionClient, ids: string[]) {
+    if (!ids?.length) return;
+    await tx.acquisitionItem.deleteMany({ where: { id: { in: ids } } });
+}
+
+//10 Update 1 item
+export async function updateAcquisitionItem(tx: Prisma.TransactionClient, id: string, data: Partial<AcquisitionItem>) {
+    return tx.acquisitionItem.update({ where: { id }, data });
 }

@@ -5,7 +5,8 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { AcquisitionOrderByRelationAggregateInputObjectSchema as AcquisitionOrderByRelationAggregateInputObjectSchema } from './AcquisitionOrderByRelationAggregateInput.schema';
 import { InvoiceOrderByRelationAggregateInputObjectSchema as InvoiceOrderByRelationAggregateInputObjectSchema } from './InvoiceOrderByRelationAggregateInput.schema';
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
-import { ProductOrderByRelationAggregateInputObjectSchema as ProductOrderByRelationAggregateInputObjectSchema } from './ProductOrderByRelationAggregateInput.schema'
+import { ProductOrderByRelationAggregateInputObjectSchema as ProductOrderByRelationAggregateInputObjectSchema } from './ProductOrderByRelationAggregateInput.schema';
+import { BankOrderByWithRelationInputObjectSchema as BankOrderByWithRelationInputObjectSchema } from './BankOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -13,15 +14,18 @@ const makeSchema = () => z.object({
   role: SortOrderSchema.optional(),
   isAuthorized: SortOrderSchema.optional(),
   email: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  phone: SortOrderSchema.optional(),
+  phone: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   note: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  bankName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  bankAcc: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   acquisitions: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional()
+  Product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional(),
+  Bank: z.lazy(() => BankOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const VendorOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.VendorOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorOrderByWithRelationInput>;
 export const VendorOrderByWithRelationInputObjectZodSchema = makeSchema();

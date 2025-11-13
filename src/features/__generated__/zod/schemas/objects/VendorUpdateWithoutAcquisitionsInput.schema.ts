@@ -8,7 +8,8 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { InvoiceUpdateManyWithoutVendorNestedInputObjectSchema as InvoiceUpdateManyWithoutVendorNestedInputObjectSchema } from './InvoiceUpdateManyWithoutVendorNestedInput.schema';
 import { MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutVendorNestedInput.schema';
-import { ProductUpdateManyWithoutVendorNestedInputObjectSchema as ProductUpdateManyWithoutVendorNestedInputObjectSchema } from './ProductUpdateManyWithoutVendorNestedInput.schema'
+import { ProductUpdateManyWithoutVendorNestedInputObjectSchema as ProductUpdateManyWithoutVendorNestedInputObjectSchema } from './ProductUpdateManyWithoutVendorNestedInput.schema';
+import { BankUpdateOneWithoutVendorNestedInputObjectSchema as BankUpdateOneWithoutVendorNestedInputObjectSchema } from './BankUpdateOneWithoutVendorNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -16,14 +17,16 @@ const makeSchema = () => z.object({
   role: z.union([VendorRoleSchema, z.lazy(() => EnumVendorRoleFieldUpdateOperationsInputObjectSchema)]).optional(),
   isAuthorized: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   email: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  phone: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  phone: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  bankAcc: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   invoice: z.lazy(() => InvoiceUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductUpdateManyWithoutVendorNestedInputObjectSchema).optional()
+  Product: z.lazy(() => ProductUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  Bank: z.lazy(() => BankUpdateOneWithoutVendorNestedInputObjectSchema).optional()
 }).strict();
 export const VendorUpdateWithoutAcquisitionsInputObjectSchema: z.ZodType<Prisma.VendorUpdateWithoutAcquisitionsInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUpdateWithoutAcquisitionsInput>;
 export const VendorUpdateWithoutAcquisitionsInputObjectZodSchema = makeSchema();

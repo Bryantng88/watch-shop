@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AcquisitionType } from "@prisma/client";
+import { AcquisitionType, ProductType } from "@prisma/client";
 // sort dùng cho bảng admin
 export const adminAcqSort = z.enum([
     "updatedDesc", "updatedAsc",
@@ -58,7 +58,8 @@ export type CreateAcquisitionInput = {
     type?: AcquisitionType;
     acquiredAt?: Date | string;
     notes?: string | null;
-    items: { title: string; quantity: number; unitCost: number }[];
+    items: { title: string; quantity: number; unitCost: number, productType?: ProductType }[];
+    quickVendorName: string;
 };
 
 

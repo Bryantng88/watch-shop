@@ -10,10 +10,13 @@ export const VendorAggregateResultSchema = z.object({  _count: z.object({
     note: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    bankName: z.number(),
+    bankAcc: z.number(),
     acquisitions: z.number(),
     invoice: z.number(),
     services: z.number(),
-    Product: z.number()
+    Product: z.number(),
+    Bank: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -23,7 +26,9 @@ export const VendorAggregateResultSchema = z.object({  _count: z.object({
     address: z.string().nullable(),
     note: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    bankName: z.string().nullable(),
+    bankAcc: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -33,5 +38,7 @@ export const VendorAggregateResultSchema = z.object({  _count: z.object({
     address: z.string().nullable(),
     note: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    bankName: z.string().nullable(),
+    bankAcc: z.string().nullable()
   }).nullable().optional()});

@@ -13,6 +13,8 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
   warrantyUntil: z.date(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  sentAt: z.date(),
+  returnedAt: z.date(),
   _count: z.object({
     id: z.number(),
     vendorId: z.number(),
@@ -29,6 +31,8 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     warrantyUntil: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    sentAt: z.number(),
+    returnedAt: z.number(),
     customer: z.number(),
     vendor: z.number(),
     acquisitionItem: z.number(),
@@ -53,7 +57,9 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     condition: z.string().nullable(),
     warrantyUntil: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sentAt: z.date().nullable(),
+    returnedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -68,6 +74,8 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     condition: z.string().nullable(),
     warrantyUntil: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sentAt: z.date().nullable(),
+    returnedAt: z.date().nullable()
   }).nullable().optional()
 }));

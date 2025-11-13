@@ -4,7 +4,8 @@ import { VendorRoleSchema } from '../enums/VendorRole.schema';
 import { AcquisitionCreateNestedManyWithoutVendorInputObjectSchema as AcquisitionCreateNestedManyWithoutVendorInputObjectSchema } from './AcquisitionCreateNestedManyWithoutVendorInput.schema';
 import { InvoiceCreateNestedManyWithoutVendorInputObjectSchema as InvoiceCreateNestedManyWithoutVendorInputObjectSchema } from './InvoiceCreateNestedManyWithoutVendorInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutVendorInput.schema';
-import { ProductCreateNestedManyWithoutVendorInputObjectSchema as ProductCreateNestedManyWithoutVendorInputObjectSchema } from './ProductCreateNestedManyWithoutVendorInput.schema'
+import { ProductCreateNestedManyWithoutVendorInputObjectSchema as ProductCreateNestedManyWithoutVendorInputObjectSchema } from './ProductCreateNestedManyWithoutVendorInput.schema';
+import { BankCreateNestedOneWithoutVendorInputObjectSchema as BankCreateNestedOneWithoutVendorInputObjectSchema } from './BankCreateNestedOneWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,14 +13,16 @@ const makeSchema = () => z.object({
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),
   email: z.string().optional().nullable(),
-  phone: z.string(),
+  phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  bankAcc: z.string().optional().nullable(),
   acquisitions: z.lazy(() => AcquisitionCreateNestedManyWithoutVendorInputObjectSchema),
   invoice: z.lazy(() => InvoiceCreateNestedManyWithoutVendorInputObjectSchema),
   services: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema),
-  Product: z.lazy(() => ProductCreateNestedManyWithoutVendorInputObjectSchema)
+  Product: z.lazy(() => ProductCreateNestedManyWithoutVendorInputObjectSchema),
+  Bank: z.lazy(() => BankCreateNestedOneWithoutVendorInputObjectSchema).optional()
 }).strict();
 export const VendorCreateInputObjectSchema: z.ZodType<Prisma.VendorCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorCreateInput>;
 export const VendorCreateInputObjectZodSchema = makeSchema();

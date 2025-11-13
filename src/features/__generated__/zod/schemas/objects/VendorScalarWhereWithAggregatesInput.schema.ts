@@ -16,11 +16,13 @@ const vendorscalarwherewithaggregatesinputSchema = z.object({
   role: z.union([z.lazy(() => EnumVendorRoleWithAggregatesFilterObjectSchema), VendorRoleSchema]).optional(),
   isAuthorized: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   email: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  phone: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  phone: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   address: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   note: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  bankName: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  bankAcc: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const VendorScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.VendorScalarWhereWithAggregatesInput> = vendorscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.VendorScalarWhereWithAggregatesInput>;
 export const VendorScalarWhereWithAggregatesInputObjectZodSchema = vendorscalarwherewithaggregatesinputSchema;

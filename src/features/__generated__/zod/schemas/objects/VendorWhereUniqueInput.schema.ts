@@ -4,7 +4,7 @@ import { VendorNameRoleCompoundUniqueInputObjectSchema as VendorNameRoleCompound
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
-  phone: z.string().optional(),
+  name: z.string().optional(),
   name_role: z.lazy(() => VendorNameRoleCompoundUniqueInputObjectSchema).optional()
 }).strict();
 export const VendorWhereUniqueInputObjectSchema: z.ZodType<Prisma.VendorWhereUniqueInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorWhereUniqueInput>;

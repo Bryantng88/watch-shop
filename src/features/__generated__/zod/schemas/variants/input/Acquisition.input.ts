@@ -19,6 +19,8 @@ export const AcquisitionInputSchema = z.object({
     warrantyUntil: z.date().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    sentAt: z.date().optional().nullable(),
+    returnedAt: z.date().optional().nullable(),
     customer: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
     acquisitionItem: z.array(z.unknown()),

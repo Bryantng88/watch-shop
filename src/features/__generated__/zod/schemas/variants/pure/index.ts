@@ -29,3 +29,4 @@ export { CustomerModelSchema } from './Customer.pure';
 export { InvoiceModelSchema } from './Invoice.pure';
 export { InvoiceItemModelSchema } from './InvoiceItem.pure';
 export { PaymentModelSchema } from './Payment.pure';
+export { BankModelSchema } from './Bank.pure';

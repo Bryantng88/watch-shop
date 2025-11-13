@@ -347,19 +347,22 @@ model MaintenancePart {
 
 model Vendor {
   id           String              @id @default(cuid())
-  name         String
+  name         String              @unique
   role         VendorRole          @default(SUPPLIER)
   isAuthorized Boolean             @default(false)
   email        String?
-  phone        String              @unique
+  phone        String?
   address      String?
   note         String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+  bankName     String?
+  bankAcc      String?
   acquisitions Acquisition[]
   invoice      Invoice[]
   services     MaintenanceRecord[]
   Product      Product[]
+  Bank         Bank?               @relation(fields: [bankName], references: [bankName], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([name, role])
   @@index([role])
@@ -381,6 +384,8 @@ model Acquisition {
   warrantyUntil   DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  sentAt          DateTime?         @db.Timestamp(6)
+  returnedAt      DateTime?         @db.Timestamp(6)
   customer        Customer?         @relation(fields: [customerId], references: [id])
   vendor          Vendor?           @relation(fields: [vendorId], references: [id])
   acquisitionItem AcquisitionItem[]
@@ -388,26 +393,39 @@ model Acquisition {
 
   @@index([vendorId, acquiredAt])
   @@index([customerId, acquiredAt])
+  @@index([returnedAt], map: "acquisition_returned_idx")
+  @@index([sentAt], map: "acquisition_sent_idx")
 }
 
 model AcquisitionItem {
-  id                String          @id @default(cuid())
-  acquisitionId     String
-  productId         String?
-  variantId         String?
-  quantity          Int             @default(1)
-  unitCost          Decimal?        @db.Decimal(12, 2)
-  currency          String?
-  notes             String?
-  sourceOrderItemId String?
-  createdAt         DateTime        @default(now())
-  acquisition       Acquisition     @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
-  product           Product?        @relation(fields: [productId], references: [id])
-  sourceOrderItem   OrderItem?      @relation(fields: [sourceOrderItemId], references: [id])
-  variant           ProductVariant? @relation(fields: [variantId], references: [id])
+  id                  String                 @id @default(cuid())
+  acquisitionId       String
+  productId           String?
+  variantId           String?
+  quantity            Int                    @default(1)
+  unitCost            Decimal?               @db.Decimal(12, 2)
+  currency            String?
+  notes               String?
+  sourceOrderItemId   String?
+  createdAt           DateTime               @default(now())
+  kind                AcquisitionItemKind?   @default(PRODUCT)
+  status              AcquisitionItemStatus? @default(DRAFT)
+  description         String?
+  expectedReturnAt    DateTime?              @db.Timestamp(6)
+  returnedAt          DateTime?              @db.Timestamp(6)
+  vendorRmaNo         String?
+  warrantyMonths      Int?
+  serviceRequestId    String?
+  capitalizeToProduct Boolean?               @default(true)
+  acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
+  product             Product?               @relation(fields: [productId], references: [id])
+  sourceOrderItem     OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])
+  variant             ProductVariant?        @relation(fields: [variantId], references: [id])
 
   @@index([acquisitionId])
   @@index([variantId])
+  @@index([serviceRequestId], map: "acqitem_serviceRequest_idx")
+  @@index([status], map: "acqitem_status_idx")
 }
 
 model User {
@@ -532,6 +550,14 @@ model Payment {
   invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId, paidAt])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Bank {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  bankName   String   @unique
+  Vendor     Vendor[]
 }
 
 enum Category {
@@ -785,4 +811,19 @@ enum ContentStatus {
 enum PriceVisibility {
   SHOW
   HIDE
+}
+
+enum AcquisitionItemKind {
+  PRODUCT
+  SERVICE
+  FEE
+}
+
+enum AcquisitionItemStatus {
+  DRAFT
+  SENT
+  IN_SERVICE
+  RETURNED
+  BILLED
+  CANCELLED
 }

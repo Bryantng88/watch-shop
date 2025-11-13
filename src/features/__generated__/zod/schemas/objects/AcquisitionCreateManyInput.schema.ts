@@ -18,7 +18,9 @@ const makeSchema = () => z.object({
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  sentAt: z.coerce.date().optional().nullable(),
+  returnedAt: z.coerce.date().optional().nullable()
 }).strict();
 export const AcquisitionCreateManyInputObjectSchema: z.ZodType<Prisma.AcquisitionCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionCreateManyInput>;
 export const AcquisitionCreateManyInputObjectZodSchema = makeSchema();

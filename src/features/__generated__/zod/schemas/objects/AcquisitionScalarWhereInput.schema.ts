@@ -28,7 +28,9 @@ const acquisitionscalarwhereinputSchema = z.object({
   condition: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   warrantyUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  sentAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  returnedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const AcquisitionScalarWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionScalarWhereInput> = acquisitionscalarwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionScalarWhereInput>;
 export const AcquisitionScalarWhereInputObjectZodSchema = acquisitionscalarwhereinputSchema;

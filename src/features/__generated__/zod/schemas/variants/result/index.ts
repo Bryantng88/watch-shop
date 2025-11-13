@@ -29,3 +29,4 @@ export { CustomerResultSchema } from './Customer.result';
 export { InvoiceResultSchema } from './Invoice.result';
 export { InvoiceItemResultSchema } from './InvoiceItem.result';
 export { PaymentResultSchema } from './Payment.result';
+export { BankResultSchema } from './Bank.result';

@@ -12,7 +12,16 @@ const makeSchema = () => z.object({
   currency: SortOrderSchema.optional(),
   notes: SortOrderSchema.optional(),
   sourceOrderItemId: SortOrderSchema.optional(),
-  createdAt: SortOrderSchema.optional()
+  createdAt: SortOrderSchema.optional(),
+  kind: SortOrderSchema.optional(),
+  status: SortOrderSchema.optional(),
+  description: SortOrderSchema.optional(),
+  expectedReturnAt: SortOrderSchema.optional(),
+  returnedAt: SortOrderSchema.optional(),
+  vendorRmaNo: SortOrderSchema.optional(),
+  warrantyMonths: SortOrderSchema.optional(),
+  serviceRequestId: SortOrderSchema.optional(),
+  capitalizeToProduct: SortOrderSchema.optional()
 }).strict();
 export const AcquisitionItemMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionItemMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemMinOrderByAggregateInput>;
 export const AcquisitionItemMinOrderByAggregateInputObjectZodSchema = makeSchema();

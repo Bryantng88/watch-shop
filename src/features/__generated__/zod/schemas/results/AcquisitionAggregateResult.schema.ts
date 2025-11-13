@@ -15,6 +15,8 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     warrantyUntil: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    sentAt: z.number(),
+    returnedAt: z.number(),
     customer: z.number(),
     vendor: z.number(),
     acquisitionItem: z.number(),
@@ -39,7 +41,9 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     condition: z.string().nullable(),
     warrantyUntil: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sentAt: z.date().nullable(),
+    returnedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -54,5 +58,7 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     condition: z.string().nullable(),
     warrantyUntil: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    sentAt: z.date().nullable(),
+    returnedAt: z.date().nullable()
   }).nullable().optional()});
