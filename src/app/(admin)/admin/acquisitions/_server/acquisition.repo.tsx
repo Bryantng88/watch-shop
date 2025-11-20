@@ -87,7 +87,7 @@ export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquis
 export async function changeDraftToPost(tx: DB, acqId: string) {
 
     const refNo = await genRefNoIncrement();
-    console.log('in ra ref no : ' + refNo)
+    console.log('in ra ref no : ' + refNo + ' va  ' + acqId)
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
 

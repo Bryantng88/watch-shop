@@ -37,7 +37,7 @@ export default function ActionButton({ id, status }: { id: string, status: strin
                 padding: "2px 10px"
             }} disabled={status === "POSTED" || pending}
         >
-            {status === "POSTED" ? "Đã duyệt" : "Chuyển sang POSTED"}
+            {status === "POSTED" ? "Đã Duyệt" : "Duyệt Phiếu"}
         </button>
     );
 }
