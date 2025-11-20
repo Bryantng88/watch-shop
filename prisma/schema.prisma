@@ -417,6 +417,7 @@ model AcquisitionItem {
   warrantyMonths      Int?
   serviceRequestId    String?
   capitalizeToProduct Boolean?               @default(true)
+  productType         ProductType            @default(WATCH)
   acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
   product             Product?               @relation(fields: [productId], references: [id])
   sourceOrderItem     OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])

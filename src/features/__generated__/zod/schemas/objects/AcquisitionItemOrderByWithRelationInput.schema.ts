@@ -27,6 +27,7 @@ const makeSchema = () => z.object({
   warrantyMonths: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   serviceRequestId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   capitalizeToProduct: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  productType: SortOrderSchema.optional(),
   acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   sourceOrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),

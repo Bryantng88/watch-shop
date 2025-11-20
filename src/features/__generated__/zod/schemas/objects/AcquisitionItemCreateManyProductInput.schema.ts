@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionItemKindSchema } from '../enums/AcquisitionItemKind.schema';
-import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema'
+import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema';
+import { ProductTypeSchema } from '../enums/ProductType.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -21,7 +22,8 @@ const makeSchema = () => z.object({
   vendorRmaNo: z.string().optional().nullable(),
   warrantyMonths: z.number().int().optional().nullable(),
   serviceRequestId: z.string().optional().nullable(),
-  capitalizeToProduct: z.boolean().optional().nullable()
+  capitalizeToProduct: z.boolean().optional().nullable(),
+  productType: ProductTypeSchema.optional()
 }).strict();
 export const AcquisitionItemCreateManyProductInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCreateManyProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCreateManyProductInput>;
 export const AcquisitionItemCreateManyProductInputObjectZodSchema = makeSchema();

@@ -20,6 +20,7 @@ export const AcquisitionItemFindManyResultSchema = z.object({
   warrantyMonths: z.number().int().optional(),
   serviceRequestId: z.string().optional(),
   capitalizeToProduct: z.boolean().optional(),
+  productType: z.unknown(),
   acquisition: z.unknown(),
   product: z.unknown().optional(),
   sourceOrderItem: z.unknown().optional(),

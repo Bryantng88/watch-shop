@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { AcquisitionItemKindSchema } from '../../enums/AcquisitionItemKind.schema';
 import { AcquisitionItemStatusSchema } from '../../enums/AcquisitionItemStatus.schema';
+import { ProductTypeSchema } from '../../enums/ProductType.schema';
 // prettier-ignore
 export const AcquisitionItemInputSchema = z.object({
     id: z.string(),
@@ -23,6 +24,7 @@ export const AcquisitionItemInputSchema = z.object({
     warrantyMonths: z.number().int().optional().nullable(),
     serviceRequestId: z.string().optional().nullable(),
     capitalizeToProduct: z.boolean().optional().nullable(),
+    productType: ProductTypeSchema,
     acquisition: z.unknown(),
     product: z.unknown().optional().nullable(),
     sourceOrderItem: z.unknown().optional().nullable(),

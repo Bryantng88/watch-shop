@@ -11,7 +11,9 @@ import { EnumAcquisitionItemStatusNullableFilterObjectSchema as EnumAcquisitionI
 import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
-import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema'
+import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema';
+import { EnumProductTypeFilterObjectSchema as EnumProductTypeFilterObjectSchema } from './EnumProductTypeFilter.schema';
+import { ProductTypeSchema } from '../enums/ProductType.schema'
 
 const acquisitionitemscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionItemScalarWhereInputObjectSchema), z.lazy(() => AcquisitionItemScalarWhereInputObjectSchema).array()]).optional(),
@@ -35,7 +37,8 @@ const acquisitionitemscalarwhereinputSchema = z.object({
   vendorRmaNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   warrantyMonths: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
   serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable()
+  capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
+  productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional()
 }).strict();
 export const AcquisitionItemScalarWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionItemScalarWhereInput> = acquisitionitemscalarwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemScalarWhereInput>;
 export const AcquisitionItemScalarWhereInputObjectZodSchema = acquisitionitemscalarwhereinputSchema;

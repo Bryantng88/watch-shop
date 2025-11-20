@@ -1,5 +1,5 @@
 // src/features/acquisitions/server/acquisition.repo.ts
-import { Prisma, AcquisitionStatus, AcquisitionType, Acquisition } from "@prisma/client";
+import { Prisma, AcquisitionStatus, AcquisitionType, Acquisition, ProductType } from "@prisma/client";
 import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
@@ -86,8 +86,8 @@ export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquis
 // 6. Chuyển phiếu sang trạng thái POSTED
 export async function changeDraftToPost(tx: DB, acqId: string) {
 
-    const refNo = await genRefNoIncrement();
-    console.log('in ra ref no : ' + refNo)
+    //const refNo = await genRefNoIncrement();
+    //console.log('in ra ref no : ' + refNo + ' va  ' + acqId)
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
 
@@ -139,14 +139,14 @@ export async function acqGetById(id: string, tx?: DB) {
 export async function addAcqItem(
     tx: DB,
     acqId: string,
-    productId: string,
+    productType: ProductType,
     unitCost: number
 ) {
     const db = dbOrTx(tx);
     return db.acquisitionItem.create({
         data: {
             acquisition: { connect: { id: acqId } },
-            product: { connect: { id: productId } },
+            productType: productType,
             quantity: 1,
             unitCost: unitCost
         }
