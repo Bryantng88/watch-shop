@@ -15,6 +15,6 @@ export async function genRefNoIncrement() {
         const match = last.refNo.match(/NK-\d{4}-(\d+)/);
         if (match) nextNum = parseInt(match[1]) + 1;
     }
-    const refNo = `NK-${year}-${String(nextNum).padStart(6, "0")}`;
+    const refNo = `AC-${year}-${String(nextNum).padStart(6, "0")}`;
     return refNo;
 }

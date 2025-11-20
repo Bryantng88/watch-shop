@@ -6,9 +6,10 @@ import DrawerHost from "./components/Drawer";                      // <— Drawe
 import ItemsHover from "./components/ItemsHover";
 import AcqItemsPopover from "./components/ItemsPopover";
 import ChangeToPostedButton from "./components/ChangeToPostedButton";
+type SearchParams = { [key: string]: string | string[] | undefined };
 
 type PageProps = {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: Promise<SearchParams>;
 };
 
 function fmtDate(d?: string | Date | null) {
@@ -30,8 +31,10 @@ function fmtMoney(n?: number | null, cur = "VND") {
 
 export default async function AcquisitionListPage({ searchParams }: PageProps) {
     // chuẩn hoá searchParams -> URLSearchParams
+    const spObj = await searchParams;  // 👈 quan trọng
+
     const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
+        Object.entries(spObj).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
         )
     );
@@ -72,7 +75,7 @@ export default async function AcquisitionListPage({ searchParams }: PageProps) {
                     <label className="text-xs text-gray-600">Tìm kiếm</label>
                     <input
                         name="q"
-                        defaultValue={(searchParams.q as string) ?? ""}
+                        defaultValue={(spObj.q as string) ?? ""}
                         placeholder="RefNo, ghi chú…"
                         className="h-9 rounded border px-2"
                     />
@@ -82,7 +85,7 @@ export default async function AcquisitionListPage({ searchParams }: PageProps) {
                     <label className="text-xs text-gray-600">Sắp xếp</label>
                     <select
                         name="sort"
-                        defaultValue={(searchParams.sort as string) ?? "updatedDesc"}
+                        defaultValue={(spObj.sort as string) ?? "updatedDesc"}
                         className="h-9 rounded border px-2"
                     >
                         <option value="updatedDesc">Cập nhật ↓</option>

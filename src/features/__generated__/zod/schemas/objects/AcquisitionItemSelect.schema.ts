@@ -25,6 +25,7 @@ const makeSchema = () => z.object({
   warrantyMonths: z.boolean().optional(),
   serviceRequestId: z.boolean().optional(),
   capitalizeToProduct: z.boolean().optional(),
+  productType: z.boolean().optional(),
   acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   sourceOrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),

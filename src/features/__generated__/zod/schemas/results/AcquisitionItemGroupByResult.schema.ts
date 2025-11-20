@@ -37,6 +37,7 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     warrantyMonths: z.number(),
     serviceRequestId: z.number(),
     capitalizeToProduct: z.number(),
+    productType: z.number(),
     acquisition: z.number(),
     product: z.number(),
     sourceOrderItem: z.number(),

@@ -72,20 +72,13 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
         let total = 0;
         //
         for (const it of input.items) {
-            if (it.productType === "WATCH" && it.quantity > 1) {
-                for (let i = 0; i < it.quantity; ++i) {
 
-                    const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
-                    await repoAcq.addAcqItem(tx, acq.id, prod.id, it.unitCost)
-                }
-            } else {
-                const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
-                await repoAcq.addAcqItem(tx, acq.id, prod.id, it.unitCost)
-            }
             //const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
 
 
-            //await repoAcq.addAcqItem(tx, acq.id, prod.id, it.quantity, it.unitCost)
+            //const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
+            await repoAcq.addAcqItem(tx, acq.id, it.unitCost)
+
             total += (it.quantity ?? 1) * (it.unitCost ?? 0);
 
 
