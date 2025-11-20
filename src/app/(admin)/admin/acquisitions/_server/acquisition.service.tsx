@@ -70,7 +70,7 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
             notes: input.notes,
         })
         let total = 0;
-
+        //
         for (const it of input.items) {
             if (it.productType === "WATCH" && it.quantity > 1) {
                 for (let i = 0; i < it.quantity; ++i) {
@@ -130,9 +130,7 @@ export async function cancelAcquisition(id: string) {
 
 export async function updateAcquisitionWithItems(acqId: string, input: any) {
     return prisma.$transaction(async tx => {
-
         const vendorId = input.vendorId;
-
         // 1. Update acquisition
         await repoAcq.updateAcquisition(acqId, tx, {
             vendorId,
@@ -141,33 +139,19 @@ export async function updateAcquisitionWithItems(acqId: string, input: any) {
             currency: input.currency,
             type: input.type,
         });
-
         // 2. Xoá item đã remove
         if (input.removedIds?.length) {
             await repoAcq.deleteAcquisitionItems(tx, input.removedIds);
         }
-
         // 3. Xử lý từng item
         for (const item of input.items) {
-
-            // ============================
-            // CASE 1: ITEM CŨ → UPDATE
-            // ============================
             if (item.id) {
                 await repoAcq.updateAcqItem(tx, item.id, {
                     quantity: item.quantity,
                     unitCost: item.unitCost,
-
                 });
-
                 continue; // QUAN TRỌNG: bỏ qua không tạo product mới
             }
-
-            // ============================
-            // CASE 2: ITEM MỚI
-            // ============================
-
-            // WATCH & quantity > 1 ⇒ tạo nhiều product draft
             if (item.productType === "WATCH" && item.quantity > 1) {
 
                 for (let i = 0; i < item.quantity; i++) {
@@ -175,25 +159,19 @@ export async function updateAcquisitionWithItems(acqId: string, input: any) {
                         tx,
                         item.title,
                         vendorId,
-
                     );
-
                     await repoAcq.addAcqItem(tx, acqId, prod.id, item.unitCost);
                 }
-
             } else {
                 // Các loại khác hoặc WATCH quantity = 1
                 const prod = await repoProd.createProductDraft(
                     tx,
                     item.title,
                     vendorId,
-
                 );
-
                 await repoAcq.addAcqItem(tx, acqId, prod.id, item.unitCost);
             }
         }
-
         return { ok: true };
     });
 }
