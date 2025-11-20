@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useMemo } from "react";
 
 type Line = {
     id?: string;                // id có thì là item cũ, không có là mới
@@ -34,7 +36,10 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
     const setLine = (id: string | undefined, key: keyof Line, val: any) => {
         setLines(ls => ls.map(l => l.id === id ? { ...l, [key]: val } : l));
     };
-
+    const total = useMemo(
+        () => lines.reduce((s, l) => (Number(l.quantity) || 0) * (Number(l.unitCost) || 0) + s, 0),
+        [lines]
+    );
     const addLine = () => setLines(ls => [
         ...ls,
         { id: undefined, title: "", quantity: 1, unitCost: 0, productType: productTypes[0] }
@@ -93,40 +98,109 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
             {/* ... các field khác ... */}
 
             <h3 className="font-bold mt-4">Dòng sản phẩm</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tên SP</th><th>SL</th><th>Đơn giá</th><th>Loại</th><th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {lines.map((ln, idx) => (
-                        <tr key={ln.id || idx}>
-                            <td>
-                                <input value={ln.title} onChange={e => setLine(ln.id, "title", e.target.value)} />
-                            </td>
-                            <td>
-                                <input type="number" value={ln.quantity}
-                                    onChange={e => setLine(ln.id, "quantity", Number(e.target.value))} />
-                            </td>
-                            <td>
-                                <input type="number" value={ln.unitCost}
-                                    onChange={e => setLine(ln.id, "unitCost", Number(e.target.value))} />
-                            </td>
-                            <td>
-                                <select value={ln.productType}
-                                    onChange={e => setLine(ln.id, "productType", e.target.value)}>
-                                    {productTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </td>
-                            <td>
-                                <button type="button" onClick={() => removeLine(ln.id)}>Xoá</button>
-                            </td>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full bg-white rounded-lg shadow border mt-2">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="px-4 py-3 font-semibold text-left rounded-tl-lg">Tên SP</th>
+                            <th className="px-3 py-3 font-semibold text-left">Loại SP</th>
+                            <th className="px-2 py-3 font-semibold text-center">SL</th>
+                            <th className="px-4 py-3 font-semibold text-right">Đơn giá</th>
+                            <th className="px-4 py-3 font-semibold text-right">Thành tiền</th>
+                            <th className="px-2 py-3 rounded-tr-lg"></th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-            <button type="button" onClick={addLine}>+ Thêm dòng</button>
+                    </thead>
+                    <tbody>
+                        {lines.map((ln, idx) => {
+                            const money = (Number(ln.quantity) || 0) * (Number(ln.unitCost) || 0);
+                            return (
+                                <tr
+                                    key={ln.id}
+                                    className="hover:bg-gray-50 border-b last:border-b-0 transition"
+                                >
+                                    <td className="px-4 py-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Tên sản phẩm"
+                                            value={ln.title}
+                                            onChange={e => setLine(ln.id, "title", e.target.value)}
+                                            className="w-full border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        />
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <select
+                                            value={ln.productType}
+                                            onChange={e => setLine(ln.id, "productType", e.target.value as any)}
+                                            className="w-full border rounded-md px-2 py-1 bg-white"
+                                        >
+                                            {Object.values(productTypes).map(t => (
+                                                <option key={t} value={t}>
+                                                    {t}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                    <td className="px-2 py-2 text-center">
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={ln.quantity}
+                                            onChange={e => setLine(ln.id, "quantity", Number(e.target.value))}
+                                            className="w-14 border rounded-md px-2 py-1 text-center focus:outline-none"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 text-right">
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={ln.unitCost}
+                                            onChange={e => setLine(ln.id, "unitCost", Number(e.target.value))}
+                                            className="w-24 border rounded-md px-2 py-1 text-right focus:outline-none"
+                                            placeholder="0"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 text-right">
+                                        {money.toLocaleString("vi-VN")} {formData.currency}
+                                    </td>
+                                    <td className="px-2 py-2 text-center">
+                                        <button
+                                            type="button"
+                                            className="text-red-600 font-semibold hover:underline hover:text-red-800"
+                                            onClick={() => removeLine(ln.id)}
+                                        >
+                                            Xoá
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td className="px-4 py-3 font-semibold text-right" colSpan={4}>
+                                Tổng cộng
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-right">
+                                {total.toLocaleString("vi-VN")} {formData.currency}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div className="mt-3">
+                    <button
+                        type="button"
+                        className="text-blue-600 hover:underline font-medium"
+                        onClick={addLine}
+                    >
+                        + Thêm dòng
+                    </button>
+                </div>
+            </div>
+
+
 
             {err && <div className="text-red-600">{err}</div>}
             {okMsg && <div className="text-green-600">{okMsg}</div>}

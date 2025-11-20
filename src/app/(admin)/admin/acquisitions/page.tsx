@@ -5,6 +5,7 @@ import { parseAcqSearchParams } from "./ultils/search-params";    // NOTE: utils
 import DrawerHost from "./components/Drawer";                      // <— Drawer client component
 import ItemsHover from "./components/ItemsHover";
 import AcqItemsPopover from "./components/ItemsPopover";
+import ChangeToPostedButton from "./components/ChangeToPostedButton";
 
 type PageProps = {
     searchParams: { [key: string]: string | string[] | undefined };
@@ -150,15 +151,16 @@ export default async function AcquisitionListPage({ searchParams }: PageProps) {
                                             count={(a as any).itemCount ?? 0}
                                             currency={a.currency ?? "VND"}
                                         />
-                                    </td>                                    <td className="px-3 py-2">{(a as any).hasInvoice ? "✓" : "-"}</td>
+                                    </td>
+                                    <td className="px-3 py-2">{(a as any).hasInvoice ? "✓" : "-"}</td>
                                     <td className="px-3 py-2">{fmtDate((a as any).updatedAt)}</td>
                                     <td className="px-3 py-2">
                                         <div className="flex justify-end gap-3">
-                                            {/* Xem nhanh -> mở Drawer bằng query ?view= */}
-                                            <a href={viewHref(a.id)} className="text-blue-600 hover:underline text-xs">
-                                                Xem nhanh
-                                            </a>
-                                            <Link href={`/admin/acquisitions/${a.id}/edit`} className="text-amber-600 hover:underline text-xs">
+                                            <ChangeToPostedButton id={a.id} status={a.status} />
+                                            <Link
+                                                href={`/admin/acquisitions/${a.id}/edit`}
+                                                className="text-amber-600 hover:underline text-xs"
+                                            >
                                                 Sửa
                                             </Link>
                                         </div>

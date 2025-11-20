@@ -3,7 +3,7 @@ import { Prisma, AcquisitionStatus, AcquisitionType, Acquisition } from "@prisma
 import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
-
+import { genRefNoIncrement } from "./helpers";
 
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
@@ -85,12 +85,18 @@ export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquis
 
 // 6. Chuyển phiếu sang trạng thái POSTED
 export async function changeDraftToPost(tx: DB, acqId: string) {
+
+    const refNo = await genRefNoIncrement();
+    console.log('in ra ref no : ' + refNo)
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
 
     return tx.acquisition.update({
         where: { id: acqId },
-        data: { accquisitionStt: "POSTED" },
+        data: {
+            //refNo: refNo,
+            accquisitionStt: "POSTED"
+        },
         select: { id: true, accquisitionStt: true },
     });
 }
@@ -145,6 +151,26 @@ export async function addAcqItem(
             unitCost: unitCost
         }
     })
+}
+export async function updateAcqItem(
+    tx: DB,
+    itemId: string,
+    data: {
+        quantity?: number;
+        unitCost?: number;
+
+        // thêm các field khác nếu cần
+    }
+) {
+    const db = dbOrTx(tx);
+
+    return db.acquisitionItem.update({
+        where: { id: itemId },
+        data: {
+            ...data
+            // nếu có thêm trường khác thì bổ sung ở đây
+        },
+    });
 }
 
 //9 Xoá các item theo id
