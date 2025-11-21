@@ -7,9 +7,11 @@ import { isAcqItemsCached } from "../_server/acqItems.cache";
 type Rect = { top: number; left: number; width: number; height: number };
 
 export default function AcqItemsPopover({
+
     acqId,
     count,
     currency = "VND",
+
 }: {
     acqId: string;
     count: number;

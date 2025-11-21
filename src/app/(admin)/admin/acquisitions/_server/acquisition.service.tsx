@@ -5,7 +5,7 @@ import * as dto from "./acquisition.dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repoAcq from "./acquisition.repo";
 //mport { CreateAcqWithItemInput } from "./acquisition.dto";
-import { AcquisitionType } from "@prisma/client";
+import { AcquisitionType, ProductType } from "@prisma/client";
 import * as repoProd from "../../products/_server/product.repo";
 import { convertOffsetToTimes } from "framer-motion";
 import { Prisma } from "@prisma/client";
@@ -70,21 +70,18 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
             notes: input.notes,
         })
         let total = 0;
-        //
+
         for (const it of input.items) {
-
-            //const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
-
-
-            //const prod = await repoProd.createProductDraft(tx, it.title, vendorId);
-            await repoAcq.addAcqItem(tx, acq.id, it.unitCost)
-
+            // WATCH & quantity > 1 ⇒ tạo nhiều product draft
+            if (it.productType === "WATCH" && it.quantity > 1) {
+                for (let i = 0; i < it.quantity; i++) {
+                    await repoAcq.addAcqItem(tx, acq.id, 1, it.productType ?? ProductType, it.unitCost, it.title);
+                }
+            } else
+                await repoAcq.addAcqItem(tx, acq.id, it.quantity, it.productType ?? ProductType.WATCH, it.unitCost, it.title)
             total += (it.quantity ?? 1) * (it.unitCost ?? 0);
-
-
         }
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
-
         return { id: acq.id }
     });
 }

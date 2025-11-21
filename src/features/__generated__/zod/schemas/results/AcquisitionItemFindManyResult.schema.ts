@@ -21,6 +21,7 @@ export const AcquisitionItemFindManyResultSchema = z.object({
   serviceRequestId: z.string().optional(),
   capitalizeToProduct: z.boolean().optional(),
   productType: z.unknown(),
+  productTitle: z.string().optional(),
   acquisition: z.unknown(),
   product: z.unknown().optional(),
   sourceOrderItem: z.unknown().optional(),

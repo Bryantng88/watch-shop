@@ -9,7 +9,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
     return NextResponse.json({
         items: acq.acquisitionItem.map((i) => ({
             id: i.id,
-            title: i.product?.title ?? i.variant?.name ?? i.productId,
+            title: i.productTitle,
             quantity: i.quantity ?? 1,
             unitCost: Number(i.unitCost ?? 0),
         })),

@@ -25,6 +25,7 @@ export const AcquisitionItemInputSchema = z.object({
     serviceRequestId: z.string().optional().nullable(),
     capitalizeToProduct: z.boolean().optional().nullable(),
     productType: ProductTypeSchema,
+    productTitle: z.string().optional().nullable(),
     acquisition: z.unknown(),
     product: z.unknown().optional().nullable(),
     sourceOrderItem: z.unknown().optional().nullable(),
