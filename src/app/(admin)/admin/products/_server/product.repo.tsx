@@ -1,12 +1,13 @@
 
 import { DB, dbOrTx } from "@/server/db/client";
 import { ProductType } from "@prisma/client";
-
+import * as helper from "./helper";
 
 export async function createProductDraft(
     tx: DB,
     title: string,
     type: ProductType,
+    quantity: number,
     vendorId: string // hoặc ProductUncheckedCreateInput
 ) {
     const db = dbOrTx(tx);
@@ -16,7 +17,11 @@ export async function createProductDraft(
             vendorId: vendorId,
             contentStatus: "DRAFT",
             type: type,
-            variants: { stockQty: }
+            variants: {
+                create: [{
+                    stockQty: quantity
+                }]
+            }
         },
         select: { id: true, slug: true }  // <-- đúng cấp với data
     });
