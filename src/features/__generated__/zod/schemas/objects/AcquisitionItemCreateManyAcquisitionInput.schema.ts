@@ -23,7 +23,8 @@ const makeSchema = () => z.object({
   warrantyMonths: z.number().int().optional().nullable(),
   serviceRequestId: z.string().optional().nullable(),
   capitalizeToProduct: z.boolean().optional().nullable(),
-  productType: ProductTypeSchema.optional()
+  productType: ProductTypeSchema.optional(),
+  productTitle: z.string().optional().nullable()
 }).strict();
 export const AcquisitionItemCreateManyAcquisitionInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCreateManyAcquisitionInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCreateManyAcquisitionInput>;
 export const AcquisitionItemCreateManyAcquisitionInputObjectZodSchema = makeSchema();

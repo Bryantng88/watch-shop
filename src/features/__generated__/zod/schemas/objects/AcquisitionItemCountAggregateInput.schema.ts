@@ -23,6 +23,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.literal(true).optional(),
   capitalizeToProduct: z.literal(true).optional(),
   productType: z.literal(true).optional(),
+  productTitle: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const AcquisitionItemCountAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCountAggregateInputType>;

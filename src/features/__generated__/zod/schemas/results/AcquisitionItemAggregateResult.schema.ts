@@ -20,6 +20,7 @@ export const AcquisitionItemAggregateResultSchema = z.object({  _count: z.object
     serviceRequestId: z.number(),
     capitalizeToProduct: z.number(),
     productType: z.number(),
+    productTitle: z.number(),
     acquisition: z.number(),
     product: z.number(),
     sourceOrderItem: z.number(),
@@ -51,7 +52,8 @@ export const AcquisitionItemAggregateResultSchema = z.object({  _count: z.object
     returnedAt: z.date().nullable(),
     vendorRmaNo: z.string().nullable(),
     warrantyMonths: z.number().int().nullable(),
-    serviceRequestId: z.string().nullable()
+    serviceRequestId: z.string().nullable(),
+    productTitle: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -69,5 +71,6 @@ export const AcquisitionItemAggregateResultSchema = z.object({  _count: z.object
     returnedAt: z.date().nullable(),
     vendorRmaNo: z.string().nullable(),
     warrantyMonths: z.number().int().nullable(),
-    serviceRequestId: z.string().nullable()
+    serviceRequestId: z.string().nullable(),
+    productTitle: z.string().nullable()
   }).nullable().optional()});

@@ -17,6 +17,7 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
   warrantyMonths: z.number().int(),
   serviceRequestId: z.string(),
   capitalizeToProduct: z.boolean(),
+  productTitle: z.string(),
   _count: z.object({
     id: z.number(),
     acquisitionId: z.number(),
@@ -38,6 +39,7 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.number(),
     capitalizeToProduct: z.number(),
     productType: z.number(),
+    productTitle: z.number(),
     acquisition: z.number(),
     product: z.number(),
     sourceOrderItem: z.number(),
@@ -69,7 +71,8 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     returnedAt: z.date().nullable(),
     vendorRmaNo: z.string().nullable(),
     warrantyMonths: z.number().int().nullable(),
-    serviceRequestId: z.string().nullable()
+    serviceRequestId: z.string().nullable(),
+    productTitle: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -87,6 +90,7 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     returnedAt: z.date().nullable(),
     vendorRmaNo: z.string().nullable(),
     warrantyMonths: z.number().int().nullable(),
-    serviceRequestId: z.string().nullable()
+    serviceRequestId: z.string().nullable(),
+    productTitle: z.string().nullable()
   }).nullable().optional()
 }));

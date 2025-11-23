@@ -38,7 +38,8 @@ const acquisitionitemscalarwhereinputSchema = z.object({
   warrantyMonths: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
   serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
-  productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional()
+  productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
+  productTitle: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const AcquisitionItemScalarWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionItemScalarWhereInput> = acquisitionitemscalarwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemScalarWhereInput>;
 export const AcquisitionItemScalarWhereInputObjectZodSchema = acquisitionitemscalarwhereinputSchema;

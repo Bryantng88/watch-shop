@@ -9,6 +9,7 @@ import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
 
 
+
 export async function findDraftOfVendorToday(tx: Prisma.TransactionClient, vendorId: string) {
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const end = new Date(); end.setHours(23, 59, 59, 999);
@@ -102,7 +103,7 @@ export async function changeDraftToPost(tx: DB, acqId: string) {
 }
 
 // 7. lấy list acquisition
-export async function acqList(where: Prisma.AcquisitionWhereInput,
+export async function getAcqList(where: Prisma.AcquisitionWhereInput,
     orderBy: Prisma.AcquisitionOrderByWithRelationInput[],
     skip: number, take: number, tx?: DB) {
     const db = dbOrTx(tx);
@@ -122,7 +123,7 @@ export async function acqList(where: Prisma.AcquisitionWhereInput,
 }
 
 // 8. Lấy detail acquisition
-export async function acqGetById(id: string, tx?: DB) {
+export async function getAcqtById(id: string, tx?: DB) {
     const db = dbOrTx(tx);
     //const db = dbOrTx(tx);
     return db.acquisition.findUnique({
@@ -139,19 +140,30 @@ export async function acqGetById(id: string, tx?: DB) {
 export async function addAcqItem(
     tx: DB,
     acqId: string,
+    quantity: number,
     productType: ProductType,
-    unitCost: number
+    unitCost: number,
+    title: string
 ) {
     const db = dbOrTx(tx);
     return db.acquisitionItem.create({
         data: {
             acquisition: { connect: { id: acqId } },
             productType: productType,
-            quantity: 1,
-            unitCost: unitCost
+            quantity: quantity,
+            unitCost: unitCost,
+            productTitle: title
         }
     })
 }
+
+export async function getAqcItems(tx: DB, acqId: string) {
+    const db = dbOrTx(tx);
+    return db.acquisitionItem.findMany({
+        where: { acquisitionId: acqId },
+    })
+}
+
 export async function updateAcqItem(
     tx: DB,
     itemId: string,
