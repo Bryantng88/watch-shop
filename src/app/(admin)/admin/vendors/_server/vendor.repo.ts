@@ -1,6 +1,5 @@
 import { PrismaClient, Prisma, ProductType, Vendor } from "@prisma/client";
-import prisma from "@/server/db/client";
-type Db = typeof prisma | Tx;
+import { DB, dbOrTx, prisma } from "@/server/db/client";
 
 export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 export type VendorOptions = { id: string; name: string };
@@ -19,8 +18,8 @@ export type BrandOption = { id: string; name: string };
 
 
 // Lấy danh sách vendor (có thể phân trang/filter nếu cần)
-export async function listVendors(
-    tx: Tx,
+export async function getListVendors(
+    tx: DB,
     opts?: { q?: string; take?: number; skip?: number }
 ) {
     return tx.vendor.findMany({
@@ -32,6 +31,17 @@ export async function listVendors(
         orderBy: { name: "asc" },
         select: { id: true, name: true, phone: true, email: true },
     });
+}
+
+export async function getVendorByName(tx: DB, name: string) {
+    const db = dbOrTx(tx)
+    const vendor = await db.vendor.findUnique({
+        where: { name },
+        select: {
+            id: true
+        }
+    })
+    return vendor?.id
 }
 
 // Tạo vendor mới
@@ -49,7 +59,7 @@ export async function createVendor(
 }
 
 // Tìm vendor theo số điện thoại
-export async function findVendorByPhone(tx: Tx, phone: string) {
+export async function getVendorByPhone(tx: Tx, phone: string) {
     return tx.vendor.findUnique({ where: { phone } });
 }
 
@@ -57,7 +67,7 @@ export async function findVendorByPhone(tx: Tx, phone: string) {
 export async function getVendorById(tx: Tx, id: string) {
     return tx.vendor.findUnique({ where: { id }, select: { id: true, name: true, phone: true, email: true } });
 }
-export async function listBrands(): Promise<BrandOption[]> {
+export async function getListBrands(): Promise<BrandOption[]> {
     const brands = await prisma.brand.findMany({
 
         select: {

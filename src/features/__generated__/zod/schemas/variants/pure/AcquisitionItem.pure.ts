@@ -25,7 +25,7 @@ export const AcquisitionItemModelSchema = z.object({
     serviceRequestId: z.string().nullable(),
     capitalizeToProduct: z.boolean().nullable(),
     productType: ProductTypeSchema,
-    productTitle: z.string().nullable(),
+    productTitle: z.string(),
     acquisition: z.unknown(),
     product: z.unknown().nullable(),
     sourceOrderItem: z.unknown().nullable(),

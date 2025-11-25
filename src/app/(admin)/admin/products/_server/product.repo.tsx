@@ -8,13 +8,14 @@ export async function createProductDraft(
     title: string,
     type: ProductType,
     quantity: number,
-    vendorId: string // hoặc ProductUncheckedCreateInput
+    vendorId: string,
+    // hoặc ProductUncheckedCreateInput
 ) {
     const db = dbOrTx(tx);
     return db.product.create({
         data: {
             title: title,
-            vendorId: vendorId,
+            vendorId,
             contentStatus: "DRAFT",
             type: type,
             variants: {

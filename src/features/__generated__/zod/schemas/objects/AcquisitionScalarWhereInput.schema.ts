@@ -15,7 +15,7 @@ const acquisitionscalarwhereinputSchema = z.object({
   OR: z.lazy(() => AcquisitionScalarWhereInputObjectSchema).array().optional(),
   NOT: z.union([z.lazy(() => AcquisitionScalarWhereInputObjectSchema), z.lazy(() => AcquisitionScalarWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  vendorId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   customerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumAcquisitionTypeFilterObjectSchema), AcquisitionTypeSchema]).optional(),
   acquiredAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),

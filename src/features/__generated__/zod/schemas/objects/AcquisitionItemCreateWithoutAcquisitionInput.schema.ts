@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.string().optional().nullable(),
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
-  productTitle: z.string().optional().nullable(),
+  productTitle: z.string(),
   product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
   sourceOrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()

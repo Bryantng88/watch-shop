@@ -11,7 +11,7 @@ import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
-import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
+import { VendorScalarRelationFilterObjectSchema as VendorScalarRelationFilterObjectSchema } from './VendorScalarRelationFilter.schema';
 import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema'
@@ -21,7 +21,7 @@ const acquisitionwhereinputSchema = z.object({
   OR: z.lazy(() => AcquisitionWhereInputObjectSchema).array().optional(),
   NOT: z.union([z.lazy(() => AcquisitionWhereInputObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  vendorId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   customerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumAcquisitionTypeFilterObjectSchema), AcquisitionTypeSchema]).optional(),
   acquiredAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
@@ -38,7 +38,7 @@ const acquisitionwhereinputSchema = z.object({
   sentAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   returnedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
-  vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
+  vendor: z.union([z.lazy(() => VendorScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional()
 }).strict();
