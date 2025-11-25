@@ -2,14 +2,14 @@
 
 import { useTransition } from "react";
 
-export default function ActionButton({ id, status }: { id: string, status: string }) {
+export default function ActionButton({ id, status, vendor }: { id: string, status: string, vendor: string }) {
     const [pending, startTransition] = useTransition();
 
     const handleClick = async () => {
         await fetch(`/api/admin/acquisitions/${id}/status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "POSTED" }),
+            body: JSON.stringify({ status: "POSTED", vendor }),
         });
         // reload trang (hoặc dùng router.refresh() nếu xài next/navigation)
         window.location.reload();

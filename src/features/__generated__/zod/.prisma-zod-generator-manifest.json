@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2025-11-21T01:49:27.520Z",
+  "generatedAt": "2025-11-24T02:33:50.877Z",
   "outputPath": "D:\\workspace\\latest-project\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",
@@ -589,6 +589,7 @@
     "schemas\\objects\\EnumVendorRoleWithAggregatesFilter.schema.ts",
     "schemas\\objects\\EnumAcquisitionTypeFilter.schema.ts",
     "schemas\\objects\\EnumAcquisitionStatusFilter.schema.ts",
+    "schemas\\objects\\VendorScalarRelationFilter.schema.ts",
     "schemas\\objects\\AcquisitionCountOrderByAggregateInput.schema.ts",
     "schemas\\objects\\AcquisitionAvgOrderByAggregateInput.schema.ts",
     "schemas\\objects\\AcquisitionMaxOrderByAggregateInput.schema.ts",
@@ -885,7 +886,7 @@
     "schemas\\objects\\EnumAcquisitionTypeFieldUpdateOperationsInput.schema.ts",
     "schemas\\objects\\EnumAcquisitionStatusFieldUpdateOperationsInput.schema.ts",
     "schemas\\objects\\CustomerUpdateOneWithoutAcquisitionNestedInput.schema.ts",
-    "schemas\\objects\\VendorUpdateOneWithoutAcquisitionsNestedInput.schema.ts",
+    "schemas\\objects\\VendorUpdateOneRequiredWithoutAcquisitionsNestedInput.schema.ts",
     "schemas\\objects\\AcquisitionItemUpdateManyWithoutAcquisitionNestedInput.schema.ts",
     "schemas\\objects\\InvoiceUpdateManyWithoutAcquisitionNestedInput.schema.ts",
     "schemas\\objects\\AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInput.schema.ts",

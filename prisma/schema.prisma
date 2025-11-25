@@ -370,7 +370,7 @@ model Vendor {
 
 model Acquisition {
   id              String            @id @default(cuid())
-  vendorId        String?
+  vendorId        String
   customerId      String?
   type            AcquisitionType   @default(PURCHASE)
   acquiredAt      DateTime
@@ -387,7 +387,7 @@ model Acquisition {
   sentAt          DateTime?         @db.Timestamp(6)
   returnedAt      DateTime?         @db.Timestamp(6)
   customer        Customer?         @relation(fields: [customerId], references: [id])
-  vendor          Vendor?           @relation(fields: [vendorId], references: [id])
+  vendor          Vendor            @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
   acquisitionItem AcquisitionItem[]
   invoice         Invoice[]
 
@@ -418,7 +418,7 @@ model AcquisitionItem {
   serviceRequestId    String?
   capitalizeToProduct Boolean?               @default(true)
   productType         ProductType            @default(WATCH)
-  productTitle        String?
+  productTitle        String
   acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
   product             Product?               @relation(fields: [productId], references: [id])
   sourceOrderItem     OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])

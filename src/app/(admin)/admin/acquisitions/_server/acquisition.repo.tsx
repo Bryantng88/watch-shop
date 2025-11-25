@@ -87,7 +87,7 @@ export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquis
 // 6. Chuyển phiếu sang trạng thái POSTED
 export async function changeDraftToPost(tx: DB, acqId: string) {
 
-    //const refNo = await genRefNoIncrement();
+    const refNo = await genRefNoIncrement(tx);
     //console.log('in ra ref no : ' + refNo + ' va  ' + acqId)
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
@@ -95,7 +95,7 @@ export async function changeDraftToPost(tx: DB, acqId: string) {
     return tx.acquisition.update({
         where: { id: acqId },
         data: {
-            //refNo: refNo,
+            refNo: refNo,
             accquisitionStt: "POSTED"
         },
         select: { id: true, accquisitionStt: true },
@@ -112,7 +112,7 @@ export async function getAcqList(where: Prisma.AcquisitionWhereInput,
             where, orderBy, skip, take,
             select: {
                 id: true, refNo: true, type: true, accquisitionStt: true,
-                acquiredAt: true, cost: true, currency: true,
+                acquiredAt: true, cost: true, currency: true, updatedAt: true,
                 vendor: { select: { id: true, name: true } },
                 _count: { select: { acquisitionItem: true, invoice: true } }
             }

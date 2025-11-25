@@ -7,6 +7,7 @@ import * as repoAcq from "./acquisition.repo";
 //mport { CreateAcqWithItemInput } from "./acquisition.dto";
 import { AcquisitionType, ProductType } from "@prisma/client";
 import * as repoProd from "../../products/_server/product.repo";
+import * as repoVendor from "../../vendors/_server/vendor.repo"
 import { convertOffsetToTimes } from "framer-motion";
 import { Prisma } from "@prisma/client";
 
@@ -16,7 +17,7 @@ export async function getAdminAcquisitionList(raw: unknown) {
     const page = Math.max(1, f.page ?? 1);
     const pageSize = Math.max(1, Math.min(200, f.pageSize ?? DEFAULT_PAGE_SIZE));
 
-    const { rows, total } = await repoAcq.acqList(
+    const { rows, total } = await repoAcq.getAcqList(
         buildAcqWhere(f),
         buildAcqOrderBy(f.sort),
         (page - 1) * pageSize,
@@ -28,11 +29,12 @@ export async function getAdminAcquisitionList(raw: unknown) {
         refNo: a.refNo,
         type: a.type,
         status: a.accquisitionStt,
-        vendorName: a.vendor?.name ?? null,
+        vendorName: a.vendor.name,
         itemCount: a._count.acquisitionItem,
         hasInvoice: a._count.invoice > 0,
         acquiredAt: a.acquiredAt,
         cost: a.cost,
+        updatedAt: a.updatedAt,
         currency: a.currency ?? "VND",
     }));
 
@@ -42,7 +44,7 @@ export async function getAdminAcquisitionList(raw: unknown) {
 // Chi tiết
 export async function getAcquisitionDetail(id: string) {
 
-    const acq = await repoAcq.acqGetById(id);
+    const acq = await repoAcq.getAcqtById(id);
     if (!acq) throw new Error("Không tìm thấy phiếu nhập");
     return acq;
 }
@@ -87,12 +89,32 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
 }
 
 // Chuyển phiếu sang POSTED
-export async function postAcquisition(acqId: string) {
+export async function postAcquisition(acqId: string, vendorName: string) {
     return prisma.$transaction(async (tx) => {
+        const items = await repoAcq.getAqcItems(tx, acqId)
+        const vendorId = await repoVendor.getVendorByName(tx, vendorName)
+        for (const item of items) {
+            if (!item.productId) {
+                await repoProd.createProductDraft(tx, item.productTitle, item.productType, item.quantity, vendorId)
+            }
+        }
+
         return repoAcq.changeDraftToPost(tx, acqId);
     });
 }
 
+export async function postMultipleAcquisitions(items: { id: string; vendor: string }[]) {
+    const results = [];
+    for (const acq of items) {
+        try {
+            await postAcquisition(acq.id, acq.vendor); // dùng logic postAcquisition như đã hướng dẫn phía trên
+            results.push({ id: acq.id, ok: true });
+        } catch (e) {
+            results.push({ id: acq.id, ok: false, error: (e as Error).message });
+        }
+    }
+    return results;
+}
 
 // Đăng (POSTED) – ví dụ có transaction
 //export async function postAcquisition(id: string) {

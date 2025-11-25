@@ -28,7 +28,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   capitalizeToProduct: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   productType: SortOrderSchema.optional(),
-  productTitle: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  productTitle: SortOrderSchema.optional(),
   acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   sourceOrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),

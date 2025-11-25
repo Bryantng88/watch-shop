@@ -39,7 +39,7 @@ const acquisitionitemscalarwherewithaggregatesinputSchema = z.object({
   serviceRequestId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableWithAggregatesFilterObjectSchema), z.boolean()]).optional().nullable(),
   productType: z.union([z.lazy(() => EnumProductTypeWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional(),
-  productTitle: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  productTitle: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional()
 }).strict();
 export const AcquisitionItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.AcquisitionItemScalarWhereWithAggregatesInput> = acquisitionitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemScalarWhereWithAggregatesInput>;
 export const AcquisitionItemScalarWhereWithAggregatesInputObjectZodSchema = acquisitionitemscalarwherewithaggregatesinputSchema;

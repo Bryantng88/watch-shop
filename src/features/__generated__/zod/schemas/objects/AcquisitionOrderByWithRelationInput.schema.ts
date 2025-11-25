@@ -9,7 +9,7 @@ import { InvoiceOrderByRelationAggregateInputObjectSchema as InvoiceOrderByRelat
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
-  vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorId: SortOrderSchema.optional(),
   customerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   type: SortOrderSchema.optional(),
   acquiredAt: SortOrderSchema.optional(),

@@ -29,7 +29,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   capitalizeToProduct: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   productType: SortOrderSchema.optional(),
-  productTitle: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  productTitle: SortOrderSchema.optional(),
   _count: z.lazy(() => AcquisitionItemCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => AcquisitionItemAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => AcquisitionItemMaxOrderByAggregateInputObjectSchema).optional(),

@@ -1,11 +1,12 @@
 
-import prisma from "@/server/db/client";
+import { prisma, DB, dbOrTx } from "@/server/db/client";
 
-export async function genRefNoIncrement() {
+export async function genRefNoIncrement(tx: DB) {
+    const db = dbOrTx(tx);
     const year = new Date().getFullYear();
     // Tìm số lớn nhất đã tồn tại trong năm
-    const last = await prisma.acquisition.findFirst({
-        where: { refNo: { startsWith: `NK-${year}-` } },
+    const last = await db.acquisition.findFirst({
+        where: { refNo: { startsWith: `AC-${year}-` } },
         orderBy: { refNo: "desc" },
         select: { refNo: true }
     });
