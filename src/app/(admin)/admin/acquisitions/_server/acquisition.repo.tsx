@@ -112,7 +112,7 @@ export async function getAcqList(where: Prisma.AcquisitionWhereInput,
             where, orderBy, skip, take,
             select: {
                 id: true, refNo: true, type: true, accquisitionStt: true,
-                createdAt: true, cost: true, currency: true, updatedAt: true,
+                createdAt: true, cost: true, currency: true, updatedAt: true, notes: true,
                 vendor: { select: { id: true, name: true } },
                 _count: { select: { acquisitionItem: true, invoice: true } }
             }

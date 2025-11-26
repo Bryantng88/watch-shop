@@ -50,35 +50,45 @@ export default function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed z-50 lg:static lg:z-auto
-          top-0 left-0 h-full lg:h-auto
-          w-72 -translate-x-full lg:translate-x-0
-          ${open ? "translate-x-0" : ""}
-          bg-[#11191f] text-gray-200
-          transition-transform
-        `}
+    fixed z-50 lg:static lg:z-auto
+    top-0 left-0 h-full lg:h-auto
+    w-52 -translate-x-full lg:translate-x-0
+    ${open ? "translate-x-0" : ""}
+    bg-[#11191f] text-gray-200
+    transition-transform
+  `}
       >
-        <div className="flex items-center gap-2 px-4 h-14 border-b border-white/10">
-          <div className="rounded bg-white/10 px-2 py-1 text-xs">Admin</div>
-          <span className="text-sm opacity-80">Control Panel</span>
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 h-12 border-b border-white/10">
+          <div className="rounded bg-white/10 px-2 py-0.5 text-[10px]">
+            Admin
+          </div>
+          <span className="text-xs opacity-70">Control Panel</span>
         </div>
 
-        <nav className="p-3 space-y-1">
+        {/* Nav */}
+        <nav className="px-3 py-3 space-y-1">
           {NAV.map((n) => {
             const Icon = n.icon;
             return (
-              <ActiveLink key={n.href} href={n.href} exact={n.exact}>
-                <Icon size={16} />
-                <span>{n.label}</span>
+              <ActiveLink
+                key={n.href}
+                href={n.href}
+                exact={n.exact}
+              >
+                <Icon size={15} className="opacity-80" />
+                <span className="text-[14px]">{n.label}</span>
               </ActiveLink>
             );
           })}
         </nav>
 
-        <div className="mt-auto p-3 text-xs opacity-60">
+        {/* Footer */}
+        <div className="mt-auto p-3 text-[11px] opacity-50">
           © {new Date().getFullYear()} Admin
         </div>
       </aside>
+
     </>
   );
 }

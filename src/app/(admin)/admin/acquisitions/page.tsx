@@ -23,6 +23,8 @@ export default async function AcquisitionListPage({ searchParams }: { searchPara
 
     const input = parseAcqSearchParams(sp);
     const { items, total, page, pageSize } = await getAdminAcquisitionList(input);
+
+    console.log('in ra note : ' + JSON.stringify(items))
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
     return (

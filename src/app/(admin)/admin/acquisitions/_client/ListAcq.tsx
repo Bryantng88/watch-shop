@@ -18,6 +18,7 @@ type AcquisitionItem = {
     currency: string;
     itemCount: number;
     hasInvoice: boolean;
+    notes: string;
     createdAt: string;
     updatedAt: string;
 };
@@ -228,6 +229,7 @@ export default function AcquisitionListPageClient({
                             <th className="px-3 py-2 text-left">Số dòng</th>
                             <th className="px-3 py-2 text-left">HĐ</th>
                             <th className="px-3 py-2 text-left">Cập nhật</th>
+                            <th className="px-3 py-2 text-left">Note</th>
                             <th className="px-3 py-2 text-right">Hành động</th>
                         </tr>
                     </thead>
@@ -285,6 +287,7 @@ export default function AcquisitionListPageClient({
                                     <td className="px-3 py-2">  {(a.updatedAt && a.updatedAt !== a.createdAt)
                                         ? fmtDate(a.updatedAt)
                                         : "-"}</td>
+                                    <td className="px-3 py-2">{a.notes}</td>
 
                                     <td className="relative px-3 py-2 text-right">
                                         <button

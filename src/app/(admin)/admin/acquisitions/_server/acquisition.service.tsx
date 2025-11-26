@@ -27,6 +27,7 @@ export async function getAdminAcquisitionList(raw: unknown) {
     const items = rows.map(a => ({
         id: a.id,
         refNo: a.refNo,
+        notes: a.notes,
         type: a.type,
         status: a.accquisitionStt,
         vendorName: a.vendor.name,
@@ -166,12 +167,13 @@ export async function updateAcquisitionWithItems(acqId: string, input: any) {
             if (item.productType === "WATCH" && item.quantity > 1) {
 
                 for (let i = 0; i < item.quantity; i++) {
-                    const prod = await repoProd.createProductDraft(
-                        tx,
-                        item.title,
-                        vendorId,
-                    );
-                    await repoAcq.addAcqItem(tx, acqId, prod.id, item.unitCost);
+                    if (item.productType === "WATCH" && item.quantity > 1) {
+                        for (let i = 0; i < item.quantity; i++) {
+                            await repoAcq.addAcqItem(tx, acq.id, 1, it.productType ?? ProductType, it.unitCost, it.title);
+                        }
+                    } else
+                        await repoAcq.addAcqItem(tx, acq.id, it.quantity, it.productType ?? ProductType.WATCH, it.unitCost, it.title)
+                    total += (it.quantity ?? 1) * (it.unitCost ?? 0);
                 }
             } else {
                 // Các loại khác hoặc WATCH quantity = 1
