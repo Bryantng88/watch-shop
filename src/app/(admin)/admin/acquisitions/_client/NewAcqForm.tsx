@@ -111,7 +111,7 @@ export default function NewAcqForm({ vendors }: Props) {
     }
 
     return (
-        <div className="space-y-6 pb-24">
+        <form id="acq-form" onSubmit={onSubmit} className="space-y-6 pb-24">
             {/* HEADER */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Tạo phiếu nhập (DRAFT)</h1>
@@ -356,30 +356,30 @@ export default function NewAcqForm({ vendors }: Props) {
                         </tfoot>
                     </table>
                 </div>
+                {/* FOOTER BUTTONS (STICKY) */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg py-3 px-6 flex justify-end gap-3">
+                    <button
+                        disabled={saving}
+                        className="rounded-md border px-4 py-2"
+                        onClick={() => history.back()}
+                    >
+                        Hủy
+                    </button>
+
+                    <button
+                        type="submit"
+                        form="acq-form"
+                        disabled={saving}
+                        className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800"
+                    >
+                        {saving ? "Đang lưu…" : "Lưu phiếu (DRAFT)"}
+                    </button>
+                </div>
+
+                {err && <div className="text-red-600">{err}</div>}
+                {okMsg && <div className="text-green-600">{okMsg}</div>}
             </div>
+        </form>
 
-            {/* FOOTER BUTTONS (STICKY) */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg py-3 px-6 flex justify-end gap-3">
-                <button
-                    disabled={saving}
-                    className="rounded-md border px-4 py-2"
-                    onClick={() => history.back()}
-                >
-                    Hủy
-                </button>
-
-                <button
-                    type="submit"
-                    form="acq-form"
-                    disabled={saving}
-                    className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800"
-                >
-                    {saving ? "Đang lưu…" : "Lưu phiếu (DRAFT)"}
-                </button>
-            </div>
-
-            {err && <div className="text-red-600">{err}</div>}
-            {okMsg && <div className="text-green-600">{okMsg}</div>}
-        </div>
     );
 }

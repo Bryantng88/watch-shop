@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import DrawerHost from "../components/Drawer";
 import ItemsHover from "../components/ItemsHover";
 import AcqItemsPopover from "../components/ItemsPopover";
 import ChangeToPostedButton from "../components/ChangeToPostedButton";
+import ActionMenu from "../components/ActionMenu";
 
 type AcquisitionItem = {
     id: string;
@@ -61,6 +62,7 @@ export default function AcquisitionListPageClient({
     totalPages,
     rawSearchParams
 }: PageProps) {
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     // ============================
     // BULK CHECKBOX HANDLING
@@ -281,17 +283,27 @@ export default function AcquisitionListPageClient({
                                     <td className="px-3 py-2">{a.hasInvoice ? "✓" : "-"}</td>
                                     <td className="px-3 py-2">{fmtDate(a.updatedAt)}</td>
 
-                                    <td className="px-3 py-2">
-                                        <div className="flex justify-end gap-3">
-                                            <ChangeToPostedButton id={a.id} status={a.status} vendor={a.vendorName || ""} />
-                                            <Link
-                                                href={`/admin/acquisitions/${a.id}/edit`}
-                                                className="text-amber-600 hover:underline text-xs"
-                                            >
-                                                Sửa
-                                            </Link>
-                                        </div>
+                                    <td className="relative px-3 py-2 text-right">
+                                        <button
+                                            className="p-2 rounded hover:bg-gray-100"
+                                            onClick={() =>
+                                                setOpenMenuId(openMenuId === a.id ? null : a.id)
+                                            }
+                                        >
+                                            ⋮
+                                        </button>
+
+                                        <ActionMenu
+                                            open={openMenuId === a.id}
+                                            onClose={() => setOpenMenuId(null)}
+                                            acqId={a.id}
+                                            status={a.status}
+                                            vendor={a.vendorName || ""}
+                                        />
                                     </td>
+
+
+
                                 </tr>
                             ))
                         )}
