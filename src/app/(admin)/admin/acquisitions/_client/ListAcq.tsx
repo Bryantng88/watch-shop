@@ -18,7 +18,7 @@ type AcquisitionItem = {
     currency: string;
     itemCount: number;
     hasInvoice: boolean;
-    acquiredAt: string;
+    createdAt: string;
     updatedAt: string;
 };
 
@@ -269,7 +269,7 @@ export default function AcquisitionListPageClient({
                                         </span>
                                     </td>
 
-                                    <td className="px-3 py-2">{fmtDate(a.acquiredAt)}</td>
+                                    <td className="px-3 py-2">{fmtDate(a.createdAt)}</td>
                                     <td className="px-3 py-2">{fmtMoney(a.cost, a.currency)}</td>
 
                                     <td className="px-3 py-2">
@@ -277,11 +277,14 @@ export default function AcquisitionListPageClient({
                                             acqId={a.id}
                                             count={a.itemCount}
                                             currency={a.currency}
+                                            status={a.status}
                                         />
                                     </td>
 
                                     <td className="px-3 py-2">{a.hasInvoice ? "✓" : "-"}</td>
-                                    <td className="px-3 py-2">{fmtDate(a.updatedAt)}</td>
+                                    <td className="px-3 py-2">  {(a.updatedAt && a.updatedAt !== a.createdAt)
+                                        ? fmtDate(a.updatedAt)
+                                        : "-"}</td>
 
                                     <td className="relative px-3 py-2 text-right">
                                         <button
@@ -290,12 +293,10 @@ export default function AcquisitionListPageClient({
                                                 setOpenMenuId(openMenuId === a.id ? null : a.id)
                                             }
                                         >
-                                            ⋮
+
                                         </button>
 
                                         <ActionMenu
-                                            open={openMenuId === a.id}
-                                            onClose={() => setOpenMenuId(null)}
                                             acqId={a.id}
                                             status={a.status}
                                             vendor={a.vendorName || ""}

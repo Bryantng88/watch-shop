@@ -32,12 +32,11 @@ export async function getAdminAcquisitionList(raw: unknown) {
         vendorName: a.vendor.name,
         itemCount: a._count.acquisitionItem,
         hasInvoice: a._count.invoice > 0,
-        acquiredAt: a.acquiredAt,
+        createdAt: a.createdAt,
         cost: a.cost,
         updatedAt: a.updatedAt,
         currency: a.currency ?? "VND",
     }));
-
     return { items, total, page, pageSize };
 }
 
@@ -68,7 +67,7 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
             vendorId,
             currency: input.currency,
             type: input.type,
-            acquiredAt: input.acquiredAt ? new Date(input.acquiredAt) : undefined,
+            createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
             notes: input.notes,
         })
         let total = 0;

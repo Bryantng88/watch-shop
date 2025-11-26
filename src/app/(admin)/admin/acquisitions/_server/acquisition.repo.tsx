@@ -29,7 +29,7 @@ export async function createDraft(
         vendorId: string;
         currency?: string;
         type?: AcquisitionType;
-        acquiredAt?: Date;
+        createdAt?: Date;
         notes?: string | null;
     }
 ) {
@@ -39,7 +39,7 @@ export async function createDraft(
     return db.acquisition.create({
         data: {
             vendor: { connect: { id: input.vendorId } },
-            acquiredAt: input.acquiredAt ?? new Date(),
+            acquiredAt: input.createdAt ?? new Date(),
             currency: input.currency ?? "VND",
             accquisitionStt: "DRAFT",
             type: input.type ?? "PURCHASE",
@@ -112,7 +112,7 @@ export async function getAcqList(where: Prisma.AcquisitionWhereInput,
             where, orderBy, skip, take,
             select: {
                 id: true, refNo: true, type: true, accquisitionStt: true,
-                acquiredAt: true, cost: true, currency: true, updatedAt: true,
+                createdAt: true, cost: true, currency: true, updatedAt: true,
                 vendor: { select: { id: true, name: true } },
                 _count: { select: { acquisitionItem: true, invoice: true } }
             }

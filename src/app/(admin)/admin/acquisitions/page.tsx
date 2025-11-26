@@ -23,6 +23,7 @@ export default async function AcquisitionListPage({ searchParams }: { searchPara
 
     const input = parseAcqSearchParams(sp);
     const { items, total, page, pageSize } = await getAdminAcquisitionList(input);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
     return (
         <AcquisitionListClient
@@ -30,6 +31,7 @@ export default async function AcquisitionListPage({ searchParams }: { searchPara
             total={total}
             page={page}
             pageSize={pageSize}
+            totalPages={totalPages}
             rawSearchParams={searchParams}
         />
     );

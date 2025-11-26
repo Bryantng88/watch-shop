@@ -56,7 +56,7 @@ export type CreateAcquisitionInput = {
     vendorId: string;
     currency?: string;
     type?: AcquisitionType;
-    acquiredAt?: Date | string;
+    createdAt?: Date | string;
     notes?: string | null;
     items: { title: string; quantity: number; unitCost: number, productType?: ProductType }[];
     quickVendorName: string;
