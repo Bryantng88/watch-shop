@@ -4,7 +4,7 @@ import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
 import { genRefNoIncrement } from "./helpers";
-
+import { genRefNo } from "../../components/AutoGenRef";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
 
@@ -86,8 +86,12 @@ export async function updateAcquisition(id: string, tx: DB, data: Partial<Acquis
 
 // 6. Chuyển phiếu sang trạng thái POSTED
 export async function changeDraftToPost(tx: DB, acqId: string) {
-
-    const refNo = await genRefNoIncrement(tx);
+    const db = dbOrTx(tx);
+    //const refNo = await genRefNoIncrement(db);
+    const refNo = await genRefNo(db, {
+        model: db.acquisition,
+        prefix: "PN",
+    });
     //console.log('in ra ref no : ' + refNo + ' va  ' + acqId)
     const count = await tx.acquisitionItem.count({ where: { acquisitionId: acqId } });
     if (count === 0) throw new Error("Không thể đăng phiếu trống.");
