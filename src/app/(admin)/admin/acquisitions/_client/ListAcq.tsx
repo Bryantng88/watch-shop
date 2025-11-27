@@ -87,6 +87,8 @@ export default function AcquisitionListPageClient({
             const payload = checked.map((c) => ({
                 id: c.dataset.id!,
                 vendor: c.dataset.vendorname!,
+                type: c.dataset.type!,
+                cost: c.dataset.cost!,
             }));
 
             // gọi API
