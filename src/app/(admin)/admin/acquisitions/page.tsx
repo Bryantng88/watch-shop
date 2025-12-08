@@ -1,7 +1,7 @@
-// app/(admin)/admin/acquisitions/page.tsx
-import { getAdminAcquisitionList } from "./_server/acquisition.service";
-import { parseAcqSearchParams } from "./ultils/search-params";
-import AcquisitionListClient from "./_client/ListAcq";
+// app/(admin)/admin/orders/page.tsx
+import { parseOrderSearchParams } from "./utils/search-params";
+import { getAdminOrderList } from "./_server/order.service";
+import OrderListClient from "./_client/ListOrder";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -14,21 +14,23 @@ function serialize(obj: any) {
         })
     );
 }
-export default async function AcquisitionListPage({ searchParams }: { searchParams: SearchParams }) {
+
+export default async function OrderListPage({ searchParams }: { searchParams: SearchParams }) {
     const sp = new URLSearchParams(
         Object.entries(searchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
         )
     );
 
-    const input = parseAcqSearchParams(sp);
-    const { items, total, page, pageSize } = await getAdminAcquisitionList(input);
+    const input = parseOrderSearchParams(sp);
 
-    console.log('in ra note : ' + JSON.stringify(items))
+    const { items, total, page, pageSize } = await getAdminOrderList(input);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
     const normalizedItems = serialize(items);
+
     return (
-        <AcquisitionListClient
+        <OrderListClient
             items={normalizedItems}
             total={total}
             page={page}
