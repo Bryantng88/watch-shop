@@ -12,6 +12,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
             title: i.productTitle,
             quantity: i.quantity ?? 1,
             unitCost: Number(i.unitCost ?? 0),
+            productType: i.productType
         })),
     });
 }

@@ -7,6 +7,7 @@ import ItemsHover from "../components/ItemsHover";
 import AcqItemsPopover from "../components/ItemsPopover";
 import ChangeToPostedButton from "../components/ChangeToPostedButton";
 import ActionMenu from "../components/ActionMenu";
+import ItemPopover from "../../components/GenericPopover";
 
 type AcquisitionItem = {
     id: string;
@@ -64,7 +65,8 @@ export default function AcquisitionListPageClient({
     rawSearchParams
 }: PageProps) {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
+    const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
+    const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
     // ============================
     // BULK CHECKBOX HANDLING
     // ============================
@@ -244,74 +246,91 @@ export default function AcquisitionListPageClient({
                                 </td>
                             </tr>
                         ) : (
-                            items.map((a) => (
-                                <tr key={a.id} className="border-b hover:bg-gray-50">
-                                    <td className="px-3 py-2">
-                                        <input
-                                            type="checkbox"
-                                            className="row-check"
-                                            data-id={a.id}
-                                            data-vendorname={a.vendorName || ""}
-                                            disabled={a.status === "POSTED"}
-                                        />
-                                    </td>
+                            items.map((a) => {
+                                // NEW: compute values override sau khi update popover
+                                const displayCount = rowCounts[a.id] ?? a.itemCount;
+                                const displayTotal = rowTotals[a.id] ?? Number(a.cost ?? 0);
 
-                                    <td className="px-3 py-2 font-medium">{a.refNo ?? "-"}</td>
-                                    <td className="px-3 py-2">{a.vendorName ?? "-"}</td>
-                                    <td className="px-3 py-2">{a.type}</td>
+                                return (
+                                    <tr key={a.id} className="border-b hover:bg-gray-50">
 
-                                    <td className="px-3 py-2">
-                                        <span
-                                            className={`px-2 py-1 rounded text-xs font-medium ${a.status === "POSTED"
-                                                ? "bg-green-100 text-green-700"
-                                                : a.status === "DRAFT"
-                                                    ? "bg-amber-100 text-amber-700"
-                                                    : "bg-gray-100 text-gray-700"
-                                                }`}
-                                        >
-                                            {a.status}
-                                        </span>
-                                    </td>
+                                        <td className="px-3 py-2">
+                                            <input
+                                                type="checkbox"
+                                                className="row-check"
+                                                data-id={a.id}
+                                                data-vendorname={a.vendorName || ""}
+                                                disabled={a.status === "POSTED"}
+                                            />
+                                        </td>
 
-                                    <td className="px-3 py-2">{fmtDate(a.createdAt)}</td>
-                                    <td className="px-3 py-2">{fmtMoney(a.cost, a.currency)}</td>
+                                        <td className="px-3 py-2 font-medium">{a.refNo ?? "-"}</td>
+                                        <td className="px-3 py-2">{a.vendorName ?? "-"}</td>
 
-                                    <td className="px-3 py-2">
-                                        <AcqItemsPopover
-                                            acqId={a.id}
-                                            count={a.itemCount}
-                                            currency={a.currency}
-                                            status={a.status}
-                                        />
-                                    </td>
+                                        <td className="px-3 py-2">{a.type}</td>
 
-                                    <td className="px-3 py-2">{a.hasInvoice ? "✓" : "-"}</td>
-                                    <td className="px-3 py-2">  {(a.updatedAt && a.updatedAt !== a.createdAt)
-                                        ? fmtDate(a.updatedAt)
-                                        : "-"}</td>
-                                    <td className="px-3 py-2">{a.notes}</td>
+                                        <td className="px-3 py-2">
+                                            <span
+                                                className={`px-2 py-1 rounded text-xs font-medium ${a.status === "POSTED"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : a.status === "DRAFT"
+                                                        ? "bg-amber-100 text-amber-700"
+                                                        : "bg-gray-100 text-gray-700"
+                                                    }`}
+                                            >
+                                                {a.status}
+                                            </span>
+                                        </td>
 
-                                    <td className="relative px-3 py-2 text-right">
-                                        <button
-                                            className="p-2 rounded hover:bg-gray-100"
-                                            onClick={() =>
-                                                setOpenMenuId(openMenuId === a.id ? null : a.id)
-                                            }
-                                        >
+                                        <td className="px-3 py-2">{fmtDate(a.createdAt)}</td>
 
-                                        </button>
+                                        {/* Tổng tiền (dùng displayTotal) */}
+                                        <td className="px-3 py-2">
+                                            {fmtMoney(displayTotal, a.currency)}
+                                        </td>
 
-                                        <ActionMenu
-                                            acqId={a.id}
-                                            status={a.status}
-                                            vendor={a.vendorName || ""}
-                                        />
-                                    </td>
+                                        {/* Số dòng (dùng displayCount) */}
+                                        <td className="px-3 py-2">
+                                            <ItemPopover
+                                                parentId={a.id}
+                                                type="acquisitions"
+                                                count={displayCount}
+                                                currency={a.currency}
+                                                status={a.status}
+                                                onUpdated={({ count, total }) => {
+                                                    setRowCounts((prev) => ({ ...prev, [a.id]: count }));
+                                                    setRowTotals((prev) => ({ ...prev, [a.id]: total }));
+                                                }}
+                                            />
+                                        </td>
 
+                                        <td className="px-3 py-2">{a.hasInvoice ? "✓" : "-"}</td>
 
+                                        <td className="px-3 py-2">
+                                            {(a.updatedAt && a.updatedAt !== a.createdAt)
+                                                ? fmtDate(a.updatedAt)
+                                                : "-"}
+                                        </td>
 
-                                </tr>
-                            ))
+                                        <td className="px-3 py-2">{a.notes}</td>
+
+                                        <td className="relative px-3 py-2 text-right">
+                                            <button
+                                                className="p-2 rounded hover:bg-gray-100"
+                                                onClick={() =>
+                                                    setOpenMenuId(openMenuId === a.id ? null : a.id)
+                                                }
+                                            ></button>
+
+                                            <ActionMenu
+                                                acqId={a.id}
+                                                status={a.status}
+                                                vendor={a.vendorName || ""}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

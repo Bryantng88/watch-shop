@@ -7,7 +7,7 @@ import { genRefNoIncrement } from "./helpers";
 import { genRefNo } from "../../components/AutoGenRef";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
-
+import { ItemInput, NewItemInput } from "./acquisition.dto";
 
 
 export async function findDraftOfVendorToday(tx: Prisma.TransactionClient, vendorId: string) {
@@ -141,58 +141,53 @@ export async function getAcqtById(id: string, tx?: DB) {
     });
 }
 // thêm acquisition item
-export async function addAcqItem(
+export async function createAcqItem(
     tx: DB,
     acqId: string,
-    quantity: number,
-    productType: ProductType,
-    unitCost: number,
-    title: string
+    item: any
 ) {
     const db = dbOrTx(tx);
     return db.acquisitionItem.create({
         data: {
-            acquisition: { connect: { id: acqId } },
-            productType: productType,
-            quantity: quantity,
-            unitCost: unitCost,
-            productTitle: title
-        }
-    })
+            acquisitionId: acqId,
+            productTitle: item.title,
+            quantity: item.quantity,
+            unitCost: item.unitCost, // chuẩn field DB
+            productType: item.productType ?? ProductType.WATCH,
+        },
+    });
 }
-
-export async function getAqcItems(tx: DB, acqId: string) {
+export async function findAcqItems(tx: DB, acqId: string) {
     const db = dbOrTx(tx);
     return db.acquisitionItem.findMany({
         where: { acquisitionId: acqId },
     })
 }
 
-export async function updateAcqItem(
-    tx: DB,
-    itemId: string,
-    data: {
-        quantity?: number;
-        unitCost?: number;
-
-        // thêm các field khác nếu cần
-    }
-) {
+export async function updateAcqItem(tx: DB, it: any) {
     const db = dbOrTx(tx);
-
     return db.acquisitionItem.update({
-        where: { id: itemId },
+        where: { id: it.id },
         data: {
-            ...data
-            // nếu có thêm trường khác thì bổ sung ở đây
+            productTitle: it.title,
+            quantity: it.quantity,
+            unitCost: it.unitPrice,
         },
     });
 }
+export async function updateAcqTotal(tx: DB, acqId: string, total: number) {
+    const db = dbOrTx(tx);
 
+    return db.acquisition.update({
+        where: { id: acqId },
+        data: { cost: total },
+    });
+}
 //9 Xoá các item theo id
-export async function deleteAcquisitionItems(tx: Prisma.TransactionClient, ids: string[]) {
+export async function deleteAcqItems(tx: DB, ids: string[]) {
+    const db = dbOrTx(tx);
     if (!ids?.length) return;
-    await tx.acquisitionItem.deleteMany({ where: { id: { in: ids } } });
+    await db.acquisitionItem.deleteMany({ where: { id: { in: ids } } });
 }
 
 //10 Update 1 item

@@ -1,33 +1,35 @@
-// app/(admin)/admin/acquisitions/page.tsx
-import { getAdminAcquisitionList } from "./_server/acquisition.service";
-import { parseAcqSearchParams } from "./ultils/search-params";
-import AcquisitionListClient from "./_client/ListAcq";
+import { getAdminInvoiceList } from "./_servers/invoice.service";
+import { parseInvoiceSearchParams } from "./_utils/search-params";
+import InvoiceListClient from "./_clients/ListInvoice";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
+// serialize Decimal → number
 function serialize(obj: any) {
     return JSON.parse(
-        JSON.stringify(obj, (key, value) => {
+        JSON.stringify(obj, (_, value) => {
             if (value instanceof Date) return value.toISOString();
             if (typeof value === "object" && value?._isDecimal) return Number(value);
             return value;
         })
     );
 }
-export default async function AcquisitionListPage({ searchParams }: { searchParams: SearchParams }) {
+
+export default async function InvoiceListPage({ searchParams }: { searchParams: SearchParams }) {
     const sp = new URLSearchParams(
         Object.entries(searchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
         )
     );
 
-    const input = parseAcqSearchParams(sp);
-    const { items, total, page, pageSize } = await getAdminAcquisitionList(input);
+    const input = parseInvoiceSearchParams(sp);
+    const { items, total, page, pageSize } = await getAdminInvoiceList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
+
     return (
-        <AcquisitionListClient
+        <InvoiceListClient
             items={normalizedItems}
             total={total}
             page={page}
