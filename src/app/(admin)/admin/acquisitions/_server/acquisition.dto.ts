@@ -73,20 +73,15 @@ export type CreateAcqDTO = {
     type?: AcquisitionType | "PURCHASE" | "CONSIGN";
 };
 
-{/*export type CreateAcqWithItemInput = {
-    vendorId: string;
-    currency?: string;            // mặc định "VND"
-    type?: AcquisitionType;       // mặc định "PURCHASE"
-    acquiredAt?: Date;
-    notes?: string | null;
 
-    // tuỳ chọn: chính sách reuse phiếu DRAFT
-    reuse?: "always-new" | "reuse-today" | "reuse-latest";
+export const ItemDTO = z.object({
+    id: z.string().min(1),
+    title: z.string(),
+    quantity: z.number().nonnegative(),
+    unitPrice: z.number().nonnegative(),      // 👈 đổi lại theo DB
+    productType: z.nativeEnum(ProductType).optional(),
+});
+export type ItemInput = z.infer<typeof ItemDTO>;
 
-    item: {
-        productId: string;
-        variantId?: string | null;
-        quantity: number;           // mặc định 1 (nếu muốn)
-        unitCost: number;           // hoặc string nếu bạn dùng Decimal
-    };
-}; */}
+export const NewItemDTO = ItemDTO.omit({ id: true });
+export type NewItemInput = z.infer<typeof NewItemDTO>;
