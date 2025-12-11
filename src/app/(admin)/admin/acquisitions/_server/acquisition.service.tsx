@@ -101,7 +101,7 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
 // Chuyển phiếu sang POSTED
 export async function postAcquisition(acqId: string, vendorName: string) {
     return prisma.$transaction(async (tx) => {
-        const items = await repoAcq.getAqcItems(tx, acqId)
+        const items = await repoAcq.findAcqItems(tx, acqId)
         const vendorId = await repoVendor.getVendorByName(tx, vendorName)
         for (const item of items) {
             if (!item.productId) {

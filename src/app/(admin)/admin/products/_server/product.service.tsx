@@ -43,3 +43,19 @@ export async function createProductDraft(title: string) {
         return product;
     });
 }
+
+export async function searchProductsService(tx, query: string) {
+    // chuẩn hóa
+    const q = query.toLowerCase();
+
+    // gọi repo
+    const items = await prodRepo.searchProductsRepo(tx, q);
+
+    // map thành output cho UI
+    return items.map((p) => ({
+        id: p.id,
+        title: p.title,
+        image: p.primaryImageUrl,
+
+    }));
+}
