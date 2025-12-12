@@ -1,5 +1,5 @@
 // app/(admin)/admin/orders/new/page.tsx
-import NewOrderForm from "../_clients/NewOrderForm";
+import NewOrderForm from "../_client/NewOrderForm";
 import { getVendorList } from "../../vendors/_server/vendor.service";
 import { getCustomerList } from "../../customers/_server/customer.service";
 

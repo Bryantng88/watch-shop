@@ -21,7 +21,6 @@ const NAV = [
   { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags },
   { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
   { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt },
-
   { href: "/admin/customers", label: "Khách hàng", icon: Users2 },
   { href: "/admin/reports", label: "Báo cáo", icon: LineChart },
   { href: "/admin/settings", label: "Thiết lập", icon: Settings },

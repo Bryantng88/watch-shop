@@ -1,7 +1,7 @@
 // app/(admin)/admin/orders/page.tsx
 import { parseOrderSearchParams } from "./utils/search-params";
 import { getAdminOrderList } from "./_servers/order.service"
-import OrderListPageClient from "./_clients/ListOrders";
+import OrderListPageClient from "./_client/ListOrder";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 

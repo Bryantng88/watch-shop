@@ -8,7 +8,7 @@ import { ProductType } from "@prisma/client";
 type ProductResult = {
     id: string;
     title: string;
-    thumbnail?: string | null;
+    primaryImage?: string | null;
     productType: ProductType;
     sellPrice: number | null;
 };
@@ -65,7 +65,7 @@ export default function ProductSearchInput({
                             }}
                         >
                             <Image
-                                src={p.thumbnail || "/no-image.png"}
+                                src={p.primaryImage || "/no-image.png"}
                                 width={40}
                                 height={40}
                                 alt={p.title}

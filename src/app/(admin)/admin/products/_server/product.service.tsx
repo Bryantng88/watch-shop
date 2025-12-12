@@ -1,5 +1,5 @@
 import { CreateProductWithOutAcqInput, CreateProductWithOutAcqSchema } from "./product.dto";
-import prisma from "@/server/db/client";
+import { prisma, DB } from "@/server/db/client";
 import { Prisma } from "@prisma/client";
 import * as ultil from "./helper"
 import * as prodRepo from "./product.repo"
@@ -44,18 +44,21 @@ export async function createProductDraft(title: string) {
     });
 }
 
-export async function searchProductsService(tx, query: string) {
-    // chuẩn hóa
-    const q = query.toLowerCase();
+export async function searchProductsService(query: string) {
 
-    // gọi repo
-    const items = await prodRepo.searchProductsRepo(tx, q);
+    return prisma.$transaction(async (tx) => {
+        // chuẩn hóa
+        const q = query.toLowerCase();
 
-    // map thành output cho UI
-    return items.map((p) => ({
-        id: p.id,
-        title: p.title,
-        image: p.primaryImageUrl,
+        // gọi repo
+        const items = await prodRepo.searchProductsRepo(tx, q);
 
-    }));
+        // map thành output cho UI
+        return items.map((p) => ({
+            id: p.id,
+            title: p.title,
+            image: p.primaryImageUrl,
+
+        }));
+    })
 }

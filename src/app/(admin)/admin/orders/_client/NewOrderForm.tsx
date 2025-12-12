@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ProductType } from "@prisma/client";
 import ProductSearchInput from "../../components/ProductSearchInput";
+
 // ==============================
 // Types
 // ==============================
@@ -16,22 +17,26 @@ type Customer = {
 
 type Line = {
     id: string;
-    title: string;
+    productId?: string;
+    title?: string;
+    primaryImage?: string | null;
     quantity: number;
-    unitPrice: number;
-    productType: ProductType;
+    unitPrice?: number;
+    productType?: ProductType;
 };
-
 type Props = {
     customers: Customer[];
 };
 
 const PAYMENT_METHODS = ["COD", "BANK_TRANSFER", "CARD"] as const;
 
+// ==============================
+// Component
+// ==============================
 export default function NewOrderForm({ customers }: Props) {
-    // ==========================
+    // --------------------------
     // FORM STATE
-    // ==========================
+    // --------------------------
     const [formData, setFormData] = useState({
         phone: "",
         customerId: "",
@@ -43,34 +48,28 @@ export default function NewOrderForm({ customers }: Props) {
     });
 
     const [lines, setLines] = useState<Line[]>([
-        {
-            id: crypto.randomUUID(),
-            title: "",
-            quantity: 1,
-            unitPrice: 0,
-            productType: "WATCH",
-        },
+        { id: crypto.randomUUID(), quantity: 1 },
     ]);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [okMsg, setOkMsg] = useState<string | null>(null);
 
-    // ==========================
-    // TOTAL MONEY
-    // ==========================
+    // --------------------------
+    // TOTAL
+    // --------------------------
     const total = useMemo(
         () =>
             lines.reduce(
-                (s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
+                (s, l) => s + (l.quantity || 0) * (l.unitPrice || 0),
                 0
             ),
         [lines]
     );
 
-    // ==========================
-    // CUSTOMER AUTO FILL
-    // ==========================
+    // --------------------------
+    // AUTO FILL CUSTOMER
+    // --------------------------
     useEffect(() => {
         if (formData.phone.trim().length < 8) return;
 
@@ -84,7 +83,6 @@ export default function NewOrderForm({ customers }: Props) {
                 shippingAddress: found.address ?? "",
             }));
         } else {
-            // KH mới – reset
             setFormData((prev) => ({
                 ...prev,
                 customerId: "",
@@ -92,11 +90,11 @@ export default function NewOrderForm({ customers }: Props) {
                 shippingAddress: "",
             }));
         }
-    }, [formData.phone]);
+    }, [formData.phone, customers]);
 
-    // ==========================
-    // HANDLE INPUT CHANGE
-    // ==========================
+    // --------------------------
+    // HANDLERS
+    // --------------------------
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) {
@@ -113,13 +111,7 @@ export default function NewOrderForm({ customers }: Props) {
     function addLine() {
         setLines((prev) => [
             ...prev,
-            {
-                id: crypto.randomUUID(),
-                title: "",
-                quantity: 1,
-                unitPrice: 0,
-                productType: "WATCH",
-            },
+            { id: crypto.randomUUID(), quantity: 1 },
         ]);
     }
 
@@ -127,9 +119,9 @@ export default function NewOrderForm({ customers }: Props) {
         setLines((prev) => (prev.length === 1 ? prev : prev.filter((l) => l.id !== id)));
     }
 
-    // ==========================
+    // --------------------------
     // SUBMIT
-    // ==========================
+    // --------------------------
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true);
@@ -143,14 +135,20 @@ export default function NewOrderForm({ customers }: Props) {
                 body: JSON.stringify({
                     ...formData,
                     orderDate: new Date(formData.orderDate),
-                    items: lines,
+                    items: lines
+                        .filter((l) => l.productId)
+                        .map((l) => ({
+                            productId: l.productId,
+                            quantity: l.quantity,
+                            unitPrice: l.unitPrice,
+                        })),
                 }),
             });
 
             if (!res.ok) throw new Error(await res.text());
             setOkMsg("Đã tạo đơn hàng thành công!");
         } catch (err: any) {
-            setError(err?.message || "Lỗi không xác định");
+            setError(err?.message || "Có lỗi xảy ra");
         } finally {
             setSaving(false);
         }
@@ -169,8 +167,8 @@ export default function NewOrderForm({ customers }: Props) {
                 </Link>
             </div>
 
+            {/* CUSTOMER + ORDER INFO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* CUSTOMER INFO */}
                 <div className="rounded-md border bg-white p-5 shadow-sm">
                     <h3 className="font-semibold mb-3">Khách hàng</h3>
 
@@ -188,7 +186,7 @@ export default function NewOrderForm({ customers }: Props) {
                         className="w-full rounded border px-3 py-2 mb-3"
                         value={formData.customerName}
                         onChange={handleChange}
-                        placeholder="Nhập tên (nếu khách mới)"
+                        placeholder="Nhập tên nếu khách mới"
                     />
 
                     <label className="block text-sm">Địa chỉ giao hàng</label>
@@ -200,28 +198,27 @@ export default function NewOrderForm({ customers }: Props) {
                     />
                 </div>
 
-                {/* ORDER INFO */}
                 <div className="rounded-md border bg-white p-5 shadow-sm">
                     <h3 className="font-semibold mb-3">Thông tin đơn hàng</h3>
 
                     <label className="block text-sm">Ngày tạo</label>
                     <input
-                        name="orderDate"
                         type="datetime-local"
+                        name="orderDate"
                         className="w-full rounded border px-3 py-2 mb-3"
                         value={formData.orderDate}
                         onChange={handleChange}
                     />
 
-                    <label className="block text-sm">Phương thức thanh toán</label>
+                    <label className="block text-sm">Thanh toán</label>
                     <select
                         name="paymentMethod"
                         className="w-full rounded border px-3 py-2 mb-3"
                         value={formData.paymentMethod}
                         onChange={handleChange}
                     >
-                        {PAYMENT_METHODS.map((pm) => (
-                            <option key={pm}>{pm}</option>
+                        {PAYMENT_METHODS.map((p) => (
+                            <option key={p}>{p}</option>
                         ))}
                     </select>
 
@@ -235,7 +232,7 @@ export default function NewOrderForm({ customers }: Props) {
                 </div>
             </div>
 
-            {/* PRODUCTS TABLE */}
+            {/* PRODUCTS */}
             <div className="rounded-md border bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">Sản phẩm</h3>
@@ -248,83 +245,125 @@ export default function NewOrderForm({ customers }: Props) {
                     </button>
                 </div>
 
-                <table className="min-w-full border-collapse text-sm">
+                <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-gray-50 border-b">
                         <tr>
+
                             <th className="px-3 py-2 text-left">Tên SP</th>
-                            <th className="px-3 py-2 text-left w-[12%]">Loại</th>
-                            <th className="px-3 py-2 text-right w-[10%]">SL</th>
-                            <th className="px-3 py-2 text-right w-[15%]">Đơn giá</th>
-                            <th className="px-3 py-2 text-right w-[15%]">Thành tiền</th>
-                            <th className="px-3 py-2 w-[5%]"></th>
+                            <th className="px-3 py-2">Loại</th>
+                            <th className="px-3 py-2 text-right">SL</th>
+                            <th className="px-3 py-2 text-right">Đơn giá</th>
+                            <th className="px-3 py-2 text-right">Thành tiền</th>
+                            <th className="px-3 py-2"></th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {lines.map((l) => {
-                            const money = l.quantity * l.unitPrice;
+                            const money = (l.quantity || 0) * (l.unitPrice || 0);
+
                             return (
                                 <tr key={l.id} className="border-b hover:bg-gray-50">
                                     <td className="px-3 py-2">
-                                        <ProductSearchInput
-                                            value={l.title}
-                                            onSelect={(p) => {
-                                                setLine(l.id, "title", p.title);
-                                                setLine(l.id, "unitPrice", p.sellPrice ?? 0);
-                                                setLine(l.id, "productType", p.productType);
-                                            }}
-                                        />
+                                        {!l.productId ? (
+                                            <ProductSearchInput
+                                                value={l.title ?? ""}
+                                                onSelect={(p) =>
+                                                    setLines((prev) =>
+                                                        prev.map((x) =>
+                                                            x.id === l.id
+                                                                ? {
+                                                                    ...x,
+                                                                    productId: p.id,
+                                                                    title: p.title,
+                                                                    primaryImage: p.primaryImage ?? null,
+                                                                    productType: p.productType,
+                                                                    unitPrice: p.sellPrice ?? 0,
+                                                                    quantity: p.productType === "WATCH" ? 1 : 1,
+                                                                }
+                                                                : x
+                                                        )
+                                                    )
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="flex items-center gap-3">
+                                                {/* Thumbnail */}
+                                                <div className="w-12 h-12 rounded border bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                    {l.primaryImage ? (
+                                                        <img
+                                                            src={l.primaryImage}
+                                                            alt={l.title}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">No image</span>
+                                                    )}
+                                                </div>
 
+                                                {/* Title */}
+                                                <input
+                                                    readOnly
+                                                    value={l.title}
+                                                    className="flex-1 rounded border px-2 py-2 bg-gray-50"
+                                                />
+                                            </div>
+                                        )}
                                     </td>
 
-                                    <td className="px-3 py-2">
-                                        <select
-                                            className="w-[110px] rounded border px-2 py-2"
-                                            value={l.productType}
-                                            onChange={(e) =>
-                                                setLine(l.id, "productType", e.target.value as ProductType)
-                                            }
-                                        >
-                                            {Object.values(ProductType).map((t) => (
-                                                <option key={t}>{t}</option>
-                                            ))}
-                                        </select>
+
+                                    <td className="px-3 py-2 text-center">
+                                        {l.productId && (
+                                            <span className="text-xs bg-gray-100 rounded px-2 py-1">
+                                                {l.productType}
+                                            </span>
+                                        )}
                                     </td>
 
                                     <td className="px-3 py-2 text-right">
-                                        <input
-                                            type="number"
-                                            className="w-20 rounded border px-2 py-2 text-right"
-                                            value={l.quantity}
-                                            onChange={(e) =>
-                                                setLine(l.id, "quantity", Number(e.target.value))
-                                            }
-                                        />
+                                        {l.productId && (
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                disabled={l.productType === "WATCH"}
+                                                className={`w-20 rounded border px-2 py-2 text-right ${l.productType === "WATCH" ? "bg-gray-100 cursor-not-allowed" : ""
+                                                    }`}
+                                                value={l.quantity}
+                                                onChange={(e) =>
+                                                    setLine(l.id, "quantity", Number(e.target.value))
+                                                }
+                                            />
+                                        )}
                                     </td>
 
+
                                     <td className="px-3 py-2 text-right">
-                                        <input
-                                            type="number"
-                                            className="w-28 rounded border px-2 py-2 text-right"
-                                            value={l.unitPrice}
-                                            onChange={(e) =>
-                                                setLine(l.id, "unitPrice", Number(e.target.value))
-                                            }
-                                        />
+                                        {l.productId && (
+                                            <input
+                                                type="number"
+                                                className="w-28 rounded border px-2 py-2 text-right"
+                                                value={l.unitPrice}
+                                                onChange={(e) =>
+                                                    setLine(l.id, "unitPrice", Number(e.target.value))
+                                                }
+                                            />
+                                        )}
                                     </td>
 
                                     <td className="px-3 py-2 text-right font-medium">
-                                        {money.toLocaleString("vi-VN")}
+                                        {l.productId ? money.toLocaleString("vi-VN") : ""}
                                     </td>
 
                                     <td className="px-3 py-2 text-right">
-                                        <button
-                                            type="button"
-                                            onClick={() => removeLine(l.id)}
-                                            className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
-                                        >
-                                            Xóa
-                                        </button>
+                                        {l.productId && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeLine(l.id)}
+                                                className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
+                                            >
+                                                Xóa
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             );
@@ -333,8 +372,9 @@ export default function NewOrderForm({ customers }: Props) {
 
                     <tfoot>
                         <tr>
-                            <td colSpan={3}></td>
-                            <td className="px-3 py-3 text-right font-semibold">Tổng cộng</td>
+                            <td colSpan={4} className="px-3 py-3 text-right font-semibold">
+                                Tổng cộng
+                            </td>
                             <td className="px-3 py-3 text-right font-semibold">
                                 {total.toLocaleString("vi-VN")}
                             </td>
@@ -344,13 +384,9 @@ export default function NewOrderForm({ customers }: Props) {
                 </table>
             </div>
 
-            {/* FOOTER BAR */}
+            {/* FOOTER */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg py-3 px-6 flex justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={() => history.back()}
-                    className="rounded-md border px-4 py-2"
-                >
+                <button type="button" onClick={() => history.back()} className="rounded-md border px-4 py-2">
                     Hủy
                 </button>
 
