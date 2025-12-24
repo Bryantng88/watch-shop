@@ -4,38 +4,7 @@ import { Prisma } from "@prisma/client";
 import * as ultil from "./helper"
 import * as prodRepo from "./product.repo"
 
-{/*export async function createProductDraft(input: unknown) {
-    const dto = CreateProductWithOutAcqSchema.parse(input);
-    return prisma.$transaction(async (tx) => {
-        // 1) Vendor (select hoặc quick-add)
 
-        // 2) Slug unique + SKU base
-        const slug = await ultil.genUniqueSlug(tx, dto.title);
-        const skuBase = slug; // single = slug
-
-        // 3) Map ProductCreateInput
-        const data: Prisma.ProductCreateInput = {
-            title: dto.title,
-            contentStatus: (dto.contentStatus as any) ?? "DRAFT",
-            type: (dto.type as any) ?? "WATCH",
-            slug, // có thể để Prisma default unique nếu bạn muốn
-            brand: dto.brandId ? { connect: { id: dto.brandId } } : undefined,
-            vendor: { connect: { id: dto.vendorId } },
-            variants: ultil.buildVariants(dto, skuBase),
-            watchSpec: ultil.buildWatchSpec(dto),
-            primaryImageUrl:
-                dto.primaryImageUrl === "" ? null : dto.primaryImageUrl ?? null,
-            seoTitle: dto.seoTitle ?? undefined,
-            seoDescription: dto.seoDescription ?? undefined,
-        };
-        // 4) Create Product
-        const product = await prodRepo.createProductDraft(tx,
-            data
-        );
-
-        return { productId: product.id };
-    });
-}*/}
 
 export async function createProductDraft(title: string) {
     return prisma.$transaction(async (tx) => {
@@ -44,21 +13,62 @@ export async function createProductDraft(title: string) {
     });
 }
 
-export async function searchProductsService(query: string) {
 
-    return prisma.$transaction(async (tx) => {
-        // chuẩn hóa
-        const q = query.toLowerCase();
+// app/(admin)/admin/products/_server/product.service.ts
 
-        // gọi repo
-        const items = await prodRepo.searchProductsRepo(tx, q);
-
-        // map thành output cho UI
-        return items.map((p) => ({
-            id: p.id,
-            title: p.title,
-            image: p.primaryImageUrl,
-
-        }));
-    })
+export async function detail(id: string) {
+    return prisma.product.findUnique({
+        where: { id },
+    });
 }
+
+export async function updateProduct(
+    id: string,
+    patch: {
+        title?: string;
+        minPrice?: number | null;
+        primaryImageUrl?: string | null;
+        contentStatus?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+        priceVisibility?: "SHOW" | "HIDE";
+        availabilityStatus?: "ACTIVE" | "HIDDEN";
+    }
+) {
+    return prisma.$transaction(async (tx) => {
+        // map field UI -> field DB (tuỳ schema của bạn)
+        // Nếu DB bạn là primaryImageUrl thay vì image, đổi chỗ này:
+        const data: any = {};
+
+        if (patch.title !== undefined) data.title = patch.title;
+        if (patch.minPrice !== undefined) data.minPrice = patch.minPrice;
+
+        // ✅ nếu DB bạn lưu ở primaryImageUrl:
+        // if (patch.image !== undefined) data.primaryImageUrl = patch.image;
+        // ✅ nếu DB bạn lưu trực tiếp field image:
+        if (patch.primaryImageUrl !== undefined) data.primaryImageUrl = patch.primaryImageUrl;
+
+        if (patch.contentStatus !== undefined) data.contentStatus = patch.contentStatus;
+        if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
+        if (patch.availabilityStatus !== undefined) data.availabilityStatus = patch.availabilityStatus;
+        console.log('in ra image url :' + patch.primaryImageUrl)
+        const updated = await prodRepo.updateProduct(tx, id, data);
+
+        // trả ra tối thiểu cho list
+        return updated;
+    });
+}
+
+export async function remove(id: string) {
+    return prisma.$transaction(async (tx) => {
+        await prodRepo.deleteProduct(tx, id);
+        return { success: true };
+    });
+}
+
+export async function searchProductService(q: string) {
+    return prisma.$transaction(async (tx) => {
+        return prodRepo.searchProductsRepo(tx, q);
+
+    });
+}
+
+

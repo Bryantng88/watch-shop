@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchProductsService } from "@/app/(admin)/admin/products/_server/product.service";
+import { searchProductService } from "@/app/(admin)/admin/products/_server/product.service";
 
 export async function GET(req: NextRequest) {
     try {
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
         if (!q) return NextResponse.json({ items: [] });
 
-        const items = await searchProductsService(q);
+        const items = await searchProductService(q);
         return NextResponse.json({ items });
     } catch (err: any) {
         console.error("Search API error:", err);

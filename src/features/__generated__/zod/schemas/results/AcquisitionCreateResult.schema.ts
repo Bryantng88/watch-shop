@@ -1,7 +1,7 @@
 import * as z from 'zod';
 export const AcquisitionCreateResultSchema = z.object({
   id: z.string(),
-  vendorId: z.string(),
+  vendorId: z.string().optional(),
   customerId: z.string().optional(),
   type: z.unknown(),
   acquiredAt: z.date(),
@@ -18,7 +18,7 @@ export const AcquisitionCreateResultSchema = z.object({
   sentAt: z.date().optional(),
   returnedAt: z.date().optional(),
   customer: z.unknown().optional(),
-  vendor: z.unknown(),
+  vendor: z.unknown().optional(),
   acquisitionItem: z.array(z.unknown()),
   invoice: z.array(z.unknown())
 });

@@ -74,12 +74,10 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
             notes: input.notes,
         })
         let total = 0;
-        console.log('in ra test o api ')
         for (const it of input.items) {
             // WATCH & quantity > 1 ⇒ tạo nhiều product draft
             if (it.productType === "WATCH" && it.quantity > 1) {
                 for (let i = 0; i < it.quantity; i++) {
-                    console.log('in ra test o api ' + it.unitCost)
 
                     await repoAcq.createAcqItem(tx, acq.id, {
                         title: it.title,
@@ -101,7 +99,7 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
 // Chuyển phiếu sang POSTED
 export async function postAcquisition(acqId: string, vendorName: string) {
     return prisma.$transaction(async (tx) => {
-        const items = await repoAcq.findAcqItems(tx, acqId)
+        const items = await repoAcq.getAqcItems(tx, acqId)
         const vendorId = await repoVendor.getVendorByName(tx, vendorName)
         for (const item of items) {
             if (!item.productId) {

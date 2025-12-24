@@ -22,7 +22,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
-  vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema),
+  vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
 }).strict();

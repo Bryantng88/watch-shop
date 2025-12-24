@@ -23,6 +23,7 @@ export type ProductListItem = {
     availabilityStatus: "ACTIVE" | "HIDDEN";
     minPrice: number | null;
     image?: string | null;
+    primaryImageUrl: string | null;
     updatedAt: string; // ISO
     createdAt: string; // ISO
 };

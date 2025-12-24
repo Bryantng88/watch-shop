@@ -171,6 +171,29 @@ export const AdminFiltersSchema = z.object({
 
 export type AdminFiltersInput = z.infer<typeof AdminFiltersSchema>;
 export type UpdateProductWithAcqInput = z.infer<typeof UpdateProductWithAcqSchema>;
+
+export const ContentStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional();
+
+export const PriceVisibilitySchema = z.enum(["SHOW", "HIDE"]).optional();
+export const AvailabilityStatusSchema = z.enum(["ACTIVE", "HIDDEN"]).optional();
+
+// ✅ PATCH schema: nhận body dạng partial, không bọc {product:...}
+export const UpdateProductPatchSchema = z
+    .object({
+        title: z.string().min(1).optional(),
+
+        // list của bạn đang dùng p.minPrice
+        minPrice: z.number().nullable().optional(),
+
+        // list của bạn đang dùng p.image (string | null)
+        primaryImageUrl: z.string().nullable().optional(),
+
+        contentStatus: ContentStatusSchema,
+        priceVisibility: PriceVisibilitySchema,
+        availabilityStatus: AvailabilityStatusSchema,
+    })
+    .strict();
+
 // Update DTO
 {/*export const UpdateProductWithAcqSchema = z.object({
     title: z.string().optional(),

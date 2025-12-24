@@ -5,7 +5,7 @@ import { AcquisitionStatusSchema } from '../../enums/AcquisitionStatus.schema';
 // prettier-ignore
 export const AcquisitionModelSchema = z.object({
     id: z.string(),
-    vendorId: z.string(),
+    vendorId: z.string().nullable(),
     customerId: z.string().nullable(),
     type: AcquisitionTypeSchema,
     acquiredAt: z.date(),
@@ -22,7 +22,7 @@ export const AcquisitionModelSchema = z.object({
     sentAt: z.date().nullable(),
     returnedAt: z.date().nullable(),
     customer: z.unknown().nullable(),
-    vendor: z.unknown(),
+    vendor: z.unknown().nullable(),
     acquisitionItem: z.array(z.unknown()),
     invoice: z.array(z.unknown())
 }).strict();

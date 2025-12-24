@@ -10,7 +10,7 @@ import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema as EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema } from './EnumAcquisitionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema as CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema } from './CustomerUpdateOneWithoutAcquisitionNestedInput.schema';
-import { VendorUpdateOneRequiredWithoutAcquisitionsNestedInputObjectSchema as VendorUpdateOneRequiredWithoutAcquisitionsNestedInputObjectSchema } from './VendorUpdateOneRequiredWithoutAcquisitionsNestedInput.schema';
+import { VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema as VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema } from './VendorUpdateOneWithoutAcquisitionsNestedInput.schema';
 import { AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutAcquisitionNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -30,7 +30,7 @@ const makeSchema = () => z.object({
   sentAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   returnedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customer: z.lazy(() => CustomerUpdateOneWithoutAcquisitionNestedInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorUpdateOneRequiredWithoutAcquisitionsNestedInputObjectSchema).optional(),
+  vendor: z.lazy(() => VendorUpdateOneWithoutAcquisitionsNestedInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionUpdateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.AcquisitionUpdateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUpdateWithoutInvoiceInput>;

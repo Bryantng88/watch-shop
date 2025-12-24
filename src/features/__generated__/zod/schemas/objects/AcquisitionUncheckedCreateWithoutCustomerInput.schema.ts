@@ -7,7 +7,7 @@ import { InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as 
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
-  vendorId: z.string(),
+  vendorId: z.string().optional().nullable(),
   type: AcquisitionTypeSchema.optional(),
   acquiredAt: z.coerce.date(),
   cost: z.number().optional().nullable(),

@@ -8,7 +8,7 @@ type Body = { files: { key: string; alt?: string }[] };
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
     const productId = params.id;
     const body = (await req.json()) as Body;
-
+    console.log(' in ra body img + ' + JSON.stringify(body))
     if (!Array.isArray(body.files) || body.files.length === 0) {
         return NextResponse.json({ error: "No files" }, { status: 400 });
     }
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         sortOrder: i,
     }));
 
-    const primaryUrl = `${PUBLIC_BASE}/${body.files[0].key}`;
+    const primaryUrl = body.files[0].key;
 
     await prisma.$transaction(async (tx) => {
         await tx.productImage.createMany({ data });
