@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './DecimalFilter.schema';
+import { Enumdiscount_typeNullableFilterObjectSchema as Enumdiscount_typeNullableFilterObjectSchema } from './Enumdiscount_typeNullableFilter.schema';
+import { discount_typeSchema } from '../enums/discount_type.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
@@ -16,8 +18,8 @@ const orderitemscalarwhereinputSchema = z.object({
   productId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   variantId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   title: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  listPriceAtOrder: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  discountType: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  listPrice: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
+  discountType: z.union([z.lazy(() => Enumdiscount_typeNullableFilterObjectSchema), discount_typeSchema]).optional().nullable(),
   discountValue: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   unitPriceAgreed: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   taxRate: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrderWithItems } from "@/app/(admin)/admin/orders/_server/order.service";
+import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
 
 // POST /api/admin/orders
 export async function POST(req: NextRequest) {
     let body: any;
-
     // ==========================
     // Parse JSON
     // ==========================
     try {
         body = await req.json();
+        console.log('in ra test body o order api: ' + JSON.stringify(body))
+
     } catch {
         return NextResponse.json(
             { error: "Body không hợp lệ (không phải JSON)" },

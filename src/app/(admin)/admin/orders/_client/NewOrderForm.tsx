@@ -11,7 +11,7 @@ import ProductSearchInput from "../../components/ProductSearchInput";
 type Customer = {
     id: string;
     name: string;
-    phone: string;
+    shipPhone: string;
     address?: string | null;
 };
 
@@ -39,7 +39,7 @@ export default function NewOrderForm({ customers }: Props) {
     // FORM STATE
     // ==========================
     const [formData, setFormData] = useState({
-        phone: "",
+        shipPhone: "",
         customerId: "",
         customerName: "",
         shippingAddress: "",
@@ -66,12 +66,12 @@ export default function NewOrderForm({ customers }: Props) {
     );
 
     // ==========================
-    // AUTO FILL CUSTOMER BY PHONE
+    // AUTO FILL CUSTOMER BY shipPhone
     // ==========================
     useEffect(() => {
-        if (formData.phone.trim().length < 8) return;
+        if (formData.shipPhone.trim().length < 8) return;
 
-        const found = customers.find((c) => c.phone === formData.phone);
+        const found = customers.find((c) => c.shipPhone === formData.shipPhone);
 
         if (found) {
             setFormData((prev) => ({
@@ -88,7 +88,7 @@ export default function NewOrderForm({ customers }: Props) {
                 shippingAddress: "",
             }));
         }
-    }, [formData.phone, customers]);
+    }, [formData.shipPhone, customers]);
 
     // ==========================
     // HANDLERS
@@ -173,9 +173,9 @@ export default function NewOrderForm({ customers }: Props) {
 
                     <label className="block text-sm">Số điện thoại</label>
                     <input
-                        name="phone"
+                        name="shipPhone"
                         className="w-full rounded border px-3 py-2 mb-3"
-                        value={formData.phone}
+                        value={formData.shipPhone}
                         onChange={handleChange}
                     />
 

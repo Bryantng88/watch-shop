@@ -4,7 +4,6 @@ export const OrderFindManyResultSchema = z.object({
   id: z.string(),
   orderCode: z.string(),
   customerId: z.string().optional(),
-  shipName: z.string(),
   shipPhone: z.string(),
   shipEmail: z.string(),
   shipAddress: z.string(),
@@ -18,6 +17,8 @@ export const OrderFindManyResultSchema = z.object({
   paymentMethod: z.unknown().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  customerName: z.string().optional(),
+  notes: z.string().optional(),
   Invoice: z.array(z.unknown()),
   customer: z.unknown().optional(),
   items: z.array(z.unknown())

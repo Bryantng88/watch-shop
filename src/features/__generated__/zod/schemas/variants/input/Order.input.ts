@@ -8,7 +8,6 @@ export const OrderInputSchema = z.object({
     id: z.string(),
     orderCode: z.string(),
     customerId: z.string().optional().nullable(),
-    shipName: z.string(),
     shipPhone: z.string(),
     shipEmail: z.string(),
     shipAddress: z.string(),
@@ -22,6 +21,8 @@ export const OrderInputSchema = z.object({
     paymentMethod: PaymentMethodSchema.optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    customerName: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
     Invoice: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
     items: z.array(z.unknown())

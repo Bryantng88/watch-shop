@@ -10,7 +10,6 @@ import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCrea
 const makeSchema = () => z.object({
   id: z.string().optional(),
   orderCode: z.string(),
-  shipName: z.string(),
   shipPhone: z.string(),
   shipEmail: z.string(),
   shipAddress: z.string(),
@@ -23,6 +22,8 @@ const makeSchema = () => z.object({
   paymentStatus: PaymentStatusSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  customerName: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrdersInputObjectSchema).optional(),
   items: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema)

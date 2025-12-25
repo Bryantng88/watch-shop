@@ -23,7 +23,6 @@ const orderwhereinputSchema = z.object({
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   orderCode: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   customerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  shipName: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   shipPhone: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   shipEmail: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   shipAddress: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
@@ -37,6 +36,8 @@ const orderwhereinputSchema = z.object({
   paymentMethod: z.union([z.lazy(() => EnumPaymentMethodNullableFilterObjectSchema), PaymentMethodSchema]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   items: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional()

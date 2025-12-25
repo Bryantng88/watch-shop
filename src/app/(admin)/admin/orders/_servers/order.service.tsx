@@ -2,8 +2,38 @@
 "use server";
 
 import { prisma, DB } from "@/server/db/client";
-import { repoOrder } from "./order.repo";
+import * as repoOrder from "./order.repo";
 import { OrderSearchInput } from "../utils/search-params";
+import { PaymentMethod } from "@prisma/client";
+
+type CreateOrderInput = {
+    orderCode?: string;
+    customerId?: string;
+    customerName: string;
+    shipPhone: string;
+    shipAddress: string;
+    paymentMethod: PaymentMethod;
+    notes?: string;
+    orderDate?: Date;
+    items: CreateOrderItemRow[];
+};
+
+type CreateOrderItemRow = {
+    productId?: string;
+    variantId?: string;
+    title: string;
+    img?: string;
+
+    quantity: number;
+    listPrice: number;
+
+    discountType?: 'PERCENT' | 'AMOUNT';
+    discountValue?: number;
+
+    unitPriceAgreed?: number; // override nếu cần
+    taxRate?: number;
+};
+
 
 export async function getAdminOrderList(input: OrderSearchInput) {
     const { page, pageSize, q } = input;
@@ -21,43 +51,24 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     return repoOrder.getList({ page, pageSize, where });
 }
 
-export async function createOrderWithItems(input: any) {
+export async function createOrderWithItems(input: CreateOrderInput) {
     return prisma.$transaction(async (tx) => {
-        // ==========================
-        // Customer
-        // ==========================
-        const customerId = input.customerId || null;
-
-        // ==========================
-        // Order
-        // ==========================
-        const order = await tx.order.create({
-            data: {
-                customerId,
-                customerName: input.customerName,
-                phone: input.phone,
-                shippingAddress: input.shippingAddress,
-                paymentMethod: input.paymentMethod,
-                notes: input.notes,
-                orderDate: input.orderDate,
-                status: "DRAFT", // đồng bộ với hệ thống
-            },
+        const order = await repoOrder.createOrder(tx, {
+            customerId: input.customerId ?? null,
+            customerName: input.customerName,
+            shipPhone: input.shipPhone,
+            shipAddress: input.shipAddress,
+            paymentMethod: input.paymentMethod,
+            notes: input.notes ?? null,
+            orderDate: input.orderDate ?? new Date(),
+            status: 'DRAFT',
         });
 
-        // ==========================
-        // Order items
-        // ==========================
-        await tx.orderItem.createMany({
-            data: input.items.map((i: any) => ({
-                orderId: order.id,
-                productId: i.productId,
-                title: i.title,
-                productType: i.productType,
-                quantity: i.quantity,
-                unitPrice: i.unitPrice,
-                totalPrice: i.quantity * i.unitPrice,
-            })),
-        });
+        await repoOrder.createOrderItems(
+            tx,
+            order.id,
+            input.items
+        );
 
         return order;
     });

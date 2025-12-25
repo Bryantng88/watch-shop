@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema'
 
 const makeSchema = () => z.object({
-  listPriceAtOrder: SortOrderSchema.optional(),
+  listPrice: SortOrderSchema.optional(),
   discountValue: SortOrderSchema.optional(),
   unitPriceAgreed: SortOrderSchema.optional(),
   taxRate: SortOrderSchema.optional(),

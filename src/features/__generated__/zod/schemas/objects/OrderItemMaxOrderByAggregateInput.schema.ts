@@ -8,7 +8,7 @@ const makeSchema = () => z.object({
   productId: SortOrderSchema.optional(),
   variantId: SortOrderSchema.optional(),
   title: SortOrderSchema.optional(),
-  listPriceAtOrder: SortOrderSchema.optional(),
+  listPrice: SortOrderSchema.optional(),
   discountType: SortOrderSchema.optional(),
   discountValue: SortOrderSchema.optional(),
   unitPriceAgreed: SortOrderSchema.optional(),

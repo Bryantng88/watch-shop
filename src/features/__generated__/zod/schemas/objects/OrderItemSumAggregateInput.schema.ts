@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  listPriceAtOrder: z.literal(true).optional(),
+  listPrice: z.literal(true).optional(),
   discountValue: z.literal(true).optional(),
   unitPriceAgreed: z.literal(true).optional(),
   taxRate: z.literal(true).optional(),

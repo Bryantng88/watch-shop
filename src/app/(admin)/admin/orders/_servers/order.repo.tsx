@@ -1,12 +1,14 @@
 // app/(admin)/admin/orders/_server/order.repo.ts
 import { DB, dbOrTx } from "@/server/db/client";
 import type { Prisma, PaymentMethod, OrderStatus } from "@prisma/client";
+import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
+import { genRefNo } from "../../components/AutoGenRef";
 
 export type CreateOrderRow = {
     customerId: string | null;
     customerName: string;
-    phone: string | null;
-    shippingAddress: string | null;
+    shipPhone: string;
+    shipAddress: string;
     paymentMethod: PaymentMethod;
     notes: string | null;
     orderDate: Date;
@@ -14,11 +16,20 @@ export type CreateOrderRow = {
 };
 
 export type CreateOrderItemRow = {
-    productId: string;
+    productId?: string;
+    variantId?: string;
     title: string;
-    productType: string; // hoặc ProductType
+    img?: string;
     quantity: number;
-    unitPrice: number;
+
+    listPrice: number;
+
+    discountType?: 'PERCENT' | 'AMOUNT';
+    discountValue?: number;
+
+    taxRate?: number; // ví dụ: 8
+    unitPriceAgreed?: number; // optional override
+
 };
 
 
@@ -42,7 +53,7 @@ export async function getList({ page, pageSize, where }: any) {
         page,
         pageSize,
     };
-},
+}
 
 
 
@@ -50,12 +61,18 @@ export async function getList({ page, pageSize, where }: any) {
 
 export async function createOrder(tx: DB, data: CreateOrderRow) {
     const db = dbOrTx(tx);
+    const refNo = await genRefNo(db, {
+        model: db.acquisition,
+        prefix: "OD",
+    });
+
     return db.order.create({
         data: {
+            orderCode: refNo,
             customerId: data.customerId,
             customerName: data.customerName,
-            phone: data.phone,
-            shippingAddress: data.shippingAddress,
+            shipPhone: data.shipPhone,
+            shipAddress: data.shipAddress,
             paymentMethod: data.paymentMethod,
             notes: data.notes,
             orderDate: "DRAFT",
@@ -66,8 +83,8 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             status: true,
             customerId: true,
             customerName: true,
-            phone: true,
-            shippingAddress: true,
+            shipPhone: true,
+            shipAddress: true,
             paymentMethod: true,
             notes: true,
             orderDate: true,
@@ -84,20 +101,47 @@ export async function createOrderItems(
 ) {
     const db = dbOrTx(tx);
     if (!items.length) return;
-    return db.orderItem.createMany({
-        data: items.map((i) => ({
+
+    const rows = items.map((i) => {
+        const listPrice = Number(i.listPrice);
+
+        const unitPriceAgreed =
+            i.unitPriceAgreed ??
+            calcUnitPriceAgreed({
+                listPrice,
+                discountType: i.discountType,
+                discountValue: i.discountValue,
+            });
+
+        const quantity = i.quantity ?? 1;
+        const subtotal = unitPriceAgreed * quantity;
+
+        return {
             orderId,
             productId: i.productId,
-            title: i.title,
-            productType: i.productType as any,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice as any,
-            subtotal: (i.quantity || 0) * (i.unitPrice || 0),
-            unitPriceAgreed: 
-        })),
-    });
-}
+            variantId: i.variantId,
 
+            title: i.title,
+            img: i.img ?? null,
+
+            listPrice: listPrice,
+            discountType: i.discountType ?? null,
+            discountValue: i.discountValue ?? null,
+
+            unitPriceAgreed,
+            quantity,
+            subtotal,
+
+            taxRate: i.taxRate ?? null,
+        };
+    });
+
+    return db.orderItem.createMany({
+        data: rows,
+    });
+
+
+}
 export async function getOrderLite(tx: DB, id: string) {
     const db = dbOrTx(tx);
     return db.order.findUnique({

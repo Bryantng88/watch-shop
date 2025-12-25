@@ -8,7 +8,6 @@ export const OrderResultSchema = z.object({
     id: z.string(),
     orderCode: z.string(),
     customerId: z.string().nullable(),
-    shipName: z.string(),
     shipPhone: z.string(),
     shipEmail: z.string(),
     shipAddress: z.string(),
@@ -22,6 +21,8 @@ export const OrderResultSchema = z.object({
     paymentMethod: PaymentMethodSchema.nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    customerName: z.string().nullable(),
+    notes: z.string().nullable(),
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     items: z.array(z.unknown())

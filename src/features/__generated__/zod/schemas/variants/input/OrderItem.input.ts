@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { discount_typeSchema } from '../../enums/discount_type.schema';
 // prettier-ignore
 export const OrderItemInputSchema = z.object({
     id: z.string(),
@@ -7,8 +8,8 @@ export const OrderItemInputSchema = z.object({
     productId: z.string().optional().nullable(),
     variantId: z.string().optional().nullable(),
     title: z.string(),
-    listPriceAtOrder: z.number(),
-    discountType: z.string().optional().nullable(),
+    listPrice: z.number(),
+    discountType: discount_typeSchema.optional().nullable(),
     discountValue: z.number().optional().nullable(),
     unitPriceAgreed: z.number(),
     taxRate: z.number().optional().nullable(),

@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   productId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   variantId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   title: SortOrderSchema.optional(),
-  listPriceAtOrder: SortOrderSchema.optional(),
+  listPrice: SortOrderSchema.optional(),
   discountType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   discountValue: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   unitPriceAgreed: SortOrderSchema.optional(),

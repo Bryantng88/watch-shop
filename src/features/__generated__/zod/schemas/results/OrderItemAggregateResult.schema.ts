@@ -5,7 +5,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     productId: z.number(),
     variantId: z.number(),
     title: z.number(),
-    listPriceAtOrder: z.number(),
+    listPrice: z.number(),
     discountType: z.number(),
     discountValue: z.number(),
     unitPriceAgreed: z.number(),
@@ -20,7 +20,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     serviceRequest: z.number()
   }).optional(),
   _sum: z.object({
-    listPriceAtOrder: z.number().nullable(),
+    listPrice: z.number().nullable(),
     discountValue: z.number().nullable(),
     unitPriceAgreed: z.number().nullable(),
     taxRate: z.number().nullable(),
@@ -28,7 +28,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     subtotal: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    listPriceAtOrder: z.number().nullable(),
+    listPrice: z.number().nullable(),
     discountValue: z.number().nullable(),
     unitPriceAgreed: z.number().nullable(),
     taxRate: z.number().nullable(),
@@ -41,8 +41,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     productId: z.string().nullable(),
     variantId: z.string().nullable(),
     title: z.string().nullable(),
-    listPriceAtOrder: z.number().nullable(),
-    discountType: z.string().nullable(),
+    listPrice: z.number().nullable(),
     discountValue: z.number().nullable(),
     unitPriceAgreed: z.number().nullable(),
     taxRate: z.number().nullable(),
@@ -57,8 +56,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     productId: z.string().nullable(),
     variantId: z.string().nullable(),
     title: z.string().nullable(),
-    listPriceAtOrder: z.number().nullable(),
-    discountType: z.string().nullable(),
+    listPrice: z.number().nullable(),
     discountValue: z.number().nullable(),
     unitPriceAgreed: z.number().nullable(),
     taxRate: z.number().nullable(),

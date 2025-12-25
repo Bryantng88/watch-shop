@@ -9,7 +9,6 @@ const makeSchema = () => z.object({
   id: z.string().optional(),
   orderCode: z.string(),
   customerId: z.string().optional().nullable(),
-  shipName: z.string(),
   shipPhone: z.string(),
   shipEmail: z.string(),
   shipAddress: z.string(),
@@ -23,6 +22,8 @@ const makeSchema = () => z.object({
   paymentMethod: PaymentMethodSchema.optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  customerName: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   items: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedCreateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.OrderUncheckedCreateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedCreateWithoutInvoiceInput>;

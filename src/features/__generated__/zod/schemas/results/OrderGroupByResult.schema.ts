@@ -3,7 +3,6 @@ export const OrderGroupByResultSchema = z.array(z.object({
   id: z.string(),
   orderCode: z.string(),
   customerId: z.string(),
-  shipName: z.string(),
   shipPhone: z.string(),
   shipEmail: z.string(),
   shipAddress: z.string(),
@@ -14,11 +13,12 @@ export const OrderGroupByResultSchema = z.array(z.object({
   total: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  customerName: z.string(),
+  notes: z.string(),
   _count: z.object({
     id: z.number(),
     orderCode: z.number(),
     customerId: z.number(),
-    shipName: z.number(),
     shipPhone: z.number(),
     shipEmail: z.number(),
     shipAddress: z.number(),
@@ -32,6 +32,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     paymentMethod: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    customerName: z.number(),
+    notes: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number()
@@ -50,7 +52,6 @@ export const OrderGroupByResultSchema = z.array(z.object({
     id: z.string().nullable(),
     orderCode: z.string().nullable(),
     customerId: z.string().nullable(),
-    shipName: z.string().nullable(),
     shipPhone: z.string().nullable(),
     shipEmail: z.string().nullable(),
     shipAddress: z.string().nullable(),
@@ -60,13 +61,14 @@ export const OrderGroupByResultSchema = z.array(z.object({
     shippingFee: z.number().nullable(),
     total: z.number().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    customerName: z.string().nullable(),
+    notes: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
     orderCode: z.string().nullable(),
     customerId: z.string().nullable(),
-    shipName: z.string().nullable(),
     shipPhone: z.string().nullable(),
     shipEmail: z.string().nullable(),
     shipAddress: z.string().nullable(),
@@ -76,6 +78,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     shippingFee: z.number().nullable(),
     total: z.number().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    customerName: z.string().nullable(),
+    notes: z.string().nullable()
   }).nullable().optional()
 }));

@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
+import { discount_typeSchema } from '../enums/discount_type.schema';
 import { AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInput.schema';
 import { ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInput.schema'
 
@@ -8,8 +9,8 @@ const makeSchema = () => z.object({
   orderId: z.string(),
   variantId: z.string().optional().nullable(),
   title: z.string(),
-  listPriceAtOrder: z.number(),
-  discountType: z.string().optional().nullable(),
+  listPrice: z.number(),
+  discountType: discount_typeSchema.optional().nullable(),
   discountValue: z.number().optional().nullable(),
   unitPriceAgreed: z.number(),
   taxRate: z.number().optional().nullable(),

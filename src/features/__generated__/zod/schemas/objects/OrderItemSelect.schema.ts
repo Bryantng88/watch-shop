@@ -12,7 +12,7 @@ const makeSchema = () => z.object({
   productId: z.boolean().optional(),
   variantId: z.boolean().optional(),
   title: z.boolean().optional(),
-  listPriceAtOrder: z.boolean().optional(),
+  listPrice: z.boolean().optional(),
   discountType: z.boolean().optional(),
   discountValue: z.boolean().optional(),
   unitPriceAgreed: z.boolean().optional(),
