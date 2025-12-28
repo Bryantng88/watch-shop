@@ -34,3 +34,16 @@ export async function findUserById(id: string) {
         },
     });
 }
+
+export async function getUserList() {
+    return prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+            roles: {
+                include: {
+                    permissions: true,
+                },
+            },
+        },
+    });
+}
