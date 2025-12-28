@@ -1,18 +1,23 @@
-// app/(admin)/admin/orders/_server/order.repo.ts
 import { DB, dbOrTx } from "@/server/db/client";
 import type { Prisma, PaymentMethod, OrderStatus } from "@prisma/client";
-import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
 import { genRefNo } from "../../components/AutoGenRef";
+
+/* ================================
+   TYPES
+================================ */
 
 export type CreateOrderRow = {
     customerId: string | null;
     customerName: string;
     shipPhone: string;
     shipAddress: string;
+    shipCity: string | null;
+    shipWard: string | null;
+    shipDistrict: string | null;
     paymentMethod: PaymentMethod;
     notes: string | null;
-    orderDate: Date;
-    status: OrderStatus; // nếu bạn có enum OrderStatus thì đổi thành OrderStatus
+    createdAt: Date;
+    status: OrderStatus;
 };
 
 export type CreateOrderItemRow = {
@@ -23,72 +28,109 @@ export type CreateOrderItemRow = {
     quantity: number;
 
     listPrice: number;
-
-    discountType?: 'PERCENT' | 'AMOUNT';
+    discountType?: "PERCENT" | "AMOUNT";
     discountValue?: number;
 
-    taxRate?: number; // ví dụ: 8
-    unitPriceAgreed?: number; // optional override
-
+    unitPriceAgreed: number; // 👈 service tính, repo chỉ lưu
+    taxRate?: number;
 };
 
+/* ================================
+   QUERIES
+================================ */
 
-export async function getList({ page, pageSize, where }: any) {
-    const [total, items] = await Promise.all([
-        prisma.order.count({ where }),
-        prisma.order.findMany({
+export async function getOrdList(
+    where: Prisma.OrderWhereInput,
+    orderBy: Prisma.OrderOrderByWithRelationInput,
+    skip: number,
+    take: number,
+    tx: DB
+) {
+    const db = dbOrTx(tx);
+
+    const [rows, total] = await Promise.all([
+        db.order.findMany({
             where,
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-            orderBy: { updatedAt: "desc" },
-            include: {
-                _count: { select: { items: true } }
-            }
+            orderBy,
+            skip,
+            take,
+            select: {
+                id: true,
+                refNo: true,
+                status: true,
+
+                customerName: true,
+                shipPhone: true,
+                shipCity: true,
+                shipDistrict: true,
+                shipWard: true,
+
+                paymentMethod: true,
+                subtotal: true,
+
+                //orderDate: true,
+                createdAt: true,
+                updatedAt: true,
+
+                _count: {
+                    select: {
+                        items: true,
+                    },
+                },
+            },
         }),
+
+        db.order.count({ where }),
     ]);
 
-    return {
-        items,
-        total,
-        page,
-        pageSize,
-    };
+    return { rows, total };
 }
-
-
-
-
+/* ================================
+   COMMANDS
+================================ */
 
 export async function createOrder(tx: DB, data: CreateOrderRow) {
     const db = dbOrTx(tx);
+
     const refNo = await genRefNo(db, {
-        model: db.acquisition,
+        model: db.order, // ✅ đúng model
         prefix: "OD",
     });
 
     return db.order.create({
         data: {
-            orderCode: refNo,
-            customerId: data.customerId,
+            refNo,
+            customer: data.customerId
+                ? { connect: { id: data.customerId } }
+                : undefined,
+
             customerName: data.customerName,
             shipPhone: data.shipPhone,
             shipAddress: data.shipAddress,
+            shipCity: data.shipCity,
+            shipWard: data.shipWard,
+            shipDistrict: data.shipDistrict,
             paymentMethod: data.paymentMethod,
             notes: data.notes,
-            orderDate: "DRAFT",
+            createdAt: data.createdAt, // ✅ đúng kiểu
             status: data.status,
+            subtotal: 0,
         },
         select: {
             id: true,
+            refNo: true,
             status: true,
             customerId: true,
             customerName: true,
             shipPhone: true,
             shipAddress: true,
+            shipCity: true,
+            shipWard: true,
+            shipDistrict: true,
             paymentMethod: true,
             notes: true,
-            orderDate: true,
             createdAt: true,
+
             updatedAt: true,
         },
     });
@@ -100,62 +142,67 @@ export async function createOrderItems(
     items: CreateOrderItemRow[]
 ) {
     const db = dbOrTx(tx);
-    if (!items.length) return;
+    if (!items.length) return [];
 
     const rows = items.map((i) => {
-        const listPrice = Number(i.listPrice);
-
-        const unitPriceAgreed =
-            i.unitPriceAgreed ??
-            calcUnitPriceAgreed({
-                listPrice,
-                discountType: i.discountType,
-                discountValue: i.discountValue,
-            });
-
-        const quantity = i.quantity ?? 1;
-        const subtotal = unitPriceAgreed * quantity;
+        const quantity = Number(i.quantity) || 1;
+        const subtotal = i.unitPriceAgreed * quantity;
 
         return {
             orderId,
-            productId: i.productId,
-            variantId: i.variantId,
-
+            productId: i.productId ?? null,
+            variantId: i.variantId ?? null,
             title: i.title,
             img: i.img ?? null,
 
-            listPrice: listPrice,
+            listPrice: i.listPrice,
             discountType: i.discountType ?? null,
             discountValue: i.discountValue ?? null,
 
-            unitPriceAgreed,
+            unitPriceAgreed: i.unitPriceAgreed,
             quantity,
             subtotal,
-
             taxRate: i.taxRate ?? null,
         };
     });
 
-    return db.orderItem.createMany({
-        data: rows,
-    });
-
-
+    await db.orderItem.createMany({ data: rows });
+    return rows;
 }
+
+export async function updateSubtotal(
+    tx: DB,
+    orderId: string,
+    subtotal: number
+) {
+    const db = dbOrTx(tx);
+    return db.order.update({
+        where: { id: orderId },
+        data: { subtotal },
+    });
+}
+
+/* ================================
+   READ
+================================ */
+
 export async function getOrderLite(tx: DB, id: string) {
     const db = dbOrTx(tx);
     return db.order.findUnique({
         where: { id },
         select: {
             id: true,
+            refNo: true,
             status: true,
             customerId: true,
             customerName: true,
-            phone: true,
-            shippingAddress: true,
+            shipPhone: true,
+            shipAddress: true,
+            shipCity: true,
+            shipWard: true,
+            shipDistrict: true,
             paymentMethod: true,
             notes: true,
-            orderDate: true,
             createdAt: true,
             updatedAt: true,
             items: {
@@ -163,10 +210,32 @@ export async function getOrderLite(tx: DB, id: string) {
                     id: true,
                     productId: true,
                     title: true,
-                    productType: true,
                     quantity: true,
-                    unitPrice: true,
-                    totalPrice: true,
+                    unitPriceAgreed: true,
+                    subtotal: true,
+                },
+            },
+        },
+    });
+}
+
+
+export async function getOrderDetail(tx: DB, id: string) {
+    const db = dbOrTx(tx);
+
+    return db.order.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            refNo: true,
+            status: true,
+            items: {
+                select: {
+                    id: true,
+                    title: true,
+                    quantity: true,
+                    unitPriceAgreed: true,
+                    //productType: true
                 },
             },
         },

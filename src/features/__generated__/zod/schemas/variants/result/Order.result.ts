@@ -6,16 +6,14 @@ import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
 // prettier-ignore
 export const OrderResultSchema = z.object({
     id: z.string(),
-    orderCode: z.string(),
+    refNo: z.string(),
     customerId: z.string().nullable(),
     shipPhone: z.string(),
-    shipEmail: z.string(),
     shipAddress: z.string(),
     shipWard: z.string().nullable(),
     shipCity: z.string(),
     subtotal: z.number(),
     shippingFee: z.number().nullable(),
-    total: z.number(),
     status: OrderStatusSchema,
     paymentStatus: PaymentStatusSchema,
     paymentMethod: PaymentMethodSchema.nullable(),
@@ -23,6 +21,7 @@ export const OrderResultSchema = z.object({
     updatedAt: z.date(),
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
+    shipDistrict: z.string().nullable(),
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     items: z.array(z.unknown())

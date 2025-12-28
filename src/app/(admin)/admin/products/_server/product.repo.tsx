@@ -33,7 +33,7 @@ export async function searchProductsRepo(
     tx: DB,
     q: string
 ) {
-    return tx.product.findMany({
+    const product = await tx.product.findMany({
         where: {
             OR: [
                 { title: { contains: q, mode: "insensitive" } },
@@ -55,6 +55,16 @@ export async function searchProductsRepo(
         take: 20,
         orderBy: { updatedAt: "desc" },
     });
+
+    return product.map((p) => ({
+        id: p.id,
+        title: p.title,
+        type: p.type,
+        primaryImageUrl: p.primaryImageUrl,
+        price: p.variants[0]
+            ? Number(p.variants[0].price)
+            : 0,
+    }));
 }
 
 // app/(admin)/admin/products/_server/product.repo.ts

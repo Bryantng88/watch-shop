@@ -14,8 +14,11 @@ function serialize(obj: any) {
         })
     );
 }
-
-export default async function OrderListPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function OrderListPage({
+    searchParams,
+}: {
+    searchParams: SearchParams;
+}) {
     const sp = new URLSearchParams(
         Object.entries(searchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
@@ -24,9 +27,12 @@ export default async function OrderListPage({ searchParams }: { searchParams: Se
 
     const input = parseOrderSearchParams(sp);
 
-    const { items, total, page, pageSize } = await getAdminOrderList(input);
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    // 👇 lấy page + pageSize từ input
+    //const { page, pageSize } = input;
 
+    const { items, total, page, pageSize } = await getAdminOrderList(input);
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
 
     return (

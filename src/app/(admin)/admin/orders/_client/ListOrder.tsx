@@ -9,9 +9,9 @@ type OrderItem = {
     id: string;
     refNo: string | null;
     customerName: string | null;
-    customerPhone: string | null;
+    shipPhone: string | null;
     status: string;
-    totalAmount: number;
+    subtotal: number;
     currency: string;
     itemCount: number;
     notes: string;
@@ -146,14 +146,14 @@ export default function OrderListPageClient({
                             </tr>
                         ) : (
                             items.map((o) => {
-                                const count = rowCounts[o.id] ?? o.itemCount;
-                                const totalMoney = rowTotals[o.id] ?? o.totalAmount;
+                                const displayCount = rowCounts[o.id] ?? o.itemCount;
+                                const totalMoney = rowTotals[o.id] ?? o.subtotal;
 
                                 return (
                                     <tr key={o.id} className="border-b hover:bg-gray-50">
                                         <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
-                                        <td className="px-3 py-2">{o.customerPhone ?? "-"}</td>
+                                        <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
 
                                         <td className="px-3 py-2">
                                             <span
@@ -177,7 +177,7 @@ export default function OrderListPageClient({
                                             <ItemPopover
                                                 parentId={o.id}
                                                 type="orders"
-                                                count={count}
+                                                count={displayCount}
                                                 currency={o.currency}
                                                 status={o.status}
                                                 onUpdated={({ count, total }) => {

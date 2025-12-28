@@ -20,9 +20,9 @@ type OrderLine = {
     productId: string;
     title: string;
     primaryImageUrl?: string | null;
-    productType: ProductType;
+    type: ProductType;
     quantity: number;
-    unitPrice: number;
+    price: number;
 };
 
 type Props = {
@@ -42,10 +42,17 @@ export default function NewOrderForm({ customers }: Props) {
         shipPhone: "",
         customerId: "",
         customerName: "",
-        shippingAddress: "",
+        shipAddress: "",
         paymentMethod: "COD",
         notes: "",
         orderDate: new Date().toISOString().slice(0, 16),
+    });
+
+    // 👉 3 FIELD ĐỊA CHỈ HÀNH CHÍNH
+    const [shippingLocation, setShippingLocation] = useState({
+        shipCity: "",
+        shipDistrict: "",
+        shipWard: "",
     });
 
     const [lines, setLines] = useState<OrderLine[]>([]);
@@ -59,14 +66,14 @@ export default function NewOrderForm({ customers }: Props) {
     const total = useMemo(
         () =>
             lines.reduce(
-                (s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
+                (s, l) => s + (Number(l.quantity) || 0) * (Number(l.price) || 0),
                 0
             ),
         [lines]
     );
 
     // ==========================
-    // AUTO FILL CUSTOMER BY shipPhone
+    // AUTO FILL CUSTOMER BY PHONE
     // ==========================
     useEffect(() => {
         if (formData.shipPhone.trim().length < 8) return;
@@ -78,14 +85,14 @@ export default function NewOrderForm({ customers }: Props) {
                 ...prev,
                 customerId: found.id,
                 customerName: found.name,
-                shippingAddress: found.address ?? "",
+                shipAddress: found.address ?? "",
             }));
         } else {
             setFormData((prev) => ({
                 ...prev,
                 customerId: "",
                 customerName: "",
-                shippingAddress: "",
+                shipAddress: "",
             }));
         }
     }, [formData.shipPhone, customers]);
@@ -100,10 +107,7 @@ export default function NewOrderForm({ customers }: Props) {
         setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
-    function updateLine(
-        id: string,
-        patch: Partial<OrderLine>
-    ) {
+    function updateLine(id: string, patch: Partial<OrderLine>) {
         setLines((prev) =>
             prev.map((l) => (l.id === id ? { ...l, ...patch } : l))
         );
@@ -128,18 +132,26 @@ export default function NewOrderForm({ customers }: Props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
+
+                    // 👉 3 FIELD ĐỊA CHỈ
+                    shipCity: shippingLocation.shipCity || null,
+                    shipDistrict: shippingLocation.shipDistrict || null,
+                    shipWard: shippingLocation.shipWard || null,
+
                     orderDate: new Date(formData.orderDate),
+
                     items: lines.map((l) => ({
                         productId: l.productId,
                         title: l.title,
-                        productType: l.productType,
+                        type: l.type,
                         quantity: l.quantity,
-                        unitPrice: l.unitPrice,
+                        price: l.price,
                     })),
                 }),
             });
 
             if (!res.ok) throw new Error(await res.text());
+
             setOkMsg("Đã tạo đơn hàng thành công!");
             setLines([]);
         } catch (err: any) {
@@ -188,11 +200,48 @@ export default function NewOrderForm({ customers }: Props) {
                         placeholder="Nhập tên nếu khách mới"
                     />
 
-                    <label className="block text-sm">Địa chỉ giao hàng</label>
+                    {/* ĐỊA CHỈ HÀNH CHÍNH */}
+                    <label className="block text-sm">Tỉnh / Thành phố</label>
+                    <input
+                        className="w-full rounded border px-3 py-2 mb-3"
+                        value={shippingLocation.shipCity}
+                        onChange={(e) =>
+                            setShippingLocation((prev) => ({
+                                ...prev,
+                                shipCity: e.target.value,
+                            }))
+                        }
+                    />
+
+                    <label className="block text-sm">Quận / Huyện</label>
+                    <input
+                        className="w-full rounded border px-3 py-2 mb-3"
+                        value={shippingLocation.shipDistrict}
+                        onChange={(e) =>
+                            setShippingLocation((prev) => ({
+                                ...prev,
+                                shipDistrict: e.target.value,
+                            }))
+                        }
+                    />
+
+                    <label className="block text-sm">Phường / Xã</label>
+                    <input
+                        className="w-full rounded border px-3 py-2 mb-3"
+                        value={shippingLocation.shipWard}
+                        onChange={(e) =>
+                            setShippingLocation((prev) => ({
+                                ...prev,
+                                shipWard: e.target.value,
+                            }))
+                        }
+                    />
+
+                    <label className="block text-sm">Địa chỉ chi tiết</label>
                     <textarea
-                        name="shippingAddress"
+                        name="shipAddress"
                         className="w-full rounded border px-3 py-2 min-h-[60px]"
-                        value={formData.shippingAddress}
+                        value={formData.shipAddress}
                         onChange={handleChange}
                     />
                 </div>
@@ -246,16 +295,14 @@ export default function NewOrderForm({ customers }: Props) {
                                 productId: p.id,
                                 title: p.title,
                                 primaryImageUrl: p.primaryImageUrl,
-                                productType: p.productType,
-                                quantity: p.productType === "WATCH" ? 1 : 1,
-                                unitPrice: p.sellPrice ?? 0,
+                                type: p.type,
+                                quantity: 1,
+                                price: p.price ?? 0,
                             },
                         ]);
                     }}
                 />
             </div>
-
-            {/* PRODUCT TABLE */}
             {lines.length > 0 && (
                 <div className="rounded-md border bg-white p-5 shadow-sm">
                     <h3 className="font-semibold mb-3">Sản phẩm đã chọn</h3>
@@ -275,8 +322,8 @@ export default function NewOrderForm({ customers }: Props) {
 
                         <tbody>
                             {lines.map((l) => {
-                                const money = l.quantity * l.unitPrice;
-                                const isWatch = l.productType === "WATCH";
+                                const money = l.quantity * l.price;
+                                const isWatch = l.type === "WATCH";
 
                                 return (
                                     <tr key={l.id} className="border-b">
@@ -292,7 +339,7 @@ export default function NewOrderForm({ customers }: Props) {
                                         </td>
 
                                         <td className="px-3 py-2">{l.title}</td>
-                                        <td className="px-3 py-2">{l.productType}</td>
+                                        <td className="px-3 py-2">{l.type}</td>
 
                                         <td className="px-3 py-2 text-right">
                                             <input
@@ -314,10 +361,10 @@ export default function NewOrderForm({ customers }: Props) {
                                             <input
                                                 type="number"
                                                 className="w-24 rounded border px-2 py-1 text-right"
-                                                value={l.unitPrice}
+                                                value={l.price}
                                                 onChange={(e) =>
                                                     updateLine(l.id, {
-                                                        unitPrice: Number(e.target.value),
+                                                        price: Number(e.target.value),
                                                     })
                                                 }
                                             />
@@ -378,3 +425,5 @@ export default function NewOrderForm({ customers }: Props) {
         </form>
     );
 }
+
+{/* PRODUCT TABLE */ }

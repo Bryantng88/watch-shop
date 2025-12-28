@@ -8,16 +8,14 @@ import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByR
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
-  orderCode: SortOrderSchema.optional(),
+  refNo: SortOrderSchema.optional(),
   customerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   shipPhone: SortOrderSchema.optional(),
-  shipEmail: SortOrderSchema.optional(),
   shipAddress: SortOrderSchema.optional(),
   shipWard: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   shipCity: SortOrderSchema.optional(),
   subtotal: SortOrderSchema.optional(),
   shippingFee: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  total: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
   paymentStatus: SortOrderSchema.optional(),
   paymentMethod: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -25,6 +23,7 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   customerName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  shipDistrict: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
   items: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional()

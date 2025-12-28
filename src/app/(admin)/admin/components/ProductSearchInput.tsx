@@ -9,8 +9,10 @@ type ProductResult = {
     id: string;
     title: string;
     primaryImageUrl: string;
-    productType: ProductType;
-    sellPrice: number | null;
+    type: ProductType;
+
+    price: number;
+
 };
 
 export default function ProductSearchInput({
@@ -75,7 +77,7 @@ export default function ProductSearchInput({
                             <div className="flex-1">
                                 <div className="font-medium">{p.title}</div>
                                 <div className="text-xs text-gray-500">
-                                    {p.productType} • {p.sellPrice?.toLocaleString("vi-VN")}₫
+                                    {p.type} • {p.price?.toLocaleString("vi-VN")}₫
                                 </div>
                             </div>
                         </div>

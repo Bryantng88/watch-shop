@@ -14,7 +14,7 @@ export default function ItemPopover({
     onUpdated,
 }: {
     parentId: string;
-    type: "acquisitions" | "invoices";
+    type: "acquisitions" | "invoices" | "orders";
     count: number;
     currency?: string | null;
     status: string; // DRAFT | POSTED...

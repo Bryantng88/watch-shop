@@ -1,5 +1,6 @@
 // app/(admin)/admin/customers/_server/customers.repo.ts
 import prisma from "@/server/db/client";
+import { DB, dbOrTx } from "@/server/db/client";
 
 export async function findCustomerById(id: string) {
     return prisma.customer.findUnique({
@@ -7,12 +8,12 @@ export async function findCustomerById(id: string) {
     });
 }
 
-export async function findCustomerByPhone(phone: string) {
-    return prisma.customer.findFirst({
+export async function findByPhone(tx: DB, phone: string) {
+    const db = dbOrTx(tx);
+    return db.customer.findFirst({
         where: { phone },
     });
 }
-
 export async function searchCustomers(keyword: string) {
     return prisma.customer.findMany({
         where: {
@@ -32,15 +33,25 @@ export async function listCustomers() {
     });
 }
 
-export async function createCustomer(data: {
-    name: string;
-    phone: string;
-    email?: string | null;
-    address?: string | null;
-}) {
-    return prisma.customer.create({ data });
+export async function createCustomer(
+    tx: DB,
+    data: {
+        name: string;
+        phone: string;
+        city?: string | null;
+        ward?: string | null;
+    }
+) {
+    const db = dbOrTx(tx);
+    return db.customer.create({
+        data: {
+            name: data.name,
+            phone: data.phone,
+            city: data.city ?? null,
+            ward: data.ward ?? null,
+        },
+    });
 }
-
 export async function updateCustomer(id: string, data: any) {
     return prisma.customer.update({
         where: { id },

@@ -1,16 +1,14 @@
 import * as z from 'zod';
 export const OrderAggregateResultSchema = z.object({  _count: z.object({
     id: z.number(),
-    orderCode: z.number(),
+    refNo: z.number(),
     customerId: z.number(),
     shipPhone: z.number(),
-    shipEmail: z.number(),
     shipAddress: z.number(),
     shipWard: z.number(),
     shipCity: z.number(),
     subtotal: z.number(),
     shippingFee: z.number(),
-    total: z.number(),
     status: z.number(),
     paymentStatus: z.number(),
     paymentMethod: z.number(),
@@ -18,51 +16,48 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     customerName: z.number(),
     notes: z.number(),
+    shipDistrict: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number()
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
-    total: z.number().nullable()
+    shippingFee: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
-    total: z.number().nullable()
+    shippingFee: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
-    orderCode: z.string().nullable(),
+    refNo: z.string().nullable(),
     customerId: z.string().nullable(),
     shipPhone: z.string().nullable(),
-    shipEmail: z.string().nullable(),
     shipAddress: z.string().nullable(),
     shipWard: z.string().nullable(),
     shipCity: z.string().nullable(),
     subtotal: z.number().nullable(),
     shippingFee: z.number().nullable(),
-    total: z.number().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),
-    notes: z.string().nullable()
+    notes: z.string().nullable(),
+    shipDistrict: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
-    orderCode: z.string().nullable(),
+    refNo: z.string().nullable(),
     customerId: z.string().nullable(),
     shipPhone: z.string().nullable(),
-    shipEmail: z.string().nullable(),
     shipAddress: z.string().nullable(),
     shipWard: z.string().nullable(),
     shipCity: z.string().nullable(),
     subtotal: z.number().nullable(),
     shippingFee: z.number().nullable(),
-    total: z.number().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),
-    notes: z.string().nullable()
+    notes: z.string().nullable(),
+    shipDistrict: z.string().nullable()
   }).nullable().optional()});

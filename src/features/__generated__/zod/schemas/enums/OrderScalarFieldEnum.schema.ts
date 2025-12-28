@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const OrderScalarFieldEnumSchema = z.enum(['id', 'orderCode', 'customerId', 'shipPhone', 'shipEmail', 'shipAddress', 'shipWard', 'shipCity', 'subtotal', 'shippingFee', 'total', 'status', 'paymentStatus', 'paymentMethod', 'createdAt', 'updatedAt', 'customerName', 'notes'])
+export const OrderScalarFieldEnumSchema = z.enum(['id', 'refNo', 'customerId', 'shipPhone', 'shipAddress', 'shipWard', 'shipCity', 'subtotal', 'shippingFee', 'status', 'paymentStatus', 'paymentMethod', 'createdAt', 'updatedAt', 'customerName', 'notes', 'shipDistrict'])
 
 export type OrderScalarFieldEnum = z.infer<typeof OrderScalarFieldEnumSchema>;
