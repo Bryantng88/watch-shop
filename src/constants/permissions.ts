@@ -1,0 +1,11 @@
+// src/constants/permissions.ts
+export const PERMISSIONS = {
+    ORDER_VIEW: "ORDER_VIEW",
+    ORDER_CREATE: "ORDER_CREATE",
+    ORDER_UPDATE: "ORDER_UPDATE",
+
+    PRODUCT_VIEW: "PRODUCT_VIEW",
+    PRODUCT_CREATE: "PRODUCT_CREATE",
+
+    USER_MANAGE: "USER_MANAGE",
+} as const;

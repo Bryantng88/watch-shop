@@ -1,10 +1,8 @@
 // app/(admin)/admin/users/page.tsx
-import { getAdminUserList } from "@/server/auth/user.service";
-import UserTable from "./user-table";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-
-
+import { getAdminUserList } from "./_server/user.service";
+import UserTable from "./_client/UserTable";
 
 export default async function UsersPage() {
     await requirePermission(PERMISSIONS.USER_MANAGE);

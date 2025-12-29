@@ -14,6 +14,7 @@ export const OrderItemCreateResultSchema = z.object({
   subtotal: z.number(),
   img: z.string().optional(),
   createdAt: z.date(),
+  productType: z.unknown().optional(),
   acquisitionItem: z.array(z.unknown()),
   order: z.unknown(),
   Product: z.unknown().optional(),

@@ -1,6 +1,7 @@
 // app/(admin)/admin/layout.tsx
 import AdminTopbar from './components/AdminTopBar';
-import AdminSidebar from '@/features/admin/layout/side-bar';
+import AdminSidebar from './components/AdmidSideBar';
+
 import { getCurrentUser } from '@/server/auth/getCurrentUser';
 import { redirect } from "next/navigation";
 

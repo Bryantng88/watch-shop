@@ -23,6 +23,7 @@ const makeSchema = () => z.object({
   subtotal: SortOrderSchema.optional(),
   img: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
+  productType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => OrderItemCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => OrderItemAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => OrderItemMaxOrderByAggregateInputObjectSchema).optional(),

@@ -14,6 +14,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     subtotal: z.number(),
     img: z.number(),
     createdAt: z.number(),
+    productType: z.number(),
     acquisitionItem: z.number(),
     order: z.number(),
     Product: z.number(),

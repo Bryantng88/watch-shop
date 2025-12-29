@@ -60,21 +60,23 @@ export default function AdminTopbar({
 
                     {/* User info */}
                     <div className="flex items-center gap-2 rounded-full border px-3 py-1">
-                        <UserCircle2 size={18} className="text-gray-600" />
                         <Link
-                            href="/admin/profile"
-                            className="flex flex-col leading-tight hover:underline"
+                            href="/admin/users/profile"
+                            className="flex items-center gap-2 hover:opacity-80"
                         >
-                            <span className="text-sm font-medium">
-                                {user?.name ?? "User"}
-                            </span>
-
-                            {user?.roles?.length ? (
-                                <span className="text-[11px] text-gray-500">
-                                    {user.roles.join(", ")}
+                            <UserCircle2 size={18} className="text-gray-600" />
+                            <div className="flex flex-col leading-tight">
+                                <span className="text-sm font-medium">
+                                    {user?.name ?? "User"}
                                 </span>
-                            ) : null}
+                                {user?.roles?.length ? (
+                                    <span className="text-[11px] text-gray-500">
+                                        {user.roles.join(", ")}
+                                    </span>
+                                ) : null}
+                            </div>
                         </Link>
+
 
 
 

@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   subtotal: z.boolean().optional(),
   img: z.boolean().optional(),
   createdAt: z.boolean().optional(),
+  productType: z.boolean().optional(),
   acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),

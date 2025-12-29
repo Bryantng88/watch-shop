@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 import { discount_typeSchema } from '../../enums/discount_type.schema';
+import { ProductTypeSchema } from '../../enums/ProductType.schema';
 // prettier-ignore
 export const OrderItemModelSchema = z.object({
     id: z.string(),
@@ -17,6 +18,7 @@ export const OrderItemModelSchema = z.object({
     subtotal: z.number(),
     img: z.string().nullable(),
     createdAt: z.date(),
+    productType: ProductTypeSchema.nullable(),
     acquisitionItem: z.array(z.unknown()),
     order: z.unknown(),
     Product: z.unknown().nullable(),
