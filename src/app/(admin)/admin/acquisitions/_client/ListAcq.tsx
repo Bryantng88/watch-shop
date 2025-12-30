@@ -7,7 +7,7 @@ import ItemsHover from "../components/ItemsHover";
 import AcqItemsPopover from "../components/ItemsPopover";
 import ChangeToPostedButton from "../components/ChangeToPostedButton";
 import ActionMenu from "../components/ActionMenu";
-import ItemPopover from "../../components/GenericPopover";
+import ItemPopover from "../../__components/GenericPopover";
 
 type AcquisitionItem = {
     id: string;

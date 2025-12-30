@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import ItemPopover from "../../components/GenericPopover"; // popover dùng chung
+import ItemPopover from "../../__components/GenericPopover"; // popover dùng chung
 import ActionMenu from "../../acquisitions/components/ActionMenu"
 
 type OrderItem = {

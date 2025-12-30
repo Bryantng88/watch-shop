@@ -61,7 +61,7 @@ export default function AdminTopbar({
                     {/* User info */}
                     <div className="flex items-center gap-2 rounded-full border px-3 py-1">
                         <Link
-                            href="/admin/users/profile"
+                            href="/admin/profile"
                             className="flex items-center gap-2 hover:opacity-80"
                         >
                             <UserCircle2 size={18} className="text-gray-600" />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import ProductStatusBadge from "../components/draft-badge";
+import ProductStatusBadge from "./DraftBadge";
 import ImagePicker from "@/app/(admin)/admin/products/_components/ImagePicker";
 import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import InlineImagePicker from "@/app/(admin)/admin/products/_components/InlineImagePicker";

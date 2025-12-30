@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ItemPopover from "../../components/GenericPopover";
+import ItemPopover from "../../__components/GenericPopover";
 import InvoiceItemsPopover from "../components/InvoiceItemsPopover";
 import InvoiceActionMenu from "../components/InvoiceActionMenu";
 

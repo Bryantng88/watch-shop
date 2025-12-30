@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ProductType } from "@prisma/client";
-import ProductSearchInput from "../../components/ProductSearchInput";
+import ProductSearchInput from "../../__components/ProductSearchInput";
 
 // ==============================
 // Types

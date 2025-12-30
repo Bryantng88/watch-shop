@@ -1,6 +1,6 @@
 import { DB, dbOrTx } from "@/server/db/client";
 import type { Prisma, PaymentMethod, OrderStatus } from "@prisma/client";
-import { genRefNo } from "../../components/AutoGenRef";
+import { genRefNo } from "../../__components/AutoGenRef";
 
 /* ================================
    TYPES

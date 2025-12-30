@@ -1,6 +1,6 @@
 "use client";
 
-import GenericActionMenu from "../../components/GenericActionMenu";
+import GenericActionMenu from "../../__components/GenericActionMenu";
 
 export default function InvoiceActionMenu({
     id,

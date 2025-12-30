@@ -1,4 +1,4 @@
-import GenericPopover from "../../components/GenericPopover";
+import GenericPopover from "../../__components/GenericPopover";
 
 export default function InvoiceItemsPopover({
     invoiceId,

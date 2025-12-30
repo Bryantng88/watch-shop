@@ -4,7 +4,7 @@ import { acqFiltersSchema } from "./acquisition.dto";
 import prisma from "@/server/db/client";
 import { CreateAcqWithItemInput } from "./acquisition.dto";
 import { genRefNoIncrement } from "./helpers";
-import { genRefNo } from "../../components/AutoGenRef";
+import { genRefNo } from "../../__components/AutoGenRef";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
 import { ItemInput, NewItemInput } from "./acquisition.dto";
