@@ -53,7 +53,7 @@ export async function createUserRepo(
         email: string;
         name?: string;
         passwordHash: string;
-        roleIds: string[];
+        roleId: string;   // 👈 đổi ở đây
     }
 ) {
     return prisma.user.create({
@@ -62,7 +62,7 @@ export async function createUserRepo(
             name: data.name,
             passwordHash: data.passwordHash,
             roles: {
-                connect: data.roleIds.map((id) => ({ id })),
+                connect: { id: data.roleId }, // 👈 chuẩn
             },
         },
         select: {
@@ -87,3 +87,32 @@ export async function updateUserRepo(
     });
 }
 
+export type RoleWithPermissions = {
+    id: string;
+    name: string;
+    description: string | null;
+    permissions: {
+        id: string;
+        code: string;
+        description: string | null;
+    }[];
+};
+
+export async function getAllRolesRepo(): Promise<RoleWithPermissions[]> {
+    return prisma.role.findMany({
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            permissions: {
+                select: {
+                    id: true,
+                    code: true,
+                    description: true,
+                },
+                orderBy: { code: "asc" },
+            },
+        },
+    });
+}

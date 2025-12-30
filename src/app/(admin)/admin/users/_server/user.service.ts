@@ -3,6 +3,13 @@ import * as userRepo from "./user.repo";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/server/db/client";
 
+export type RoleDTO = {
+    id: string;
+    name: string;
+    description: string | null;
+    permissions: string[]; // chỉ trả code cho UI
+};
+
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -46,7 +53,7 @@ export async function createAdminUser(input: {
     email: string;
     name?: string;
     password: string;
-    roleIds: string[];
+    roleId: string;
 }) {
     // 1. validate cơ bản
     if (!input.email || !input.password) {
@@ -56,7 +63,6 @@ export async function createAdminUser(input: {
     if (input.password.length < 6) {
         throw new Error("Mật khẩu tối thiểu 6 ký tự");
     }
-
     // 2. check email tồn tại
     const existed = await prisma.user.findUnique({
         where: { email: input.email },
@@ -75,7 +81,7 @@ export async function createAdminUser(input: {
         email: input.email,
         name: input.name,
         passwordHash,
-        roleIds: input.roleIds,
+        roleId: input.roleId,
     });
 }
 
@@ -87,4 +93,15 @@ export async function updateUserService(
     }
 ) {
     return userRepo.updateUserRepo(prisma, userId, input);
+}
+
+export async function getAllRoles(): Promise<RoleDTO[]> {
+    const roles = await userRepo.getAllRolesRepo();
+
+    return roles.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        permissions: r.permissions.map((p) => p.code),
+    }));
 }

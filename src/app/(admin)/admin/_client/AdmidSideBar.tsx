@@ -16,21 +16,32 @@ import {
 
 } from "lucide-react";
 import ActiveLink from "./AdminActiveLink";
+import { PERMISSIONS } from "@/constants/permissions";
+
+type Props = {
+    user: {
+        permissions: string[];
+    };
+};
+
 
 const NAV = [
-    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    { href: "/admin/products", label: "Sản phẩm", icon: Package },
-    { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags },
-    { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList },
-    { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt },
-    { href: "/admin/customers", label: "Khách hàng", icon: Users2 },
-    { href: "/admin/users", label: "Người dùng", icon: User },
-    { href: "/admin/reports", label: "Báo cáo", icon: LineChart },
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: PERMISSIONS.DASHBOARD_VIEW },
+    { href: "/admin/products", label: "Sản phẩm", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
+    { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags, permission: PERMISSIONS.ACQUISITION_VIEW },
+    { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList, permission: PERMISSIONS.ORDER_VIEW },
+    { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW },
+    { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
+    { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
+    { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
     { href: "/admin/settings", label: "Thiết lập", icon: Settings },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ user }: Props) {
     const [open, setOpen] = useState(false);
+    const allowedNav = NAV.filter(
+        (n) => !n.permission || user.permissions.includes(n.permission)
+    );
 
     return (
         <>
@@ -74,7 +85,7 @@ export default function AdminSidebar() {
 
                 {/* Nav */}
                 <nav className="px-3 py-3 space-y-1">
-                    {NAV.map((n) => {
+                    {allowedNav.map((n) => {
                         const Icon = n.icon;
                         return (
                             <ActiveLink
