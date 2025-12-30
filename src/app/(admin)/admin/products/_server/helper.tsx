@@ -3,6 +3,25 @@ import { Prisma, CaseType, ProductType, Gender, MovementType } from "@prisma/cli
 import slugify from "slugify";
 import { Tx } from "@/server/db/client";
 
+export type AdminSort =
+    | "updatedDesc" | "updatedAsc"
+    | "createdDesc" | "createdAsc"
+    | "titleAsc" | "titleDesc";
+
+export interface AdminProductFilters {
+    page?: number;
+    pageSize?: number;
+    q?: string;
+
+    //sstatus?: Prisma.ProductWhereInput["status"][]; // ['ACTIVE','DRAFT','INACTIVE']
+    type?: Prisma.ProductWhereInput["type"][];     // ['PRE_OWNED',...]
+    brandIds?: string[];
+    hasImages?: "yes" | "no";
+    updatedFrom?: Date | string;
+    updatedTo?: Date | string;
+    sort?: AdminSort;
+}
+
 export async function genUniqueSlug(db: Tx, title: string) {
     const base = slugify(title, { lower: true, strict: true });
     let slug = base;
@@ -98,3 +117,41 @@ export function toPublicUrl(key?: string | null): string | undefined {
 }
 
 
+export function buildWhere(f: AdminProductFilters): Prisma.ProductWhereInput {
+    return {
+        ...(f.q
+            ? {
+                OR: [
+                    { title: { contains: f.q, mode: "insensitive" } },
+                    { slug: { contains: f.q, mode: "insensitive" } },
+                    { seoTitle: { contains: f.q, mode: "insensitive" } },
+                ],
+            }
+            : {}),
+        // ...(f.status?.length ? { status: { in: f.status as any } } : {}),
+        ...(f.type?.length ? { type: { in: f.type as any } } : {}),
+        ...(f.brandIds?.length ? { brandId: { in: f.brandIds } } : {}),
+        ...(f.hasImages === "yes" ? { primaryImageUrl: { not: null } } : {}),
+        ...(f.hasImages === "no" ? { primaryImageUrl: null } : {}),
+        ...(f.updatedFrom || f.updatedTo
+            ? {
+                updatedAt: {
+                    ...(f.updatedFrom ? { gte: new Date(f.updatedFrom) } : {}),
+                    ...(f.updatedTo ? { lte: new Date(f.updatedTo) } : {}),
+                },
+            }
+            : {}),
+    };
+}
+
+export function buildOrderBy(sort: AdminSort | undefined): Prisma.ProductOrderByWithRelationInput[] {
+    switch (sort) {
+        case "updatedAsc": return [{ updatedAt: "asc" }];
+        case "updatedDesc": return [{ updatedAt: "desc" }];
+        case "createdAsc": return [{ createdAt: "asc" }];
+        case "createdDesc": return [{ createdAt: "desc" }];
+        case "titleAsc": return [{ title: "asc" }];
+        case "titleDesc": return [{ title: "desc" }];
+        default: return [{ updatedAt: "desc" }];
+    }
+}

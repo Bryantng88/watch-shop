@@ -1,9 +1,23 @@
 import { CreateProductWithOutAcqInput, CreateProductWithOutAcqSchema } from "./product.dto";
 import { prisma, DB } from "@/server/db/client";
-import { Prisma } from "@prisma/client";
+import { ContentStatus } from "@prisma/client";
 import * as ultil from "./helper"
 import * as prodRepo from "./product.repo"
+import { AdminFiltersSchema } from "./product.dto";
+import { mapProductToAdminRow } from "./product.mapper";
 
+const asDate = (v: unknown) =>
+    v == null || v === "" ? undefined : new Date(String(v));
+
+const asNumber = (v: unknown) =>
+    v == null || v === "" ? undefined : Number(v);
+
+/** Một số field có thể đi theo dạng nhiều giá trị trên query (?status=A&status=B) */
+const arrayify = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter(Boolean).map(String);
+    if (v == null || v === "") return [];
+    return [String(v)];
+};
 
 
 export async function createProductDraft(title: string) {
@@ -20,6 +34,49 @@ export async function detail(id: string) {
     return prisma.product.findUnique({
         where: { id },
     });
+}
+
+export async function getAdminProductList(raw: Record<string, unknown>) {
+    // helper nhỏ để convert string[] sang enum ProductStatus[]
+    const parseStatusArray = (input: unknown): ContentStatus[] | undefined => {
+        const arr = Array.isArray(input) ? input : [input];
+        const valid = arr
+            .filter(Boolean)
+            .map((s) => String(s).toUpperCase())
+            .filter((s): s is ContentStatus =>
+                Object.values(ContentStatus).includes(s as ContentStatus)
+            );
+        return valid.length ? valid : undefined;
+    };
+
+    const parsed = AdminFiltersSchema.parse({
+
+        page: asNumber(raw.page) ?? 1,
+        pageSize: asNumber(raw.pageSize) ?? 50,
+        q: raw.q ?? undefined,
+        sort: raw.sort ?? undefined,
+        status: parseStatusArray(raw.status), // ✅ chuyển sang enum
+        type: arrayify(raw.type),
+        brandIds: arrayify(raw.brandIds),
+        hasImages: raw.hasImages ?? undefined,
+        updatedFrom: asDate(raw.updatedFrom),
+        updatedTo: asDate(raw.updatedTo),
+    });
+
+
+    const { items, total, page, pageSize } =
+        await prodRepo.listAdminProducts(parsed);
+
+    // 3️⃣ Map → Admin View Model
+    const rows = items.map(mapProductToAdminRow);
+
+    // 4️⃣ Return
+    return {
+        items: rows,
+        total,
+        page,
+        pageSize,
+    };
 }
 
 export async function updateProduct(

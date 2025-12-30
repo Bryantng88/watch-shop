@@ -1,22 +1,36 @@
 import { prisma, DB } from "@/server/db/client";
 
-export async function getUserListRepo() {
-    return prisma.user.findMany({
-        orderBy: { createdAt: "desc" },
-        select: {
-            id: true,
-            email: true,
-            name: true,
-            isActive: true,
-            roles: {
-                select: {
-                    name: true,
+
+export async function getUserListRepo(
+    params: {
+        skip: number;
+        take: number;
+    }
+) {
+    const [items, total] = await Promise.all([
+        prisma.user.findMany({
+            skip: params.skip,
+            take: params.take,
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
+                roles: {
+                    select: {
+                        name: true,
+                    },
                 },
             },
-        },
-    });
-}
+        }),
+        prisma.user.count(),
+    ]);
 
+    return { items, total };
+}
 
 
 export async function listUsersRepo(db: DB) {
@@ -32,20 +46,29 @@ export async function listUsersRepo(db: DB) {
     });
 }
 
+
+
 export async function createUserRepo(
-    db: DB,
     data: {
         email: string;
-        name?: string | null;
+        name?: string;
         passwordHash: string;
+        roleIds: string[];
     }
 ) {
-    return db.user.create({
+    return prisma.user.create({
         data: {
             email: data.email,
             name: data.name,
             passwordHash: data.passwordHash,
-            isActive: true,
+            roles: {
+                connect: data.roleIds.map((id) => ({ id })),
+            },
+        },
+        select: {
+            id: true,
+            email: true,
+            name: true,
         },
     });
 }

@@ -1,7 +1,10 @@
 
-import { DB, dbOrTx } from "@/server/db/client";
+import { DB, dbOrTx, prisma } from "@/server/db/client";
 import { ProductType, Prisma } from "@prisma/client";
 import * as helper from "./helper";
+
+const DEFAULT_PAGE_SIZE = 50;
+
 
 export async function createProductDraft(
     tx: DB,
@@ -105,3 +108,69 @@ export async function deleteProduct(tx: DB, id: string) {
     return db.product.delete({ where: { id } });
 }
 
+export async function listAdminProducts(f: helper.AdminProductFilters) {
+    const page = Math.max(1, f.page ?? 1);
+    const pageSize = Math.max(1, Math.min(200, f.pageSize ?? DEFAULT_PAGE_SIZE));
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+    const where = helper.buildWhere(f);
+    const [items, total] = await Promise.all([
+        prisma.product.findMany({
+            where,
+            skip,
+            take,
+            orderBy: helper.buildOrderBy(f.sort),
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                priceVisibility: true,
+                contentStatus: true,
+
+                type: true,
+                brand: { select: { id: true, name: true } },
+                primaryImageUrl: true,
+                createdAt: true,
+                updatedAt: true,
+                // Lấy min price từ variants + (tuỳ có stockQty hay không)
+                variants: {
+                    orderBy: { price: "asc" },
+                    take: 1,
+                    select: {
+                        price: true,
+                        availabilityStatus: true, /*, stockQty: true*/
+                    }, // TODO: map field tồn kho nếu có
+                },
+
+                // Lấy bản ghi gần nhất của các lịch sử
+                orderItems: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: { createdAt: true },
+                },
+                maintenanceRecords: {
+                    orderBy: { servicedAt: "desc" }, // TODO: map field ngày bảo trì
+                    take: 1,
+                    select: { servicedAt: true },
+                },
+
+                // Đếm số bản ghi liên quan
+                _count: {
+                    select: {
+                        image: true,
+                        variants: true,
+                        orderItems: true,
+                        maintenanceRecords: true,
+                        InvoiceItem: true,
+                        AcquisitionItem: true,
+                        ServiceRequest: true,
+                        Reservation: true,
+                    },
+                },
+            },
+        }),
+        prisma.product.count({ where }),
+    ]);
+
+    return { items, total, page, pageSize };
+}

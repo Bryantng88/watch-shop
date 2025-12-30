@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createUserService } from "@/app/(admin)/admin/users/_server/user.service";
-import { requirePermission } from "@/server/auth/requirePermission";
+import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 
 export async function POST(req: Request) {
-    await requirePermission(PERMISSIONS.USER_CREATE);
+    await requirePermissionApi(PERMISSIONS.USER_MANAGE);
 
     try {
         const body = await req.json();
