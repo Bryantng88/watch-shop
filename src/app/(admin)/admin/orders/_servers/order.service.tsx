@@ -4,7 +4,7 @@ import { prisma } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import type { PaymentMethod, Prisma } from "@prisma/client";
+import type { PaymentMethod, Prisma, orderitemkind } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 
 /* ================================
@@ -35,7 +35,7 @@ export type CreateOrderInput = {
   shipCity: string;
   shipDistrict: string;
   shipWard: string;
-
+  kind?: orderitemkind;
   paymentMethod?: PaymentMethod | null;
   notes?: string | null;
   orderDate: Date;
@@ -101,16 +101,15 @@ export async function getAdminOrderList(input: OrderSearchInput) {
 ================================ */
 
 export async function createOrderWithItems(raw: any) {
-  // 1️⃣ Normalize input
   const input: CreateOrderInput = {
     shipPhone: raw.shipPhone ?? null,
     customerId: raw.customerId ?? null,
     customerName: raw.customerName,
 
     shipAddress: raw.shipAddress ?? null,
-    shipCity: raw.shipCity,
-    shipDistrict: raw.shipDistrict,
-    shipWard: raw.shipWard,
+    shipCity: raw.shipCity ?? null,
+    shipDistrict: raw.shipDistrict ?? null,
+    shipWard: raw.shipWard ?? null,
 
     paymentMethod: raw.paymentMethod ?? null,
     notes: raw.notes ?? null,
@@ -120,44 +119,54 @@ export async function createOrderWithItems(raw: any) {
         : new Date(raw.orderDate),
 
     items: (raw.items ?? []).map((i: any) => ({
-      productId: i.productId,
-      variantId: i.variantId,
-      title: i.title,
-      img: i.img,
+      kind: i.kind as "PRODUCT" | "SERVICE",
 
+      // PRODUCT
+      productId: i.productId ?? null,
+      variantId: i.variantId ?? null,
+
+      // SERVICE
+      serviceCatalogId: i.serviceCatalogId ?? null,
+
+      title: i.title,
       quantity: Number(i.quantity ?? 1),
       listPrice: Number(i.price ?? i.unitPrice ?? 0),
 
-      discountType: i.discountType,
-      discountValue: i.discountValue,
-      taxRate: i.taxRate,
+      discountType: i.discountType ?? null,
+      discountValue: i.discountValue ?? null,
+      taxRate: i.taxRate ?? null,
     })),
   };
 
   return prisma.$transaction(async (tx) => {
-    let customerId: string | undefined;
+    /** -----------------------------
+     * 1️⃣ Resolve customer
+     * ----------------------------- */
+    let resolvedCustomerId = input.customerId ?? null;
 
-    if (input.shipPhone) {
-      const existing = await customerRepo.findByPhone(
-        tx,
-        input.shipPhone
-      );
+    if (!resolvedCustomerId && input.shipPhone) {
+      const existing = await customerRepo.findByPhone(tx, input.shipPhone);
 
       if (existing) {
-        customerId = existing.id;
+        resolvedCustomerId = existing.id;
       } else {
         const created = await customerRepo.createCustomer(tx, {
           name: input.customerName,
           phone: input.shipPhone,
           city: input.shipCity,
+          district: input.shipDistrict,
           ward: input.shipWard,
+          address: input.shipAddress,
         });
-        customerId = created.id;
+        resolvedCustomerId = created.id;
       }
     }
-    // 2️⃣ Create ORDER (chưa có subtotal)
+
+    /** -----------------------------
+     * 2️⃣ Create ORDER (DRAFT)
+     * ----------------------------- */
     const order = await orderRepo.createOrder(tx, {
-      customerId: input.customerId,
+      customerId: resolvedCustomerId,
       customerName: input.customerName,
       shipPhone: input.shipPhone!,
       shipAddress: input.shipAddress,
@@ -170,8 +179,10 @@ export async function createOrderWithItems(raw: any) {
       status: "DRAFT",
     });
 
-    // 3️⃣ Build OrderItems + tính subtotal
-    const itemRows = input.items.map((i) => {
+    /** -----------------------------
+     * 3️⃣ Build OrderItems
+     * ----------------------------- */
+    const orderItems = input.items.map((i) => {
       const unitPriceAgreed = calcUnitPriceAgreed({
         listPrice: i.listPrice,
         discountType: i.discountType,
@@ -179,27 +190,40 @@ export async function createOrderWithItems(raw: any) {
       });
 
       return {
-        ...i,
+        kind: i.kind,
+
+        productId: i.kind === "PRODUCT" ? i.productId : null,
+        variantId: i.kind === "PRODUCT" ? i.variantId : null,
+
+        serviceCatalogId:
+          i.kind === "SERVICE" ? i.serviceCatalogId : null,
+
+        title: i.title,
+        quantity: i.quantity,
+        listPrice: i.listPrice,
         unitPriceAgreed,
       };
     });
 
-    const rows = await orderRepo.createOrderItems(
+    const createdItems = await orderRepo.createOrderItems(
       tx,
       order.id,
-      itemRows
+      orderItems
     );
 
-    // 4️⃣ Tính subtotal ORDER (SERVER-SIDE)
-    const subtotal = rows.reduce(
+    /** -----------------------------
+     * 4️⃣ Compute subtotal
+     * ----------------------------- */
+    const subtotal = createdItems.reduce(
       (sum, i) => sum + i.subtotal,
       0
     );
 
-    // 5️⃣ Update subtotal
     await orderRepo.updateSubtotal(tx, order.id, subtotal);
 
-    // 6️⃣ Trả order lite
+    /** -----------------------------
+     * 5️⃣ Return lite order
+     * ----------------------------- */
     return orderRepo.getOrderLite(tx, order.id);
   });
 }

@@ -13,7 +13,12 @@ const makeSchema = () => z.object({
   city: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+<<<<<<< HEAD
   address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+=======
+  address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  district: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 }).strict();
 export const CustomerUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.CustomerUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerUpdateManyMutationInput>;
 export const CustomerUpdateManyMutationInputObjectZodSchema = makeSchema();

@@ -12,7 +12,12 @@ const makeSchema = () => z.object({
   userId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+<<<<<<< HEAD
   address: SortOrderSchema.optional()
+=======
+  address: SortOrderSchema.optional(),
+  district: SortOrderSchema.optional()
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 }).strict();
 export const CustomerMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.CustomerMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerMinOrderByAggregateInput>;
 export const CustomerMinOrderByAggregateInputObjectZodSchema = makeSchema();

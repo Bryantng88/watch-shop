@@ -486,6 +486,10 @@ model Customer {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   address        String?
+<<<<<<< HEAD
+=======
+  district       String?
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
   Acquisition    Acquisition[]
   user           User?            @relation(fields: [userId], references: [id])
   Invoice        Invoice[]

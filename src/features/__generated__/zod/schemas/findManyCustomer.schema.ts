@@ -20,6 +20,10 @@ export const CustomerFindManySelectSchema: z.ZodType<Prisma.CustomerSelect> = z.
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
+<<<<<<< HEAD
+=======
+    district: z.boolean().optional(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
     Acquisition: z.boolean().optional(),
     user: z.boolean().optional(),
     Invoice: z.boolean().optional(),
@@ -39,6 +43,10 @@ export const CustomerFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
+<<<<<<< HEAD
+=======
+    district: z.boolean().optional(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
     Acquisition: z.boolean().optional(),
     user: z.boolean().optional(),
     Invoice: z.boolean().optional(),

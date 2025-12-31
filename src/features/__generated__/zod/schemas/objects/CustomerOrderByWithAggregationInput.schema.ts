@@ -17,6 +17,10 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+<<<<<<< HEAD
+=======
+  district: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
   _count: z.lazy(() => CustomerCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => CustomerMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => CustomerMinOrderByAggregateInputObjectSchema).optional()

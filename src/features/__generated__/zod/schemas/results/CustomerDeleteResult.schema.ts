@@ -10,6 +10,10 @@ export const CustomerDeleteResultSchema = z.nullable(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   address: z.string().optional(),
+<<<<<<< HEAD
+=======
+  district: z.string().optional(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
   Acquisition: z.array(z.unknown()),
   user: z.unknown().optional(),
   Invoice: z.array(z.unknown()),

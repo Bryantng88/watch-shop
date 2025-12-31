@@ -12,6 +12,10 @@ export const CustomerInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     address: z.string().optional().nullable(),
+<<<<<<< HEAD
+=======
+    district: z.string().optional().nullable(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
     Acquisition: z.array(z.unknown()),
     user: z.unknown().optional().nullable(),
     Invoice: z.array(z.unknown()),

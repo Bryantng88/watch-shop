@@ -58,7 +58,11 @@ export async function updateCustomer(id: string, data: any) {
         data
     });
 }
+<<<<<<< HEAD
 
+=======
+// customer.service.ts
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 // customer.repo.ts
 export async function searchCustomersByPhone(phone: string) {
     return prisma.customer.findMany({

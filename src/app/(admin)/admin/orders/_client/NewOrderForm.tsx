@@ -12,6 +12,9 @@ type Customer = {
     id: string;
     name: string;
     shipPhone: string;
+    city?: string | null;
+    district?: string | null;
+    ward?: string | null;
     address?: string | null;
 };
 
@@ -37,7 +40,7 @@ type OrderLine = {
 
     title: string;
     quantity: number;
-    unitPrice: number;
+    price: number;
 };
 
 type Props = {
@@ -149,7 +152,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
      * Derived
      * -------------------------- */
     const total = useMemo(() => {
-        return lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), 0);
+        return lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.price) || 0), 0);
     }, [lines]);
 
     const serviceOptions = useMemo(() => {
@@ -160,30 +163,35 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
      * Auto fill customer by phone
      * -------------------------- */
     useEffect(() => {
-        const phone = formData.shipPhone.trim();
+        const phone = (formData.shipPhone ?? "").trim();
 
         if (phone.length < 3) {
             setSuggestCustomers([]);
-            setShowSuggest(false);
             return;
         }
 
-        const t = setTimeout(async () => {
-            try {
-                setLoadingSuggest(true);
-                const res = await fetch(`/api/admin/customers/search?phone=${phone}`);
-                if (!res.ok) return;
+        const matches = customers.filter((c) =>
+            c.shipPhone?.includes(phone)
+        );
 
-                const data: Customer[] = await res.json();
-                setSuggestCustomers(data);
-                setShowSuggest(true);
-            } finally {
-                setLoadingSuggest(false);
-            }
-        }, 300);
+        setSuggestCustomers(matches);
 
-        return () => clearTimeout(t);
-    }, [formData.shipPhone]);
+        // ✅ Nếu chỉ có 1 khách → auto-fill toàn bộ
+        if (matches.length === 1) {
+            const c = matches[0];
+
+            setFormData((prev) => ({
+                ...prev,
+                customerId: c.id,
+                customerName: c.name ?? prev.customerName,
+
+                shipCity: c.city ?? prev.shipCity,
+                shipDistrict: c.district ?? prev.shipDistrict,
+                shipWard: c.ward ?? prev.shipWard,
+                shipAddress: c.address ?? prev.shipAddress,
+            }));
+        }
+    }, [formData.shipPhone, customers]);
 
 
     /** --------------------------
@@ -209,7 +217,22 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
         setErrMsg(null);
         setOkMsg(null);
     }
+    function applyCustomer(c: Customer) {
+        setFormData((prev) => ({
+            ...prev,
+            customerId: c.id,
+            customerName: c.name,
 
+            shipPhone: c.shipPhone,
+            shipCity: c.city ?? "",
+            shipDistrict: c.district ?? "",
+            shipWard: c.ward ?? "",
+            shipAddress: c.address ?? "",
+        }));
+
+        setSuggestCustomers([]);
+        setShowSuggest(false);
+    }
     /** --------------------------
      * Validate minimal
      * -------------------------- */
@@ -220,7 +243,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
         for (const l of lines) {
             if (!l.title) return "Có dòng item thiếu tiêu đề.";
             if (!l.quantity || l.quantity < 1) return "Số lượng phải >= 1.";
-            if (l.unitPrice == null || Number.isNaN(Number(l.unitPrice))) return "Đơn giá không hợp lệ.";
+            if (l.price == null || Number.isNaN(Number(l.price))) return "Đơn giá không hợp lệ.";
             if (l.kind === "PRODUCT" && !l.productId) return "Có dòng PRODUCT thiếu productId.";
             if (l.kind === "SERVICE" && !l.serviceCatalogId) return "Có dòng SERVICE thiếu serviceCatalogId.";
         }
@@ -262,7 +285,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                     kind: l.kind,
                     title: l.title,
                     quantity: l.quantity,
-                    unitPrice: l.unitPrice,
+                    price: l.price,
 
                     productId: l.kind === "PRODUCT" ? l.productId : null,
                     variantId: l.kind === "PRODUCT" ? l.variantId ?? null : null,
@@ -326,9 +349,25 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                                         className="h-9 w-full rounded border px-3"
                                         value={formData.shipPhone}
                                         onChange={(e) => {
-                                            set("shipPhone", e.target.value);
+                                            const v = e.target.value;
+
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                shipPhone: v,
+
+                                                // 🔥 QUAN TRỌNG: invalidate khách cũ
+                                                customerId: "",
+                                                customerName: prev.customerId ? "" : prev.customerName,
+
+                                                shipCity: "",
+                                                shipDistrict: "",
+                                                shipWard: "",
+                                                shipAddress: "",
+                                            }));
+
                                             setShowSuggest(true);
                                         }}
+
                                         placeholder="VD: 0909xxxxxx"
                                         onBlur={() => {
                                             // delay để click được item
@@ -354,16 +393,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                                                         key={c.id}
                                                         type="button"
                                                         className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                                                        onClick={() => {
-                                                            setFormData((prev) => ({
-                                                                ...prev,
-                                                                customerId: c.id,
-                                                                customerName: c.name,
-                                                                shipPhone: c.shipPhone,
-                                                                shipAddress: c.address ?? "",
-                                                            }));
-                                                            setShowSuggest(false);
-                                                        }}
+                                                        onClick={() => applyCustomer(c)}
                                                     >
                                                         <div className="font-medium">{c.name}</div>
                                                         <div className="text-xs text-gray-500">
@@ -493,7 +523,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                                             title: p.title,
                                             primaryImageUrl: p.primaryImageUrl ?? null,
                                             quantity: 1,
-                                            unitPrice: Number(p.price ?? 0),
+                                            price: Number(p.price ?? 0),
                                         });
                                     }}
                                 />
@@ -520,7 +550,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                                                         serviceCatalogId: s.id,
                                                         title: s.name,
                                                         quantity: 1,
-                                                        unitPrice: Number(s.defaultPrice ?? 0),
+                                                        price: Number(s.defaultPrice ?? 0),
                                                     });
                                                     e.currentTarget.value = "";
                                                 }}
@@ -563,7 +593,7 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
 
                                     <tbody>
                                         {lines.map((l) => {
-                                            const lineTotal = Number(l.quantity) * Number(l.unitPrice);
+                                            const lineTotal = Number(l.quantity) * Number(l.price);
                                             return (
                                                 <tr key={l.id} className="border-b hover:bg-gray-50">
                                                     <td className="px-3 py-2">
@@ -599,8 +629,8 @@ export default function NewOrderFormOptimized({ customers, services = [] }: Prop
                                                         <input
                                                             type="number"
                                                             className="h-8 w-28 rounded border px-2 text-right"
-                                                            value={l.unitPrice}
-                                                            onChange={(e) => updateLine(l.id, { unitPrice: Number(e.target.value || 0) })}
+                                                            value={l.price}
+                                                            onChange={(e) => updateLine(l.id, { price: Number(e.target.value || 0) })}
                                                         />
                                                     </td>
 

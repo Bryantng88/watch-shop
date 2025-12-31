@@ -19,6 +19,10 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+<<<<<<< HEAD
+=======
+  district: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
   Acquisition: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),

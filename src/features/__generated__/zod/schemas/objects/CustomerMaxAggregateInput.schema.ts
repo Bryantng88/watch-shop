@@ -12,7 +12,12 @@ const makeSchema = () => z.object({
   userId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+<<<<<<< HEAD
   address: z.literal(true).optional()
+=======
+  address: z.literal(true).optional(),
+  district: z.literal(true).optional()
+>>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 }).strict();
 export const CustomerMaxAggregateInputObjectSchema: z.ZodType<Prisma.CustomerMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.CustomerMaxAggregateInputType>;
 export const CustomerMaxAggregateInputObjectZodSchema = makeSchema();
