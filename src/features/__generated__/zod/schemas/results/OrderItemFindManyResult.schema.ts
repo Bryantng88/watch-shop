@@ -16,9 +16,12 @@ export const OrderItemFindManyResultSchema = z.object({
   img: z.string().optional(),
   createdAt: z.date(),
   productType: z.unknown().optional(),
+  kind: z.unknown(),
+  serviceCatalogId: z.string().optional(),
   acquisitionItem: z.array(z.unknown()),
   order: z.unknown(),
   Product: z.unknown().optional(),
+  ServiceCatalog: z.unknown().optional(),
   serviceRequest: z.array(z.unknown())
 })),
   pagination: z.object({

@@ -12,7 +12,8 @@ const makeSchema = () => z.object({
   isActive: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  maintenanceRecordId: SortOrderSchema.optional()
+  maintenanceRecordId: SortOrderSchema.optional(),
+  detail: SortOrderSchema.optional()
 }).strict();
 export const ServiceCatalogCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCountOrderByAggregateInput>;
 export const ServiceCatalogCountOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -5,7 +5,9 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumServiceDetailFilterObjectSchema as EnumServiceDetailFilterObjectSchema } from './EnumServiceDetailFilter.schema';
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema'
 
 const servicecatalogscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceCatalogScalarWhereInputObjectSchema), z.lazy(() => ServiceCatalogScalarWhereInputObjectSchema).array()]).optional(),
@@ -20,7 +22,8 @@ const servicecatalogscalarwhereinputSchema = z.object({
   isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  maintenanceRecordId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  maintenanceRecordId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  detail: z.union([z.lazy(() => EnumServiceDetailFilterObjectSchema), ServiceDetailSchema]).optional()
 }).strict();
 export const ServiceCatalogScalarWhereInputObjectSchema: z.ZodType<Prisma.ServiceCatalogScalarWhereInput> = servicecatalogscalarwhereinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogScalarWhereInput>;
 export const ServiceCatalogScalarWhereInputObjectZodSchema = servicecatalogscalarwhereinputSchema;

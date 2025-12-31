@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { ServiceDetailSchema } from '../../enums/ServiceDetail.schema';
 // prettier-ignore
 export const ServiceCatalogModelSchema = z.object({
     id: z.string(),
@@ -12,7 +13,10 @@ export const ServiceCatalogModelSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     maintenanceRecordId: z.string().nullable(),
-    maintenanceRecord: z.unknown().nullable()
+    detail: ServiceDetailSchema,
+    OrderItem: z.array(z.unknown()),
+    maintenanceRecord: z.unknown().nullable(),
+    ServiceRequest: z.array(z.unknown())
 }).strict();
 
 export type ServiceCatalogPureType = z.infer<typeof ServiceCatalogModelSchema>;

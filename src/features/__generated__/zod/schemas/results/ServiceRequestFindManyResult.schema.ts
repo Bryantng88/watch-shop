@@ -4,7 +4,7 @@ export const ServiceRequestFindManyResultSchema = z.object({
   id: z.string(),
   type: z.unknown(),
   billable: z.boolean(),
-  orderItemId: z.string().optional(),
+  orderItemId: z.string(),
   customerId: z.string().optional(),
   productId: z.string().optional(),
   variantId: z.string().optional(),
@@ -19,12 +19,14 @@ export const ServiceRequestFindManyResultSchema = z.object({
   warrantyPolicy: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  servicecatalogid: z.string().optional(),
   Invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),
-  orderItem: z.unknown().optional(),
+  orderItem: z.unknown(),
   product: z.unknown().optional(),
-  variant: z.unknown().optional()
+  variant: z.unknown().optional(),
+  ServiceCatalog: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

@@ -2,7 +2,9 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
-import { MaintenanceRecordOrderByWithRelationInputObjectSchema as MaintenanceRecordOrderByWithRelationInputObjectSchema } from './MaintenanceRecordOrderByWithRelationInput.schema'
+import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByRelationAggregateInputObjectSchema } from './OrderItemOrderByRelationAggregateInput.schema';
+import { MaintenanceRecordOrderByWithRelationInputObjectSchema as MaintenanceRecordOrderByWithRelationInputObjectSchema } from './MaintenanceRecordOrderByWithRelationInput.schema';
+import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -15,7 +17,10 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   maintenanceRecordId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional()
+  detail: SortOrderSchema.optional(),
+  OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput>;
 export const ServiceCatalogOrderByWithRelationInputObjectZodSchema = makeSchema();

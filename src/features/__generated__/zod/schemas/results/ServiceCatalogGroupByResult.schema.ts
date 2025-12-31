@@ -21,7 +21,10 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     maintenanceRecordId: z.number(),
-    maintenanceRecord: z.number()
+    detail: z.number(),
+    OrderItem: z.number(),
+    maintenanceRecord: z.number(),
+    ServiceRequest: z.number()
   }).optional(),
   _sum: z.object({
     defaultPrice: z.number().nullable(),

@@ -10,9 +10,12 @@ import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsIn
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema as NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumProductTypeFieldUpdateOperationsInput.schema';
+import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { EnumorderitemkindFieldUpdateOperationsInputObjectSchema as EnumorderitemkindFieldUpdateOperationsInputObjectSchema } from './EnumorderitemkindFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUpdateManyWithoutSourceOrderItemNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutSourceOrderItemNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutSourceOrderItemNestedInput.schema';
 import { OrderUpdateOneRequiredWithoutItemsNestedInputObjectSchema as OrderUpdateOneRequiredWithoutItemsNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutItemsNestedInput.schema';
-import { ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema as ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema } from './ProductUpdateOneWithoutOrderItemsNestedInput.schema'
+import { ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema as ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema } from './ProductUpdateOneWithoutOrderItemsNestedInput.schema';
+import { ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutOrderItemNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -28,9 +31,11 @@ const makeSchema = () => z.object({
   img: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productType: z.union([ProductTypeSchema, z.lazy(() => NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  kind: z.union([orderitemkindSchema, z.lazy(() => EnumorderitemkindFieldUpdateOperationsInputObjectSchema)]).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutSourceOrderItemNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneRequiredWithoutItemsNestedInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema).optional()
+  Product: z.lazy(() => ProductUpdateOneWithoutOrderItemsNestedInputObjectSchema).optional(),
+  ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema).optional()
 }).strict();
 export const OrderItemUpdateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.OrderItemUpdateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUpdateWithoutServiceRequestInput>;
 export const OrderItemUpdateWithoutServiceRequestInputObjectZodSchema = makeSchema();

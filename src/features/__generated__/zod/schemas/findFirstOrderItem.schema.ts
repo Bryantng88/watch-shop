@@ -25,9 +25,12 @@ export const OrderItemFindFirstSelectSchema: z.ZodType<Prisma.OrderItemSelect> =
     img: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     productType: z.boolean().optional(),
+    kind: z.boolean().optional(),
+    serviceCatalogId: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     order: z.boolean().optional(),
     Product: z.boolean().optional(),
+    ServiceCatalog: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.OrderItemSelect>;
@@ -48,9 +51,12 @@ export const OrderItemFindFirstSelectZodSchema = z.object({
     img: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     productType: z.boolean().optional(),
+    kind: z.boolean().optional(),
+    serviceCatalogId: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     order: z.boolean().optional(),
     Product: z.boolean().optional(),
+    ServiceCatalog: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

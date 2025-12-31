@@ -9,7 +9,9 @@ import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema 
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumProductTypeNullableFilterObjectSchema as EnumProductTypeNullableFilterObjectSchema } from './EnumProductTypeNullableFilter.schema';
-import { ProductTypeSchema } from '../enums/ProductType.schema'
+import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumorderitemkindFilterObjectSchema as EnumorderitemkindFilterObjectSchema } from './EnumorderitemkindFilter.schema';
+import { orderitemkindSchema } from '../enums/orderitemkind.schema'
 
 const orderitemscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderItemScalarWhereInputObjectSchema), z.lazy(() => OrderItemScalarWhereInputObjectSchema).array()]).optional(),
@@ -29,7 +31,9 @@ const orderitemscalarwhereinputSchema = z.object({
   subtotal: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   img: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  productType: z.union([z.lazy(() => EnumProductTypeNullableFilterObjectSchema), ProductTypeSchema]).optional().nullable()
+  productType: z.union([z.lazy(() => EnumProductTypeNullableFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
+  kind: z.union([z.lazy(() => EnumorderitemkindFilterObjectSchema), orderitemkindSchema]).optional(),
+  serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const OrderItemScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereInput> = orderitemscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereInput>;
 export const OrderItemScalarWhereInputObjectZodSchema = orderitemscalarwhereinputSchema;

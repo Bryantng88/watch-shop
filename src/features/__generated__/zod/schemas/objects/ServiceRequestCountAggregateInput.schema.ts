@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   warrantyPolicy: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  servicecatalogid: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ServiceRequestCountAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountAggregateInputType>;

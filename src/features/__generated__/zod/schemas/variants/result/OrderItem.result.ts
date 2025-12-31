@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { discount_typeSchema } from '../../enums/discount_type.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
+import { orderitemkindSchema } from '../../enums/orderitemkind.schema';
 // prettier-ignore
 export const OrderItemResultSchema = z.object({
     id: z.string(),
@@ -19,9 +20,12 @@ export const OrderItemResultSchema = z.object({
     img: z.string().nullable(),
     createdAt: z.date(),
     productType: ProductTypeSchema.nullable(),
+    kind: orderitemkindSchema,
+    serviceCatalogId: z.string().nullable(),
     acquisitionItem: z.array(z.unknown()),
     order: z.unknown(),
     Product: z.unknown().nullable(),
+    ServiceCatalog: z.unknown().nullable(),
     serviceRequest: z.array(z.unknown())
 }).strict();
 

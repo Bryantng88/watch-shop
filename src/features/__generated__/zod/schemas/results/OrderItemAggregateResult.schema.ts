@@ -15,9 +15,12 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     img: z.number(),
     createdAt: z.number(),
     productType: z.number(),
+    kind: z.number(),
+    serviceCatalogId: z.number(),
     acquisitionItem: z.number(),
     order: z.number(),
     Product: z.number(),
+    ServiceCatalog: z.number(),
     serviceRequest: z.number()
   }).optional(),
   _sum: z.object({
@@ -49,7 +52,8 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     quantity: z.number().int().nullable(),
     subtotal: z.number().nullable(),
     img: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    serviceCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -64,5 +68,6 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     quantity: z.number().int().nullable(),
     subtotal: z.number().nullable(),
     img: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    serviceCatalogId: z.string().nullable()
   }).nullable().optional()});

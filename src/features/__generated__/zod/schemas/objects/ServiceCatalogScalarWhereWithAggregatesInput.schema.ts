@@ -5,7 +5,9 @@ import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAgg
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
 import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
-import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { EnumServiceDetailWithAggregatesFilterObjectSchema as EnumServiceDetailWithAggregatesFilterObjectSchema } from './EnumServiceDetailWithAggregatesFilter.schema';
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema'
 
 const servicecatalogscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceCatalogScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ServiceCatalogScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -20,7 +22,8 @@ const servicecatalogscalarwherewithaggregatesinputSchema = z.object({
   isActive: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  maintenanceRecordId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  maintenanceRecordId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  detail: z.union([z.lazy(() => EnumServiceDetailWithAggregatesFilterObjectSchema), ServiceDetailSchema]).optional()
 }).strict();
 export const ServiceCatalogScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ServiceCatalogScalarWhereWithAggregatesInput> = servicecatalogscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogScalarWhereWithAggregatesInput>;
 export const ServiceCatalogScalarWhereWithAggregatesInputObjectZodSchema = servicecatalogscalarwherewithaggregatesinputSchema;

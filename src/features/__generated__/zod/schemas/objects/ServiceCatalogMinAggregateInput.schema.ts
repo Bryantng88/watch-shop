@@ -12,7 +12,8 @@ const makeSchema = () => z.object({
   isActive: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
-  maintenanceRecordId: z.literal(true).optional()
+  maintenanceRecordId: z.literal(true).optional(),
+  detail: z.literal(true).optional()
 }).strict();
 export const ServiceCatalogMinAggregateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogMinAggregateInputType>;
 export const ServiceCatalogMinAggregateInputObjectZodSchema = makeSchema();

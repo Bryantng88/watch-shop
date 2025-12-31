@@ -6,8 +6,12 @@ import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema 
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumServiceDetailFilterObjectSchema as EnumServiceDetailFilterObjectSchema } from './EnumServiceDetailFilter.schema';
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
+import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
 import { MaintenanceRecordNullableScalarRelationFilterObjectSchema as MaintenanceRecordNullableScalarRelationFilterObjectSchema } from './MaintenanceRecordNullableScalarRelationFilter.schema';
-import { MaintenanceRecordWhereInputObjectSchema as MaintenanceRecordWhereInputObjectSchema } from './MaintenanceRecordWhereInput.schema'
+import { MaintenanceRecordWhereInputObjectSchema as MaintenanceRecordWhereInputObjectSchema } from './MaintenanceRecordWhereInput.schema';
+import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema'
 
 const servicecatalogwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceCatalogWhereInputObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema).array()]).optional(),
@@ -23,7 +27,10 @@ const servicecatalogwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   maintenanceRecordId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  maintenanceRecord: z.union([z.lazy(() => MaintenanceRecordNullableScalarRelationFilterObjectSchema), z.lazy(() => MaintenanceRecordWhereInputObjectSchema)]).optional()
+  detail: z.union([z.lazy(() => EnumServiceDetailFilterObjectSchema), ServiceDetailSchema]).optional(),
+  OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  maintenanceRecord: z.union([z.lazy(() => MaintenanceRecordNullableScalarRelationFilterObjectSchema), z.lazy(() => MaintenanceRecordWhereInputObjectSchema)]).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional()
 }).strict();
 export const ServiceCatalogWhereInputObjectSchema: z.ZodType<Prisma.ServiceCatalogWhereInput> = servicecatalogwhereinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogWhereInput>;
 export const ServiceCatalogWhereInputObjectZodSchema = servicecatalogwhereinputSchema;

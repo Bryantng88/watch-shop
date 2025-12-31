@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,7 +12,8 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  maintenanceRecordId: z.string().optional().nullable()
+  maintenanceRecordId: z.string().optional().nullable(),
+  detail: ServiceDetailSchema
 }).strict();
 export const ServiceCatalogCreateManyInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCreateManyInput>;
 export const ServiceCatalogCreateManyInputObjectZodSchema = makeSchema();

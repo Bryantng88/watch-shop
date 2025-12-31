@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   subtotal: z.literal(true).optional(),
   img: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  productType: z.literal(true).optional()
+  productType: z.literal(true).optional(),
+  kind: z.literal(true).optional(),
+  serviceCatalogId: z.literal(true).optional()
 }).strict();
 export const OrderItemMinAggregateInputObjectSchema: z.ZodType<Prisma.OrderItemMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemMinAggregateInputType>;
 export const OrderItemMinAggregateInputObjectZodSchema = makeSchema();

@@ -7,7 +7,7 @@ export const ServiceRequestInputSchema = z.object({
     id: z.string(),
     type: ServiceTypeSchema,
     billable: z.boolean(),
-    orderItemId: z.string().optional().nullable(),
+    orderItemId: z.string(),
     customerId: z.string().optional().nullable(),
     productId: z.string().optional().nullable(),
     variantId: z.string().optional().nullable(),
@@ -22,12 +22,14 @@ export const ServiceRequestInputSchema = z.object({
     warrantyPolicy: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    servicecatalogid: z.string().optional().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
-    orderItem: z.unknown().optional().nullable(),
+    orderItem: z.unknown(),
     product: z.unknown().optional().nullable(),
-    variant: z.unknown().optional().nullable()
+    variant: z.unknown().optional().nullable(),
+    ServiceCatalog: z.unknown().optional().nullable()
 }).strict();
 
 export type ServiceRequestInputType = z.infer<typeof ServiceRequestInputSchema>;

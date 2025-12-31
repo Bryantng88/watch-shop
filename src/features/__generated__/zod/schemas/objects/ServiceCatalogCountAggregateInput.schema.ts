@@ -13,6 +13,7 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   maintenanceRecordId: z.literal(true).optional(),
+  detail: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ServiceCatalogCountAggregateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCountAggregateInputType>;

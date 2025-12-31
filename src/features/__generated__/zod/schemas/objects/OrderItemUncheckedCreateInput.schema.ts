@@ -2,6 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { discount_typeSchema } from '../enums/discount_type.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { orderitemkindSchema } from '../enums/orderitemkind.schema';
 import { AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInput.schema';
 import { ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInput.schema'
 
@@ -21,6 +22,8 @@ const makeSchema = () => z.object({
   img: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   productType: ProductTypeSchema.optional().nullable(),
+  kind: orderitemkindSchema,
+  serviceCatalogId: z.string().optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutSourceOrderItemInputObjectSchema),
   serviceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema)
 }).strict();

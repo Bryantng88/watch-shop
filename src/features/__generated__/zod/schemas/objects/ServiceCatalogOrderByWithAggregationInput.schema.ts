@@ -19,6 +19,7 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   maintenanceRecordId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  detail: SortOrderSchema.optional(),
   _count: z.lazy(() => ServiceCatalogCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => ServiceCatalogAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ServiceCatalogMaxOrderByAggregateInputObjectSchema).optional(),

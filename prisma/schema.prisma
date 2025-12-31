@@ -215,28 +215,33 @@ model Order {
 }
 
 model OrderItem {
-  id              String            @id @default(cuid())
-  orderId         String
-  productId       String?
-  variantId       String?
-  title           String
-  listPrice       Decimal           @db.Decimal(12, 2)
-  discountType    discount_type?
-  discountValue   Decimal?          @db.Decimal(12, 2)
-  unitPriceAgreed Decimal           @db.Decimal(12, 2)
-  taxRate         Decimal?          @db.Decimal(12, 2)
-  quantity        Int
-  subtotal        Decimal           @db.Decimal(12, 2)
-  img             String?
-  createdAt       DateTime          @default(now())
-  productType     ProductType?
-  acquisitionItem AcquisitionItem[]
-  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  Product         Product?          @relation(fields: [productId], references: [id])
-  serviceRequest  ServiceRequest[]
+  id               String            @id @default(cuid())
+  orderId          String
+  productId        String?
+  variantId        String?
+  title            String
+  listPrice        Decimal           @db.Decimal(12, 2)
+  discountType     discount_type?
+  discountValue    Decimal?          @db.Decimal(12, 2)
+  unitPriceAgreed  Decimal           @db.Decimal(12, 2)
+  taxRate          Decimal?          @db.Decimal(12, 2)
+  quantity         Int
+  subtotal         Decimal           @db.Decimal(12, 2)
+  img              String?
+  createdAt        DateTime          @default(now())
+  productType      ProductType?
+  kind             orderitemkind
+  serviceCatalogId String?
+  acquisitionItem  AcquisitionItem[]
+  order            Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product          Product?          @relation(fields: [productId], references: [id])
+  ServiceCatalog   ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
+  serviceRequest   ServiceRequest[]
 
   @@index([orderId])
   @@index([productId])
+  @@index([kind], map: "idx_order_item_kind")
+  @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
 }
 
 model Reservation {
@@ -264,40 +269,48 @@ model ServiceCatalog {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   maintenanceRecordId String?
+  detail              ServiceDetail
+  OrderItem           OrderItem[]
   maintenanceRecord   MaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id])
+  ServiceRequest      ServiceRequest[]
+
+  @@index([detail], map: "idx_service_catalog_detail")
 }
 
 model ServiceRequest {
-  id             String               @id @default(cuid())
-  type           ServiceType          @default(PAID)
-  billable       Boolean              @default(true)
-  orderItemId    String?
-  customerId     String?
-  productId      String?
-  variantId      String?
-  brandSnapshot  String?
-  modelSnapshot  String?
-  refSnapshot    String?
-  serialSnapshot String?
-  appointmentAt  DateTime?
-  status         ServiceRequestStatus @default(PENDING)
-  notes          String?
-  warrantyUntil  DateTime?
-  warrantyPolicy String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  Invoice        Invoice[]
-  maintenance    MaintenanceRecord[]
-  customer       Customer?            @relation(fields: [customerId], references: [id])
-  orderItem      OrderItem?           @relation(fields: [orderItemId], references: [id])
-  product        Product?             @relation(fields: [productId], references: [id])
-  variant        ProductVariant?      @relation(fields: [variantId], references: [id])
+  id               String               @id @default(cuid())
+  type             ServiceType          @default(PAID)
+  billable         Boolean              @default(true)
+  orderItemId      String
+  customerId       String?
+  productId        String?
+  variantId        String?
+  brandSnapshot    String?
+  modelSnapshot    String?
+  refSnapshot      String?
+  serialSnapshot   String?
+  appointmentAt    DateTime?
+  status           ServiceRequestStatus @default(PENDING)
+  notes            String?
+  warrantyUntil    DateTime?
+  warrantyPolicy   String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  servicecatalogid String?
+  Invoice          Invoice[]
+  maintenance      MaintenanceRecord[]
+  customer         Customer?            @relation(fields: [customerId], references: [id])
+  orderItem        OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  product          Product?             @relation(fields: [productId], references: [id])
+  variant          ProductVariant?      @relation(fields: [variantId], references: [id])
+  ServiceCatalog   ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
 
   @@index([customerId])
   @@index([productId])
   @@index([variantId])
   @@index([orderItemId])
   @@index([status])
+  @@index([orderItemId], map: "idx_service_request_order_item_id")
 }
 
 model MaintenanceRecord {
@@ -834,4 +847,9 @@ enum AcquisitionItemStatus {
 enum discount_type {
   PERCENT
   AMOUNT
+}
+
+enum orderitemkind {
+  PRODUCT
+  SERVICE
 }

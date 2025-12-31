@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { discount_typeSchema } from '../enums/discount_type.schema';
-import { ProductTypeSchema } from '../enums/ProductType.schema'
+import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { orderitemkindSchema } from '../enums/orderitemkind.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -18,7 +19,9 @@ const makeSchema = () => z.object({
   subtotal: z.number(),
   img: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  productType: ProductTypeSchema.optional().nullable()
+  productType: ProductTypeSchema.optional().nullable(),
+  kind: orderitemkindSchema,
+  serviceCatalogId: z.string().optional().nullable()
 }).strict();
 export const OrderItemCreateManyInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyInput>;
 export const OrderItemCreateManyInputObjectZodSchema = makeSchema();

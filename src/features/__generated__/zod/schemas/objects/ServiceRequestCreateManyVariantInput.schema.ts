@@ -7,7 +7,7 @@ const makeSchema = () => z.object({
   id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
-  orderItemId: z.string().optional().nullable(),
+  orderItemId: z.string(),
   customerId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
   brandSnapshot: z.string().optional().nullable(),
@@ -20,7 +20,8 @@ const makeSchema = () => z.object({
   warrantyUntil: z.coerce.date().optional().nullable(),
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  servicecatalogid: z.string().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyVariantInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyVariantInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyVariantInput>;
 export const ServiceRequestCreateManyVariantInputObjectZodSchema = makeSchema();

@@ -18,12 +18,14 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     warrantyPolicy: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    servicecatalogid: z.number(),
     Invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),
     orderItem: z.number(),
     product: z.number(),
-    variant: z.number()
+    variant: z.number(),
+    ServiceCatalog: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -40,7 +42,8 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     warrantyUntil: z.date().nullable(),
     warrantyPolicy: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    servicecatalogid: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -57,5 +60,6 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     warrantyUntil: z.date().nullable(),
     warrantyPolicy: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    servicecatalogid: z.string().nullable()
   }).nullable().optional()});

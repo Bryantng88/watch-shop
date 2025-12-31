@@ -20,7 +20,8 @@ const makeSchema = () => z.object({
   warrantyUntil: z.coerce.date().optional().nullable(),
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  servicecatalogid: z.string().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyOrderItemInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyOrderItemInput>;
 export const ServiceRequestCreateManyOrderItemInputObjectZodSchema = makeSchema();

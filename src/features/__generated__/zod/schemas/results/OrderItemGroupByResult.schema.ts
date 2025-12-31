@@ -13,6 +13,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
   subtotal: z.number(),
   img: z.string(),
   createdAt: z.date(),
+  serviceCatalogId: z.string(),
   _count: z.object({
     id: z.number(),
     orderId: z.number(),
@@ -29,9 +30,12 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     img: z.number(),
     createdAt: z.number(),
     productType: z.number(),
+    kind: z.number(),
+    serviceCatalogId: z.number(),
     acquisitionItem: z.number(),
     order: z.number(),
     Product: z.number(),
+    ServiceCatalog: z.number(),
     serviceRequest: z.number()
   }).optional(),
   _sum: z.object({
@@ -63,7 +67,8 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     quantity: z.number().int().nullable(),
     subtotal: z.number().nullable(),
     img: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    serviceCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -78,6 +83,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     quantity: z.number().int().nullable(),
     subtotal: z.number().nullable(),
     img: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    serviceCatalogId: z.string().nullable()
   }).nullable().optional()
 }));

@@ -6,7 +6,11 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema as MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema } from './MaintenanceRecordUpdateOneWithoutServiceDetailNestedInput.schema'
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
+import { EnumServiceDetailFieldUpdateOperationsInputObjectSchema as EnumServiceDetailFieldUpdateOperationsInputObjectSchema } from './EnumServiceDetailFieldUpdateOperationsInput.schema';
+import { OrderItemUpdateManyWithoutServiceCatalogNestedInputObjectSchema as OrderItemUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './OrderItemUpdateManyWithoutServiceCatalogNestedInput.schema';
+import { MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema as MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema } from './MaintenanceRecordUpdateOneWithoutServiceDetailNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema as ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutServiceCatalogNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18,7 +22,10 @@ const makeSchema = () => z.object({
   isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema).optional()
+  detail: z.union([ServiceDetailSchema, z.lazy(() => EnumServiceDetailFieldUpdateOperationsInputObjectSchema)]).optional(),
+  OrderItem: z.lazy(() => OrderItemUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateOneWithoutServiceDetailNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUpdateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUpdateInput>;
 export const ServiceCatalogUpdateInputObjectZodSchema = makeSchema();

@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   img: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   productType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  kind: SortOrderSchema.optional(),
+  serviceCatalogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => OrderItemCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => OrderItemAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => OrderItemMaxOrderByAggregateInputObjectSchema).optional(),

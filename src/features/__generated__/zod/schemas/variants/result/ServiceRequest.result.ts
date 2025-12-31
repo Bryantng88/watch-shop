@@ -7,7 +7,7 @@ export const ServiceRequestResultSchema = z.object({
     id: z.string(),
     type: ServiceTypeSchema,
     billable: z.boolean(),
-    orderItemId: z.string().nullable(),
+    orderItemId: z.string(),
     customerId: z.string().nullable(),
     productId: z.string().nullable(),
     variantId: z.string().nullable(),
@@ -22,12 +22,14 @@ export const ServiceRequestResultSchema = z.object({
     warrantyPolicy: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    servicecatalogid: z.string().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().nullable(),
-    orderItem: z.unknown().nullable(),
+    orderItem: z.unknown(),
     product: z.unknown().nullable(),
-    variant: z.unknown().nullable()
+    variant: z.unknown().nullable(),
+    ServiceCatalog: z.unknown().nullable()
 }).strict();
 
 export type ServiceRequestResultType = z.infer<typeof ServiceRequestResultSchema>;
