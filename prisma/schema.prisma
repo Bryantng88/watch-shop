@@ -485,6 +485,7 @@ model Customer {
   userId         String?          @unique
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  address        String?
   Acquisition    Acquisition[]
   user           User?            @relation(fields: [userId], references: [id])
   Invoice        Invoice[]

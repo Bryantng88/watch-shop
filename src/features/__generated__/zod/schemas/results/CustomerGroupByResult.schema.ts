@@ -9,6 +9,7 @@ export const CustomerGroupByResultSchema = z.array(z.object({
   userId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  address: z.string(),
   _count: z.object({
     id: z.number(),
     name: z.number(),
@@ -19,6 +20,7 @@ export const CustomerGroupByResultSchema = z.array(z.object({
     userId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    address: z.number(),
     Acquisition: z.number(),
     user: z.number(),
     Invoice: z.number(),
@@ -34,7 +36,8 @@ export const CustomerGroupByResultSchema = z.array(z.object({
     city: z.string().nullable(),
     userId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    address: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -45,6 +48,7 @@ export const CustomerGroupByResultSchema = z.array(z.object({
     city: z.string().nullable(),
     userId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    address: z.string().nullable()
   }).nullable().optional()
 }));

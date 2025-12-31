@@ -10,6 +10,7 @@ export const CustomerFindManyResultSchema = z.object({
   userId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  address: z.string().optional(),
   Acquisition: z.array(z.unknown()),
   user: z.unknown().optional(),
   Invoice: z.array(z.unknown()),

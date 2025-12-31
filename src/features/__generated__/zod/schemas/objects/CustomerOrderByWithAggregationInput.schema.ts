@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   userId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => CustomerCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => CustomerMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => CustomerMinOrderByAggregateInputObjectSchema).optional()

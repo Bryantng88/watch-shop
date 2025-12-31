@@ -49,7 +49,7 @@ export async function createCustomer(data: {
     if (!data.phone.trim()) throw new Error("Số điện thoại bắt buộc");
 
     // check trùng số điện thoại
-    const exists = await repo.findCustomerByPhone(data.phone);
+    const exists = await repo.searchCustomersByPhone(data.phone);
     if (exists) throw new Error("Phone already used by another customer");
 
     return repo.createCustomer(data);
@@ -57,4 +57,11 @@ export async function createCustomer(data: {
 
 export async function updateCustomer(id: string, data: any) {
     return repo.updateCustomer(id, data);
+}
+
+
+// customer.service.ts
+export async function searchCustomerService(phone?: string) {
+    if (!phone || phone.length < 3) return [];
+    return repo.searchCustomersByPhone(phone);
 }

@@ -12,6 +12,7 @@ const makeSchema = () => z.object({
   userId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  address: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const CustomerCountAggregateInputObjectSchema: z.ZodType<Prisma.CustomerCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.CustomerCountAggregateInputType>;

@@ -11,6 +11,7 @@ export const CustomerResultSchema = z.object({
     userId: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    address: z.string().nullable(),
     Acquisition: z.array(z.unknown()),
     user: z.unknown().nullable(),
     Invoice: z.array(z.unknown()),
