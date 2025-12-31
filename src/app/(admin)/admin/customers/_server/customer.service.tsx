@@ -58,3 +58,9 @@ export async function createCustomer(data: {
 export async function updateCustomer(id: string, data: any) {
     return repo.updateCustomer(id, data);
 }
+
+// customer.service.ts
+export async function searchCustomerService(phone?: string) {
+    if (!phone || phone.length < 3) return [];
+    return repo.searchCustomersByPhone(phone);
+}

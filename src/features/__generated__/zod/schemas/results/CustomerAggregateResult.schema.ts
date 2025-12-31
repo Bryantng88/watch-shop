@@ -9,6 +9,8 @@ export const CustomerAggregateResultSchema = z.object({  _count: z.object({
     userId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    address: z.number(),
+    district: z.number(),
     Acquisition: z.number(),
     user: z.number(),
     Invoice: z.number(),
@@ -24,7 +26,9 @@ export const CustomerAggregateResultSchema = z.object({  _count: z.object({
     city: z.string().nullable(),
     userId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    address: z.string().nullable(),
+    district: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -35,5 +39,7 @@ export const CustomerAggregateResultSchema = z.object({  _count: z.object({
     city: z.string().nullable(),
     userId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    address: z.string().nullable(),
+    district: z.string().nullable()
   }).nullable().optional()});

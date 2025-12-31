@@ -11,7 +11,9 @@ const makeSchema = () => z.object({
   city: z.literal(true).optional(),
   userId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  address: z.literal(true).optional(),
+  district: z.literal(true).optional()
 }).strict();
 export const CustomerMinAggregateInputObjectSchema: z.ZodType<Prisma.CustomerMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.CustomerMinAggregateInputType>;
 export const CustomerMinAggregateInputObjectZodSchema = makeSchema();

@@ -1,5 +1,5 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import type { Prisma, PaymentMethod, OrderStatus } from "@prisma/client";
+import type { Prisma, PaymentMethod, OrderStatus, orderitemkind } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 
 /* ================================
@@ -26,7 +26,7 @@ export type CreateOrderItemRow = {
     title: string;
     img?: string;
     quantity: number;
-
+    kind: orderitemkind;
     listPrice: number;
     discountType?: "PERCENT" | "AMOUNT";
     discountValue?: number;
@@ -158,7 +158,7 @@ export async function createOrderItems(
             listPrice: i.listPrice,
             discountType: i.discountType ?? null,
             discountValue: i.discountValue ?? null,
-
+            kind: i.kind,
             unitPriceAgreed: i.unitPriceAgreed,
             quantity,
             subtotal,

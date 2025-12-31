@@ -11,7 +11,9 @@ const makeSchema = () => z.object({
   city: z.string().optional().nullable(),
   userId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  address: z.string().optional().nullable(),
+  district: z.string().optional().nullable()
 }).strict();
 export const CustomerCreateManyInputObjectSchema: z.ZodType<Prisma.CustomerCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerCreateManyInput>;
 export const CustomerCreateManyInputObjectZodSchema = makeSchema();

@@ -14,6 +14,8 @@ const makeSchema = () => z.object({
   ward: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  address: z.string().optional().nullable(),
+  district: z.string().optional().nullable(),
   Acquisition: z.lazy(() => AcquisitionCreateNestedManyWithoutCustomerInputObjectSchema),
   user: z.lazy(() => UserCreateNestedOneWithoutCustomerInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutCustomerInputObjectSchema),

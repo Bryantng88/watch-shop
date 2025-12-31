@@ -18,6 +18,8 @@ const makeSchema = () => z.object({
   city: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  district: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   Acquisition: z.lazy(() => AcquisitionUpdateManyWithoutCustomerNestedInputObjectSchema).optional(),
   user: z.lazy(() => UserUpdateOneWithoutCustomerNestedInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutCustomerNestedInputObjectSchema).optional(),

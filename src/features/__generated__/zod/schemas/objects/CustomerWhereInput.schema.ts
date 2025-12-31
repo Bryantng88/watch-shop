@@ -23,6 +23,8 @@ const customerwhereinputSchema = z.object({
   userId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  address: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  district: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   Acquisition: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
