@@ -15,9 +15,9 @@ export const OrderGroupByResultSchema = z.array(z.object({
   notes: z.string(),
   shipDistrict: z.string(),
   hasShipment: z.boolean(),
-  reserveuntil: z.date(),
-  depositqequired: z.number(),
-  depositpaid: z.number(),
+  reserveUntil: z.date(),
+  depositRequired: z.number(),
+  depositPaid: z.number(),
   _count: z.object({
     id: z.number(),
     refNo: z.number(),
@@ -37,10 +37,10 @@ export const OrderGroupByResultSchema = z.array(z.object({
     notes: z.number(),
     shipDistrict: z.number(),
     hasShipment: z.number(),
-    reservetype: z.number(),
-    reserveuntil: z.number(),
-    depositqequired: z.number(),
-    depositpaid: z.number(),
+    reserveType: z.number(),
+    reserveUntil: z.number(),
+    depositRequired: z.number(),
+    depositPaid: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number(),
@@ -49,14 +49,14 @@ export const OrderGroupByResultSchema = z.array(z.object({
   _sum: z.object({
     subtotal: z.number().nullable(),
     shippingFee: z.number().nullable(),
-    depositqequired: z.number().nullable(),
-    depositpaid: z.number().nullable()
+    depositRequired: z.number().nullable(),
+    depositPaid: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     subtotal: z.number().nullable(),
     shippingFee: z.number().nullable(),
-    depositqequired: z.number().nullable(),
-    depositpaid: z.number().nullable()
+    depositRequired: z.number().nullable(),
+    depositPaid: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -73,9 +73,9 @@ export const OrderGroupByResultSchema = z.array(z.object({
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
     shipDistrict: z.string().nullable(),
-    reserveuntil: z.date().nullable(),
-    depositqequired: z.number().nullable(),
-    depositpaid: z.number().nullable()
+    reserveUntil: z.date().nullable(),
+    depositRequired: z.number().nullable(),
+    depositPaid: z.number().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -92,8 +92,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
     shipDistrict: z.string().nullable(),
-    reserveuntil: z.date().nullable(),
-    depositqequired: z.number().nullable(),
-    depositpaid: z.number().nullable()
+    reserveUntil: z.date().nullable(),
+    depositRequired: z.number().nullable(),
+    depositPaid: z.number().nullable()
   }).nullable().optional()
 }));

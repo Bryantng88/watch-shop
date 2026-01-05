@@ -23,10 +23,10 @@ const makeSchema = () => z.object({
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
   hasShipment: z.boolean().optional(),
-  reservetype: reservetypeSchema.optional().nullable(),
-  reserveuntil: z.coerce.date().optional().nullable(),
-  depositqequired: z.number().optional().nullable(),
-  depositpaid: z.number().optional().nullable()
+  reserveType: reservetypeSchema.optional().nullable(),
+  reserveUntil: z.coerce.date().optional().nullable(),
+  depositRequired: z.number().optional().nullable(),
+  depositPaid: z.number().optional().nullable()
 }).strict();
 export const OrderCreateManyCustomerInputObjectSchema: z.ZodType<Prisma.OrderCreateManyCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateManyCustomerInput>;
 export const OrderCreateManyCustomerInputObjectZodSchema = makeSchema();

@@ -206,10 +206,10 @@ model Order {
   notes           String?
   shipDistrict    String?
   hasShipment     Boolean        @default(false)
-  reservetype     reservetype?
-  reserveuntil    DateTime?      @db.Timestamptz(6)
-  depositqequired Decimal?       @db.Decimal(12, 2)
-  depositpaid     Decimal?       @db.Decimal(12, 2)
+  reserveType     reservetype?
+  reserveUntil    DateTime?      @db.Timestamptz(6)
+  depositRequired Decimal?       @db.Decimal(12, 2)
+  depositPaid     Decimal?       @db.Decimal(12, 2)
   Invoice         Invoice[]
   customer        Customer?      @relation(fields: [customerId], references: [id])
   items           OrderItem[]

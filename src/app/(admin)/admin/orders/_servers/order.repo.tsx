@@ -1,5 +1,5 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import type { Prisma, PaymentMethod, OrderStatus, orderitemkind } from "@prisma/client";
+import type { Prisma, PaymentMethod, OrderStatus, orderitemkind, reservetype } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 /* ================================
    TYPES
@@ -17,6 +17,9 @@ export type CreateOrderRow = {
     notes: string | null;
     createdAt: Date;
     status: OrderStatus;
+    reserveType: reservetype | null;
+    depositRequired: number | null;
+    reserveUntil: Date | null;
 };
 
 export type CreateOrderItemRow = {
@@ -104,6 +107,9 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             createdAt: data.createdAt, // ✅ đúng kiểu
             status: data.status,
             subtotal: 0,
+            reserveType: data.reserveType,
+            depositRequired: data.depositRequired,
+            reserveUntil: data.reserveUntil
         },
         select: {
             id: true,

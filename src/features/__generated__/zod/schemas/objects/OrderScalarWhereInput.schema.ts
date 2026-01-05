@@ -38,10 +38,10 @@ const orderscalarwhereinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   shipDistrict: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   hasShipment: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  reservetype: z.union([z.lazy(() => EnumreservetypeNullableFilterObjectSchema), reservetypeSchema]).optional().nullable(),
-  reserveuntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
-  depositqequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
-  depositpaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable()
+  reserveType: z.union([z.lazy(() => EnumreservetypeNullableFilterObjectSchema), reservetypeSchema]).optional().nullable(),
+  reserveUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  depositRequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  depositPaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable()
 }).strict();
 export const OrderScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereInput> = orderscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereInput>;
 export const OrderScalarWhereInputObjectZodSchema = orderscalarwhereinputSchema;
