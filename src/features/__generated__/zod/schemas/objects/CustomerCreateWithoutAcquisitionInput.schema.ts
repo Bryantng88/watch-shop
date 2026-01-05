@@ -15,10 +15,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   address: z.string().optional().nullable(),
-<<<<<<< HEAD
-=======
   district: z.string().optional().nullable(),
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
   user: z.lazy(() => UserCreateNestedOneWithoutCustomerInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
   orders: z.lazy(() => OrderCreateNestedManyWithoutCustomerInputObjectSchema).optional(),

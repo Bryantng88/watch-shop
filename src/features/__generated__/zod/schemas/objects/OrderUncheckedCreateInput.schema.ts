@@ -4,11 +4,12 @@ import { OrderStatusSchema } from '../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutOrderInput.schema';
-import { OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutOrderInput.schema'
+import { OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutOrderInput.schema';
+import { ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema as ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema } from './ShipmentUncheckedCreateNestedOneWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
-  refNo: z.string(),
+  refNo: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   shipPhone: z.string(),
   shipAddress: z.string(),
@@ -23,8 +24,10 @@ const makeSchema = () => z.object({
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
+  hasShipment: z.boolean().optional(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema),
-  items: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema)
+  items: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema),
+  Shipment: z.lazy(() => ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedCreateInputObjectSchema: z.ZodType<Prisma.OrderUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedCreateInput>;
 export const OrderUncheckedCreateInputObjectZodSchema = makeSchema();

@@ -4,6 +4,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
 type Rect = { top: number; left: number; width: number; height: number };
+type ItemPopoverMode = "view" | "edit";
+
+
 
 export default function ItemPopover({
     parentId,
@@ -11,6 +14,7 @@ export default function ItemPopover({
     count,
     currency = "VND",
     status,
+    mode = "view",
     onUpdated,
 }: {
     parentId: string;
@@ -18,6 +22,7 @@ export default function ItemPopover({
     count: number;
     currency?: string | null;
     status: string; // DRAFT | POSTED...
+    mode?: ItemPopoverMode;
     onUpdated?: (info: {           // 👈 THÊM
         count: number;
         total: number;
@@ -69,6 +74,7 @@ export default function ItemPopover({
             height: r.height,
         });
     };
+    const canEdit = mode === "edit";
 
     useLayoutEffect(() => {
         if (open) measure();
@@ -198,7 +204,7 @@ export default function ItemPopover({
                         <div className="flex items-center justify-between p-2 text-xs text-gray-600 border-b">
                             <span>Dòng sản phẩm</span>
 
-                            {isDraft && (
+                            {canEdit && (
                                 <button
                                     type="button"
                                     onClick={addRow}
@@ -232,7 +238,7 @@ export default function ItemPopover({
                                             <tr key={it.id ?? `tmp-${idx}`} className="border-t">
                                                 {/* Title */}
                                                 <td className="px-2 py-1 w-44">
-                                                    {isDraft ? (
+                                                    {canEdit ? (
                                                         <input
                                                             className="w-full border rounded px-1 py-0.5"
                                                             value={it.title}
@@ -247,7 +253,7 @@ export default function ItemPopover({
                                                     )}
                                                 </td>
                                                 <td className="px-2 py-1 w-28">
-                                                    {isDraft ? (
+                                                    {canEdit ? (
                                                         <select
                                                             className="w-full border rounded px-1 py-0.5"
                                                             value={it.productType ?? "WATCH"}
@@ -269,7 +275,7 @@ export default function ItemPopover({
                                                 </td>
                                                 {/* Quantity */}
                                                 <td className="px-2 py-1 text-right w-12">
-                                                    {isDraft ? (
+                                                    {canEdit ? (
                                                         <input
                                                             type="number"
                                                             className="w-full border rounded px-1 py-0.5"
@@ -288,7 +294,7 @@ export default function ItemPopover({
 
                                                 {/* Price */}
                                                 <td className="px-2 py-1 w-28">
-                                                    {isDraft ? (
+                                                    {canEdit ? (
                                                         <input
                                                             type="number"
                                                             className="w-20 border rounded px-1 py-0.5 text-right"
@@ -310,7 +316,7 @@ export default function ItemPopover({
                                                     )}
                                                 </td>
                                                 <td className="px-2 py-1 text-center w-8">
-                                                    {isDraft && (
+                                                    {canEdit && (
                                                         <button
                                                             type="button"
                                                             onClick={() => {
@@ -339,7 +345,7 @@ export default function ItemPopover({
                         </div>
 
                         {/* Footer */}
-                        {isDraft && (
+                        {canEdit && (
                             <div className="border-t px-2 py-2 bg-gray-50 flex items-center justify-between">
                                 <span className="text-xs text-gray-600">
                                     Tổng tiền:{" "}

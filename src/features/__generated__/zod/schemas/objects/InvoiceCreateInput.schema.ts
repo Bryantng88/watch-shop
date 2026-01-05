@@ -7,8 +7,7 @@ import { CustomerCreateNestedOneWithoutInvoiceInputObjectSchema as CustomerCreat
 import { OrderCreateNestedOneWithoutInvoiceInputObjectSchema as OrderCreateNestedOneWithoutInvoiceInputObjectSchema } from './OrderCreateNestedOneWithoutInvoiceInput.schema';
 import { ServiceRequestCreateNestedOneWithoutInvoiceInputObjectSchema as ServiceRequestCreateNestedOneWithoutInvoiceInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutInvoiceInput.schema';
 import { VendorCreateNestedOneWithoutInvoiceInputObjectSchema as VendorCreateNestedOneWithoutInvoiceInputObjectSchema } from './VendorCreateNestedOneWithoutInvoiceInput.schema';
-import { InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema as InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutInvoiceInput.schema';
-import { PaymentCreateNestedManyWithoutInvoiceInputObjectSchema as PaymentCreateNestedManyWithoutInvoiceInputObjectSchema } from './PaymentCreateNestedManyWithoutInvoiceInput.schema'
+import { InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema as InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutInvoiceInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -29,8 +28,7 @@ const makeSchema = () => z.object({
   order: z.lazy(() => OrderCreateNestedOneWithoutInvoiceInputObjectSchema).optional(),
   serviceReq: z.lazy(() => ServiceRequestCreateNestedOneWithoutInvoiceInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutInvoiceInputObjectSchema).optional(),
-  items: z.lazy(() => InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema),
-  payments: z.lazy(() => PaymentCreateNestedManyWithoutInvoiceInputObjectSchema)
+  items: z.lazy(() => InvoiceItemCreateNestedManyWithoutInvoiceInputObjectSchema)
 }).strict();
 export const InvoiceCreateInputObjectSchema: z.ZodType<Prisma.InvoiceCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceCreateInput>;
 export const InvoiceCreateInputObjectZodSchema = makeSchema();

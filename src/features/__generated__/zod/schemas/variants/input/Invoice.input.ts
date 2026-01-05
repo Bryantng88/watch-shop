@@ -28,8 +28,7 @@ export const InvoiceInputSchema = z.object({
     order: z.unknown().optional().nullable(),
     serviceReq: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
-    items: z.array(z.unknown()),
-    payments: z.array(z.unknown())
+    items: z.array(z.unknown())
 }).strict();
 
 export type InvoiceInputType = z.infer<typeof InvoiceInputSchema>;

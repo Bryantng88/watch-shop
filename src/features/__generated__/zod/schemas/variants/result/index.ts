@@ -30,3 +30,4 @@ export { InvoiceResultSchema } from './Invoice.result';
 export { InvoiceItemResultSchema } from './InvoiceItem.result';
 export { PaymentResultSchema } from './Payment.result';
 export { BankResultSchema } from './Bank.result';
+export { ShipmentResultSchema } from './Shipment.result';

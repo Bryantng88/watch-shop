@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   customerName: z.literal(true).optional(),
   notes: z.literal(true).optional(),
   shipDistrict: z.literal(true).optional(),
+  hasShipment: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const OrderCountAggregateInputObjectSchema: z.ZodType<Prisma.OrderCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderCountAggregateInputType>;

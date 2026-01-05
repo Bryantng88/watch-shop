@@ -9,8 +9,7 @@ import { EnumInvoiceStatusFieldUpdateOperationsInputObjectSchema as EnumInvoiceS
 import { DecimalFieldUpdateOperationsInputObjectSchema as DecimalFieldUpdateOperationsInputObjectSchema } from './DecimalFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema as InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema } from './InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput.schema';
-import { PaymentUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema as PaymentUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema } from './PaymentUncheckedUpdateManyWithoutInvoiceNestedInput.schema'
+import { InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema as InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema } from './InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,8 +31,7 @@ const makeSchema = () => z.object({
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  items: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema).optional(),
-  payments: z.lazy(() => PaymentUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
+  items: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
 }).strict();
 export const InvoiceUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.InvoiceUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceUncheckedUpdateInput>;
 export const InvoiceUncheckedUpdateInputObjectZodSchema = makeSchema();

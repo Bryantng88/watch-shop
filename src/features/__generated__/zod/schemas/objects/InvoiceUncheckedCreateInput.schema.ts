@@ -2,8 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { InvoiceTypeSchema } from '../enums/InvoiceType.schema';
 import { InvoiceStatusSchema } from '../enums/InvoiceStatus.schema';
-import { InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema as InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema } from './InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput.schema';
-import { PaymentUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutInvoiceInput.schema'
+import { InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema as InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema } from './InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -24,8 +23,7 @@ const makeSchema = () => z.object({
   dueAt: z.coerce.date().optional().nullable(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  items: z.lazy(() => InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema),
-  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema)
+  items: z.lazy(() => InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInputObjectSchema)
 }).strict();
 export const InvoiceUncheckedCreateInputObjectSchema: z.ZodType<Prisma.InvoiceUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceUncheckedCreateInput>;
 export const InvoiceUncheckedCreateInputObjectZodSchema = makeSchema();

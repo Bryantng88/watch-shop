@@ -10,14 +10,15 @@ import { EnumPaymentStatusFilterObjectSchema as EnumPaymentStatusFilterObjectSch
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentMethodNullableFilterObjectSchema as EnumPaymentMethodNullableFilterObjectSchema } from './EnumPaymentMethodNullableFilter.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema'
 
 const orderscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderScalarWhereInputObjectSchema), z.lazy(() => OrderScalarWhereInputObjectSchema).array()]).optional(),
   OR: z.lazy(() => OrderScalarWhereInputObjectSchema).array().optional(),
   NOT: z.union([z.lazy(() => OrderScalarWhereInputObjectSchema), z.lazy(() => OrderScalarWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  refNo: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   shipPhone: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   shipAddress: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
@@ -32,7 +33,8 @@ const orderscalarwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  shipDistrict: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  shipDistrict: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  hasShipment: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const OrderScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereInput> = orderscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereInput>;
 export const OrderScalarWhereInputObjectZodSchema = orderscalarwhereinputSchema;

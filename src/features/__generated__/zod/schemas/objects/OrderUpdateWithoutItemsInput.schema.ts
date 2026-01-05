@@ -11,12 +11,14 @@ import { EnumPaymentStatusFieldUpdateOperationsInputObjectSchema as EnumPaymentS
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { NullableEnumPaymentMethodFieldUpdateOperationsInputObjectSchema as NullableEnumPaymentMethodFieldUpdateOperationsInputObjectSchema } from './NullableEnumPaymentMethodFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { InvoiceUpdateManyWithoutOrderNestedInputObjectSchema as InvoiceUpdateManyWithoutOrderNestedInputObjectSchema } from './InvoiceUpdateManyWithoutOrderNestedInput.schema';
-import { CustomerUpdateOneWithoutOrdersNestedInputObjectSchema as CustomerUpdateOneWithoutOrdersNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrdersNestedInput.schema'
+import { CustomerUpdateOneWithoutOrdersNestedInputObjectSchema as CustomerUpdateOneWithoutOrdersNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrdersNestedInput.schema';
+import { ShipmentUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateOneWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  refNo: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   shipPhone: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   shipAddress: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   shipWard: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -31,8 +33,10 @@ const makeSchema = () => z.object({
   customerName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   shipDistrict: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  hasShipment: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  customer: z.lazy(() => CustomerUpdateOneWithoutOrdersNestedInputObjectSchema).optional()
+  customer: z.lazy(() => CustomerUpdateOneWithoutOrdersNestedInputObjectSchema).optional(),
+  Shipment: z.lazy(() => ShipmentUpdateOneWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUpdateWithoutItemsInputObjectSchema: z.ZodType<Prisma.OrderUpdateWithoutItemsInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUpdateWithoutItemsInput>;
 export const OrderUpdateWithoutItemsInputObjectZodSchema = makeSchema();

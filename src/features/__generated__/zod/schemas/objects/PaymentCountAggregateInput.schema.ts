@@ -4,7 +4,6 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   id: z.literal(true).optional(),
-  invoiceId: z.literal(true).optional(),
   method: z.literal(true).optional(),
   amount: z.literal(true).optional(),
   currency: z.literal(true).optional(),
@@ -12,6 +11,12 @@ const makeSchema = () => z.object({
   reference: z.literal(true).optional(),
   note: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
+  direction: z.literal(true).optional(),
+  status: z.literal(true).optional(),
+  order_id: z.literal(true).optional(),
+  service_request_id: z.literal(true).optional(),
+  vendor_id: z.literal(true).optional(),
+  acquisition_id: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const PaymentCountAggregateInputObjectSchema: z.ZodType<Prisma.PaymentCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCountAggregateInputType>;

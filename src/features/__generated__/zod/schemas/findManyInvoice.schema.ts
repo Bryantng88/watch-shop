@@ -35,7 +35,6 @@ export const InvoiceFindManySelectSchema: z.ZodType<Prisma.InvoiceSelect> = z.ob
     serviceReq: z.boolean().optional(),
     vendor: z.boolean().optional(),
     items: z.boolean().optional(),
-    payments: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.InvoiceSelect>;
 
@@ -65,7 +64,6 @@ export const InvoiceFindManySelectZodSchema = z.object({
     serviceReq: z.boolean().optional(),
     vendor: z.boolean().optional(),
     items: z.boolean().optional(),
-    payments: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

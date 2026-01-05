@@ -1,7 +1,6 @@
 import { DB, dbOrTx } from "@/server/db/client";
 import type { Prisma, PaymentMethod, OrderStatus, orderitemkind } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
-
 /* ================================
    TYPES
 ================================ */
@@ -11,7 +10,7 @@ export type CreateOrderRow = {
     customerName: string;
     shipPhone: string;
     shipAddress: string;
-    shipCity: string | null;
+    shipCity: string;
     shipWard: string | null;
     shipDistrict: string | null;
     paymentMethod: PaymentMethod;
@@ -28,9 +27,6 @@ export type CreateOrderItemRow = {
     quantity: number;
     kind: orderitemkind;
     listPrice: number;
-    discountType?: "PERCENT" | "AMOUNT";
-    discountValue?: number;
-
     unitPriceAgreed: number; // 👈 service tính, repo chỉ lưu
     taxRate?: number;
 };
@@ -64,7 +60,7 @@ export async function getOrdList(
                 shipCity: true,
                 shipDistrict: true,
                 shipWard: true,
-
+                notes: true,
                 paymentMethod: true,
                 subtotal: true,
 
@@ -91,15 +87,8 @@ export async function getOrdList(
 
 export async function createOrder(tx: DB, data: CreateOrderRow) {
     const db = dbOrTx(tx);
-
-    const refNo = await genRefNo(db, {
-        model: db.order, // ✅ đúng model
-        prefix: "OD",
-    });
-
     return db.order.create({
         data: {
-            refNo,
             customer: data.customerId
                 ? { connect: { id: data.customerId } }
                 : undefined,
@@ -118,7 +107,6 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
         },
         select: {
             id: true,
-            refNo: true,
             status: true,
             customerId: true,
             customerName: true,
@@ -147,17 +135,13 @@ export async function createOrderItems(
     const rows = items.map((i) => {
         const quantity = Number(i.quantity) || 1;
         const subtotal = i.unitPriceAgreed * quantity;
-
         return {
             orderId,
             productId: i.productId ?? null,
             variantId: i.variantId ?? null,
             title: i.title,
             img: i.img ?? null,
-
             listPrice: i.listPrice,
-            discountType: i.discountType ?? null,
-            discountValue: i.discountValue ?? null,
             kind: i.kind,
             unitPriceAgreed: i.unitPriceAgreed,
             quantity,
@@ -238,6 +222,47 @@ export async function getOrderDetail(tx: DB, id: string) {
                     //productType: true
                 },
             },
+        },
+    });
+}
+
+export function getOrderForPost(
+    tx: DB,
+    id: string
+) {
+    const db = dbOrTx(tx);
+    return db.order.findUnique({
+        where: { id },
+        include: { items: true },
+    });
+}
+
+export function getOrdersForPost(
+    tx: DB,
+    ids: string[]
+) {
+    const db = dbOrTx(tx);
+    return db.order.findMany({
+        where: {
+            id: { in: ids },
+            status: "DRAFT",
+        },
+        include: { items: true },
+    });
+}
+
+export function markPosted(
+    tx: DB,
+    id: string,
+    hasShipment: boolean
+) {
+    const db = dbOrTx(tx);
+    return db.order.update({
+        where: { id },
+        data: {
+            status: "POSTED",
+            hasShipment,
+            updatedAt: new Date(),
         },
     });
 }

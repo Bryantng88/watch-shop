@@ -6,7 +6,6 @@ import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.sche
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { InvoiceItemFindManySchema as InvoiceItemFindManySchema } from '../findManyInvoiceItem.schema';
-import { PaymentFindManySchema as PaymentFindManySchema } from '../findManyPayment.schema';
 import { InvoiceCountOutputTypeArgsObjectSchema as InvoiceCountOutputTypeArgsObjectSchema } from './InvoiceCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -16,7 +15,6 @@ const makeSchema = () => z.object({
   serviceReq: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   items: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
-  payments: z.union([z.boolean(), z.lazy(() => PaymentFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => InvoiceCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const InvoiceIncludeObjectSchema: z.ZodType<Prisma.InvoiceInclude> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceInclude>;

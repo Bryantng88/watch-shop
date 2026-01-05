@@ -6,7 +6,7 @@ import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
 // prettier-ignore
 export const OrderModelSchema = z.object({
     id: z.string(),
-    refNo: z.string(),
+    refNo: z.string().nullable(),
     customerId: z.string().nullable(),
     shipPhone: z.string(),
     shipAddress: z.string(),
@@ -22,9 +22,11 @@ export const OrderModelSchema = z.object({
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
     shipDistrict: z.string().nullable(),
+    hasShipment: z.boolean(),
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
-    items: z.array(z.unknown())
+    items: z.array(z.unknown()),
+    Shipment: z.unknown().nullable()
 }).strict();
 
 export type OrderPureType = z.infer<typeof OrderModelSchema>;

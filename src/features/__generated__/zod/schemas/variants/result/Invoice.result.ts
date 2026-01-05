@@ -28,8 +28,7 @@ export const InvoiceResultSchema = z.object({
     order: z.unknown().nullable(),
     serviceReq: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
-    items: z.array(z.unknown()),
-    payments: z.array(z.unknown())
+    items: z.array(z.unknown())
 }).strict();
 
 export type InvoiceResultType = z.infer<typeof InvoiceResultSchema>;

@@ -62,6 +62,10 @@ export default function OrderListPageClient({
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
     const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
+    const [showBulkBar, setShowBulkBar] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [bulkHasShipment, setBulkHasShipment] = useState(true);
+    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
     const url = new URLSearchParams(rawSearchParams as any);
 
@@ -85,6 +89,7 @@ export default function OrderListPageClient({
                     + Tạo đơn hàng
                 </Link>
             </div>
+
 
             {/* FILTER FORM */}
             <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
@@ -119,12 +124,116 @@ export default function OrderListPageClient({
                     </Link>
                 </div>
             </form>
+            {showBulkBar && (
+                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
+                    <span className="font-medium text-blue-700">
+                        {selectedIds.length} đơn hàng đã chọn
+                    </span>
+
+                    <button
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                        onClick={() => setShowBulkConfirm(true)}
+                    >
+                        Duyệt các đơn đã chọn
+                    </button>
+
+                    <button
+                        className="px-3 py-1 border rounded text-sm"
+                        onClick={() => {
+                            setSelectedIds([]);
+                            setShowBulkBar(false);
+                        }}
+                    >
+                        Bỏ chọn
+                    </button>
+                </div>
+            )}
+            {showBulkConfirm && (
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+                    <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
+                        <h3 className="font-semibold text-lg">Duyệt đơn hàng</h3>
+
+                        <div className="text-sm text-gray-600">
+                            Bạn đang duyệt <b>{selectedIds.length}</b> đơn hàng.
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    checked={bulkHasShipment}
+                                    onChange={() => setBulkHasShipment(true)}
+                                />
+                                Đơn hàng có shipment (giao hàng)
+                            </label>
+
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    checked={!bulkHasShipment}
+                                    onChange={() => setBulkHasShipment(false)}
+                                />
+                                Đơn hàng không có shipment (pickup)
+                            </label>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3">
+                            <button
+                                className="px-3 py-1 border rounded"
+                                onClick={() => setShowBulkConfirm(false)}
+                            >
+                                Hủy
+                            </button>
+
+                            <button
+                                className="px-3 py-1 bg-blue-600 text-white rounded"
+                                onClick={async () => {
+                                    await fetch("/api/admin/orders/bulk-post", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            orderIds: selectedIds,
+                                            hasShipment: bulkHasShipment,
+                                        }),
+                                    });
+
+                                    location.reload();
+                                }}
+                            >
+                                Xác nhận duyệt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
+
                     <thead className="bg-gray-50 border-b">
                         <tr>
+                            <th className="px-3 py-2">
+                                <input
+                                    type="checkbox"
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        if (!checked) {
+                                            setSelectedIds([]);
+                                            setShowBulkBar(false);
+                                            return;
+                                        }
+
+                                        const ids = items
+                                            .filter((o) => o.status === "DRAFT")
+                                            .map((o) => o.id);
+
+                                        setSelectedIds(ids);
+                                        setShowBulkBar(ids.length > 0);
+                                    }}
+                                />
+                            </th>
+
                             <th className="px-3 py-2 text-left">RefNo</th>
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
@@ -151,6 +260,22 @@ export default function OrderListPageClient({
 
                                 return (
                                     <tr key={o.id} className="border-b hover:bg-gray-50">
+                                        <td className="px-3 py-2">
+                                            <input
+                                                type="checkbox"
+                                                disabled={o.status !== "DRAFT"}
+                                                checked={selectedIds.includes(o.id)}
+                                                onChange={(e) => {
+                                                    const next = e.target.checked
+                                                        ? [...selectedIds, o.id]
+                                                        : selectedIds.filter((id) => id !== o.id);
+
+                                                    setSelectedIds(next);
+                                                    setShowBulkBar(next.length > 0);
+                                                }}
+                                            />
+                                        </td>
+
                                         <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
@@ -180,6 +305,7 @@ export default function OrderListPageClient({
                                                 count={displayCount}
                                                 currency={o.currency}
                                                 status={o.status}
+                                                mode="view"
                                                 onUpdated={({ count, total }) => {
                                                     setRowCounts((prev) => ({ ...prev, [o.id]: count }));
                                                     setRowTotals((prev) => ({ ...prev, [o.id]: total }));

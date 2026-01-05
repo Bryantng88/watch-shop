@@ -59,10 +59,7 @@ export async function updateCustomer(id: string, data: any) {
     return repo.updateCustomer(id, data);
 }
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 // customer.service.ts
 export async function searchCustomerService(phone?: string) {
     if (!phone || phone.length < 3) return [];

@@ -1,4 +1,6 @@
 import { listServiceCatalogRepo } from "./service_request.repo";
+import * as sevRepo from "./service_request.repo"
+import { Prisma } from "@prisma/client";
 
 export type ServiceCatalogItem = {
     id: string;
@@ -26,4 +28,33 @@ export async function getServiceCatalogList() {
             : null,
         durationMin: r.durationMin,
     }));
+}
+
+
+export async function createFromOrder(
+    tx: Prisma.TransactionClient,
+    order: {
+        items: Array<{
+            id: string;
+            kind: string;
+            title: string;
+            quantity: number;
+            unitPriceAgreed: number;
+        }>;
+    }
+) {
+    const serviceItems = order.items.filter(
+        (i) => i.kind === "SERVICE"
+    );
+
+    if (serviceItems.length === 0) return;
+
+    for (const item of serviceItems) {
+        await sevRepo.createServiceRequest(tx, {
+            orderItemId: item.id,
+            title: item.title,
+            quantity: item.quantity,
+            unitPrice: item.unitPriceAgreed,
+        });
+    }
 }

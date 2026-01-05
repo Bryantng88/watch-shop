@@ -10,7 +10,7 @@ import { OrderSumOrderByAggregateInputObjectSchema as OrderSumOrderByAggregateIn
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
-  refNo: SortOrderSchema.optional(),
+  refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   customerId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   shipPhone: SortOrderSchema.optional(),
   shipAddress: SortOrderSchema.optional(),
@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   customerName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   shipDistrict: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  hasShipment: SortOrderSchema.optional(),
   _count: z.lazy(() => OrderCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => OrderAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => OrderMaxOrderByAggregateInputObjectSchema).optional(),

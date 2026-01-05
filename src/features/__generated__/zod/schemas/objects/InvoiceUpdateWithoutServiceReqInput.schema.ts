@@ -13,8 +13,7 @@ import { AcquisitionUpdateOneWithoutInvoiceNestedInputObjectSchema as Acquisitio
 import { CustomerUpdateOneWithoutInvoiceNestedInputObjectSchema as CustomerUpdateOneWithoutInvoiceNestedInputObjectSchema } from './CustomerUpdateOneWithoutInvoiceNestedInput.schema';
 import { OrderUpdateOneWithoutInvoiceNestedInputObjectSchema as OrderUpdateOneWithoutInvoiceNestedInputObjectSchema } from './OrderUpdateOneWithoutInvoiceNestedInput.schema';
 import { VendorUpdateOneWithoutInvoiceNestedInputObjectSchema as VendorUpdateOneWithoutInvoiceNestedInputObjectSchema } from './VendorUpdateOneWithoutInvoiceNestedInput.schema';
-import { InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema as InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutInvoiceNestedInput.schema';
-import { PaymentUpdateManyWithoutInvoiceNestedInputObjectSchema as PaymentUpdateManyWithoutInvoiceNestedInputObjectSchema } from './PaymentUpdateManyWithoutInvoiceNestedInput.schema'
+import { InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema as InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutInvoiceNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -35,8 +34,7 @@ const makeSchema = () => z.object({
   customer: z.lazy(() => CustomerUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  items: z.lazy(() => InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema).optional(),
-  payments: z.lazy(() => PaymentUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
+  items: z.lazy(() => InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
 }).strict();
 export const InvoiceUpdateWithoutServiceReqInputObjectSchema: z.ZodType<Prisma.InvoiceUpdateWithoutServiceReqInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceUpdateWithoutServiceReqInput>;
 export const InvoiceUpdateWithoutServiceReqInputObjectZodSchema = makeSchema();

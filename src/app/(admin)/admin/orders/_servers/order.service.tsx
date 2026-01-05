@@ -1,12 +1,15 @@
 "use server";
 
-import { prisma } from "@/server/db/client";
+import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
 import type { PaymentMethod, Prisma, orderitemkind } from "@prisma/client";
+import { OrderStatus } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
-
+import { updateProductVariantStt } from "../../products/_server/product.repo";
+import * as serviceReqtService from "../../services/_server/service_request.service";
+import * as shipmentService from "../../shipment/_server/shipment.service";
 /* ================================
    TYPES
 ================================ */
@@ -19,10 +22,10 @@ export type CreateOrderItemInput = {
 
   quantity: number;
   listPrice: number;
-
+  kind: orderitemkind;
   discountType?: "PERCENT" | "AMOUNT";
   discountValue?: number;
-
+  serviceCatalogId: string;
   taxRate?: number;
 };
 
@@ -31,13 +34,12 @@ export type CreateOrderInput = {
   customerId?: string | null;
   customerName: string;
 
-  shipAddress?: string | null;
+  shipAddress: string;
   shipCity: string;
   shipDistrict: string;
   shipWard: string;
-  kind?: orderitemkind;
   paymentMethod?: PaymentMethod | null;
-  notes?: string | null;
+  notes: string | null;
   orderDate: Date;
 
   items: CreateOrderItemInput[];
@@ -119,52 +121,39 @@ export async function createOrderWithItems(raw: any) {
         : new Date(raw.orderDate),
 
     items: (raw.items ?? []).map((i: any) => ({
-      kind: i.kind as "PRODUCT" | "SERVICE",
-
-      // PRODUCT
+      kind: i.kind as "PRODUCT" | "SERVICE" | "DISCOUNT",
       productId: i.productId ?? null,
       variantId: i.variantId ?? null,
-
-      // SERVICE
       serviceCatalogId: i.serviceCatalogId ?? null,
-
       title: i.title,
       quantity: Number(i.quantity ?? 1),
       listPrice: Number(i.price ?? i.unitPrice ?? 0),
-
-      discountType: i.discountType ?? null,
-      discountValue: i.discountValue ?? null,
       taxRate: i.taxRate ?? null,
     })),
   };
 
   return prisma.$transaction(async (tx) => {
-    /** -----------------------------
-     * 1️⃣ Resolve customer
-     * ----------------------------- */
-    let resolvedCustomerId = input.customerId ?? null;
+    /* =====================================================
+     * 1️⃣ Resolve CUSTOMER
+     * ===================================================== */
+    const resolvedCustomerId = await resolveCustomer(tx, input);
 
-    if (!resolvedCustomerId && input.shipPhone) {
-      const existing = await customerRepo.findByPhone(tx, input.shipPhone);
+    /* =====================================================
+     * 2️⃣ Reserve PRODUCT variants (lock inventory)
+     * ===================================================== */
+    for (const item of input.items) {
+      if (item.kind !== "PRODUCT") continue;
 
-      if (existing) {
-        resolvedCustomerId = existing.id;
-      } else {
-        const created = await customerRepo.createCustomer(tx, {
-          name: input.customerName,
-          phone: input.shipPhone,
-          city: input.shipCity,
-          district: input.shipDistrict,
-          ward: input.shipWard,
-          address: input.shipAddress,
-        });
-        resolvedCustomerId = created.id;
-      }
+      await updateProductVariantStt(tx, {
+        productId: item.productId!,
+        status: "RESERVED",
+        fromStatuses: ["ACTIVE"],
+      });
     }
 
-    /** -----------------------------
-     * 2️⃣ Create ORDER (DRAFT)
-     * ----------------------------- */
+    /* =====================================================
+     * 3️⃣ Create ORDER (DRAFT)
+     * ===================================================== */
     const order = await orderRepo.createOrder(tx, {
       customerId: resolvedCustomerId,
       customerName: input.customerName,
@@ -175,13 +164,13 @@ export async function createOrderWithItems(raw: any) {
       shipWard: input.shipWard,
       paymentMethod: input.paymentMethod!,
       notes: input.notes,
-      orderDate: input.orderDate,
+      createdAt: input.orderDate,
       status: "DRAFT",
     });
 
-    /** -----------------------------
-     * 3️⃣ Build OrderItems
-     * ----------------------------- */
+    /* =====================================================
+     * 4️⃣ Create ORDER ITEMS
+     * ===================================================== */
     const orderItems = input.items.map((i) => {
       const unitPriceAgreed = calcUnitPriceAgreed({
         listPrice: i.listPrice,
@@ -191,13 +180,10 @@ export async function createOrderWithItems(raw: any) {
 
       return {
         kind: i.kind,
-
-        productId: i.kind === "PRODUCT" ? i.productId : null,
-        variantId: i.kind === "PRODUCT" ? i.variantId : null,
-
+        productId: i.kind === "PRODUCT" ? i.productId : undefined,
+        variantId: i.kind === "PRODUCT" ? i.variantId : undefined,
         serviceCatalogId:
-          i.kind === "SERVICE" ? i.serviceCatalogId : null,
-
+          i.kind === "SERVICE" ? i.serviceCatalogId : undefined,
         title: i.title,
         quantity: i.quantity,
         listPrice: i.listPrice,
@@ -211,9 +197,9 @@ export async function createOrderWithItems(raw: any) {
       orderItems
     );
 
-    /** -----------------------------
-     * 4️⃣ Compute subtotal
-     * ----------------------------- */
+    /* =====================================================
+     * 5️⃣ Compute & update SUBTOTAL
+     * ===================================================== */
     const subtotal = createdItems.reduce(
       (sum, i) => sum + i.subtotal,
       0
@@ -221,13 +207,127 @@ export async function createOrderWithItems(raw: any) {
 
     await orderRepo.updateSubtotal(tx, order.id, subtotal);
 
-    /** -----------------------------
-     * 5️⃣ Return lite order
-     * ----------------------------- */
+    /* =====================================================
+     * 6️⃣ Return lite order
+     * ===================================================== */
     return orderRepo.getOrderLite(tx, order.id);
   });
 }
 
+function norm(v: unknown) {
+  const s = typeof v === "string" ? v.trim() : "";
+  return s; // giữ "" nếu user xóa
+}
+
+async function resolveCustomer(
+  tx: Prisma.TransactionClient,
+  input: CreateOrderInput
+): Promise<string | null> {
+  const shipCity = norm(input.shipCity);
+  const shipDistrict = norm(input.shipDistrict);
+  const shipWard = norm(input.shipWard);
+  const shipAddress = norm(input.shipAddress);
+  const shipPhone = norm(input.shipPhone);
+
+  // 1) Nếu có customerId => ưu tiên update theo ID
+  if (input.customerId) {
+    const existing = await customerRepo.findCustomerById(tx, input.customerId);
+    if (!existing) return null;
+
+    const needUpdate =
+      shipCity !== norm(existing.city) ||
+      shipDistrict !== norm(existing.district) ||
+      shipWard !== norm(existing.ward) ||
+      shipAddress !== norm(existing.address);
+
+    if (needUpdate) {
+      await customerRepo.updateCustomer(tx, existing.id, {
+        city: shipCity,
+        district: shipDistrict,
+        ward: shipWard,
+        address: shipAddress,
+      });
+    }
+
+    return existing.id;
+  }
+
+  // 2) Không có customerId => resolve theo phone
+  if (!shipPhone) return null;
+
+  const existing = await customerRepo.findByPhone(tx, shipPhone);
+
+  if (existing) {
+    const needUpdate =
+      shipCity !== norm(existing.city) ||
+      shipDistrict !== norm(existing.district) ||
+      shipWard !== norm(existing.ward) ||
+      shipAddress !== norm(existing.address);
+
+    if (needUpdate) {
+      await customerRepo.updateCustomer(tx, existing.id, {
+        city: shipCity,
+        district: shipDistrict,
+        ward: shipWard,
+        address: shipAddress,
+      });
+    }
+
+    return existing.id;
+  }
+
+  // 3) Không có => create
+  const created = await customerRepo.createCustomer(tx, {
+    name: input.customerName,
+    phone: shipPhone,
+    city: shipCity,
+    district: shipDistrict,
+    ward: shipWard,
+    address: shipAddress,
+  });
+
+  return created.id;
+}
+
+
 export async function getOrderDetail(id: string) {
   return orderRepo.getOrderDetail(prisma, id);
+}
+
+
+// order-post.service.ts
+export async function postOrders(
+  orderIds: string[],
+  hasShipment: boolean
+) {
+  return prisma.$transaction(async (tx) => {
+    const orders = await orderRepo.getOrdersForPost(tx, orderIds);
+    if (!orders.length) {
+      throw new Error("No orders found");
+    }
+
+    for (const order of orders) {
+      console.log('service order test : ' + order.status)
+
+      if (order.status !== OrderStatus.DRAFT) continue;
+
+      // 1. mark posted
+      await orderRepo.markPosted(tx, order.id, hasShipment);
+
+      // 2. shipment
+      if (hasShipment) {
+        await shipmentService.createFromOrder(tx, order);
+      }
+
+      // 3. service request
+      if (order.items.some(i => i.kind === "SERVICE")) {
+        await serviceReqtService.createFromOrder(tx, order);
+      }
+
+      // 4. inventory (sau)
+      // await productRepo.markVariantsSold(tx, order.items);
+    }
+
+    return { count: orders.length };
+  });
 }

@@ -24,8 +24,7 @@ export const InvoiceAggregateResultSchema = z.object({  _count: z.object({
     order: z.number(),
     serviceReq: z.number(),
     vendor: z.number(),
-    items: z.number(),
-    payments: z.number()
+    items: z.number()
   }).optional(),
   _sum: z.object({
     subTotal: z.number().nullable(),

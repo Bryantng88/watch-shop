@@ -297,6 +297,7 @@ export default function AcquisitionListPageClient({
                                                 count={displayCount}
                                                 currency={a.currency}
                                                 status={a.status}
+                                                mode={a.status === "DRAFT" ? "edit" : "view"}
                                                 onUpdated={({ count, total }) => {
                                                     setRowCounts((prev) => ({ ...prev, [a.id]: count }));
                                                     setRowTotals((prev) => ({ ...prev, [a.id]: total }));

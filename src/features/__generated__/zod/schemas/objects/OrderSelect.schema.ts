@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { InvoiceFindManySchema as InvoiceFindManySchema } from '../findManyInvoice.schema';
 import { CustomerArgsObjectSchema as CustomerArgsObjectSchema } from './CustomerArgs.schema';
 import { OrderItemFindManySchema as OrderItemFindManySchema } from '../findManyOrderItem.schema';
+import { ShipmentArgsObjectSchema as ShipmentArgsObjectSchema } from './ShipmentArgs.schema';
 import { OrderCountOutputTypeArgsObjectSchema as OrderCountOutputTypeArgsObjectSchema } from './OrderCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -23,9 +24,11 @@ const makeSchema = () => z.object({
   customerName: z.boolean().optional(),
   notes: z.boolean().optional(),
   shipDistrict: z.boolean().optional(),
+  hasShipment: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   items: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  Shipment: z.union([z.boolean(), z.lazy(() => ShipmentArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrderCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrderSelectObjectSchema: z.ZodType<Prisma.OrderSelect> = makeSchema() as unknown as z.ZodType<Prisma.OrderSelect>;

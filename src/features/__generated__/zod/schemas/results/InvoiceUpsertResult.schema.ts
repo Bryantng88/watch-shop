@@ -24,6 +24,5 @@ export const InvoiceUpsertResultSchema = z.object({
   order: z.unknown().optional(),
   serviceReq: z.unknown().optional(),
   vendor: z.unknown().optional(),
-  items: z.array(z.unknown()),
-  payments: z.array(z.unknown())
+  items: z.array(z.unknown())
 });

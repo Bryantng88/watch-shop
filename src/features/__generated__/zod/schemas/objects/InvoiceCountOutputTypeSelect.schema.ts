@@ -3,8 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  items: z.boolean().optional(),
-  payments: z.boolean().optional()
+  items: z.boolean().optional()
 }).strict();
 export const InvoiceCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.InvoiceCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceCountOutputTypeSelect>;
 export const InvoiceCountOutputTypeSelectObjectZodSchema = makeSchema();

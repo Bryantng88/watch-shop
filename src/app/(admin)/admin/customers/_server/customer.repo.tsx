@@ -2,8 +2,9 @@
 import prisma from "@/server/db/client";
 import { DB, dbOrTx } from "@/server/db/client";
 
-export async function findCustomerById(id: string) {
-    return prisma.customer.findUnique({
+export async function findCustomerById(tx: DB, id: string) {
+    const db = dbOrTx(tx);
+    return db.customer.findUnique({
         where: { id }
     });
 }
@@ -40,6 +41,8 @@ export async function createCustomer(
         phone: string;
         city?: string | null;
         ward?: string | null;
+        district?: string | null;
+        address?: string | null;
     }
 ) {
     const db = dbOrTx(tx);
@@ -49,20 +52,28 @@ export async function createCustomer(
             phone: data.phone,
             city: data.city ?? null,
             ward: data.ward ?? null,
+            district: data.district ?? null,
+            address: data.address ?? null,
         },
     });
 }
-export async function updateCustomer(id: string, data: any) {
-    return prisma.customer.update({
+export async function updateCustomer(
+    tx: DB,
+    id: string,
+    data: {
+        city?: string | null;
+        district?: string | null;
+        ward?: string | null;
+        address?: string | null;
+    }
+) {
+    const db = dbOrTx(tx);
+    return db.customer.update({
         where: { id },
-        data
+        data,
     });
 }
-<<<<<<< HEAD
 
-=======
-// customer.service.ts
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 // customer.repo.ts
 export async function searchCustomersByPhone(phone: string) {
     return prisma.customer.findMany({

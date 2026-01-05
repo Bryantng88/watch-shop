@@ -2,7 +2,6 @@ import * as z from 'zod';
 export const PaymentFindManyResultSchema = z.object({
   data: z.array(z.object({
   id: z.string(),
-  invoiceId: z.string(),
   method: z.unknown(),
   amount: z.number(),
   currency: z.string(),
@@ -10,7 +9,12 @@ export const PaymentFindManyResultSchema = z.object({
   reference: z.string().optional(),
   note: z.string().optional(),
   createdAt: z.date(),
-  invoice: z.unknown()
+  direction: z.unknown().optional(),
+  status: z.unknown().optional(),
+  order_id: z.string().optional(),
+  service_request_id: z.string().optional(),
+  vendor_id: z.string().optional(),
+  acquisition_id: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

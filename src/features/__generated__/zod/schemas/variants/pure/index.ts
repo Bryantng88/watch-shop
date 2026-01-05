@@ -30,3 +30,4 @@ export { InvoiceModelSchema } from './Invoice.pure';
 export { InvoiceItemModelSchema } from './InvoiceItem.pure';
 export { PaymentModelSchema } from './Payment.pure';
 export { BankModelSchema } from './Bank.pure';
+export { ShipmentModelSchema } from './Shipment.pure';

@@ -20,10 +20,7 @@ export const CustomerFindFirstOrThrowSelectSchema: z.ZodType<Prisma.CustomerSele
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
-<<<<<<< HEAD
-=======
     district: z.boolean().optional(),
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
     Acquisition: z.boolean().optional(),
     user: z.boolean().optional(),
     Invoice: z.boolean().optional(),
@@ -43,10 +40,7 @@ export const CustomerFindFirstOrThrowSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
-<<<<<<< HEAD
-=======
     district: z.boolean().optional(),
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
     Acquisition: z.boolean().optional(),
     user: z.boolean().optional(),
     Invoice: z.boolean().optional(),

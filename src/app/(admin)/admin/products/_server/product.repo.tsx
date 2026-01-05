@@ -1,6 +1,6 @@
 
 import { DB, dbOrTx, prisma } from "@/server/db/client";
-import { ProductType, Prisma } from "@prisma/client";
+import { ProductType, Prisma, AvailabilityStatus } from "@prisma/client";
 import * as helper from "./helper";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -43,6 +43,14 @@ export async function searchProductsRepo(
                 // sau này mở SKU thì thêm ở đây
             ],
             contentStatus: "DRAFT", // admin search
+
+            variants: {
+                some: {
+                    availabilityStatus: "ACTIVE",
+                },
+            },
+
+
         },
         select: {
             id: true,
@@ -50,9 +58,18 @@ export async function searchProductsRepo(
             type: true,
             primaryImageUrl: true,
             variants: {
-                select: {
-                    price: true,
+                where: {
+                    availabilityStatus: "ACTIVE", // ✅ CHỈ LẤY VARIANT ACTIVE
                 },
+                select: {
+                    id: true,
+                    price: true,
+                    availabilityStatus: true,
+                },
+                orderBy: {
+                    updatedAt: "desc",
+                },
+                take: 1,
             },
         },
         take: 20,
@@ -174,3 +191,37 @@ export async function listAdminProducts(f: helper.AdminProductFilters) {
 
     return { items, total, page, pageSize };
 }
+
+export async function updateProductVariantStt(
+    tx: DB,
+    params: {
+        productId: string;
+        status: AvailabilityStatus;
+        fromStatuses?: AvailabilityStatus[]; // optional guard
+    }
+) {
+    const { productId, status, fromStatuses } = params;
+
+    const where: Prisma.ProductVariantWhereInput = {
+        productId,
+        ...(fromStatuses?.length
+            ? { availabilityStatus: { in: fromStatuses } }
+            : {}),
+    };
+    const db = dbOrTx(tx);
+    const result = await db.productVariant.updateMany({
+        where,
+        data: {
+            availabilityStatus: status,
+        },
+    });
+
+    if (result.count === 0) {
+        throw new Error(
+            `Không thể cập nhật trạng thái sản phẩm (productId=${productId}). Có thể sản phẩm không AVAILABLE.`
+        );
+    }
+
+    return result.count;
+}
+

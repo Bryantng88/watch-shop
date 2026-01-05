@@ -10,7 +10,6 @@ import { PaymentSumOrderByAggregateInputObjectSchema as PaymentSumOrderByAggrega
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
-  invoiceId: SortOrderSchema.optional(),
   method: SortOrderSchema.optional(),
   amount: SortOrderSchema.optional(),
   currency: SortOrderSchema.optional(),
@@ -18,6 +17,12 @@ const makeSchema = () => z.object({
   reference: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   note: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
+  direction: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  status: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  order_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  service_request_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendor_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  acquisition_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => PaymentCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => PaymentAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => PaymentMaxOrderByAggregateInputObjectSchema).optional(),

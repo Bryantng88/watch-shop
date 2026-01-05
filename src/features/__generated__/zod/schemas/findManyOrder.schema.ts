@@ -27,9 +27,11 @@ export const OrderFindManySelectSchema: z.ZodType<Prisma.OrderSelect> = z.object
     customerName: z.boolean().optional(),
     notes: z.boolean().optional(),
     shipDistrict: z.boolean().optional(),
+    hasShipment: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     customer: z.boolean().optional(),
     items: z.boolean().optional(),
+    Shipment: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.OrderSelect>;
 
@@ -51,9 +53,11 @@ export const OrderFindManySelectZodSchema = z.object({
     customerName: z.boolean().optional(),
     notes: z.boolean().optional(),
     shipDistrict: z.boolean().optional(),
+    hasShipment: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     customer: z.boolean().optional(),
     items: z.boolean().optional(),
+    Shipment: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

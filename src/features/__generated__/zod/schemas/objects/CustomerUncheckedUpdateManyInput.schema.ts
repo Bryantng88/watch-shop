@@ -14,12 +14,8 @@ const makeSchema = () => z.object({
   userId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-<<<<<<< HEAD
-  address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
-=======
   address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   district: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
->>>>>>> 4f6d70506e71757ff795315d849e6d5ac7fcf052
 }).strict();
 export const CustomerUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.CustomerUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerUncheckedUpdateManyInput>;
 export const CustomerUncheckedUpdateManyInputObjectZodSchema = makeSchema();

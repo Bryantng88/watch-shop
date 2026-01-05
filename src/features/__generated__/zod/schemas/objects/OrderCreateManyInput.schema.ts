@@ -6,7 +6,7 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
-  refNo: z.string(),
+  refNo: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   shipPhone: z.string(),
   shipAddress: z.string(),
@@ -21,7 +21,8 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  shipDistrict: z.string().optional().nullable()
+  shipDistrict: z.string().optional().nullable(),
+  hasShipment: z.boolean().optional()
 }).strict();
 export const OrderCreateManyInputObjectSchema: z.ZodType<Prisma.OrderCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateManyInput>;
 export const OrderCreateManyInputObjectZodSchema = makeSchema();

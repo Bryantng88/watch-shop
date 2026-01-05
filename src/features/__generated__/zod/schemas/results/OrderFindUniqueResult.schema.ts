@@ -1,7 +1,7 @@
 import * as z from 'zod';
 export const OrderFindUniqueResultSchema = z.nullable(z.object({
   id: z.string(),
-  refNo: z.string(),
+  refNo: z.string().optional(),
   customerId: z.string().optional(),
   shipPhone: z.string(),
   shipAddress: z.string(),
@@ -17,7 +17,9 @@ export const OrderFindUniqueResultSchema = z.nullable(z.object({
   customerName: z.string().optional(),
   notes: z.string().optional(),
   shipDistrict: z.string().optional(),
+  hasShipment: z.boolean(),
   Invoice: z.array(z.unknown()),
   customer: z.unknown().optional(),
-  items: z.array(z.unknown())
+  items: z.array(z.unknown()),
+  Shipment: z.unknown().optional()
 }));

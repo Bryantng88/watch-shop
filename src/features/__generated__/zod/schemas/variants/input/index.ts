@@ -30,3 +30,4 @@ export { InvoiceInputSchema } from './Invoice.input';
 export { InvoiceItemInputSchema } from './InvoiceItem.input';
 export { PaymentInputSchema } from './Payment.input';
 export { BankInputSchema } from './Bank.input';
+export { ShipmentInputSchema } from './Shipment.input';
