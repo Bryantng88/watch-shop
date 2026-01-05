@@ -12,6 +12,9 @@ import { EnumPaymentMethodNullableFilterObjectSchema as EnumPaymentMethodNullabl
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
+import { EnumreservetypeNullableFilterObjectSchema as EnumreservetypeNullableFilterObjectSchema } from './EnumreservetypeNullableFilter.schema';
+import { reservetypeSchema } from '../enums/reservetype.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
@@ -41,6 +44,10 @@ const orderwhereinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   shipDistrict: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   hasShipment: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  reservetype: z.union([z.lazy(() => EnumreservetypeNullableFilterObjectSchema), reservetypeSchema]).optional().nullable(),
+  reserveuntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  depositqequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  depositpaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   items: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),

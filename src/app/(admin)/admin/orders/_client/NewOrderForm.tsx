@@ -18,6 +18,9 @@ type Customer = {
     address?: string | null;
 };
 
+type ReserveType = "NONE" | "COD_DEPOSIT" | "HOLD"
+
+
 type ServiceCatalog = {
     id: string;
     code?: string | null;
@@ -397,7 +400,25 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                 notes: formData.notes || null,
                 currency: formData.currency,
                 orderDate: new Date(formData.orderDate),
-
+                reserve: reserve.enabled
+                    ? {
+                        type:
+                            formData.paymentMethod === "COD"
+                                ? "COD_DEPOSIT"
+                                : "HOLD",
+                        amount: Number(reserve.amount || 0),
+                        expiresAt:
+                            formData.paymentMethod === "COD"
+                                ? null
+                                : reserve.expiresAt
+                                    ? new Date(reserve.expiresAt)
+                                    : null,
+                    }
+                    : {
+                        type: "NONE",
+                        amount: 0,
+                        expiresAt: null,
+                    },
                 items: lines.map((l) => ({
                     kind: l.kind,
                     title: l.title,

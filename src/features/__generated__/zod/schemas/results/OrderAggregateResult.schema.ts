@@ -18,6 +18,10 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     notes: z.number(),
     shipDistrict: z.number(),
     hasShipment: z.number(),
+    reservetype: z.number(),
+    reserveuntil: z.number(),
+    depositqequired: z.number(),
+    depositpaid: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number(),
@@ -25,11 +29,15 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable()
+    shippingFee: z.number().nullable(),
+    depositqequired: z.number().nullable(),
+    depositpaid: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable()
+    shippingFee: z.number().nullable(),
+    depositqequired: z.number().nullable(),
+    depositpaid: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -45,7 +53,10 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
-    shipDistrict: z.string().nullable()
+    shipDistrict: z.string().nullable(),
+    reserveuntil: z.date().nullable(),
+    depositqequired: z.number().nullable(),
+    depositpaid: z.number().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -61,5 +72,8 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),
     notes: z.string().nullable(),
-    shipDistrict: z.string().nullable()
+    shipDistrict: z.string().nullable(),
+    reserveuntil: z.date().nullable(),
+    depositqequired: z.number().nullable(),
+    depositpaid: z.number().nullable()
   }).nullable().optional()});

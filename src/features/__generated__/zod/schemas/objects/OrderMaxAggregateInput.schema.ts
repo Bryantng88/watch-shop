@@ -20,7 +20,11 @@ const makeSchema = () => z.object({
   customerName: z.literal(true).optional(),
   notes: z.literal(true).optional(),
   shipDistrict: z.literal(true).optional(),
-  hasShipment: z.literal(true).optional()
+  hasShipment: z.literal(true).optional(),
+  reservetype: z.literal(true).optional(),
+  reserveuntil: z.literal(true).optional(),
+  depositqequired: z.literal(true).optional(),
+  depositpaid: z.literal(true).optional()
 }).strict();
 export const OrderMaxAggregateInputObjectSchema: z.ZodType<Prisma.OrderMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderMaxAggregateInputType>;
 export const OrderMaxAggregateInputObjectZodSchema = makeSchema();

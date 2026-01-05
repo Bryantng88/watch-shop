@@ -4,7 +4,7 @@ import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import type { PaymentMethod, Prisma, orderitemkind } from "@prisma/client";
+import { PaymentMethod, Prisma, orderitemkind } from "@prisma/client";
 import { OrderStatus } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
@@ -33,17 +33,55 @@ export type CreateOrderInput = {
   shipPhone?: string | null;
   customerId?: string | null;
   customerName: string;
-
+  reserve: ReserveInput
   shipAddress: string;
   shipCity: string;
   shipDistrict: string;
   shipWard: string;
-  paymentMethod?: PaymentMethod | null;
+  paymentMethod: PaymentMethod,
   notes: string | null;
   orderDate: Date;
 
   items: CreateOrderItemInput[];
 };
+
+type ReserveInput = {
+  enabled: boolean;
+  amount: number;
+  expiresAt?: string | null;
+};
+
+function resolveReserve(
+  paymentMethod: PaymentMethod,
+  reserve?: ReserveInput | null
+) {
+  // 1. Không reserve
+  if (!reserve?.enabled) {
+    return {
+      reservetype: null,
+      reserveuntil: null,
+      depositrequired: null,
+    };
+  }
+
+  // 2. COD → bắt buộc cọc, KHÔNG expire
+  if (paymentMethod === "COD") {
+    return {
+      reservetype: "COD",
+      reserveuntil: null,           // ❗ COD không giữ theo ngày
+      depositrequired: reserve.amount,
+    };
+  }
+
+  // 3. Không COD → HOLD
+  return {
+    reservetype: "HOLD",
+    reserveuntil: reserve.expiresAt
+      ? new Date(reserve.expiresAt)
+      : null,
+    depositrequired: reserve.amount,
+  };
+}
 
 /* ================================
    QUERIES
@@ -102,6 +140,8 @@ export async function getAdminOrderList(input: OrderSearchInput) {
    COMMAND
 ================================ */
 
+
+
 export async function createOrderWithItems(raw: any) {
   const input: CreateOrderInput = {
     shipPhone: raw.shipPhone ?? null,
@@ -112,8 +152,8 @@ export async function createOrderWithItems(raw: any) {
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
     shipWard: raw.shipWard ?? null,
-
-    paymentMethod: raw.paymentMethod ?? null,
+    reserve: raw.reserve,
+    paymentMethod: raw.paymentMethod as PaymentMethod,
     notes: raw.notes ?? null,
     orderDate:
       raw.orderDate instanceof Date
@@ -131,12 +171,11 @@ export async function createOrderWithItems(raw: any) {
       taxRate: i.taxRate ?? null,
     })),
   };
-
+  const reserveData = resolveReserve(input.paymentMethod, input.reserve)
   return prisma.$transaction(async (tx) => {
     /* =====================================================
      * 1️⃣ Resolve CUSTOMER
      * ===================================================== */
-    const resolvedCustomerId = await resolveCustomer(tx, input);
 
     /* =====================================================
      * 2️⃣ Reserve PRODUCT variants (lock inventory)

@@ -2,7 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { OrderStatusSchema } from '../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
-import { PaymentMethodSchema } from '../enums/PaymentMethod.schema'
+import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
+import { reservetypeSchema } from '../enums/reservetype.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,7 +23,11 @@ const makeSchema = () => z.object({
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
-  hasShipment: z.boolean().optional()
+  hasShipment: z.boolean().optional(),
+  reservetype: reservetypeSchema.optional().nullable(),
+  reserveuntil: z.coerce.date().optional().nullable(),
+  depositqequired: z.number().optional().nullable(),
+  depositpaid: z.number().optional().nullable()
 }).strict();
 export const OrderCreateManyInputObjectSchema: z.ZodType<Prisma.OrderCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateManyInput>;
 export const OrderCreateManyInputObjectZodSchema = makeSchema();

@@ -3,6 +3,7 @@ import * as z from 'zod';
 import { OrderStatusSchema } from '../../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
+import { reservetypeSchema } from '../../enums/reservetype.schema';
 // prettier-ignore
 export const OrderResultSchema = z.object({
     id: z.string(),
@@ -23,6 +24,10 @@ export const OrderResultSchema = z.object({
     notes: z.string().nullable(),
     shipDistrict: z.string().nullable(),
     hasShipment: z.boolean(),
+    reservetype: reservetypeSchema.nullable(),
+    reserveuntil: z.date().nullable(),
+    depositqequired: z.number().nullable(),
+    depositpaid: z.number().nullable(),
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     items: z.array(z.unknown()),

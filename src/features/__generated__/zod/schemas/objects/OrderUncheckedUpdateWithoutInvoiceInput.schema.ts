@@ -12,6 +12,9 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { NullableEnumPaymentMethodFieldUpdateOperationsInputObjectSchema as NullableEnumPaymentMethodFieldUpdateOperationsInputObjectSchema } from './NullableEnumPaymentMethodFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
+import { reservetypeSchema } from '../enums/reservetype.schema';
+import { NullableEnumreservetypeFieldUpdateOperationsInputObjectSchema as NullableEnumreservetypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumreservetypeFieldUpdateOperationsInput.schema';
+import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutOrderNestedInput.schema';
 import { ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateOneWithoutOrderNestedInput.schema'
 
@@ -34,6 +37,10 @@ const makeSchema = () => z.object({
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   shipDistrict: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   hasShipment: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  reservetype: z.union([reservetypeSchema, z.lazy(() => NullableEnumreservetypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  reserveuntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  depositqequired: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  depositpaid: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   items: z.lazy(() => OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   Shipment: z.lazy(() => ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
