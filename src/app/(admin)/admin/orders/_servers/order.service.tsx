@@ -4,12 +4,14 @@ import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import type { PaymentMethod, Prisma, orderitemkind, reservetype } from "@prisma/client";
+import { PaymentMethod, Prisma, orderitemkind, ReserveType } from "@prisma/client";
 import { OrderStatus } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipment/_server/shipment.service";
+import * as paymentService from "../../payments/_server/payment.service"
+
 /* ================================
    TYPES
 ================================ */
@@ -29,7 +31,7 @@ export type CreateOrderItemInput = {
   taxRate?: number;
 };
 type ReserveInput = {
-  type: reservetype;     // HOLD | COD
+  type: ReserveType;     // HOLD | COD
   amount?: number;
   expiresAt?: Date | null;
 };
@@ -111,6 +113,8 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     customerName: o.customerName,
     shipPhone: o.shipPhone,
     status: o.status,
+    reserveType: o.reserveType,
+    depositRequired: o.depositRequired,
     subtotal: Number(o.subtotal ?? 0),
     //currency: o.currency ?? "VND",
     itemCount: o._count?.items ?? 0,
@@ -355,7 +359,7 @@ export async function postOrders(
 
       // 1. mark posted
       await orderRepo.markPosted(tx, order.id, hasShipment);
-
+      await paymentService.createPaymentsForOrder(tx, order);
       // 2. shipment
       if (hasShipment) {
         await shipmentService.createFromOrder(tx, order);

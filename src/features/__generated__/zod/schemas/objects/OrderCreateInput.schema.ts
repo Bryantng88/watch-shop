@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { OrderStatusSchema } from '../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
-import { reservetypeSchema } from '../enums/reservetype.schema';
+import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceCreateNestedManyWithoutOrderInput.schema';
 import { CustomerCreateNestedOneWithoutOrdersInputObjectSchema as CustomerCreateNestedOneWithoutOrdersInputObjectSchema } from './CustomerCreateNestedOneWithoutOrdersInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema';
@@ -26,7 +26,7 @@ const makeSchema = () => z.object({
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
   hasShipment: z.boolean().optional(),
-  reserveType: reservetypeSchema.optional().nullable(),
+  reserveType: ReserveTypeSchema.optional().nullable(),
   reserveUntil: z.coerce.date().optional().nullable(),
   depositRequired: z.number().optional().nullable(),
   depositPaid: z.number().optional().nullable(),

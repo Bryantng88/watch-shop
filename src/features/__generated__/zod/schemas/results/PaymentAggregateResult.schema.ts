@@ -9,11 +9,12 @@ export const PaymentAggregateResultSchema = z.object({  _count: z.object({
     note: z.number(),
     createdAt: z.number(),
     direction: z.number(),
-    status: z.number(),
     order_id: z.number(),
     service_request_id: z.number(),
     vendor_id: z.number(),
-    acquisition_id: z.number()
+    acquisition_id: z.number(),
+    status: z.number(),
+    purpose: z.number()
   }).optional(),
   _sum: z.object({
     amount: z.number().nullable()

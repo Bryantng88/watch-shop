@@ -12,8 +12,8 @@ import { EnumPaymentMethodNullableFilterObjectSchema as EnumPaymentMethodNullabl
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
-import { EnumreservetypeNullableFilterObjectSchema as EnumreservetypeNullableFilterObjectSchema } from './EnumreservetypeNullableFilter.schema';
-import { reservetypeSchema } from '../enums/reservetype.schema';
+import { EnumReserveTypeNullableFilterObjectSchema as EnumReserveTypeNullableFilterObjectSchema } from './EnumReserveTypeNullableFilter.schema';
+import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
@@ -44,7 +44,7 @@ const orderwhereinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   shipDistrict: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   hasShipment: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  reserveType: z.union([z.lazy(() => EnumreservetypeNullableFilterObjectSchema), reservetypeSchema]).optional().nullable(),
+  reserveType: z.union([z.lazy(() => EnumReserveTypeNullableFilterObjectSchema), ReserveTypeSchema]).optional().nullable(),
   reserveUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   depositRequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   depositPaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),

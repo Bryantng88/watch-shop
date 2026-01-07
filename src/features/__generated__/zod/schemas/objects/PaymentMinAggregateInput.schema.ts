@@ -12,11 +12,12 @@ const makeSchema = () => z.object({
   note: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   direction: z.literal(true).optional(),
-  status: z.literal(true).optional(),
   order_id: z.literal(true).optional(),
   service_request_id: z.literal(true).optional(),
   vendor_id: z.literal(true).optional(),
-  acquisition_id: z.literal(true).optional()
+  acquisition_id: z.literal(true).optional(),
+  status: z.literal(true).optional(),
+  purpose: z.literal(true).optional()
 }).strict();
 export const PaymentMinAggregateInputObjectSchema: z.ZodType<Prisma.PaymentMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PaymentMinAggregateInputType>;
 export const PaymentMinAggregateInputObjectZodSchema = makeSchema();

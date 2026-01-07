@@ -2,7 +2,8 @@ import * as z from 'zod';
 
 import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
 import { paymentdirectionSchema } from '../../enums/paymentdirection.schema';
-import { paymentstatusSchema } from '../../enums/paymentstatus.schema';
+import { PaymentStatusSchema } from '../../enums/PaymentStatus.schema';
+import { PaymentPurposeSchema } from '../../enums/PaymentPurpose.schema';
 // prettier-ignore
 export const PaymentModelSchema = z.object({
     id: z.string(),
@@ -14,11 +15,12 @@ export const PaymentModelSchema = z.object({
     note: z.string().nullable(),
     createdAt: z.date(),
     direction: paymentdirectionSchema.nullable(),
-    status: paymentstatusSchema.nullable(),
     order_id: z.string().nullable(),
     service_request_id: z.string().nullable(),
     vendor_id: z.string().nullable(),
-    acquisition_id: z.string().nullable()
+    acquisition_id: z.string().nullable(),
+    status: PaymentStatusSchema,
+    purpose: PaymentPurposeSchema
 }).strict();
 
 export type PaymentPureType = z.infer<typeof PaymentModelSchema>;

@@ -21,6 +21,7 @@ type Customer = {
 type ReserveType = "NONE" | "COD_DEPOSIT" | "HOLD"
 
 
+
 type ServiceCatalog = {
     id: string;
     code?: string | null;
@@ -404,8 +405,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                     ? {
                         type:
                             formData.paymentMethod === "COD"
-                                ? "COD_DEPOSIT"
-                                : "HOLD",
+                                ? "COD_HOLD"
+                                : "DEPOSIT_HOLD",
                         amount: Number(reserve.amount || 0),
                         expiresAt:
                             formData.paymentMethod === "COD"

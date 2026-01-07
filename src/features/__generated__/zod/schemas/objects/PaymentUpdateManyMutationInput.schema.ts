@@ -8,8 +8,10 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
 import { NullableEnumpaymentdirectionFieldUpdateOperationsInputObjectSchema as NullableEnumpaymentdirectionFieldUpdateOperationsInputObjectSchema } from './NullableEnumpaymentdirectionFieldUpdateOperationsInput.schema';
-import { paymentstatusSchema } from '../enums/paymentstatus.schema';
-import { NullableEnumpaymentstatusFieldUpdateOperationsInputObjectSchema as NullableEnumpaymentstatusFieldUpdateOperationsInputObjectSchema } from './NullableEnumpaymentstatusFieldUpdateOperationsInput.schema'
+import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
+import { EnumPaymentStatusFieldUpdateOperationsInputObjectSchema as EnumPaymentStatusFieldUpdateOperationsInputObjectSchema } from './EnumPaymentStatusFieldUpdateOperationsInput.schema';
+import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
+import { EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema as EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentPurposeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -21,11 +23,12 @@ const makeSchema = () => z.object({
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   direction: z.union([paymentdirectionSchema, z.lazy(() => NullableEnumpaymentdirectionFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  status: z.union([paymentstatusSchema, z.lazy(() => NullableEnumpaymentstatusFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   order_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   service_request_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   vendor_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  acquisition_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  acquisition_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  status: z.union([PaymentStatusSchema, z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  purpose: z.union([PaymentPurposeSchema, z.lazy(() => EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const PaymentUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.PaymentUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUpdateManyMutationInput>;
 export const PaymentUpdateManyMutationInputObjectZodSchema = makeSchema();

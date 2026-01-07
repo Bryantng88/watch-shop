@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const paymentstatusSchema = z.enum(['PENDING', 'PAID', 'CANCELLED'])
+export const PaymentStatusSchema = z.enum(['UNPAID', 'PAID', 'REFUNDED'])
 
-export type paymentstatus = z.infer<typeof paymentstatusSchema>;
+export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;

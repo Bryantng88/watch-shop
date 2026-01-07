@@ -12,11 +12,12 @@ const makeSchema = () => z.object({
   note: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   direction: z.boolean().optional(),
-  status: z.boolean().optional(),
   order_id: z.boolean().optional(),
   service_request_id: z.boolean().optional(),
   vendor_id: z.boolean().optional(),
-  acquisition_id: z.boolean().optional()
+  acquisition_id: z.boolean().optional(),
+  status: z.boolean().optional(),
+  purpose: z.boolean().optional()
 }).strict();
 export const PaymentSelectObjectSchema: z.ZodType<Prisma.PaymentSelect> = makeSchema() as unknown as z.ZodType<Prisma.PaymentSelect>;
 export const PaymentSelectObjectZodSchema = makeSchema();

@@ -9,9 +9,10 @@ export const PaymentDeleteResultSchema = z.nullable(z.object({
   note: z.string().optional(),
   createdAt: z.date(),
   direction: z.unknown().optional(),
-  status: z.unknown().optional(),
   order_id: z.string().optional(),
   service_request_id: z.string().optional(),
   vendor_id: z.string().optional(),
-  acquisition_id: z.string().optional()
+  acquisition_id: z.string().optional(),
+  status: z.unknown(),
+  purpose: z.unknown()
 }));

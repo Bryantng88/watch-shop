@@ -1,9 +1,9 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { reservetypeSchema } from '../enums/reservetype.schema'
+import { ReserveTypeSchema } from '../enums/ReserveType.schema'
 
 const makeSchema = () => z.object({
-  set: reservetypeSchema.optional()
+  set: ReserveTypeSchema.optional()
 }).strict();
-export const NullableEnumreservetypeFieldUpdateOperationsInputObjectSchema: z.ZodType<Prisma.NullableEnumreservetypeFieldUpdateOperationsInput> = makeSchema() as unknown as z.ZodType<Prisma.NullableEnumreservetypeFieldUpdateOperationsInput>;
-export const NullableEnumreservetypeFieldUpdateOperationsInputObjectZodSchema = makeSchema();
+export const NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema: z.ZodType<Prisma.NullableEnumReserveTypeFieldUpdateOperationsInput> = makeSchema() as unknown as z.ZodType<Prisma.NullableEnumReserveTypeFieldUpdateOperationsInput>;
+export const NullableEnumReserveTypeFieldUpdateOperationsInputObjectZodSchema = makeSchema();

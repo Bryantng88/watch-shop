@@ -1,13 +1,13 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { reservetypeSchema } from '../enums/reservetype.schema';
-import { NestedEnumreservetypeNullableFilterObjectSchema as NestedEnumreservetypeNullableFilterObjectSchema } from './NestedEnumreservetypeNullableFilter.schema'
+import { ReserveTypeSchema } from '../enums/ReserveType.schema';
+import { NestedEnumReserveTypeNullableFilterObjectSchema as NestedEnumReserveTypeNullableFilterObjectSchema } from './NestedEnumReserveTypeNullableFilter.schema'
 
 const makeSchema = () => z.object({
-  equals: reservetypeSchema.optional().nullable(),
-  in: reservetypeSchema.array().optional().nullable(),
-  notIn: reservetypeSchema.array().optional().nullable(),
-  not: z.union([reservetypeSchema, z.lazy(() => NestedEnumreservetypeNullableFilterObjectSchema)]).optional().nullable()
+  equals: ReserveTypeSchema.optional().nullable(),
+  in: ReserveTypeSchema.array().optional().nullable(),
+  notIn: ReserveTypeSchema.array().optional().nullable(),
+  not: z.union([ReserveTypeSchema, z.lazy(() => NestedEnumReserveTypeNullableFilterObjectSchema)]).optional().nullable()
 }).strict();
-export const EnumreservetypeNullableFilterObjectSchema: z.ZodType<Prisma.EnumreservetypeNullableFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumreservetypeNullableFilter>;
-export const EnumreservetypeNullableFilterObjectZodSchema = makeSchema();
+export const EnumReserveTypeNullableFilterObjectSchema: z.ZodType<Prisma.EnumReserveTypeNullableFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumReserveTypeNullableFilter>;
+export const EnumReserveTypeNullableFilterObjectZodSchema = makeSchema();

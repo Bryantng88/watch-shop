@@ -206,7 +206,7 @@ model Order {
   notes           String?
   shipDistrict    String?
   hasShipment     Boolean        @default(false)
-  reserveType     reservetype?
+  reserveType     ReserveType?
   reserveUntil    DateTime?      @db.Timestamptz(6)
   depositRequired Decimal?       @db.Decimal(12, 2)
   depositPaid     Decimal?       @db.Decimal(12, 2)
@@ -570,17 +570,17 @@ model Payment {
   note               String?
   createdAt          DateTime          @default(now())
   direction          paymentdirection?
-  status             paymentstatus?    @default(PAID)
   order_id           String?
   service_request_id String?
   vendor_id          String?
   acquisition_id     String?
+  status             PaymentStatus     @default(UNPAID)
+  purpose            PaymentPurpose    @default(ORDER_FULL)
 
   @@index([direction], map: "idx_payment_direction")
   @@index([order_id], map: "idx_payment_order")
   @@index([paidAt], map: "idx_payment_paidat")
   @@index([service_request_id], map: "idx_payment_service_request")
-  @@index([status], map: "idx_payment_status")
   @@index([vendor_id], map: "idx_payment_vendor")
   @@index([acquisition_id], map: "idx_payment_acquisition")
 }
@@ -907,14 +907,14 @@ enum paymentdirection {
   OUT
 }
 
-enum paymentstatus {
-  PENDING
-  PAID
-  CANCELLED
-}
-
-enum reservetype {
+enum ReserveType {
   NONE
   COD_HOLD
   DEPOSIT_HOLD
+}
+
+enum PaymentPurpose {
+  ORDER_DEPOSIT
+  ORDER_REMAIN
+  ORDER_FULL
 }

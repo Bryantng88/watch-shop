@@ -1,5 +1,5 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import type { Prisma, PaymentMethod, OrderStatus, orderitemkind, reservetype } from "@prisma/client";
+import type { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 /* ================================
    TYPES
@@ -17,10 +17,25 @@ export type CreateOrderRow = {
     notes: string | null;
     createdAt: Date;
     status: OrderStatus;
-    reserveType: reservetype | null;
+    reserveType: ReserveType | null;
     depositRequired: number | null;
     reserveUntil: Date | null;
 };
+function normalizeReserve(data: CreateOrderRow) {
+    if (!data.reserveType) {
+        return {
+            reserveType: null,
+            reserveUntil: null,
+            depositRequired: null,
+        };
+    }
+
+    return {
+        reserveType: data.reserveType,
+        reserveUntil: data.reserveUntil ?? null,
+        depositRequired: data.depositRequired ?? null,
+    };
+}
 
 export type CreateOrderItemRow = {
     productId?: string;
@@ -57,7 +72,8 @@ export async function getOrdList(
                 id: true,
                 refNo: true,
                 status: true,
-
+                reserveType: true,
+                depositRequired: true,
                 customerName: true,
                 shipPhone: true,
                 shipCity: true,
@@ -90,6 +106,7 @@ export async function getOrdList(
 
 export async function createOrder(tx: DB, data: CreateOrderRow) {
     const db = dbOrTx(tx);
+    const reserve = normalizeReserve(data);
     return db.order.create({
         data: {
             customer: data.customerId
@@ -107,9 +124,11 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             createdAt: data.createdAt, // ✅ đúng kiểu
             status: data.status,
             subtotal: 0,
-            reserveType: data.reserveType,
-            depositRequired: data.depositRequired,
-            reserveUntil: data.reserveUntil
+            reserveType: data.reserveType
+                ? (data.reserveType as ReserveType)
+                : null,
+            depositRequired: reserve.depositRequired,
+            reserveUntil: reserve.reserveUntil
         },
         select: {
             id: true,

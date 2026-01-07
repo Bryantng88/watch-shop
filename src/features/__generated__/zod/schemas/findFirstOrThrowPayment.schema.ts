@@ -18,11 +18,12 @@ export const PaymentFindFirstOrThrowSelectSchema: z.ZodType<Prisma.PaymentSelect
     note: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     direction: z.boolean().optional(),
-    status: z.boolean().optional(),
     order_id: z.boolean().optional(),
     service_request_id: z.boolean().optional(),
     vendor_id: z.boolean().optional(),
-    acquisition_id: z.boolean().optional()
+    acquisition_id: z.boolean().optional(),
+    status: z.boolean().optional(),
+    purpose: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PaymentSelect>;
 
 export const PaymentFindFirstOrThrowSelectZodSchema = z.object({
@@ -35,11 +36,12 @@ export const PaymentFindFirstOrThrowSelectZodSchema = z.object({
     note: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     direction: z.boolean().optional(),
-    status: z.boolean().optional(),
     order_id: z.boolean().optional(),
     service_request_id: z.boolean().optional(),
     vendor_id: z.boolean().optional(),
-    acquisition_id: z.boolean().optional()
+    acquisition_id: z.boolean().optional(),
+    status: z.boolean().optional(),
+    purpose: z.boolean().optional()
   }).strict();
 
 export const PaymentFindFirstOrThrowSchema: z.ZodType<Prisma.PaymentFindFirstOrThrowArgs> = z.object({ select: PaymentFindFirstOrThrowSelectSchema.optional(),  orderBy: z.union([PaymentOrderByWithRelationInputObjectSchema, PaymentOrderByWithRelationInputObjectSchema.array()]).optional(), where: PaymentWhereInputObjectSchema.optional(), cursor: PaymentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([PaymentScalarFieldEnumSchema, PaymentScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.PaymentFindFirstOrThrowArgs>;

@@ -1,17 +1,17 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { reservetypeSchema } from '../enums/reservetype.schema';
+import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { NestedIntNullableFilterObjectSchema as NestedIntNullableFilterObjectSchema } from './NestedIntNullableFilter.schema';
-import { NestedEnumreservetypeNullableFilterObjectSchema as NestedEnumreservetypeNullableFilterObjectSchema } from './NestedEnumreservetypeNullableFilter.schema'
+import { NestedEnumReserveTypeNullableFilterObjectSchema as NestedEnumReserveTypeNullableFilterObjectSchema } from './NestedEnumReserveTypeNullableFilter.schema'
 
 const nestedenumreservetypenullablewithaggregatesfilterSchema = z.object({
-  equals: reservetypeSchema.optional().nullable(),
-  in: reservetypeSchema.array().optional().nullable(),
-  notIn: reservetypeSchema.array().optional().nullable(),
-  not: z.union([reservetypeSchema, z.lazy(() => NestedEnumreservetypeNullableWithAggregatesFilterObjectSchema)]).optional().nullable(),
+  equals: ReserveTypeSchema.optional().nullable(),
+  in: ReserveTypeSchema.array().optional().nullable(),
+  notIn: ReserveTypeSchema.array().optional().nullable(),
+  not: z.union([ReserveTypeSchema, z.lazy(() => NestedEnumReserveTypeNullableWithAggregatesFilterObjectSchema)]).optional().nullable(),
   _count: z.lazy(() => NestedIntNullableFilterObjectSchema).optional(),
-  _min: z.lazy(() => NestedEnumreservetypeNullableFilterObjectSchema).optional(),
-  _max: z.lazy(() => NestedEnumreservetypeNullableFilterObjectSchema).optional()
+  _min: z.lazy(() => NestedEnumReserveTypeNullableFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedEnumReserveTypeNullableFilterObjectSchema).optional()
 }).strict();
-export const NestedEnumreservetypeNullableWithAggregatesFilterObjectSchema: z.ZodType<Prisma.NestedEnumreservetypeNullableWithAggregatesFilter> = nestedenumreservetypenullablewithaggregatesfilterSchema as unknown as z.ZodType<Prisma.NestedEnumreservetypeNullableWithAggregatesFilter>;
-export const NestedEnumreservetypeNullableWithAggregatesFilterObjectZodSchema = nestedenumreservetypenullablewithaggregatesfilterSchema;
+export const NestedEnumReserveTypeNullableWithAggregatesFilterObjectSchema: z.ZodType<Prisma.NestedEnumReserveTypeNullableWithAggregatesFilter> = nestedenumreservetypenullablewithaggregatesfilterSchema as unknown as z.ZodType<Prisma.NestedEnumReserveTypeNullableWithAggregatesFilter>;
+export const NestedEnumReserveTypeNullableWithAggregatesFilterObjectZodSchema = nestedenumreservetypenullablewithaggregatesfilterSchema;

@@ -10,6 +10,8 @@ type OrderItem = {
     refNo: string | null;
     customerName: string | null;
     shipPhone: string | null;
+    reserveType: string | null;
+    depositRequired: number;
     status: string;
     subtotal: number;
     currency: string;
@@ -27,6 +29,10 @@ type PageProps = {
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
 };
+type OrderDisplayType =
+    | "NORMAL"        // đơn thường
+    | "COD_HOLD"           // COD có cọc
+    | "DEPOSIT_HOLD"; // đặt cọc giữ hàng
 
 // =====================
 // FORMATTERS
@@ -42,10 +48,51 @@ function fmtDate(d?: string | null) {
         minute: "2-digit",
     });
 }
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
+
+function Badge({ children, tone = "gray" }: { children: React.ReactNode; tone?: "gray" | "blue" | "green" | "orange" }) {
+    const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
+    const toneCls =
+        tone === "blue"
+            ? "bg-blue-50 text-blue-700"
+            : tone === "green"
+                ? "bg-green-50 text-green-700"
+                : "bg-gray-100 text-gray-700";
+    return <span className={cls(base, toneCls)}>{children}</span>;
+}
 
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
+}
+function getOrderDisplayType(order: {
+    paymentMethod?: string | null;
+    reserveType?: string | null;
+    depositRequired?: number | null;
+}): OrderDisplayType {
+    if (order.paymentMethod === "COD_HOLD") {
+        return "COD_HOLD";
+    }
+
+    if (
+        order.reserveType === "HOLD" &&
+        (order.depositRequired ?? 0) > 0
+    ) {
+        return "DEPOSIT_HOLD";
+    }
+
+    return "NORMAL";
+}
+function OrderTypeBadge({ type }: { type: OrderDisplayType }) {
+    if (type === "COD_HOLD")
+        return <Badge tone="orange">COD</Badge>;
+
+    if (type === "DEPOSIT_HOLD")
+        return <Badge tone="blue">Đặt cọc</Badge>;
+
+    return <Badge>Thường</Badge>;
 }
 
 // =====================
@@ -238,6 +285,8 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
+                            <th className="px-3 py-2 text-left">Loại ĐH</th>
+                            <th className="px-3 py-2 text-left">Tiền cọc</th>
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-left">Tổng tiền</th>
                             <th className="px-3 py-2 text-left">Số dòng</th>
@@ -279,7 +328,6 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
-
                                         <td className="px-3 py-2">
                                             <span
                                                 className={`px-2 py-1 rounded text-xs font-medium ${o.status === "PAID"
@@ -292,7 +340,8 @@ export default function OrderListPageClient({
                                                 {o.status}
                                             </span>
                                         </td>
-
+                                        <td className="px-3 py-2">{o.reserveType ?? "-"}</td>
+                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
                                         <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
 
                                         <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
