@@ -17,5 +17,6 @@ export const ShipmentUpsertResultSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   status: z.unknown(),
+  refNo: z.string().optional(),
   Order: z.unknown()
 });

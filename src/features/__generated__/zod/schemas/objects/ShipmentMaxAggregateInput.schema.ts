@@ -19,7 +19,8 @@ const makeSchema = () => z.object({
   notes: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
-  status: z.literal(true).optional()
+  status: z.literal(true).optional(),
+  refNo: z.literal(true).optional()
 }).strict();
 export const ShipmentMaxAggregateInputObjectSchema: z.ZodType<Prisma.ShipmentMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentMaxAggregateInputType>;
 export const ShipmentMaxAggregateInputObjectZodSchema = makeSchema();

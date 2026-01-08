@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   status: z.boolean().optional(),
+  refNo: z.boolean().optional(),
   Order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional()
 }).strict();
 export const ShipmentSelectObjectSchema: z.ZodType<Prisma.ShipmentSelect> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentSelect>;

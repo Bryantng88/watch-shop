@@ -20,6 +20,7 @@ export const ShipmentInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     status: shipmentstatusSchema,
+    refNo: z.string().optional().nullable(),
     Order: z.unknown()
 }).strict();
 

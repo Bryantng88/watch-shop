@@ -62,7 +62,7 @@ function resolveReserve(
 
   if (paymentMethod === "COD") {
     return {
-      reserveType: "COD" as reservetype,
+      reserveType: "COD" as ReserveType,
       depositRequired: reserve.amount ?? 0,
       reserveUntil: null, // COD không giữ hàng
     };

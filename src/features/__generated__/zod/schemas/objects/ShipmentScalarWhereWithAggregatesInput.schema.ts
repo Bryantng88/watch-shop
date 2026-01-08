@@ -29,7 +29,8 @@ const shipmentscalarwherewithaggregatesinputSchema = z.object({
   notes: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  status: z.union([z.lazy(() => EnumshipmentstatusWithAggregatesFilterObjectSchema), shipmentstatusSchema]).optional()
+  status: z.union([z.lazy(() => EnumshipmentstatusWithAggregatesFilterObjectSchema), shipmentstatusSchema]).optional(),
+  refNo: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ShipmentScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ShipmentScalarWhereWithAggregatesInput> = shipmentscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ShipmentScalarWhereWithAggregatesInput>;
 export const ShipmentScalarWhereWithAggregatesInputObjectZodSchema = shipmentscalarwherewithaggregatesinputSchema;

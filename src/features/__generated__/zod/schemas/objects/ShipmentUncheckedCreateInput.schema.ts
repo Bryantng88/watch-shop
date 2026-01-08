@@ -19,7 +19,8 @@ const makeSchema = () => z.object({
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  status: shipmentstatusSchema.optional()
+  status: shipmentstatusSchema.optional(),
+  refNo: z.string().optional().nullable()
 }).strict();
 export const ShipmentUncheckedCreateInputObjectSchema: z.ZodType<Prisma.ShipmentUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUncheckedCreateInput>;
 export const ShipmentUncheckedCreateInputObjectZodSchema = makeSchema();

@@ -19,7 +19,8 @@ const makeSchema = () => z.object({
   notes: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
-  status: z.literal(true).optional()
+  status: z.literal(true).optional(),
+  refNo: z.literal(true).optional()
 }).strict();
 export const ShipmentMinAggregateInputObjectSchema: z.ZodType<Prisma.ShipmentMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentMinAggregateInputType>;
 export const ShipmentMinAggregateInputObjectZodSchema = makeSchema();
