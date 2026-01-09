@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 /* ==============================
  * Types
  * ============================== */
 type ShipmentRow = {
     id: string;
-    code: string | null;
+    refNo: string | null;
     status: string;
-    createdAt: Date;
+    createdAt: string; // ✅ nhận từ server đã serialize
 
     orderRefNo: string | null;
     customerName: string;
@@ -22,16 +22,19 @@ type ShipmentRow = {
     shippingFee: number | null;
 };
 
-export type ShipmentListData = {
+type PageProps = {
+    items: ShipmentRow[];
+    total: number;
     page: number;
     pageSize: number;
-    total: number;
-    rows: ShipmentRow[];
+    totalPages: number;
+    rawSearchParams: Record<string, string | string[] | undefined>;
 };
 
-type Props = {
-    data: ShipmentListData;
-};
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
+
 function Badge({
     children,
     tone = "gray",
@@ -39,8 +42,7 @@ function Badge({
     children: React.ReactNode;
     tone?: "gray" | "blue" | "green" | "amber" | "red";
 }) {
-    const base =
-        "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
+    const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
     const toneCls =
         tone === "blue"
             ? "bg-blue-50 text-blue-700"
@@ -51,7 +53,7 @@ function Badge({
                     : tone === "red"
                         ? "bg-red-50 text-red-700"
                         : "bg-gray-100 text-gray-700";
-    return <span className={`${base} ${toneCls}`}>{children}</span>;
+    return <span className={cls(base, toneCls)}>{children}</span>;
 }
 
 function statusTone(status: ShipmentRow["status"]) {
@@ -74,34 +76,39 @@ function money(n?: number | null) {
     return new Intl.NumberFormat("vi-VN").format(n) + " VND";
 }
 
+function fmtDate(d?: string | null) {
+    if (!d) return "-";
+    const dt = new Date(d);
+    return dt.toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
 /* ==============================
  * Component
  * ============================== */
-export default function ShipmentListClient({ data }: Props) {
-    const [rows, setRows] = useState<ShipmentRow[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function ShipmentListClient({
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    rawSearchParams,
+}: PageProps) {
+    const url = useMemo(() => new URLSearchParams(rawSearchParams as any), [rawSearchParams]);
 
-    useEffect(() => {
-        let aborted = false;
+    const gotoPageHref = (p: number) => {
+        const next = new URLSearchParams(url);
+        next.set("page", String(p));
+        next.set("pageSize", String(pageSize));
+        return `/admin/shipments?${next.toString()}`;
+    };
 
-        setLoading(true);
-        fetch("/api/admin/shipments")
-            .then((r) => (r.ok ? r.json() : []))
-            .then((data) => {
-                if (aborted) return;
-                setRows(Array.isArray(data) ? data : []);
-            })
-            .catch(() => {
-                if (!aborted) setRows([]);
-            })
-            .finally(() => {
-                if (!aborted) setLoading(false);
-            });
-
-        return () => {
-            aborted = true;
-        };
-    }, []);
+    const spObj = rawSearchParams;
 
     return (
         <div className="space-y-4">
@@ -122,6 +129,39 @@ export default function ShipmentListClient({ data }: Props) {
                 </Link>
             </div>
 
+            {/* Filter (optional, giống Order) */}
+            <form action="/admin/shipments" method="get" className="flex flex-wrap gap-2 items-end">
+                <div className="flex flex-col">
+                    <label className="text-xs text-gray-600">Tìm kiếm</label>
+                    <input
+                        name="q"
+                        defaultValue={(spObj.q as string) ?? ""}
+                        placeholder="RefNo, tên KH, số ĐT…"
+                        className="h-9 rounded border px-2"
+                    />
+                </div>
+
+                <div className="flex flex-col">
+                    <label className="text-xs text-gray-600">Page size</label>
+                    <select
+                        name="pageSize"
+                        defaultValue={String(pageSize)}
+                        className="h-9 rounded border px-2"
+                    >
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+
+                <div className="flex gap-2">
+                    <button className="h-9 rounded border px-3">Lọc</button>
+                    <Link href="/admin/shipments" className="h-9 rounded border px-3 flex items-center">
+                        Clear
+                    </Link>
+                </div>
+            </form>
+
             {/* Table */}
             <div className="rounded-lg border bg-white shadow-sm overflow-x-auto">
                 <table className="min-w-full text-sm border-collapse">
@@ -138,34 +178,20 @@ export default function ShipmentListClient({ data }: Props) {
                     </thead>
 
                     <tbody>
-                        {loading && (
-                            <tr>
-                                <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
-                                    Đang tải…
-                                </td>
-                            </tr>
-                        )}
-
-                        {!loading && rows.length === 0 && (
+                        {items.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
                                     Chưa có shipment nào
                                 </td>
                             </tr>
-                        )}
-
-                        {!loading &&
-                            rows.map((s) => (
+                        ) : (
+                            items.map((s) => (
                                 <tr key={s.id} className="border-b hover:bg-gray-50">
                                     {/* Shipment */}
                                     <td className="px-3 py-2">
-                                        <div className="font-medium">
-                                            {s.code ?? s.id.slice(0, 8)}
-                                        </div>
+                                        <div className="font-medium">{s.refNo ?? s.id.slice(0, 8)}</div>
                                         {s.orderRefNo && (
-                                            <div className="text-xs text-gray-500">
-                                                Order: {s.orderRefNo}
-                                            </div>
+                                            <div className="text-xs text-gray-500">Order: {s.orderRefNo}</div>
                                         )}
                                     </td>
 
@@ -174,9 +200,7 @@ export default function ShipmentListClient({ data }: Props) {
                                         <div className="font-medium">{s.customerName}</div>
                                         <div className="text-xs text-gray-500">{s.shipPhone}</div>
                                         {s.shipAddress && (
-                                            <div className="text-xs text-gray-400 line-clamp-1">
-                                                {s.shipAddress}
-                                            </div>
+                                            <div className="text-xs text-gray-400 line-clamp-1">{s.shipAddress}</div>
                                         )}
                                     </td>
 
@@ -184,16 +208,12 @@ export default function ShipmentListClient({ data }: Props) {
                                     <td className="px-3 py-2">
                                         <div>{s.carrier ?? "-"}</div>
                                         {s.trackingNo && (
-                                            <div className="text-xs text-gray-500">
-                                                Tracking: {s.trackingNo}
-                                            </div>
+                                            <div className="text-xs text-gray-500">Tracking: {s.trackingNo}</div>
                                         )}
                                     </td>
 
                                     {/* Fee */}
-                                    <td className="px-3 py-2 text-right font-medium">
-                                        {money(s.shippingFee)}
-                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium">{money(s.shippingFee)}</td>
 
                                     {/* Status */}
                                     <td className="px-3 py-2">
@@ -202,7 +222,7 @@ export default function ShipmentListClient({ data }: Props) {
 
                                     {/* Created */}
                                     <td className="px-3 py-2 text-right text-xs text-gray-500">
-                                        {new Date(s.createdAt).toLocaleString("vi-VN")}
+                                        {fmtDate(s.createdAt)}
                                     </td>
 
                                     {/* Action */}
@@ -215,9 +235,39 @@ export default function ShipmentListClient({ data }: Props) {
                                         </Link>
                                     </td>
                                 </tr>
-                            ))}
+                            ))
+                        )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Pagination (giống Order) */}
+            <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                    Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
+                </div>
+
+                <div className="flex gap-2">
+                    <Link
+                        href={gotoPageHref(Math.max(1, page - 1))}
+                        className={cls(
+                            "rounded border px-3 py-1 text-sm",
+                            page <= 1 && "pointer-events-none opacity-50"
+                        )}
+                    >
+                        ← Trước
+                    </Link>
+
+                    <Link
+                        href={gotoPageHref(Math.min(totalPages, page + 1))}
+                        className={cls(
+                            "rounded border px-3 py-1 text-sm",
+                            page >= totalPages && "pointer-events-none opacity-50"
+                        )}
+                    >
+                        Sau →
+                    </Link>
+                </div>
             </div>
         </div>
     );
