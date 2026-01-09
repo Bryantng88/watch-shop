@@ -30,6 +30,8 @@ const makeSchema = () => z.object({
   reserveUntil: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   depositRequired: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   depositPaid: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  source: SortOrderSchema.optional(),
+  verificationStatus: SortOrderSchema.optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
   items: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),

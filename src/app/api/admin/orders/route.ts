@@ -61,8 +61,15 @@ export async function POST(req: NextRequest) {
     // ==========================
     // Create order
     // ==========================
+    const payload = {
+        ...body,
+        source: "ADMIN",
+        verificationStatus: "VERIFIED",
+    };
+
+    // (optional)
     try {
-        const order = await createOrderWithItems(body);
+        const order = await createOrderWithItems(payload);
         return NextResponse.json(order, { status: 201 });
     } catch (err: any) {
         console.error("Create order failed:", err);

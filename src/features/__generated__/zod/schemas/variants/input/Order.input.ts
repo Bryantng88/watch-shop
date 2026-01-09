@@ -4,6 +4,8 @@ import { OrderStatusSchema } from '../../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
 import { ReserveTypeSchema } from '../../enums/ReserveType.schema';
+import { OrderSourceSchema } from '../../enums/OrderSource.schema';
+import { OrderVerificationStatusSchema } from '../../enums/OrderVerificationStatus.schema';
 // prettier-ignore
 export const OrderInputSchema = z.object({
     id: z.string(),
@@ -28,6 +30,8 @@ export const OrderInputSchema = z.object({
     reserveUntil: z.date().optional().nullable(),
     depositRequired: z.number().optional().nullable(),
     depositPaid: z.number().optional().nullable(),
+    source: OrderSourceSchema,
+    verificationStatus: OrderVerificationStatusSchema,
     Invoice: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
     items: z.array(z.unknown()),

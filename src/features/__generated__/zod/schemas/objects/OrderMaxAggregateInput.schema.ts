@@ -24,7 +24,9 @@ const makeSchema = () => z.object({
   reserveType: z.literal(true).optional(),
   reserveUntil: z.literal(true).optional(),
   depositRequired: z.literal(true).optional(),
-  depositPaid: z.literal(true).optional()
+  depositPaid: z.literal(true).optional(),
+  source: z.literal(true).optional(),
+  verificationStatus: z.literal(true).optional()
 }).strict();
 export const OrderMaxAggregateInputObjectSchema: z.ZodType<Prisma.OrderMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderMaxAggregateInputType>;
 export const OrderMaxAggregateInputObjectZodSchema = makeSchema();

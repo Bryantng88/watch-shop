@@ -41,6 +41,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     reserveUntil: z.number(),
     depositRequired: z.number(),
     depositPaid: z.number(),
+    source: z.number(),
+    verificationStatus: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number(),

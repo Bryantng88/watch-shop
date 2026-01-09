@@ -22,6 +22,8 @@ export const OrderFindFirstResultSchema = z.nullable(z.object({
   reserveUntil: z.date().optional(),
   depositRequired: z.number().optional(),
   depositPaid: z.number().optional(),
+  source: z.unknown(),
+  verificationStatus: z.unknown(),
   Invoice: z.array(z.unknown()),
   customer: z.unknown().optional(),
   items: z.array(z.unknown()),

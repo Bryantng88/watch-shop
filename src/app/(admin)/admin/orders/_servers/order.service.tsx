@@ -4,8 +4,7 @@ import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import { PaymentMethod, Prisma, orderitemkind, ReserveType } from "@prisma/client";
-import { OrderStatus } from "@prisma/client";
+import { PaymentMethod, Prisma, orderitemkind, ReserveType, OrderStatus, OrderSource, OrderVerificationStatus } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
@@ -49,8 +48,10 @@ export type CreateOrderInput = {
   paymentMethod: PaymentMethod;
   notes: string | null;
   orderDate: Date;
-
+  status: OrderStatus;
   items: CreateOrderItemInput[];
+  source: OrderSource;
+  verificationStatus: OrderVerificationStatus;
 };
 
 
@@ -121,6 +122,8 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     notes: o.notes,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
+    source: o.source,
+    verificationStatus: o.verificationStatus
   }));
 
   return {
@@ -143,19 +146,20 @@ export async function createOrderWithItems(raw: any) {
     customerName: raw.customerName,
     reserve: raw.reserve
       ? {
-        type: raw.reserve.type as reservetype,
+        type: raw.reserve.type as ReserveType,
         amount: Number(raw.reserve.amount || 0),
         expiresAt: raw.reserve.expiresAt
           ? new Date(raw.reserve.expiresAt)
           : null,
       }
       : null,
-
+    status: raw.status as OrderStatus,
     shipAddress: raw.shipAddress ?? null,
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
     shipWard: raw.shipWard ?? null,
-
+    source: raw.source as OrderSource,
+    verificationStatus: raw.verificationStatus as OrderVerificationStatus,
     paymentMethod: raw.paymentMethod as PaymentMethod,
     notes: raw.notes ?? null,
     orderDate:
@@ -193,7 +197,11 @@ export async function createOrderWithItems(raw: any) {
         fromStatuses: ["ACTIVE"],
       });
     }
-
+    if (reserveData?.reserveType === "DEPOSIT_HOLD") {
+      input.status === OrderStatus.RESERVED
+    } else {
+      input.status === OrderStatus.DRAFT
+    }
     /* =====================================================
      * 3️⃣ Create ORDER (DRAFT)
      * ===================================================== */
@@ -208,7 +216,9 @@ export async function createOrderWithItems(raw: any) {
       paymentMethod: input.paymentMethod!,
       notes: input.notes,
       createdAt: input.orderDate,
-      status: "DRAFT",
+      status: input.status,
+      source: input.source,
+      verificationStatus: input.verificationStatus,
       reserveType: reserveData?.reserveType ?? null,
       depositRequired: reserveData?.depositRequired ?? null,
       reserveUntil: reserveData?.reserveUntil ?? null

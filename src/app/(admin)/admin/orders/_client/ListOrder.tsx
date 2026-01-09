@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import ItemPopover from "../../__components/GenericPopover"; // popover dùng chung
 import ActionMenu from "../../acquisitions/components/ActionMenu"
+import { StatusBadge } from "@/components/badges/StatusBadge";
+import { ORDER_STATUS, ORDER_SOURCE, VERIFICATION_STATUS, RESERVE_TYPE } from "@/components/badges/StatusMaps"
 
 type OrderItem = {
     id: string;
@@ -19,6 +21,8 @@ type OrderItem = {
     notes: string;
     createdAt: string;
     updatedAt: string;
+    source: string;
+    verificationStatus: string;
 };
 
 type PageProps = {
@@ -285,6 +289,8 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
+                            <th className="px-3 py-2 text-left">Nguồn ĐH</th>
+                            <th className="px-3 py-2 text-left">Admin Phê duyệt</th>
                             <th className="px-3 py-2 text-left">Loại ĐH</th>
                             <th className="px-3 py-2 text-left">Tiền cọc</th>
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
@@ -329,19 +335,21 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
                                         <td className="px-3 py-2">
-                                            <span
-                                                className={`px-2 py-1 rounded text-xs font-medium ${o.status === "PAID"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : o.status === "PENDING"
-                                                        ? "bg-amber-100 text-amber-700"
-                                                        : "bg-gray-100 text-gray-700"
-                                                    }`}
-                                            >
-                                                {o.status}
-                                            </span>
+                                            <StatusBadge value={o.status} map={ORDER_STATUS} />
+
                                         </td>
-                                        <td className="px-3 py-2">{o.reserveType ?? "-"}</td>
-                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.source} map={ORDER_SOURCE} />
+
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
+
+                                        </td>
+
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                                        </td>                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
                                         <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
 
                                         <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
@@ -410,6 +418,6 @@ export default function OrderListPageClient({
                     </Link>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -29,6 +29,8 @@ const makeSchema = () => z.object({
   reserveUntil: z.boolean().optional(),
   depositRequired: z.boolean().optional(),
   depositPaid: z.boolean().optional(),
+  source: z.boolean().optional(),
+  verificationStatus: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   items: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),

@@ -15,6 +15,10 @@ import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperations
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema as NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumReserveTypeFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
+import { OrderSourceSchema } from '../enums/OrderSource.schema';
+import { EnumOrderSourceFieldUpdateOperationsInputObjectSchema as EnumOrderSourceFieldUpdateOperationsInputObjectSchema } from './EnumOrderSourceFieldUpdateOperationsInput.schema';
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema as EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema } from './EnumOrderVerificationStatusFieldUpdateOperationsInput.schema';
 import { InvoiceUpdateManyWithoutOrderNestedInputObjectSchema as InvoiceUpdateManyWithoutOrderNestedInputObjectSchema } from './InvoiceUpdateManyWithoutOrderNestedInput.schema';
 import { CustomerUpdateOneWithoutOrdersNestedInputObjectSchema as CustomerUpdateOneWithoutOrdersNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrdersNestedInput.schema';
 import { ShipmentUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateOneWithoutOrderNestedInput.schema'
@@ -41,6 +45,8 @@ const makeSchema = () => z.object({
   reserveUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   depositRequired: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   depositPaid: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  source: z.union([OrderSourceSchema, z.lazy(() => EnumOrderSourceFieldUpdateOperationsInputObjectSchema)]).optional(),
+  verificationStatus: z.union([OrderVerificationStatusSchema, z.lazy(() => EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutOrdersNestedInputObjectSchema).optional(),
   Shipment: z.lazy(() => ShipmentUpdateOneWithoutOrderNestedInputObjectSchema).optional()

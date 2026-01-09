@@ -31,6 +31,8 @@ const makeSchema = () => z.object({
   reserveUntil: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   depositRequired: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   depositPaid: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  source: SortOrderSchema.optional(),
+  verificationStatus: SortOrderSchema.optional(),
   _count: z.lazy(() => OrderCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => OrderAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => OrderMaxOrderByAggregateInputObjectSchema).optional(),

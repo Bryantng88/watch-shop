@@ -14,7 +14,11 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { EnumReserveTypeNullableFilterObjectSchema as EnumReserveTypeNullableFilterObjectSchema } from './EnumReserveTypeNullableFilter.schema';
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
-import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema'
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { EnumOrderSourceFilterObjectSchema as EnumOrderSourceFilterObjectSchema } from './EnumOrderSourceFilter.schema';
+import { OrderSourceSchema } from '../enums/OrderSource.schema';
+import { EnumOrderVerificationStatusFilterObjectSchema as EnumOrderVerificationStatusFilterObjectSchema } from './EnumOrderVerificationStatusFilter.schema';
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema'
 
 const orderscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderScalarWhereInputObjectSchema), z.lazy(() => OrderScalarWhereInputObjectSchema).array()]).optional(),
@@ -41,7 +45,9 @@ const orderscalarwhereinputSchema = z.object({
   reserveType: z.union([z.lazy(() => EnumReserveTypeNullableFilterObjectSchema), ReserveTypeSchema]).optional().nullable(),
   reserveUntil: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   depositRequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
-  depositPaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable()
+  depositPaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  source: z.union([z.lazy(() => EnumOrderSourceFilterObjectSchema), OrderSourceSchema]).optional(),
+  verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusFilterObjectSchema), OrderVerificationStatusSchema]).optional()
 }).strict();
 export const OrderScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereInput> = orderscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereInput>;
 export const OrderScalarWhereInputObjectZodSchema = orderscalarwhereinputSchema;

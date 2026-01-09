@@ -4,6 +4,8 @@ import { OrderStatusSchema } from '../enums/OrderStatus.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
+import { OrderSourceSchema } from '../enums/OrderSource.schema';
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
 import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceCreateNestedManyWithoutOrderInput.schema';
 import { CustomerCreateNestedOneWithoutOrdersInputObjectSchema as CustomerCreateNestedOneWithoutOrdersInputObjectSchema } from './CustomerCreateNestedOneWithoutOrdersInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema'
@@ -30,6 +32,8 @@ const makeSchema = () => z.object({
   reserveUntil: z.coerce.date().optional().nullable(),
   depositRequired: z.number().optional().nullable(),
   depositPaid: z.number().optional().nullable(),
+  source: OrderSourceSchema.optional(),
+  verificationStatus: OrderVerificationStatusSchema.optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrdersInputObjectSchema).optional(),
   items: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema).optional()

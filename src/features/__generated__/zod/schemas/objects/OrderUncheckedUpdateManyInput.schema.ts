@@ -14,7 +14,11 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema as NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumReserveTypeFieldUpdateOperationsInput.schema';
-import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema'
+import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
+import { OrderSourceSchema } from '../enums/OrderSource.schema';
+import { EnumOrderSourceFieldUpdateOperationsInputObjectSchema as EnumOrderSourceFieldUpdateOperationsInputObjectSchema } from './EnumOrderSourceFieldUpdateOperationsInput.schema';
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema as EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema } from './EnumOrderVerificationStatusFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -38,7 +42,9 @@ const makeSchema = () => z.object({
   reserveType: z.union([ReserveTypeSchema, z.lazy(() => NullableEnumReserveTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   reserveUntil: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   depositRequired: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  depositPaid: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  depositPaid: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  source: z.union([OrderSourceSchema, z.lazy(() => EnumOrderSourceFieldUpdateOperationsInputObjectSchema)]).optional(),
+  verificationStatus: z.union([OrderVerificationStatusSchema, z.lazy(() => EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const OrderUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateManyInput>;
 export const OrderUncheckedUpdateManyInputObjectZodSchema = makeSchema();
