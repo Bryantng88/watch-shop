@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 
@@ -15,7 +15,7 @@ type Rect = {
     height: number;
 };
 
-type EntityType =
+export type EntityType =
     | "order"
     | "orders"
     | "acquisition"
@@ -26,20 +26,27 @@ type EntityType =
 type ActionConfig = {
     postUrl?: string;
     editUrl?: string;
+    viewUrl?: string;
     cancelUrl?: string;
+
     canPost: boolean;
     canEdit: boolean;
+    canCancel: boolean;
 };
 
 type Props = {
     entityId: string;
     entityType: EntityType;
-    status: string; // DRAFT | POSTED | ...
-    mode?: "view" | "edit"; // override nếu cần
+    status: string; // DRAFT | POSTED | RESERVED | CANCELLED | ...
+    mode?: "view" | "edit";
+    className?: string;
+    size?: "sm" | "md";
 };
+
 const DEFAULT_ACTIONS: ActionConfig = {
     canEdit: false,
     canPost: false,
+    canCancel: false,
 };
 
 /* ==============================
@@ -47,20 +54,19 @@ const DEFAULT_ACTIONS: ActionConfig = {
 ============================== */
 
 // normalize số nhiều → số ít
-function normalizeEntityType(
-    t: EntityType
-): "order" | "acquisition" | "invoice" {
+function normalizeEntityType(t: EntityType): "order" | "acquisition" | "invoice" {
     if (t === "orders") return "order";
     if (t === "acquisitions") return "acquisition";
     if (t === "invoices") return "invoice";
     return t;
 }
 
-function getActions(
-    entityTypeRaw: EntityType,
-    entityId: string,
-    status: string
-): ActionConfig {
+function getAdminDetailUrl(entityTypeRaw: EntityType, entityId: string) {
+    const t = normalizeEntityType(entityTypeRaw);
+    return `/admin/${t}s/${entityId}`;
+}
+
+function getActions(entityTypeRaw: EntityType, entityId: string, status: string): ActionConfig {
     const entityType = normalizeEntityType(entityTypeRaw);
 
     switch (entityType) {
@@ -69,15 +75,23 @@ function getActions(
                 postUrl: `/api/admin/acquisitions/${entityId}/post`,
                 editUrl: `/admin/acquisitions/${entityId}/edit`,
                 cancelUrl: `/api/admin/acquisitions/${entityId}/cancel`,
-                canPost: status !== "POSTED",
-                canEdit: status !== "POSTED",
+                viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
+
+                canPost: status !== "POSTED" && status !== "CANCELLED",
+                canEdit: status !== "POSTED" && status !== "CANCELLED",
+                canCancel: status !== "CANCELLED",
             };
 
         case "order":
             return {
                 postUrl: `/api/admin/orders/${entityId}/post`,
-                canPost: status === "DRAFT",
+                cancelUrl: `/api/admin/orders/${entityId}/cancel`,
+                viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
+
+                // bạn chỉnh rule ở đây tuỳ nghiệp vụ
+                canPost: status === "DRAFT" || status === "RESERVED",
                 canEdit: false,
+                canCancel: status === "DRAFT" || status === "RESERVED",
             };
 
         case "invoice":
@@ -85,15 +99,21 @@ function getActions(
                 postUrl: `/api/admin/invoices/${entityId}/post`,
                 editUrl: `/admin/invoices/${entityId}/edit`,
                 cancelUrl: `/api/admin/invoices/${entityId}/cancel`,
+                viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
+
                 canPost: status === "DRAFT",
                 canEdit: status === "DRAFT",
+                canCancel: status === "DRAFT",
             };
 
         default:
-            return DEFAULT_ACTIONS; // 🔥 CỰC KỲ QUAN TRỌNG
+            return DEFAULT_ACTIONS;
     }
 }
 
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
 
 /* ==============================
    COMPONENT
@@ -104,27 +124,55 @@ export default function ActionMenuPopover({
     entityType,
     status,
     mode = "edit",
+    className,
+    size = "md",
 }: Props) {
     const btnRef = useRef<HTMLButtonElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
+
     const [open, setOpen] = useState(false);
     const [rect, setRect] = useState<Rect | null>(null);
 
-    const actions = getActions(entityType, entityId, status) ?? DEFAULT_ACTIONS;
+    const actions = useMemo(() => getActions(entityType, entityId, status) ?? DEFAULT_ACTIONS, [
+        entityType,
+        entityId,
+        status,
+    ]);
 
-    // override mode=view
-    const canEdit = mode === "edit" && !!actions.canEdit;
-    const canPost = mode === "edit" && !!actions.canPost;
+    const canPost = mode === "edit" && actions.canPost;
+    const canEdit = mode === "edit" && actions.canEdit;
+    const canCancel = mode === "edit" && actions.canCancel;
+
+    const viewUrl = actions.viewUrl ?? getAdminDetailUrl(entityType, entityId);
 
     /* ==========================
        POSITIONING
     ========================== */
+
     const measure = () => {
         const el = btnRef.current;
         if (!el) return;
+
         const r = el.getBoundingClientRect();
+        const menuW = 180;
+        const margin = 8;
+
+        // default: canh phải theo button
+        let left = r.right - menuW;
+        left = Math.max(margin, Math.min(left, window.innerWidth - menuW - margin));
+
+        // default: xổ xuống
+        let top = r.bottom + 6;
+
+        // nếu gần đáy thì xổ lên
+        const estimatedH = 44 * 4; // rough height
+        if (top + estimatedH > window.innerHeight - margin) {
+            top = Math.max(margin, r.top - estimatedH - 6);
+        }
+
         setRect({
-            top: r.bottom + 6,
-            left: Math.max(8, Math.min(r.right - 160, window.innerWidth - 168)),
+            top,
+            left,
             width: r.width,
             height: r.height,
         });
@@ -132,35 +180,59 @@ export default function ActionMenuPopover({
 
     useLayoutEffect(() => {
         if (open) measure();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     useEffect(() => {
         if (!open) return;
 
         const onDown = (e: MouseEvent) => {
-            const pop = document.getElementById(`action-pop-${entityId}`);
-            if (
-                pop &&
-                (pop.contains(e.target as Node) ||
-                    btnRef.current?.contains(e.target as Node))
-            )
-                return;
+            const target = e.target as Node;
+            if (popRef.current?.contains(target) || btnRef.current?.contains(target)) return;
             setOpen(false);
+        };
+
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setOpen(false);
         };
 
         const onResize = () => measure();
         const onScroll = () => measure();
 
         document.addEventListener("mousedown", onDown);
+        document.addEventListener("keydown", onKey);
         window.addEventListener("resize", onResize);
         window.addEventListener("scroll", onScroll, true);
 
         return () => {
             document.removeEventListener("mousedown", onDown);
+            document.removeEventListener("keydown", onKey);
             window.removeEventListener("resize", onResize);
             window.removeEventListener("scroll", onScroll, true);
         };
-    }, [open, entityId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    /* ==========================
+       ACTION HELPERS
+    ========================== */
+
+    const doPost = async () => {
+        if (!actions.postUrl) return;
+        await fetch(actions.postUrl, { method: "POST" });
+        setOpen(false);
+        location.reload();
+    };
+
+    const doCancel = async () => {
+        if (!actions.cancelUrl) return;
+        const ok = confirm("Bạn có chắc muốn hủy?");
+        if (!ok) return;
+
+        await fetch(actions.cancelUrl, { method: "POST" });
+        setOpen(false);
+        location.reload();
+    };
 
     /* ==========================
        UI
@@ -171,8 +243,13 @@ export default function ActionMenuPopover({
             <button
                 ref={btnRef}
                 onClick={() => setOpen((v) => !v)}
-                className="px-2 text-lg hover:bg-gray-100 rounded"
+                className={cls(
+                    size === "sm" ? "px-2 py-1" : "px-2",
+                    "text-lg rounded hover:bg-gray-100",
+                    className
+                )}
                 title="Hành động"
+                type="button"
             >
                 ⋮
             </button>
@@ -181,25 +258,23 @@ export default function ActionMenuPopover({
                 rect &&
                 createPortal(
                     <div
-                        id={`action-pop-${entityId}`}
+                        ref={popRef}
                         style={{
                             position: "fixed",
                             top: rect.top,
                             left: rect.left,
-                            width: 160,
+                            width: 180,
                             zIndex: 10000,
                         }}
-                        className="rounded-lg border bg-white shadow-xl"
+                        className="rounded-lg border bg-white shadow-xl overflow-hidden"
                     >
                         <div className="py-1 text-sm">
                             {/* POST */}
                             {canPost && actions.postUrl && (
                                 <button
                                     className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                                    onClick={async () => {
-                                        await fetch(actions.postUrl!, { method: "POST" });
-                                        location.reload();
-                                    }}
+                                    onClick={doPost}
+                                    type="button"
                                 >
                                     Duyệt
                                 </button>
@@ -207,31 +282,22 @@ export default function ActionMenuPopover({
 
                             {/* EDIT */}
                             {canEdit && actions.editUrl && (
-                                <Link
-                                    href={actions.editUrl}
-                                    className="block px-3 py-2 hover:bg-gray-50"
-                                >
+                                <Link className="block px-3 py-2 hover:bg-gray-50" href={actions.editUrl}>
                                     Sửa
                                 </Link>
                             )}
 
-                            {/* VIEW (luôn có) */}
-                            <Link
-                                href={`/admin/${normalizeEntityType(entityType)}s/${entityId}`}
-                                className="block px-3 py-2 hover:bg-gray-50"
-                            >
+                            {/* VIEW */}
+                            <Link className="block px-3 py-2 hover:bg-gray-50" href={viewUrl}>
                                 Xem chi tiết
                             </Link>
 
                             {/* CANCEL */}
-                            {canEdit && actions.cancelUrl && (
+                            {canCancel && actions.cancelUrl && (
                                 <button
                                     className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                                    onClick={async () => {
-                                        if (!confirm("Bạn có chắc muốn hủy?")) return;
-                                        await fetch(actions.cancelUrl!, { method: "POST" });
-                                        location.reload();
-                                    }}
+                                    onClick={doCancel}
+                                    type="button"
                                 >
                                     Hủy
                                 </button>

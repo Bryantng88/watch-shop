@@ -405,8 +405,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                     ? {
                         type:
                             formData.paymentMethod === "COD"
-                                ? "COD_HOLD"
-                                : "DEPOSIT_HOLD",
+                                ? "COD"
+                                : "DEPOSIT",
                         amount: Number(reserve.amount || 0),
                         expiresAt:
                             formData.paymentMethod === "COD"
