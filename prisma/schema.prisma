@@ -915,8 +915,8 @@ enum paymentdirection {
 
 enum ReserveType {
   NONE
-  COD_HOLD
-  DEPOSIT_HOLD
+  COD
+  DEPOSIT
 }
 
 enum PaymentPurpose {

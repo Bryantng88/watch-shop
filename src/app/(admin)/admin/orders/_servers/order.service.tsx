@@ -197,10 +197,10 @@ export async function createOrderWithItems(raw: any) {
         fromStatuses: ["ACTIVE"],
       });
     }
-    if (reserveData?.reserveType === "DEPOSIT_HOLD") {
+    if (reserveData?.reserveType === "DEPOSIT" || reserveData?.reserveType === "COD") {
       input.status === OrderStatus.RESERVED
     } else {
-      input.status === OrderStatus.DRAFT
+      //input.status === OrderStatus.DRAFT
     }
     /* =====================================================
      * 3️⃣ Create ORDER (DRAFT)

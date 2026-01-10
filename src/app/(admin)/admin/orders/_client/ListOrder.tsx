@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import ItemPopover from "../../__components/GenericPopover"; // popover dùng chung
-import ActionMenu from "../../acquisitions/components/ActionMenu"
+import ItemPopover from "../../__components/GenericPopover";
+import ActionMenu from "../../acquisitions/components/ActionMenu";
 import { StatusBadge } from "@/components/badges/StatusBadge";
-import { ORDER_STATUS, ORDER_SOURCE, VERIFICATION_STATUS, RESERVE_TYPE } from "@/components/badges/StatusMaps"
+import {
+    ORDER_STATUS,
+    ORDER_SOURCE,
+    VERIFICATION_STATUS,
+    RESERVE_TYPE,
+} from "@/components/badges/StatusMaps";
+import SegmentTabs from "@/components/tabs/SegmenTabs";
 
 type OrderItem = {
     id: string;
@@ -33,14 +39,7 @@ type PageProps = {
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
 };
-type OrderDisplayType =
-    | "NORMAL"        // đơn thường
-    | "COD_HOLD"           // COD có cọc
-    | "DEPOSIT_HOLD"; // đặt cọc giữ hàng
 
-// =====================
-// FORMATTERS
-// =====================
 function fmtDate(d?: string | null) {
     if (!d) return "-";
     const dt = new Date(d);
@@ -55,62 +54,58 @@ function fmtDate(d?: string | null) {
 function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
 }
-
-function Badge({ children, tone = "gray" }: { children: React.ReactNode; tone?: "gray" | "blue" | "green" | "orange" }) {
-    const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
-    const toneCls =
-        tone === "blue"
-            ? "bg-blue-50 text-blue-700"
-            : tone === "green"
-                ? "bg-green-50 text-green-700"
-                : "bg-gray-100 text-gray-700";
-    return <span className={cls(base, toneCls)}>{children}</span>;
-}
-
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
 }
-function getOrderDisplayType(order: {
-    paymentMethod?: string | null;
-    reserveType?: string | null;
-    depositRequired?: number | null;
-}): OrderDisplayType {
-    if (order.paymentMethod === "COD_HOLD") {
-        return "COD_HOLD";
+
+/** =====================
+ * Tabs / Segments
+ * ===================== */
+type ViewKey = "all" | "web_pending" | "need_action" | "processing" | "cancelled";
+
+const VIEW_DEFS: Array<{ key: ViewKey; label: string }> = [
+    { key: "all", label: "Tất cả" },
+    { key: "web_pending", label: "Chờ xác minh" },
+    { key: "need_action", label: "Chờ duyệt" },
+    { key: "processing", label: "Đang xử lý" },
+    { key: "cancelled", label: "Đã hủy" },
+];
+
+function matchesView(o: OrderItem, view: ViewKey) {
+    switch (view) {
+        case "web_pending":
+            return o.source === "WEB" && o.verificationStatus === "PENDING";
+        case "need_action":
+            return o.status === "DRAFT" || o.status === "RESERVED";
+        case "processing":
+            return o.status === "POSTED";
+        case "cancelled":
+            return (
+                o.status === "CANCELLED" ||
+                o.verificationStatus === "REJECTED" ||
+                o.verificationStatus === "EXPIRED"
+            );
+        case "all":
+        default:
+            return true;
     }
-
-    if (
-        order.reserveType === "HOLD" &&
-        (order.depositRequired ?? 0) > 0
-    ) {
-        return "DEPOSIT_HOLD";
-    }
-
-    return "NORMAL";
-}
-function OrderTypeBadge({ type }: { type: OrderDisplayType }) {
-    if (type === "COD_HOLD")
-        return <Badge tone="orange">COD</Badge>;
-
-    if (type === "DEPOSIT_HOLD")
-        return <Badge tone="blue">Đặt cọc</Badge>;
-
-    return <Badge>Thường</Badge>;
 }
 
-// =====================
-// MAIN COMPONENT
-// =====================
+function parseView(raw: Record<string, any>): ViewKey {
+    const v = (raw?.view as string) || "all";
+    if (v === "web_pending" || v === "need_action" || v === "processing" || v === "cancelled") return v;
+    return "all";
+}
+
 export default function OrderListPageClient({
     items,
     total,
     page,
     pageSize,
     totalPages,
-    rawSearchParams
+    rawSearchParams,
 }: PageProps) {
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
     const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
     const [showBulkBar, setShowBulkBar] = useState(false);
@@ -118,7 +113,25 @@ export default function OrderListPageClient({
     const [bulkHasShipment, setBulkHasShipment] = useState(true);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
-    const url = new URLSearchParams(rawSearchParams as any);
+    const url = useMemo(() => new URLSearchParams(rawSearchParams as any), [rawSearchParams]);
+    const spObj = rawSearchParams;
+
+    const currentView = useMemo(() => parseView(rawSearchParams), [rawSearchParams]);
+
+    // reset chọn bulk khi đổi tab
+    useEffect(() => {
+        setSelectedIds([]);
+        setShowBulkBar(false);
+        setShowBulkConfirm(false);
+    }, [currentView]);
+
+    const setViewHref = (view: ViewKey) => {
+        const next = new URLSearchParams(url);
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+        next.set("page", "1");
+        return `/admin/orders?${next.toString()}`;
+    };
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(url);
@@ -126,7 +139,23 @@ export default function OrderListPageClient({
         return `/admin/orders?${next.toString()}`;
     };
 
-    const spObj = rawSearchParams;
+    const displayItems = useMemo(() => items.filter((o) => matchesView(o, currentView)), [items, currentView]);
+
+    const countsByView: Record<ViewKey, number> = useMemo(
+        () => ({
+            all: items.length,
+            web_pending: items.filter((o) => matchesView(o, "web_pending")).length,
+            need_action: items.filter((o) => matchesView(o, "need_action")).length,
+            processing: items.filter((o) => matchesView(o, "processing")).length,
+            cancelled: items.filter((o) => matchesView(o, "cancelled")).length,
+        }),
+        [items]
+    );
+
+    const tabs = useMemo(
+        () => VIEW_DEFS.map((t) => ({ ...t, count: countsByView[t.key] })),
+        [countsByView]
+    );
 
     return (
         <div className="space-y-4">
@@ -141,9 +170,14 @@ export default function OrderListPageClient({
                 </Link>
             </div>
 
+            {/* TABS (reusable component) */}
+            <SegmentTabs tabs={tabs} current={currentView} hrefFor={setViewHref} />
 
             {/* FILTER FORM */}
             <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
+                {/* ✅ chỉ giữ view khi khác all */}
+                {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
+
                 <div className="flex flex-col">
                     <label className="text-xs text-gray-600">Tìm kiếm</label>
                     <input
@@ -169,21 +203,24 @@ export default function OrderListPageClient({
                 </div>
 
                 <div className="flex gap-2">
-                    <button className="h-9 rounded border px-3">Lọc</button>
+                    <button className="h-9 rounded border px-3" type="submit">
+                        Lọc
+                    </button>
                     <Link href="/admin/orders" className="h-9 rounded border px-3 flex items-center">
                         Clear
                     </Link>
                 </div>
             </form>
+
+            {/* BULK BAR */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span className="font-medium text-blue-700">
-                        {selectedIds.length} đơn hàng đã chọn
-                    </span>
+                    <span className="font-medium text-blue-700">{selectedIds.length} đơn hàng đã chọn</span>
 
                     <button
                         className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
                         onClick={() => setShowBulkConfirm(true)}
+                        type="button"
                     >
                         Duyệt các đơn đã chọn
                     </button>
@@ -194,11 +231,14 @@ export default function OrderListPageClient({
                             setSelectedIds([]);
                             setShowBulkBar(false);
                         }}
+                        type="button"
                     >
                         Bỏ chọn
                     </button>
                 </div>
             )}
+
+            {/* BULK CONFIRM */}
             {showBulkConfirm && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
                     <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
@@ -210,29 +250,18 @@ export default function OrderListPageClient({
 
                         <div className="space-y-2">
                             <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={bulkHasShipment}
-                                    onChange={() => setBulkHasShipment(true)}
-                                />
+                                <input type="radio" checked={bulkHasShipment} onChange={() => setBulkHasShipment(true)} />
                                 Đơn hàng có shipment (giao hàng)
                             </label>
 
                             <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={!bulkHasShipment}
-                                    onChange={() => setBulkHasShipment(false)}
-                                />
+                                <input type="radio" checked={!bulkHasShipment} onChange={() => setBulkHasShipment(false)} />
                                 Đơn hàng không có shipment (pickup)
                             </label>
                         </div>
 
                         <div className="flex justify-end gap-2 pt-3">
-                            <button
-                                className="px-3 py-1 border rounded"
-                                onClick={() => setShowBulkConfirm(false)}
-                            >
+                            <button className="px-3 py-1 border rounded" onClick={() => setShowBulkConfirm(false)} type="button">
                                 Hủy
                             </button>
 
@@ -250,6 +279,7 @@ export default function OrderListPageClient({
 
                                     location.reload();
                                 }}
+                                type="button"
                             >
                                 Xác nhận duyệt
                             </button>
@@ -261,7 +291,6 @@ export default function OrderListPageClient({
             {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
-
                     <thead className="bg-gray-50 border-b">
                         <tr>
                             <th className="px-3 py-2">
@@ -275,10 +304,7 @@ export default function OrderListPageClient({
                                             return;
                                         }
 
-                                        const ids = items
-                                            .filter((o) => o.status === "DRAFT")
-                                            .map((o) => o.id);
-
+                                        const ids = displayItems.filter((o) => o.status === "DRAFT").map((o) => o.id);
                                         setSelectedIds(ids);
                                         setShowBulkBar(ids.length > 0);
                                     }}
@@ -302,14 +328,14 @@ export default function OrderListPageClient({
                     </thead>
 
                     <tbody>
-                        {items.length === 0 ? (
+                        {displayItems.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="py-8 text-center text-gray-500">
-                                    Không có đơn hàng
+                                <td colSpan={14} className="py-8 text-center text-gray-500">
+                                    Không có đơn hàng trong tab này
                                 </td>
                             </tr>
                         ) : (
-                            items.map((o) => {
+                            displayItems.map((o) => {
                                 const displayCount = rowCounts[o.id] ?? o.itemCount;
                                 const totalMoney = rowTotals[o.id] ?? o.subtotal;
 
@@ -334,27 +360,27 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
+
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.status} map={ORDER_STATUS} />
-
                                         </td>
+
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.source} map={ORDER_SOURCE} />
-
                                         </td>
+
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
-
                                         </td>
 
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
-                                        </td>                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
-                                        <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
+                                        </td>
 
+                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
+                                        <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
                                         <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
 
-                                        {/* ITEM POPOVER */}
                                         <td className="px-3 py-2">
                                             <ItemPopover
                                                 parentId={o.id}
@@ -373,18 +399,7 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2">{o.notes ?? "-"}</td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            <button
-                                                className="p-2 rounded hover:bg-gray-100"
-                                                onClick={() =>
-                                                    setOpenMenuId(openMenuId === o.id ? null : o.id)
-                                                }
-                                            >
-                                                ⋮
-                                            </button>
-
-                                            {openMenuId === o.id && (
-                                                <ActionMenu orderId={o.id} status={o.status} />
-                                            )}
+                                            <ActionMenu entityId={o.id} entityType="orders" status={o.status} mode="edit" />
                                         </td>
                                     </tr>
                                 );
@@ -403,21 +418,22 @@ export default function OrderListPageClient({
                 <div className="flex gap-2">
                     <Link
                         href={gotoPageHref(Math.max(1, page - 1))}
-                        className={`rounded border px-3 py-1 text-sm ${page <= 1 ? "pointer-events-none opacity-50" : ""
-                            }`}
+                        className={cls("rounded border px-3 py-1 text-sm", page <= 1 && "pointer-events-none opacity-50")}
                     >
                         ← Trước
                     </Link>
 
                     <Link
                         href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={`rounded border px-3 py-1 text-sm ${page >= totalPages ? "pointer-events-none opacity-50" : ""
-                            }`}
+                        className={cls(
+                            "rounded border px-3 py-1 text-sm",
+                            page >= totalPages && "pointer-events-none opacity-50"
+                        )}
                     >
                         Sau →
                     </Link>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

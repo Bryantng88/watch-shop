@@ -21,7 +21,7 @@ export const VERIFICATION_STATUS: Record<string, StatusMeta> = {
 
 // Source (WEB/ADMIN)
 export const ORDER_SOURCE: Record<string, StatusMeta> = {
-    WEB: { label: "WEB", tone: "purple" },
+    WEB: { label: "WEB", tone: "blue" },
     ADMIN: { label: "ADMIN", tone: "gray" },
 };
 
