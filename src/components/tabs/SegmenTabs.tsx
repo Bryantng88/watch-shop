@@ -1,39 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
-
-type TabItem<T extends string> = {
-    key: T;
-    label: string;
-    count?: number;
-};
 
 function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
 }
 
-export default function SegmentTabs<T extends string>({
+export type SegmentTab<Key extends string = string> = {
+    key: Key;
+    label: string;
+    count?: number;
+    href: string;       // ✅ tab tự có href
+    active?: boolean;
+};
+
+export default function SegmentTabs<Key extends string = string>({
     tabs,
-    current,
-    hrefFor,
-    className,
 }: {
-    tabs: TabItem<T>[];
-    current: T;
-    hrefFor: (key: T) => string;
-    className?: string;
+    tabs: SegmentTab<Key>[];
 }) {
     return (
-        <div className={cls("border-b", className)}>
-            <nav className="-mb-px flex gap-6">
+        <div className="border-b">
+            <nav className="-mb-px flex flex-wrap items-center gap-6">
                 {tabs.map((t) => {
-                    const active = current === t.key;
-
+                    const active = !!t.active;
                     return (
                         <Link
                             key={t.key}
-                            href={hrefFor(t.key)}
+                            href={t.href}
                             className={cls(
                                 "group inline-flex items-center gap-2 border-b-2 px-1 pb-2 text-sm font-medium",
                                 active

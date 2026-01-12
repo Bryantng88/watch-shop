@@ -41,9 +41,6 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
         take,
         prisma
     );
-
-
-
     /**
      * 🔥 Map dữ liệu cho UI (giống Order)
      */
@@ -53,23 +50,62 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
         status: s.status,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-
         orderId: s.orderId, // thay cho orderRefNo
         shipPhone: s.shipPhone,
         shipAddress: s.shipAddress,
         shipCity: s.shipCity,
         shipDistrict: s.shipDistrict,
         shipWard: s.shipWard,
-
         carrier: s.carrier,
         trackingCode: s.trackingCode, // thay cho trackingNo
         shippingFee: s.shippingFee,   // Decimal (serialize ở page.tsx giống Order)
         currency: s.currency,
-
         shippedAt: s.shippedAt,
         deliveredAt: s.deliveredAt,
         notes: s.notes,
     }));
 
     return { items, total, page, pageSize };
+}
+
+export async function createFromOrder(orderId: string) {
+    // 1) lấy order để copy info
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+            id: true,
+            refNo: true,
+            customerName: true,
+            shipPhone: true,
+            shipAddress: true,
+            shipCity: true,
+            shipDistrict: true,
+            shipWard: true,
+            //currency: true,
+            // tuỳ schema order của bạn
+            // shippingFee: true,
+        },
+    });
+
+    if (!order) throw new Error("Order không tồn tại");
+
+    // 2) tạo shipment (nếu cần chặn trùng do orderId unique)
+    //    nếu bạn muốn: check trước để tránh crash unique constraint
+    const existed = await prisma.shipment.findUnique({
+        where: { orderId: orderId },
+        select: { id: true },
+    });
+    if (existed) {
+        throw new Error("Order đã có shipment");
+    }
+
+    // 3) tạo
+    return shipmentRepo.createShipment(prisma as any, {
+        orderId: orderId,
+        shipPhone: order.shipPhone ?? null,
+        shipAddress: order.shipAddress ?? null,
+        shipCity: order.shipCity ?? null,
+        shipDistrict: order.shipDistrict ?? null,
+        shipWard: order.shipWard ?? null,
+    });
 }

@@ -29,11 +29,12 @@ export async function createPaymentsForOrder(
             amount: subtotal - deposit,
             currency: "VND",
             purpose: PaymentPurpose.ORDER_REMAIN,
+            method: "COD"
         });
     }
 
     // CASE 2: HOLD (đặt cọc giữ hàng)
-    else if (order.reserveType === ReserveType.DEPOSIT_HOLD && deposit > 0) {
+    else if (order.reserveType === ReserveType.DEPOSIT && deposit > 0) {
         payments.push({
             orderId: order.id,
             amount: deposit,

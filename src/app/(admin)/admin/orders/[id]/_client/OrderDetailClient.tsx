@@ -265,7 +265,7 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                                     canPost ? "bg-black text-white hover:bg-neutral-800" : "bg-gray-100 text-gray-400 cursor-not-allowed"
                                 )}
                                 onClick={async () => {
-                                    await fetch(`/api/admin/orders/${data.id}/post`, { method: "POST" });
+                                    await fetch(`/api/admin/orders/${data.id}/bulk-post`, { method: "POST" });
                                     location.reload();
                                 }}
                             >
