@@ -1,79 +1,49 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
 
-/* ==============================
- * Types
- * ============================== */
-type ShipmentRow = {
+import ItemPopover from "../../__components/GenericPopover";
+import ActionMenu from "../../acquisitions/components/ActionMenu";
+import { StatusBadge } from "@/components/badges/StatusBadge";
+import {
+    ORDER_STATUS,
+    ORDER_SOURCE,
+    VERIFICATION_STATUS,
+    RESERVE_TYPE,
+} from "@/components/badges/StatusMaps";
+import SegmentTabs from "@/components/tabs/SegmentTabs";
+
+type OrderItem = {
     id: string;
     refNo: string | null;
+    customerName: string | null;
+    shipPhone: string | null;
+    reserveType: string | null;
+    depositRequired: number;
     status: string;
-    createdAt: string; // ✅ nhận từ server đã serialize
-
-    orderRefNo: string | null;
-    customerName: string;
-    shipPhone: string;
-    shipAddress: string;
-
-    carrier: string | null;
-    trackingNo: string | null;
-    shippingFee: number | null;
+    subtotal: number;
+    currency: string;
+    itemCount: number;
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+    source: string;
+    verificationStatus: string;
 };
 
 type PageProps = {
-    items: ShipmentRow[];
+    items: OrderItem[];
     total: number;
     page: number;
     pageSize: number;
     totalPages: number;
-    rawSearchParams: Record<string, string | string[] | undefined>;
+    rawSearchParams: Record<string, string | string[] | undefined>; // vẫn giữ để defaultValue form
 };
 
 function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
-}
-
-function Badge({
-    children,
-    tone = "gray",
-}: {
-    children: React.ReactNode;
-    tone?: "gray" | "blue" | "green" | "amber" | "red";
-}) {
-    const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
-    const toneCls =
-        tone === "blue"
-            ? "bg-blue-50 text-blue-700"
-            : tone === "green"
-                ? "bg-green-50 text-green-700"
-                : tone === "amber"
-                    ? "bg-amber-50 text-amber-700"
-                    : tone === "red"
-                        ? "bg-red-50 text-red-700"
-                        : "bg-gray-100 text-gray-700";
-    return <span className={cls(base, toneCls)}>{children}</span>;
-}
-
-function statusTone(status: ShipmentRow["status"]) {
-    switch (status) {
-        case "READY":
-            return "blue";
-        case "SHIPPED":
-            return "amber";
-        case "DELIVERED":
-            return "green";
-        case "CANCELLED":
-            return "red";
-        default:
-            return "gray";
-    }
-}
-
-function money(n?: number | null) {
-    if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(n) + " VND";
 }
 
 function fmtDate(d?: string | null) {
@@ -88,10 +58,47 @@ function fmtDate(d?: string | null) {
     });
 }
 
-/* ==============================
- * Component
- * ============================== */
-export default function ShipmentListClient({
+function fmtMoney(n?: number | null, cur = "VND") {
+    if (n == null) return "-";
+    return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
+}
+
+type ViewKey = "all" | "web_pending" | "need_action" | "processing" | "cancelled";
+
+const VIEW_DEFS: Array<{ key: ViewKey; label: string }> = [
+    { key: "all", label: "Tất cả" },
+    { key: "web_pending", label: "Chờ xác minh" },
+    { key: "need_action", label: "Chờ duyệt" },
+    { key: "processing", label: "Đang xử lý" },
+    { key: "cancelled", label: "Đã hủy" },
+];
+
+function matchesView(o: OrderItem, view: ViewKey) {
+    switch (view) {
+        case "web_pending":
+            return o.source === "WEB" && o.verificationStatus === "PENDING";
+        case "need_action":
+            return o.status === "DRAFT" || o.status === "RESERVED";
+        case "processing":
+            return o.status === "POSTED";
+        case "cancelled":
+            return (
+                o.status === "CANCELLED" ||
+                o.verificationStatus === "REJECTED" ||
+                o.verificationStatus === "EXPIRED"
+            );
+        case "all":
+        default:
+            return true;
+    }
+}
+
+function parseView(v: string | null): ViewKey {
+    if (v === "web_pending" || v === "need_action" || v === "processing" || v === "cancelled") return v;
+    return "all";
+}
+
+export default function OrderListPageClient({
     items,
     total,
     page,
@@ -99,38 +106,90 @@ export default function ShipmentListClient({
     totalPages,
     rawSearchParams,
 }: PageProps) {
-    const url = useMemo(() => new URLSearchParams(rawSearchParams as any), [rawSearchParams]);
+    const pathname = usePathname();
+    const sp = useSearchParams();
+
+    const currentView = useMemo(() => parseView(sp.get("view")), [sp]);
+
+    const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
+    const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
+    const [showBulkBar, setShowBulkBar] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [bulkHasShipment, setBulkHasShipment] = useState(true);
+    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+
+    // ✅ reset bulk selection khi đổi tab
+    useEffect(() => {
+        setSelectedIds([]);
+        setShowBulkBar(false);
+        setShowBulkConfirm(false);
+    }, [currentView]);
+
+    const setViewHref = (view: ViewKey) => {
+        const next = new URLSearchParams(sp.toString());
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+        next.set("page", "1"); // đổi tab reset page
+        return `${pathname}?${next.toString()}`;
+    };
 
     const gotoPageHref = (p: number) => {
-        const next = new URLSearchParams(url);
+        const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
         next.set("pageSize", String(pageSize));
-        return `/admin/shipments?${next.toString()}`;
+        return `${pathname}?${next.toString()}`;
     };
+
+    const displayItems = useMemo(
+        () => items.filter((o) => matchesView(o, currentView)),
+        [items, currentView]
+    );
+
+    const countsByView = useMemo(() => {
+        const c: Record<ViewKey, number> = {
+            all: items.length,
+            web_pending: 0,
+            need_action: 0,
+            processing: 0,
+            cancelled: 0,
+        };
+        for (const o of items) {
+            if (matchesView(o, "web_pending")) c.web_pending++;
+            if (matchesView(o, "need_action")) c.need_action++;
+            if (matchesView(o, "processing")) c.processing++;
+            if (matchesView(o, "cancelled")) c.cancelled++;
+        }
+        return c;
+    }, [items]);
+
+    const tabs = useMemo(
+        () => VIEW_DEFS.map((t) => ({ ...t, count: countsByView[t.key] })),
+        [countsByView]
+    );
 
     const spObj = rawSearchParams;
 
     return (
         <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-xl font-semibold">Shipment</h1>
-                    <div className="mt-1 text-sm text-gray-600">
-                        Danh sách shipment được tạo từ đơn hàng
-                    </div>
-                </div>
-
+            {/* HEADER */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-xl font-semibold">Đơn hàng</h1>
                 <Link
-                    href="/admin/orders"
-                    className="rounded-md border px-3 py-2 hover:bg-gray-50 text-sm"
+                    href="/admin/orders/new"
+                    className="rounded-md bg-black text-white text-sm px-3 py-2 hover:bg-neutral-800"
                 >
-                    ← Quay lại Order
+                    + Tạo đơn hàng
                 </Link>
             </div>
 
-            {/* Filter (optional, giống Order) */}
-            <form action="/admin/shipments" method="get" className="flex flex-wrap gap-2 items-end">
+            {/* ✅ TABS */}
+            <SegmentTabs tabs={tabs} current={currentView} hrefFor={setViewHref} />
+
+            {/* FILTER FORM */}
+            <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
+                {/* ✅ giữ view khi submit filter */}
+                {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
+
                 <div className="flex flex-col">
                     <label className="text-xs text-gray-600">Tìm kiếm</label>
                     <input
@@ -142,106 +201,148 @@ export default function ShipmentListClient({
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Page size</label>
+                    <label className="text-xs text-gray-600">Sắp xếp</label>
                     <select
-                        name="pageSize"
-                        defaultValue={String(pageSize)}
+                        name="sort"
+                        defaultValue={(spObj.sort as string) ?? "updatedDesc"}
                         className="h-9 rounded border px-2"
                     >
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
+                        <option value="updatedDesc">Cập nhật ↓</option>
+                        <option value="updatedAsc">Cập nhật ↑</option>
+                        <option value="createdDesc">Tạo ↓</option>
+                        <option value="createdAsc">Tạo ↑</option>
                     </select>
                 </div>
 
                 <div className="flex gap-2">
-                    <button className="h-9 rounded border px-3">Lọc</button>
-                    <Link href="/admin/shipments" className="h-9 rounded border px-3 flex items-center">
+                    <button className="h-9 rounded border px-3" type="submit">
+                        Lọc
+                    </button>
+                    <Link href="/admin/orders" className="h-9 rounded border px-3 flex items-center">
                         Clear
                     </Link>
                 </div>
             </form>
 
-            {/* Table */}
-            <div className="rounded-lg border bg-white shadow-sm overflow-x-auto">
+            {/* TABLE */}
+            <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-gray-50 border-b">
                         <tr>
-                            <th className="px-3 py-2 text-left">Shipment</th>
+                            <th className="px-3 py-2">
+                                <input
+                                    type="checkbox"
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        if (!checked) {
+                                            setSelectedIds([]);
+                                            setShowBulkBar(false);
+                                            return;
+                                        }
+                                        const ids = displayItems.filter((o) => o.status === "DRAFT").map((o) => o.id);
+                                        setSelectedIds(ids);
+                                        setShowBulkBar(ids.length > 0);
+                                    }}
+                                />
+                            </th>
+
+                            <th className="px-3 py-2 text-left">RefNo</th>
                             <th className="px-3 py-2 text-left">Khách hàng</th>
-                            <th className="px-3 py-2 text-left">Vận chuyển</th>
-                            <th className="px-3 py-2 text-right">Phí ship</th>
+                            <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
-                            <th className="px-3 py-2 text-right">Ngày tạo</th>
-                            <th className="px-3 py-2 text-right">Action</th>
+                            <th className="px-3 py-2 text-left">Nguồn ĐH</th>
+                            <th className="px-3 py-2 text-left">Admin Phê duyệt</th>
+                            <th className="px-3 py-2 text-left">Loại ĐH</th>
+                            <th className="px-3 py-2 text-left">Tiền cọc</th>
+                            <th className="px-3 py-2 text-left">Ngày tạo</th>
+                            <th className="px-3 py-2 text-left">Tổng tiền</th>
+                            <th className="px-3 py-2 text-left">Số dòng</th>
+                            <th className="px-3 py-2 text-left">Ghi chú</th>
+                            <th className="px-3 py-2 text-right">Hành động</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {items.length === 0 ? (
+                        {/* ✅ quan trọng: render displayItems */}
+                        {displayItems.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-3 py-8 text-center text-gray-500">
-                                    Chưa có shipment nào
+                                <td colSpan={14} className="py-8 text-center text-gray-500">
+                                    Không có đơn hàng trong tab này
                                 </td>
                             </tr>
                         ) : (
-                            items.map((s) => (
-                                <tr key={s.id} className="border-b hover:bg-gray-50">
-                                    {/* Shipment */}
-                                    <td className="px-3 py-2">
-                                        <div className="font-medium">{s.refNo ?? s.id.slice(0, 8)}</div>
-                                        {s.orderRefNo && (
-                                            <div className="text-xs text-gray-500">Order: {s.orderRefNo}</div>
-                                        )}
-                                    </td>
+                            displayItems.map((o) => {
+                                const displayCount = rowCounts[o.id] ?? o.itemCount;
+                                const totalMoney = rowTotals[o.id] ?? o.subtotal;
 
-                                    {/* Customer */}
-                                    <td className="px-3 py-2">
-                                        <div className="font-medium">{s.customerName}</div>
-                                        <div className="text-xs text-gray-500">{s.shipPhone}</div>
-                                        {s.shipAddress && (
-                                            <div className="text-xs text-gray-400 line-clamp-1">{s.shipAddress}</div>
-                                        )}
-                                    </td>
+                                return (
+                                    <tr key={o.id} className="border-b hover:bg-gray-50">
+                                        <td className="px-3 py-2">
+                                            <input
+                                                type="checkbox"
+                                                disabled={o.status !== "DRAFT"}
+                                                checked={selectedIds.includes(o.id)}
+                                                onChange={(e) => {
+                                                    const next = e.target.checked
+                                                        ? [...selectedIds, o.id]
+                                                        : selectedIds.filter((id) => id !== o.id);
 
-                                    {/* Carrier */}
-                                    <td className="px-3 py-2">
-                                        <div>{s.carrier ?? "-"}</div>
-                                        {s.trackingNo && (
-                                            <div className="text-xs text-gray-500">Tracking: {s.trackingNo}</div>
-                                        )}
-                                    </td>
+                                                    setSelectedIds(next);
+                                                    setShowBulkBar(next.length > 0);
+                                                }}
+                                            />
+                                        </td>
 
-                                    {/* Fee */}
-                                    <td className="px-3 py-2 text-right font-medium">{money(s.shippingFee)}</td>
+                                        <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
+                                        <td className="px-3 py-2">{o.customerName ?? "-"}</td>
+                                        <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
 
-                                    {/* Status */}
-                                    <td className="px-3 py-2">
-                                        <Badge tone={statusTone(s.status)}>{s.status}</Badge>
-                                    </td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.status} map={ORDER_STATUS} />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.source} map={ORDER_SOURCE} />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                                        </td>
 
-                                    {/* Created */}
-                                    <td className="px-3 py-2 text-right text-xs text-gray-500">
-                                        {fmtDate(s.createdAt)}
-                                    </td>
+                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
+                                        <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
+                                        <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
 
-                                    {/* Action */}
-                                    <td className="px-3 py-2 text-right">
-                                        <Link
-                                            href={`/admin/shipments/${s.id}`}
-                                            className="text-blue-600 hover:underline text-sm"
-                                        >
-                                            Xem
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))
+                                        <td className="px-3 py-2">
+                                            <ItemPopover
+                                                parentId={o.id}
+                                                type="orders"
+                                                count={displayCount}
+                                                currency={o.currency}
+                                                status={o.status}
+                                                mode="view"
+                                                onUpdated={({ count, total }) => {
+                                                    setRowCounts((prev) => ({ ...prev, [o.id]: count }));
+                                                    setRowTotals((prev) => ({ ...prev, [o.id]: total }));
+                                                }}
+                                            />
+                                        </td>
+
+                                        <td className="px-3 py-2">{o.notes ?? "-"}</td>
+
+                                        <td className="relative px-3 py-2 text-right">
+                                            <ActionMenu entityId={o.id} entityType="orders" status={o.status} mode="edit" />
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
             </div>
 
-            {/* Pagination (giống Order) */}
+            {/* PAGINATION */}
             <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                     Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
@@ -250,20 +351,14 @@ export default function ShipmentListClient({
                 <div className="flex gap-2">
                     <Link
                         href={gotoPageHref(Math.max(1, page - 1))}
-                        className={cls(
-                            "rounded border px-3 py-1 text-sm",
-                            page <= 1 && "pointer-events-none opacity-50"
-                        )}
+                        className={cls("rounded border px-3 py-1 text-sm", page <= 1 && "pointer-events-none opacity-50")}
                     >
                         ← Trước
                     </Link>
 
                     <Link
                         href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={cls(
-                            "rounded border px-3 py-1 text-sm",
-                            page >= totalPages && "pointer-events-none opacity-50"
-                        )}
+                        className={cls("rounded border px-3 py-1 text-sm", page >= totalPages && "pointer-events-none opacity-50")}
                     >
                         Sau →
                     </Link>

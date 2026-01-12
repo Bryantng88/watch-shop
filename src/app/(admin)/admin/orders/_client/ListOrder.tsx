@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams, usePathname } from "next/navigation";
+
 import ItemPopover from "../../__components/GenericPopover";
 import ActionMenu from "../../acquisitions/components/ActionMenu";
 import { StatusBadge } from "@/components/badges/StatusBadge";
@@ -37,8 +39,12 @@ type PageProps = {
     page: number;
     pageSize: number;
     totalPages: number;
-    rawSearchParams: Record<string, string | string[] | undefined>;
+    rawSearchParams: Record<string, string | string[] | undefined>; // vẫn giữ để defaultValue form
 };
+
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
 
 function fmtDate(d?: string | null) {
     if (!d) return "-";
@@ -51,17 +57,12 @@ function fmtDate(d?: string | null) {
         minute: "2-digit",
     });
 }
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
-}
+
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
 }
 
-/** =====================
- * Tabs / Segments
- * ===================== */
 type ViewKey = "all" | "web_pending" | "need_action" | "processing" | "cancelled";
 
 const VIEW_DEFS: Array<{ key: ViewKey; label: string }> = [
@@ -92,8 +93,7 @@ function matchesView(o: OrderItem, view: ViewKey) {
     }
 }
 
-function parseView(raw: Record<string, any>): ViewKey {
-    const v = (raw?.view as string) || "all";
+function parseView(v: string | null): ViewKey {
     if (v === "web_pending" || v === "need_action" || v === "processing" || v === "cancelled") return v;
     return "all";
 }
@@ -106,6 +106,11 @@ export default function OrderListPageClient({
     totalPages,
     rawSearchParams,
 }: PageProps) {
+    const pathname = usePathname();
+    const sp = useSearchParams();
+
+    const currentView = useMemo(() => parseView(sp.get("view")), [sp]);
+
     const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
     const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
     const [showBulkBar, setShowBulkBar] = useState(false);
@@ -113,12 +118,7 @@ export default function OrderListPageClient({
     const [bulkHasShipment, setBulkHasShipment] = useState(true);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
-    const url = useMemo(() => new URLSearchParams(rawSearchParams as any), [rawSearchParams]);
-    const spObj = rawSearchParams;
-
-    const currentView = useMemo(() => parseView(rawSearchParams), [rawSearchParams]);
-
-    // reset chọn bulk khi đổi tab
+    // ✅ reset bulk selection khi đổi tab
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
@@ -126,36 +126,48 @@ export default function OrderListPageClient({
     }, [currentView]);
 
     const setViewHref = (view: ViewKey) => {
-        const next = new URLSearchParams(url);
+        const next = new URLSearchParams(sp.toString());
         if (view === "all") next.delete("view");
         else next.set("view", view);
-        next.set("page", "1");
-        return `/admin/orders?${next.toString()}`;
+        next.set("page", "1"); // đổi tab reset page
+        return `${pathname}?${next.toString()}`;
     };
 
     const gotoPageHref = (p: number) => {
-        const next = new URLSearchParams(url);
+        const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
-        return `/admin/orders?${next.toString()}`;
+        next.set("pageSize", String(pageSize));
+        return `${pathname}?${next.toString()}`;
     };
 
-    const displayItems = useMemo(() => items.filter((o) => matchesView(o, currentView)), [items, currentView]);
-
-    const countsByView: Record<ViewKey, number> = useMemo(
-        () => ({
-            all: items.length,
-            web_pending: items.filter((o) => matchesView(o, "web_pending")).length,
-            need_action: items.filter((o) => matchesView(o, "need_action")).length,
-            processing: items.filter((o) => matchesView(o, "processing")).length,
-            cancelled: items.filter((o) => matchesView(o, "cancelled")).length,
-        }),
-        [items]
+    const displayItems = useMemo(
+        () => items.filter((o) => matchesView(o, currentView)),
+        [items, currentView]
     );
+
+    const countsByView = useMemo(() => {
+        const c: Record<ViewKey, number> = {
+            all: items.length,
+            web_pending: 0,
+            need_action: 0,
+            processing: 0,
+            cancelled: 0,
+        };
+        for (const o of items) {
+            if (matchesView(o, "web_pending")) c.web_pending++;
+            if (matchesView(o, "need_action")) c.need_action++;
+            if (matchesView(o, "processing")) c.processing++;
+            if (matchesView(o, "cancelled")) c.cancelled++;
+        }
+        return c;
+    }, [items]);
 
     const tabs = useMemo(
         () => VIEW_DEFS.map((t) => ({ ...t, count: countsByView[t.key] })),
         [countsByView]
     );
+
+    const spObj = rawSearchParams;
 
     return (
         <div className="space-y-4">
@@ -170,12 +182,12 @@ export default function OrderListPageClient({
                 </Link>
             </div>
 
-            {/* TABS (reusable component) */}
+            {/* ✅ TABS */}
             <SegmentTabs tabs={tabs} current={currentView} hrefFor={setViewHref} />
 
             {/* FILTER FORM */}
             <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
-                {/* ✅ chỉ giữ view khi khác all */}
+                {/* ✅ giữ view khi submit filter */}
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
 
                 <div className="flex flex-col">
@@ -212,82 +224,6 @@ export default function OrderListPageClient({
                 </div>
             </form>
 
-            {/* BULK BAR */}
-            {showBulkBar && (
-                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span className="font-medium text-blue-700">{selectedIds.length} đơn hàng đã chọn</span>
-
-                    <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                        onClick={() => setShowBulkConfirm(true)}
-                        type="button"
-                    >
-                        Duyệt các đơn đã chọn
-                    </button>
-
-                    <button
-                        className="px-3 py-1 border rounded text-sm"
-                        onClick={() => {
-                            setSelectedIds([]);
-                            setShowBulkBar(false);
-                        }}
-                        type="button"
-                    >
-                        Bỏ chọn
-                    </button>
-                </div>
-            )}
-
-            {/* BULK CONFIRM */}
-            {showBulkConfirm && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
-                    <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
-                        <h3 className="font-semibold text-lg">Duyệt đơn hàng</h3>
-
-                        <div className="text-sm text-gray-600">
-                            Bạn đang duyệt <b>{selectedIds.length}</b> đơn hàng.
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2">
-                                <input type="radio" checked={bulkHasShipment} onChange={() => setBulkHasShipment(true)} />
-                                Đơn hàng có shipment (giao hàng)
-                            </label>
-
-                            <label className="flex items-center gap-2">
-                                <input type="radio" checked={!bulkHasShipment} onChange={() => setBulkHasShipment(false)} />
-                                Đơn hàng không có shipment (pickup)
-                            </label>
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-3">
-                            <button className="px-3 py-1 border rounded" onClick={() => setShowBulkConfirm(false)} type="button">
-                                Hủy
-                            </button>
-
-                            <button
-                                className="px-3 py-1 bg-blue-600 text-white rounded"
-                                onClick={async () => {
-                                    await fetch("/api/admin/orders/bulk-post", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                            orderIds: selectedIds,
-                                            hasShipment: bulkHasShipment,
-                                        }),
-                                    });
-
-                                    location.reload();
-                                }}
-                                type="button"
-                            >
-                                Xác nhận duyệt
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
@@ -303,7 +239,6 @@ export default function OrderListPageClient({
                                             setShowBulkBar(false);
                                             return;
                                         }
-
                                         const ids = displayItems.filter((o) => o.status === "DRAFT").map((o) => o.id);
                                         setSelectedIds(ids);
                                         setShowBulkBar(ids.length > 0);
@@ -328,6 +263,7 @@ export default function OrderListPageClient({
                     </thead>
 
                     <tbody>
+                        {/* ✅ quan trọng: render displayItems */}
                         {displayItems.length === 0 ? (
                             <tr>
                                 <td colSpan={14} className="py-8 text-center text-gray-500">
@@ -364,15 +300,12 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.status} map={ORDER_STATUS} />
                                         </td>
-
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.source} map={ORDER_SOURCE} />
                                         </td>
-
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
                                         </td>
-
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
                                         </td>
@@ -425,10 +358,7 @@ export default function OrderListPageClient({
 
                     <Link
                         href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={cls(
-                            "rounded border px-3 py-1 text-sm",
-                            page >= totalPages && "pointer-events-none opacity-50"
-                        )}
+                        className={cls("rounded border px-3 py-1 text-sm", page >= totalPages && "pointer-events-none opacity-50")}
                     >
                         Sau →
                     </Link>
