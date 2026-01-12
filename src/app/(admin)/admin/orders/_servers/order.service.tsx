@@ -4,7 +4,7 @@ import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import { PaymentMethod, Prisma, orderitemkind, ReserveType, OrderStatus, OrderSource, OrderVerificationStatus } from "@prisma/client";
+import { PaymentMethod, Prisma, orderitemkind, ReserveType, OrderStatus, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
@@ -14,6 +14,7 @@ import * as paymentService from "../../payments/_server/payment.service"
 /* ================================
    TYPES
 ================================ */
+const prisma = new PrismaClient();
 
 export type CreateOrderItemInput = {
   productId?: string;
@@ -75,6 +76,89 @@ function resolveReserve(
     reserveUntil: reserve.expiresAt ?? null,
   };
 }
+function norm(v: unknown) {
+  const s = typeof v === "string" ? v.trim() : "";
+  return s; // giữ "" nếu user xóa
+}
+function serialize(obj: any) {
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) => {
+      if (value instanceof Date) return value.toISOString();
+      if (typeof value === "object" && value?._isDecimal) return Number(value);
+      return value;
+    })
+  );
+}
+
+async function resolveCustomer(
+  tx: Prisma.TransactionClient,
+  input: CreateOrderInput
+): Promise<string | null> {
+  const shipCity = norm(input.shipCity);
+  const shipDistrict = norm(input.shipDistrict);
+  const shipWard = norm(input.shipWard);
+  const shipAddress = norm(input.shipAddress);
+  const shipPhone = norm(input.shipPhone);
+
+  // 1) Nếu có customerId => ưu tiên update theo ID
+  if (input.customerId) {
+    const existing = await customerRepo.findCustomerById(tx, input.customerId);
+    if (!existing) return null;
+
+    const needUpdate =
+      shipCity !== norm(existing.city) ||
+      shipDistrict !== norm(existing.district) ||
+      shipWard !== norm(existing.ward) ||
+      shipAddress !== norm(existing.address);
+
+    if (needUpdate) {
+      await customerRepo.updateCustomer(tx, existing.id, {
+        city: shipCity,
+        district: shipDistrict,
+        ward: shipWard,
+        address: shipAddress,
+      });
+    }
+
+    return existing.id;
+  }
+
+  // 2) Không có customerId => resolve theo phone
+  if (!shipPhone) return null;
+
+  const existing = await customerRepo.findByPhone(tx, shipPhone);
+
+  if (existing) {
+    const needUpdate =
+      shipCity !== norm(existing.city) ||
+      shipDistrict !== norm(existing.district) ||
+      shipWard !== norm(existing.ward) ||
+      shipAddress !== norm(existing.address);
+
+    if (needUpdate) {
+      await customerRepo.updateCustomer(tx, existing.id, {
+        city: shipCity,
+        district: shipDistrict,
+        ward: shipWard,
+        address: shipAddress,
+      });
+    }
+
+    return existing.id;
+  }
+
+  // 3) Không có => create
+  const created = await customerRepo.createCustomer(tx, {
+    name: input.customerName,
+    phone: shipPhone,
+    city: shipCity,
+    district: shipDistrict,
+    ward: shipWard,
+    address: shipAddress,
+  });
+
+  return created.id;
+}
 
 /* ================================
    QUERIES
@@ -133,11 +217,18 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     pageSize,
   };
 }
+
+export async function getAdminOrderDetail(id: string) {
+
+
+  const row = await orderRepo.getOrderDetail(id, prisma);
+  if (!row) throw new Error("Order không tồn tại");
+  return serialize(row);
+}
+
 /* ================================
    COMMAND
 ================================ */
-
-
 
 export async function createOrderWithItems(raw: any) {
   const input: CreateOrderInput = {
@@ -270,86 +361,9 @@ export async function createOrderWithItems(raw: any) {
   });
 }
 
-function norm(v: unknown) {
-  const s = typeof v === "string" ? v.trim() : "";
-  return s; // giữ "" nếu user xóa
-}
-
-async function resolveCustomer(
-  tx: Prisma.TransactionClient,
-  input: CreateOrderInput
-): Promise<string | null> {
-  const shipCity = norm(input.shipCity);
-  const shipDistrict = norm(input.shipDistrict);
-  const shipWard = norm(input.shipWard);
-  const shipAddress = norm(input.shipAddress);
-  const shipPhone = norm(input.shipPhone);
-
-  // 1) Nếu có customerId => ưu tiên update theo ID
-  if (input.customerId) {
-    const existing = await customerRepo.findCustomerById(tx, input.customerId);
-    if (!existing) return null;
-
-    const needUpdate =
-      shipCity !== norm(existing.city) ||
-      shipDistrict !== norm(existing.district) ||
-      shipWard !== norm(existing.ward) ||
-      shipAddress !== norm(existing.address);
-
-    if (needUpdate) {
-      await customerRepo.updateCustomer(tx, existing.id, {
-        city: shipCity,
-        district: shipDistrict,
-        ward: shipWard,
-        address: shipAddress,
-      });
-    }
-
-    return existing.id;
-  }
-
-  // 2) Không có customerId => resolve theo phone
-  if (!shipPhone) return null;
-
-  const existing = await customerRepo.findByPhone(tx, shipPhone);
-
-  if (existing) {
-    const needUpdate =
-      shipCity !== norm(existing.city) ||
-      shipDistrict !== norm(existing.district) ||
-      shipWard !== norm(existing.ward) ||
-      shipAddress !== norm(existing.address);
-
-    if (needUpdate) {
-      await customerRepo.updateCustomer(tx, existing.id, {
-        city: shipCity,
-        district: shipDistrict,
-        ward: shipWard,
-        address: shipAddress,
-      });
-    }
-
-    return existing.id;
-  }
-
-  // 3) Không có => create
-  const created = await customerRepo.createCustomer(tx, {
-    name: input.customerName,
-    phone: shipPhone,
-    city: shipCity,
-    district: shipDistrict,
-    ward: shipWard,
-    address: shipAddress,
-  });
-
-  return created.id;
-}
-
-
 export async function getOrderDetail(id: string) {
-  return orderRepo.getOrderDetail(prisma, id);
+  return orderRepo.getOrderDetail(id, prisma);
 }
-
 
 // order-post.service.ts
 export async function postOrders(
@@ -386,4 +400,14 @@ export async function postOrders(
 
     return { count: orders.length };
   });
+}
+
+export async function cancelOrder(input: { id: string; reason?: string | null }) {
+  const updated = await orderRepo.cancelOrder(input.id, prisma, input.reason ?? null);
+  return serialize(updated);
+}
+
+export async function verifyOrder(input: { id: string; status: "VERIFIED" | "REJECTED" }) {
+  const updated = await orderRepo.verifyOrder(input.id, prisma, input.status);
+  return serialize(updated);
 }

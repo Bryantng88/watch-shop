@@ -1,5 +1,5 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import type { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus } from "@prisma/client";
+import { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 /* ================================
    TYPES
@@ -234,21 +234,31 @@ export async function getOrderLite(tx: DB, id: string) {
 }
 
 
-export async function getOrderDetail(tx: DB, id: string) {
-    const db = dbOrTx(tx);
+export async function getOrderDetail(id: string, tx: PrismaClient) {
 
-    return db.order.findUnique({
+
+    return tx.order.findUnique({
         where: { id },
         select: {
             id: true,
             refNo: true,
             status: true,
+            shipAddress: true,
+            shipDistrict: true,
+            shipCity: true,
+            shipPhone: true,
+            customerName: true,
+            paymentMethod: true,
+            subtotal: true,
+            createdAt: true,
             items: {
                 select: {
                     id: true,
                     title: true,
                     quantity: true,
                     unitPriceAgreed: true,
+                    listPrice: true,
+                    kind: true,
                     //productType: true
                 },
             },
@@ -293,6 +303,36 @@ export function markPosted(
             status: "POSTED",
             hasShipment,
             updatedAt: new Date(),
+        },
+    });
+}
+
+export async function cancelOrder(
+    id: string,
+    tx: DB,
+    reason?: string | null
+) {
+    const db = dbOrTx(tx);
+    return db.order.update({
+        where: { id },
+        data: {
+            status: "CANCELLED" as any,
+            // nếu bạn có cột cancelReason/notes thì map vào đây
+            notes: reason ?? undefined,
+        },
+    });
+}
+
+export async function verifyOrder(
+    id: string,
+    tx: DB,
+    verificationStatus: string
+) {
+    const db = dbOrTx(tx);
+    return db.order.update({
+        where: { id },
+        data: {
+            verificationStatus: verificationStatus as any, // VERIFIED | REJECTED | ...
         },
     });
 }

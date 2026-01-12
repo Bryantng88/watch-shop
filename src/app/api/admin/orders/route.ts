@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
-
+import { createOrderWithItems, getAdminOrderDetail } from "@/app/(admin)/admin/orders/_servers/order.service";
 // POST /api/admin/orders
 export async function POST(req: NextRequest) {
     let body: any;
@@ -77,5 +76,13 @@ export async function POST(req: NextRequest) {
             { error: err?.message || "Lỗi hệ thống" },
             { status: 400 }
         );
+    }
+}
+export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+    try {
+        const data = await getAdminOrderDetail(ctx.params.id);
+        return NextResponse.json(data);
+    } catch (e: any) {
+        return NextResponse.json({ error: e?.message ?? "Lỗi hệ thống" }, { status: 404 });
     }
 }
