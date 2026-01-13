@@ -109,3 +109,45 @@ export async function createFromOrder(orderId: string) {
         shipWard: order.shipWard ?? null,
     });
 }
+
+
+function uniq(xs: string[]) {
+    return Array.from(new Set(xs));
+}
+
+export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
+    const shipmentIds = uniq((input.shipmentIds || []).filter(Boolean));
+
+    if (shipmentIds.length === 0) {
+        throw new Error("shipmentIds rỗng");
+    }
+
+    return prisma.$transaction(async (tx) => {
+        // 1) check tồn tại
+        const rows = await shipmentRepo.findShipmentsByIds(tx, shipmentIds);
+
+        if (rows.length !== shipmentIds.length) {
+            const found = new Set(rows.map((x) => x.id));
+            const missing = shipmentIds.filter((id) => !found.has(id));
+            throw new Error(`Shipment không tồn tại: ${missing.join(", ")}`);
+        }
+
+        // 2) chỉ cho duyệt DRAFT
+        const notDraft = rows.filter((x) => x.status !== "DRAFT");
+        if (notDraft.length > 0) {
+            throw new Error(
+                `Chỉ duyệt shipment DRAFT. Các shipment không hợp lệ: ${notDraft
+                    .map((x) => `${x.id}(${x.status})`)
+                    .join(", ")}`
+            );
+        }
+
+        // 3) update DRAFT -> READY
+        const result = await shipmentRepo.bulkMarkReady(tx, shipmentIds);
+
+        return {
+            updated: result.count,
+            shipmentIds,
+        };
+    });
+}

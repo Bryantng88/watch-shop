@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
-  hasShipment: z.boolean().optional(),
+  hasShipment: z.boolean(),
   reserveType: ReserveTypeSchema.optional().nullable(),
   reserveUntil: z.coerce.date().optional().nullable(),
   depositRequired: z.number().optional().nullable(),

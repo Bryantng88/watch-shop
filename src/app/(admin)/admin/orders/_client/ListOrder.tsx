@@ -12,6 +12,9 @@ import {
     RESERVE_TYPE,
 } from "@/components/badges/StatusMaps";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
+import { useSearchParams } from "next/navigation";
+
+
 
 type OrderItem = {
     id: string;
@@ -29,6 +32,7 @@ type OrderItem = {
     updatedAt: string;
     source: string;
     verificationStatus: string;
+    hasShipment: boolean | null;
 };
 
 type PageProps = {
@@ -111,14 +115,16 @@ export default function OrderListPageClient({
     const [bulkHasShipment, setBulkHasShipment] = useState(true);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
-    const url = useMemo(
-        () => new URLSearchParams(rawSearchParams as any),
-        [rawSearchParams]
-    );
+    const sp = useSearchParams();
+
+    const url = useMemo(() => {
+        // clone readonly searchParams -> URLSearchParams mutable
+        return new URLSearchParams(sp.toString());
+    }, [sp]);
 
     const currentView = useMemo(() => {
-        return (((rawSearchParams.view as string) || "all") as ViewKey);
-    }, [rawSearchParams.view]);
+        return ((sp.get("view") || "all") as ViewKey);
+    }, [sp]);
 
     // reset selection khi đổi tab (tránh carry selection)
     useEffect(() => {
@@ -363,6 +369,7 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Nguồn ĐH</th>
                             <th className="px-3 py-2 text-left">Admin Phê duyệt</th>
                             <th className="px-3 py-2 text-left">Loại ĐH</th>
+                            <th className="px-3 py-2 text-left">Shipment</th>
                             <th className="px-3 py-2 text-left">Tiền cọc</th>
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-left">Tổng tiền</th>
@@ -421,6 +428,17 @@ export default function OrderListPageClient({
 
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {o.hasShipment ? (
+                                                <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
+                                                    SHIP
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
+                                                    PICKUP
+                                                </span>
+                                            )}
                                         </td>
 
                                         <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>

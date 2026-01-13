@@ -70,3 +70,40 @@ export async function getShipmentList(
 
     return { rows, total };
 }
+
+
+
+export async function findShipmentsByIds(
+    tx: DB,
+    ids: string[]
+) {
+    const db = dbOrTx(tx);
+
+    return db.shipment.findMany({
+        where: { id: { in: ids } },
+        select: {
+            id: true,
+            status: true,
+            orderId: true, // nếu bạn cần
+        },
+    });
+}
+
+export async function bulkMarkReady(
+    tx: DB,
+    shipmentIds: string[]
+) {
+    const db = dbOrTx(tx);
+
+    // chỉ update các shipment đang DRAFT
+    return db.shipment.updateMany({
+        where: {
+            id: { in: shipmentIds },
+            status: "DRAFT",
+        },
+        data: {
+            status: "READY",
+            updatedAt: new Date(),
+        },
+    });
+}

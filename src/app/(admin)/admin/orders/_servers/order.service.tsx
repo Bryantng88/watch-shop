@@ -47,6 +47,7 @@ export type CreateOrderInput = {
   shipDistrict: string;
   shipWard: string;
   paymentMethod: PaymentMethod;
+  hasShipment: boolean;
   notes: string | null;
   orderDate: Date;
   status: OrderStatus;
@@ -245,6 +246,7 @@ export async function createOrderWithItems(raw: any) {
       }
       : null,
     status: raw.status as OrderStatus,
+    hasShipment: raw.hasShipment,
     shipAddress: raw.shipAddress ?? null,
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
@@ -269,7 +271,7 @@ export async function createOrderWithItems(raw: any) {
       taxRate: i.taxRate ?? null,
     })),
   };
-
+  console.log('in ra test order service 274: ' + raw.hasShipment)
   return prisma.$transaction(async (tx) => {
     /* =====================================================
      * 1️⃣ Resolve CUSTOMER
@@ -305,6 +307,7 @@ export async function createOrderWithItems(raw: any) {
       shipDistrict: input.shipDistrict,
       shipWard: input.shipWard,
       paymentMethod: input.paymentMethod!,
+      hasShipment: input.hasShipment,
       notes: input.notes,
       createdAt: input.orderDate,
       status: input.status,

@@ -18,9 +18,7 @@ type Customer = {
     address?: string | null;
 };
 
-type ReserveType = "NONE" | "COD_DEPOSIT" | "HOLD"
-
-
+type ReserveType = "NONE" | "COD_DEPOSIT" | "HOLD";
 
 type ServiceCatalog = {
     id: string;
@@ -32,7 +30,7 @@ type ServiceCatalog = {
 
 type OrderLine = {
     id: string;
-    kind: "PRODUCT" | "SERVICE" | "DISCOUNT"
+    kind: "PRODUCT" | "SERVICE" | "DISCOUNT";
 
     // PRODUCT
     productId?: string;
@@ -48,7 +46,6 @@ type OrderLine = {
 };
 
 type Props = {
-
     // nếu bạn đã có list service catalog từ server thì truyền vào cho đẹp
     services?: ServiceCatalog[];
 };
@@ -77,7 +74,15 @@ function uid() {
 /** ==============================
  * UI atoms
  * ============================== */
-function Card({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+function Card({
+    title,
+    children,
+    right,
+}: {
+    title: string;
+    children: React.ReactNode;
+    right?: React.ReactNode;
+}) {
     return (
         <div className="rounded-lg border bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -107,7 +112,13 @@ function Field({
     );
 }
 
-function Badge({ children, tone = "gray" }: { children: React.ReactNode; tone?: "gray" | "blue" | "green" }) {
+function Badge({
+    children,
+    tone = "gray",
+}: {
+    children: React.ReactNode;
+    tone?: "gray" | "blue" | "green";
+}) {
     const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
     const toneCls =
         tone === "blue"
@@ -129,13 +140,15 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
      * -------------------------- */
     type ItemTab = "PRODUCT" | "SERVICE" | "DISCOUNT";
 
-    const [activeTab, setActiveTab] =
-        useState<ItemTab>("PRODUCT");
+    const [activeTab, setActiveTab] = useState<ItemTab>("PRODUCT");
 
     const [formData, setFormData] = useState({
         shipPhone: "",
         customerId: "",
         customerName: "",
+
+        // ✅ NEW
+        hasShipment: true,
 
         shipCity: "",
         shipDistrict: "",
@@ -147,6 +160,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         orderDate: new Date().toISOString().slice(0, 16),
         currency: "VND",
     });
+
     const [suggestCustomers, setSuggestCustomers] = useState<Customer[]>([]);
     const [showSuggest, setShowSuggest] = useState(false);
     const [loadingSuggest, setLoadingSuggest] = useState(false);
@@ -157,6 +171,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+
     const [reserve, setReserve] = useState<{
         enabled: boolean;
         amount: number;
@@ -171,18 +186,22 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
      * Derived
      * -------------------------- */
     const total = useMemo(() => {
-        return lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.price) || 0), 0);
+        return lines.reduce(
+            (s, l) => s + (Number(l.quantity) || 0) * (Number(l.price) || 0),
+            0
+        );
     }, [lines]);
 
     const serviceOptions = useMemo(() => {
         return (services || []).filter((s) => s.isActive !== false);
     }, [services]);
+
     const depositAmount = reserve.enabled ? Number(reserve.amount || 0) : 0;
 
     const remainingAmount = useMemo(() => {
         return Math.max(0, total - depositAmount);
     }, [total, depositAmount]);
-    const [autoDepositApplied, setAutoDepositApplied] = useState(false);
+
     const [reserveTouched, setReserveTouched] = useState(false);
 
     /** --------------------------
@@ -198,21 +217,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
         return debounced;
     }
+
     const debouncedPhone = useDebounce(formData.shipPhone, 300);
-    useEffect(() => {
-        if (formData.paymentMethod !== "COD") return;
-
-        // nếu user đã chỉnh tay → không auto nữa
-        if (reserveTouched) return;
-
-        const deposit = Math.round(total * 0.1);
-
-        setReserve({
-            enabled: true,
-            amount: deposit,
-            expiresAt: reserve.expiresAt || "", // giữ nguyên nếu có
-        });
-    }, [formData.paymentMethod, total]);
 
     useEffect(() => {
         const phone = (debouncedPhone ?? "").trim();
@@ -228,7 +234,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         setLoadingSuggest(true);
 
         fetch(`/api/admin/customers/search?phone=${encodeURIComponent(phone)}`)
-            .then((r) => r.ok ? r.json() : [])
+            .then((r) => (r.ok ? r.json() : []))
             .then((data) => {
                 if (!aborted) {
                     setSuggestCustomers(Array.isArray(data) ? data : []);
@@ -242,7 +248,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
             });
 
         return () => {
-            aborted = true; // 🚫 cancel response cũ
+            aborted = true;
         };
     }, [debouncedPhone]);
 
@@ -269,6 +275,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         setErrMsg(null);
         setOkMsg(null);
     }
+
     function applyCustomer(c: Customer) {
         setSelectedCustomerId(c.id);
         setFormData((prev) => ({
@@ -285,8 +292,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
         setSuggestCustomers([]);
         setShowSuggest(false);
-
     }
+
     /** --------------------------
      * Validate minimal
      * -------------------------- */
@@ -294,6 +301,14 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         if (!formData.shipPhone.trim()) return "Vui lòng nhập số điện thoại.";
         if (!formData.customerName.trim()) return "Vui lòng nhập tên khách hàng.";
         if (lines.length === 0) return "Vui lòng thêm ít nhất 1 sản phẩm/dịch vụ.";
+
+        // ✅ OPTIONAL: nếu có shipment thì bắt buộc nhập địa chỉ tối thiểu
+        if (formData.hasShipment) {
+            if (!formData.shipCity.trim()) return "Vui lòng nhập Tỉnh/TP.";
+            if (!formData.shipDistrict.trim()) return "Vui lòng nhập Quận/Huyện.";
+            if (!formData.shipAddress.trim()) return "Vui lòng nhập địa chỉ giao hàng.";
+        }
+
         for (const l of lines) {
             if (!l.title) return "Có dòng item thiếu tiêu đề.";
             if (!l.quantity || l.quantity < 1) return "Số lượng phải >= 1.";
@@ -303,11 +318,16 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         }
         return null;
     }
+
     function resetFormForNewOrder() {
         setFormData({
             shipPhone: "",
             customerId: "",
             customerName: "",
+
+            // ✅ NEW
+            hasShipment: true,
+
             shipCity: "",
             shipDistrict: "",
             shipWard: "",
@@ -325,16 +345,15 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         setErrMsg(null);
         setOkMsg(null);
     }
+
     function plusDaysISO(days: number) {
         const d = new Date();
         d.setDate(d.getDate() + days);
-
-        // format yyyy-MM-ddTHH:mm cho input datetime-local
         return d.toISOString().slice(0, 16);
     }
+
     useEffect(() => {
         if (formData.paymentMethod !== "COD") return;
-
         if (reserveTouched) return;
 
         const deposit = Math.round(total * 0.1);
@@ -342,13 +361,12 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         setReserve({
             enabled: true,
             amount: deposit,
-            expiresAt: "", // 🚫 COD KHÔNG GIỮ HÀNG
+            expiresAt: "", // COD không giữ hàng
         });
     }, [formData.paymentMethod, total]);
 
     useEffect(() => {
         if (formData.paymentMethod === "COD") return;
-
         if (!reserve.enabled) return;
         if (reserveTouched) return;
 
@@ -357,7 +375,6 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
             expiresAt: prev.expiresAt || plusDaysISO(7),
         }));
     }, [formData.paymentMethod, reserve.enabled]);
-
 
     useEffect(() => {
         setReserveTouched(false);
@@ -370,11 +387,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         }
     }, [formData.paymentMethod]);
 
-
     /** --------------------------
      * Submit
-     * - mode: "DRAFT" (tạo/sửa draft)
-     * - duyệt POSTED sẽ làm ở màn khác + require admin
      * -------------------------- */
     async function submit(mode: "DRAFT" = "DRAFT") {
         clearMessages();
@@ -387,26 +401,28 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         setSaving(true);
         try {
             const payload = {
-                mode, // backend bạn có thể dùng để set status
+                mode,
+
+                // ✅ NEW: gửi lên backend
+                hasShipment: !!formData.hasShipment,
+
                 shipPhone: formData.shipPhone.trim(),
                 customerId: formData.customerId || null,
                 customerName: formData.customerName.trim(),
 
-                shipCity: formData.shipCity || null,
-                shipDistrict: formData.shipDistrict || null,
-                shipWard: formData.shipWard || null,
-                shipAddress: formData.shipAddress || null,
+                shipCity: formData.hasShipment ? (formData.shipCity || null) : null,
+                shipDistrict: formData.hasShipment ? (formData.shipDistrict || null) : null,
+                shipWard: formData.hasShipment ? (formData.shipWard || null) : null,
+                shipAddress: formData.hasShipment ? (formData.shipAddress || null) : null,
 
                 paymentMethod: formData.paymentMethod,
                 notes: formData.notes || null,
                 currency: formData.currency,
                 orderDate: new Date(formData.orderDate),
+
                 reserve: reserve.enabled
                     ? {
-                        type:
-                            formData.paymentMethod === "COD"
-                                ? "COD"
-                                : "DEPOSIT",
+                        type: formData.paymentMethod === "COD" ? "COD" : "DEPOSIT",
                         amount: Number(reserve.amount || 0),
                         expiresAt:
                             formData.paymentMethod === "COD"
@@ -420,6 +436,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         amount: 0,
                         expiresAt: null,
                     },
+
                 items: lines.map((l) => ({
                     kind: l.kind,
                     title: l.title,
@@ -443,13 +460,10 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                 const t = await res.text();
                 throw new Error(t || "Tạo đơn thất bại");
             }
-            const data = await res.json(); // nên trả orderLite { id, refNo? }
 
+            const data = await res.json();
             setCreatedOrderId(data?.id ?? null);
             setShowSuccessModal(true);
-            // reset items nếu muốn
-            // setLines([]);
-            // router.push("/admin/orders"); router.refresh();
             router.refresh();
         } catch (e: any) {
             setErrMsg(e?.message || "Lỗi không xác định");
@@ -478,9 +492,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                 </Link>
             </div>
 
-            {/* Grid: left (customer + shipping) / right (payment + notes) */}
+            {/* Grid: left / right */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left: customer + shipping */}
+                {/* Left */}
                 <div className="lg:col-span-2 space-y-6">
                     <Card title="Khách hàng">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -497,7 +511,6 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                 shipPhone: v,
                                             }));
 
-                                            // ⚠️ chỉ reset nếu đang có customer được chọn
                                             if (selectedCustomerId) {
                                                 setSelectedCustomerId(null);
                                                 setFormData((prev) => ({
@@ -512,26 +525,18 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                             }
 
                                             setShowSuggest(true);
-
                                         }}
-
                                         placeholder="VD: 0909xxxxxx"
-                                        onBlur={() => {
-                                            // delay để click được item
-                                            setTimeout(() => setShowSuggest(false), 150);
-                                        }}
+                                        onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
                                         onFocus={() => {
                                             if (suggestCustomers.length > 0) setShowSuggest(true);
                                         }}
                                     />
 
-                                    {/* SUGGEST BOX */}
                                     {showSuggest && (loadingSuggest || suggestCustomers.length > 0) && (
                                         <div className="absolute z-30 mt-1 w-full rounded-md border bg-white shadow-lg max-h-64 overflow-auto">
                                             {loadingSuggest && (
-                                                <div className="px-3 py-2 text-sm text-gray-500">
-                                                    Đang tìm…
-                                                </div>
+                                                <div className="px-3 py-2 text-sm text-gray-500">Đang tìm…</div>
                                             )}
 
                                             {!loadingSuggest &&
@@ -560,7 +565,6 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 </div>
                             </Field>
 
-
                             <Field label="Tên khách hàng" hint="Nếu khách mới, bạn nhập tên vào đây">
                                 <input
                                     className="h-9 rounded border px-3"
@@ -570,6 +574,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 />
                             </Field>
                         </div>
+
                         {formData.customerId ? (
                             <div className="mt-2">
                                 <Badge tone="green">Khách hàng cũ</Badge>
@@ -584,11 +589,28 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         )}
                     </Card>
 
-                    <Card title="Giao hàng">
+                    {/* ✅ UPDATED: shipping with hasShipment */}
+                    <Card
+                        title="Giao hàng"
+                        right={
+                            <label className="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.hasShipment}
+                                    onChange={(e) => set("hasShipment", e.target.checked)}
+                                />
+                                Có shipment (giao hàng)
+                            </label>
+                        }
+                    >
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Field label="Tỉnh / Thành phố">
                                 <input
-                                    className="h-9 rounded border px-3"
+                                    disabled={!formData.hasShipment}
+                                    className={cls(
+                                        "h-9 rounded border px-3",
+                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                    )}
                                     value={formData.shipCity}
                                     onChange={(e) => set("shipCity", e.target.value)}
                                     placeholder="VD: Hồ Chí Minh"
@@ -597,7 +619,11 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
                             <Field label="Quận / Huyện">
                                 <input
-                                    className="h-9 rounded border px-3"
+                                    disabled={!formData.hasShipment}
+                                    className={cls(
+                                        "h-9 rounded border px-3",
+                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                    )}
                                     value={formData.shipDistrict}
                                     onChange={(e) => set("shipDistrict", e.target.value)}
                                     placeholder="VD: Quận 1"
@@ -606,7 +632,11 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
                             <Field label="Phường / Xã">
                                 <input
-                                    className="h-9 rounded border px-3"
+                                    disabled={!formData.hasShipment}
+                                    className={cls(
+                                        "h-9 rounded border px-3",
+                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                    )}
                                     value={formData.shipWard}
                                     onChange={(e) => set("shipWard", e.target.value)}
                                     placeholder="VD: Bến Nghé"
@@ -617,12 +647,22 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         <div className="mt-4">
                             <Field label="Địa chỉ chi tiết">
                                 <textarea
-                                    className="min-h-[70px] w-full rounded border px-3 py-2"
+                                    disabled={!formData.hasShipment}
+                                    className={cls(
+                                        "min-h-[70px] w-full rounded border px-3 py-2",
+                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                    )}
                                     value={formData.shipAddress}
                                     onChange={(e) => set("shipAddress", e.target.value)}
                                     placeholder="Số nhà, tên đường, ghi chú giao hàng…"
                                 />
                             </Field>
+
+                            {!formData.hasShipment && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                    Đang chọn <b>pickup</b> nên không cần nhập địa chỉ giao hàng.
+                                </div>
+                            )}
                         </div>
                     </Card>
 
@@ -636,7 +676,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     onClick={() => setActiveTab("PRODUCT")}
                                     className={cls(
                                         "h-8 rounded px-3 text-sm border",
-                                        activeTab === "PRODUCT" ? "bg-black text-white border-black" : "bg-white hover:bg-gray-50"
+                                        activeTab === "PRODUCT"
+                                            ? "bg-black text-white border-black"
+                                            : "bg-white hover:bg-gray-50"
                                     )}
                                 >
                                     Sản phẩm
@@ -646,7 +688,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     onClick={() => setActiveTab("SERVICE")}
                                     className={cls(
                                         "h-8 rounded px-3 text-sm border",
-                                        activeTab === "SERVICE" ? "bg-black text-white border-black" : "bg-white hover:bg-gray-50"
+                                        activeTab === "SERVICE"
+                                            ? "bg-black text-white border-black"
+                                            : "bg-white hover:bg-gray-50"
                                     )}
                                 >
                                     Dịch vụ
@@ -656,7 +700,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     onClick={() => setActiveTab("DISCOUNT")}
                                     className={cls(
                                         "h-8 rounded px-3 text-sm border",
-                                        activeTab === "DISCOUNT" ? "bg-black text-white border-black" : "bg-white hover:bg-gray-50"
+                                        activeTab === "DISCOUNT"
+                                            ? "bg-black text-white border-black"
+                                            : "bg-white hover:bg-gray-50"
                                     )}
                                 >
                                     Giảm giá
@@ -667,7 +713,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         {activeTab === "PRODUCT" && (
                             <div className="space-y-3">
                                 <div className="text-sm text-gray-600">
-                                    Tìm và thêm sản phẩm vào đơn. (Đồng hồ thường giới hạn số lượng = 1 tuỳ rule của bạn)
+                                    Tìm và thêm sản phẩm vào đơn.
                                 </div>
 
                                 <ProductSearchInput
@@ -689,7 +735,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         {activeTab === "SERVICE" && (
                             <div className="space-y-3">
                                 <div className="text-sm text-gray-600">
-                                    Thêm dịch vụ (bảo dưỡng, đánh bóng, thay pin…). ServiceRequest sẽ được tạo khi ADMIN duyệt POST.
+                                    Thêm dịch vụ. ServiceRequest sẽ được tạo khi ADMIN duyệt POST.
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 items-end">
@@ -730,6 +776,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 </div>
                             </div>
                         )}
+
                         {activeTab === "DISCOUNT" && (
                             <div className="space-y-3 max-w-sm">
                                 <div className="text-sm text-gray-600">
@@ -752,7 +799,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                 kind: "DISCOUNT",
                                                 title: "Giảm giá",
                                                 quantity: 1,
-                                                price: -Math.abs(value), // 🔥 luôn âm
+                                                price: -Math.abs(value),
                                             });
 
                                             (e.target as HTMLInputElement).value = "";
@@ -789,27 +836,14 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                             return (
                                                 <tr
                                                     key={l.id}
-                                                    className={cls(
-                                                        "border-b hover:bg-gray-50",
-                                                        isDiscount && "bg-red-50"
-                                                    )}
+                                                    className={cls("border-b hover:bg-gray-50", isDiscount && "bg-red-50")}
                                                 >
-                                                    {/* KIND */}
                                                     <td className="px-3 py-2">
-                                                        <Badge
-                                                            tone={
-                                                                l.kind === "SERVICE"
-                                                                    ? "blue"
-                                                                    : l.kind === "DISCOUNT"
-                                                                        ? "green"
-                                                                        : "gray"
-                                                            }
-                                                        >
+                                                        <Badge tone={l.kind === "SERVICE" ? "blue" : l.kind === "DISCOUNT" ? "green" : "gray"}>
                                                             {l.kind}
                                                         </Badge>
                                                     </td>
 
-                                                    {/* TITLE */}
                                                     <td className="px-3 py-2">
                                                         <div className="font-medium">{l.title}</div>
 
@@ -817,28 +851,21 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                             <div className="text-[11px] text-gray-500">
                                                                 {l.kind === "PRODUCT" ? (
                                                                     <>
-                                                                        productId:{" "}
-                                                                        <span className="font-mono">{l.productId}</span>
+                                                                        productId: <span className="font-mono">{l.productId}</span>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        serviceCatalogId:{" "}
-                                                                        <span className="font-mono">
-                                                                            {l.serviceCatalogId}
-                                                                        </span>
+                                                                        serviceCatalogId: <span className="font-mono">{l.serviceCatalogId}</span>
                                                                     </>
                                                                 )}
                                                             </div>
                                                         )}
 
                                                         {isDiscount && (
-                                                            <div className="text-[11px] text-red-600">
-                                                                Giảm giá toàn đơn
-                                                            </div>
+                                                            <div className="text-[11px] text-red-600">Giảm giá toàn đơn</div>
                                                         )}
                                                     </td>
 
-                                                    {/* QUANTITY */}
                                                     <td className="px-3 py-2 text-right">
                                                         {isDiscount ? (
                                                             <span className="text-gray-500">—</span>
@@ -850,24 +877,17 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                                 value={l.quantity}
                                                                 onChange={(e) =>
                                                                     updateLine(l.id, {
-                                                                        quantity: Math.max(
-                                                                            1,
-                                                                            Number(e.target.value || 1)
-                                                                        ),
+                                                                        quantity: Math.max(1, Number(e.target.value || 1)),
                                                                     })
                                                                 }
                                                             />
                                                         )}
                                                     </td>
 
-                                                    {/* PRICE */}
                                                     <td className="px-3 py-2 text-right">
                                                         <input
                                                             type="number"
-                                                            className={cls(
-                                                                "h-8 w-28 rounded border px-2 text-right",
-                                                                isDiscount && "text-red-600"
-                                                            )}
+                                                            className={cls("h-8 w-28 rounded border px-2 text-right", isDiscount && "text-red-600")}
                                                             value={l.price}
                                                             onChange={(e) =>
                                                                 updateLine(l.id, {
@@ -879,17 +899,10 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                         />
                                                     </td>
 
-                                                    {/* SUBTOTAL */}
-                                                    <td
-                                                        className={cls(
-                                                            "px-3 py-2 text-right font-semibold",
-                                                            isDiscount && "text-red-600"
-                                                        )}
-                                                    >
+                                                    <td className={cls("px-3 py-2 text-right font-semibold", isDiscount && "text-red-600")}>
                                                         {fmtMoney(lineTotal, formData.currency)}
                                                     </td>
 
-                                                    {/* REMOVE */}
                                                     <td className="px-3 py-2 text-right">
                                                         <button
                                                             type="button"
@@ -904,25 +917,28 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                         })}
                                     </tbody>
 
-
                                     <tfoot>
                                         <tr>
                                             <td colSpan={4} className="px-3 py-3 text-right text-sm text-gray-600">
                                                 Tổng
                                             </td>
-                                            <td className="px-3 py-3 text-right font-bold">{fmtMoney(total, formData.currency)}</td>
+                                            <td className="px-3 py-3 text-right font-bold">
+                                                {fmtMoney(total, formData.currency)}
+                                            </td>
                                             <td />
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
                         ) : (
-                            <div className="mt-4 text-sm text-gray-500">Chưa có item nào. Hãy thêm sản phẩm hoặc dịch vụ.</div>
+                            <div className="mt-4 text-sm text-gray-500">
+                                Chưa có item nào. Hãy thêm sản phẩm hoặc dịch vụ.
+                            </div>
                         )}
                     </Card>
                 </div>
 
-                {/* Right: order meta */}
+                {/* Right */}
                 <div className="space-y-6">
                     <Card title="Thông tin đơn hàng">
                         <div className="space-y-4">
@@ -948,6 +964,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     ))}
                                 </select>
                             </Field>
+
                             {/* RESERVE / DEPOSIT */}
                             <div className="space-y-3">
                                 <label className="flex items-center gap-2 text-sm">
@@ -965,19 +982,15 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     <span className="font-medium">
                                         Đặt cọc giữ hàng
                                         {formData.paymentMethod === "COD" && (
-                                            <span className="ml-1 text-xs text-orange-600">
-                                                (bắt buộc với COD)
-                                            </span>
+                                            <span className="ml-1 text-xs text-orange-600">(bắt buộc với COD)</span>
                                         )}
                                     </span>
                                 </label>
-
 
                                 {reserve.enabled && (
                                     <div className="space-y-3 rounded-md border bg-gray-50 p-3">
                                         <Field
                                             label="Số tiền cọc"
-
                                             hint={
                                                 formData.paymentMethod === "COD"
                                                     ? "Mặc định 10% giá trị đơn, có thể chỉnh sửa"
@@ -999,23 +1012,10 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                             />
                                         </Field>
 
-                                        <Field
-                                            label="Giữ hàng đến"
-                                            hint="Hết hạn có thể huỷ đơn nếu chưa thanh toán"
-                                        >
-                                            <input
-                                                type="number"
-                                                onChange={(e) => {
-                                                    setReserveTouched(true);
-                                                    setReserve((prev) => ({
-                                                        ...prev,
-                                                        amount: Number(e.target.value || 0),
-                                                    }));
-                                                }}
-                                            />
-
+                                        <Field label="Giữ hàng đến" hint="Hết hạn có thể huỷ đơn nếu chưa thanh toán">
                                             <input
                                                 type="datetime-local"
+                                                value={reserve.expiresAt}
                                                 onChange={(e) => {
                                                     setReserveTouched(true);
                                                     setReserve((prev) => ({
@@ -1023,10 +1023,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                         expiresAt: e.target.value,
                                                     }));
                                                 }}
+                                                className="h-9 w-full rounded border px-3"
+                                                disabled={formData.paymentMethod === "COD"}
                                             />
-
-
-
                                         </Field>
 
                                         <div className="text-xs text-gray-500">
@@ -1035,6 +1034,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     </div>
                                 )}
                             </div>
+
                             <Field label="Ghi chú">
                                 <textarea
                                     className="min-h-[90px] w-full rounded border px-3 py-2"
@@ -1045,6 +1045,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                             </Field>
                         </div>
                     </Card>
+
                     <Card title="Tóm tắt">
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
@@ -1054,32 +1055,24 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Tổng tiền</span>
-                                <span className="font-semibold">
-                                    {fmtMoney(total, formData.currency)}
-                                </span>
+                                <span className="font-semibold">{fmtMoney(total, formData.currency)}</span>
                             </div>
 
-                            {/* DEPOSIT */}
                             {reserve.enabled && (
                                 <>
                                     <div className="flex justify-between text-amber-700">
                                         <span>Đã cọc</span>
-                                        <span className="font-medium">
-                                            − {fmtMoney(depositAmount, formData.currency)}
-                                        </span>
+                                        <span className="font-medium">− {fmtMoney(depositAmount, formData.currency)}</span>
                                     </div>
 
                                     <div className="flex justify-between font-semibold text-red-700 border-t pt-2">
                                         <span>Còn phải thu</span>
-                                        <span>
-                                            {fmtMoney(remainingAmount, formData.currency)}
-                                        </span>
+                                        <span>{fmtMoney(remainingAmount, formData.currency)}</span>
                                     </div>
 
                                     {reserve.expiresAt && (
                                         <div className="text-xs text-gray-500">
-                                            ⏰ Giữ hàng đến:{" "}
-                                            {new Date(reserve.expiresAt).toLocaleString("vi-VN")}
+                                            ⏰ Giữ hàng đến: {new Date(reserve.expiresAt).toLocaleString("vi-VN")}
                                         </div>
                                     )}
                                 </>
@@ -1093,12 +1086,17 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         </div>
                     </Card>
 
-
-                    {errMsg ? <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errMsg}</div> : null}
-                    {okMsg ? <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{okMsg}</div> : null}
+                    {errMsg ? (
+                        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {errMsg}
+                        </div>
+                    ) : null}
+                    {okMsg ? (
+                        <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                            {okMsg}
+                        </div>
+                    ) : null}
                 </div>
-
-
             </div>
 
             {/* Sticky footer actions */}
@@ -1139,6 +1137,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                     </div>
                 </div>
             </div>
+
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
@@ -1172,7 +1171,6 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                     </div>
                 </div>
             )}
-
         </div>
     );
 }

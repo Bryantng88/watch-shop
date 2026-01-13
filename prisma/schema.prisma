@@ -205,7 +205,7 @@ model Order {
   customerName       String?
   notes              String?
   shipDistrict       String?
-  hasShipment        Boolean                 @default(false)
+  hasShipment        Boolean
   reserveType        ReserveType?
   reserveUntil       DateTime?               @db.Timestamptz(6)
   depositRequired    Decimal?                @db.Decimal(12, 2)

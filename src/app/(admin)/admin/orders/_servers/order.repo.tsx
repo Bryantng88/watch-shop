@@ -13,6 +13,7 @@ export type CreateOrderRow = {
     shipCity: string;
     shipWard: string | null;
     shipDistrict: string | null;
+    hasShipment: boolean;
     paymentMethod: PaymentMethod;
     notes: string | null;
     createdAt: Date;
@@ -123,6 +124,7 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             shipWard: data.shipWard,
             shipDistrict: data.shipDistrict,
             paymentMethod: data.paymentMethod,
+            hasShipment: data.hasShipment,
             notes: data.notes,
             createdAt: data.createdAt, // ✅ đúng kiểu
             status: data.status,
