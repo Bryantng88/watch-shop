@@ -580,6 +580,8 @@ model Payment {
   acquisition_id     String?
   status             PaymentStatus     @default(UNPAID)
   purpose            PaymentPurpose    @default(ORDER_FULL)
+  shipment_id        String?
+  type               PaymentType       @default(ORDER)
 
   @@index([direction], map: "idx_payment_direction")
   @@index([order_id], map: "idx_payment_order")
@@ -587,6 +589,7 @@ model Payment {
   @@index([service_request_id], map: "idx_payment_service_request")
   @@index([vendor_id], map: "idx_payment_vendor")
   @@index([acquisition_id], map: "idx_payment_acquisition")
+  @@index([type], map: "idx_payment_type")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -935,4 +938,13 @@ enum OrderVerificationStatus {
   VERIFIED
   REJECTED
   EXPIRED
+}
+
+enum PaymentType {
+  ORDER
+  SHIPMENT
+  INVOICE
+  ACQUISITION
+  SERVICE
+  OTHER
 }

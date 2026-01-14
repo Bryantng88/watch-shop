@@ -18,6 +18,8 @@ const makeSchema = () => z.object({
   acquisition_id: z.literal(true).optional(),
   status: z.literal(true).optional(),
   purpose: z.literal(true).optional(),
+  shipment_id: z.literal(true).optional(),
+  type: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const PaymentCountAggregateInputObjectSchema: z.ZodType<Prisma.PaymentCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCountAggregateInputType>;

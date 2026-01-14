@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
-import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema'
+import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
+import { PaymentTypeSchema } from '../enums/PaymentType.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -20,7 +21,9 @@ const makeSchema = () => z.object({
   vendor_id: z.string().optional().nullable(),
   acquisition_id: z.string().optional().nullable(),
   status: PaymentStatusSchema.optional(),
-  purpose: PaymentPurposeSchema.optional()
+  purpose: PaymentPurposeSchema.optional(),
+  shipment_id: z.string().optional().nullable(),
+  type: PaymentTypeSchema.optional()
 }).strict();
 export const PaymentCreateInputObjectSchema: z.ZodType<Prisma.PaymentCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCreateInput>;
 export const PaymentCreateInputObjectZodSchema = makeSchema();

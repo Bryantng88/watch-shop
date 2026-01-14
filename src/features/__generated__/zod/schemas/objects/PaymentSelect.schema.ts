@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   vendor_id: z.boolean().optional(),
   acquisition_id: z.boolean().optional(),
   status: z.boolean().optional(),
-  purpose: z.boolean().optional()
+  purpose: z.boolean().optional(),
+  shipment_id: z.boolean().optional(),
+  type: z.boolean().optional()
 }).strict();
 export const PaymentSelectObjectSchema: z.ZodType<Prisma.PaymentSelect> = makeSchema() as unknown as z.ZodType<Prisma.PaymentSelect>;
 export const PaymentSelectObjectZodSchema = makeSchema();

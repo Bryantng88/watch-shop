@@ -11,7 +11,9 @@ import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
 import { EnumPaymentStatusWithAggregatesFilterObjectSchema as EnumPaymentStatusWithAggregatesFilterObjectSchema } from './EnumPaymentStatusWithAggregatesFilter.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentPurposeWithAggregatesFilterObjectSchema as EnumPaymentPurposeWithAggregatesFilterObjectSchema } from './EnumPaymentPurposeWithAggregatesFilter.schema';
-import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema'
+import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
+import { EnumPaymentTypeWithAggregatesFilterObjectSchema as EnumPaymentTypeWithAggregatesFilterObjectSchema } from './EnumPaymentTypeWithAggregatesFilter.schema';
+import { PaymentTypeSchema } from '../enums/PaymentType.schema'
 
 const paymentscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => PaymentScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => PaymentScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -31,7 +33,9 @@ const paymentscalarwherewithaggregatesinputSchema = z.object({
   vendor_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   acquisition_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   status: z.union([z.lazy(() => EnumPaymentStatusWithAggregatesFilterObjectSchema), PaymentStatusSchema]).optional(),
-  purpose: z.union([z.lazy(() => EnumPaymentPurposeWithAggregatesFilterObjectSchema), PaymentPurposeSchema]).optional()
+  purpose: z.union([z.lazy(() => EnumPaymentPurposeWithAggregatesFilterObjectSchema), PaymentPurposeSchema]).optional(),
+  shipment_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  type: z.union([z.lazy(() => EnumPaymentTypeWithAggregatesFilterObjectSchema), PaymentTypeSchema]).optional()
 }).strict();
 export const PaymentScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.PaymentScalarWhereWithAggregatesInput> = paymentscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.PaymentScalarWhereWithAggregatesInput>;
 export const PaymentScalarWhereWithAggregatesInputObjectZodSchema = paymentscalarwherewithaggregatesinputSchema;

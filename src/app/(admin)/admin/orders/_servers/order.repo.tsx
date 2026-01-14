@@ -338,3 +338,23 @@ export async function verifyOrder(
         },
     });
 }
+
+export async function updateStatus(orderId: string, status: string, tx: DB) {
+    const db = dbOrTx(tx);
+    return db.order.update({
+        where: { id: orderId },
+        data: { status: status as any },
+    });
+}
+
+export async function getProductIdsOfOrder(orderId: string, tx: DB): Promise<string[]> {
+    // Tuỳ schema: orderItems/orderLines
+
+    const db = dbOrTx(tx);
+    const lines = await db.orderItem.findMany({
+        where: { orderId },
+        select: { productId: true },
+    });
+
+    return Array.from(new Set(lines.map((x) => x.productId).filter(Boolean))) as string[];
+}

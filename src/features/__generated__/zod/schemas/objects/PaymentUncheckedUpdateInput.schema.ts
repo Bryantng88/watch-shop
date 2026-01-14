@@ -11,7 +11,9 @@ import { NullableEnumpaymentdirectionFieldUpdateOperationsInputObjectSchema as N
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentStatusFieldUpdateOperationsInputObjectSchema as EnumPaymentStatusFieldUpdateOperationsInputObjectSchema } from './EnumPaymentStatusFieldUpdateOperationsInput.schema';
 import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
-import { EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema as EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentPurposeFieldUpdateOperationsInput.schema'
+import { EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema as EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentPurposeFieldUpdateOperationsInput.schema';
+import { PaymentTypeSchema } from '../enums/PaymentType.schema';
+import { EnumPaymentTypeFieldUpdateOperationsInputObjectSchema as EnumPaymentTypeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentTypeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -28,7 +30,9 @@ const makeSchema = () => z.object({
   vendor_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   acquisition_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   status: z.union([PaymentStatusSchema, z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
-  purpose: z.union([PaymentPurposeSchema, z.lazy(() => EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema)]).optional()
+  purpose: z.union([PaymentPurposeSchema, z.lazy(() => EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  shipment_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  type: z.union([PaymentTypeSchema, z.lazy(() => EnumPaymentTypeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const PaymentUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.PaymentUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUncheckedUpdateInput>;
 export const PaymentUncheckedUpdateInputObjectZodSchema = makeSchema();

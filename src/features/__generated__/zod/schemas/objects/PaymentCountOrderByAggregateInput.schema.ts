@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   vendor_id: SortOrderSchema.optional(),
   acquisition_id: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
-  purpose: SortOrderSchema.optional()
+  purpose: SortOrderSchema.optional(),
+  shipment_id: SortOrderSchema.optional(),
+  type: SortOrderSchema.optional()
 }).strict();
 export const PaymentCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.PaymentCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCountOrderByAggregateInput>;
 export const PaymentCountOrderByAggregateInputObjectZodSchema = makeSchema();

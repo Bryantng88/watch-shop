@@ -23,7 +23,9 @@ export const PaymentFindManySelectSchema: z.ZodType<Prisma.PaymentSelect> = z.ob
     vendor_id: z.boolean().optional(),
     acquisition_id: z.boolean().optional(),
     status: z.boolean().optional(),
-    purpose: z.boolean().optional()
+    purpose: z.boolean().optional(),
+    shipment_id: z.boolean().optional(),
+    type: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PaymentSelect>;
 
 export const PaymentFindManySelectZodSchema = z.object({
@@ -41,7 +43,9 @@ export const PaymentFindManySelectZodSchema = z.object({
     vendor_id: z.boolean().optional(),
     acquisition_id: z.boolean().optional(),
     status: z.boolean().optional(),
-    purpose: z.boolean().optional()
+    purpose: z.boolean().optional(),
+    shipment_id: z.boolean().optional(),
+    type: z.boolean().optional()
   }).strict();
 
 export const PaymentFindManySchema: z.ZodType<Prisma.PaymentFindManyArgs> = z.object({ select: PaymentFindManySelectSchema.optional(),  orderBy: z.union([PaymentOrderByWithRelationInputObjectSchema, PaymentOrderByWithRelationInputObjectSchema.array()]).optional(), where: PaymentWhereInputObjectSchema.optional(), cursor: PaymentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([PaymentScalarFieldEnumSchema, PaymentScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.PaymentFindManyArgs>;

@@ -107,3 +107,30 @@ export async function bulkMarkReady(
         },
     });
 }
+
+export async function updateShipmentStt(id: string, data: Prisma.ShipmentUpdateInput, tx: DB) {
+    const db = dbOrTx(tx);
+    return db.shipment.update({
+        where: { id }, data
+    })
+}
+
+export async function getById(id: string, tx: DB) {
+    const db = dbOrTx(tx);
+    return db.shipment.findUnique({ where: { id } });
+
+}
+
+export async function getByIdWithOrder(id: string, tx: DB) {
+    const db = dbOrTx(tx);
+    return db.shipment.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            refNo: true,
+            status: true,
+            shippingFee: true,
+            orderId: true,
+        },
+    });
+}

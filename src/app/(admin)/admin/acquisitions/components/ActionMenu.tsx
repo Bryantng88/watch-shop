@@ -3,6 +3,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /* ==============================
    TYPES
@@ -21,7 +22,9 @@ export type EntityType =
     | "acquisition"
     | "acquisitions"
     | "invoice"
-    | "invoices";
+    | "invoices"
+    | "shipment"
+    | "shipments";
 
 type ActionConfig = {
     postUrl?: string;
@@ -37,10 +40,13 @@ type ActionConfig = {
 type Props = {
     entityId: string;
     entityType: EntityType;
-    status: string; // DRAFT | POSTED | RESERVED | CANCELLED | ...
+    status: string; // DRAFT | POSTED | RESERVED | CANCELLED | READY | SHIPPED | DELIVERED | ...
     mode?: "view" | "edit";
     className?: string;
     size?: "sm" | "md";
+
+    /** optional: gọi khi action xong (ngoài router.refresh) */
+    onDone?: () => void;
 };
 
 const DEFAULT_ACTIONS: ActionConfig = {
@@ -54,10 +60,13 @@ const DEFAULT_ACTIONS: ActionConfig = {
 ============================== */
 
 // normalize số nhiều → số ít
-function normalizeEntityType(t: EntityType): "order" | "acquisition" | "invoice" {
+function normalizeEntityType(
+    t: EntityType
+): "order" | "acquisition" | "invoice" | "shipment" {
     if (t === "orders") return "order";
     if (t === "acquisitions") return "acquisition";
     if (t === "invoices") return "invoice";
+    if (t === "shipments") return "shipment";
     return t;
 }
 
@@ -88,7 +97,7 @@ function getActions(entityTypeRaw: EntityType, entityId: string, status: string)
                 cancelUrl: `/api/admin/orders/${entityId}/cancel`,
                 viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
 
-                // bạn chỉnh rule ở đây tuỳ nghiệp vụ
+                // rule của bạn
                 canPost: status === "DRAFT" || status === "RESERVED",
                 canEdit: false,
                 canCancel: status === "DRAFT" || status === "RESERVED",
@@ -106,6 +115,18 @@ function getActions(entityTypeRaw: EntityType, entityId: string, status: string)
                 canCancel: status === "DRAFT",
             };
 
+        case "shipment":
+            return {
+                // Single-ready (nếu bạn chưa có, tạo tương tự bulk-ready)
+                postUrl: `/api/admin/shipments/${entityId}/ready`,
+                viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
+
+                // Shipment không có editUrl/cancelUrl trong flow bạn mô tả (tuỳ bạn bật)
+                canPost: status === "DRAFT",
+                canEdit: false,
+                canCancel: false,
+            };
+
         default:
             return DEFAULT_ACTIONS;
     }
@@ -113,6 +134,20 @@ function getActions(entityTypeRaw: EntityType, entityId: string, status: string)
 
 function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
+}
+
+async function postJson(url: string, body?: any) {
+    const res = await fetch(url, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `Request failed: ${res.status}`);
+    }
+    return res;
 }
 
 /* ==============================
@@ -126,24 +161,39 @@ export default function ActionMenuPopover({
     mode = "edit",
     className,
     size = "md",
+    onDone,
 }: Props) {
+    const router = useRouter();
+
     const btnRef = useRef<HTMLButtonElement>(null);
     const popRef = useRef<HTMLDivElement>(null);
 
     const [open, setOpen] = useState(false);
     const [rect, setRect] = useState<Rect | null>(null);
 
-    const actions = useMemo(() => getActions(entityType, entityId, status) ?? DEFAULT_ACTIONS, [
-        entityType,
-        entityId,
-        status,
-    ]);
+    // ===== Shipment modals
+    const [shipModalOpen, setShipModalOpen] = useState(false);
+    const [deliverModalOpen, setDeliverModalOpen] = useState(false);
+    const [shippingFee, setShippingFee] = useState<number>(0);
+    const [saving, setSaving] = useState(false);
+    const [err, setErr] = useState<string | null>(null);
+
+    const actions = useMemo(
+        () => getActions(entityType, entityId, status) ?? DEFAULT_ACTIONS,
+        [entityType, entityId, status]
+    );
+
+    const t = normalizeEntityType(entityType);
+    const viewUrl = actions.viewUrl ?? getAdminDetailUrl(entityType, entityId);
 
     const canPost = mode === "edit" && actions.canPost;
     const canEdit = mode === "edit" && actions.canEdit;
     const canCancel = mode === "edit" && actions.canCancel;
 
-    const viewUrl = actions.viewUrl ?? getAdminDetailUrl(entityType, entityId);
+    // ===== Shipment status helpers
+    const isShipment = t === "shipment";
+    const canMarkShipped = mode === "edit" && isShipment && status === "READY";
+    const canMarkDelivered = mode === "edit" && isShipment && status === "SHIPPED";
 
     /* ==========================
        POSITIONING
@@ -154,28 +204,20 @@ export default function ActionMenuPopover({
         if (!el) return;
 
         const r = el.getBoundingClientRect();
-        const menuW = 180;
+        const menuW = 220; // nhỉnh hơn chút vì thêm actions shipment
         const margin = 8;
 
-        // default: canh phải theo button
         let left = r.right - menuW;
         left = Math.max(margin, Math.min(left, window.innerWidth - menuW - margin));
 
-        // default: xổ xuống
         let top = r.bottom + 6;
 
-        // nếu gần đáy thì xổ lên
-        const estimatedH = 44 * 4; // rough height
+        const estimatedH = 44 * 5; // rough height (tối đa ~5 dòng)
         if (top + estimatedH > window.innerHeight - margin) {
             top = Math.max(margin, r.top - estimatedH - 6);
         }
 
-        setRect({
-            top,
-            left,
-            width: r.width,
-            height: r.height,
-        });
+        setRect({ top, left, width: r.width, height: r.height });
     };
 
     useLayoutEffect(() => {
@@ -217,11 +259,24 @@ export default function ActionMenuPopover({
        ACTION HELPERS
     ========================== */
 
+    const done = () => {
+        setOpen(false);
+        onDone?.();
+        router.refresh();
+    };
+
     const doPost = async () => {
         if (!actions.postUrl) return;
-        await fetch(actions.postUrl, { method: "POST" });
-        setOpen(false);
-        location.reload();
+        setErr(null);
+        setSaving(true);
+        try {
+            await postJson(actions.postUrl);
+            done();
+        } catch (e: any) {
+            setErr(e?.message || "Duyệt thất bại");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const doCancel = async () => {
@@ -229,14 +284,146 @@ export default function ActionMenuPopover({
         const ok = confirm("Bạn có chắc muốn hủy?");
         if (!ok) return;
 
-        await fetch(actions.cancelUrl, { method: "POST" });
+        setErr(null);
+        setSaving(true);
+        try {
+            await postJson(actions.cancelUrl);
+            done();
+        } catch (e: any) {
+            setErr(e?.message || "Huỷ thất bại");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Shipment: READY -> SHIPPED (nhập phí ship)
+    const openShipModal = () => {
+        setErr(null);
         setOpen(false);
-        location.reload();
+        setShippingFee(0);
+        setShipModalOpen(true);
+    };
+
+    const submitShip = async () => {
+        setErr(null);
+        const fee = Number(shippingFee);
+        if (Number.isNaN(fee) || fee < 0) {
+            setErr("Phí ship không hợp lệ");
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await postJson(`/api/admin/shipments/${entityId}/ship`, { shippingFee: fee });
+            setShipModalOpen(false);
+            done();
+        } catch (e: any) {
+            setErr(e?.message || "Chuyển SHIPPED thất bại");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Shipment: SHIPPED -> DELIVERED (tạo payment + đổi order + product ở backend)
+    const openDeliverModal = () => {
+        setErr(null);
+        setOpen(false);
+        setDeliverModalOpen(true);
+    };
+
+    const submitDeliver = async () => {
+        setErr(null);
+        setSaving(true);
+        try {
+            await postJson(`/api/admin/shipments/${entityId}/deliver`, {});
+            setDeliverModalOpen(false);
+            done();
+        } catch (e: any) {
+            setErr(e?.message || "Chuyển DELIVERED thất bại");
+        } finally {
+            setSaving(false);
+        }
     };
 
     /* ==========================
        UI
     ========================== */
+
+    const menu = (
+        <div
+            ref={popRef}
+            style={{
+                position: "fixed",
+                top: rect?.top ?? 0,
+                left: rect?.left ?? 0,
+                width: 220,
+                zIndex: 10000,
+            }}
+            className="rounded-lg border bg-white shadow-xl overflow-hidden"
+        >
+            <div className="py-1 text-sm">
+                {/* POST */}
+                {canPost && actions.postUrl && (
+                    <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
+                        onClick={doPost}
+                        type="button"
+                        disabled={saving}
+                    >
+                        Duyệt
+                    </button>
+                )}
+
+                {/* Shipment: READY -> SHIPPED */}
+                {canMarkShipped && (
+                    <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
+                        onClick={openShipModal}
+                        type="button"
+                        disabled={saving}
+                    >
+                        Chuyển sang SHIPPED…
+                    </button>
+                )}
+
+                {/* Shipment: SHIPPED -> DELIVERED */}
+                {canMarkDelivered && (
+                    <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
+                        onClick={openDeliverModal}
+                        type="button"
+                        disabled={saving}
+                    >
+                        Xác nhận DELIVERED
+                    </button>
+                )}
+
+                {/* EDIT */}
+                {canEdit && actions.editUrl && (
+                    <Link className="block px-3 py-2 hover:bg-gray-50" href={actions.editUrl}>
+                        Sửa
+                    </Link>
+                )}
+
+                {/* VIEW */}
+                <Link className="block px-3 py-2 hover:bg-gray-50" href={viewUrl}>
+                    Xem chi tiết
+                </Link>
+
+                {/* CANCEL */}
+                {canCancel && actions.cancelUrl && (
+                    <button
+                        className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        onClick={doCancel}
+                        type="button"
+                        disabled={saving}
+                    >
+                        Hủy
+                    </button>
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <>
@@ -254,54 +441,93 @@ export default function ActionMenuPopover({
                 ⋮
             </button>
 
-            {open &&
-                rect &&
+            {open && rect && createPortal(menu, document.body)}
+
+            {/* ===== Modal READY -> SHIPPED */}
+            {shipModalOpen &&
                 createPortal(
-                    <div
-                        ref={popRef}
-                        style={{
-                            position: "fixed",
-                            top: rect.top,
-                            left: rect.left,
-                            width: 180,
-                            zIndex: 10000,
-                        }}
-                        className="rounded-lg border bg-white shadow-xl overflow-hidden"
-                    >
-                        <div className="py-1 text-sm">
-                            {/* POST */}
-                            {canPost && actions.postUrl && (
+                    <div className="fixed inset-0 z-[10001] bg-black/30 flex items-center justify-center">
+                        <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
+                            <h3 className="font-semibold text-lg">Chuyển shipment sang SHIPPED</h3>
+
+                            <div className="text-sm text-gray-600">
+                                Nhập <b>phí giao hàng</b> để cập nhật vào shipment.
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-600">Phí ship (VND)</label>
+                                <input
+                                    className="h-9 w-full rounded border px-2"
+                                    type="number"
+                                    min={0}
+                                    value={shippingFee}
+                                    onChange={(e) => setShippingFee(Number(e.target.value))}
+                                />
+                            </div>
+
+                            {err ? <div className="text-sm text-red-600">{err}</div> : null}
+
+                            <div className="flex justify-end gap-2 pt-2">
                                 <button
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                                    onClick={doPost}
+                                    className="px-3 py-1 border rounded"
+                                    onClick={() => setShipModalOpen(false)}
                                     type="button"
+                                    disabled={saving}
                                 >
-                                    Duyệt
+                                    Huỷ
                                 </button>
-                            )}
 
-                            {/* EDIT */}
-                            {canEdit && actions.editUrl && (
-                                <Link className="block px-3 py-2 hover:bg-gray-50" href={actions.editUrl}>
-                                    Sửa
-                                </Link>
-                            )}
-
-                            {/* VIEW */}
-                            <Link className="block px-3 py-2 hover:bg-gray-50" href={viewUrl}>
-                                Xem chi tiết
-                            </Link>
-
-                            {/* CANCEL */}
-                            {canCancel && actions.cancelUrl && (
                                 <button
-                                    className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                                    onClick={doCancel}
+                                    className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60"
+                                    onClick={submitShip}
                                     type="button"
+                                    disabled={saving}
                                 >
-                                    Hủy
+                                    {saving ? "Đang lưu..." : "Xác nhận"}
                                 </button>
-                            )}
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+            {/* ===== Modal SHIPPED -> DELIVERED */}
+            {deliverModalOpen &&
+                createPortal(
+                    <div className="fixed inset-0 z-[10001] bg-black/30 flex items-center justify-center">
+                        <div className="bg-white rounded-lg w-[440px] p-5 space-y-4">
+                            <h3 className="font-semibold text-lg">Xác nhận DELIVERED</h3>
+
+                            <div className="text-sm text-gray-600">
+                                Hệ thống sẽ:
+                                <ul className="list-disc pl-5 mt-2 space-y-1">
+                                    <li>Chuyển shipment sang <b>DELIVERED</b></li>
+                                    <li>Tạo payment cho <b>phí ship</b></li>
+                                    <li>Chuyển trạng thái <b>order</b> và <b>sản phẩm</b></li>
+                                </ul>
+                            </div>
+
+                            {err ? <div className="text-sm text-red-600">{err}</div> : null}
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    className="px-3 py-1 border rounded"
+                                    onClick={() => setDeliverModalOpen(false)}
+                                    type="button"
+                                    disabled={saving}
+                                >
+                                    Huỷ
+                                </button>
+
+                                <button
+                                    className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-60"
+                                    onClick={submitDeliver}
+                                    type="button"
+                                    disabled={saving}
+                                >
+                                    {saving ? "Đang xử lý..." : "Xác nhận giao thành công"}
+                                </button>
+                            </div>
                         </div>
                     </div>,
                     document.body

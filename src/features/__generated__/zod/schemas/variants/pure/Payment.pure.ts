@@ -4,6 +4,7 @@ import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
 import { paymentdirectionSchema } from '../../enums/paymentdirection.schema';
 import { PaymentStatusSchema } from '../../enums/PaymentStatus.schema';
 import { PaymentPurposeSchema } from '../../enums/PaymentPurpose.schema';
+import { PaymentTypeSchema } from '../../enums/PaymentType.schema';
 // prettier-ignore
 export const PaymentModelSchema = z.object({
     id: z.string(),
@@ -20,7 +21,9 @@ export const PaymentModelSchema = z.object({
     vendor_id: z.string().nullable(),
     acquisition_id: z.string().nullable(),
     status: PaymentStatusSchema,
-    purpose: PaymentPurposeSchema
+    purpose: PaymentPurposeSchema,
+    shipment_id: z.string().nullable(),
+    type: PaymentTypeSchema
 }).strict();
 
 export type PaymentPureType = z.infer<typeof PaymentModelSchema>;

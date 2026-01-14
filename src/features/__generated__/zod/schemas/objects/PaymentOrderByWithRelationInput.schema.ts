@@ -18,7 +18,9 @@ const makeSchema = () => z.object({
   vendor_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   acquisition_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   status: SortOrderSchema.optional(),
-  purpose: SortOrderSchema.optional()
+  purpose: SortOrderSchema.optional(),
+  shipment_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  type: SortOrderSchema.optional()
 }).strict();
 export const PaymentOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.PaymentOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentOrderByWithRelationInput>;
 export const PaymentOrderByWithRelationInputObjectZodSchema = makeSchema();

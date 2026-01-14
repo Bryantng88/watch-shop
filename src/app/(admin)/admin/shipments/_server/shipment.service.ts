@@ -2,6 +2,10 @@
 import { Prisma, shipmentstatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import * as shipmentRepo from "./shipment.repo";
+import * as paymentRepo from "../../payments/_server/payment.repo"
+import * as orderRepo from "../../orders/_servers/order.repo"
+import * as productRepo from "../../products/_server/product.repo"
+
 import { ShipmentSearchInput } from "./shipment.type";
 
 export async function getAdminShipmentList(input: ShipmentSearchInput) {
@@ -149,5 +153,81 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
             updated: result.count,
             shipmentIds,
         };
+    });
+}
+
+
+export async function markShipmentShipped(input: { shipmentId: string; shippingFee: number }) {
+    const { shipmentId, shippingFee } = input;
+
+    await prisma.$transaction(async (tx) => {
+        const s = await shipmentRepo.getById(shipmentId, tx);
+        if (!s) throw new Error("Shipment not found");
+
+        if (s.status !== "READY") {
+            throw new Error(`Shipment must be READY to mark SHIPPED (current=${s.status})`);
+        }
+
+        await shipmentRepo.updateShipmentStt(shipmentId, {
+            status: "SHIPPED",
+            shippingFee,
+            shippedAt: new Date(),
+        }, tx);
+    });
+}
+
+export async function markShipmentDelivered(input: { shipmentId: string }) {
+    const { shipmentId } = input;
+
+    await prisma.$transaction(async (tx) => {
+        const s = await shipmentRepo.getByIdWithOrder(shipmentId, tx);
+        if (!s) throw new Error("Shipment not found");
+
+        if (s.status !== "SHIPPED") {
+            throw new Error(`Shipment must be SHIPPED to mark DELIVERED (current=${s.status})`);
+        }
+
+        // 1) create payment shipping fee (idempotent)
+        const fee = Number(s.shippingFee ?? 0);
+        if (fee > 0) {
+            const existed = await paymentRepo.findShippingFeePaymentByShipmentId(shipmentId, tx);
+            if (!existed) {
+                await paymentRepo.createShippingFeePayment(
+                    {
+                        shipmentId,
+                        orderId: s.orderId ?? null,
+                        amount: fee,
+                        currency: "VND",
+                        method: "CASH", // tuỳ bạn
+                        status: "PAID", // hoặc PENDING
+                        note: `Shipping fee for shipment ${s.refNo ?? s.id}`,
+                    },
+                    tx
+                );
+            }
+        }
+
+        // 2) update shipment status
+        await shipmentRepo.updateShipmentStt(
+            shipmentId,
+            {
+                status: "DELIVERED",
+                deliveredAt: new Date(),
+            },
+            tx
+        );
+
+        // 3) update order status (tuỳ enum bạn)
+        if (s.orderId) {
+            // bạn nói “chuyển order status sang SHIPPED” khi delivered
+            await orderRepo.updateStatus(s.orderId, "SHIPPED", tx);
+
+            // 4) update products of that order
+            // tuỳ cấu trúc: nếu order có orderItems, map productIds rồi update.
+            const productIds = await orderRepo.getProductIdsOfOrder(s.orderId, tx);
+            if (productIds.length) {
+                await productRepo.markProductsShippedOrDelivered(productIds, "SHIPPED", tx);
+            }
+        }
     });
 }

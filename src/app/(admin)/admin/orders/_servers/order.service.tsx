@@ -8,7 +8,7 @@ import { PaymentMethod, Prisma, orderitemkind, ReserveType, OrderStatus, OrderSo
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
-import * as shipmentService from "../../shipment/_server/shipment.service";
+import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
 
 /* ================================
@@ -47,7 +47,6 @@ export type CreateOrderInput = {
   shipDistrict: string;
   shipWard: string;
   paymentMethod: PaymentMethod;
-  hasShipment: boolean;
   notes: string | null;
   orderDate: Date;
   status: OrderStatus;
@@ -246,7 +245,6 @@ export async function createOrderWithItems(raw: any) {
       }
       : null,
     status: raw.status as OrderStatus,
-    hasShipment: raw.hasShipment,
     shipAddress: raw.shipAddress ?? null,
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
@@ -271,7 +269,7 @@ export async function createOrderWithItems(raw: any) {
       taxRate: i.taxRate ?? null,
     })),
   };
-  console.log('in ra test order service 274: ' + raw.hasShipment)
+
   return prisma.$transaction(async (tx) => {
     /* =====================================================
      * 1️⃣ Resolve CUSTOMER
@@ -307,7 +305,6 @@ export async function createOrderWithItems(raw: any) {
       shipDistrict: input.shipDistrict,
       shipWard: input.shipWard,
       paymentMethod: input.paymentMethod!,
-      hasShipment: input.hasShipment,
       notes: input.notes,
       createdAt: input.orderDate,
       status: input.status,
@@ -366,6 +363,7 @@ export async function createOrderWithItems(raw: any) {
 
 export async function getOrderDetail(id: string) {
   return orderRepo.getOrderDetail(id, prisma);
+
 }
 
 // order-post.service.ts

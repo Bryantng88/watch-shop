@@ -14,5 +14,7 @@ export const PaymentDeleteResultSchema = z.nullable(z.object({
   vendor_id: z.string().optional(),
   acquisition_id: z.string().optional(),
   status: z.unknown(),
-  purpose: z.unknown()
+  purpose: z.unknown(),
+  shipment_id: z.string().optional(),
+  type: z.unknown()
 }));

@@ -17,7 +17,9 @@ const makeSchema = () => z.object({
   vendor_id: z.literal(true).optional(),
   acquisition_id: z.literal(true).optional(),
   status: z.literal(true).optional(),
-  purpose: z.literal(true).optional()
+  purpose: z.literal(true).optional(),
+  shipment_id: z.literal(true).optional(),
+  type: z.literal(true).optional()
 }).strict();
 export const PaymentMaxAggregateInputObjectSchema: z.ZodType<Prisma.PaymentMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PaymentMaxAggregateInputType>;
 export const PaymentMaxAggregateInputObjectZodSchema = makeSchema();

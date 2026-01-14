@@ -1,6 +1,6 @@
 
 import { DB, dbOrTx, prisma } from "@/server/db/client";
-import { ProductType, Prisma, AvailabilityStatus } from "@prisma/client";
+import { ProductType, Prisma, AvailabilityStatus, ContentStatus } from "@prisma/client";
 import * as helper from "./helper";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -225,3 +225,11 @@ export async function updateProductVariantStt(
     return result.count;
 }
 
+export async function markProductsShippedOrDelivered(productIds: string[], status: ContentStatus, tx: DB) {
+    // Tuỳ schema product status
+    const db = dbOrTx(tx);
+    return db.product.updateMany({
+        where: { id: { in: productIds } },
+        data: { contentStatus: status as any },
+    });
+}

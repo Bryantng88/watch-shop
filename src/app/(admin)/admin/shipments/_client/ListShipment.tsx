@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ActionMenu from "../../acquisitions/components/ActionMenu";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 
 /* ==============================
  * Types
  * ============================== */
-type shipmenttatus = "DRAFT" | "READY" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+type ShipmentStatus = "DRAFT" | "READY" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
 type ShipmentRow = {
     id: string;
     refNo: string | null;
-    status: shipmenttatus;
+    status: ShipmentStatus;
     createdAt: string;
 
     orderId?: string | null;
@@ -63,7 +63,7 @@ function Badge({
     return <span className={cls(base, toneCls)}>{children}</span>;
 }
 
-function statusTone(status: shipmenttatus) {
+function statusTone(status: ShipmentStatus) {
     switch (status) {
         case "DRAFT":
             return "gray";
@@ -129,12 +129,9 @@ function matchesView(s: ShipmentRow, view: ViewKey) {
     }
 }
 
-/**
- * ✅ FIX: chỉ giữ các query hợp lệ để tránh "status=resolved_model&_debugChunk=..."
- * (Những query rác này xuất hiện khi runtime error/overlay)
- */
-const ALLOWED_KEYS = new Set(["q", "page", "pageSize", "view"]);
-
+/* ==============================
+ * Component
+ * ============================== */
 export default function ShipmentListClient({
     items,
     total,
@@ -145,49 +142,18 @@ export default function ShipmentListClient({
 }: PageProps) {
     const router = useRouter();
 
-    /** ==========================
-     * ✅ Build URLSearchParams từ rawSearchParams (whitelist)
-     * ========================== */
+    // ✅ FIX: đọc view từ URL hiện tại giống Order
+    const sp = useSearchParams();
+
     const url = useMemo(() => {
-        const u = new URLSearchParams();
-
-        Object.entries(rawSearchParams || {}).forEach(([k, v]) => {
-            if (!ALLOWED_KEYS.has(k)) return; // ✅ bỏ query debug
-            if (v == null) return;
-
-            if (Array.isArray(v)) v.forEach((x) => u.append(k, String(x)));
-            else u.set(k, String(v));
-        });
-
-        return u;
-    }, [rawSearchParams]);
-
-    /** ==========================
-     * ✅ Auto-clean URL nếu đang dính query rác
-     * ========================== */
-    useEffect(() => {
-        const keys = Object.keys(rawSearchParams || {});
-        const hasInvalid = keys.some((k) => !ALLOWED_KEYS.has(k));
-        if (!hasInvalid) return;
-
-        const cleaned = new URLSearchParams();
-        for (const k of ["q", "page", "pageSize", "view"] as const) {
-            const v = rawSearchParams?.[k];
-            if (v == null) continue;
-            if (Array.isArray(v)) v.forEach((x) => cleaned.append(k, String(x)));
-            else cleaned.set(k, String(v));
-        }
-
-        const qs = cleaned.toString();
-        router.replace(qs ? `/admin/shipment?${qs}` : "/admin/shipment");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rawSearchParams]);
+        return new URLSearchParams(sp.toString());
+    }, [sp]);
 
     const currentView = useMemo(() => {
-        return (((rawSearchParams?.view as string) || "all") as ViewKey);
-    }, [rawSearchParams?.view]);
+        return ((sp.get("view") || "all") as ViewKey);
+    }, [sp]);
 
-    // local rows (smooth UI)
+    // local rows for smooth UI
     const [rows, setRows] = useState<ShipmentRow[]>(items);
     useEffect(() => setRows(items), [items]);
 
@@ -216,31 +182,26 @@ export default function ShipmentListClient({
         next.set("page", "1");
         next.set("pageSize", String(pageSize));
 
-        return `/admin/shipment?${next.toString()}`;
+        return `/admin/shipments?${next.toString()}`;
     };
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(url);
         next.set("page", String(p));
         next.set("pageSize", String(pageSize));
-        return `/admin/shipment?${next.toString()}`;
+        return `/admin/shipments?${next.toString()}`;
     };
 
-    /**
-     * ✅ TABS: tương thích `SegmenTabs` kiểu Order (nhiều dự án dùng hrefFor)
-     * - Nếu SegmenTabs của bạn nhận `tabs` và `hrefFor`, thì OK.
-     * - Nếu SegmenTabs nhận mỗi `tabs` có `href`, cũng OK vì ta có thể pass thêm field.
-     */
     const tabs = (Object.keys(VIEW_LABELS) as ViewKey[]).map((k) => ({
         key: k,
         label: VIEW_LABELS[k],
         count: countsByView[k],
+        href: setViewHref(k),
         active: currentView === k,
-        href: setViewHref(k), // (fallback nếu SegmenTabs dùng href)
     }));
 
     /** ==========================
-     * BULK (y như Order)
+     * BULK states (y như Order)
      * ========================== */
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
@@ -284,7 +245,7 @@ export default function ShipmentListClient({
 
         setBulkSaving(true);
         try {
-            const res = await fetch("/api/admin/shipment/bulk-ready", {
+            const res = await fetch("/api/admin/shipments/bulk-ready", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ shipmentIds: selectedIds }),
@@ -314,30 +275,31 @@ export default function ShipmentListClient({
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-semibold">Shipment</h1>
-                    <div className="mt-1 text-sm text-gray-600">Danh sách shipment được tạo từ đơn hàng</div>
+                    <div className="mt-1 text-sm text-gray-600">
+                        Danh sách shipment được tạo từ đơn hàng
+                    </div>
                 </div>
 
-                <Link href="/admin/orders" className="rounded-md border px-3 py-2 hover:bg-gray-50 text-sm">
+                <Link
+                    href="/admin/orders"
+                    className="rounded-md border px-3 py-2 hover:bg-gray-50 text-sm"
+                >
                     ← Quay lại Order
                 </Link>
             </div>
 
             {/* ✅ TABS dùng chung */}
-            <SegmentTabs
-                tabs={tabs}
-            // ✅ nếu SegmenTabs của bạn dùng hrefFor(t.key)
-            // hrefFor={(key: string) => setViewHref(key as ViewKey)}
-            />
+            <SegmentTabs tabs={tabs} />
 
             {/* FILTER FORM */}
-            <form action="/admin/shipment" method="get" className="flex flex-wrap gap-2 items-end">
+            <form action="/admin/shipments" method="get" className="flex flex-wrap gap-2 items-end">
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
 
                 <div className="flex flex-col">
                     <label className="text-xs text-gray-600">Tìm kiếm</label>
                     <input
                         name="q"
-                        defaultValue={(rawSearchParams.q as string) ?? ""}
+                        defaultValue={sp.get("q") ?? ""}
                         placeholder="RefNo, tên KH, số ĐT…"
                         className="h-9 rounded border px-2"
                     />
@@ -356,7 +318,7 @@ export default function ShipmentListClient({
                     <button className="h-9 rounded border px-3" type="submit">
                         Lọc
                     </button>
-                    <Link href="/admin/shipment" className="h-9 rounded border px-3 flex items-center">
+                    <Link href="/admin/shipments" className="h-9 rounded border px-3 flex items-center">
                         Clear
                     </Link>
                 </div>
@@ -372,7 +334,7 @@ export default function ShipmentListClient({
                         onClick={() => setShowBulkConfirm(true)}
                         type="button"
                     >
-                        Duyệt shipment đã chọn (→ READY)
+                        Duyệt shipments đã chọn (→ READY)
                     </button>
 
                     <button
@@ -504,12 +466,10 @@ export default function ShipmentListClient({
                                             <Badge tone={statusTone(s.status)}>{s.status}</Badge>
                                         </td>
 
-                                        <td className="px-3 py-2 text-right text-xs text-gray-500">
-                                            {fmtDate(s.createdAt)}
-                                        </td>
+                                        <td className="px-3 py-2 text-right text-xs text-gray-500">{fmtDate(s.createdAt)}</td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            <ActionMenu entityId={s.id} entityType="shipment" status={s.status} mode="edit" />
+                                            <ActionMenu entityId={s.id} entityType="shipments" status={s.status} mode="edit" />
                                         </td>
                                     </tr>
                                 );
