@@ -68,36 +68,54 @@ function fmtMoney(n?: number | null, cur = "VND") {
 /** =====================
  * Tabs / Segments
  * ===================== */
-type ViewKey = "all" | "web_pending" | "need_action" | "processing" | "cancelled";
+type ViewKey =
+    | "all"
+    | "web_pending"
+    | "need_action"
+    | "processing"
+    | "delivered"
+    | "completed"
+    | "cancelled";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
     web_pending: "Chờ xác minh",
     need_action: "Chờ duyệt",
     processing: "Đang xử lý",
+    delivered: "Đã giao",
+    completed: "Hoàn thành",
     cancelled: "Đã hủy",
 };
-
 function matchesView(o: OrderItem, view: ViewKey) {
     switch (view) {
         case "web_pending":
             return o.source === "WEB" && o.verificationStatus === "PENDING";
+
         case "need_action":
-            // workflow bạn có thể sửa lại
             return o.status === "DRAFT" || o.status === "RESERVED";
+
         case "processing":
             return o.status === "POSTED";
+
+        case "delivered":
+            return o.status === "SHIPPED";
+
+        case "completed":
+            return o.status === "COMPLETED";
+
         case "cancelled":
             return (
                 o.status === "CANCELLED" ||
                 o.verificationStatus === "REJECTED" ||
                 o.verificationStatus === "EXPIRED"
             );
+
         case "all":
         default:
             return true;
     }
 }
+
 
 export default function OrderListPageClient({
     items,
@@ -149,12 +167,21 @@ export default function OrderListPageClient({
     const countsByView: Record<ViewKey, number> = useMemo(
         () => ({
             all: items.length,
+
             web_pending: items.filter(
                 (o) => o.source === "WEB" && o.verificationStatus === "PENDING"
             ).length,
-            need_action: items.filter((o) => o.status === "DRAFT" || o.status === "RESERVED")
-                .length,
+
+            need_action: items.filter(
+                (o) => o.status === "DRAFT" || o.status === "RESERVED"
+            ).length,
+
             processing: items.filter((o) => o.status === "POSTED").length,
+
+            delivered: items.filter((o) => o.status === "SHIPPED").length,
+
+            completed: items.filter((o) => o.status === "COMPLETED").length,
+
             cancelled: items.filter(
                 (o) =>
                     o.status === "CANCELLED" ||
@@ -164,6 +191,7 @@ export default function OrderListPageClient({
         }),
         [items]
     );
+
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(url);

@@ -18,6 +18,7 @@ export const ShipmentAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     status: z.number(),
     refNo: z.number(),
+    orderRefNo: z.number(),
     Order: z.number()
   }).optional(),
   _sum: z.object({
@@ -43,7 +44,8 @@ export const ShipmentAggregateResultSchema = z.object({  _count: z.object({
     notes: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    orderRefNo: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -62,5 +64,6 @@ export const ShipmentAggregateResultSchema = z.object({  _count: z.object({
     notes: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    orderRefNo: z.string().nullable()
   }).nullable().optional()});

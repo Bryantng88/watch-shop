@@ -225,11 +225,22 @@ export async function updateProductVariantStt(
     return result.count;
 }
 
-export async function markProductsShippedOrDelivered(productIds: string[], status: ContentStatus, tx: DB) {
+export async function markProductsShippedOrDelivered(
     // Tuỳ schema product status
+    productIds: string[],
+    status: AvailabilityStatus,
+    tx: DB
+) {
     const db = dbOrTx(tx);
-    return db.product.updateMany({
-        where: { id: { in: productIds } },
-        data: { contentStatus: status as any },
+
+    if (!productIds?.length) return { count: 0 };
+
+    return db.productVariant.updateMany({
+        where: {
+            productId: { in: productIds },
+        },
+        data: {
+            availabilityStatus: status,
+        },
     });
 }

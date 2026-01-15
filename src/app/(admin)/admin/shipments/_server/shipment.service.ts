@@ -7,6 +7,77 @@ import * as orderRepo from "../../orders/_servers/order.repo"
 import * as productRepo from "../../products/_server/product.repo"
 
 import { ShipmentSearchInput } from "./shipment.type";
+export type OrderForShipment = {
+    id: string;
+    refNo: string | null;
+    customerName: string | null;
+    shipPhone: string | null;
+    shipAddress: string | null;
+    shipCity?: string | null;
+    shipDistrict?: string | null;
+    shipWard?: string | null;
+};
+
+export async function createFromOrderTx(
+    tx: Prisma.TransactionClient,
+    order: OrderForShipment
+) {
+    if (!order?.id) throw new Error("Missing order.id");
+
+    // tránh tạo trùng (do orderId unique ở Shipment)
+    const existed = await tx.shipment.findUnique({
+        where: { orderId: order.id },
+        select: { id: true },
+    });
+
+    if (existed) {
+        throw new Error("Order đã có shipment");
+    }
+
+    return tx.shipment.create({
+        data: {
+            orderId: order.id,
+            orderRefNo: order.refNo ?? null,
+
+            customerName: order.customerName ?? "",
+            shipPhone: order.shipPhone ?? "",
+            shipAddress: order.shipAddress ?? "",
+
+            shipCity: order.shipCity ?? null,
+            shipDistrict: order.shipDistrict ?? null,
+            shipWard: order.shipWard ?? null,
+
+            status: "DRAFT",
+            shippingFee: 0,
+        },
+    });
+}
+
+/**
+ * Wrapper nếu bạn vẫn muốn call kiểu truyền orderId từ chỗ khác
+ * (nhưng trong post order thì KHÔNG dùng wrapper này)
+ */
+export async function createFromOrder(orderId: string) {
+    return prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+            where: { id: orderId },
+            select: {
+                id: true,
+                refNo: true,
+                customerName: true,
+                shipPhone: true,
+                shipAddress: true,
+                shipCity: true,
+                shipDistrict: true,
+                shipWard: true,
+            },
+        });
+
+        if (!order) throw new Error("Order không tồn tại");
+
+        return createFromOrderTx(tx, order);
+    });
+}
 
 export async function getAdminShipmentList(input: ShipmentSearchInput) {
     const { page, pageSize, q, status } = input;
@@ -70,48 +141,6 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
     }));
 
     return { items, total, page, pageSize };
-}
-
-export async function createFromOrder(orderId: string) {
-    // 1) lấy order để copy info
-    const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        select: {
-            id: true,
-            refNo: true,
-            customerName: true,
-            shipPhone: true,
-            shipAddress: true,
-            shipCity: true,
-            shipDistrict: true,
-            shipWard: true,
-            //currency: true,
-            // tuỳ schema order của bạn
-            // shippingFee: true,
-        },
-    });
-
-    if (!order) throw new Error("Order không tồn tại");
-
-    // 2) tạo shipment (nếu cần chặn trùng do orderId unique)
-    //    nếu bạn muốn: check trước để tránh crash unique constraint
-    const existed = await prisma.shipment.findUnique({
-        where: { orderId: orderId },
-        select: { id: true },
-    });
-    if (existed) {
-        throw new Error("Order đã có shipment");
-    }
-
-    // 3) tạo
-    return shipmentRepo.createShipment(prisma as any, {
-        orderId: orderId,
-        shipPhone: order.shipPhone ?? null,
-        shipAddress: order.shipAddress ?? null,
-        shipCity: order.shipCity ?? null,
-        shipDistrict: order.shipDistrict ?? null,
-        shipWard: order.shipWard ?? null,
-    });
 }
 
 
@@ -224,10 +253,7 @@ export async function markShipmentDelivered(input: { shipmentId: string }) {
 
             // 4) update products of that order
             // tuỳ cấu trúc: nếu order có orderItems, map productIds rồi update.
-            const productIds = await orderRepo.getProductIdsOfOrder(s.orderId, tx);
-            if (productIds.length) {
-                await productRepo.markProductsShippedOrDelivered(productIds, "SHIPPED", tx);
-            }
+
         }
     });
 }

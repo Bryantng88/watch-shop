@@ -28,6 +28,7 @@ export const ShipmentFindManySelectSchema: z.ZodType<Prisma.ShipmentSelect> = z.
     updatedAt: z.boolean().optional(),
     status: z.boolean().optional(),
     refNo: z.boolean().optional(),
+    orderRefNo: z.boolean().optional(),
     Order: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ShipmentSelect>;
 
@@ -50,6 +51,7 @@ export const ShipmentFindManySelectZodSchema = z.object({
     updatedAt: z.boolean().optional(),
     status: z.boolean().optional(),
     refNo: z.boolean().optional(),
+    orderRefNo: z.boolean().optional(),
     Order: z.boolean().optional()
   }).strict();
 

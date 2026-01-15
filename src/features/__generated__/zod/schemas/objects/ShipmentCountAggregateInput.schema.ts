@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   updatedAt: z.literal(true).optional(),
   status: z.literal(true).optional(),
   refNo: z.literal(true).optional(),
+  orderRefNo: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ShipmentCountAggregateInputObjectSchema: z.ZodType<Prisma.ShipmentCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCountAggregateInputType>;

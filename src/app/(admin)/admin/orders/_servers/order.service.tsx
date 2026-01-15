@@ -366,40 +366,66 @@ export async function getOrderDetail(id: string) {
 
 }
 
-// order-post.service.ts
-export async function postOrders(
-  orderIds: string[],
+export async function postOneOrderTx(
+  tx: Prisma.TransactionClient,
+  orderId: string,
   hasShipment: boolean
 ) {
+  const order = await orderRepo.getOrderForPost(tx, orderId);
+  if (!order) throw new Error("Order not found");
+
+  if (order.status !== OrderStatus.DRAFT) {
+    throw new Error(`Order status must be DRAFT. Current: ${order.status}`);
+  }
+
+  await orderRepo.markPosted(tx, order.id, hasShipment);
+
+  await paymentService.createPaymentsForOrder(tx, order);
+
+  if (hasShipment) {
+    // ✅ FIX: truyền order object, không truyền id
+    await shipmentService.createFromOrderTx(tx, {
+      id: order.id,
+      refNo: order.refNo,
+      customerName: order.customerName,
+      shipPhone: order.shipPhone,
+      shipAddress: order.shipAddress,
+      shipCity: (order as any).shipCity ?? null,
+      shipDistrict: (order as any).shipDistrict ?? null,
+      shipWard: (order as any).shipWard ?? null,
+    });
+  }
+
+  if (order.items.some((i: any) => i.kind === "SERVICE")) {
+    await serviceReqtService.createFromOrder(tx, order);
+  }
+
+  return { id: order.id, status: "POSTED" as const };
+}
+
+// 2) Wrapper: gọi cho trường hợp post 1 đơn lẻ (API /orders/[id]/post)
+export async function postOneOrder(orderId: string, hasShipment: boolean) {
+  return prisma.$transaction((tx) => postOneOrderTx(tx, orderId, hasShipment));
+}
+
+// order-post.service.ts
+export async function postOrders(orderIds: string[], hasShipment: boolean) {
   return prisma.$transaction(async (tx) => {
     const orders = await orderRepo.getOrdersForPost(tx, orderIds);
-    if (!orders.length) {
-      throw new Error("No orders found");
+    if (!orders.length) throw new Error("No orders found");
+
+    let posted = 0;
+
+    for (const o of orders) {
+      // bulk -> bạn muốn “skip” những cái không DRAFT thì keep continue
+      if (o.status !== OrderStatus.DRAFT) continue;
+
+      // ✅ gọi core tx handler cho gọn
+      await postOneOrderTx(tx, o.id, hasShipment);
+      posted++;
     }
 
-    for (const order of orders) {
-      console.log('service order test : ' + order.status)
-
-      if (order.status !== OrderStatus.DRAFT) continue;
-
-      // 1. mark posted
-      await orderRepo.markPosted(tx, order.id, hasShipment);
-      await paymentService.createPaymentsForOrder(tx, order);
-      // 2. shipment
-      if (hasShipment) {
-        await shipmentService.createFromOrder(tx, order);
-      }
-
-      // 3. service request
-      if (order.items.some(i => i.kind === "SERVICE")) {
-        await serviceReqtService.createFromOrder(tx, order);
-      }
-
-      // 4. inventory (sau)
-      // await productRepo.markVariantsSold(tx, order.items);
-    }
-
-    return { count: orders.length };
+    return { count: posted };
   });
 }
 

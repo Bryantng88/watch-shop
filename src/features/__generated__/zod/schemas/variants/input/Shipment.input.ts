@@ -21,6 +21,7 @@ export const ShipmentInputSchema = z.object({
     updatedAt: z.date(),
     status: shipmentstatusSchema,
     refNo: z.string().optional().nullable(),
+    orderRefNo: z.string().optional().nullable(),
     Order: z.unknown()
 }).strict();
 

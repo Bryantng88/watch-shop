@@ -19,7 +19,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   status: shipmentstatusSchema.optional(),
-  refNo: z.string().optional().nullable()
+  refNo: z.string().optional().nullable(),
+  orderRefNo: z.string().optional().nullable()
 }).strict();
 export const ShipmentCreateWithoutOrderInputObjectSchema: z.ZodType<Prisma.ShipmentCreateWithoutOrderInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCreateWithoutOrderInput>;
 export const ShipmentCreateWithoutOrderInputObjectZodSchema = makeSchema();
