@@ -32,6 +32,7 @@ export default async function OrderListPage({
 
     const { items, total, page, pageSize } = await getAdminOrderList(input);
 
+
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
 

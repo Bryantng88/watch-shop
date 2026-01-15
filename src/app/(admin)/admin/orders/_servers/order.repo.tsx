@@ -1,6 +1,8 @@
 import { DB, dbOrTx } from "@/server/db/client";
 import { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
+import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
+
 /* ================================
    TYPES
 ================================ */
@@ -87,6 +89,7 @@ export async function getOrdList(
                 subtotal: true,
                 source: true,
                 verificationStatus: true,
+                hasShipment: true,
                 //orderDate: true,
                 createdAt: true,
                 updatedAt: true,
@@ -159,7 +162,8 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
 export async function createOrderItems(
     tx: DB,
     orderId: string,
-    items: CreateOrderItemRow[]
+    items: CreateOrderItemRow[],
+
 ) {
     const db = dbOrTx(tx);
     if (!items.length) return [];
@@ -309,6 +313,7 @@ export function markPosted(
     });
 }
 
+
 export async function cancelOrder(
     id: string,
     tx: DB,
@@ -328,7 +333,7 @@ export async function cancelOrder(
 export async function verifyOrder(
     id: string,
     tx: DB,
-    verificationStatus: string
+    verificationStatus: OrderVerificationStatus
 ) {
     const db = dbOrTx(tx);
     return db.order.update({
@@ -357,4 +362,123 @@ export async function getProductIdsOfOrder(orderId: string, tx: DB): Promise<str
     });
 
     return Array.from(new Set(lines.map((x) => x.productId).filter(Boolean))) as string[];
+}
+
+export async function getDraftForEdit(
+    prismaOrTx: Prisma.TransactionClient,
+    orderId: string
+): Promise<OrderDraftForEdit | null> {
+    return prismaOrTx.order.findUnique({
+        where: { id: orderId },
+        select: {
+            id: true,
+            status: true,
+            refNo: true,
+            customerName: true,
+            shipPhone: true,
+            hasShipment: true,
+            shipAddress: true,
+            shipCity: true,
+            shipDistrict: true,
+            shipWard: true,
+            createdAt: true,
+            paymentMethod: true,
+            notes: true,
+
+            // ✅ reserve nằm trên Order
+            reserveType: true,
+            depositRequired: true,     // nếu có
+            reserveUntil: true,    // nếu có
+
+            items: {
+                orderBy: { createdAt: "asc" },
+                select: {
+                    id: true,
+                    kind: true,
+                    productId: true,
+                    title: true,
+                    quantity: true,
+
+                    // ✅ thống nhất field giá theo schema của bạn
+                    listPrice: true,
+                },
+            },
+        },
+    }) as any;
+}
+
+export async function updateDraft(
+    tx: DB,
+    orderId: string,
+    input: OrderDraftInput
+) {
+    const db = dbOrTx(tx);
+
+    // 0) guard
+    await assertCanEditDraft(db as any, orderId);
+
+    // 1) update order core fields + reserve fields (nằm trên Order)
+    await db.order.update({
+        where: { id: orderId },
+        data: {
+            customerName: input.customerName,
+            shipPhone: input.shipPhone ?? null,
+            hasShipment: input.hasShipment,
+            shipAddress: input.shipAddress ?? null,
+            shipCity: input.shipCity ?? null,
+            shipDistrict: input.shipDistrict ?? null,
+            shipWard: input.shipWard ?? null,
+
+            createdAt: new Date(input.orderDate),
+            paymentMethod: input.paymentMethod,
+            notes: input.notes ?? null,
+
+            // ✅ RESERVE: không có bảng reserve -> set thẳng vào Order
+            reserveType: input.reserve?.type ?? null,
+            depositRequired: input.reserve
+                ? new Prisma.Decimal(input.reserve.amount ?? 0)
+                : new Prisma.Decimal(0),
+
+            reserveUntil: input.reserve?.expiresAt
+                ? new Date(input.reserve.expiresAt)
+                : null,
+        },
+        select: { id: true },
+    });
+
+    // 2) items: replace toàn bộ
+    await db.orderItem.deleteMany({ where: { orderId } });
+
+    await db.orderItem.createMany({
+        data: input.items.map((it) => ({
+            orderId,
+            kind: it.kind as any,
+            productId: it.productId ?? null,
+            title: it.title,
+            quantity: it.quantity,
+
+            // ✅ thống nhất với getDraftForEdit: listPrice
+            listPrice: new Prisma.Decimal(it.unitPrice), // nếu input tên unitPrice
+            // hoặc nếu input là listPrice thì dùng:
+            // listPrice: new Prisma.Decimal(it.listPrice),
+        })),
+    });
+
+    return { id: orderId };
+}
+
+export async function assertCanEditDraft(
+    tx: Prisma.TransactionClient,
+    orderId: string
+) {
+    const o = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+    });
+    if (!o) throw new Error("Order not found");
+
+    // chỉ cho edit khi DRAFT / RESERVED
+    if (o.status !== "DRAFT" && o.status !== "RESERVED") {
+        throw new Error(`Order cannot be edited at status=${o.status}`);
+    }
 }

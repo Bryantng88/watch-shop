@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
+import { setHeapSnapshotNearHeapLimit } from "v8";
 
 // POST /api/public/orders
 export async function POST(req: NextRequest) {
@@ -75,9 +76,9 @@ export async function POST(req: NextRequest) {
         customerId: null, // public thường không có customerId (tuỳ bạn)
         source: "WEB",
         verificationStatus: "PENDING",
+        hasShipment: true
         // status: "DRAFT", // nếu service không tự set status thì bạn có thể ép ở đây
     };
-
     // OPTIONAL: chặn các field nhạy cảm từ public (tuỳ dự án bạn)
     // delete payload.discount;
     // delete payload.manualPrice;

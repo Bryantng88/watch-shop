@@ -92,7 +92,12 @@ function matchesView(o: OrderItem, view: ViewKey) {
             return o.source === "WEB" && o.verificationStatus === "PENDING";
 
         case "need_action":
-            return o.status === "DRAFT" || o.status === "RESERVED";
+            // Chờ duyệt: chỉ ADMIN, không lấy WEB
+            return (
+                o.source === "ADMIN" &&
+                (o.status === "DRAFT" || o.status === "RESERVED") &&
+                o.verificationStatus !== "PENDING"
+            );
 
         case "processing":
             return o.status === "POSTED";

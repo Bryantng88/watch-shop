@@ -10,11 +10,14 @@ import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
+import { boolean } from "zod";
 
 /* ================================
    TYPES
 ================================ */
 const prisma = new PrismaClient();
+
+
 
 export type CreateOrderItemInput = {
   productId?: string;
@@ -36,12 +39,69 @@ type ReserveInput = {
   expiresAt?: Date | null;
 };
 
+type RawProductItem = {
+  productId: string;
+  quantity: number;
+};
+
+export type ResolvedOrderItem = {
+  kind: "PRODUCT";
+  productId: string;
+  variantId: string;
+  title: string;
+  quantity: number;
+  listPrice: number; // number để tạo orderItem
+  primaryImageUrl?: string | null;
+  productType?: string; // nếu bạn cần
+};
+function toNumberPrice(v: unknown): number {
+  // prisma Decimal -> object có toNumber() hoặc valueOf()
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+
+  // Prisma.Decimal thường có toNumber()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const anyV = v as any;
+  if (typeof anyV?.toNumber === "function") return anyV.toNumber();
+
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+type ProductRow = Prisma.ProductGetPayload<{
+  select: {
+    id: true;
+    title: true;
+    primaryImageUrl: true;
+    type: true;
+    variants: {
+      select: {
+        id: true;
+        availabilityStatus: true;
+        price: true;
+        stockQty: true;
+        createdAt: true;
+      };
+    };
+  };
+}>;
+
+type VariantRow = ProductRow["variants"][number];
+
+/** ============ HELPERS ============ */
+function assertValidQty(productId: string, quantity: number) {
+  const q = Number(quantity ?? 1);
+  if (!Number.isFinite(q) || q <= 0) {
+    throw new Error(`Invalid quantity for productId=${productId}`);
+  }
+  return q;
+}
 
 export type CreateOrderInput = {
   shipPhone?: string | null;
   customerId?: string | null;
   customerName: string;
   reserve?: ReserveInput | null;
+  hasShipment: boolean;
   shipAddress: string;
   shipCity: string;
   shipDistrict: string;
@@ -88,6 +148,91 @@ function serialize(obj: any) {
       return value;
     })
   );
+}
+
+export async function resolveItemsFromDb(
+  tx: Prisma.TransactionClient,
+  items: RawProductItem[]
+): Promise<ResolvedOrderItem[]> {
+  if (!items?.length) return [];
+
+  // 1) normalize + cộng dồn qty nếu trùng productId
+  const qtyByProductId = new Map<string, number>();
+
+  for (const it of items) {
+    if (!it?.productId) throw new Error("Missing productId");
+    const productId = String(it.productId).trim();
+    const qty = assertValidQty(productId, it.quantity);
+    qtyByProductId.set(productId, (qtyByProductId.get(productId) ?? 0) + qty);
+  }
+
+  const productIds = Array.from(qtyByProductId.keys());
+
+  // 2) query product + variants ACTIVE
+  const products: ProductRow[] = await tx.product.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      title: true,
+      primaryImageUrl: true,
+      type: true,
+      variants: {
+        where: { availabilityStatus: "ACTIVE" }, // ✅ theo schema bạn
+        orderBy: [
+          { stockQty: "desc" },   // ưu tiên variant còn hàng nhiều
+          { createdAt: "asc" },   // tie-break
+        ],
+        select: {
+          id: true,
+          availabilityStatus: true,
+          price: true,
+          stockQty: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  // 3) check missing
+  const productMap = new Map<string, ProductRow>(products.map((p) => [p.id, p]));
+  const missing = productIds.filter((id) => !productMap.has(id));
+  if (missing.length) {
+    throw new Error(`Products not found: ${missing.join(", ")}`);
+  }
+
+  // 4) resolve mỗi product -> chọn 1 variant ACTIVE
+  const resolved: ResolvedOrderItem[] = [];
+
+  for (const productId of productIds) {
+    const p = productMap.get(productId);
+    if (!p) throw new Error(`Product not found: ${productId}`);
+
+    const chosenVariant: VariantRow | undefined = p.variants?.[0];
+    if (!chosenVariant) {
+      throw new Error(`No ACTIVE variant for productId=${productId}`);
+    }
+
+    // optional: check stock if managed (bạn có isStockManaged ở ProductVariant)
+    const qty = qtyByProductId.get(productId)!;
+    if (chosenVariant.stockQty != null && chosenVariant.stockQty < qty) {
+      throw new Error(
+        `Not enough stock for productId=${productId}. Need ${qty}, available ${chosenVariant.stockQty}`
+      );
+    }
+
+    resolved.push({
+      kind: "PRODUCT",
+      productId: p.id,
+      variantId: chosenVariant.id,
+      title: p.title,
+      quantity: qty,
+      listPrice: toNumberPrice(chosenVariant.price),
+      primaryImageUrl: p.primaryImageUrl ?? null,
+      productType: String(p.type),
+    });
+  }
+
+  return resolved;
 }
 
 async function resolveCustomer(
@@ -201,6 +346,7 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     reserveType: o.reserveType,
     depositRequired: o.depositRequired,
     subtotal: Number(o.subtotal ?? 0),
+    hasShipment: o.hasShipment,
     //currency: o.currency ?? "VND",
     itemCount: o._count?.items ?? 0,
     notes: o.notes,
@@ -248,6 +394,7 @@ export async function createOrderWithItems(raw: any) {
     shipAddress: raw.shipAddress ?? null,
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
+    hasShipment: raw.hasShipment,
     shipWard: raw.shipWard ?? null,
     source: raw.source as OrderSource,
     verificationStatus: raw.verificationStatus as OrderVerificationStatus,
@@ -259,13 +406,9 @@ export async function createOrderWithItems(raw: any) {
         : new Date(raw.orderDate),
 
     items: (raw.items ?? []).map((i: any) => ({
-      kind: i.kind as "PRODUCT" | "SERVICE" | "DISCOUNT",
       productId: i.productId ?? null,
-      variantId: i.variantId ?? null,
       serviceCatalogId: i.serviceCatalogId ?? null,
-      title: i.title,
       quantity: Number(i.quantity ?? 1),
-      listPrice: Number(i.price ?? i.unitPrice ?? 0),
       taxRate: i.taxRate ?? null,
     })),
   };
@@ -279,7 +422,18 @@ export async function createOrderWithItems(raw: any) {
     /* =====================================================
      * 2️⃣ Reserve PRODUCT variants (lock inventory)
      * ===================================================== */
-    for (const item of input.items) {
+
+    const rawProductItems = input.items
+      .filter((i) => i.productId) // bỏ item rỗng
+      .map((i) => ({
+        productId: i.productId as string,
+        quantity: i.quantity,
+        taxRate: i.taxRate ?? null,
+      }));
+
+    const resolvedItems = await resolveItemsFromDb(tx, rawProductItems);
+
+    for (const item of resolvedItems) {
       if (item.kind !== "PRODUCT") continue;
 
       await updateProductVariantStt(tx, {
@@ -305,6 +459,7 @@ export async function createOrderWithItems(raw: any) {
       shipDistrict: input.shipDistrict,
       shipWard: input.shipWard,
       paymentMethod: input.paymentMethod!,
+      hasShipment: input.hasShipment,
       notes: input.notes,
       createdAt: input.orderDate,
       status: input.status,
@@ -318,31 +473,28 @@ export async function createOrderWithItems(raw: any) {
     /* =====================================================
      * 4️⃣ Create ORDER ITEMS
      * ===================================================== */
-    const orderItems = input.items.map((i) => {
+    const orderItemsPayload = resolvedItems.map((i) => {
+      // nếu bạn chưa support discount/service ở endpoint này thì discountType/value luôn null
       const unitPriceAgreed = calcUnitPriceAgreed({
         listPrice: i.listPrice,
-        discountType: i.discountType,
-        discountValue: i.discountValue,
+        discountType: null,
+        discountValue: null,
       });
 
       return {
-        kind: i.kind,
-        productId: i.kind === "PRODUCT" ? i.productId : undefined,
-        variantId: i.kind === "PRODUCT" ? i.variantId : undefined,
-        serviceCatalogId:
-          i.kind === "SERVICE" ? i.serviceCatalogId : undefined,
+        kind: "PRODUCT" as const,
+        productId: i.productId,
+        variantId: i.variantId,
         title: i.title,
         quantity: i.quantity,
         listPrice: i.listPrice,
         unitPriceAgreed,
+        taxRate: i.taxRate ?? null, // nếu orderItem có field taxRate
+        // primaryImageUrl: i.primaryImageUrl ?? null, // nếu bạn muốn snapshot
       };
     });
 
-    const createdItems = await orderRepo.createOrderItems(
-      tx,
-      order.id,
-      orderItems
-    );
+    const createdItems = await orderRepo.createOrderItems(tx, order.id, orderItemsPayload);
 
     /* =====================================================
      * 5️⃣ Compute & update SUBTOTAL
@@ -379,6 +531,10 @@ export async function postOneOrderTx(
   }
 
   await orderRepo.markPosted(tx, order.id, hasShipment);
+
+  if (order.verificationStatus === OrderVerificationStatus.PENDING) {
+    await orderRepo.verifyOrder(order.id, tx, OrderVerificationStatus.VERIFIED)
+  }
 
   await paymentService.createPaymentsForOrder(tx, order);
 
