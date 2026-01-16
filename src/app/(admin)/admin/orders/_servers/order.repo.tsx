@@ -448,21 +448,23 @@ export async function updateDraft(
 
     // 2) items: replace toàn bộ
     await db.orderItem.deleteMany({ where: { orderId } });
-
-    await db.orderItem.createMany({
-        data: input.items.map((it) => ({
+    const rows = input.items.map((i) => {
+        const quantity = Number(i.quantity) || 1;
+        const subtotal = i.unitPriceAgreed * quantity;
+        return {
             orderId,
-            kind: it.kind as any,
-            productId: it.productId ?? null,
-            title: it.title,
-            quantity: it.quantity,
-
-            // ✅ thống nhất với getDraftForEdit: listPrice
-            listPrice: new Prisma.Decimal(it.unitPrice), // nếu input tên unitPrice
-            // hoặc nếu input là listPrice thì dùng:
-            // listPrice: new Prisma.Decimal(it.listPrice),
-        })),
+            productId: i.productId ?? null,
+            variantId: i.variantId ?? null,
+            title: i.title,
+            listPrice: i.listPrice,
+            kind: i.kind,
+            unitPriceAgreed: i.unitPriceAgreed,
+            quantity,
+            subtotal,
+        };
     });
+
+    await db.orderItem.createMany({ data: rows });
 
     return { id: orderId };
 }

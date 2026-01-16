@@ -6,7 +6,11 @@ export type OrderItemInput = {
     productId?: string | null;
     title: string;
     quantity: number;
-    unitPrice: number;
+    listPrice: number;
+    variantId: string;
+    unitPriceAgreed: number;
+    img: string;
+
 };
 
 export type OrderDraftInput = {
@@ -21,7 +25,7 @@ export type OrderDraftInput = {
     shipWard: string;
 
     // order info
-    orderDate: string; // ISO
+    createdAt: string; // ISO
     paymentMethod: PaymentMethod;
     notes?: string | null;
 
@@ -48,7 +52,7 @@ export type OrderDraftForEdit = {
     shipDistrict: string | null;
     shipWard: string | null;
 
-    orderDate: string; // ISO
+    createdAt: string; // ISO
     paymentMethod: PaymentMethod;
     notes: string | null;
 

@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductSearchInput from "../../__components/ProductSearchInput";
+import type { OrderDraftForEdit, OrderDraftInput, OrderItemInput } from "../_servers/order.type";
+import { PaymentMethod, ReserveType } from "@prisma/client";
 
 /** ==============================
  * Types
@@ -18,8 +20,6 @@ type Customer = {
     address?: string | null;
 };
 
-type ReserveType = "NONE" | "COD_DEPOSIT" | "HOLD";
-
 type ServiceCatalog = {
     id: string;
     code?: string | null;
@@ -28,47 +28,127 @@ type ServiceCatalog = {
     isActive?: boolean;
 };
 
-type OrderLine = {
-    id: string;
-    kind: "PRODUCT" | "SERVICE" | "DISCOUNT";
+type Props =
+    | {
+        mode: "create";
+        initialData: null;
+        orderId?: never;
+        services?: ServiceCatalog[];
+        title?: string;
+        subtitle?: string;
+        backHref?: string;
+        backLabel?: string;
+    }
+    | {
+        mode: "edit";
+        orderId: string;
+        initialData: OrderDraftForEdit;
+        services?: ServiceCatalog[];
+        title?: string;
+        subtitle?: string;
+        backHref?: string;
+        backLabel?: string;
+    };
 
-    // PRODUCT
-    productId?: string;
-    variantId?: string;
-    primaryImageUrl?: string | null;
-
-    // SERVICE
-    serviceCatalogId?: string;
-
-    title: string;
-    quantity: number;
-    price: number;
-};
-
-type Props = {
-    // nếu bạn đã có list service catalog từ server thì truyền vào cho đẹp
-    services?: ServiceCatalog[];
-};
-
-const PAYMENT_METHODS = ["BANK_TRANSFER", "COD", "CARD"] as const;
+const PAYMENT_METHODS: PaymentMethod[] = ["BANK_TRANSFER", "COD", "CREDIT_CARD"];
 
 /** ==============================
  * Helpers
  * ============================== */
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
+}
+
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + (cur ? ` ${cur}` : "");
 }
 
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
-}
-
 function uid() {
-    // crypto.randomUUID() ok trên modern browsers
     return typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : Math.random().toString(16).slice(2);
+}
+
+// ISO -> datetime-local (YYYY-MM-DDTHH:mm)
+function isoToLocalInput(iso?: string | null) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+// datetime-local -> ISO
+function localInputToIso(v?: string | null) {
+    if (!v) return new Date().toISOString();
+    // "2026-01-16T10:30" -> local time -> iso
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return new Date().toISOString();
+    return d.toISOString();
+}
+
+function nowIso() {
+    return new Date().toISOString();
+}
+
+function emptyDraft(): OrderDraftInput {
+    return {
+        customerName: "",
+        shipPhone: "",
+
+        hasShipment: true,
+        shipAddress: "",
+        shipCity: "",
+        shipDistrict: null,
+        shipWard: "",
+
+        createdAt: nowIso(),
+        paymentMethod: "BANK_TRANSFER" as PaymentMethod,
+        notes: null,
+
+        reserve: null,
+        items: [],
+    };
+}
+
+function toInputFromEdit(d: OrderDraftForEdit): OrderDraftInput {
+    return {
+        customerName: d.customerName || "",
+        shipPhone: d.shipPhone ?? "",
+
+        hasShipment: Boolean(d.hasShipment),
+        shipAddress: d.shipAddress ?? "",
+        shipCity: d.shipCity ?? "",
+        shipDistrict: d.shipDistrict ?? null,
+        shipWard: d.shipWard ?? "",
+
+        orderDate: d.createdAt ?? nowIso(),
+        paymentMethod: d.paymentMethod,
+        notes: d.notes ?? null,
+
+        reserve: d.reserve
+            ? {
+                type: d.reserve.type,
+                amount: Number(d.reserve.amount),
+                expiresAt: d.reserve.expiresAt ?? null,
+            }
+            : null,
+
+        items: (d.items || []).map((it) => ({
+            id: it.id,
+            kind: it.kind as any,
+            productId: it.productId ?? null,
+            title: it.title,
+            quantity: it.quantity,
+            unitPrice: Number(it.unitPrice),
+        })),
+    };
 }
 
 /** ==============================
@@ -132,97 +212,73 @@ function Badge({
 /** ==============================
  * MAIN
  * ============================== */
-export default function NewOrderFormOptimized({ services = [] }: Props) {
+export default function OrderFormClient(props: Props) {
     const router = useRouter();
+    const services = props.services ?? [];
+
+    const computedTitle =
+        props.title ?? (props.mode === "create" ? "Tạo đơn hàng" : "Sửa đơn hàng");
+
+    const computedSubtitle =
+        props.subtitle ??
+        (props.mode === "create"
+            ? "Đơn nháp — chỉ khi ADMIN duyệt mới sinh RefNo + Shipment/ServiceRequest."
+            : "Chỉ cho phép sửa khi đơn hàng còn DRAFT/RESERVED.");
+
+    const computedBackHref =
+        props.backHref ??
+        (props.mode === "create" ? "/admin/orders" : `/admin/orders/${props.orderId}`);
+
+    const computedBackLabel =
+        props.backLabel ??
+        (props.mode === "create" ? "← Danh sách" : "← Quay lại chi tiết");
 
     /** --------------------------
      * Form State
      * -------------------------- */
     type ItemTab = "PRODUCT" | "SERVICE" | "DISCOUNT";
-
     const [activeTab, setActiveTab] = useState<ItemTab>("PRODUCT");
 
-    const [formData, setFormData] = useState({
-        shipPhone: "",
-        customerId: "",
-        customerName: "",
+    const initial = useMemo<OrderDraftInput>(() => {
+        if (props.mode === "edit") return toInputFromEdit(props.initialData);
+        return emptyDraft();
+    }, [props]);
 
-        // ✅ NEW
-        hasShipment: true,
+    const [form, setForm] = useState<OrderDraftInput>(initial);
 
-        shipCity: "",
-        shipDistrict: "",
-        shipWard: "",
-        shipAddress: "",
+    // Khi đổi orderId / initialData (route change), sync lại state
+    useEffect(() => {
+        setForm(initial);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initial]);
 
-        paymentMethod: "BANK_TRANSFER",
-        notes: "",
-        orderDate: new Date().toISOString().slice(0, 16),
-        currency: "VND",
-    });
-
-    const [suggestCustomers, setSuggestCustomers] = useState<Customer[]>([]);
-    const [showSuggest, setShowSuggest] = useState(false);
-    const [loadingSuggest, setLoadingSuggest] = useState(false);
-    const [lines, setLines] = useState<OrderLine[]>([]);
     const [saving, setSaving] = useState(false);
     const [errMsg, setErrMsg] = useState<string | null>(null);
-    const [okMsg, setOkMsg] = useState<string | null>(null);
-    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+    // create-only modal
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
-    const [reserve, setReserve] = useState<{
-        enabled: boolean;
-        amount: number;
-        expiresAt: string;
-    }>({
-        enabled: false,
-        amount: 0,
-        expiresAt: "",
-    });
-
     /** --------------------------
-     * Derived
+     * Customer suggest by phone
      * -------------------------- */
-    const total = useMemo(() => {
-        return lines.reduce(
-            (s, l) => s + (Number(l.quantity) || 0) * (Number(l.price) || 0),
-            0
-        );
-    }, [lines]);
+    const [suggestCustomers, setSuggestCustomers] = useState<Customer[]>([]);
+    const [showSuggest, setShowSuggest] = useState(false);
+    const [loadingSuggest, setLoadingSuggest] = useState(false);
 
-    const serviceOptions = useMemo(() => {
-        return (services || []).filter((s) => s.isActive !== false);
-    }, [services]);
-
-    const depositAmount = reserve.enabled ? Number(reserve.amount || 0) : 0;
-
-    const remainingAmount = useMemo(() => {
-        return Math.max(0, total - depositAmount);
-    }, [total, depositAmount]);
-
-    const [reserveTouched, setReserveTouched] = useState(false);
-
-    /** --------------------------
-     * Auto fill customer by phone
-     * -------------------------- */
     function useDebounce<T>(value: T, delay = 300) {
         const [debounced, setDebounced] = useState(value);
-
         useEffect(() => {
             const t = setTimeout(() => setDebounced(value), delay);
             return () => clearTimeout(t);
         }, [value, delay]);
-
         return debounced;
     }
 
-    const debouncedPhone = useDebounce(formData.shipPhone, 300);
+    const debouncedPhone = useDebounce(form.shipPhone ?? "", 300);
 
     useEffect(() => {
         const phone = (debouncedPhone ?? "").trim();
-
         if (phone.length < 3) {
             setSuggestCustomers([]);
             setLoadingSuggest(false);
@@ -230,15 +286,12 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         }
 
         let aborted = false;
-
         setLoadingSuggest(true);
 
         fetch(`/api/admin/customers/search?phone=${encodeURIComponent(phone)}`)
             .then((r) => (r.ok ? r.json() : []))
             .then((data) => {
-                if (!aborted) {
-                    setSuggestCustomers(Array.isArray(data) ? data : []);
-                }
+                if (!aborted) setSuggestCustomers(Array.isArray(data) ? data : []);
             })
             .catch(() => {
                 if (!aborted) setSuggestCustomers([]);
@@ -252,146 +305,133 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
         };
     }, [debouncedPhone]);
 
-    /** --------------------------
-     * Handlers
-     * -------------------------- */
-    function set<K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) {
-        setFormData((prev) => ({ ...prev, [key]: value }));
-    }
-
-    function addLine(line: Omit<OrderLine, "id">) {
-        setLines((prev) => [...prev, { id: uid(), ...line }]);
-    }
-
-    function updateLine(id: string, patch: Partial<OrderLine>) {
-        setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
-    }
-
-    function removeLine(id: string) {
-        setLines((prev) => prev.filter((l) => l.id !== id));
-    }
-
-    function clearMessages() {
-        setErrMsg(null);
-        setOkMsg(null);
-    }
-
     function applyCustomer(c: Customer) {
-        setSelectedCustomerId(c.id);
-        setFormData((prev) => ({
+        setForm((prev) => ({
             ...prev,
-            customerId: c.id,
             customerName: c.name,
-
             shipPhone: c.phone,
-            shipCity: c.city ?? "",
-            shipDistrict: c.district ?? "",
-            shipWard: c.ward ?? "",
-            shipAddress: c.address ?? "",
+            shipCity: c.city ?? prev.shipCity ?? null,
+            shipDistrict: c.district ?? prev.shipDistrict ?? null,
+            shipWard: c.ward ?? prev.shipWard ?? null,
+            shipAddress: c.address ?? prev.shipAddress ?? null,
         }));
-
         setSuggestCustomers([]);
         setShowSuggest(false);
     }
 
     /** --------------------------
-     * Validate minimal
+     * Helpers setForm
      * -------------------------- */
-    function validate() {
-        if (!formData.shipPhone.trim()) return "Vui lòng nhập số điện thoại.";
-        if (!formData.customerName.trim()) return "Vui lòng nhập tên khách hàng.";
-        if (lines.length === 0) return "Vui lòng thêm ít nhất 1 sản phẩm/dịch vụ.";
-
-        // ✅ OPTIONAL: nếu có shipment thì bắt buộc nhập địa chỉ tối thiểu
-        if (formData.hasShipment) {
-            if (!formData.shipCity.trim()) return "Vui lòng nhập Tỉnh/TP.";
-            if (!formData.shipDistrict.trim()) return "Vui lòng nhập Quận/Huyện.";
-            if (!formData.shipAddress.trim()) return "Vui lòng nhập địa chỉ giao hàng.";
-        }
-
-        for (const l of lines) {
-            if (!l.title) return "Có dòng item thiếu tiêu đề.";
-            if (!l.quantity || l.quantity < 1) return "Số lượng phải >= 1.";
-            if (l.price == null || Number.isNaN(Number(l.price))) return "Đơn giá không hợp lệ.";
-            if (l.kind === "PRODUCT" && !l.productId) return "Có dòng PRODUCT thiếu productId.";
-            if (l.kind === "SERVICE" && !l.serviceCatalogId) return "Có dòng SERVICE thiếu serviceCatalogId.";
-        }
-        return null;
+    function set<K extends keyof OrderDraftInput>(key: K, value: OrderDraftInput[K]) {
+        setForm((prev) => ({ ...prev, [key]: value }));
     }
 
-    function resetFormForNewOrder() {
-        setFormData({
-            shipPhone: "",
-            customerId: "",
-            customerName: "",
-
-            // ✅ NEW
-            hasShipment: true,
-
-            shipCity: "",
-            shipDistrict: "",
-            shipWard: "",
-            shipAddress: "",
-            paymentMethod: "COD",
-            notes: "",
-            orderDate: new Date().toISOString().slice(0, 16),
-            currency: "VND",
+    function updateItem(idx: number, patch: Partial<OrderItemInput>) {
+        setForm((prev) => {
+            const next = [...prev.items];
+            next[idx] = { ...next[idx], ...patch };
+            return { ...prev, items: next };
         });
-
-        setLines([]);
-        setSelectedCustomerId(null);
-        setSuggestCustomers([]);
-        setShowSuggest(false);
-        setErrMsg(null);
-        setOkMsg(null);
     }
 
-    function plusDaysISO(days: number) {
-        const d = new Date();
-        d.setDate(d.getDate() + days);
-        return d.toISOString().slice(0, 16);
+    function addItem(item: Omit<OrderItemInput, "id">) {
+        setForm((prev) => ({
+            ...prev,
+            items: [...prev.items, { id: uid(), ...item } as any],
+        }));
     }
 
+    function removeItem(idx: number) {
+        setForm((prev) => {
+            const next = [...prev.items];
+            next.splice(idx, 1);
+            return { ...prev, items: next };
+        });
+    }
+
+    /** --------------------------
+     * Derived
+     * -------------------------- */
+    const total = useMemo(() => {
+        return form.items.reduce(
+            (s, it) => s + Number(it.quantity || 0) * Number(it.unitPrice || 0),
+            0
+        );
+    }, [form.items]);
+
+    const serviceOptions = useMemo(() => {
+        return (services || []).filter((s) => s.isActive !== false);
+    }, [services]);
+
+    const depositAmount = useMemo(() => {
+        return form.reserve ? Number(form.reserve.amount || 0) : 0;
+    }, [form.reserve]);
+
+    const remainingAmount = useMemo(() => {
+        return Math.max(0, total - depositAmount);
+    }, [total, depositAmount]);
+
+    /** --------------------------
+     * Reserve UX helpers
+     * -------------------------- */
+    const [reserveTouched, setReserveTouched] = useState(false);
+
+    // COD => auto enable reserve nếu chưa touched + chưa có reserve
     useEffect(() => {
-        if (formData.paymentMethod !== "COD") return;
+        if (form.paymentMethod !== "COD") return;
         if (reserveTouched) return;
 
         const deposit = Math.round(total * 0.1);
 
-        setReserve({
-            enabled: true,
+        set("reserve", {
+            type: "COD" as ReserveType,
             amount: deposit,
-            expiresAt: "", // COD không giữ hàng
+            expiresAt: null, // COD: không giữ hạn theo UI của bạn
         });
-    }, [formData.paymentMethod, total]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.paymentMethod, total]);
 
-    useEffect(() => {
-        if (formData.paymentMethod === "COD") return;
-        if (!reserve.enabled) return;
-        if (reserveTouched) return;
+    /** --------------------------
+     * Validate
+     * -------------------------- */
+    function validate() {
+        if (!form.shipPhone?.trim()) return "Vui lòng nhập số điện thoại.";
+        if (!form.customerName?.trim()) return "Vui lòng nhập tên khách hàng.";
+        if (!form.items.length) return "Vui lòng thêm ít nhất 1 sản phẩm/dịch vụ.";
 
-        setReserve((prev) => ({
-            ...prev,
-            expiresAt: prev.expiresAt || plusDaysISO(7),
-        }));
-    }, [formData.paymentMethod, reserve.enabled]);
-
-    useEffect(() => {
-        setReserveTouched(false);
-
-        if (formData.paymentMethod === "COD") {
-            setReserve((prev) => ({
-                ...prev,
-                expiresAt: "",
-            }));
+        if (form.hasShipment) {
+            if (!form.shipCity?.trim()) return "Vui lòng nhập Tỉnh/TP.";
+            if (!form.shipDistrict?.trim()) return "Vui lòng nhập Quận/Huyện.";
+            if (!form.shipAddress?.trim()) return "Vui lòng nhập địa chỉ giao hàng.";
         }
-    }, [formData.paymentMethod]);
+
+        for (const it of form.items) {
+            if (!it.title?.trim()) return "Có dòng item thiếu tiêu đề.";
+            if (!it.quantity || it.quantity < 1) return "Số lượng phải >= 1.";
+            if (it.unitPrice == null || Number.isNaN(Number(it.unitPrice))) return "Đơn giá không hợp lệ.";
+
+            if (it.kind === "PRODUCT" && !it.productId) return "Có dòng PRODUCT thiếu productId.";
+            // SERVICE/DISCOUNT: backend bạn đang dùng title + unitPrice nên ok
+        }
+
+        return null;
+    }
+
+    function resetFormForNewOrder() {
+        setReserveTouched(false);
+        setForm(emptyDraft());
+        setActiveTab("PRODUCT");
+        setSuggestCustomers([]);
+        setShowSuggest(false);
+        setErrMsg(null);
+    }
 
     /** --------------------------
      * Submit
      * -------------------------- */
-    async function submit(mode: "DRAFT" = "DRAFT") {
-        clearMessages();
+    async function submit() {
+        setErrMsg(null);
+
         const v = validate();
         if (v) {
             setErrMsg(v);
@@ -400,73 +440,33 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
 
         setSaving(true);
         try {
-            const payload = {
-                mode,
+            if (props.mode === "create") {
+                const res = await fetch("/api/admin/orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(form),
+                });
+                if (!res.ok) throw new Error(await res.text());
 
-                // ✅ NEW: gửi lên backend
-                hasShipment: !!formData.hasShipment,
-
-                shipPhone: formData.shipPhone.trim(),
-                customerId: formData.customerId || null,
-                customerName: formData.customerName.trim(),
-
-                shipCity: formData.hasShipment ? (formData.shipCity || null) : null,
-                shipDistrict: formData.hasShipment ? (formData.shipDistrict || null) : null,
-                shipWard: formData.hasShipment ? (formData.shipWard || null) : null,
-                shipAddress: formData.hasShipment ? (formData.shipAddress || null) : null,
-
-                paymentMethod: formData.paymentMethod,
-                notes: formData.notes || null,
-                currency: formData.currency,
-                orderDate: new Date(formData.orderDate),
-
-                reserve: reserve.enabled
-                    ? {
-                        type: formData.paymentMethod === "COD" ? "COD" : "DEPOSIT",
-                        amount: Number(reserve.amount || 0),
-                        expiresAt:
-                            formData.paymentMethod === "COD"
-                                ? null
-                                : reserve.expiresAt
-                                    ? new Date(reserve.expiresAt)
-                                    : null,
-                    }
-                    : {
-                        type: "NONE",
-                        amount: 0,
-                        expiresAt: null,
-                    },
-
-                items: lines.map((l) => ({
-                    kind: l.kind,
-                    title: l.title,
-                    quantity: l.quantity,
-                    price: l.price,
-
-                    productId: l.kind === "PRODUCT" ? l.productId : null,
-                    variantId: l.kind === "PRODUCT" ? l.variantId ?? null : null,
-
-                    serviceCatalogId: l.kind === "SERVICE" ? l.serviceCatalogId : null,
-                })),
-            };
-
-            const res = await fetch("/api/admin/orders", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (!res.ok) {
-                const t = await res.text();
-                throw new Error(t || "Tạo đơn thất bại");
+                const data = await res.json();
+                setCreatedOrderId(data?.id ?? null);
+                setShowSuccessModal(true);
+                router.refresh();
+                return;
             }
 
-            const data = await res.json();
-            setCreatedOrderId(data?.id ?? null);
-            setShowSuccessModal(true);
+            // edit
+            const res = await fetch(`/api/admin/orders/${props.orderId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            });
+            if (!res.ok) throw new Error(await res.text());
+
+            router.push(`/admin/orders/${props.orderId}`);
             router.refresh();
         } catch (e: any) {
-            setErrMsg(e?.message || "Lỗi không xác định");
+            setErrMsg(e?.message || "Lưu thất bại");
         } finally {
             setSaving(false);
         }
@@ -480,19 +480,22 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <h1 className="text-xl font-semibold">Tạo đơn hàng</h1>
+                    <h1 className="text-xl font-semibold">{computedTitle}</h1>
                     <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
-                        <Badge>Draft</Badge>
-                        <span>Đơn nháp — chỉ khi ADMIN duyệt mới sinh RefNo + Shipment/ServiceRequest.</span>
+                        <Badge>{props.mode === "create" ? "Draft" : "Edit"}</Badge>
+                        <span>{computedSubtitle}</span>
                     </div>
                 </div>
 
-                <Link href="/admin/orders" className="rounded-md border px-3 py-2 hover:bg-gray-50">
-                    ← Danh sách
+                <Link
+                    href={computedBackHref}
+                    className="rounded-md border px-3 py-2 hover:bg-gray-50 text-sm"
+                >
+                    {computedBackLabel}
                 </Link>
             </div>
 
-            {/* Grid: left / right */}
+            {/* Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left */}
                 <div className="lg:col-span-2 space-y-6">
@@ -502,28 +505,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 <div className="relative">
                                     <input
                                         className="h-9 w-full rounded border px-3"
-                                        value={formData.shipPhone ?? ""}
+                                        value={form.shipPhone ?? ""}
                                         onChange={(e) => {
-                                            const v = e.target.value;
-
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                shipPhone: v,
-                                            }));
-
-                                            if (selectedCustomerId) {
-                                                setSelectedCustomerId(null);
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    customerId: "",
-                                                    customerName: "",
-                                                    shipCity: "",
-                                                    shipDistrict: "",
-                                                    shipWard: "",
-                                                    shipAddress: "",
-                                                }));
-                                            }
-
+                                            set("shipPhone", e.target.value || null);
                                             setShowSuggest(true);
                                         }}
                                         placeholder="VD: 0909xxxxxx"
@@ -556,9 +540,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                 ))}
 
                                             {!loadingSuggest && suggestCustomers.length === 0 && (
-                                                <div className="px-3 py-2 text-sm text-gray-500">
-                                                    Không tìm thấy khách cũ
-                                                </div>
+                                                <div className="px-3 py-2 text-sm text-gray-500">Không tìm thấy khách cũ</div>
                                             )}
                                         </div>
                                     )}
@@ -568,35 +550,22 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                             <Field label="Tên khách hàng" hint="Nếu khách mới, bạn nhập tên vào đây">
                                 <input
                                     className="h-9 rounded border px-3"
-                                    value={formData.customerName}
+                                    value={form.customerName}
                                     onChange={(e) => set("customerName", e.target.value)}
                                     placeholder="VD: Nguyễn Văn A"
                                 />
                             </Field>
                         </div>
-
-                        {formData.customerId ? (
-                            <div className="mt-2">
-                                <Badge tone="green">Khách hàng cũ</Badge>
-                                <span className="ml-2 text-xs text-gray-500">
-                                    ID: <span className="font-mono">{formData.customerId}</span>
-                                </span>
-                            </div>
-                        ) : (
-                            <div className="mt-2">
-                                <Badge>Khách mới</Badge>
-                            </div>
-                        )}
                     </Card>
 
-                    {/* ✅ UPDATED: shipping with hasShipment */}
+                    {/* Shipping */}
                     <Card
                         title="Giao hàng"
                         right={
                             <label className="flex items-center gap-2 text-sm">
                                 <input
                                     type="checkbox"
-                                    checked={formData.hasShipment}
+                                    checked={form.hasShipment}
                                     onChange={(e) => set("hasShipment", e.target.checked)}
                                 />
                                 Có shipment (giao hàng)
@@ -606,39 +575,39 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Field label="Tỉnh / Thành phố">
                                 <input
-                                    disabled={!formData.hasShipment}
+                                    disabled={!form.hasShipment}
                                     className={cls(
                                         "h-9 rounded border px-3",
-                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                        !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
-                                    value={formData.shipCity}
-                                    onChange={(e) => set("shipCity", e.target.value)}
+                                    value={form.shipCity ?? ""}
+                                    onChange={(e) => set("shipCity", e.target.value || null)}
                                     placeholder="VD: Hồ Chí Minh"
                                 />
                             </Field>
 
                             <Field label="Quận / Huyện">
                                 <input
-                                    disabled={!formData.hasShipment}
+                                    disabled={!form.hasShipment}
                                     className={cls(
                                         "h-9 rounded border px-3",
-                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                        !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
-                                    value={formData.shipDistrict}
-                                    onChange={(e) => set("shipDistrict", e.target.value)}
+                                    value={form.shipDistrict ?? ""}
+                                    onChange={(e) => set("shipDistrict", e.target.value || null)}
                                     placeholder="VD: Quận 1"
                                 />
                             </Field>
 
                             <Field label="Phường / Xã">
                                 <input
-                                    disabled={!formData.hasShipment}
+                                    disabled={!form.hasShipment}
                                     className={cls(
                                         "h-9 rounded border px-3",
-                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                        !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
-                                    value={formData.shipWard}
-                                    onChange={(e) => set("shipWard", e.target.value)}
+                                    value={form.shipWard ?? ""}
+                                    onChange={(e) => set("shipWard", e.target.value || null)}
                                     placeholder="VD: Bến Nghé"
                                 />
                             </Field>
@@ -647,18 +616,18 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         <div className="mt-4">
                             <Field label="Địa chỉ chi tiết">
                                 <textarea
-                                    disabled={!formData.hasShipment}
+                                    disabled={!form.hasShipment}
                                     className={cls(
                                         "min-h-[70px] w-full rounded border px-3 py-2",
-                                        !formData.hasShipment && "bg-gray-50 text-gray-500"
+                                        !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
-                                    value={formData.shipAddress}
-                                    onChange={(e) => set("shipAddress", e.target.value)}
+                                    value={form.shipAddress ?? ""}
+                                    onChange={(e) => set("shipAddress", e.target.value || null)}
                                     placeholder="Số nhà, tên đường, ghi chú giao hàng…"
                                 />
                             </Field>
 
-                            {!formData.hasShipment && (
+                            {!form.hasShipment && (
                                 <div className="mt-2 text-xs text-gray-500">
                                     Đang chọn <b>pickup</b> nên không cần nhập địa chỉ giao hàng.
                                 </div>
@@ -712,21 +681,18 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                     >
                         {activeTab === "PRODUCT" && (
                             <div className="space-y-3">
-                                <div className="text-sm text-gray-600">
-                                    Tìm và thêm sản phẩm vào đơn.
-                                </div>
+                                <div className="text-sm text-gray-600">Tìm và thêm sản phẩm vào đơn.</div>
 
                                 <ProductSearchInput
                                     value=""
                                     onSelect={(p: any) => {
-                                        addLine({
+                                        addItem({
                                             kind: "PRODUCT",
                                             productId: p.id,
                                             title: p.title,
-                                            primaryImageUrl: p.primaryImageUrl ?? null,
                                             quantity: 1,
-                                            price: Number(p.price ?? 0),
-                                        });
+                                            unitPrice: Number(p.price ?? 0),
+                                        } as any);
                                     }}
                                 />
                             </div>
@@ -750,13 +716,13 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                     const s = serviceOptions.find((x) => x.id === id);
                                                     if (!s) return;
 
-                                                    addLine({
+                                                    addItem({
                                                         kind: "SERVICE",
-                                                        serviceCatalogId: s.id,
                                                         title: s.name,
+                                                        productId: null,
                                                         quantity: 1,
-                                                        price: Number(s.defaultPrice ?? 0),
-                                                    });
+                                                        unitPrice: Number(s.defaultPrice ?? 0),
+                                                    } as any);
 
                                                     e.currentTarget.value = "";
                                                 }}
@@ -795,12 +761,13 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                             const value = Number((e.target as HTMLInputElement).value);
                                             if (!value || value <= 0) return;
 
-                                            addLine({
+                                            addItem({
                                                 kind: "DISCOUNT",
                                                 title: "Giảm giá",
+                                                productId: null,
                                                 quantity: 1,
-                                                price: -Math.abs(value),
-                                            });
+                                                unitPrice: -Math.abs(value),
+                                            } as any);
 
                                             (e.target as HTMLInputElement).value = "";
                                         }}
@@ -814,7 +781,7 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         )}
 
                         {/* Items table */}
-                        {lines.length > 0 ? (
+                        {form.items.length > 0 ? (
                             <div className="mt-5 overflow-x-auto border rounded-lg">
                                 <table className="min-w-full text-sm border-collapse">
                                     <thead className="bg-gray-50 border-b">
@@ -829,40 +796,36 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                     </thead>
 
                                     <tbody>
-                                        {lines.map((l) => {
-                                            const isDiscount = l.kind === "DISCOUNT";
-                                            const lineTotal = Number(l.quantity) * Number(l.price);
+                                        {form.items.map((it, idx) => {
+                                            const isDiscount = it.kind === "DISCOUNT";
+                                            const lineTotal = Number(it.quantity) * Number(it.unitPrice);
 
                                             return (
                                                 <tr
-                                                    key={l.id}
+                                                    key={it.id ?? idx}
                                                     className={cls("border-b hover:bg-gray-50", isDiscount && "bg-red-50")}
                                                 >
                                                     <td className="px-3 py-2">
-                                                        <Badge tone={l.kind === "SERVICE" ? "blue" : l.kind === "DISCOUNT" ? "green" : "gray"}>
-                                                            {l.kind}
+                                                        <Badge tone={it.kind === "SERVICE" ? "blue" : it.kind === "DISCOUNT" ? "green" : "gray"}>
+                                                            {it.kind}
                                                         </Badge>
                                                     </td>
 
                                                     <td className="px-3 py-2">
-                                                        <div className="font-medium">{l.title}</div>
+                                                        <input
+                                                            className="h-8 w-full rounded border px-2"
+                                                            value={it.title}
+                                                            onChange={(e) => updateItem(idx, { title: e.target.value })}
+                                                        />
 
-                                                        {!isDiscount && (
-                                                            <div className="text-[11px] text-gray-500">
-                                                                {l.kind === "PRODUCT" ? (
-                                                                    <>
-                                                                        productId: <span className="font-mono">{l.productId}</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        serviceCatalogId: <span className="font-mono">{l.serviceCatalogId}</span>
-                                                                    </>
-                                                                )}
+                                                        {it.kind === "PRODUCT" && (
+                                                            <div className="text-[11px] text-gray-500 mt-1">
+                                                                productId: <span className="font-mono">{it.productId}</span>
                                                             </div>
                                                         )}
 
                                                         {isDiscount && (
-                                                            <div className="text-[11px] text-red-600">Giảm giá toàn đơn</div>
+                                                            <div className="text-[11px] text-red-600 mt-1">Giảm giá toàn đơn</div>
                                                         )}
                                                     </td>
 
@@ -874,9 +837,9 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                                 type="number"
                                                                 min={1}
                                                                 className="h-8 w-20 rounded border px-2 text-right"
-                                                                value={l.quantity}
+                                                                value={it.quantity}
                                                                 onChange={(e) =>
-                                                                    updateLine(l.id, {
+                                                                    updateItem(idx, {
                                                                         quantity: Math.max(1, Number(e.target.value || 1)),
                                                                     })
                                                                 }
@@ -887,11 +850,14 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                     <td className="px-3 py-2 text-right">
                                                         <input
                                                             type="number"
-                                                            className={cls("h-8 w-28 rounded border px-2 text-right", isDiscount && "text-red-600")}
-                                                            value={l.price}
+                                                            className={cls(
+                                                                "h-8 w-28 rounded border px-2 text-right",
+                                                                isDiscount && "text-red-600"
+                                                            )}
+                                                            value={it.unitPrice}
                                                             onChange={(e) =>
-                                                                updateLine(l.id, {
-                                                                    price: isDiscount
+                                                                updateItem(idx, {
+                                                                    unitPrice: isDiscount
                                                                         ? -Math.abs(Number(e.target.value || 0))
                                                                         : Number(e.target.value || 0),
                                                                 })
@@ -900,13 +866,13 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                     </td>
 
                                                     <td className={cls("px-3 py-2 text-right font-semibold", isDiscount && "text-red-600")}>
-                                                        {fmtMoney(lineTotal, formData.currency)}
+                                                        {fmtMoney(lineTotal, "VND")}
                                                     </td>
 
                                                     <td className="px-3 py-2 text-right">
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeLine(l.id)}
+                                                            onClick={() => removeItem(idx)}
                                                             className="text-red-600 hover:underline text-xs"
                                                         >
                                                             Xóa
@@ -922,18 +888,14 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                             <td colSpan={4} className="px-3 py-3 text-right text-sm text-gray-600">
                                                 Tổng
                                             </td>
-                                            <td className="px-3 py-3 text-right font-bold">
-                                                {fmtMoney(total, formData.currency)}
-                                            </td>
+                                            <td className="px-3 py-3 text-right font-bold">{fmtMoney(total, "VND")}</td>
                                             <td />
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
                         ) : (
-                            <div className="mt-4 text-sm text-gray-500">
-                                Chưa có item nào. Hãy thêm sản phẩm hoặc dịch vụ.
-                            </div>
+                            <div className="mt-4 text-sm text-gray-500">Chưa có item nào. Hãy thêm sản phẩm hoặc dịch vụ.</div>
                         )}
                     </Card>
                 </div>
@@ -946,16 +908,19 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 <input
                                     type="datetime-local"
                                     className="h-9 w-full rounded border px-3"
-                                    value={formData.orderDate}
-                                    onChange={(e) => set("orderDate", e.target.value)}
+                                    value={isoToLocalInput(form.orderDate)}
+                                    onChange={(e) => set("orderDate", localInputToIso(e.target.value))}
                                 />
                             </Field>
 
                             <Field label="Thanh toán">
                                 <select
                                     className="h-9 w-full rounded border px-2"
-                                    value={formData.paymentMethod}
-                                    onChange={(e) => set("paymentMethod", e.target.value as any)}
+                                    value={form.paymentMethod}
+                                    onChange={(e) => {
+                                        setReserveTouched(false);
+                                        set("paymentMethod", e.target.value as any);
+                                    }}
                                 >
                                     {PAYMENT_METHODS.map((m) => (
                                         <option key={m} value={m}>
@@ -965,34 +930,53 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 </select>
                             </Field>
 
-                            {/* RESERVE / DEPOSIT */}
+                            {/* RESERVE */}
                             <div className="space-y-3">
                                 <label className="flex items-center gap-2 text-sm">
                                     <input
                                         type="checkbox"
-                                        checked={reserve.enabled}
-                                        disabled={formData.paymentMethod === "COD"}
-                                        onChange={(e) =>
-                                            setReserve((prev) => ({
-                                                ...prev,
-                                                enabled: e.target.checked,
-                                            }))
-                                        }
+                                        checked={Boolean(form.reserve)}
+                                        disabled={form.paymentMethod === "COD"} // COD bắt buộc theo UX bạn đang muốn
+                                        onChange={(e) => {
+                                            setReserveTouched(true);
+                                            if (!e.target.checked) set("reserve", null);
+                                            else
+                                                set("reserve", {
+                                                    type: "DEPOSIT" as ReserveType,
+                                                    amount: 0,
+                                                    expiresAt: null,
+                                                });
+                                        }}
                                     />
                                     <span className="font-medium">
                                         Đặt cọc giữ hàng
-                                        {formData.paymentMethod === "COD" && (
+                                        {form.paymentMethod === "COD" && (
                                             <span className="ml-1 text-xs text-orange-600">(bắt buộc với COD)</span>
                                         )}
                                     </span>
                                 </label>
 
-                                {reserve.enabled && (
+                                {form.reserve && (
                                     <div className="space-y-3 rounded-md border bg-gray-50 p-3">
+                                        <Field label="Loại cọc">
+                                            <select
+                                                className="h-9 w-full rounded border px-2"
+                                                value={form.reserve.type}
+                                                onChange={(e) => {
+                                                    setReserveTouched(true);
+                                                    set("reserve", { ...form.reserve!, type: e.target.value as any });
+                                                }}
+                                            >
+                                                <option value="DEPOSIT">DEPOSIT</option>
+                                                <option value="COD">COD</option>
+                                                <option value="HOLD">HOLD</option>
+                                            </select>
+                                        </Field>
+
                                         <Field
                                             label="Số tiền cọc"
                                             hint={
-                                                formData.paymentMethod === "COD"
+                                                form.paymentMethod === "COD"
                                                     ? "Mặc định 10% giá trị đơn, có thể chỉnh sửa"
                                                     : "Khách trả trước để giữ hàng"
                                             }
@@ -1001,13 +985,14 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                                 type="number"
                                                 min={0}
                                                 className="h-9 w-full rounded border px-3"
-                                                value={reserve.amount || ""}
-                                                onChange={(e) =>
-                                                    setReserve((prev) => ({
-                                                        ...prev,
+                                                value={Number(form.reserve.amount ?? 0)}
+                                                onChange={(e) => {
+                                                    setReserveTouched(true);
+                                                    set("reserve", {
+                                                        ...form.reserve!,
                                                         amount: Number(e.target.value || 0),
-                                                    }))
-                                                }
+                                                    });
+                                                }}
                                                 placeholder="VD: 5000000"
                                             />
                                         </Field>
@@ -1015,22 +1000,20 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                         <Field label="Giữ hàng đến" hint="Hết hạn có thể huỷ đơn nếu chưa thanh toán">
                                             <input
                                                 type="datetime-local"
-                                                value={reserve.expiresAt}
+                                                value={isoToLocalInput(form.reserve.expiresAt)}
                                                 onChange={(e) => {
                                                     setReserveTouched(true);
-                                                    setReserve((prev) => ({
-                                                        ...prev,
-                                                        expiresAt: e.target.value,
-                                                    }));
+                                                    set("reserve", {
+                                                        ...form.reserve!,
+                                                        expiresAt: e.target.value ? localInputToIso(e.target.value) : null,
+                                                    });
                                                 }}
                                                 className="h-9 w-full rounded border px-3"
-                                                disabled={formData.paymentMethod === "COD"}
+                                                disabled={form.paymentMethod === "COD"}
                                             />
                                         </Field>
 
-                                        <div className="text-xs text-gray-500">
-                                            💡 Thường dùng cho COD hoặc giữ hàng cho khách VIP
-                                        </div>
+                                        <div className="text-xs text-gray-500">💡 Thường dùng cho COD hoặc giữ hàng cho khách VIP</div>
                                     </div>
                                 )}
                             </div>
@@ -1038,8 +1021,8 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                             <Field label="Ghi chú">
                                 <textarea
                                     className="min-h-[90px] w-full rounded border px-3 py-2"
-                                    value={formData.notes}
-                                    onChange={(e) => set("notes", e.target.value)}
+                                    value={form.notes ?? ""}
+                                    onChange={(e) => set("notes", e.target.value || null)}
                                     placeholder="Ghi chú nội bộ…"
                                 />
                             </Field>
@@ -1050,35 +1033,35 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Số item</span>
-                                <span className="font-medium">{lines.length}</span>
+                                <span className="font-medium">{form.items.length}</span>
                             </div>
 
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Tổng tiền</span>
-                                <span className="font-semibold">{fmtMoney(total, formData.currency)}</span>
+                                <span className="font-semibold">{fmtMoney(total, "VND")}</span>
                             </div>
 
-                            {reserve.enabled && (
+                            {form.reserve && (
                                 <>
                                     <div className="flex justify-between text-amber-700">
                                         <span>Đã cọc</span>
-                                        <span className="font-medium">− {fmtMoney(depositAmount, formData.currency)}</span>
+                                        <span className="font-medium">− {fmtMoney(depositAmount, "VND")}</span>
                                     </div>
 
                                     <div className="flex justify-between font-semibold text-red-700 border-t pt-2">
                                         <span>Còn phải thu</span>
-                                        <span>{fmtMoney(remainingAmount, formData.currency)}</span>
+                                        <span>{fmtMoney(remainingAmount, "VND")}</span>
                                     </div>
 
-                                    {reserve.expiresAt && (
+                                    {form.reserve.expiresAt && (
                                         <div className="text-xs text-gray-500">
-                                            ⏰ Giữ hàng đến: {new Date(reserve.expiresAt).toLocaleString("vi-VN")}
+                                            ⏰ Giữ hàng đến: {new Date(form.reserve.expiresAt).toLocaleString("vi-VN")}
                                         </div>
                                     )}
                                 </>
                             )}
 
-                            {!reserve.enabled && (
+                            {!form.reserve && (
                                 <div className="pt-2 text-xs text-gray-500">
                                     * RefNo / Shipment / ServiceRequest sẽ sinh khi Admin duyệt POST.
                                 </div>
@@ -1091,11 +1074,6 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                             {errMsg}
                         </div>
                     ) : null}
-                    {okMsg ? (
-                        <div className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                            {okMsg}
-                        </div>
-                    ) : null}
                 </div>
             </div>
 
@@ -1104,41 +1082,38 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                 <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
                     <div className="text-sm">
                         <span className="text-gray-600">Tổng:</span>{" "}
-                        <span className="font-semibold">{fmtMoney(total, formData.currency)}</span>
+                        <span className="font-semibold">{fmtMoney(total, "VND")}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => history.back()}
-                            className="h-9 rounded border px-4 hover:bg-gray-50"
-                            disabled={saving}
+                        <Link
+                            href={computedBackHref}
+                            className={cls(
+                                "h-9 rounded border px-4 hover:bg-gray-50 flex items-center",
+                                saving && "pointer-events-none opacity-60"
+                            )}
                         >
                             Hủy
-                        </button>
+                        </Link>
 
                         <button
                             type="button"
-                            onClick={() => submit("DRAFT")}
+                            onClick={submit}
                             disabled={saving}
-                            className="h-9 rounded border px-4 hover:bg-gray-50"
+                            className="h-9 rounded bg-black px-4 text-white hover:bg-neutral-800 disabled:opacity-60"
                         >
-                            {saving ? "Đang lưu…" : "Lưu draft"}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => submit("DRAFT")}
-                            disabled={saving}
-                            className="h-9 rounded bg-black px-4 text-white hover:bg-neutral-800"
-                        >
-                            {saving ? "Đang tạo…" : "Tạo đơn"}
+                            {saving
+                                ? "Đang lưu…"
+                                : props.mode === "create"
+                                    ? "Tạo Draft"
+                                    : "Lưu thay đổi"}
                         </button>
                     </div>
                 </div>
             </div>
 
-            {showSuccessModal && (
+            {/* Create success modal (chỉ show khi create) */}
+            {props.mode === "create" && showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
                         <h3 className="text-lg font-semibold">Tạo đơn thành công 🎉</h3>
@@ -1152,10 +1127,11 @@ export default function NewOrderFormOptimized({ services = [] }: Props) {
                                 className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
                                 onClick={() => {
                                     setShowSuccessModal(false);
-                                    router.push("/admin/orders");
+                                    if (createdOrderId) router.push(`/admin/orders/${createdOrderId}`);
+                                    else router.push("/admin/orders");
                                 }}
                             >
-                                Về danh sách
+                                Xem chi tiết
                             </button>
 
                             <button

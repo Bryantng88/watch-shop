@@ -1,5 +1,5 @@
 // app/(admin)/admin/orders/new/page.tsx
-import NewOrderForm from "../_client/NewOrderForm";
+import OrderFormClient from "../_client/OrderForm";
 import { getVendorList } from "../../vendors/_server/vendor.service";
 import { getCustomerList } from "../../customers/_server/customer.service";
 import { getServiceCatalogList } from "../../services/_server/service_request.service";
@@ -19,9 +19,12 @@ export default async function NewOrderPage() {
 
     return (
         <div className="p-6">
-            <NewOrderForm
-                customers={customers}
+            <OrderFormClient
+                //customers={customers}
                 services={services}
+                mode="create"
+                backHref="/admin/orders"
+                backLabel="← Danh sách"
             />
         </div>
     );
