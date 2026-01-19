@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductSearchInput from "../../__components/ProductSearchInput";
 import type { OrderDraftForEdit, OrderDraftInput, OrderItemInput } from "../_servers/order.type";
-import { PaymentMethod, ReserveType } from "@prisma/client";
+//import { PaymentMethod, ReserveType } from "@prisma/client";
 
 /** ==============================
  * Types
@@ -19,6 +19,10 @@ type Customer = {
     ward?: string | null;
     address?: string | null;
 };
+
+type PaymentMethod = "BANK_TRANSFER" | "COD" | "CREDIT_CARD";
+type ReserveType = "DEPOSIT" | "COD";
+
 
 type ServiceCatalog = {
     id: string;
@@ -128,7 +132,7 @@ function toInputFromEdit(d: OrderDraftForEdit): OrderDraftInput {
         shipDistrict: d.shipDistrict ?? null,
         shipWard: d.shipWard ?? "",
 
-        orderDate: d.createdAt ?? nowIso(),
+        createdAt: d.createdAt ?? nowIso(),
         paymentMethod: d.paymentMethod,
         notes: d.notes ?? null,
 
@@ -147,6 +151,16 @@ function toInputFromEdit(d: OrderDraftForEdit): OrderDraftInput {
             title: it.title,
             quantity: it.quantity,
             unitPrice: Number(it.unitPrice),
+            // ✅ unitPrice đang dùng để tính tiền hiện tại 
+            variantId: (it as any).variantId ?? null,
+            // ✅ listPrice để đồng bộ schema (nếu bạn chỉ có 1 giá thì set bằng unitPrice)
+            listPrice: Number((it as any).listPrice ?? (it as any).unitPrice ?? 0),
+
+            // ✅ nếu chưa có logic “agreed” thì default true/false tuỳ bạn
+            unitPriceAgreed: Number((it as any).unitPriceAgreed ?? true),
+
+            // ✅ ảnh / meta (nếu chưa dùng thì null)
+            img: (it as any).img ?? null,
         })),
     };
 }
@@ -213,6 +227,10 @@ function Badge({
  * MAIN
  * ============================== */
 export default function OrderFormClient(props: Props) {
+    console.log("RENDER props:", props.mode, props.orderId, props.initialData);
+
+    const [hydrated, setHydrated] = useState(false);
+    useEffect(() => setHydrated(true), []);
     const router = useRouter();
     const services = props.services ?? [];
 
@@ -244,13 +262,20 @@ export default function OrderFormClient(props: Props) {
         return emptyDraft();
     }, [props]);
 
-    const [form, setForm] = useState<OrderDraftInput>(initial);
+    const [form, setForm] = useState<OrderDraftInput>(() => emptyDraft());
 
-    // Khi đổi orderId / initialData (route change), sync lại state
+    // ✅ SYNC lại state khi vào edit / initialData đổi
     useEffect(() => {
-        setForm(initial);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initial]);
+        if (props.mode === "edit") {
+            // debug nhanh: xem có data thật không
+            console.log("[OrderForm] initialData:", props.initialData);
+
+            setForm(toInputFromEdit(props.initialData));
+        } else {
+            setForm(emptyDraft());
+        }
+    }, [props.mode, props.mode === "edit" ? props.initialData?.id : "create"]);
+
 
     const [saving, setSaving] = useState(false);
     const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -258,7 +283,6 @@ export default function OrderFormClient(props: Props) {
     // create-only modal
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-
     /** --------------------------
      * Customer suggest by phone
      * -------------------------- */
@@ -354,7 +378,7 @@ export default function OrderFormClient(props: Props) {
      * -------------------------- */
     const total = useMemo(() => {
         return form.items.reduce(
-            (s, it) => s + Number(it.quantity || 0) * Number(it.unitPrice || 0),
+            (s, it) => s + Number(it.quantity || 0) * Number(it.listPrice || 0),
             0
         );
     }, [form.items]);
@@ -408,7 +432,7 @@ export default function OrderFormClient(props: Props) {
         for (const it of form.items) {
             if (!it.title?.trim()) return "Có dòng item thiếu tiêu đề.";
             if (!it.quantity || it.quantity < 1) return "Số lượng phải >= 1.";
-            if (it.unitPrice == null || Number.isNaN(Number(it.unitPrice))) return "Đơn giá không hợp lệ.";
+            if (it.listPrice == null || Number.isNaN(Number(it.listPrice))) return "Đơn giá không hợp lệ.";
 
             if (it.kind === "PRODUCT" && !it.productId) return "Có dòng PRODUCT thiếu productId.";
             // SERVICE/DISCOUNT: backend bạn đang dùng title + unitPrice nên ok
@@ -476,7 +500,9 @@ export default function OrderFormClient(props: Props) {
      * UI
      * -------------------------- */
     return (
+
         <div className="space-y-4 pb-24">
+
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                 <div>
@@ -507,7 +533,7 @@ export default function OrderFormClient(props: Props) {
                                         className="h-9 w-full rounded border px-3"
                                         value={form.shipPhone ?? ""}
                                         onChange={(e) => {
-                                            set("shipPhone", e.target.value || null);
+                                            set("shipPhone", e.target.value);
                                             setShowSuggest(true);
                                         }}
                                         placeholder="VD: 0909xxxxxx"
@@ -581,7 +607,7 @@ export default function OrderFormClient(props: Props) {
                                         !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
                                     value={form.shipCity ?? ""}
-                                    onChange={(e) => set("shipCity", e.target.value || null)}
+                                    onChange={(e) => set("shipCity", e.target.value)}
                                     placeholder="VD: Hồ Chí Minh"
                                 />
                             </Field>
@@ -607,7 +633,7 @@ export default function OrderFormClient(props: Props) {
                                         !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
                                     value={form.shipWard ?? ""}
-                                    onChange={(e) => set("shipWard", e.target.value || null)}
+                                    onChange={(e) => set("shipWard", e.target.value)}
                                     placeholder="VD: Bến Nghé"
                                 />
                             </Field>
@@ -622,7 +648,7 @@ export default function OrderFormClient(props: Props) {
                                         !form.hasShipment && "bg-gray-50 text-gray-500"
                                     )}
                                     value={form.shipAddress ?? ""}
-                                    onChange={(e) => set("shipAddress", e.target.value || null)}
+                                    onChange={(e) => set("shipAddress", e.target.value)}
                                     placeholder="Số nhà, tên đường, ghi chú giao hàng…"
                                 />
                             </Field>
@@ -798,7 +824,7 @@ export default function OrderFormClient(props: Props) {
                                     <tbody>
                                         {form.items.map((it, idx) => {
                                             const isDiscount = it.kind === "DISCOUNT";
-                                            const lineTotal = Number(it.quantity) * Number(it.unitPrice);
+                                            const lineTotal = Number(it.quantity) * Number(it.listPrice);
 
                                             return (
                                                 <tr
@@ -854,10 +880,10 @@ export default function OrderFormClient(props: Props) {
                                                                 "h-8 w-28 rounded border px-2 text-right",
                                                                 isDiscount && "text-red-600"
                                                             )}
-                                                            value={it.unitPrice}
+                                                            value={it.listPrice}
                                                             onChange={(e) =>
                                                                 updateItem(idx, {
-                                                                    unitPrice: isDiscount
+                                                                    listPrice: isDiscount
                                                                         ? -Math.abs(Number(e.target.value || 0))
                                                                         : Number(e.target.value || 0),
                                                                 })
@@ -908,8 +934,8 @@ export default function OrderFormClient(props: Props) {
                                 <input
                                     type="datetime-local"
                                     className="h-9 w-full rounded border px-3"
-                                    value={isoToLocalInput(form.orderDate)}
-                                    onChange={(e) => set("orderDate", localInputToIso(e.target.value))}
+                                    value={isoToLocalInput(form.createdAt)}
+                                    onChange={(e) => set("createdAt", localInputToIso(e.target.value))}
                                 />
                             </Field>
 

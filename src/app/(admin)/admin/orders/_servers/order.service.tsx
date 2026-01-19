@@ -1,6 +1,6 @@
 "use server";
 
-//import { prisma, DB, dbOrTx } from "@/server/db/client";
+import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
@@ -10,7 +10,7 @@ import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
-import { OrderDraftInput } from "./order.type";
+import { boolean } from "zod";
 
 /* ================================
    TYPES
@@ -140,7 +140,7 @@ function norm(v: unknown) {
   const s = typeof v === "string" ? v.trim() : "";
   return s; // giữ "" nếu user xóa
 }
-export function serialize(obj: any) {
+export async function serialize(obj: any) {
   return JSON.parse(
     JSON.stringify(obj, (key, value) => {
       if (value instanceof Date) return value.toISOString();
@@ -366,7 +366,6 @@ export async function getAdminOrderList(input: OrderSearchInput) {
 
 export async function getAdminOrderDetail(id: string) {
 
-
   const row = await orderRepo.getOrderDetail(id, prisma);
   if (!row) throw new Error("Order không tồn tại");
   return serialize(row);
@@ -489,7 +488,7 @@ export async function createOrderWithItems(raw: any) {
         quantity: i.quantity,
         listPrice: i.listPrice,
         unitPriceAgreed,
-        taxRate: i.taxRate ?? null, // nếu orderItem có field taxRate
+
         // primaryImageUrl: i.primaryImageUrl ?? null, // nếu bạn muốn snapshot
       };
     });
@@ -600,12 +599,3 @@ export async function getOrderDraftForEdit(orderId: string) {
   if (!data) throw new Error("Order not found");
   return data;
 }
-
-export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
-  return prisma.$transaction(async (tx) => {
-    await orderRepo.assertCanEditDraft(tx, orderId);
-    return orderRepo.updateDraft(tx, orderId, input);
-  });
-}
-
-/** helper serialize Decimal/Date để dùng trong page server */

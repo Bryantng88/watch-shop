@@ -8,6 +8,7 @@ export default async function EditOrderPage({ params }: { params: { id: string }
 
     return (
         <OrderFormClient
+            key={params.id}
             mode="edit"
             orderId={params.id}
             initialData={initial as any}

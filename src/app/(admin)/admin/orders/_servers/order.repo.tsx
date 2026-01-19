@@ -2,6 +2,7 @@ import { DB, dbOrTx } from "@/server/db/client";
 import { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
+import { DevBundlerService } from "next/dist/server/lib/dev-bundler-service";
 
 /* ================================
    TYPES
@@ -240,10 +241,11 @@ export async function getOrderLite(tx: DB, id: string) {
 }
 
 
-export async function getOrderDetail(id: string, tx: PrismaClient) {
+export async function getOrderDetail(id: string, tx: DB) {
 
 
-    return tx.order.findUnique({
+    const db = dbOrTx(tx);
+    return db.order.findUnique({
         where: { id },
         select: {
             id: true,
