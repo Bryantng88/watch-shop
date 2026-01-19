@@ -10,7 +10,7 @@ import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
-import { boolean } from "zod";
+import { OrderDraftInput } from "./order.type";
 
 /* ================================
    TYPES
@@ -598,4 +598,10 @@ export async function getOrderDraftForEdit(orderId: string) {
   const data = await orderRepo.getDraftForEdit(prisma, orderId);
   if (!data) throw new Error("Order not found");
   return data;
+}
+export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
+  return prisma.$transaction(async (tx) => {
+    await orderRepo.assertCanEditDraft(tx, orderId);
+    return orderRepo.updateDraft(tx, orderId, input);
+  });
 }

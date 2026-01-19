@@ -431,7 +431,7 @@ export async function updateDraft(
             shipDistrict: input.shipDistrict ?? null,
             shipWard: input.shipWard ?? null,
 
-            createdAt: new Date(input.orderDate),
+            createdAt: new Date(input.createdAt),
             paymentMethod: input.paymentMethod,
             notes: input.notes ?? null,
 

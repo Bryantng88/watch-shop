@@ -227,7 +227,6 @@ function Badge({
  * MAIN
  * ============================== */
 export default function OrderFormClient(props: Props) {
-    console.log("RENDER props:", props.mode, props.orderId, props.initialData);
 
     const [hydrated, setHydrated] = useState(false);
     useEffect(() => setHydrated(true), []);
@@ -769,6 +768,7 @@ export default function OrderFormClient(props: Props) {
                             </div>
                         )}
 
+                        {/* DISCOUNT TAB */}
                         {activeTab === "DISCOUNT" && (
                             <div className="space-y-3 max-w-sm">
                                 <div className="text-sm text-gray-600">
@@ -784,19 +784,25 @@ export default function OrderFormClient(props: Props) {
                                         onKeyDown={(e) => {
                                             if (e.key !== "Enter") return;
 
-                                            const value = Number((e.target as HTMLInputElement).value);
-                                            if (!value || value <= 0) return;
+                                            const raw = (e.currentTarget.value ?? "").trim();
+                                            const value = Number(raw);
+                                            if (!Number.isFinite(value) || value <= 0) return;
 
                                             addItem({
                                                 kind: "DISCOUNT",
                                                 title: "Giảm giá",
                                                 productId: null,
+                                                variantId: "",          // ✅ thêm
+                                                unitPriceAgreed: 0,   // ✅ thêm
+                                                img: "",
                                                 quantity: 1,
-                                                unitPrice: -Math.abs(value),
-                                            } as any);
+                                                listPrice: -Math.abs(value),
+                                            });
 
-                                            (e.target as HTMLInputElement).value = "";
+                                            // clear input để không phải nhập lần 2
+                                            e.currentTarget.value = "";
                                         }}
+
                                     />
                                 </Field>
 
@@ -805,6 +811,7 @@ export default function OrderFormClient(props: Props) {
                                 </div>
                             </div>
                         )}
+
 
                         {/* Items table */}
                         {form.items.length > 0 ? (
@@ -824,6 +831,9 @@ export default function OrderFormClient(props: Props) {
                                     <tbody>
                                         {form.items.map((it, idx) => {
                                             const isDiscount = it.kind === "DISCOUNT";
+                                            const isProduct = it.kind === "PRODUCT";
+                                            const isService = it.kind === "SERVICE";
+
                                             const lineTotal = Number(it.quantity) * Number(it.listPrice);
 
                                             return (
@@ -832,21 +842,38 @@ export default function OrderFormClient(props: Props) {
                                                     className={cls("border-b hover:bg-gray-50", isDiscount && "bg-red-50")}
                                                 >
                                                     <td className="px-3 py-2">
-                                                        <Badge tone={it.kind === "SERVICE" ? "blue" : it.kind === "DISCOUNT" ? "green" : "gray"}>
+                                                        <Badge
+                                                            tone={
+                                                                isService ? "blue" : isDiscount ? "green" : "gray"
+                                                            }
+                                                        >
                                                             {it.kind}
                                                         </Badge>
                                                     </td>
 
                                                     <td className="px-3 py-2">
-                                                        <input
-                                                            className="h-8 w-full rounded border px-2"
-                                                            value={it.title}
-                                                            onChange={(e) => updateItem(idx, { title: e.target.value })}
-                                                        />
+                                                        {/* ✅ PRODUCT: không cho edit title */}
+                                                        {isProduct ? (
+                                                            <div className="h-8 flex items-center font-medium">{it.title}</div>
+                                                        ) : (
+                                                            <input
+                                                                className={cls(
+                                                                    "h-8 w-full rounded border px-2",
+                                                                    isDiscount && "text-red-600"
+                                                                )}
+                                                                value={it.title}
+                                                                onChange={(e) => updateItem(idx, { title: e.target.value })}
+                                                            />
+                                                        )}
 
-                                                        {it.kind === "PRODUCT" && (
+                                                        {isProduct && (
                                                             <div className="text-[11px] text-gray-500 mt-1">
-                                                                productId: <span className="font-mono">{it.productId}</span>
+                                                                {/* nếu có productId thì show ở đây */}
+                                                                {it.productId ? (
+                                                                    <>
+                                                                        productId: <span className="font-mono">{it.productId}</span>
+                                                                    </>
+                                                                ) : null}
                                                             </div>
                                                         )}
 
@@ -874,24 +901,36 @@ export default function OrderFormClient(props: Props) {
                                                     </td>
 
                                                     <td className="px-3 py-2 text-right">
-                                                        <input
-                                                            type="number"
-                                                            className={cls(
-                                                                "h-8 w-28 rounded border px-2 text-right",
-                                                                isDiscount && "text-red-600"
-                                                            )}
-                                                            value={it.listPrice}
-                                                            onChange={(e) =>
-                                                                updateItem(idx, {
-                                                                    listPrice: isDiscount
-                                                                        ? -Math.abs(Number(e.target.value || 0))
-                                                                        : Number(e.target.value || 0),
-                                                                })
-                                                            }
-                                                        />
+                                                        {/* ✅ PRODUCT: không cho edit đơn giá */}
+                                                        {isProduct ? (
+                                                            <span className="inline-flex h-8 items-center justify-end w-28 font-medium">
+                                                                {fmtMoney(Number(it.listPrice), "VND")}
+                                                            </span>
+                                                        ) : (
+                                                            <input
+                                                                type="number"
+                                                                className={cls(
+                                                                    "h-8 w-28 rounded border px-2 text-right",
+                                                                    isDiscount && "text-red-600"
+                                                                )}
+                                                                value={it.listPrice}
+                                                                onChange={(e) =>
+                                                                    updateItem(idx, {
+                                                                        listPrice: isDiscount
+                                                                            ? -Math.abs(Number(e.target.value || 0))
+                                                                            : Number(e.target.value || 0),
+                                                                    })
+                                                                }
+                                                            />
+                                                        )}
                                                     </td>
 
-                                                    <td className={cls("px-3 py-2 text-right font-semibold", isDiscount && "text-red-600")}>
+                                                    <td
+                                                        className={cls(
+                                                            "px-3 py-2 text-right font-semibold",
+                                                            isDiscount && "text-red-600"
+                                                        )}
+                                                    >
                                                         {fmtMoney(lineTotal, "VND")}
                                                     </td>
 
@@ -907,6 +946,7 @@ export default function OrderFormClient(props: Props) {
                                                 </tr>
                                             );
                                         })}
+
                                     </tbody>
 
                                     <tfoot>
