@@ -34,6 +34,7 @@ const shipmentwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumshipmentstatusFilterObjectSchema), shipmentstatusSchema]).optional(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   orderRefNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   Order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional()
 }).strict();
 export const ShipmentWhereInputObjectSchema: z.ZodType<Prisma.ShipmentWhereInput> = shipmentwhereinputSchema as unknown as z.ZodType<Prisma.ShipmentWhereInput>;

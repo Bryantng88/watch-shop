@@ -38,15 +38,12 @@ export async function createFromOrderTx(
         data: {
             orderId: order.id,
             orderRefNo: order.refNo ?? null,
-
             customerName: order.customerName ?? "",
             shipPhone: order.shipPhone ?? "",
             shipAddress: order.shipAddress ?? "",
-
             shipCity: order.shipCity ?? null,
             shipDistrict: order.shipDistrict ?? null,
             shipWard: order.shipWard ?? null,
-
             status: "DRAFT",
             shippingFee: 0,
         },

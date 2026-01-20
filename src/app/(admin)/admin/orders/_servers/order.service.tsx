@@ -11,7 +11,7 @@ import * as serviceReqtService from "../../services/_server/service_request.serv
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
 import { OrderDraftInput } from "./order.type";
-
+import { genRefNo } from "../../__components/AutoGenRef";
 /* ================================
    TYPES
 ================================ */
@@ -520,7 +520,6 @@ export async function getOrderDetail(id: string) {
 export async function postOneOrderTx(
   tx: Prisma.TransactionClient,
   orderId: string,
-  hasShipment: boolean
 ) {
   const order = await orderRepo.getOrderForPost(tx, orderId);
   if (!order) throw new Error("Order not found");
@@ -528,8 +527,16 @@ export async function postOneOrderTx(
   if (order.status !== OrderStatus.DRAFT) {
     throw new Error(`Order status must be DRAFT. Current: ${order.status}`);
   }
+  const refNo =
+    order.refNo ??
+    (await genRefNo(tx, {
+      model: tx.order,
+      prefix: "OD",
+      field: "refNo",
+      padding: 6,
+    }));
 
-  await orderRepo.markPosted(tx, order.id, hasShipment);
+  await orderRepo.markPosted(tx, order.id, refNo, order.hasShipment);
 
   if (order.verificationStatus === OrderVerificationStatus.PENDING) {
     await orderRepo.verifyOrder(order.id, tx, OrderVerificationStatus.VERIFIED)
@@ -537,11 +544,11 @@ export async function postOneOrderTx(
 
   await paymentService.createPaymentsForOrder(tx, order);
 
-  if (hasShipment) {
+  if (order.hasShipment) {
     // ✅ FIX: truyền order object, không truyền id
     await shipmentService.createFromOrderTx(tx, {
       id: order.id,
-      refNo: order.refNo,
+      orderRefNo: order.refNo,
       customerName: order.customerName,
       shipPhone: order.shipPhone,
       shipAddress: order.shipAddress,

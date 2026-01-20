@@ -21,7 +21,8 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   status: shipmentstatusSchema.optional(),
   refNo: z.string().optional().nullable(),
-  orderRefNo: z.string().optional().nullable()
+  orderRefNo: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable()
 }).strict();
 export const ShipmentCreateManyInputObjectSchema: z.ZodType<Prisma.ShipmentCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCreateManyInput>;
 export const ShipmentCreateManyInputObjectZodSchema = makeSchema();

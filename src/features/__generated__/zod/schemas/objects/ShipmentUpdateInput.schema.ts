@@ -28,6 +28,7 @@ const makeSchema = () => z.object({
   status: z.union([shipmentstatusSchema, z.lazy(() => EnumshipmentstatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   orderRefNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customerName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   Order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentNestedInputObjectSchema).optional()
 }).strict();
 export const ShipmentUpdateInputObjectSchema: z.ZodType<Prisma.ShipmentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUpdateInput>;

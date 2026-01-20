@@ -329,25 +329,7 @@ export default function OrderListPageClient({
                             Bạn đang duyệt <b>{selectedIds.length}</b> đơn hàng.
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={bulkHasShipment}
-                                    onChange={() => setBulkHasShipment(true)}
-                                />
-                                Đơn hàng có shipment (giao hàng)
-                            </label>
 
-                            <label className="flex items-center gap-2">
-                                <input
-                                    type="radio"
-                                    checked={!bulkHasShipment}
-                                    onChange={() => setBulkHasShipment(false)}
-                                />
-                                Đơn hàng không có shipment (pickup)
-                            </label>
-                        </div>
 
                         <div className="flex justify-end gap-2 pt-3">
                             <button
@@ -366,7 +348,6 @@ export default function OrderListPageClient({
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({
                                             orderIds: selectedIds,
-                                            hasShipment: bulkHasShipment,
                                         }),
                                     });
                                     location.reload();

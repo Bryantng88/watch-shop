@@ -22,6 +22,7 @@ const makeSchema = () => z.object({
   status: shipmentstatusSchema.optional(),
   refNo: z.string().optional().nullable(),
   orderRefNo: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable(),
   Order: z.lazy(() => OrderCreateNestedOneWithoutShipmentInputObjectSchema)
 }).strict();
 export const ShipmentCreateInputObjectSchema: z.ZodType<Prisma.ShipmentCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCreateInput>;

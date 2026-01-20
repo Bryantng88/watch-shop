@@ -29,6 +29,7 @@ export const ShipmentFindFirstSelectSchema: z.ZodType<Prisma.ShipmentSelect> = z
     status: z.boolean().optional(),
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
+    customerName: z.boolean().optional(),
     Order: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ShipmentSelect>;
 
@@ -52,6 +53,7 @@ export const ShipmentFindFirstSelectZodSchema = z.object({
     status: z.boolean().optional(),
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
+    customerName: z.boolean().optional(),
     Order: z.boolean().optional()
   }).strict();
 

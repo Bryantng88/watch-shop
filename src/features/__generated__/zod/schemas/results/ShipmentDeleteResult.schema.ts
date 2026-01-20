@@ -19,5 +19,6 @@ export const ShipmentDeleteResultSchema = z.nullable(z.object({
   status: z.unknown(),
   refNo: z.string().optional(),
   orderRefNo: z.string().optional(),
+  customerName: z.string().optional(),
   Order: z.unknown()
 }));

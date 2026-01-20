@@ -302,14 +302,14 @@ export function getOrdersForPost(
 export function markPosted(
     tx: DB,
     id: string,
-    hasShipment: boolean
+    refNo: string,
 ) {
     const db = dbOrTx(tx);
     return db.order.update({
         where: { id },
         data: {
             status: "POSTED",
-            hasShipment,
+            refNo,
             updatedAt: new Date(),
         },
     });
