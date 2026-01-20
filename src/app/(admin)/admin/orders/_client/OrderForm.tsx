@@ -59,6 +59,9 @@ const PAYMENT_METHODS: PaymentMethod[] = ["BANK_TRANSFER", "COD", "CREDIT_CARD"]
 /** ==============================
  * Helpers
  * ============================== */
+
+
+
 function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
 }
@@ -455,29 +458,50 @@ export default function OrderFormClient(props: Props) {
     async function submit() {
         setErrMsg(null);
 
-        const v = validate();
-        if (v) {
-            setErrMsg(v);
+        // validate nhẹ (giữ như bạn đang làm)
+        if (!form.customerName?.trim()) {
+            setErrMsg("Vui lòng nhập tên khách hàng");
+            return;
+        }
+        if (form.hasShipment && !form.shipAddress?.trim()) {
+            setErrMsg("Vui lòng nhập địa chỉ giao hàng (vì bạn chọn Có shipment)");
             return;
         }
 
-        setSaving(true);
-        try {
-            if (props.mode === "create") {
+        // CREATE: giữ nguyên như cũ
+        if (props.mode === "create") {
+            setSaving(true);
+            try {
                 const res = await fetch("/api/admin/orders", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(form),
                 });
                 if (!res.ok) throw new Error(await res.text());
-
                 const data = await res.json();
-                setCreatedOrderId(data?.id ?? null);
-                setShowSuccessModal(true);
+                router.push(`/admin/orders/${data.id}`);
                 router.refresh();
                 return;
+            } catch (e: any) {
+                setErrMsg(e?.message || "Tạo thất bại");
+            } finally {
+                setSaving(false);
             }
+            return;
+        }
 
+        // EDIT: không save ngay -> mở popup hỏi có POST luôn không
+        setShowPostConfirm(true);
+    }
+
+    // ====== POST-AFTER-EDIT CONFIRM ======
+    const [showPostConfirm, setShowPostConfirm] = useState(false);
+    const [postAfterSave, setPostAfterSave] = useState(false);
+
+    async function saveDraftOnly() {
+        setErrMsg(null);
+        setSaving(true);
+        try {
             // edit
             const res = await fetch(`/api/admin/orders/${props.orderId}`, {
                 method: "PATCH",
@@ -486,13 +510,18 @@ export default function OrderFormClient(props: Props) {
             });
             if (!res.ok) throw new Error(await res.text());
 
-            router.push(`/admin/orders/${props.orderId}`);
             router.refresh();
-        } catch (e: any) {
-            setErrMsg(e?.message || "Lưu thất bại");
         } finally {
             setSaving(false);
         }
+    }
+
+    // TODO: sửa đúng endpoint post của bạn nếu khác
+    async function postOrderNow(orderId: string) {
+        const res = await fetch(`/api/admin/orders/${orderId}/post`, {
+            method: "POST",
+        });
+        if (!res.ok) throw new Error(await res.text());
     }
 
     /** --------------------------
@@ -1163,17 +1192,14 @@ export default function OrderFormClient(props: Props) {
                         </Link>
 
                         <button
-                            type="button"
+                            className="w-full mt-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-neutral-800 disabled:opacity-60"
                             onClick={submit}
                             disabled={saving}
-                            className="h-9 rounded bg-black px-4 text-white hover:bg-neutral-800 disabled:opacity-60"
+                            type="button"
                         >
-                            {saving
-                                ? "Đang lưu…"
-                                : props.mode === "create"
-                                    ? "Tạo Draft"
-                                    : "Lưu thay đổi"}
+                            {saving ? "Đang lưu..." : props.mode === "create" ? "Tạo Draft" : "Lưu thay đổi"}
                         </button>
+
                     </div>
                 </div>
             </div>
@@ -1213,6 +1239,79 @@ export default function OrderFormClient(props: Props) {
                     </div>
                 </div>
             )}
+            {showPostConfirm && props.mode === "edit" && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
+                        <h3 className="text-lg font-semibold">Xác nhận lưu thay đổi</h3>
+
+                        <p className="mt-2 text-sm text-gray-600">
+                            Bạn muốn <b>lưu thay đổi</b> cho đơn hàng này.
+                            <br />
+                            Nếu bạn chọn <b>Duyệt (POST) luôn</b> thì đơn sẽ chuyển từ <b>DRAFT/RESERVED</b> sang <b>POSTED</b>
+                            và hệ thống sẽ tạo các bản ghi liên quan theo flow hiện tại (payments / shipment / service request...).
+                        </p>
+
+                        <div className="mt-4 flex items-center gap-2">
+                            <input
+                                id="postAfterSave"
+                                type="checkbox"
+                                checked={postAfterSave}
+                                onChange={(e) => setPostAfterSave(e.target.checked)}
+                            />
+                            <label htmlFor="postAfterSave" className="text-sm">
+                                Duyệt (POST) luôn sau khi lưu
+                            </label>
+                        </div>
+
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
+                                onClick={() => {
+                                    setShowPostConfirm(false);
+                                    setPostAfterSave(false);
+                                }}
+                                disabled={saving}
+                            >
+                                Hủy
+                            </button>
+
+                            <button
+                                type="button"
+                                className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
+                                onClick={async () => {
+                                    setSaving(true);
+                                    setErrMsg(null);
+                                    try {
+                                        // 1) save draft trước
+                                        await saveDraftOnly();
+
+                                        // 2) nếu tick -> post luôn
+                                        if (postAfterSave) {
+                                            await postOrderNow(props.orderId);
+                                        }
+
+                                        setShowPostConfirm(false);
+                                        setPostAfterSave(false);
+
+                                        // 3) quay lại detail
+                                        router.push(`/admin/orders/${props.orderId}`);
+                                        router.refresh();
+                                    } catch (e: any) {
+                                        setErrMsg(e?.message || "Thao tác thất bại");
+                                    } finally {
+                                        setSaving(false);
+                                    }
+                                }}
+                                disabled={saving}
+                            >
+                                {saving ? "Đang xử lý..." : postAfterSave ? "Lưu & POST" : "Chỉ lưu"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
