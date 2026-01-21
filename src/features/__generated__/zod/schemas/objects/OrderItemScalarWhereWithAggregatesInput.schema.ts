@@ -11,7 +11,9 @@ import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilte
 import { EnumProductTypeNullableWithAggregatesFilterObjectSchema as EnumProductTypeNullableWithAggregatesFilterObjectSchema } from './EnumProductTypeNullableWithAggregatesFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { EnumorderitemkindWithAggregatesFilterObjectSchema as EnumorderitemkindWithAggregatesFilterObjectSchema } from './EnumorderitemkindWithAggregatesFilter.schema';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema'
+import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { Enumservice_scopeNullableWithAggregatesFilterObjectSchema as Enumservice_scopeNullableWithAggregatesFilterObjectSchema } from './Enumservice_scopeNullableWithAggregatesFilter.schema';
+import { service_scopeSchema } from '../enums/service_scope.schema'
 
 const orderitemscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -33,7 +35,9 @@ const orderitemscalarwherewithaggregatesinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   productType: z.union([z.lazy(() => EnumProductTypeNullableWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
   kind: z.union([z.lazy(() => EnumorderitemkindWithAggregatesFilterObjectSchema), orderitemkindSchema]).optional(),
-  serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  serviceScope: z.union([z.lazy(() => Enumservice_scopeNullableWithAggregatesFilterObjectSchema), service_scopeSchema]).optional().nullable(),
+  linkedOrderItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const OrderItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput> = orderitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput>;
 export const OrderItemScalarWhereWithAggregatesInputObjectZodSchema = orderitemscalarwherewithaggregatesinputSchema;

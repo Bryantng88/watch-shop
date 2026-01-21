@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { bulkReadyShipments } from "@/app/(admin)/admin/shipment/_server/shipment.service";
+import { bulkReadyShipments } from "@/app/(admin)/admin/shipments/_server/shipment.service";
 // ✅ đổi path theo project bạn
 
 export async function POST(req: Request) {

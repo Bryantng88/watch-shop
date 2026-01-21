@@ -536,7 +536,7 @@ export async function postOneOrderTx(
       padding: 6,
     }));
 
-  await orderRepo.markPosted(tx, order.id, refNo, order.hasShipment);
+  await orderRepo.markPosted(tx, order.id, refNo);
 
   if (order.verificationStatus === OrderVerificationStatus.PENDING) {
     await orderRepo.verifyOrder(order.id, tx, OrderVerificationStatus.VERIFIED)

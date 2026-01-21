@@ -12,7 +12,11 @@ import { EnumProductTypeNullableFilterObjectSchema as EnumProductTypeNullableFil
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { EnumorderitemkindFilterObjectSchema as EnumorderitemkindFilterObjectSchema } from './EnumorderitemkindFilter.schema';
 import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { Enumservice_scopeNullableFilterObjectSchema as Enumservice_scopeNullableFilterObjectSchema } from './Enumservice_scopeNullableFilter.schema';
+import { service_scopeSchema } from '../enums/service_scope.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
+import { OrderItemNullableScalarRelationFilterObjectSchema as OrderItemNullableScalarRelationFilterObjectSchema } from './OrderItemNullableScalarRelationFilter.schema';
+import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
 import { OrderScalarRelationFilterObjectSchema as OrderScalarRelationFilterObjectSchema } from './OrderScalarRelationFilter.schema';
 import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema';
 import { ProductNullableScalarRelationFilterObjectSchema as ProductNullableScalarRelationFilterObjectSchema } from './ProductNullableScalarRelationFilter.schema';
@@ -42,7 +46,11 @@ const orderitemwhereinputSchema = z.object({
   productType: z.union([z.lazy(() => EnumProductTypeNullableFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
   kind: z.union([z.lazy(() => EnumorderitemkindFilterObjectSchema), orderitemkindSchema]).optional(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  serviceScope: z.union([z.lazy(() => Enumservice_scopeNullableFilterObjectSchema), service_scopeSchema]).optional().nullable(),
+  linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
+  other_OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),

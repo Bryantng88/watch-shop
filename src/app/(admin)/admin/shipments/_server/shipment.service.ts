@@ -9,7 +9,7 @@ import * as productRepo from "../../products/_server/product.repo"
 import { ShipmentSearchInput } from "./shipment.type";
 export type OrderForShipment = {
     id: string;
-    refNo: string | null;
+    orderRefNo: string | null;
     customerName: string | null;
     shipPhone: string | null;
     shipAddress: string | null;
@@ -37,7 +37,7 @@ export async function createFromOrderTx(
     return tx.shipment.create({
         data: {
             orderId: order.id,
-            orderRefNo: order.refNo ?? null,
+            orderRefNo: order.orderRefNo ?? null,
             customerName: order.customerName ?? "",
             shipPhone: order.shipPhone ?? "",
             shipAddress: order.shipAddress ?? "",

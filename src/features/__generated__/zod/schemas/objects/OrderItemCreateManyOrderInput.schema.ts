@@ -2,7 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { discount_typeSchema } from '../enums/discount_type.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema'
+import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { service_scopeSchema } from '../enums/service_scope.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -20,7 +21,9 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   productType: ProductTypeSchema.optional().nullable(),
   kind: orderitemkindSchema,
-  serviceCatalogId: z.string().optional().nullable()
+  serviceCatalogId: z.string().optional().nullable(),
+  serviceScope: service_scopeSchema.optional().nullable(),
+  linkedOrderItemId: z.string().optional().nullable()
 }).strict();
 export const OrderItemCreateManyOrderInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyOrderInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyOrderInput>;
 export const OrderItemCreateManyOrderInputObjectZodSchema = makeSchema();
