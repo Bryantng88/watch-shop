@@ -34,7 +34,8 @@ const makeSchema = () => z.object({
   kind: z.union([orderitemkindSchema, z.lazy(() => EnumorderitemkindFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   serviceScope: z.union([service_scopeSchema, z.lazy(() => NullableEnumservice_scopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const OrderItemUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.OrderItemUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUncheckedUpdateManyInput>;
 export const OrderItemUncheckedUpdateManyInputObjectZodSchema = makeSchema();

@@ -48,6 +48,7 @@ const orderitemwhereinputSchema = z.object({
   serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serviceScope: z.union([z.lazy(() => Enumservice_scopeNullableFilterObjectSchema), service_scopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  customerItemNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
   other_OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),

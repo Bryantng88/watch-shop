@@ -15,6 +15,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
   createdAt: z.date(),
   serviceCatalogId: z.string(),
   linkedOrderItemId: z.string(),
+  customerItemNote: z.string(),
   _count: z.object({
     id: z.number(),
     orderId: z.number(),
@@ -35,6 +36,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     serviceCatalogId: z.number(),
     serviceScope: z.number(),
     linkedOrderItemId: z.number(),
+    customerItemNote: z.number(),
     acquisitionItem: z.number(),
     OrderItem: z.number(),
     other_OrderItem: z.number(),
@@ -74,7 +76,8 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     img: z.string().nullable(),
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
-    linkedOrderItemId: z.string().nullable()
+    linkedOrderItemId: z.string().nullable(),
+    customerItemNote: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -91,6 +94,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     img: z.string().nullable(),
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
-    linkedOrderItemId: z.string().nullable()
+    linkedOrderItemId: z.string().nullable(),
+    customerItemNote: z.string().nullable()
   }).nullable().optional()
 }));

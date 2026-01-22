@@ -1,4 +1,4 @@
-import { PaymentMethod, ReserveType } from "@prisma/client";
+import { PaymentMethod, ReserveType, service_scope } from "@prisma/client";
 
 export type OrderItemInput = {
     id?: string; // dùng cho edit (optional)
@@ -10,6 +10,14 @@ export type OrderItemInput = {
     variantId: string;
     unitPriceAgreed: number;
     img: string;
+    serviceCatalogId?: string | null;
+    serviceScope?: service_scope | null;
+
+    // Nếu đi kèm sản phẩm: link tới OrderItem PRODUCT
+    linkedOrderItemId?: string | null;
+
+    // Nếu đồ khách mang tới: note mô tả
+    customerItemNote?: string | null;
 
 };
 

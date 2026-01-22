@@ -25,6 +25,7 @@ export const OrderItemModelSchema = z.object({
     serviceCatalogId: z.string().nullable(),
     serviceScope: service_scopeSchema.nullable(),
     linkedOrderItemId: z.string().nullable(),
+    customerItemNote: z.string().nullable(),
     acquisitionItem: z.array(z.unknown()),
     OrderItem: z.unknown().nullable(),
     other_OrderItem: z.array(z.unknown()),

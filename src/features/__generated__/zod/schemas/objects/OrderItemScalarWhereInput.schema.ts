@@ -37,7 +37,8 @@ const orderitemscalarwhereinputSchema = z.object({
   kind: z.union([z.lazy(() => EnumorderitemkindFilterObjectSchema), orderitemkindSchema]).optional(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serviceScope: z.union([z.lazy(() => Enumservice_scopeNullableFilterObjectSchema), service_scopeSchema]).optional().nullable(),
-  linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  customerItemNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const OrderItemScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereInput> = orderitemscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereInput>;
 export const OrderItemScalarWhereInputObjectZodSchema = orderitemscalarwhereinputSchema;

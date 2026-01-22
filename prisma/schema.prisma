@@ -244,6 +244,7 @@ model OrderItem {
   serviceCatalogId  String?
   serviceScope      service_scope?
   linkedOrderItemId String?
+  customerItemNote  String?
   acquisitionItem   AcquisitionItem[]
   OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
   other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")

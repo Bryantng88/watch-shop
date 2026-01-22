@@ -21,7 +21,8 @@ const makeSchema = () => z.object({
   kind: SortOrderSchema.optional(),
   serviceCatalogId: SortOrderSchema.optional(),
   serviceScope: SortOrderSchema.optional(),
-  linkedOrderItemId: SortOrderSchema.optional()
+  linkedOrderItemId: SortOrderSchema.optional(),
+  customerItemNote: SortOrderSchema.optional()
 }).strict();
 export const OrderItemMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.OrderItemMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemMinOrderByAggregateInput>;
 export const OrderItemMinOrderByAggregateInputObjectZodSchema = makeSchema();

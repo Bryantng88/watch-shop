@@ -108,7 +108,7 @@ export type CreateOrderInput = {
   shipWard: string;
   paymentMethod: PaymentMethod;
   notes: string | null;
-  orderDate: Date;
+  createdAt: Date;
   status: OrderStatus;
   items: CreateOrderItemInput[];
   source: OrderSource;
@@ -399,10 +399,10 @@ export async function createOrderWithItems(raw: any) {
     verificationStatus: raw.verificationStatus as OrderVerificationStatus,
     paymentMethod: raw.paymentMethod as PaymentMethod,
     notes: raw.notes ?? null,
-    orderDate:
-      raw.orderDate instanceof Date
-        ? raw.orderDate
-        : new Date(raw.orderDate),
+    createdAt:
+      raw.createdAt instanceof Date
+        ? raw.createdAt
+        : new Date(raw.createdAt),
 
     items: (raw.items ?? []).map((i: any) => ({
       productId: i.productId ?? null,

@@ -23,7 +23,8 @@ const makeSchema = () => z.object({
   productType: ProductTypeSchema.optional().nullable(),
   kind: orderitemkindSchema,
   serviceScope: service_scopeSchema.optional().nullable(),
-  linkedOrderItemId: z.string().optional().nullable()
+  linkedOrderItemId: z.string().optional().nullable(),
+  customerItemNote: z.string().optional().nullable()
 }).strict();
 export const OrderItemCreateManyServiceCatalogInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyServiceCatalogInput>;
 export const OrderItemCreateManyServiceCatalogInputObjectZodSchema = makeSchema();

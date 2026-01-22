@@ -29,6 +29,7 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.boolean().optional(),
   serviceScope: z.boolean().optional(),
   linkedOrderItemId: z.boolean().optional(),
+  customerItemNote: z.boolean().optional(),
   acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   other_OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),

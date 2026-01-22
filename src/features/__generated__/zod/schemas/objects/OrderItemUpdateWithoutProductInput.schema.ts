@@ -37,6 +37,7 @@ const makeSchema = () => z.object({
   productType: z.union([ProductTypeSchema, z.lazy(() => NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   kind: z.union([orderitemkindSchema, z.lazy(() => EnumorderitemkindFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceScope: z.union([service_scopeSchema, z.lazy(() => NullableEnumservice_scopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutSourceOrderItemNestedInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemUpdateOneWithoutOther_OrderItemNestedInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (item.price == null) {
+        if (item.listPrice == null) {
             return NextResponse.json(
                 { error: `Sản phẩm dòng ${i + 1} đơn giá không hợp lệ` },
                 { status: 400 }
