@@ -3,7 +3,7 @@ import * as z from 'zod';
 import { discount_typeSchema } from '../../enums/discount_type.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
 import { orderitemkindSchema } from '../../enums/orderitemkind.schema';
-import { service_scopeSchema } from '../../enums/service_scope.schema';
+import { ServiceScopeSchema } from '../../enums/ServiceScope.schema';
 // prettier-ignore
 export const OrderItemResultSchema = z.object({
     id: z.string(),
@@ -23,7 +23,7 @@ export const OrderItemResultSchema = z.object({
     productType: ProductTypeSchema.nullable(),
     kind: orderitemkindSchema,
     serviceCatalogId: z.string().nullable(),
-    serviceScope: service_scopeSchema.nullable(),
+    serviceScope: ServiceScopeSchema.nullable(),
     linkedOrderItemId: z.string().nullable(),
     customerItemNote: z.string().nullable(),
     acquisitionItem: z.array(z.unknown()),

@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { discount_typeSchema } from '../enums/discount_type.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { orderitemkindSchema } from '../enums/orderitemkind.schema';
-import { service_scopeSchema } from '../enums/service_scope.schema';
+import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema as AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutSourceOrderItemInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderItemInput.schema';
 import { OrderCreateNestedOneWithoutItemsInputObjectSchema as OrderCreateNestedOneWithoutItemsInputObjectSchema } from './OrderCreateNestedOneWithoutItemsInput.schema';
@@ -26,7 +26,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   productType: ProductTypeSchema.optional().nullable(),
   kind: orderitemkindSchema,
-  serviceScope: service_scopeSchema.optional().nullable(),
+  serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),

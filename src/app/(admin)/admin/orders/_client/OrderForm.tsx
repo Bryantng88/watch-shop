@@ -26,7 +26,7 @@ type Customer = {
 type PaymentMethod = "BANK_TRANSFER" | "COD" | "CREDIT_CARD";
 type ReserveType = "DEPOSIT" | "COD";
 
-type ServiceScope = "BUNDLED_PRODUCT" | "CUSTOMER_ITEM";
+type ServiceScope = "WITH_PURCHASE" | "CUSTOMER_OWNED";
 
 type ServiceCatalog = {
     id: string;
@@ -514,10 +514,10 @@ export default function OrderFormClient(props: Props) {
                 if (!it.serviceCatalogId) return "Dòng SERVICE thiếu serviceCatalogId.";
                 if (!it.serviceScope) return "Dòng SERVICE thiếu serviceScope.";
 
-                if (it.serviceScope === "BUNDLED_PRODUCT" && !it.linkedOrderItemId) {
+                if (it.serviceScope === "WITH_PURCHASE" && !it.linkedOrderItemId) {
                     return "SERVICE đi kèm sản phẩm: vui lòng chọn sản phẩm áp cho.";
                 }
-                if (it.serviceScope === "CUSTOMER_ITEM" && !String(it.customerItemNote ?? "").trim()) {
+                if (it.serviceScope === "CUSTOMER_OWNED" && !String(it.customerItemNote ?? "").trim()) {
                     return "SERVICE đồ khách mang tới: vui lòng nhập mô tả.";
                 }
             }
@@ -875,7 +875,7 @@ export default function OrderFormClient(props: Props) {
                                                             listPrice: Number(s.defaultPrice ?? 0),
 
                                                             serviceCatalogId: s.id,
-                                                            serviceScope: "BUNDLED_PRODUCT" as any,
+                                                            serviceScope: "WITH_PURCHASE" as any,
                                                             linkedOrderItemId: firstProductId,
                                                             customerItemNote: null,
                                                         } as any);
@@ -931,19 +931,19 @@ export default function OrderFormClient(props: Props) {
                                                     <Field label="Phạm vi dịch vụ">
                                                         <select
                                                             className="h-9 w-full rounded border px-2"
-                                                            value={(it.serviceScope ?? "BUNDLED_PRODUCT") as any}
+                                                            value={(it.serviceScope ?? "WITH_PURCHASE") as any}
                                                             onChange={(e) => {
                                                                 const scope = e.target.value as ServiceScope;
                                                                 updateItemById(it.id, {
                                                                     serviceScope: scope as any,
                                                                     linkedOrderItemId:
-                                                                        scope === "BUNDLED_PRODUCT" ? it.linkedOrderItemId ?? null : null,
-                                                                    customerItemNote: scope === "CUSTOMER_ITEM" ? it.customerItemNote ?? "" : null,
+                                                                        scope === "WITH_PURCHASE" ? it.linkedOrderItemId ?? null : null,
+                                                                    customerItemNote: scope === "CUSTOMER_OWNED" ? it.customerItemNote ?? "" : null,
                                                                 } as any);
                                                             }}
                                                         >
-                                                            <option value="BUNDLED_PRODUCT">Đi kèm sản phẩm</option>
-                                                            <option value="CUSTOMER_ITEM">Đồ khách mang tới</option>
+                                                            <option value="WITH_PURCHASE">Đi kèm sản phẩm</option>
+                                                            <option value="CUSTOMER_OWNED">Đồ khách mang tới</option>
                                                         </select>
                                                     </Field>
 
@@ -974,7 +974,7 @@ export default function OrderFormClient(props: Props) {
                                                     </Field>
                                                 </div>
 
-                                                {it.serviceScope !== "CUSTOMER_ITEM" && (
+                                                {it.serviceScope !== "CUSTOMER_OWNED" && (
                                                     <Field label="Áp cho sản phẩm" hint="Bắt buộc nếu dịch vụ đi kèm sản phẩm">
                                                         <select
                                                             className="h-9 w-full rounded border px-2"
@@ -995,7 +995,7 @@ export default function OrderFormClient(props: Props) {
                                                     </Field>
                                                 )}
 
-                                                {it.serviceScope === "CUSTOMER_ITEM" && (
+                                                {it.serviceScope === "CUSTOMER_OWNED" && (
                                                     <Field
                                                         label="Mô tả đồ khách mang tới"
                                                         hint="VD: seiko tròn mặt đen, đang chạy sai giờ"
@@ -1106,7 +1106,7 @@ export default function OrderFormClient(props: Props) {
                                             // service extra display
                                             let subNote: string | null = null;
                                             if (isService) {
-                                                if (it.serviceScope === "CUSTOMER_ITEM") {
+                                                if (it.serviceScope === "CUSTOMER_OWNED") {
                                                     subNote = String(it.customerItemNote ?? "").trim() || null;
                                                 } else if (it.linkedOrderItemId) {
                                                     const p = productLineItems.find((x) => x.id === it.linkedOrderItemId);

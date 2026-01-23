@@ -12,8 +12,8 @@ import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema as NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumProductTypeFieldUpdateOperationsInput.schema';
 import { orderitemkindSchema } from '../enums/orderitemkind.schema';
 import { EnumorderitemkindFieldUpdateOperationsInputObjectSchema as EnumorderitemkindFieldUpdateOperationsInputObjectSchema } from './EnumorderitemkindFieldUpdateOperationsInput.schema';
-import { service_scopeSchema } from '../enums/service_scope.schema';
-import { NullableEnumservice_scopeFieldUpdateOperationsInputObjectSchema as NullableEnumservice_scopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumservice_scopeFieldUpdateOperationsInput.schema';
+import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
+import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutOrderItemNestedInput.schema';
 import { ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInput.schema'
@@ -35,7 +35,7 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productType: z.union([ProductTypeSchema, z.lazy(() => NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   kind: z.union([orderitemkindSchema, z.lazy(() => EnumorderitemkindFieldUpdateOperationsInputObjectSchema)]).optional(),
-  serviceScope: z.union([service_scopeSchema, z.lazy(() => NullableEnumservice_scopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema).optional(),

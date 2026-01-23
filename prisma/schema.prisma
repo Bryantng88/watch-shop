@@ -242,7 +242,7 @@ model OrderItem {
   productType       ProductType?
   kind              orderitemkind
   serviceCatalogId  String?
-  serviceScope      service_scope?
+  serviceScope      ServiceScope?
   linkedOrderItemId String?
   customerItemNote  String?
   acquisitionItem   AcquisitionItem[]
@@ -958,7 +958,7 @@ enum PaymentType {
   OTHER
 }
 
-enum service_scope {
+enum ServiceScope {
   WITH_PURCHASE
   CUSTOMER_OWNED
 }

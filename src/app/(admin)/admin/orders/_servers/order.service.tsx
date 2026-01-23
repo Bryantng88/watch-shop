@@ -375,64 +375,97 @@ export async function getAdminOrderDetail(id: string) {
    COMMAND
 ================================ */
 
+
+
+// tùy bạn đang define kind ở đâu
+type OrderItemKind = "PRODUCT" | "SERVICE" | "DISCOUNT";
+
+function safeDate(v: any): Date {
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? new Date() : v;
+  const s = (v ?? "").toString().trim();
+  if (!s || s.toLowerCase() === "invalid date") return new Date();
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
 export async function createOrderWithItems(raw: any) {
-  const input: CreateOrderInput = {
+  const input = {
     shipPhone: raw.shipPhone ?? null,
     customerId: raw.customerId ?? null,
-    customerName: raw.customerName,
+    customerName: raw.customerName ?? "",
     reserve: raw.reserve
       ? {
         type: raw.reserve.type as ReserveType,
         amount: Number(raw.reserve.amount || 0),
-        expiresAt: raw.reserve.expiresAt
-          ? new Date(raw.reserve.expiresAt)
-          : null,
+        expiresAt: raw.reserve.expiresAt ? safeDate(raw.reserve.expiresAt) : null,
       }
       : null,
-    status: raw.status as OrderStatus,
+    status: (raw.status as OrderStatus) ?? OrderStatus.DRAFT,
+
     shipAddress: raw.shipAddress ?? null,
     shipCity: raw.shipCity ?? null,
     shipDistrict: raw.shipDistrict ?? null,
-    hasShipment: raw.hasShipment,
     shipWard: raw.shipWard ?? null,
-    source: raw.source as OrderSource,
-    verificationStatus: raw.verificationStatus as OrderVerificationStatus,
+    hasShipment: Boolean(raw.hasShipment),
+
+    source: (raw.source as OrderSource) ?? ("ADMIN" as any),
+    verificationStatus:
+      (raw.verificationStatus as OrderVerificationStatus) ??
+      OrderVerificationStatus.PENDING,
+
     paymentMethod: raw.paymentMethod as PaymentMethod,
     notes: raw.notes ?? null,
-    createdAt:
-      raw.createdAt instanceof Date
-        ? raw.createdAt
-        : new Date(raw.createdAt),
+
+    createdAt: safeDate(raw.createdAt),
 
     items: (raw.items ?? []).map((i: any) => ({
+      kind: (i.kind as OrderItemKind) ?? (i.productId ? "PRODUCT" : i.serviceCatalogId ? "SERVICE" : "PRODUCT"),
       productId: i.productId ?? null,
       serviceCatalogId: i.serviceCatalogId ?? null,
+
+      // service fields mới
+      serviceScope: i.serviceScope ?? null,
+      linkedOrderItemId: i.linkedOrderItemId ?? null,
+      customerItemNote: i.customerItemNote ?? null,
+
+      title: i.title ?? "",
       quantity: Number(i.quantity ?? 1),
+
+      // bạn đang dùng listPrice ở UI
+      listPrice: Number(i.listPrice ?? 0),
       taxRate: i.taxRate ?? null,
     })),
   };
 
   return prisma.$transaction(async (tx) => {
     /* =====================================================
-     * 1️⃣ Resolve CUSTOMER
+     * 1) Resolve CUSTOMER + RESERVE
      * ===================================================== */
     const resolvedCustomerId = await resolveCustomer(tx, input);
-    const reserveData = resolveReserve(input.paymentMethod, input.reserve)
-    /* =====================================================
-     * 2️⃣ Reserve PRODUCT variants (lock inventory)
-     * ===================================================== */
 
+    const reserveData = resolveReserve(input.paymentMethod, input.reserve);
+
+    // FIX: nếu reserve là DEPOSIT/COD thì bạn muốn RESERVED
+    if (reserveData?.reserveType === "DEPOSIT" || reserveData?.reserveType === "COD") {
+      input.status = OrderStatus.RESERVED;
+    } else {
+      input.status = OrderStatus.DRAFT;
+    }
+
+    /* =====================================================
+     * 2) Resolve PRODUCT items từ DB + reserve inventory
+     * ===================================================== */
     const rawProductItems = input.items
-      .filter((i) => i.productId) // bỏ item rỗng
+      .filter((i) => i.kind === "PRODUCT" && i.productId)
       .map((i) => ({
         productId: i.productId as string,
         quantity: i.quantity,
         taxRate: i.taxRate ?? null,
       }));
 
-    const resolvedItems = await resolveItemsFromDb(tx, rawProductItems);
+    const resolvedProductItems = await resolveItemsFromDb(tx, rawProductItems);
 
-    for (const item of resolvedItems) {
+    for (const item of resolvedProductItems) {
       if (item.kind !== "PRODUCT") continue;
 
       await updateProductVariantStt(tx, {
@@ -441,13 +474,9 @@ export async function createOrderWithItems(raw: any) {
         fromStatuses: ["ACTIVE"],
       });
     }
-    if (reserveData?.reserveType === "DEPOSIT" || reserveData?.reserveType === "COD") {
-      input.status === OrderStatus.RESERVED
-    } else {
-      //input.status === OrderStatus.DRAFT
-    }
+
     /* =====================================================
-     * 3️⃣ Create ORDER (DRAFT)
+     * 3) Create ORDER (DRAFT/RESERVED)
      * ===================================================== */
     const order = await orderRepo.createOrder(tx, {
       customerId: resolvedCustomerId,
@@ -460,20 +489,21 @@ export async function createOrderWithItems(raw: any) {
       paymentMethod: input.paymentMethod!,
       hasShipment: input.hasShipment,
       notes: input.notes,
-      createdAt: input.orderDate,
+      createdAt: input.createdAt, // ✅ FIX (không dùng input.orderDate)
       status: input.status,
       source: input.source,
       verificationStatus: input.verificationStatus,
       reserveType: reserveData?.reserveType ?? null,
       depositRequired: reserveData?.depositRequired ?? null,
-      reserveUntil: reserveData?.reserveUntil ?? null
+      reserveUntil: reserveData?.reserveUntil ?? null,
     });
 
     /* =====================================================
-     * 4️⃣ Create ORDER ITEMS
+     * 4) Create ORDER ITEMS (PRODUCT + SERVICE + DISCOUNT)
      * ===================================================== */
-    const orderItemsPayload = resolvedItems.map((i) => {
-      // nếu bạn chưa support discount/service ở endpoint này thì discountType/value luôn null
+
+    // 4.1 PRODUCT payload: dùng resolvedProductItems (lấy title/variant/price từ DB)
+    const productPayload = resolvedProductItems.map((i) => {
       const unitPriceAgreed = calcUnitPriceAgreed({
         listPrice: i.listPrice,
         discountType: null,
@@ -487,26 +517,45 @@ export async function createOrderWithItems(raw: any) {
         title: i.title,
         quantity: i.quantity,
         listPrice: i.listPrice,
+        taxRate: i.taxRate ?? null,
         unitPriceAgreed,
-
-        // primaryImageUrl: i.primaryImageUrl ?? null, // nếu bạn muốn snapshot
+        img: i.primaryImageUrl ?? null,
       };
     });
+
+    // 4.2 SERVICE payload: lấy trực tiếp từ input.items (không qua resolveItemsFromDb)
+    const servicePayload = await resolveServicePayload(tx, input.items);
+
+    // 4.3 DISCOUNT payload: (âm tiền)
+    const discountPayload = input.items
+      .filter((i) => i.kind === "DISCOUNT")
+      .map((i) => {
+        const v = Number(i.listPrice || 0);
+        if (!Number.isFinite(v) || v === 0) throw new Error("DISCOUNT listPrice không hợp lệ");
+        return {
+          kind: "DISCOUNT" as const,
+          productId: null,
+          variantId: null,
+          title: (i.title ?? "Giảm giá").trim(),
+          quantity: 1,
+          listPrice: v > 0 ? -Math.abs(v) : v, // luôn âm
+          taxRate: null,
+          unitPriceAgreed: v > 0 ? -Math.abs(v) : v,
+        };
+      });
+
+    const orderItemsPayload = [...productPayload, ...servicePayload, ...discountPayload];
 
     const createdItems = await orderRepo.createOrderItems(tx, order.id, orderItemsPayload);
 
     /* =====================================================
-     * 5️⃣ Compute & update SUBTOTAL
+     * 5) Compute & update SUBTOTAL (tính cả SERVICE/DISCOUNT)
      * ===================================================== */
-    const subtotal = createdItems.reduce(
-      (sum, i) => sum + i.subtotal,
-      0
-    );
-
+    const subtotal = createdItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
     await orderRepo.updateSubtotal(tx, order.id, subtotal);
 
     /* =====================================================
-     * 6️⃣ Return lite order
+     * 6) Return lite order
      * ===================================================== */
     return orderRepo.getOrderLite(tx, order.id);
   });
@@ -559,15 +608,15 @@ export async function postOneOrderTx(
   }
 
   if (order.items.some((i: any) => i.kind === "SERVICE")) {
-    await serviceReqtService.createFromOrder(tx, order);
+    await serviceReqtService.createServiceRequestsFromOrderTx(tx, order);
   }
 
   return { id: order.id, status: "POSTED" as const };
 }
 
 // 2) Wrapper: gọi cho trường hợp post 1 đơn lẻ (API /orders/[id]/post)
-export async function postOneOrder(orderId: string, hasShipment: boolean) {
-  return prisma.$transaction((tx) => postOneOrderTx(tx, orderId, hasShipment));
+export async function postOneOrder(orderId: string) {
+  return prisma.$transaction((tx) => postOneOrderTx(tx, orderId));
 }
 
 // order-post.service.ts
@@ -583,7 +632,7 @@ export async function postOrders(orderIds: string[], hasShipment: boolean) {
       if (o.status !== OrderStatus.DRAFT) continue;
 
       // ✅ gọi core tx handler cho gọn
-      await postOneOrderTx(tx, o.id, hasShipment);
+      await postOneOrderTx(tx, o.id);
       posted++;
     }
 
@@ -610,5 +659,78 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
   return prisma.$transaction(async (tx) => {
     await orderRepo.assertCanEditDraft(tx, orderId);
     return orderRepo.updateDraft(tx, orderId, input);
+  });
+}
+
+type ServiceScope = "WITH_PURCHASE" | "CUSTOMER_OWNED"; // theo enum bạn vừa tạo
+
+async function resolveServicePayload(tx: Prisma.TransactionClient, items: any[]) {
+  const serviceInputs = items.filter((i) => i.kind === "SERVICE");
+
+  if (!serviceInputs.length) return [];
+
+  // fetch all catalogs
+  const ids = [...new Set(serviceInputs.map((i) => i.serviceCatalogId).filter(Boolean))];
+  if (ids.length !== serviceInputs.length) {
+    throw new Error("Có SERVICE thiếu serviceCatalogId");
+  }
+
+  const catalogs = await tx.serviceCatalog.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true, defaultPrice: true, isActive: true },
+  });
+
+  const catMap = new Map(catalogs.map((c) => [c.id, c]));
+
+  return serviceInputs.map((i) => {
+    const cat = catMap.get(i.serviceCatalogId);
+    if (!cat) throw new Error(`ServiceCatalog not found: ${i.serviceCatalogId}`);
+    if (cat.isActive === false) throw new Error(`ServiceCatalog is inactive: ${i.serviceCatalogId}`);
+
+    const scope = (i.serviceScope as ServiceScope) ?? "CUSTOMER_OWNED";
+
+    // ✅ validate theo scope
+    if (scope === "CUSTOMER_OWNED") {
+      const note = (i.customerItemNote ?? "").toString().trim();
+      if (!note) throw new Error("SERVICE scope CUSTOMER_ITEM cần customerItemNote");
+    }
+
+    if (scope === "WITH_PURCHASE") {
+      // nếu bạn muốn áp vào sản phẩm đã có trong order
+      if (!i.linkedOrderItemId) throw new Error("SERVICE scope WITH_PURCHASE cần linkedOrderItemId");
+    }
+
+    const title = (i.title ?? cat.name ?? "").toString().trim();
+    if (!title) throw new Error("SERVICE thiếu title (và ServiceCatalog cũng thiếu name)");
+
+    const rawPrice = Number(i.listPrice ?? 0);
+    const price =
+      Number.isFinite(rawPrice) && rawPrice !== 0
+        ? rawPrice
+        : Number(cat.defaultPrice ?? 0);
+
+    const unitPriceAgreed = calcUnitPriceAgreed({
+      listPrice: price,
+      discountType: null,
+      discountValue: null,
+    });
+
+    return {
+      kind: "SERVICE" as const,
+      productId: null,
+      variantId: null,
+
+      title,
+      quantity: Math.max(1, Number(i.quantity ?? 1)),
+      listPrice: price,
+      taxRate: i.taxRate ?? null,
+      unitPriceAgreed,
+
+      // ✅ fields mới
+      serviceCatalogId: cat.id,
+      serviceScope: scope,
+      linkedOrderItemId: i.linkedOrderItemId ?? null,
+      customerItemNote: i.customerItemNote ?? null,
+    };
   });
 }
