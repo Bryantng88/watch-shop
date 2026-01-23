@@ -19,6 +19,7 @@ export const OrderItemFindUniqueResultSchema = z.nullable(z.object({
   serviceCatalogId: z.string().optional(),
   serviceScope: z.unknown().optional(),
   linkedOrderItemId: z.string().optional(),
+  customerItemNote: z.string().optional(),
   acquisitionItem: z.array(z.unknown()),
   OrderItem: z.unknown().optional(),
   other_OrderItem: z.array(z.unknown()),

@@ -1,5 +1,5 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import { Prisma, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
+import { Prisma, ServiceScope, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
 import { DevBundlerService } from "next/dist/server/lib/dev-bundler-service";
@@ -22,6 +22,7 @@ export type CreateOrderRow = {
     createdAt: Date;
     status: OrderStatus;
     source: OrderSource;
+
     verificationStatus: OrderVerificationStatus;
     reserveType: ReserveType | null;
     depositRequired: number | null;
@@ -50,6 +51,8 @@ export type CreateOrderItemRow = {
     img?: string;
     quantity: number;
     kind: orderitemkind;
+    serviceCatalogId: string;
+    serviceScope: ServiceScope;
     listPrice: number;
     unitPriceAgreed: number; // 👈 service tính, repo chỉ lưu
     taxRate?: number;
@@ -178,6 +181,8 @@ export async function createOrderItems(
             variantId: i.variantId ?? null,
             title: i.title,
             img: i.img ?? null,
+            serviceCatalogId: i.serviceCatalogId,
+            serviceScope: i.serviceScope,
             listPrice: i.listPrice,
             kind: i.kind,
             unitPriceAgreed: i.unitPriceAgreed,

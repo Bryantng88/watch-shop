@@ -31,30 +31,95 @@ export async function getServiceCatalogList() {
 }
 
 
-export async function createFromOrder(
+
+
+type OrderForPost = any; // bạn đang có type order trong getOrderForPost(); để any cho bạn paste nhanh
+
+function pickSnapFromLinkedProductItem(linked: any) {
+    // linked: OrderItem PRODUCT (include Product + variant)
+    const product = linked?.Product ?? null;
+    const variant = linked?.variant ?? null;
+
+    return {
+        productId: linked?.productId ?? null,
+        variantId: linked?.variantId ?? null,
+        brandSnapshot: product?.brandName ?? product?.brand ?? null,
+        modelSnapshot: product?.modelName ?? product?.title ?? linked?.title ?? null,
+        refSnapshot: product?.refNo ?? product?.ref ?? null,
+        serialSnapshot: variant?.serial ?? variant?.serialNo ?? null,
+    };
+}
+
+/**
+ * Tạo ServiceRequest từ các OrderItem.kind === "SERVICE"
+ * - servicecatalogid lấy từ orderItem.serviceCatalogId / orderItem.servicecatalogid tuỳ schema OrderItem
+ * - PRODUCT_ITEM: lấy snapshot từ linkedOrderItemId (item PRODUCT)
+ * - CUSTOMER_ITEM: snapshot product/variant null, notes ưu tiên customerItemNote
+ */
+export async function createServiceRequestsFromOrderTx(
     tx: Prisma.TransactionClient,
-    order: {
-        items: Array<{
-            id: string;
-            kind: string;
-            title: string;
-            quantity: number;
-            unitPriceAgreed: number;
-        }>;
-    }
+    order: OrderForPost
 ) {
-    const serviceItems = order.items.filter(
-        (i) => i.kind === "SERVICE"
-    );
+    const serviceItems = (order.items ?? []).filter((i: any) => i.kind === "SERVICE");
+    if (!serviceItems.length) return { created: 0 };
 
-    if (serviceItems.length === 0) return;
-
-    for (const item of serviceItems) {
-        await sevRepo.createServiceRequest(tx, {
-            orderItemId: item.id,
-            title: item.title,
-            quantity: item.quantity,
-            unitPrice: item.unitPriceAgreed,
-        });
+    // Map orderItemId => item (để lookup linkedOrderItem)
+    const itemById = new Map<string, any>();
+    for (const it of order.items ?? []) {
+        if (it?.id) itemById.set(it.id, it);
     }
+
+    const rows: Prisma.ServiceRequestCreateManyInput[] = serviceItems.map((it: any) => {
+        const servicecatalogid =
+            it.serviceCatalogId ?? it.servicecatalogid ?? null;
+
+        if (!servicecatalogid) {
+            throw new Error(`SERVICE item thiếu serviceCatalogId: orderItemId=${it.id}`);
+        }
+
+        const scope = it.serviceScope; // enum ServiceScope ở OrderItem
+        const linked = it.linkedOrderItemId ? itemById.get(it.linkedOrderItemId) : null;
+
+        const snap =
+            scope === "PRODUCT_ITEM" && linked
+                ? pickSnapFromLinkedProductItem(linked)
+                : {
+                    productId: null,
+                    variantId: null,
+                    brandSnapshot: null,
+                    modelSnapshot: null,
+                    refSnapshot: null,
+                    serialSnapshot: null,
+                };
+
+        // notes: CUSTOMER_ITEM ưu tiên note mô tả đồ khách mang tới
+        const notes =
+            (scope === "CUSTOMER_ITEM" ? (it.customerItemNote ?? null) : null) ??
+            (order.notes ?? null);
+
+        return {
+            orderItemId: it.id,
+            customerId: order.customerId ?? null,
+
+            // snapshots from linked product item (nếu có)
+            productId: snap.productId,
+            variantId: snap.variantId,
+            brandSnapshot: snap.brandSnapshot,
+            modelSnapshot: snap.modelSnapshot,
+            refSnapshot: snap.refSnapshot,
+            serialSnapshot: snap.serialSnapshot,
+
+            appointmentAt: null,
+            notes,
+            warrantyUntil: null,
+            warrantyPolicy: null,
+
+            // schema field name (lowercase theo ảnh)
+            servicecatalogid,
+            // type/status default đã có trong schema nên không cần set
+        };
+    });
+
+    await serviceRequestRepo.createMany(tx, rows);
+    return { created: rows.length };
 }
