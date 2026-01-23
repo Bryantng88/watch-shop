@@ -936,7 +936,8 @@ export default function OrderFormClient(props: Props) {
                                                     </td>
 
                                                     {/* SL */}
-                                                    <td className="px-3 py-3 align-top text-right">
+                                                    {/* SL */}
+                                                    <td className="px-3 py-3 align-middle text-right">
                                                         {isDiscount ? (
                                                             <span className="text-gray-500">—</span>
                                                         ) : (
@@ -953,9 +954,9 @@ export default function OrderFormClient(props: Props) {
                                                     </td>
 
                                                     {/* Đơn giá */}
-                                                    <td className="px-3 py-3 align-top text-right">
+                                                    <td className="px-3 py-3 align-middle text-right">
                                                         {isProduct ? (
-                                                            <div className="h-9 inline-flex items-center justify-end font-medium w-28">
+                                                            <div className="inline-flex h-9 w-28 items-center justify-end font-medium">
                                                                 {fmtMoney(price, "VND")}
                                                             </div>
                                                         ) : (
@@ -976,12 +977,12 @@ export default function OrderFormClient(props: Props) {
                                                     </td>
 
                                                     {/* Thành tiền */}
-                                                    <td className={cls("px-3 py-3 align-top text-right font-semibold", isDiscount && "text-red-600")}>
+                                                    <td className={cls("px-3 py-3 align-middle text-right font-semibold", isDiscount && "text-red-600")}>
                                                         {fmtMoney(lineTotal, "VND")}
                                                     </td>
 
                                                     {/* Xóa */}
-                                                    <td className="px-3 py-3 align-top text-right">
+                                                    <td className="px-3 py-3 align-middle text-right">
                                                         <button
                                                             type="button"
                                                             onClick={() => removeItem(idx)}
@@ -990,6 +991,7 @@ export default function OrderFormClient(props: Props) {
                                                             Xóa
                                                         </button>
                                                     </td>
+
                                                 </tr>
                                             );
                                         })}
