@@ -13,7 +13,7 @@ import {
     Menu,
     ClipboardList,
     Receipt,
-    Warehouse
+    Warehouse,
 
 } from "lucide-react";
 import ActiveLink from "./AdminActiveLink";
@@ -31,12 +31,14 @@ const NAV = [
     { href: "/admin/products", label: "Sản phẩm", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
     { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags, permission: PERMISSIONS.ACQUISITION_VIEW },
     { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList, permission: PERMISSIONS.ORDER_VIEW },
-    { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW },
+    { href: "/admin/services", label: "Service", icon: Settings, permission: PERMISSIONS.SERVICE_VIEW },
+
     { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW },
     { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
+    { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW },
+
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
-    { href: "/admin/settings", label: "Thiết lập", icon: Settings },
 ];
 
 export default function AdminSidebar({ user }: Props) {
