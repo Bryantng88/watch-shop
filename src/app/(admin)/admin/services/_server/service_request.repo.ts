@@ -60,14 +60,16 @@ export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyIn
 }
 
 export async function getServiceCatalogList(
-  where: Prisma.ServiceCatalogWhereInput,
-  orderBy: Prisma.ServiceCatalogOrderByWithRelationInput,
+  where: Prisma.ServiceRequestWhereInput,
+  orderBy: Prisma.ServiceRequestOrderByWithRelationInput,
   skip: number,
   take: number,
-  prisma: PrismaClient
+  tx: DB
 ) {
-  const [rows, total] = await prisma.$transaction([
-    prisma.serviceCatalog.findMany({
+  const db = dbOrTx(tx);
+
+  const [rows, total] = await Promise.all([
+    db.serviceRequest.findMany({
       where,
       orderBy,
       skip,
@@ -75,15 +77,15 @@ export async function getServiceCatalogList(
       // select tuỳ bạn, để an toàn + nhẹ query
       select: {
         id: true,
-        code: true,
-        name: true,
-        defaultPrice: true,
-        isActive: true,
+        //code: true,
+        //name: true,
+        //defaultPrice: true,
+        //isActive: true,
         createdAt: true,
         updatedAt: true,
       },
     }),
-    prisma.serviceCatalog.count({ where }),
+    db.serviceRequest.count({ where }),
   ]);
 
   return { rows, total };

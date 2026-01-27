@@ -59,6 +59,34 @@ function fmtDate(d?: string | null) {
         minute: "2-digit",
     });
 }
+function DotLabel({
+    label,
+    tone = "green",
+}: {
+    label: string;
+    tone?: "green" | "gray" | "blue";
+}) {
+    const dot =
+        tone === "blue"
+            ? "bg-blue-500"
+            : tone === "gray"
+                ? "bg-gray-400"
+                : "bg-emerald-500";
+
+    const text =
+        tone === "blue"
+            ? "text-blue-700"
+            : tone === "gray"
+                ? "text-gray-600"
+                : "text-emerald-700";
+
+    return (
+        <div className={cls("mt-1 inline-flex items-center gap-1.5 text-[11px]", text)}>
+            <span className={cls("h-2 w-2 rounded-full", dot)} />
+            <span className="leading-none">{label}</span>
+        </div>
+    );
+}
 
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
@@ -424,7 +452,15 @@ export default function OrderListPageClient({
                                             />
                                         </td>
 
-                                        <td className="px-3 py-2 font-medium">{o.refNo ?? "-"}</td>
+                                        <td className="px-3 py-2">
+                                            <div className="leading-tight">
+                                                <div className="font-medium">{o.refNo ?? "-"}</div>
+
+                                                {o.hasShipment ? (
+                                                    <DotLabel label="Shipment" tone="green" />
+                                                ) : null}
+                                            </div>
+                                        </td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
 
