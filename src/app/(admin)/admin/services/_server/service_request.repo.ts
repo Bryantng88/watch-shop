@@ -1,5 +1,5 @@
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient | typeof prisma;
 
@@ -54,3 +54,37 @@ export function createServiceRequest(
 }
 
 
+export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyInput[]) {
+  const db = dbOrTx(tx)
+  return db.serviceRequest.createMany({ data });
+}
+
+export async function getServiceCatalogList(
+  where: Prisma.ServiceCatalogWhereInput,
+  orderBy: Prisma.ServiceCatalogOrderByWithRelationInput,
+  skip: number,
+  take: number,
+  prisma: PrismaClient
+) {
+  const [rows, total] = await prisma.$transaction([
+    prisma.serviceCatalog.findMany({
+      where,
+      orderBy,
+      skip,
+      take,
+      // select tuỳ bạn, để an toàn + nhẹ query
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        defaultPrice: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.serviceCatalog.count({ where }),
+  ]);
+
+  return { rows, total };
+}

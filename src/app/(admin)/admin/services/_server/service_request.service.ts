@@ -1,6 +1,6 @@
-import { listServiceCatalogRepo } from "./service_request.repo";
 import * as sevRepo from "./service_request.repo"
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import * as serviceRequestRepo from "./service_request.repo";
 
 export type ServiceCatalogItem = {
     id: string;
@@ -12,26 +12,61 @@ export type ServiceCatalogItem = {
     durationMin: number | null;
 };
 
-export async function getServiceCatalogList() {
-    const rows = await listServiceCatalogRepo(undefined, {
-        isActive: true,
-    });
 
-    return rows.map((r) => ({
-        id: r.id,
-        code: r.code,
-        name: r.name,
-        description: r.description,
-        detail: r.detail,
-        defaultPrice: r.defaultPrice
-            ? Number(r.defaultPrice)
-            : null,
-        durationMin: r.durationMin,
+
+/**
+ * Repo cần có hàm:
+ * serviceCatalogRepo.getList(where, orderBy, skip, take, prisma)
+ * -> return { rows, total }
+ */
+export type ServiceCatalogSearchInput = {
+    page: number;
+    pageSize: number;
+    q?: string | null;
+    isActive?: boolean | null;
+};
+
+export async function getServiceCatalogList(
+    input: ServiceCatalogSearchInput,
+    prisma: PrismaClient
+) {
+    const { page, pageSize, q, isActive } = input;
+
+    const where: Prisma.ServiceCatalogWhereInput = {
+        ...(typeof isActive === "boolean" ? { isActive } : {}),
+        ...(q
+            ? {
+                OR: [
+                    { name: { contains: q, mode: "insensitive" } },
+                    { code: { contains: q, mode: "insensitive" } },
+                ],
+            }
+            : {}),
+    };
+
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    const { rows, total } = await serviceRequestRepo.getServiceCatalogList(
+        where,
+        { updatedAt: "desc" },
+        skip,
+        take,
+        prisma
+    );
+
+    const items = rows.map((s) => ({
+        id: s.id,
+        code: s.code ?? null,
+        name: s.name,
+        defaultPrice: s.defaultPrice != null ? Number(s.defaultPrice) : null,
+        isActive: Boolean(s.isActive),
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
     }));
+
+    return { items, total, page, pageSize };
 }
-
-
-
 
 type OrderForPost = any; // bạn đang có type order trong getOrderForPost(); để any cho bạn paste nhanh
 
