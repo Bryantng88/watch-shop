@@ -13,7 +13,7 @@ import {
 } from "@/components/badges/StatusMaps";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { useSearchParams } from "next/navigation";
-
+import DotLabel from "../../__components/DotLabel";
 
 
 type OrderItem = {
@@ -59,34 +59,7 @@ function fmtDate(d?: string | null) {
         minute: "2-digit",
     });
 }
-function DotLabel({
-    label,
-    tone = "green",
-}: {
-    label: string;
-    tone?: "green" | "gray" | "blue";
-}) {
-    const dot =
-        tone === "blue"
-            ? "bg-blue-500"
-            : tone === "gray"
-                ? "bg-gray-400"
-                : "bg-emerald-500";
 
-    const text =
-        tone === "blue"
-            ? "text-blue-700"
-            : tone === "gray"
-                ? "text-gray-600"
-                : "text-emerald-700";
-
-    return (
-        <div className={cls("mt-1 inline-flex items-center gap-1.5 text-[11px]", text)}>
-            <span className={cls("h-2 w-2 rounded-full", dot)} />
-            <span className="leading-none">{label}</span>
-        </div>
-    );
-}
 
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
@@ -408,11 +381,8 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
-                            <th className="px-3 py-2 text-left">Nguồn ĐH</th>
                             <th className="px-3 py-2 text-left">Admin Phê duyệt</th>
-                            <th className="px-3 py-2 text-left">Loại ĐH</th>
-                            <th className="px-3 py-2 text-left">Shipment</th>
-                            <th className="px-3 py-2 text-left">Tiền cọc</th>
+
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-left">Tổng tiền</th>
                             <th className="px-3 py-2 text-left">Số dòng</th>
@@ -459,6 +429,10 @@ export default function OrderListPageClient({
                                                 {o.hasShipment ? (
                                                     <DotLabel label="Shipment" tone="green" />
                                                 ) : null}
+                                                {o.reserveType === "COD" ? <DotLabel label="COD" tone="blue" /> : null}
+                                                {o.reserveType === "DEPOSIT" ? <DotLabel label="Deposit" tone="blue" /> : null}
+                                                {o.source === "WEB" ? <DotLabel label="Web" tone="gray" /> : null}
+
                                             </div>
                                         </td>
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
@@ -468,30 +442,13 @@ export default function OrderListPageClient({
                                             <StatusBadge value={o.status} map={ORDER_STATUS} />
                                         </td>
 
-                                        <td className="px-3 py-2">
-                                            <StatusBadge value={o.source} map={ORDER_SOURCE} />
-                                        </td>
 
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
                                         </td>
 
-                                        <td className="px-3 py-2">
-                                            <StatusBadge value={o.reserveType ?? "NONE"} map={RESERVE_TYPE} />
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            {o.hasShipment ? (
-                                                <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
-                                                    SHIP
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
-                                                    PICKUP
-                                                </span>
-                                            )}
-                                        </td>
 
-                                        <td className="px-3 py-2">{o.depositRequired ?? "-"}</td>
+
                                         <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
                                         <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
 
