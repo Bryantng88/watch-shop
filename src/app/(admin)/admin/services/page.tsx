@@ -1,7 +1,7 @@
 // app/(admin)/admin/service-requests/page.tsx
 
 import { parseListSearchParams } from "../__helpers/SearchParams";
-import { getServiceCatalogList } from "./_server/service_request.service";
+import { getAdminServiceRequestList } from "./_server/service_request.service";
 import ServiceRequestsClient from "./_client/ServiceRequestList";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
@@ -29,10 +29,12 @@ export default async function ServiceRequestListPage({
 
     const input = parseListSearchParams(sp);
 
-    const { items, total, page, pageSize } = await getServiceCatalogList(input);
+    const { items, total, page, pageSize } = await getAdminServiceRequestList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
+
+    console.log('in ra test service req body :' + JSON.stringify(items))
 
     return (
         <ServiceRequestsClient

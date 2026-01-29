@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2026-01-28T08:57:55.439Z",
-  "outputPath": "D:\\workspace\\project\\watch-shop\\src\\features\\__generated__\\zod",
+  "generatedAt": "2026-01-29T02:59:19.720Z",
+  "outputPath": "D:\\workspace\\project\\watch-shop\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",
     "schemas\\enums\\MarketSegmentScalarFieldEnum.schema.ts",
@@ -80,6 +80,7 @@
     "schemas\\enums\\UserRole.schema.ts",
     "schemas\\enums\\ServicePriority.schema.ts",
     "schemas\\enums\\VendorType.schema.ts",
+    "schemas\\enums\\servicerequeststatus_new.schema.ts",
     "schemas\\objects\\MarketSegmentWhereInput.schema.ts",
     "schemas\\objects\\MarketSegmentOrderByWithRelationInput.schema.ts",
     "schemas\\objects\\MarketSegmentWhereUniqueInput.schema.ts",

@@ -14,7 +14,11 @@ type ServiceReqItem = {
 
     status: string;
     createdAt: string;
-
+    scope: string;
+    customerItemNote: string;
+    orderRefNo: string;
+    refNo: string;
+    serviceName: string;
     // optional (tùy API bạn trả)
     orderItemId?: string | null;
     orderItem?: {
@@ -59,11 +63,11 @@ function fmtDate(d?: string | null) {
 /** =====================
  * Tabs / Segments
  * ===================== */
-type ViewKey = "all" | "pending" | "in_progress" | "done" | "canceled";
+type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
-    pending: "PENDING",
+    draft: "DRAFT",
     in_progress: "IN_PROGRESS",
     done: "DONE",
     canceled: "CANCELED",
@@ -71,8 +75,8 @@ const VIEW_LABELS: Record<ViewKey, string> = {
 
 function matchesView(o: ServiceReqItem, view: ViewKey) {
     switch (view) {
-        case "pending":
-            return o.status === "PENDING";
+        case "draft":
+            return o.status === "DRAFT";
         case "in_progress":
             return o.status === "IN_PROGRESS";
         case "done":
@@ -316,7 +320,7 @@ export default function ServiceRequestListPageClient({
                                 />
                             </th>
 
-                            <th className="px-3 py-2 text-left">ID</th>
+                            <th className="px-3 py-2 text-left">RefNo</th>
                             <th className="px-3 py-2 text-left">Dịch vụ</th>
                             <th className="px-3 py-2 text-left">Order</th>
                             <th className="px-3 py-2 text-left">Scope</th>
@@ -373,14 +377,14 @@ export default function ServiceRequestListPageClient({
                                         <td className="px-3 py-2 font-mono text-xs">
                                             <Link
                                                 className="text-blue-600 hover:underline"
-                                                href={`/admin/service-requests/${r.id}`}
+                                                href={`/admin/service-requests/${r.refNo}`}
                                             >
                                                 {r.id}
                                             </Link>
                                         </td>
 
                                         <td className="px-3 py-2">
-                                            <div className="font-medium">{serviceName}</div>
+                                            <div className="font-medium">{r.serviceName}</div>
                                             {(r.serviceCatalogId || r.orderItem?.serviceCatalogId) && (
                                                 <div className="text-xs text-gray-500">
                                                     catalogId:{" "}
@@ -392,9 +396,9 @@ export default function ServiceRequestListPageClient({
                                         </td>
 
                                         <td className="px-3 py-2">
-                                            {orderId ? (
+                                            {r.orderRefNo ? (
                                                 <Link className="hover:underline" href={`/admin/orders/${orderId}`}>
-                                                    {orderRefNo ?? orderId}
+                                                    {r.orderRefNo ?? r.orderId}
                                                 </Link>
                                             ) : (
                                                 "-"
@@ -402,16 +406,16 @@ export default function ServiceRequestListPageClient({
                                         </td>
 
                                         <td className="px-3 py-2">
-                                            {r.orderItem?.serviceScope ? (
+                                            {r.scope ? (
                                                 <span className="text-xs rounded bg-gray-100 px-2 py-0.5">
-                                                    {r.orderItem.serviceScope}
+                                                    {r.scope}
                                                 </span>
                                             ) : (
                                                 "-"
                                             )}
-                                            {r.orderItem?.customerItemNote ? (
+                                            {r.customerItemNote ? (
                                                 <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                    {r.orderItem.customerItemNote}
+                                                    {r.customerItemNote}
                                                 </div>
                                             ) : null}
                                         </td>

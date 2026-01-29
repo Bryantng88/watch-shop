@@ -67,7 +67,7 @@ export function createServiceRequest(
       //title: data.title,
       //quantity: data.quantity,
       //unitPrice: data.unitPrice,
-      status: "PENDING",
+      status: "DRAFT",
     },
   });
 }

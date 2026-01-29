@@ -307,7 +307,7 @@ model ServiceRequest {
   refSnapshot      String?
   serialSnapshot   String?
   appointmentAt    DateTime?
-  status           ServiceRequestStatus @default(PENDING)
+  status           ServiceRequestStatus @default(DRAFT)
   notes            String?
   warrantyUntil    DateTime?
   warrantyPolicy   String?
@@ -671,7 +671,7 @@ enum OrderStatus {
 }
 
 enum ServiceRequestStatus {
-  PENDING
+  DRAFT
   DIAGNOSING
   WAIT_APPROVAL
   IN_PROGRESS
@@ -962,4 +962,14 @@ enum PaymentType {
 enum ServiceScope {
   WITH_PURCHASE
   CUSTOMER_OWNED
+}
+
+enum servicerequeststatus_new {
+  DRAFT
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELED
 }

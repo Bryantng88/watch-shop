@@ -12,7 +12,7 @@ export type ServiceCatalogItem = {
     durationMin: number | null;
 };
 
-
+const prisma = new PrismaClient();
 
 /**
  * Repo cần có hàm:
@@ -24,6 +24,7 @@ export type ServiceRequestSearchInput = {
     pageSize: number;
     q?: string | null;
     isActive?: boolean | null;
+    status: string;
 };
 
 export type ServiceRequestListItem = {
@@ -44,10 +45,10 @@ export type ServiceRequestListItem = {
 };
 
 export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
-    const { page, pageSize, q, status } = input;
+    const { page, pageSize, q } = input;
 
     const where: Prisma.ServiceRequestWhereInput = {
-        ...(status ? { status: status as any } : {}),
+
         ...(q?.trim()
             ? {
                 OR: [
