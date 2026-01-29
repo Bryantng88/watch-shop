@@ -9,6 +9,7 @@ export const ORDER_STATUS: Record<string, StatusMeta> = {
     POSTED: { label: "POSTED", tone: "green" },
     PAID: { label: "PAID", tone: "green" },
     CANCELLED: { label: "CANCELLED", tone: "red" },
+    SHIPPED: { label: "SHIPPED", tone: "blue" },
 };
 
 // Verification
@@ -27,10 +28,10 @@ export const ORDER_SOURCE: Record<string, StatusMeta> = {
 
 // Shipment status (ví dụ)
 export const SHIPMENT_STATUS: Record<string, StatusMeta> = {
-    DRAFT: { label: "DRAFT", tone: "gray" },
-    READY: { label: "READY", tone: "blue" },
-    SHIPPED: { label: "SHIPPED", tone: "amber" },
-    DELIVERED: { label: "DELIVERED", tone: "green" },
+    DRAFT: { label: "DRAFT", tone: "amber" },
+    READY: { label: "READY", tone: "green" },
+    SHIPPED: { label: "SHIPPED", tone: "blue" },
+    DELIVERED: { label: "DELIVERED", tone: "gray" },
     CANCELLED: { label: "CANCELLED", tone: "red" },
 };
 export const RESERVE_TYPE: Record<string, StatusMeta> = {

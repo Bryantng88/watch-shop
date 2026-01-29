@@ -381,7 +381,6 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
-                            <th className="px-3 py-2 text-left">Admin Phê duyệt</th>
 
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-left">Tổng tiền</th>
@@ -429,9 +428,9 @@ export default function OrderListPageClient({
                                                 {o.hasShipment ? (
                                                     <DotLabel label="Shipment" tone="green" />
                                                 ) : null}
-                                                {o.reserveType === "COD" ? <DotLabel label="COD" tone="blue" /> : null}
-                                                {o.reserveType === "DEPOSIT" ? <DotLabel label="Deposit" tone="blue" /> : null}
-                                                {o.source === "WEB" ? <DotLabel label="Web" tone="gray" /> : null}
+                                                {o.reserveType === "COD" ? <DotLabel label="COD" tone="green" /> : null}
+                                                {o.reserveType === "DEPOSIT" ? <DotLabel label="Deposit" tone="green" /> : null}
+                                                {o.source === "WEB" ? <DotLabel label="Web" tone="blue" /> : null}
 
                                             </div>
                                         </td>
@@ -443,9 +442,6 @@ export default function OrderListPageClient({
                                         </td>
 
 
-                                        <td className="px-3 py-2">
-                                            <StatusBadge value={o.verificationStatus} map={VERIFICATION_STATUS} />
-                                        </td>
 
 
 

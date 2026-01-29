@@ -314,6 +314,7 @@ model ServiceRequest {
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   servicecatalogid String?
+  refNo            String?
   Invoice          Invoice[]
   maintenance      MaintenanceRecord[]
   customer         Customer?            @relation(fields: [customerId], references: [id])

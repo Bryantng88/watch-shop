@@ -23,6 +23,7 @@ export const ServiceRequestInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     servicecatalogid: z.string().optional().nullable(),
+    refNo: z.string().optional().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),

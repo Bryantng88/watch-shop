@@ -19,6 +19,7 @@ export const ServiceRequestCreateResultSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   servicecatalogid: z.string().optional(),
+  refNo: z.string().optional(),
   Invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),

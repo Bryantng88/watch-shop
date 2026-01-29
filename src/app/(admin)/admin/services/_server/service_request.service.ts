@@ -19,26 +19,59 @@ export type ServiceCatalogItem = {
  * serviceCatalogRepo.getList(where, orderBy, skip, take, prisma)
  * -> return { rows, total }
  */
-export type ServiceCatalogSearchInput = {
+export type ServiceRequestSearchInput = {
     page: number;
     pageSize: number;
     q?: string | null;
     isActive?: boolean | null;
 };
 
-export async function getServiceCatalogList(
-    input: ServiceCatalogSearchInput,
-    prisma: PrismaClient
-) {
-    const { page, pageSize, q, isActive } = input;
+export type ServiceRequestListItem = {
+    id: string;
+    refNo: string | null;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
 
-    const where: Prisma.ServiceCatalogWhereInput = {
-        ...(typeof isActive === "boolean" ? { isActive } : {}),
-        ...(q
+    serviceName: string | null;
+    serviceCode: string | null;
+
+    orderId: string | null;
+    orderRefNo: string | null;
+
+    scope: string | null;
+    customerItemNote: string | null;
+};
+
+export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
+    const { page, pageSize, q, status } = input;
+
+    const where: Prisma.ServiceRequestWhereInput = {
+        ...(status ? { status: status as any } : {}),
+        ...(q?.trim()
             ? {
                 OR: [
-                    { name: { contains: q, mode: "insensitive" } },
-                    { code: { contains: q, mode: "insensitive" } },
+                    { id: { contains: q, mode: "insensitive" } },
+                    { refNo: { contains: q, mode: "insensitive" } },
+                    { notes: { contains: q, mode: "insensitive" } },
+
+                    // order refNo (qua orderItem -> order)
+                    {
+                        orderItem: {
+                            is: {
+                                order: {
+                                    is: { refNo: { contains: q, mode: "insensitive" } },
+                                },
+                            },
+                        },
+                    },
+
+                    // search theo tên serviceCatalog
+                    {
+                        ServiceCatalog: {
+                            is: { name: { contains: q, mode: "insensitive" } },
+                        },
+                    },
                 ],
             }
             : {}),
@@ -47,7 +80,7 @@ export async function getServiceCatalogList(
     const skip = (page - 1) * pageSize;
     const take = pageSize;
 
-    const { rows, total } = await serviceRequestRepo.getServiceCatalogList(
+    const { rows, total } = await serviceRequestRepo.getServiceRequestList(
         where,
         { updatedAt: "desc" },
         skip,
@@ -55,14 +88,21 @@ export async function getServiceCatalogList(
         prisma
     );
 
-    const items = rows.map((s) => ({
-        id: s.id,
-        code: s.code ?? null,
-        name: s.name,
-        defaultPrice: s.defaultPrice != null ? Number(s.defaultPrice) : null,
-        isActive: Boolean(s.isActive),
-        createdAt: s.createdAt,
-        updatedAt: s.updatedAt,
+    const items: ServiceRequestListItem[] = rows.map((r) => ({
+        id: r.id,
+        refNo: r.refNo ?? null,
+        status: r.status,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+
+        serviceName: r.serviceCatalog?.name ?? null,
+        serviceCode: r.serviceCatalog?.code ?? null,
+
+        orderId: r.orderItem?.order?.id ?? null,
+        orderRefNo: r.orderItem?.order?.refNo ?? null,
+
+        scope: (r.orderItem?.serviceScope as any) ?? null,
+        customerItemNote: r.orderItem?.customerItemNote ?? null,
     }));
 
     return { items, total, page, pageSize };

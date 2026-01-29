@@ -32,7 +32,8 @@ const servicerequestscalarwhereinputSchema = z.object({
   warrantyPolicy: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  servicecatalogid: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  servicecatalogid: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ServiceRequestScalarWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestScalarWhereInput> = servicerequestscalarwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestScalarWhereInput>;
 export const ServiceRequestScalarWhereInputObjectZodSchema = servicerequestscalarwhereinputSchema;

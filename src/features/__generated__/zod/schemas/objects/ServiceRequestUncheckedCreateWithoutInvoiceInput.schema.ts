@@ -24,6 +24,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   servicecatalogid: z.string().optional().nullable(),
+  refNo: z.string().optional().nullable(),
   maintenance: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedCreateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutInvoiceInput>;

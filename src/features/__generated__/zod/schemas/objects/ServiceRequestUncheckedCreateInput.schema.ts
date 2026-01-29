@@ -24,6 +24,7 @@ const makeSchema = () => z.object({
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   servicecatalogid: z.string().optional().nullable(),
+  refNo: z.string().optional().nullable(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema),
   maintenance: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema)
 }).strict();

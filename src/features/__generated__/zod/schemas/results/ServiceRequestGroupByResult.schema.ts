@@ -17,6 +17,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   servicecatalogid: z.string(),
+  refNo: z.string(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -37,6 +38,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     servicecatalogid: z.number(),
+    refNo: z.number(),
     Invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),
@@ -61,7 +63,8 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     warrantyPolicy: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    servicecatalogid: z.string().nullable()
+    servicecatalogid: z.string().nullable(),
+    refNo: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -79,6 +82,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     warrantyPolicy: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    servicecatalogid: z.string().nullable()
+    servicecatalogid: z.string().nullable(),
+    refNo: z.string().nullable()
   }).nullable().optional()
 }));
