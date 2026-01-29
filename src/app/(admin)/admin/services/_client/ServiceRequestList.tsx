@@ -323,6 +323,7 @@ export default function ServiceRequestListPageClient({
                             <th className="px-3 py-2 text-left">RefNo</th>
                             <th className="px-3 py-2 text-left">Dịch vụ</th>
                             <th className="px-3 py-2 text-left">Order</th>
+                            <th className="px-3 py-2 text-left">Note</th>
                             <th className="px-3 py-2 text-left">Scope</th>
                             <th className="px-3 py-2 text-left">Status</th>
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
@@ -403,6 +404,9 @@ export default function ServiceRequestListPageClient({
                                             ) : (
                                                 "-"
                                             )}
+                                        </td>
+                                        <td className="px-3 py-2 font-mono text-xs">
+                                            {r.customerItemNote}
                                         </td>
 
                                         <td className="px-3 py-2">

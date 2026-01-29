@@ -9,7 +9,7 @@ import {
     VERIFICATION_STATUS,
     RESERVE_TYPE,
 } from "@/components/badges/StatusMaps";
-
+import { ServiceScope } from "@prisma/client";
 type OrderDetailItem = {
     id: string;
     title: string;
@@ -17,6 +17,12 @@ type OrderDetailItem = {
     quantity: number;
     listPrice: number;
     lineTotal: number;
+    serviceScope?: ServiceScope | null;
+    customerItemNote?: string | null;
+    linkedOrderItemId?: string | null;
+
+    // ✅ (optional) nếu API trả kèm title của product được link
+    linkedProductTitle?: string | null;
 };
 
 type OrderDetailData = {
@@ -69,6 +75,12 @@ function fmtDate(d?: string | null) {
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
+}
+function renderServiceScope(scope?: string | null) {
+    if (!scope) return "-";
+    if (scope === "WITH_PURCHASE") return "Đi kèm sản phẩm";
+    if (scope === "CUSTOMER_ITEM") return "Đồ khách mang tới";
+    return scope;
 }
 
 function Section({
@@ -194,20 +206,73 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.items.map((it) => (
-                                        <tr key={it.id} className="border-b">
-                                            <td className="px-3 py-2 font-medium">{it.title}</td>
-                                            <td className="px-3 py-2 text-gray-600">{it.kind ?? "-"}</td>
-                                            <td className="px-3 py-2 text-right">{it.quantity}</td>
-                                            <td className="px-3 py-2 text-right">
-                                                {fmtMoney(it.listPrice, data.currency)}
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-medium">
-                                                {fmtMoney(it.lineTotal, data.currency)}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {data.items.map((it) => {
+                                        const isService = it.kind === "SERVICE";
+
+                                        return (
+                                            <tr key={it.id} className="border-b align-top">
+                                                {/* TÊN */}
+                                                <td className="px-3 py-2">
+                                                    <div className="font-medium">{it.title}</div>
+
+                                                    {/* ✅ service detail lines */}
+                                                    {isService && (
+                                                        <div className="mt-1 space-y-1 text-[12px] text-gray-600">
+                                                            <div>
+                                                                <span className="text-gray-500">Phạm vi:</span>{" "}
+                                                                <span className="font-medium text-gray-700">
+                                                                    {renderServiceScope(it.serviceScope)}
+                                                                </span>
+
+                                                                {/* Nếu scope đi kèm sản phẩm thì show áp cho */}
+                                                                {it.serviceScope === "WITH_PURCHASE" && (
+                                                                    <>
+                                                                        <span className="mx-2 text-gray-300">•</span>
+                                                                        <span className="text-gray-500">Áp cho:</span>{" "}
+                                                                        <span className="font-medium text-gray-700">
+                                                                            {it.linkedProductTitle?.trim()
+                                                                                ? it.linkedProductTitle
+                                                                                : it.linkedOrderItemId
+                                                                                    ? `#${it.linkedOrderItemId.slice(0, 8)}`
+                                                                                    : "-"}
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Note đồ khách mang tới */}
+                                                            {it.serviceScope === "CUSTOMER_ITEM" && it.customerItemNote?.trim() ? (
+                                                                <div className="text-gray-500">
+                                                                    <span className="text-gray-500">Ghi chú:</span>{" "}
+                                                                    <span className="text-gray-700">{it.customerItemNote}</span>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* LOẠI */}
+                                                <td className="px-3 py-2 text-gray-600">
+                                                    {it.kind ?? "-"}
+                                                </td>
+
+                                                {/* SL */}
+                                                <td className="px-3 py-2 text-right">{it.quantity}</td>
+
+                                                {/* ĐƠN GIÁ */}
+                                                <td className="px-3 py-2 text-right">
+                                                    {fmtMoney(it.listPrice, data.currency)}
+                                                </td>
+
+                                                {/* THÀNH TIỀN */}
+                                                <td className="px-3 py-2 text-right font-medium">
+                                                    {fmtMoney(it.lineTotal, data.currency)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
+
                             </table>
                         </div>
 

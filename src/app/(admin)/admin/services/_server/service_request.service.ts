@@ -148,7 +148,7 @@ export async function createServiceRequestsFromOrderTx(
     const rows: Prisma.ServiceRequestCreateManyInput[] = serviceItems.map((it: any) => {
         const servicecatalogid =
             it.serviceCatalogId ?? it.servicecatalogid ?? null;
-
+        console.log('in ra test service request : ' + JSON.stringify(it))
         if (!servicecatalogid) {
             throw new Error(`SERVICE item thiếu serviceCatalogId: orderItemId=${it.id}`);
         }
@@ -157,7 +157,7 @@ export async function createServiceRequestsFromOrderTx(
         const linked = it.linkedOrderItemId ? itemById.get(it.linkedOrderItemId) : null;
 
         const snap =
-            scope === "PRODUCT_ITEM" && linked
+            scope === "WITH_PURCHASE" && linked
                 ? pickSnapFromLinkedProductItem(linked)
                 : {
                     productId: null,
@@ -170,7 +170,7 @@ export async function createServiceRequestsFromOrderTx(
 
         // notes: CUSTOMER_ITEM ưu tiên note mô tả đồ khách mang tới
         const notes =
-            (scope === "CUSTOMER_ITEM" ? (it.customerItemNote ?? null) : null) ??
+            (scope === "CUSTOMER_OWNED" ? (it.customerItemNote ?? null) : null) ??
             (order.notes ?? null);
 
         return {
@@ -198,4 +198,22 @@ export async function createServiceRequestsFromOrderTx(
 
     await serviceRequestRepo.createMany(tx, rows);
     return { created: rows.length };
+}
+
+export type ServiceCatalogOption = {
+    id: string;
+    code: string | null;
+    name: string;
+    defaultPrice: number | null;
+};
+
+export async function getServiceCatalogOptions() {
+    const rows = await serviceRequestRepo.getOptions(prisma, { isActive: true });
+    const items: ServiceCatalogOption[] = rows.map((r) => ({
+        id: r.id,
+        code: r.code ?? null,
+        name: r.name,
+        defaultPrice: r.defaultPrice
+    }));
+    return items;
 }

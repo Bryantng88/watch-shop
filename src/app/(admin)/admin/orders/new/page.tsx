@@ -2,14 +2,14 @@
 import OrderFormClient from "../_client/OrderForm";
 import { getVendorList } from "../../vendors/_server/vendor.service";
 import { getCustomerList } from "../../customers/_server/customer.service";
-import { getServiceCatalogList } from "../../services/_server/service_request.service";
+import { getServiceCatalogOptions } from "../../services/_server/service_request.service";
 
 export default async function NewOrderPage() {
 
     // 🟦 Load vendor + customer để đổ dropdown
     //const vendors = await getVendorList();
     const customersRaw = await getCustomerList();
-    const services = await getServiceCatalogList();
+    const services = await getServiceCatalogOptions();
 
     const customers = customersRaw.map(c => ({
         id: c.id,

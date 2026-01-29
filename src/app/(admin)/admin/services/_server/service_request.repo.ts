@@ -153,3 +153,26 @@ export async function getServiceRequestList(
 
   return { rows: mapped, total };
 }
+
+
+
+export async function getOptions(
+  prisma: PrismaClient,
+  opts?: { isActive?: boolean }
+) {
+  const where: Prisma.ServiceCatalogWhereInput =
+    typeof opts?.isActive === "boolean" ? { isActive: opts.isActive } : {};
+
+  const rows = await prisma.serviceCatalog.findMany({
+    where,
+    orderBy: [{ name: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      defaultPrice: true,
+    },
+  });
+
+  return rows;
+}
