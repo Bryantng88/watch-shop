@@ -8,6 +8,7 @@ import ActionMenu from "../../acquisitions/components/ActionMenu";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { SERVICE_REQUEST_STATUS } from "@/components/badges/StatusMaps";
+import DotLabel from "../../__components/DotLabel";
 
 type ServiceReqItem = {
     id: string;
@@ -324,7 +325,6 @@ export default function ServiceRequestListPageClient({
                             <th className="px-3 py-2 text-left">Dịch vụ</th>
                             <th className="px-3 py-2 text-left">Order</th>
                             <th className="px-3 py-2 text-left">Note</th>
-                            <th className="px-3 py-2 text-left">Scope</th>
                             <th className="px-3 py-2 text-left">Status</th>
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-right">Hành động</th>
@@ -376,12 +376,16 @@ export default function ServiceRequestListPageClient({
                                         </td>
 
                                         <td className="px-3 py-2 font-mono text-xs">
-                                            <Link
-                                                className="text-blue-600 hover:underline"
-                                                href={`/admin/service-requests/${r.refNo}`}
-                                            >
-                                                {r.id}
-                                            </Link>
+
+                                            <div className="font-medium">{r.refNo ?? "-"}</div>
+
+                                            {r.scope === "CUSTOMER_OWNED" ? (
+                                                <DotLabel label="Đồ Khách" tone="green" />
+                                            ) : null}
+
+                                            {r.scope === "WITH_PURCHASE" ? (
+                                                <DotLabel label="Dịch Vụ" tone="blue" />
+                                            ) : null}
                                         </td>
 
                                         <td className="px-3 py-2">
@@ -409,20 +413,7 @@ export default function ServiceRequestListPageClient({
                                             {r.customerItemNote}
                                         </td>
 
-                                        <td className="px-3 py-2">
-                                            {r.scope ? (
-                                                <span className="text-xs rounded bg-gray-100 px-2 py-0.5">
-                                                    {r.scope}
-                                                </span>
-                                            ) : (
-                                                "-"
-                                            )}
-                                            {r.customerItemNote ? (
-                                                <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                    {r.customerItemNote}
-                                                </div>
-                                            ) : null}
-                                        </td>
+
 
                                         <td className="px-3 py-2">
                                             <StatusBadge value={r.status} map={SERVICE_REQUEST_STATUS} />

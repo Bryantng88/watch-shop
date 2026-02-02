@@ -56,6 +56,7 @@ export type CreateOrderItemRow = {
     listPrice: number;
     unitPriceAgreed: number; // 👈 service tính, repo chỉ lưu
     taxRate?: number;
+    customerItemNote: string;
 };
 
 /* ================================
@@ -189,6 +190,7 @@ export async function createOrderItems(
             quantity,
             subtotal,
             taxRate: i.taxRate ?? null,
+            customerItemNote: i.customerItemNote
         };
     });
 
