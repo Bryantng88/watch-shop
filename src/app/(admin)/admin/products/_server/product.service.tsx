@@ -1,6 +1,6 @@
 import { CreateProductWithOutAcqInput, CreateProductWithOutAcqSchema } from "./product.dto";
 import { prisma, DB } from "@/server/db/client";
-import { ContentStatus } from "@prisma/client";
+import { ProductStatus } from "@prisma/client";
 import * as ultil from "./helper"
 import * as prodRepo from "./product.repo"
 import { AdminFiltersSchema } from "./product.dto";
@@ -38,13 +38,13 @@ export async function detail(id: string) {
 
 export async function getAdminProductList(raw: Record<string, unknown>) {
     // helper nhỏ để convert string[] sang enum ProductStatus[]
-    const parseStatusArray = (input: unknown): ContentStatus[] | undefined => {
+    const parseStatusArray = (input: unknown): ProductStatus[] | undefined => {
         const arr = Array.isArray(input) ? input : [input];
         const valid = arr
             .filter(Boolean)
             .map((s) => String(s).toUpperCase())
-            .filter((s): s is ContentStatus =>
-                Object.values(ContentStatus).includes(s as ContentStatus)
+            .filter((s): s is ProductStatus =>
+                Object.values(ProductStatus).includes(s as ProductStatus)
             );
         return valid.length ? valid : undefined;
     };
@@ -68,6 +68,8 @@ export async function getAdminProductList(raw: Record<string, unknown>) {
         await prodRepo.listAdminProducts(parsed);
 
     // 3️⃣ Map → Admin View Model
+
+
     const rows = items.map(mapProductToAdminRow);
 
     // 4️⃣ Return

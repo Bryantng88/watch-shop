@@ -1,4 +1,4 @@
-import { ContentStatus, PriceVisibility } from "@prisma/client";
+import { ProductStatus, PriceVisibility } from "@prisma/client";
 
 export type AdminProductRow = {
     id: string;
@@ -6,7 +6,7 @@ export type AdminProductRow = {
     slug: string;
 
     availabilityStatus: string | null;
-    contentStatus: ContentStatus;
+    status: ProductStatus;
     priceVisibility: PriceVisibility;
 
     type: string;
@@ -39,7 +39,7 @@ export function mapProductToAdminRow(p: any): AdminProductRow {
         slug: p.slug,
 
         availabilityStatus: p.variants?.[0]?.availabilityStatus ?? null,
-        contentStatus: p.contentStatus,
+        status: p.status,
         priceVisibility: p.priceVisibility,
 
         type: p.type,

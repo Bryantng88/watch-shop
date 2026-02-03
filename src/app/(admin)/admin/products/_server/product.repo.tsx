@@ -19,7 +19,7 @@ export async function createProductDraft(
         data: {
             title: title,
             vendorId,
-            contentStatus: "DRAFT",
+            status: "DRAFT",
             type: type,
             variants: {
                 create: [{
@@ -42,7 +42,7 @@ export async function searchProductsRepo(
                 { title: { contains: q, mode: "insensitive" } },
                 // sau này mở SKU thì thêm ở đây
             ],
-            contentStatus: "DRAFT", // admin search
+            status: "DRAFT", // admin search
 
             variants: {
                 some: {
@@ -106,7 +106,7 @@ export async function updateProduct(
             image: true,
             primaryImageUrl: true,
             //minPrice: true,
-            contentStatus: true,
+            status: true,
             priceVisibility: true,
             variants: {
                 select: {
@@ -142,7 +142,7 @@ export async function listAdminProducts(f: helper.AdminProductFilters) {
                 title: true,
                 slug: true,
                 priceVisibility: true,
-                contentStatus: true,
+                status: true,
 
                 type: true,
                 brand: { select: { id: true, name: true } },

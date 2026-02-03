@@ -1,16 +1,15 @@
 import * as z from 'zod';
 
-import { ContentStatusSchema } from '../../enums/ContentStatus.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
 import { PriceVisibilitySchema } from '../../enums/PriceVisibility.schema';
 import { TagSchema } from '../../enums/Tag.schema';
+import { ProductStatusSchema } from '../../enums/ProductStatus.schema';
 // prettier-ignore
 export const ProductResultSchema = z.object({
     id: z.string(),
     slug: z.string().nullable(),
     title: z.string(),
     primaryImageUrl: z.string().nullable(),
-    contentStatus: ContentStatusSchema,
     type: ProductTypeSchema,
     priceVisibility: PriceVisibilitySchema,
     brandId: z.string().nullable(),
@@ -23,6 +22,7 @@ export const ProductResultSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     tag: TagSchema,
+    status: ProductStatusSchema,
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),

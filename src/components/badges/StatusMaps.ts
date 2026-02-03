@@ -12,6 +12,16 @@ export const ORDER_STATUS: Record<string, StatusMeta> = {
     SHIPPED: { label: "SHIPPED", tone: "blue" },
 };
 
+export const PRODUCT_STATUS: Record<string, StatusMeta> = {
+    DRAFT: { label: "DRAFT", tone: "amber" },
+    HOLD: { label: "HOLD", tone: "blue" },
+    POSTED: { label: "POSTED", tone: "green" },
+    SOLD: { label: "SOLD", tone: "green" },
+    CONSIGNED_TO: { label: "CONSIGNED_TO", tone: "red" },
+    CONSIGNED_FROM: { label: "CONSIGNED_FROM", tone: "blue" },
+    IN_SERVICE: { label: "IN_SERVICE", tone: "blue" },
+};
+
 // Verification
 export const VERIFICATION_STATUS: Record<string, StatusMeta> = {
     PENDING: { label: "PENDING", tone: "amber" },
