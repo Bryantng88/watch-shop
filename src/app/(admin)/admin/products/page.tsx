@@ -5,7 +5,7 @@
 import { getAdminProductList } from "./_server/product.service";
 import { parseProductSearchParams } from "./ultis/search-params";
 
-import AdminProductList from "./_client/AdminProductList";
+import AdminProductList from "./_client/ListProducts";
 import { listBrands } from "@/features/catalog/server/brands.repo";
 import { PRODUCT_TYPES } from "@/features/meta/server/enum";
 
@@ -34,7 +34,7 @@ export default async function ProductListPage({
 
     const input = parseProductSearchParams(sp);
     const { items, total, page, pageSize } = await getAdminProductList(input);
-
+    console.log('in ra test prod: ' + items)
     const brands = await listBrands();
     const productTypes = Object.values(PRODUCT_TYPES).map((v) => ({
         label: v,

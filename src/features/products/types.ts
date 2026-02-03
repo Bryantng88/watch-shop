@@ -18,7 +18,7 @@ export type BrandLite = { id: string; name: string };
 export type ProductListItem = {
     id: string;
     title: string;
-    contentStatus: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+    status: string;
     priceVisibility: "SHOW" | "HIDE";
     availabilityStatus: "ACTIVE" | "HIDDEN";
     minPrice: number | null;

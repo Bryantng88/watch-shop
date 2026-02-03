@@ -75,7 +75,6 @@ model Product {
   slug               String?             @unique
   title              String
   primaryImageUrl    String?
-  contentStatus      ContentStatus       @default(DRAFT)
   type               ProductType
   priceVisibility    PriceVisibility     @default(SHOW)
   brandId            String?
@@ -88,6 +87,7 @@ model Product {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   tag                Tag                 @default(PRE_OWNED)
+  status             ProductStatus       @default(DRAFT)
   AcquisitionItem    AcquisitionItem[]
   InvoiceItem        InvoiceItem[]
   maintenanceRecords MaintenanceRecord[]
@@ -100,10 +100,8 @@ model Product {
   ServiceRequest     ServiceRequest[]
   watchSpec          WatchSpec?
 
-  @@index([contentStatus])
   @@index([brandId])
   @@index([type])
-  @@index([contentStatus, type, publishedAt])
   @@index([createdAt])
   @@index([updatedAt])
 }
@@ -972,4 +970,15 @@ enum servicerequeststatus_new {
   COMPLETED
   DELIVERED
   CANCELED
+}
+
+enum ProductStatus {
+  DRAFT
+  POSTED
+  IN_SERVICE
+  AVAILABLE
+  CONSIGNED_FROM
+  CONSIGNED_TO
+  HOLD
+  SOLD
 }

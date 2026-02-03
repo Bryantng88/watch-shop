@@ -13,7 +13,7 @@ export async function GET(req: Request) {
         raw.brandIds = url.searchParams.getAll("brandIds");
 
         const data = await adminProductService.list(raw);
-        console.dir(JSON.stringify(data))
+        console.log("in ra product tét" + JSON.stringify(data))
         return NextResponse.json(data, { status: 200 });
     } catch (err: any) {
         return NextResponse.json(
