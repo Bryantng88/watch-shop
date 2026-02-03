@@ -1,18 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
+import { StatusBadge } from "@/components/badges/StatusBadge";
 import ProductStatusBadge from "./DraftBadge";
 import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import InlineImagePicker from "@/app/(admin)/admin/products/_components/InlineImagePicker";
 import DotLabel from "../../__components/DotLabel";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
-import { StatusBadge } from "@/components/badges/StatusBadge";
-
-import type { BrandLite, ProductListItem } from "@/features/products/types";
 import { PRODUCT_STATUS } from "@/components/badges/StatusMaps";
+import type { BrandLite, ProductListItem } from "@/features/products/types";
 
 type PageProps = {
     items: ProductListItem[];
@@ -45,35 +43,42 @@ function fmtDate(d?: string | null) {
 /** =====================
  * Tabs / Segments
  * ===================== */
-type ViewKey = "all" | "draft" | "active" | "archived";
+type ViewKey = "all" | "draft" | "posted" | "in_service" | "consigned" | "hold" | "sold";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
-    draft: "Nháp",
-    active: "Đang bán",
-    archived: "Ẩn",
+    draft: "Chờ duyệt",
+    posted: "Chờ service",
+    in_service: "Đang service",
+    consigned: "Ký gửi/ Giữ hàng",
+    hold: "Giữ hàng",
+    sold: "Đã bán",
 };
 
-// tuỳ schema thật của bạn, bạn chỉnh lại các điều kiện này 1 lần là xong
 function matchesView(p: ProductListItem, view: ViewKey) {
-    const content = String((p as any).contentStatus ?? "").toUpperCase();
-    const avail = String((p as any).availabilityStatus ?? "").toUpperCase();
+    const status = String((p as any).status ?? "").toUpperCase();
 
     switch (view) {
         case "draft":
-            return content === "DRAFT";
-
-        case "active":
-            // hệ bạn đang dùng gì thì đổi ở đây
-            return ["ACTIVE", "AVAILABLE"].includes(avail);
-
-        case "archived":
-            return ["INACTIVE", "ARCHIVED", "DISABLED", "HIDDEN"].includes(avail);
-
+            return status === "DRAFT";
+        case "posted":
+            return status === "POSTED"
+        case "in_service":
+            return ["INACTIVE", "ARCHIVED", "DISABLED", "HIDDEN"]
         case "all":
         default:
             return true;
     }
+}
+
+/** ✅ điều kiện để được bulk post */
+function hasValidPrice(p: ProductListItem) {
+    const price = Number((p as any).minPrice ?? 0);
+    return Number.isFinite(price) && price > 0;
+}
+function hasValidImage(p: ProductListItem) {
+    const img = (p as any).primaryImageUrl;
+    return typeof img === "string" && img.trim().length > 0;
 }
 
 export default function AdminProductListPageClient({
@@ -86,9 +91,20 @@ export default function AdminProductListPageClient({
     brands,
 }: PageProps) {
     const sp = useSearchParams();
-
     const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
     const currentView = useMemo(() => (sp.get("view") || "all") as ViewKey, [sp]);
+
+    // ===== Bulk states (giống orders)
+    const [showBulkBar, setShowBulkBar] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+
+    // reset selection khi đổi tab
+    useEffect(() => {
+        setSelectedIds([]);
+        setShowBulkBar(false);
+        setShowBulkConfirm(false);
+    }, [currentView]);
 
     const setViewHref = (view: ViewKey) => {
         const next = new URLSearchParams(url);
@@ -105,12 +121,11 @@ export default function AdminProductListPageClient({
         return `/admin/products?${next.toString()}`;
     };
 
-    // counts theo data page đang có (giống OrderList hiện tại của bạn)
     const countsByView: Record<ViewKey, number> = useMemo(
         () => ({
             all: items.length,
             draft: items.filter((p) => matchesView(p, "draft")).length,
-            active: items.filter((p) => matchesView(p, "active")).length,
+            posted: items.filter((p) => matchesView(p, "posted")).length,
             archived: items.filter((p) => matchesView(p, "archived")).length,
         }),
         [items]
@@ -129,6 +144,29 @@ export default function AdminProductListPageClient({
         active: currentView === k,
     }));
 
+    // ✅ rule selectable for bulk
+    const isRowSelectable = (p: ProductListItem) => hasValidPrice(p) && hasValidImage(p);
+
+    const selectableIdsInView = useMemo(
+        () => displayItems.filter(isRowSelectable).map((p) => p.id),
+        [displayItems]
+    );
+
+    const allChecked =
+        selectableIdsInView.length > 0 && selectableIdsInView.every((id) => selectedIds.includes(id));
+
+    const toggleAllInView = (checked: boolean) => {
+        if (!checked) {
+            const next = selectedIds.filter((id) => !selectableIdsInView.includes(id));
+            setSelectedIds(next);
+            setShowBulkBar(next.length > 0);
+            return;
+        }
+        const merged = Array.from(new Set([...selectedIds, ...selectableIdsInView]));
+        setSelectedIds(merged);
+        setShowBulkBar(merged.length > 0);
+    };
+
     async function handleDelete(id: string) {
         if (!confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) return;
 
@@ -137,7 +175,6 @@ export default function AdminProductListPageClient({
             alert("Xoá thất bại!");
             return;
         }
-        // format OrderList: server fetch -> sau khi xoá thì reload để đồng bộ
         location.reload();
     }
 
@@ -167,6 +204,16 @@ export default function AdminProductListPageClient({
         location.reload();
     }
 
+    const selectedProducts = useMemo(
+        () => items.filter((p) => selectedIds.includes(p.id)),
+        [items, selectedIds]
+    );
+
+    const selectedInvalid = useMemo(() => {
+        // về lý thuyết không có vì checkbox disabled, nhưng check thêm cho chắc
+        return selectedProducts.filter((p) => !isRowSelectable(p));
+    }, [selectedProducts]);
+
     return (
         <div className="space-y-4">
             {/* HEADER */}
@@ -184,7 +231,7 @@ export default function AdminProductListPageClient({
             {/* TABS */}
             <SegmentTabs tabs={tabs} />
 
-            {/* FILTER FORM (giống orders) */}
+            {/* FILTER FORM */}
             <form action="/admin/products" method="get" className="flex flex-wrap gap-2 items-end">
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
 
@@ -222,15 +269,114 @@ export default function AdminProductListPageClient({
                 </div>
             </form>
 
+            {/* BULK BAR */}
+            {showBulkBar && (
+                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
+                    <span className="font-medium text-blue-700">{selectedIds.length} sản phẩm đã chọn</span>
+
+                    <button
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm disabled:opacity-60"
+                        disabled={selectedIds.length === 0}
+                        onClick={() => setShowBulkConfirm(true)}
+                        type="button"
+                    >
+                        POST các sản phẩm đã chọn
+                    </button>
+
+                    <button
+                        className="px-3 py-1 border rounded text-sm"
+                        onClick={() => {
+                            setSelectedIds([]);
+                            setShowBulkBar(false);
+                        }}
+                        type="button"
+                    >
+                        Bỏ chọn
+                    </button>
+
+                    <div className="text-xs text-gray-600 ml-auto">
+                        Điều kiện: có <b>giá</b> & <b>hình</b>
+                    </div>
+                </div>
+            )}
+
+            {/* BULK CONFIRM MODAL */}
+            {showBulkConfirm && (
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+                    <div className="bg-white rounded-lg w-[520px] p-5 space-y-4">
+                        <h3 className="font-semibold text-lg">Duyệt (POST) sản phẩm</h3>
+
+                        <div className="text-sm text-gray-700">
+                            Bạn đang duyệt <b>{selectedIds.length}</b> sản phẩm.
+                        </div>
+
+                        {selectedInvalid.length > 0 ? (
+                            <div className="rounded border bg-red-50 p-3 text-sm text-red-700">
+                                Có <b>{selectedInvalid.length}</b> sản phẩm không đạt điều kiện (thiếu giá hoặc hình).
+                                Vui lòng bỏ chọn chúng.
+                            </div>
+                        ) : (
+                            <div className="rounded border bg-gray-50 p-3 text-sm text-gray-700">
+                                Điều kiện đã đạt: đủ <b>giá</b> và <b>hình</b>.
+                            </div>
+                        )}
+
+                        <div className="flex justify-end gap-2 pt-3">
+                            <button
+                                className="px-3 py-1 border rounded"
+                                onClick={() => setShowBulkConfirm(false)}
+                                type="button"
+                            >
+                                Hủy
+                            </button>
+
+                            <button
+                                className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60"
+                                disabled={selectedIds.length === 0 || selectedInvalid.length > 0}
+                                onClick={async () => {
+                                    // ✅ TODO: đổi endpoint theo hệ thống của bạn
+                                    // ví dụ giống order: /api/admin/products/bulk-post
+                                    const res = await fetch("/api/admin/products/bulk-post", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ productIds: selectedIds }),
+                                    });
+
+                                    if (!res.ok) {
+                                        alert(await res.text());
+                                        return;
+                                    }
+                                    location.reload();
+                                }}
+                                type="button"
+                            >
+                                Xác nhận POST
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg bg-white">
                 <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-gray-50 border-b">
                         <tr>
+                            {/* ✅ bulk checkbox header */}
+                            <th className="px-4 py-2">
+                                <input
+                                    type="checkbox"
+                                    checked={allChecked}
+                                    onChange={(e) => toggleAllInView(e.target.checked)}
+                                    disabled={selectableIdsInView.length === 0}
+                                />
+                            </th>
+
                             <th className="px-4 py-2 text-left">Ảnh</th>
                             <th className="px-4 py-2 text-left">Tên</th>
-                            <th className="px-4 py-2 text-right">Giá bán</th>
-                            <th className="px-4 py-2 text-left">Tình trạng duyệt</th>
+                            <th className="px-4 py-2 text-left">Vendor</th>
+                            <th className="px-4 py-2 text-left">Giá bán</th>
+                            <th className="px-4 py-2 text-left">Trạng thái</th>
                             <th className="px-4 py-2 text-left">Cập nhật</th>
                             <th className="px-4 py-2 text-left">Tạo lúc</th>
                             <th className="px-4 py-2 text-right">Hành động</th>
@@ -240,74 +386,115 @@ export default function AdminProductListPageClient({
                     <tbody>
                         {displayItems.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="py-10 text-center text-gray-400 italic">
+                                <td colSpan={9} className="py-10 text-center text-gray-400 italic">
                                     Không có sản phẩm trong tab này
                                 </td>
                             </tr>
                         ) : (
-                            displayItems.map((p) => (
-                                <tr key={p.id} className="border-b hover:bg-gray-50 transition-colors">
-                                    {/* IMAGE */}
-                                    <td className="px-4 py-2 align-middle">
-                                        <InlineImagePicker
-                                            imageUrl={(p as any).primaryImageUrl ?? null}
-                                            onPick={(fileKey) => updateProductImage(p.id, fileKey)}
-                                        />
-                                    </td>
+                            displayItems.map((p) => {
+                                const selectable = isRowSelectable(p);
+                                const checked = selectedIds.includes(p.id);
 
-                                    {/* TITLE */}
-                                    <td className="px-4 py-2">
-                                        <div className="leading-tight">
-                                            <div className="font-medium">{(p as any).title ?? "-"}</div>
+                                const priceOk = hasValidPrice(p);
+                                const imgOk = hasValidImage(p);
 
-                                            {/* label phụ: luôn xuống hàng */}
-                                            {(p as any).priceVisibility === "SHOW" ? (
-                                                <div className="mt-1">
-                                                    <DotLabel label="Hiển thị giá" tone="green" />
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    </td>
+                                return (
+                                    <tr key={p.id} className="border-b hover:bg-gray-50 transition-colors">
+                                        {/* ✅ row checkbox */}
+                                        <td className="px-4 py-2 align-middle">
+                                            <input
+                                                type="checkbox"
+                                                disabled={!selectable}
+                                                checked={checked}
+                                                onChange={(e) => {
+                                                    const next = e.target.checked
+                                                        ? [...selectedIds, p.id]
+                                                        : selectedIds.filter((id) => id !== p.id);
 
-                                    {/* PRICE – INLINE EDIT */}
-                                    <td className="px-4 py-2 text-right">
-                                        <input
-                                            type="number"
-                                            defaultValue={(p as any).minPrice ?? ""}
-                                            className="w-28 rounded border px-2 py-1 text-right"
-                                            onBlur={(e) => {
-                                                const value = Number(e.target.value);
-                                                if (Number.isNaN(value)) return;
-                                                if (value !== Number((p as any).minPrice ?? 0)) {
-                                                    updateProduct(p.id, { ...(p as any), minPrice: value } as any);
+                                                    setSelectedIds(next);
+                                                    setShowBulkBar(next.length > 0);
+                                                }}
+                                                title={
+                                                    selectable
+                                                        ? "Chọn để bulk POST"
+                                                        : `Không thể chọn: ${!priceOk ? "thiếu giá" : ""}${!priceOk && !imgOk ? " + " : ""
+                                                        }${!imgOk ? "thiếu hình" : ""}`
                                                 }
-                                            }}
-                                        />
-                                    </td>
+                                            />
+                                        </td>
 
-                                    {/* STATUS */}
-                                    <td className="px-4 py-2">
-                                        <StatusBadge value={p.status} map={PRODUCT_STATUS} />
+                                        {/* IMAGE */}
+                                        <td className="px-4 py-2 align-middle">
+                                            <InlineImagePicker
+                                                imageUrl={(p as any).primaryImageUrl ?? null}
+                                                onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                            />
+                                        </td>
 
-                                    </td>
+                                        {/* TITLE */}
+                                        <td className="px-4 py-2">
+                                            <div className="leading-tight">
+                                                <div className="font-medium">{(p as any).title ?? "-"}</div>
+
+                                                {/* dot label luôn xuống hàng */}
+                                                {(p as any).priceVisibility === "SHOW" ? (
+                                                    <div className="mt-1">
+                                                        <DotLabel label="Hiển thị giá" tone="green" />
+                                                    </div>
+                                                ) : null}
+
+                                                {/* gợi ý lý do không selectable (nhỏ gọn) */}
+                                                {!selectable ? (
+                                                    <div className="mt-1 text-xs text-amber-700">
+                                                        Thiếu {priceOk ? "" : "giá"}
+                                                        {!priceOk && !imgOk ? " & " : ""}
+                                                        {imgOk ? "" : "hình"} → không bulk POST được
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-2">{p.vendorName}</td>
+
+                                        {/* PRICE */}
+                                        <td className="px-4 py-2 ">
+                                            <input
+                                                type="number"
+                                                defaultValue={(p as any).minPrice ?? ""}
+                                                className="w-28 rounded border px-2 py-1 text-right"
+                                                onBlur={(e) => {
+                                                    const value = Number(e.target.value);
+                                                    if (!Number.isFinite(value)) return;
+                                                    if (value !== Number((p as any).minPrice ?? 0)) {
+                                                        updateProduct(p.id, { ...(p as any), minPrice: value } as any);
+                                                    }
+                                                }}
+                                            />
+                                        </td>
+
+                                        {/* STATUS */}
+                                        <td className="px-4 py-2">
+                                            <StatusBadge value={p.status} map={PRODUCT_STATUS} />
+
+                                        </td>
 
 
-                                    {/* UPDATED */}
-                                    <td className="px-4 py-2">{fmtDate((p as any).updatedAt)}</td>
+                                        {/* UPDATED */}
+                                        <td className="px-4 py-2">{fmtDate((p as any).updatedAt)}</td>
 
-                                    {/* CREATED */}
-                                    <td className="px-4 py-2">{fmtDate((p as any).createdAt)}</td>
+                                        {/* CREATED */}
+                                        <td className="px-4 py-2">{fmtDate((p as any).createdAt)}</td>
 
-                                    {/* ACTIONS */}
-                                    <td className="px-4 py-2 text-right">
-                                        <RowActionsMenu
-                                            onView={() => (window.location.href = `/admin/products/${p.id}`)}
-                                            onEdit={() => (window.location.href = `/admin/products/${p.id}/edit`)}
-                                            onDelete={() => handleDelete(p.id)}
-                                        />
-                                    </td>
-                                </tr>
-                            ))
+                                        {/* ACTIONS */}
+                                        <td className="px-4 py-2 text-right">
+                                            <RowActionsMenu
+                                                onView={() => (window.location.href = `/admin/products/${p.id}`)}
+                                                onEdit={() => (window.location.href = `/admin/products/${p.id}/edit`)}
+                                                onDelete={() => handleDelete(p.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

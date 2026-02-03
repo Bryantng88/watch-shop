@@ -69,7 +69,6 @@ export async function getAdminProductList(raw: Record<string, unknown>) {
 
     // 3️⃣ Map → Admin View Model
 
-
     const rows = items.map(mapProductToAdminRow);
 
     // 4️⃣ Return
@@ -130,4 +129,92 @@ export async function searchProductService(q: string) {
     });
 }
 
+export type BulkPostProductsResult = {
+    count: number;
+    postedIds: string[];
+    failed: Array<{
+        id: string;
+        title?: string | null;
+        reasons: string[];
+    }>;
+};
 
+function toNumberPrice(v: unknown): number {
+    if (v == null) return 0;
+    if (typeof v === "number") return v;
+
+    // Prisma.Decimal thường có toNumber()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyV = v as any;
+    if (typeof anyV?.toNumber === "function") return anyV.toNumber();
+
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function hasPrice(p: { minPrice: unknown }) {
+    return toNumberPrice(p.minPrice) > 0;
+}
+
+function hasImage(p: { primaryImageUrl: string | null }) {
+    return !!p.primaryImageUrl && p.primaryImageUrl.trim().length > 0;
+}
+
+/**
+ * Bulk POST Products (y như orders bulk post: chạy trong transaction)
+ * Điều kiện hoàn thành:
+ * - status phải DRAFT
+ * - có minPrice > 0
+ * - có primaryImageUrl
+ */
+export async function bulkPostProducts(productIds: string[]): Promise<BulkPostProductsResult> {
+    const ids = Array.from(new Set((productIds ?? []).filter(Boolean)));
+
+    if (!ids.length) {
+        return { count: 0, postedIds: [], failed: [] };
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const rows = await prodRepo.getProductsForBulkPost(tx, ids);
+
+        const found = new Set(rows.map((x) => x.id));
+        const notFound = ids.filter((id) => !found.has(id));
+
+        const failed: BulkPostProductsResult["failed"] = [];
+
+        // not found
+        for (const id of notFound) {
+            failed.push({ id, title: null, reasons: ["NOT_FOUND"] });
+        }
+
+        // validate
+        const eligibleIds: string[] = [];
+        for (const p of rows) {
+            const reasons: string[] = [];
+
+            if (p.status !== ProductStatus.DRAFT) reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
+            //if (!hasPrice(p)) reasons.push("MISSING_PRICE");
+            if (!hasImage(p)) reasons.push("MISSING_IMAGE");
+
+            if (reasons.length) {
+                failed.push({ id: p.id, title: p.title ?? null, reasons });
+            } else {
+                eligibleIds.push(p.id);
+            }
+            console.log('tét prod repo : ')
+
+        }
+
+        // giống orders: skip cái fail, vẫn post cái ok
+        if (eligibleIds.length) {
+            await prodRepo.markPostedMany(tx, eligibleIds);
+            console.log('tét prod repo : ')
+        }
+
+        return {
+            count: eligibleIds.length,
+            postedIds: eligibleIds,
+            failed,
+        };
+    });
+}

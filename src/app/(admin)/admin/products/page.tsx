@@ -34,7 +34,6 @@ export default async function ProductListPage({
 
     const input = parseProductSearchParams(sp);
     const { items, total, page, pageSize } = await getAdminProductList(input);
-    console.log('in ra test prod: ' + items)
     const brands = await listBrands();
     const productTypes = Object.values(PRODUCT_TYPES).map((v) => ({
         label: v,

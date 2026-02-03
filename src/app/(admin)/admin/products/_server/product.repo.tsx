@@ -1,6 +1,6 @@
 
 import { DB, dbOrTx, prisma } from "@/server/db/client";
-import { ProductType, Prisma, AvailabilityStatus, ContentStatus } from "@prisma/client";
+import { ProductType, Prisma, AvailabilityStatus, ProductStatus } from "@prisma/client";
 import * as helper from "./helper";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -71,6 +71,13 @@ export async function searchProductsRepo(
                 },
                 take: 1,
             },
+            vendor: {
+                select: {
+
+                    name: true,
+                }
+            }
+
         },
         take: 20,
         orderBy: { updatedAt: "desc" },
@@ -84,6 +91,7 @@ export async function searchProductsRepo(
         price: p.variants[0]
             ? Number(p.variants[0].price)
             : 0,
+        vendorName: p.vendor?.name ?? null,
     }));
 }
 
@@ -158,7 +166,11 @@ export async function listAdminProducts(f: helper.AdminProductFilters) {
                         availabilityStatus: true, /*, stockQty: true*/
                     }, // TODO: map field tồn kho nếu có
                 },
-
+                vendor: {
+                    select: {
+                        name: true
+                    }
+                },
                 // Lấy bản ghi gần nhất của các lịch sử
                 orderItems: {
                     orderBy: { createdAt: "desc" },
@@ -242,5 +254,38 @@ export async function markProductsShippedOrDelivered(
         data: {
             availabilityStatus: status,
         },
+    });
+}
+
+export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs>()({
+    select: {
+        id: true,
+        title: true,
+        status: true,
+        primaryImageUrl: true,
+
+        // ⚠️ CHỈ ĐỂ minPrice nếu Product thật sự có field này trong prisma schema
+        // minPrice: true,
+    },
+});
+
+// ✅ 2) Type lấy từ args => auto khớp schema
+export type ProductForBulkPost = Prisma.ProductGetPayload<typeof productForBulkPostArgs>;
+
+export async function getProductsForBulkPost(tx: DB, ids: string[]) {
+    const db = dbOrTx(tx);
+
+    return db.product.findMany({
+        where: { id: { in: ids } },
+        ...productForBulkPostArgs,
+    });
+}
+
+export async function markPostedMany(tx: DB, ids: string[]) {
+    const db = dbOrTx(tx);
+
+    return db.product.updateMany({
+        where: { id: { in: ids }, status: ProductStatus.DRAFT },
+        data: { status: ProductStatus.POSTED, updatedAt: new Date() },
     });
 }
