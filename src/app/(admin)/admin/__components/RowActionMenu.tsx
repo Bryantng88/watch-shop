@@ -7,12 +7,14 @@ type Props = {
     onView?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
+    onService?: () => void;
 };
 
 export default function RowActionsMenu({
     onView,
     onEdit,
     onDelete,
+    onService,
 }: Props) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -57,6 +59,18 @@ export default function RowActionsMenu({
                                     Xem
                                 </button>
                             </li>
+                        )}
+                        {onService && (
+                            <button
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-gray-50"
+                                onClick={() => {
+                                    setOpen(false);
+                                    onService();
+                                }}
+                            >
+                                Tạo service
+                            </button>
                         )}
 
                         {onEdit && (

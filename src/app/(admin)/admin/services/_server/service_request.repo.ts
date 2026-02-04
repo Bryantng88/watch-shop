@@ -176,3 +176,39 @@ export async function getOptions(
 
   return rows;
 }
+
+export async function createOne(
+  tx: DB,
+  data: Prisma.ServiceRequestCreateInput
+) {
+  const db = dbOrTx(tx);
+  return db.serviceRequest.create({ data });
+}
+
+export async function findServiceCatalogLite(tx: DB) {
+  const db = dbOrTx(tx);
+  return db.serviceCatalog.findMany({
+    where: { isActive: true },
+    select: { id: true, code: true, name: true },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+export async function findProductForService(tx: DB, productId: string) {
+  const db = dbOrTx(tx);
+  return db.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      title: true,
+      brand: { select: { name: true } }, // nếu bạn có
+      model: true, // nếu bạn có
+      ref: true,   // nếu bạn có
+      variants: {
+        orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+}

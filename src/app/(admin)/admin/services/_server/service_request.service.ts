@@ -1,7 +1,7 @@
 import * as sevRepo from "./service_request.repo"
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient, ServiceScope, ServiceType, ServiceRequestStatus } from "@prisma/client";
 import * as serviceRequestRepo from "./service_request.repo";
-
+import { genRefNo } from "../../__components/AutoGenRef";
 export type ServiceCatalogItem = {
     id: string;
     code: string;
@@ -216,4 +216,67 @@ export async function getServiceCatalogOptions() {
         defaultPrice: r.defaultPrice
     }));
     return items;
+}
+
+export type CreateServiceRequestFromProductInput = {
+    productId: string;
+    serviceCatalogId: string;
+    scope: ServiceScope; // INTERNAL
+    notes?: string | null; // ghi chú kỹ thuật
+    // nếu bạn muốn gán customer ngay (vd ký gửi):
+    customerId?: string | null;
+};
+
+export async function createFromProduct(input: CreateServiceRequestFromProductInput) {
+    return prisma.$transaction((tx) => createFromProductTx(tx, input));
+}
+
+export async function createFromProductTx(
+    tx: Prisma.TransactionClient,
+    input: CreateServiceRequestFromProductInput
+) {
+    const product = await serviceRequestRepo.findProductForService(tx, input.productId);
+    if (!product) throw new Error("Product not found");
+
+    const variantId = product.variants?.[0]?.id ?? null;
+
+    // refNo cho ServiceRequest (SR-xxxxxx)
+    const refNo = await genRefNo(tx, {
+        model: tx.serviceRequest,
+        prefix: "SR",
+        field: "refNo",
+        padding: 6,
+    });
+
+    // snapshot (tùy schema bạn đang có)
+    const brandSnapshot = (product as any).brand?.name ?? null;
+    const modelSnapshot = (product as any).model ?? null;
+    const refSnapshot = (product as any).ref ?? null;
+
+    const created = await serviceRequestRepo.createOne(tx, {
+        refNo,
+        type: ServiceType.PAID,          // hoặc INTERNAL -> nếu bạn có ServiceType khác
+        billable: false,                 // INTERNAL thường không tính phí khách
+        status: ServiceRequestStatus.DRAFT,
+
+        // liên kết product
+        product: { connect: { id: input.productId } },
+        ...(variantId ? { variant: { connect: { id: variantId } } } : {}),
+
+        // service catalog
+        ServiceCatalog: { connect: { id: input.serviceCatalogId } }, // hoặc serviceCatalog (tùy relation name trong schema)
+        serviceScope: input.scope, // INTERNAL
+
+        customer: input.customerId ? { connect: { id: input.customerId } } : undefined,
+
+        // notes kỹ thuật
+        notes: input.notes ?? null,
+
+        // snapshot
+        brandSnapshot,
+        modelSnapshot,
+        refSnapshot,
+    });
+
+    return created;
 }

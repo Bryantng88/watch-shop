@@ -11,6 +11,7 @@ import DotLabel from "../../__components/DotLabel";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { PRODUCT_STATUS } from "@/components/badges/StatusMaps";
 import type { BrandLite, ProductListItem } from "@/features/products/types";
+import CreateServiceRequestModal from "./CreateServiceRequestModal";
 
 type PageProps = {
     items: ProductListItem[];
@@ -43,15 +44,14 @@ function fmtDate(d?: string | null) {
 /** =====================
  * Tabs / Segments
  * ===================== */
-type ViewKey = "all" | "draft" | "posted" | "in_service" | "consigned" | "hold" | "sold";
+type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "hold" | "sold";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
     draft: "Chờ duyệt",
     posted: "Chờ service",
     in_service: "Đang service",
-    consigned: "Ký gửi/ Giữ hàng",
-    hold: "Giữ hàng",
+    hold: "Ký gửi/ Giữ hàng",
     sold: "Đã bán",
 };
 
@@ -98,6 +98,8 @@ export default function AdminProductListPageClient({
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+    const [openService, setOpenService] = useState(false);
+    const [serviceProductId, setServiceProductId] = useState<string | null>(null);
 
     // reset selection khi đổi tab
     useEffect(() => {
@@ -490,12 +492,26 @@ export default function AdminProductListPageClient({
                                                 onView={() => (window.location.href = `/admin/products/${p.id}`)}
                                                 onEdit={() => (window.location.href = `/admin/products/${p.id}/edit`)}
                                                 onDelete={() => handleDelete(p.id)}
+                                                // ✅ thêm action mới (bạn sửa RowActionsMenu component để nhận prop này)
+                                                onService={() => {
+                                                    setServiceProductId(p.id);
+                                                    setOpenService(true);
+                                                }}
                                             />
+
+
                                         </td>
                                     </tr>
                                 );
                             })
+
                         )}
+
+                        <CreateServiceRequestModal
+                            open={openService}
+                            onClose={() => setOpenService(false)}
+                            productId={serviceProductId ?? ""}
+                        />
                     </tbody>
                 </table>
             </div>
