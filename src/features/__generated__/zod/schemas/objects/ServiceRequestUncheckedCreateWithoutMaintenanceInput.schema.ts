@@ -2,13 +2,14 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema';
+import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutServiceReqInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
-  orderItemId: z.string(),
+  orderItemId: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),
@@ -25,6 +26,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   servicecatalogid: z.string().optional().nullable(),
   refNo: z.string().optional().nullable(),
+  scope: ServiceScopeSchema.optional().nullable(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedCreateWithoutMaintenanceInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutMaintenanceInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutMaintenanceInput>;

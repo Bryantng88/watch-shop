@@ -39,6 +39,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     servicecatalogid: z.number(),
     refNo: z.number(),
+    scope: z.number(),
     Invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),

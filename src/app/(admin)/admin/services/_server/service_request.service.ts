@@ -325,9 +325,10 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
 
                 // internal service => không có orderItemId
                 orderItemId: null,
-            } as Prisma.ServiceRequestCreateInput);
-
+            }
+            )
             created.push({ id: row.id, refNo: row.refNo ?? null });
+            console.log('test created ' + created)
         }
 
         return created;

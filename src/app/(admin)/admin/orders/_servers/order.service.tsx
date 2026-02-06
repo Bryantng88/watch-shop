@@ -15,7 +15,7 @@ import { genRefNo } from "../../__components/AutoGenRef";
 /* ================================
    TYPES
 ================================ */
-const prisma = new PrismaClient();
+//const prisma = new PrismaClient();
 
 
 

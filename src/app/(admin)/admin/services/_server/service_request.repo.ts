@@ -202,8 +202,6 @@ export async function findProductForService(tx: DB, productId: string) {
       id: true,
       title: true,
       brand: { select: { name: true } }, // nếu bạn có
-      model: true, // nếu bạn có
-      ref: true,   // nếu bạn có
       variants: {
         orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
         select: { id: true },
