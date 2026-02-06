@@ -16,6 +16,7 @@ import { MaintenanceRecordUpdateManyWithoutServiceRequestNestedInputObjectSchema
 import { CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema as CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './CustomerUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema as ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ProductUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema as ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutServiceRequestNestedInput.schema';
+import { VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema as VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './VendorUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutServiceRequestNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -35,11 +36,13 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   scope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  vendorNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUpdateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.ServiceRequestUpdateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUpdateWithoutOrderItemInput>;

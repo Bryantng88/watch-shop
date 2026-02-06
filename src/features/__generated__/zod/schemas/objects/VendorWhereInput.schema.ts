@@ -10,6 +10,7 @@ import { AcquisitionListRelationFilterObjectSchema as AcquisitionListRelationFil
 import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { ProductListRelationFilterObjectSchema as ProductListRelationFilterObjectSchema } from './ProductListRelationFilter.schema';
+import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
 import { BankNullableScalarRelationFilterObjectSchema as BankNullableScalarRelationFilterObjectSchema } from './BankNullableScalarRelationFilter.schema';
 import { BankWhereInputObjectSchema as BankWhereInputObjectSchema } from './BankWhereInput.schema'
 
@@ -29,10 +30,12 @@ const vendorwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   bankName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   bankAcc: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   acquisitions: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   Product: z.lazy(() => ProductListRelationFilterObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   Bank: z.union([z.lazy(() => BankNullableScalarRelationFilterObjectSchema), z.lazy(() => BankWhereInputObjectSchema)]).optional()
 }).strict();
 export const VendorWhereInputObjectSchema: z.ZodType<Prisma.VendorWhereInput> = vendorwhereinputSchema as unknown as z.ZodType<Prisma.VendorWhereInput>;

@@ -19,6 +19,7 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   bankName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   bankAcc: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  isActive: SortOrderSchema.optional(),
   _count: z.lazy(() => VendorCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => VendorMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => VendorMinOrderByAggregateInputObjectSchema).optional()

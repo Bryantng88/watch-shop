@@ -22,7 +22,8 @@ const vendorscalarwherewithaggregatesinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   bankName: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  bankAcc: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  bankAcc: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  isActive: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const VendorScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.VendorScalarWhereWithAggregatesInput> = vendorscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.VendorScalarWhereWithAggregatesInput>;
 export const VendorScalarWhereWithAggregatesInputObjectZodSchema = vendorscalarwherewithaggregatesinputSchema;

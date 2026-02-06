@@ -24,7 +24,9 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   refNo: z.string().optional().nullable(),
-  scope: ServiceScopeSchema.optional().nullable()
+  scope: ServiceScopeSchema.optional().nullable(),
+  vendorId: z.string().optional().nullable(),
+  vendorNameSnap: z.string().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyServiceCatalogInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyServiceCatalogInput>;
 export const ServiceRequestCreateManyServiceCatalogInputObjectZodSchema = makeSchema();

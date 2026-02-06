@@ -12,10 +12,12 @@ export const VendorAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     bankName: z.number(),
     bankAcc: z.number(),
+    isActive: z.number(),
     acquisitions: z.number(),
     invoice: z.number(),
     services: z.number(),
     Product: z.number(),
+    ServiceRequest: z.number(),
     Bank: z.number()
   }).optional(),
   _min: z.object({

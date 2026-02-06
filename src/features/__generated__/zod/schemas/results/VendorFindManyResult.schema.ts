@@ -13,10 +13,12 @@ export const VendorFindManyResultSchema = z.object({
   updatedAt: z.date(),
   bankName: z.string().optional(),
   bankAcc: z.string().optional(),
+  isActive: z.boolean(),
   acquisitions: z.array(z.unknown()),
   invoice: z.array(z.unknown()),
   services: z.array(z.unknown()),
   Product: z.array(z.unknown()),
+  ServiceRequest: z.array(z.unknown()),
   Bank: z.unknown().optional()
 })),
   pagination: z.object({

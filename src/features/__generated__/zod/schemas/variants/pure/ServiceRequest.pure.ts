@@ -26,12 +26,15 @@ export const ServiceRequestModelSchema = z.object({
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
     scope: ServiceScopeSchema.nullable(),
+    vendorId: z.string().nullable(),
+    vendorNameSnap: z.string().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     orderItem: z.unknown().nullable(),
     product: z.unknown().nullable(),
     variant: z.unknown().nullable(),
+    Vendor: z.unknown().nullable(),
     ServiceCatalog: z.unknown().nullable()
 }).strict();
 

@@ -14,7 +14,8 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   bankName: z.literal(true).optional(),
-  bankAcc: z.literal(true).optional()
+  bankAcc: z.literal(true).optional(),
+  isActive: z.literal(true).optional()
 }).strict();
 export const VendorMaxAggregateInputObjectSchema: z.ZodType<Prisma.VendorMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.VendorMaxAggregateInputType>;
 export const VendorMaxAggregateInputObjectZodSchema = makeSchema();

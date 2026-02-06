@@ -8,6 +8,7 @@ import { CustomerOrderByWithRelationInputObjectSchema as CustomerOrderByWithRela
 import { OrderItemOrderByWithRelationInputObjectSchema as OrderItemOrderByWithRelationInputObjectSchema } from './OrderItemOrderByWithRelationInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrderByWithRelationInputObjectSchema } from './ProductVariantOrderByWithRelationInput.schema';
+import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { ServiceCatalogOrderByWithRelationInputObjectSchema as ServiceCatalogOrderByWithRelationInputObjectSchema } from './ServiceCatalogOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
@@ -32,12 +33,15 @@ const makeSchema = () => z.object({
   servicecatalogid: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   scope: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ServiceRequestOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestOrderByWithRelationInput>;

@@ -36,7 +36,9 @@ const servicerequestscalarwherewithaggregatesinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   servicecatalogid: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   refNo: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  scope: z.union([z.lazy(() => EnumServiceScopeNullableWithAggregatesFilterObjectSchema), ServiceScopeSchema]).optional().nullable()
+  scope: z.union([z.lazy(() => EnumServiceScopeNullableWithAggregatesFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
+  vendorId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  vendorNameSnap: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ServiceRequestScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ServiceRequestScalarWhereWithAggregatesInput> = servicerequestscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ServiceRequestScalarWhereWithAggregatesInput>;
 export const ServiceRequestScalarWhereWithAggregatesInputObjectZodSchema = servicerequestscalarwherewithaggregatesinputSchema;

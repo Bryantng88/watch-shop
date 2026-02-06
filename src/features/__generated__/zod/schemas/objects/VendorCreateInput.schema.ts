@@ -5,6 +5,7 @@ import { AcquisitionCreateNestedManyWithoutVendorInputObjectSchema as Acquisitio
 import { InvoiceCreateNestedManyWithoutVendorInputObjectSchema as InvoiceCreateNestedManyWithoutVendorInputObjectSchema } from './InvoiceCreateNestedManyWithoutVendorInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutVendorInput.schema';
 import { ProductCreateNestedManyWithoutVendorInputObjectSchema as ProductCreateNestedManyWithoutVendorInputObjectSchema } from './ProductCreateNestedManyWithoutVendorInput.schema';
+import { ServiceRequestCreateNestedManyWithoutVendorInputObjectSchema as ServiceRequestCreateNestedManyWithoutVendorInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutVendorInput.schema';
 import { BankCreateNestedOneWithoutVendorInputObjectSchema as BankCreateNestedOneWithoutVendorInputObjectSchema } from './BankCreateNestedOneWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
@@ -18,10 +19,12 @@ const makeSchema = () => z.object({
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   bankAcc: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
   acquisitions: z.lazy(() => AcquisitionCreateNestedManyWithoutVendorInputObjectSchema),
   invoice: z.lazy(() => InvoiceCreateNestedManyWithoutVendorInputObjectSchema),
   services: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutVendorInputObjectSchema),
   Product: z.lazy(() => ProductCreateNestedManyWithoutVendorInputObjectSchema),
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutVendorInputObjectSchema),
   Bank: z.lazy(() => BankCreateNestedOneWithoutVendorInputObjectSchema).optional()
 }).strict();
 export const VendorCreateInputObjectSchema: z.ZodType<Prisma.VendorCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorCreateInput>;

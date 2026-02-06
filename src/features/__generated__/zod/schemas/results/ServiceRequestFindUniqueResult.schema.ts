@@ -21,11 +21,14 @@ export const ServiceRequestFindUniqueResultSchema = z.nullable(z.object({
   servicecatalogid: z.string().optional(),
   refNo: z.string().optional(),
   scope: z.unknown().optional(),
+  vendorId: z.string().optional(),
+  vendorNameSnap: z.string().optional(),
   Invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),
   orderItem: z.unknown().optional(),
   product: z.unknown().optional(),
   variant: z.unknown().optional(),
+  Vendor: z.unknown().optional(),
   ServiceCatalog: z.unknown().optional()
 }));

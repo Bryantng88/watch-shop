@@ -11,6 +11,7 @@ export const VendorGroupByResultSchema = z.array(z.object({
   updatedAt: z.date(),
   bankName: z.string(),
   bankAcc: z.string(),
+  isActive: z.boolean(),
   _count: z.object({
     id: z.number(),
     name: z.number(),
@@ -24,10 +25,12 @@ export const VendorGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     bankName: z.number(),
     bankAcc: z.number(),
+    isActive: z.number(),
     acquisitions: z.number(),
     invoice: z.number(),
     services: z.number(),
     Product: z.number(),
+    ServiceRequest: z.number(),
     Bank: z.number()
   }).optional(),
   _min: z.object({

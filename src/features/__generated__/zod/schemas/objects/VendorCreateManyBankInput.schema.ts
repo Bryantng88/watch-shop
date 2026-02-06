@@ -13,7 +13,8 @@ const makeSchema = () => z.object({
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  bankAcc: z.string().optional().nullable()
+  bankAcc: z.string().optional().nullable(),
+  isActive: z.boolean().optional()
 }).strict();
 export const VendorCreateManyBankInputObjectSchema: z.ZodType<Prisma.VendorCreateManyBankInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorCreateManyBankInput>;
 export const VendorCreateManyBankInputObjectZodSchema = makeSchema();
