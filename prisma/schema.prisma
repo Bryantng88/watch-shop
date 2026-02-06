@@ -296,7 +296,7 @@ model ServiceRequest {
   id               String               @id @default(cuid())
   type             ServiceType          @default(PAID)
   billable         Boolean              @default(true)
-  orderItemId      String
+  orderItemId      String?
   customerId       String?
   productId        String?
   variantId        String?
@@ -313,10 +313,11 @@ model ServiceRequest {
   updatedAt        DateTime             @updatedAt
   servicecatalogid String?
   refNo            String?
+  scope            ServiceScope?
   Invoice          Invoice[]
   maintenance      MaintenanceRecord[]
   customer         Customer?            @relation(fields: [customerId], references: [id])
-  orderItem        OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  orderItem        OrderItem?           @relation(fields: [orderItemId], references: [id])
   product          Product?             @relation(fields: [productId], references: [id])
   variant          ProductVariant?      @relation(fields: [variantId], references: [id])
   ServiceCatalog   ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
@@ -960,6 +961,7 @@ enum PaymentType {
 enum ServiceScope {
   WITH_PURCHASE
   CUSTOMER_OWNED
+  INTERNAL
 }
 
 enum servicerequeststatus_new {

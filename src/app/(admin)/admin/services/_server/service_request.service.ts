@@ -280,3 +280,56 @@ export async function createFromProductTx(
 
     return created;
 }
+
+type CreateFromProductManyInput = {
+    productId: string;
+    customerId?: string | null;
+    scope: ServiceScope; // INTERNAL | CUSTOMER_OWNED | WITH_PURCHASE
+    services: Array<{ serviceCatalogId: string; notes?: string | null }>;
+};
+
+export async function createFromProductMany(input: CreateFromProductManyInput) {
+    return prisma.$transaction(async (tx) => {
+        // 1) lấy product + variantId để snapshot/attach nếu bạn cần
+        const product = await serviceRequestRepo.findProductForService(tx, input.productId);
+        if (!product) throw new Error("Product not found");
+
+        const variantId = product.variants?.[0]?.id ?? null;
+
+        // 2) tạo nhiều service
+        const created: Array<{ id: string; refNo: string | null }> = [];
+
+        for (const s of input.services) {
+            if (!s.serviceCatalogId) continue;
+
+            const refNo = await genRefNo(tx, {
+                model: tx.serviceRequest,
+                prefix: "SR",
+                field: "refNo",
+                padding: 6,
+            });
+
+            const row = await serviceRequestRepo.createOne(tx, {
+                refNo,
+                type: ServiceType.PAID, // hoặc theo logic của bạn
+                billable: true,         // internal service có thể billable=false tuỳ bạn
+                status: "DRAFT",
+                scope: input.scope,
+
+                productId: product.id,
+                variantId,
+                customerId: input.customerId ?? null,
+
+                servicecatalogid: s.serviceCatalogId,
+                notes: s.notes ?? null,
+
+                // internal service => không có orderItemId
+                orderItemId: null,
+            } as Prisma.ServiceRequestCreateInput);
+
+            created.push({ id: row.id, refNo: row.refNo ?? null });
+        }
+
+        return created;
+    });
+}

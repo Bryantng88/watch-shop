@@ -179,7 +179,7 @@ export async function getOptions(
 
 export async function createOne(
   tx: DB,
-  data: Prisma.ServiceRequestCreateInput
+  data: Prisma.ServiceRequestUncheckedCreateInput
 ) {
   const db = dbOrTx(tx);
   return db.serviceRequest.create({ data });
