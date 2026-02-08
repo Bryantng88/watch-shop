@@ -31,12 +31,15 @@ export const ServiceRequestFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Servic
     servicecatalogid: z.boolean().optional(),
     refNo: z.boolean().optional(),
     scope: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     maintenance: z.boolean().optional(),
     customer: z.boolean().optional(),
     orderItem: z.boolean().optional(),
     product: z.boolean().optional(),
     variant: z.boolean().optional(),
+    Vendor: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;
@@ -63,12 +66,15 @@ export const ServiceRequestFindFirstOrThrowSelectZodSchema = z.object({
     servicecatalogid: z.boolean().optional(),
     refNo: z.boolean().optional(),
     scope: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     maintenance: z.boolean().optional(),
     customer: z.boolean().optional(),
     orderItem: z.boolean().optional(),
     product: z.boolean().optional(),
     variant: z.boolean().optional(),
+    Vendor: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

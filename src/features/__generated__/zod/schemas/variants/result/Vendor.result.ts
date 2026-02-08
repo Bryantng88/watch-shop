@@ -15,10 +15,12 @@ export const VendorResultSchema = z.object({
     updatedAt: z.date(),
     bankName: z.string().nullable(),
     bankAcc: z.string().nullable(),
+    isActive: z.boolean(),
     acquisitions: z.array(z.unknown()),
     invoice: z.array(z.unknown()),
     services: z.array(z.unknown()),
     Product: z.array(z.unknown()),
+    ServiceRequest: z.array(z.unknown()),
     Bank: z.unknown().nullable()
 }).strict();
 

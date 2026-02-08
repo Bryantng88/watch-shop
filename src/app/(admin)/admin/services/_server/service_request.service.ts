@@ -24,7 +24,6 @@ export type ServiceRequestSearchInput = {
     pageSize: number;
     q?: string | null;
     isActive?: boolean | null;
-    status: string;
 };
 
 export type ServiceRequestListItem = {
@@ -95,14 +94,11 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         status: r.status,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
-
         serviceName: r.serviceCatalog?.name ?? null,
         serviceCode: r.serviceCatalog?.code ?? null,
-
         orderId: r.orderItem?.order?.id ?? null,
         orderRefNo: r.orderItem?.order?.refNo ?? null,
-
-        scope: (r.orderItem?.serviceScope as any) ?? null,
+        scope: r.scope ?? null,
         customerItemNote: r.orderItem?.customerItemNote ?? null,
     }));
 
@@ -148,7 +144,6 @@ export async function createServiceRequestsFromOrderTx(
     const rows: Prisma.ServiceRequestCreateManyInput[] = serviceItems.map((it: any) => {
         const servicecatalogid =
             it.serviceCatalogId ?? it.servicecatalogid ?? null;
-        console.log('in ra test service request : ' + JSON.stringify(it))
         if (!servicecatalogid) {
             throw new Error(`SERVICE item thiếu serviceCatalogId: orderItemId=${it.id}`);
         }
@@ -280,6 +275,7 @@ export async function createFromProductTx(
 
     return created;
 }
+
 type CreateFromProductManyInput = {
     productId: string;
     customerId?: string | null;
@@ -310,10 +306,10 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
 
             const row = await serviceRequestRepo.createOne(tx, {
                 refNo,
-                type: "PAID", // hoặc theo logic của bạn
+                type: ServiceType.PAID, // hoặc theo logic của bạn
                 billable: true,         // internal service có thể billable=false tuỳ bạn
                 status: "DRAFT",
-                scope: input.scope,
+                scope: "INTERNAL",
 
                 productId: product.id,
                 variantId,
@@ -323,10 +319,10 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
                 notes: s.notes ?? null,
 
                 // internal service => không có orderItemId
-                orderItemId: null
-            })
-
-            //created.push({ id: row.id, refNo: row.refNo ?? null });
+                orderItemId: null,
+            }
+            )
+            created.push({ id: row.id, refNo: row.refNo ?? null });
         }
 
         return created;

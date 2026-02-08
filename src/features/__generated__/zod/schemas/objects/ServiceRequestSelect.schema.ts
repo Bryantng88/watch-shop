@@ -6,6 +6,7 @@ import { CustomerArgsObjectSchema as CustomerArgsObjectSchema } from './Customer
 import { OrderItemArgsObjectSchema as OrderItemArgsObjectSchema } from './OrderItemArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
 import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
+import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { ServiceCatalogArgsObjectSchema as ServiceCatalogArgsObjectSchema } from './ServiceCatalogArgs.schema';
 import { ServiceRequestCountOutputTypeArgsObjectSchema as ServiceRequestCountOutputTypeArgsObjectSchema } from './ServiceRequestCountOutputTypeArgs.schema'
 
@@ -31,12 +32,15 @@ const makeSchema = () => z.object({
   servicecatalogid: z.boolean().optional(),
   refNo: z.boolean().optional(),
   scope: z.boolean().optional(),
+  vendorId: z.boolean().optional(),
+  vendorNameSnap: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
+  Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceRequestCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

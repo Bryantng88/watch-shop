@@ -18,7 +18,8 @@ const makeSchema = () => z.object({
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  bankAcc: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  bankAcc: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const VendorUncheckedUpdateManyWithoutBankInputObjectSchema: z.ZodType<Prisma.VendorUncheckedUpdateManyWithoutBankInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUncheckedUpdateManyWithoutBankInput>;
 export const VendorUncheckedUpdateManyWithoutBankInputObjectZodSchema = makeSchema();

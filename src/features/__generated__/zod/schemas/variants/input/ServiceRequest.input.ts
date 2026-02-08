@@ -26,12 +26,15 @@ export const ServiceRequestInputSchema = z.object({
     servicecatalogid: z.string().optional().nullable(),
     refNo: z.string().optional().nullable(),
     scope: ServiceScopeSchema.optional().nullable(),
+    vendorId: z.string().optional().nullable(),
+    vendorNameSnap: z.string().optional().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
     orderItem: z.unknown().optional().nullable(),
     product: z.unknown().optional().nullable(),
     variant: z.unknown().optional().nullable(),
+    Vendor: z.unknown().optional().nullable(),
     ServiceCatalog: z.unknown().optional().nullable()
 }).strict();
 

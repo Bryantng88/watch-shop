@@ -22,7 +22,8 @@ const vendorscalarwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   bankName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  bankAcc: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  bankAcc: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const VendorScalarWhereInputObjectSchema: z.ZodType<Prisma.VendorScalarWhereInput> = vendorscalarwhereinputSchema as unknown as z.ZodType<Prisma.VendorScalarWhereInput>;
 export const VendorScalarWhereInputObjectZodSchema = vendorscalarwhereinputSchema;

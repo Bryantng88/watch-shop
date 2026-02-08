@@ -6,6 +6,7 @@ import { AcquisitionOrderByRelationAggregateInputObjectSchema as AcquisitionOrde
 import { InvoiceOrderByRelationAggregateInputObjectSchema as InvoiceOrderByRelationAggregateInputObjectSchema } from './InvoiceOrderByRelationAggregateInput.schema';
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
 import { ProductOrderByRelationAggregateInputObjectSchema as ProductOrderByRelationAggregateInputObjectSchema } from './ProductOrderByRelationAggregateInput.schema';
+import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
 import { BankOrderByWithRelationInputObjectSchema as BankOrderByWithRelationInputObjectSchema } from './BankOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
@@ -21,10 +22,12 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   bankName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   bankAcc: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  isActive: SortOrderSchema.optional(),
   acquisitions: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
   invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   services: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
   Bank: z.lazy(() => BankOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const VendorOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.VendorOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorOrderByWithRelationInput>;

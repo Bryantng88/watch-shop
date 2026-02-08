@@ -291,7 +291,7 @@ export default function ServiceRequestListPageClient({
                                 className="px-3 py-1 bg-blue-600 text-white rounded"
                                 onClick={async () => {
                                     // TODO: thay endpoint theo hệ thống của bạn
-                                    await fetch("/api/admin/service-requests/bulk", {
+                                    await fetch("/api/admin/service-requests/bulk-post", {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({ ids: selectedIds }),
@@ -385,6 +385,10 @@ export default function ServiceRequestListPageClient({
 
                                             {r.scope === "WITH_PURCHASE" ? (
                                                 <DotLabel label="Dịch Vụ" tone="blue" />
+                                            ) : null}
+
+                                            {r.scope === "INTERNAL" ? (
+                                                <DotLabel label="Nội bộ" tone="gray" />
                                             ) : null}
                                         </td>
 

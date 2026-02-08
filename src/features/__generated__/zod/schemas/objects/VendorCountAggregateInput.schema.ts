@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   updatedAt: z.literal(true).optional(),
   bankName: z.literal(true).optional(),
   bankAcc: z.literal(true).optional(),
+  isActive: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const VendorCountAggregateInputObjectSchema: z.ZodType<Prisma.VendorCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.VendorCountAggregateInputType>;

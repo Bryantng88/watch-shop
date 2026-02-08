@@ -28,6 +28,8 @@ const makeSchema = () => z.object({
   servicecatalogid: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   scope: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ServiceRequestCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ServiceRequestMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => ServiceRequestMinOrderByAggregateInputObjectSchema).optional()

@@ -1,5 +1,5 @@
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient, ServiceRequestStatus } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient | typeof prisma;
 export type ServiceRequestListRow = {
@@ -8,7 +8,7 @@ export type ServiceRequestListRow = {
   status: string;
   createdAt: Date;
   updatedAt: Date;
-
+  scope: string;
   // hiển thị "Dịch vụ"
   serviceCatalog: { id: string; code: string | null; name: string } | null;
 
@@ -99,7 +99,7 @@ export async function getServiceRequestList(
         status: true,
         createdAt: true,
         updatedAt: true,
-
+        scope: true,
         // ✅ Dịch vụ
         ServiceCatalog: {
           select: {
@@ -114,7 +114,6 @@ export async function getServiceRequestList(
           select: {
             id: true,
             title: true,
-            serviceScope: true,
             customerItemNote: true,
             order: {
               select: {
@@ -135,6 +134,7 @@ export async function getServiceRequestList(
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    scope: r.scope,
     serviceCatalog: r.ServiceCatalog
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
       : null,
@@ -179,7 +179,7 @@ export async function getOptions(
 
 export async function createOne(
   tx: DB,
-  data: Prisma.ServiceRequestCreateInput
+  data: Prisma.ServiceRequestUncheckedCreateInput
 ) {
   const db = dbOrTx(tx);
   return db.serviceRequest.create({ data });
@@ -202,8 +202,6 @@ export async function findProductForService(tx: DB, productId: string) {
       id: true,
       title: true,
       brand: { select: { name: true } }, // nếu bạn có
-      model: true, // nếu bạn có
-      ref: true,   // nếu bạn có
       variants: {
         orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
         select: { id: true },
@@ -211,4 +209,37 @@ export async function findProductForService(tx: DB, productId: string) {
       },
     },
   });
+}
+
+export type VendorLite = { id: string; name: string };
+
+export async function findVendorsLite(tx: DB) {
+  const db = dbOrTx(tx);
+  return db.vendor.findMany({
+    where: { isActive: true }, // nếu schema bạn có
+    select: { id: true, name: true },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+export async function bulkAssignVendor(
+  tx: DB,
+  input: { ids: string[]; vendorId: string | null; vendorNameSnap: string | null }
+) {
+  const db = dbOrTx(tx);
+
+  const ids = Array.from(new Set(input.ids.filter(Boolean)));
+  if (!ids.length) return { count: 0 };
+
+  // ✅ chỉ assign cho SR tồn tại (updateMany)
+  const updated = await db.serviceRequest.updateMany({
+    where: { id: { in: ids } },
+    data: {
+      vendorId: input.vendorId,
+      vendorNameSnap: input.vendorNameSnap,
+      updatedAt: new Date(),
+    },
+  });
+
+  return { count: updated.count };
 }
