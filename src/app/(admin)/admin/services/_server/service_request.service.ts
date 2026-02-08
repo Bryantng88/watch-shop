@@ -323,7 +323,7 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
                 notes: s.notes ?? null,
 
                 // internal service => không có orderItemId
-                orderItemId: null,
+                orderItemId: null
             })
 
             //created.push({ id: row.id, refNo: row.refNo ?? null });
