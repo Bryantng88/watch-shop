@@ -9,6 +9,7 @@ import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { SERVICE_REQUEST_STATUS } from "@/components/badges/StatusMaps";
 import DotLabel from "../../__components/DotLabel";
+import BulkAssignVendorModal from "./BulkAssignVendorModal";
 
 type ServiceReqItem = {
     id: string;
@@ -102,6 +103,7 @@ export default function ServiceRequestListPageClient({
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+    const [openBulkAssignVendor, setOpenBulkAssignVendor] = useState(false);
 
     const sp = useSearchParams();
 
@@ -246,14 +248,14 @@ export default function ServiceRequestListPageClient({
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} service request đã chọn
                     </span>
-
                     <button
                         className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                        onClick={() => setShowBulkConfirm(true)}
+                        onClick={() => setOpenBulkAssignVendor(true)}
                         type="button"
                     >
-                        Thao tác hàng loạt
+                        Assign vendor
                     </button>
+
 
                     <button
                         className="px-3 py-1 border rounded text-sm"
@@ -440,6 +442,13 @@ export default function ServiceRequestListPageClient({
                         )}
                     </tbody>
                 </table>
+                <BulkAssignVendorModal
+                    open={openBulkAssignVendor}
+                    onClose={() => setOpenBulkAssignVendor(false)}
+                    selectedCount={selectedIds.length}
+                    selectedIds={selectedIds}
+                />
+
             </div>
 
             {/* PAGINATION */}

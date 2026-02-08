@@ -328,3 +328,31 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
         return created;
     });
 }
+
+export async function bulkAssignVendor(input: { ids: string[]; vendorId: string | null }) {
+    return prisma.$transaction(async (tx) => {
+        let vendorNameSnap: string | null = null;
+
+        if (input.vendorId) {
+            const v = await tx.vendor.findUnique({
+                where: { id: input.vendorId },
+                select: { id: true, name: true },
+            });
+            if (!v) throw new Error("Vendor không tồn tại");
+            vendorNameSnap = v.name;
+        }
+
+        return serviceRequestRepo.bulkAssignVendor(tx, {
+            ids: input.ids,
+            vendorId: input.vendorId ?? null,
+            vendorNameSnap,
+        });
+    });
+}
+
+export async function getVendorDropdown() {
+    return prisma.$transaction(async (tx) => {
+        const rows = await serviceRequestRepo.findVendorsLite(tx);
+        return rows;
+    });
+}
