@@ -2,12 +2,13 @@ import * as z from 'zod';
 
 import { ServiceTypeSchema } from '../../enums/ServiceType.schema';
 import { ServiceRequestStatusSchema } from '../../enums/ServiceRequestStatus.schema';
+import { ServiceScopeSchema } from '../../enums/ServiceScope.schema';
 // prettier-ignore
 export const ServiceRequestResultSchema = z.object({
     id: z.string(),
     type: ServiceTypeSchema,
     billable: z.boolean(),
-    orderItemId: z.string(),
+    orderItemId: z.string().nullable(),
     customerId: z.string().nullable(),
     productId: z.string().nullable(),
     variantId: z.string().nullable(),
@@ -24,10 +25,11 @@ export const ServiceRequestResultSchema = z.object({
     updatedAt: z.date(),
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
+    scope: ServiceScopeSchema.nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().nullable(),
-    orderItem: z.unknown(),
+    orderItem: z.unknown().nullable(),
     product: z.unknown().nullable(),
     variant: z.unknown().nullable(),
     ServiceCatalog: z.unknown().nullable()

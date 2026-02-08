@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2026-02-03T04:53:03.312Z",
+  "generatedAt": "2026-02-05T12:06:01.151Z",
   "outputPath": "D:\\workspace\\project\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",
@@ -601,7 +601,6 @@
     "schemas\\objects\\EnumServiceDetailWithAggregatesFilter.schema.ts",
     "schemas\\objects\\EnumServiceTypeFilter.schema.ts",
     "schemas\\objects\\EnumServiceRequestStatusFilter.schema.ts",
-    "schemas\\objects\\OrderItemScalarRelationFilter.schema.ts",
     "schemas\\objects\\ProductVariantNullableScalarRelationFilter.schema.ts",
     "schemas\\objects\\ServiceRequestCountOrderByAggregateInput.schema.ts",
     "schemas\\objects\\ServiceRequestMaxOrderByAggregateInput.schema.ts",
@@ -918,7 +917,7 @@
     "schemas\\objects\\InvoiceUpdateManyWithoutServiceReqNestedInput.schema.ts",
     "schemas\\objects\\MaintenanceRecordUpdateManyWithoutServiceRequestNestedInput.schema.ts",
     "schemas\\objects\\CustomerUpdateOneWithoutServiceRequestNestedInput.schema.ts",
-    "schemas\\objects\\OrderItemUpdateOneRequiredWithoutServiceRequestNestedInput.schema.ts",
+    "schemas\\objects\\OrderItemUpdateOneWithoutServiceRequestNestedInput.schema.ts",
     "schemas\\objects\\ProductUpdateOneWithoutServiceRequestNestedInput.schema.ts",
     "schemas\\objects\\ProductVariantUpdateOneWithoutServiceRequestNestedInput.schema.ts",
     "schemas\\objects\\ServiceCatalogUpdateOneWithoutServiceRequestNestedInput.schema.ts",

@@ -1,13 +1,14 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
-import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema'
+import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema';
+import { ServiceScopeSchema } from '../enums/ServiceScope.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
-  orderItemId: z.string(),
+  orderItemId: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),
@@ -22,7 +23,8 @@ const makeSchema = () => z.object({
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  refNo: z.string().optional().nullable()
+  refNo: z.string().optional().nullable(),
+  scope: ServiceScopeSchema.optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyServiceCatalogInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyServiceCatalogInput>;
 export const ServiceRequestCreateManyServiceCatalogInputObjectZodSchema = makeSchema();

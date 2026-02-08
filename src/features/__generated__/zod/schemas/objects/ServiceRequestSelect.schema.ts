@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   servicecatalogid: z.boolean().optional(),
   refNo: z.boolean().optional(),
+  scope: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
