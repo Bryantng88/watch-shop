@@ -32,7 +32,7 @@ export type ServiceRequestListItem = {
     status: string;
     createdAt: Date;
     updatedAt: Date;
-
+    productTitle: string;
     serviceName: string | null;
     serviceCode: string | null;
 
@@ -94,6 +94,8 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         status: r.status,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
+        vendorName: r.vendorName,
+        productTitle: r.productTitle,
         serviceName: r.serviceCatalog?.name ?? null,
         serviceCode: r.serviceCatalog?.code ?? null,
         orderId: r.orderItem?.order?.id ?? null,

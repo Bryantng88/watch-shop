@@ -1,6 +1,6 @@
 import { prisma, DB, dbOrTx } from "@/server/db/client";
 import { Prisma, PrismaClient } from "@prisma/client";
-
+import { ServiceRequestStatus } from "@prisma/client";
 type Tx = Prisma.TransactionClient | typeof prisma;
 export type ServiceRequestListRow = {
   id: string;
@@ -8,10 +8,11 @@ export type ServiceRequestListRow = {
   status: string;
   createdAt: Date;
   updatedAt: Date;
-
+  scope: string;
+  productTitle: string;
   // hiển thị "Dịch vụ"
   serviceCatalog: { id: string; code: string | null; name: string } | null;
-
+  vendorName: string;
   // hiển thị "Order", "Scope", notes đồ khách mang tới...
   orderItem: {
     id: string;
@@ -99,7 +100,14 @@ export async function getServiceRequestList(
         status: true,
         createdAt: true,
         updatedAt: true,
-
+        scope: true,
+        vendorNameSnap: true,
+        product: {
+          select: {
+            id: true,
+            title: true,
+          }
+        },
         // ✅ Dịch vụ
         ServiceCatalog: {
           select: {
@@ -132,9 +140,12 @@ export async function getServiceRequestList(
   const mapped: ServiceRequestListRow[] = rows.map((r) => ({
     id: r.id,
     refNo: r.refNo ?? null,
-    status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    vendorName: r.vendorNameSnap,
+    scope: r.scope,
+    productTitle: r.product?.title,
+    status: r.status,
     serviceCatalog: r.ServiceCatalog
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
       : null,
@@ -235,10 +246,11 @@ export async function bulkAssignVendor(
 
   // ✅ chỉ assign cho SR tồn tại (updateMany)
   const updated = await db.serviceRequest.updateMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, status: ServiceRequestStatus.DRAFT, },
     data: {
       vendorId: input.vendorId,
       vendorNameSnap: input.vendorNameSnap,
+      status: ServiceRequestStatus.IN_PROGRESS,
       updatedAt: new Date(),
     },
   });

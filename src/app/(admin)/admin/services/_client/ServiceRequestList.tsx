@@ -21,8 +21,10 @@ type ServiceReqItem = {
     orderRefNo: string;
     refNo: string;
     serviceName: string;
+    productTitle: string;
     // optional (tùy API bạn trả)
     orderItemId?: string | null;
+    vendorName: string;
     orderItem?: {
         id: string;
         title?: string | null;
@@ -82,7 +84,7 @@ function matchesView(o: ServiceReqItem, view: ViewKey) {
         case "in_progress":
             return o.status === "IN_PROGRESS";
         case "done":
-            return o.status === "DONE";
+            return o.status === "COMPLETED";
         case "canceled":
             return o.status === "CANCELED";
         case "all":
@@ -123,7 +125,7 @@ export default function ServiceRequestListPageClient({
         if (view === "all") next.delete("view");
         else next.set("view", view);
         next.set("page", "1");
-        return `/admin/service-requests?${next.toString()}`;
+        return `/admin/services?${next.toString()}`;
     };
 
     const displayItems = useMemo(
@@ -134,6 +136,8 @@ export default function ServiceRequestListPageClient({
     const countsByView: Record<ViewKey, number> = useMemo(
         () => ({
             all: items.length,
+            draft: items.filter((o) => o.status === "DRAFT").length,
+
             pending: items.filter((o) => o.status === "PENDING").length,
             in_progress: items.filter((o) => o.status === "IN_PROGRESS").length,
             done: items.filter((o) => o.status === "DONE").length,
@@ -325,6 +329,8 @@ export default function ServiceRequestListPageClient({
 
                             <th className="px-3 py-2 text-left">RefNo</th>
                             <th className="px-3 py-2 text-left">Dịch vụ</th>
+                            <th className="px-3 py-2 text-left">Sản phẩm</th>
+                            <th className="px-3 py-2 text-left">Vendor</th>
                             <th className="px-3 py-2 text-left">Order</th>
                             <th className="px-3 py-2 text-left">Note</th>
                             <th className="px-3 py-2 text-left">Status</th>
@@ -405,7 +411,12 @@ export default function ServiceRequestListPageClient({
                                                 </div>
                                             )}
                                         </td>
-
+                                        <td className="px-3 py-2 font-mono text-xs">
+                                            {r.productTitle}
+                                        </td>
+                                        <td className="px-3 py-2 font-mono text-xs">
+                                            {r.vendorName}
+                                        </td>
                                         <td className="px-3 py-2">
                                             {r.orderRefNo ? (
                                                 <Link className="hover:underline" href={`/admin/orders/${orderId}`}>
