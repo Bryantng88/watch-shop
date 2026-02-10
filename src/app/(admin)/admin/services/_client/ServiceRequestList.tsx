@@ -10,7 +10,8 @@ import { StatusBadge } from "@/components/badges/StatusBadge";
 import { SERVICE_REQUEST_STATUS } from "@/components/badges/StatusMaps";
 import DotLabel from "../../__components/DotLabel";
 import BulkAssignVendorModal from "./BulkAssignVendorModal";
-
+import MaintenanceDrawer
+    from "./MaintenanceDrawer";
 type ServiceReqItem = {
     id: string;
 
@@ -33,7 +34,8 @@ type ServiceReqItem = {
         serviceCatalogId?: string | null;
         order?: { id: string; refNo?: string | null } | null;
     } | null;
-
+    maintenanceCount: number;
+    lastMaintenanceAt?: string | null;
     serviceCatalogId?: string | null;
     serviceCatalog?: { id: string; code?: string | null; name: string } | null;
     ServiceCatalog?: { id: string; code?: string | null; name: string } | null; // fallback key
@@ -106,7 +108,8 @@ export default function ServiceRequestListPageClient({
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
     const [openBulkAssignVendor, setOpenBulkAssignVendor] = useState(false);
-
+    const [openMaint, setOpenMaint] = useState(false);
+    const [maintSrId, setMaintSrId] = useState<string | null>(null);
     const sp = useSearchParams();
 
     const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
@@ -414,8 +417,15 @@ export default function ServiceRequestListPageClient({
                                         <td className="px-3 py-2 font-mono text-xs">
                                             {r.productTitle}
                                         </td>
-                                        <td className="px-3 py-2 font-mono text-xs">
-                                            {r.vendorName}
+                                        <td className="px-3 py-2">
+                                            <div className="text-sm">{r.vendorName ?? "-"}</div>
+                                            <div className="mt-1">
+                                                {r.maintenanceCount > 0 ? (
+                                                    <DotLabel label={`${r.maintenanceCount} logs`} tone="gray" />
+                                                ) : (
+                                                    <DotLabel label="Chưa có log" tone="gray" />
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-3 py-2">
                                             {r.orderRefNo ? (
@@ -439,13 +449,17 @@ export default function ServiceRequestListPageClient({
                                         <td className="px-3 py-2">{fmtDate(r.createdAt)}</td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            {/* dùng ActionMenu cho đồng bộ hệ thống */}
-                                            <ActionMenu
-                                                entityId={r.id}
-                                                entityType="service-requests"
-                                                status={r.status}
-                                                mode="edit"
-                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    className="px-2 py-1 text-xs rounded border hover:bg-gray-50"
+                                                    onClick={() => { setMaintSrId(r.id); setOpenMaint(true); }}
+                                                    type="button"
+                                                >
+                                                    Maintenance
+                                                </button>
+
+                                                <ActionMenu entityId={r.id} entityType="service-requests" status={r.status} mode="edit" />
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -484,6 +498,13 @@ export default function ServiceRequestListPageClient({
                     </Link>
                 </div>
             </div>
+            <MaintenanceDrawer
+                open={openMaint}
+                serviceRequestId={maintSrId ?? ""}
+                onClose={() => setOpenMaint(false)}
+                onChanged={() => location.reload()} // đơn giản: reload list sau khi add log/assign vendor
+            />
         </div>
+
     );
 }
