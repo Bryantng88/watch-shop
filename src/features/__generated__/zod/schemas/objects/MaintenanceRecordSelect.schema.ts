@@ -29,6 +29,8 @@ const makeSchema = () => z.object({
   invoiceId: z.boolean().optional(),
   revenueAmount: z.boolean().optional(),
   currency: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
   parts: z.union([z.boolean(), z.lazy(() => MaintenancePartFindManySchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),

@@ -23,6 +23,8 @@ const makeSchema = () => z.object({
   invoiceId: z.literal(true).optional(),
   revenueAmount: z.literal(true).optional(),
   currency: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const MaintenanceRecordCountAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCountAggregateInputType>;

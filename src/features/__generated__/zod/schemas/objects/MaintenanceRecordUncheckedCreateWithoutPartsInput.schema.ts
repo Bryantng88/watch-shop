@@ -24,6 +24,8 @@ const makeSchema = () => z.object({
   invoiceId: z.string().optional().nullable(),
   revenueAmount: z.number().optional().nullable(),
   currency: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordUncheckedCreateWithoutPartsInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUncheckedCreateWithoutPartsInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUncheckedCreateWithoutPartsInput>;

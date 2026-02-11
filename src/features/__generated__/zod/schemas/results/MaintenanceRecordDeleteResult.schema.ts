@@ -20,6 +20,8 @@ export const MaintenanceRecordDeleteResultSchema = z.nullable(z.object({
   invoiceId: z.string().optional(),
   revenueAmount: z.number().optional(),
   currency: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
   parts: z.array(z.unknown()),
   product: z.unknown().optional(),
   serviceRequest: z.unknown().optional(),

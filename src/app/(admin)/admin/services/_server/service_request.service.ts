@@ -40,7 +40,7 @@ export type ServiceRequestListItem = {
 
     orderId: string | null;
     orderRefNo: string | null;
-    maintenanceCount: number;
+    //maintenanceCount: number;
     scope: string | null;
     customerItemNote: string | null;
 };
@@ -101,6 +101,7 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         orderId: r.orderItem?.order?.id ?? null,
         orderRefNo: r.orderItem?.order?.refNo ?? null,
         scope: r.scope ?? null,
+        vendorName: r.vendorName,
         customerItemNote: r.orderItem?.customerItemNote ?? null,
         maintenanceCount: r.maintenanceCount ?? 0, // ✅
     }));

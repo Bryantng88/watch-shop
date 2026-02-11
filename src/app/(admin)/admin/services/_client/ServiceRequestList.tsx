@@ -12,6 +12,9 @@ import DotLabel from "../../__components/DotLabel";
 import BulkAssignVendorModal from "./BulkAssignVendorModal";
 import MaintenanceDrawer
     from "./MaintenanceDrawer";
+import MaintenanceLogModal from "./MaintenaceLogModel";
+import GenericActionMenu from "../../__components/GenericActionMenu";
+
 type ServiceReqItem = {
     id: string;
 
@@ -110,6 +113,9 @@ export default function ServiceRequestListPageClient({
     const [openBulkAssignVendor, setOpenBulkAssignVendor] = useState(false);
     const [openMaint, setOpenMaint] = useState(false);
     const [maintSrId, setMaintSrId] = useState<string | null>(null);
+    const [openLogs, setOpenLogs] = useState(false);
+    const [logSrId, setLogSrId] = useState<string>("");
+    const [logTitle, setLogTitle] = useState<string>("");
     const sp = useSearchParams();
 
     const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
@@ -419,14 +425,24 @@ export default function ServiceRequestListPageClient({
                                         </td>
                                         <td className="px-3 py-2">
                                             <div className="text-sm">{r.vendorName ?? "-"}</div>
-                                            <div className="mt-1">
+
+                                            <button
+                                                type="button"
+                                                className="mt-1 inline-flex"
+                                                onClick={() => {
+                                                    setLogSrId(r.id);
+                                                    setLogTitle(`${r.refNo ?? "-"} • ${r.productTitle ?? ""} • ${r.serviceName ?? ""}`);
+                                                    setOpenLogs(true);
+                                                }}
+                                            >
                                                 {r.maintenanceCount > 0 ? (
-                                                    <DotLabel label={`${r.maintenanceCount} logs`} tone="gray" />
+                                                    <DotLabel label={`${r.maintenanceCount} log`} tone="blue" />
                                                 ) : (
                                                     <DotLabel label="Chưa có log" tone="gray" />
                                                 )}
-                                            </div>
+                                            </button>
                                         </td>
+
                                         <td className="px-3 py-2">
                                             {r.orderRefNo ? (
                                                 <Link className="hover:underline" href={`/admin/orders/${orderId}`}>
@@ -449,17 +465,21 @@ export default function ServiceRequestListPageClient({
                                         <td className="px-3 py-2">{fmtDate(r.createdAt)}</td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    className="px-2 py-1 text-xs rounded border hover:bg-gray-50"
-                                                    onClick={() => { setMaintSrId(r.id); setOpenMaint(true); }}
-                                                    type="button"
-                                                >
-                                                    Maintenance
-                                                </button>
+                                            <GenericActionMenu
+                                                id={r.id}
+                                                maintenance={{
+                                                    href: `/admin/maintenance?serviceRequestId=${r.id}`,
+                                                    label: "Maintenance",
+                                                }}
+                                                actions={[
+                                                    {
+                                                        label: "Xem chi tiết",
+                                                        onClick: () => (window.location.href = `/admin/service-requests/${r.id}`),
+                                                    },
+                                                    // các action khác...
+                                                ]}
+                                            />
 
-                                                <ActionMenu entityId={r.id} entityType="service-requests" status={r.status} mode="edit" />
-                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -504,6 +524,13 @@ export default function ServiceRequestListPageClient({
                 onClose={() => setOpenMaint(false)}
                 onChanged={() => location.reload()} // đơn giản: reload list sau khi add log/assign vendor
             />
+            <MaintenanceLogModal
+                open={openLogs}
+                onClose={() => setOpenLogs(false)}
+                serviceRequestId={logSrId}
+                title={logTitle}
+            />
+
         </div>
 
     );

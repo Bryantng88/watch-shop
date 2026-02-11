@@ -22,7 +22,9 @@ const makeSchema = () => z.object({
   billed: z.boolean().optional(),
   invoiceId: z.string().optional().nullable(),
   revenueAmount: z.number().optional().nullable(),
-  currency: z.string().optional()
+  currency: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const MaintenanceRecordCreateManyInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyInput>;
 export const MaintenanceRecordCreateManyInputObjectZodSchema = makeSchema();

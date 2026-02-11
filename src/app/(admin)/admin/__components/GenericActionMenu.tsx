@@ -13,12 +13,22 @@ export type ActionItem = {
     hidden?: boolean;
 };
 
+type MaintenanceConfig = {
+    href: string;              // ví dụ: `/admin/maintenance?serviceRequestId=${id}`
+    label?: string;            // default: "Maintenance"
+    hidden?: boolean;
+};
+
 export default function GenericActionMenu({
     id,
     actions,
+    maintenance,               // ✅ NEW
+    maintenancePlacement = "top", // ✅ NEW: "top" | "bottom"
 }: {
     id: string;
     actions: ActionItem[];
+    maintenance?: MaintenanceConfig;
+    maintenancePlacement?: "top" | "bottom";
 }) {
     const btnRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
@@ -63,7 +73,26 @@ export default function GenericActionMenu({
             window.removeEventListener("scroll", onScroll, true);
             window.removeEventListener("resize", onResize);
         };
-    }, [open]);
+    }, [open, id]);
+
+    const maintenanceItem =
+        maintenance && !maintenance.hidden
+            ? ({
+                label: maintenance.label ?? "Maintenance",
+                onClick: () => {
+                    // dùng location để chắc chắn hoạt động mọi nơi (kể cả outside Next router context)
+                    window.location.href = maintenance.href;
+                },
+            } satisfies ActionItem)
+            : null;
+
+    const mergedActions: ActionItem[] = (() => {
+        const base = actions.filter((a) => !a.hidden);
+        if (!maintenanceItem) return base;
+
+        if (maintenancePlacement === "top") return [maintenanceItem, ...base];
+        return [...base, maintenanceItem];
+    })();
 
     return (
         <>
@@ -71,6 +100,7 @@ export default function GenericActionMenu({
                 ref={btnRef}
                 className="p-2 rounded hover:bg-gray-100"
                 onClick={() => setOpen((v) => !v)}
+                type="button"
             >
                 <MoreVertical size={16} />
             </button>
@@ -88,25 +118,23 @@ export default function GenericActionMenu({
                         }}
                         className="rounded-lg border bg-white shadow-xl py-1"
                     >
-                        {actions
-                            .filter((a) => !a.hidden)
-                            .map((a, i) => (
-                                <button
-                                    key={i}
-                                    onClick={async () => {
-                                        await a.onClick();
-                                        setOpen(false);
-                                    }}
-                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${a.danger ? "text-red-600" : "text-gray-800"
-                                        }`}
-                                >
-                                    {a.label}
-                                </button>
-                            ))}
+                        {mergedActions.map((a, i) => (
+                            <button
+                                key={i}
+                                onClick={async () => {
+                                    await a.onClick();
+                                    setOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${a.danger ? "text-red-600" : "text-gray-800"
+                                    }`}
+                                type="button"
+                            >
+                                {a.label}
+                            </button>
+                        ))}
                     </div>,
                     document.body
-                )
-            }
+                )}
         </>
     );
 }

@@ -23,6 +23,8 @@ export const MaintenanceRecordInputSchema = z.object({
     invoiceId: z.string().optional().nullable(),
     revenueAmount: z.number().optional().nullable(),
     currency: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
     parts: z.array(z.unknown()),
     product: z.unknown().optional().nullable(),
     serviceRequest: z.unknown().optional().nullable(),

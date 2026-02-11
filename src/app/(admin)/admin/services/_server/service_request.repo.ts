@@ -150,7 +150,7 @@ export async function getServiceRequestList(
     serviceCatalog: r.ServiceCatalog
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
       : null,
-    maintenanceCount: r._count,
+    maintenanceCount: r._count.maintenance,
     orderItem: r.orderItem
       ? {
         id: r.orderItem.id,

@@ -23,6 +23,8 @@ export const MaintenanceRecordResultSchema = z.object({
     invoiceId: z.string().nullable(),
     revenueAmount: z.number().nullable(),
     currency: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
     parts: z.array(z.unknown()),
     product: z.unknown().nullable(),
     serviceRequest: z.unknown().nullable(),

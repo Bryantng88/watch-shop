@@ -22,7 +22,9 @@ const makeSchema = () => z.object({
   billed: SortOrderSchema.optional(),
   invoiceId: SortOrderSchema.optional(),
   revenueAmount: SortOrderSchema.optional(),
-  currency: SortOrderSchema.optional()
+  currency: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
 }).strict();
 export const MaintenanceRecordCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCountOrderByAggregateInput>;
 export const MaintenanceRecordCountOrderByAggregateInputObjectZodSchema = makeSchema();

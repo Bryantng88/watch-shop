@@ -20,6 +20,8 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     invoiceId: z.number(),
     revenueAmount: z.number(),
     currency: z.number(),
+    createdAt: z.number(),
+    updatedAt: z.number(),
     parts: z.number(),
     product: z.number(),
     serviceRequest: z.number(),
@@ -52,7 +54,9 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     totalCost: z.number().nullable(),
     invoiceId: z.string().nullable(),
     revenueAmount: z.number().nullable(),
-    currency: z.string().nullable()
+    currency: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -71,5 +75,7 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     totalCost: z.number().nullable(),
     invoiceId: z.string().nullable(),
     revenueAmount: z.number().nullable(),
-    currency: z.string().nullable()
+    currency: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()});

@@ -25,6 +25,8 @@ const makeSchema = () => z.object({
   invoiceId: z.string().optional().nullable(),
   revenueAmount: z.number().optional().nullable(),
   currency: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
   parts: z.lazy(() => MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema),
   product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema).optional(),

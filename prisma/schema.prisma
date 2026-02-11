@@ -355,6 +355,8 @@ model MaintenanceRecord {
   invoiceId        String?
   revenueAmount    Decimal?          @db.Decimal(12, 2)
   currency         String            @default("VND")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now())
   parts            MaintenancePart[]
   product          Product?          @relation(fields: [productId], references: [id])
   serviceRequest   ServiceRequest?   @relation(fields: [serviceRequestId], references: [id])

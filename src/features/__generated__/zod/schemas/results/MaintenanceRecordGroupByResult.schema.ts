@@ -19,6 +19,8 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
   invoiceId: z.string(),
   revenueAmount: z.number(),
   currency: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -40,6 +42,8 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     invoiceId: z.number(),
     revenueAmount: z.number(),
     currency: z.number(),
+    createdAt: z.number(),
+    updatedAt: z.number(),
     parts: z.number(),
     product: z.number(),
     serviceRequest: z.number(),
@@ -72,7 +76,9 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     totalCost: z.number().nullable(),
     invoiceId: z.string().nullable(),
     revenueAmount: z.number().nullable(),
-    currency: z.string().nullable()
+    currency: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -91,6 +97,8 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     totalCost: z.number().nullable(),
     invoiceId: z.string().nullable(),
     revenueAmount: z.number().nullable(),
-    currency: z.string().nullable()
+    currency: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()
 }));

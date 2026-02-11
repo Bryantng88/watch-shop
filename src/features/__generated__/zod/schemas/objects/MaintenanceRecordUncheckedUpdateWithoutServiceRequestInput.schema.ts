@@ -7,6 +7,7 @@ import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperations
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutRecordNestedInput.schema';
 import { ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInput.schema'
 
@@ -30,6 +31,8 @@ const makeSchema = () => z.object({
   invoiceId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   revenueAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   currency: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   parts: z.lazy(() => MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()
 }).strict();

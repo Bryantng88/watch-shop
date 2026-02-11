@@ -6,7 +6,8 @@ import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
-import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema'
+import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
 
 const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -31,7 +32,9 @@ const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   billed: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   invoiceId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   revenueAmount: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
-  currency: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional()
+  currency: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput> = maintenancerecordscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput>;
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectZodSchema = maintenancerecordscalarwherewithaggregatesinputSchema;

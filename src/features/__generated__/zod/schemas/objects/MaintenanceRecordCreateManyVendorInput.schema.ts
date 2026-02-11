@@ -21,7 +21,9 @@ const makeSchema = () => z.object({
   billed: z.boolean().optional(),
   invoiceId: z.string().optional().nullable(),
   revenueAmount: z.number().optional().nullable(),
-  currency: z.string().optional()
+  currency: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const MaintenanceRecordCreateManyVendorInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyVendorInput>;
 export const MaintenanceRecordCreateManyVendorInputObjectZodSchema = makeSchema();
