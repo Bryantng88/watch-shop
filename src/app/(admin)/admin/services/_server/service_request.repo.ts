@@ -13,6 +13,7 @@ export type ServiceRequestListRow = {
   // hiển thị "Dịch vụ"
   serviceCatalog: { id: string; code: string | null; name: string } | null;
   vendorName: string;
+  maintenanceCount: number;
   // hiển thị "Order", "Scope", notes đồ khách mang tới...
   orderItem: {
     id: string;
@@ -116,7 +117,7 @@ export async function getServiceRequestList(
             name: true,
           },
         },
-
+        _count: { select: { maintenance: true } }, // ✅
         // ✅ Link về Order + Scope
         orderItem: {
           select: {
@@ -149,6 +150,7 @@ export async function getServiceRequestList(
     serviceCatalog: r.ServiceCatalog
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
       : null,
+    maintenanceCount: r._count,
     orderItem: r.orderItem
       ? {
         id: r.orderItem.id,
@@ -237,16 +239,22 @@ export async function findVendorsLite(tx: DB) {
 
 export async function bulkAssignVendor(
   tx: DB,
-  input: { ids: string[]; vendorId: string | null; vendorNameSnap: string | null }
-) {
+  input: {
+    ids: string[];
+    vendorId: string;
+    vendorNameSnap: string;
+    onlyFromDraft?: boolean; // default true
+  }
+): Promise<number> {   // ✅ QUAN TRỌNG: khai báo return type
   const db = dbOrTx(tx);
 
-  const ids = Array.from(new Set(input.ids.filter(Boolean)));
-  if (!ids.length) return { count: 0 };
+  const where: Prisma.ServiceRequestWhereInput = {
+    id: { in: input.ids },
+    ...(input.onlyFromDraft !== false ? { status: ServiceRequestStatus.DRAFT } : {}),
+  };
 
-  // ✅ chỉ assign cho SR tồn tại (updateMany)
   const updated = await db.serviceRequest.updateMany({
-    where: { id: { in: ids }, status: ServiceRequestStatus.DRAFT, },
+    where,
     data: {
       vendorId: input.vendorId,
       vendorNameSnap: input.vendorNameSnap,
@@ -255,5 +263,25 @@ export async function bulkAssignVendor(
     },
   });
 
-  return { count: updated.count };
+  return updated.count; // ✅ number
+}
+
+
+export async function listAssignedAfterBulk(
+  tx: DB,
+  input: { ids: string[]; onlyFromDraft?: boolean }
+) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.findMany({
+    where: {
+      id: { in: input.ids },
+      ...(input.onlyFromDraft !== false ? { status: ServiceRequestStatus.IN_PROGRESS } : {}),
+    },
+    select: {
+      id: true,
+      productId: true,
+      variantId: true,
+    },
+  });
 }

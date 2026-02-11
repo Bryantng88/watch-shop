@@ -1,6 +1,8 @@
 import * as sevRepo from "./service_request.repo"
 import { Prisma, PrismaClient, ServiceScope, ServiceType, ServiceRequestStatus } from "@prisma/client";
 import * as serviceRequestRepo from "./service_request.repo";
+import * as maintRepo from "./maintenance.repo"
+
 import { genRefNo } from "../../__components/AutoGenRef";
 export type ServiceCatalogItem = {
     id: string;
@@ -32,13 +34,13 @@ export type ServiceRequestListItem = {
     status: string;
     createdAt: Date;
     updatedAt: Date;
-    productTitle: string;
+
     serviceName: string | null;
     serviceCode: string | null;
 
     orderId: string | null;
     orderRefNo: string | null;
-
+    maintenanceCount: number;
     scope: string | null;
     customerItemNote: string | null;
 };
@@ -94,14 +96,13 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         status: r.status,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
-        vendorName: r.vendorName,
-        productTitle: r.productTitle,
         serviceName: r.serviceCatalog?.name ?? null,
         serviceCode: r.serviceCatalog?.code ?? null,
         orderId: r.orderItem?.order?.id ?? null,
         orderRefNo: r.orderItem?.order?.refNo ?? null,
         scope: r.scope ?? null,
         customerItemNote: r.orderItem?.customerItemNote ?? null,
+        maintenanceCount: r.maintenanceCount ?? 0, // ✅
     }));
 
     return { items, total, page, pageSize };
@@ -331,24 +332,66 @@ export async function createFromProductMany(input: CreateFromProductManyInput) {
     });
 }
 
-export async function bulkAssignVendor(input: { ids: string[]; vendorId: string | null }) {
+export async function bulkAssignVendorAndCreateMaintenance(input: {
+    ids: string[];
+    vendorId: string;
+    note?: string | null;          // note chung cho log
+    //onlyFromDraft?: boolean;       // default true
+}) {
+    const ids = Array.from(new Set((input.ids ?? []).map((x) => String(x).trim()).filter(Boolean)));
+    if (!ids.length) throw new Error("Missing ids");
+    const vendorId = String(input.vendorId ?? "").trim();
+    if (!vendorId) throw new Error("Missing vendorId");
+
     return prisma.$transaction(async (tx) => {
-        let vendorNameSnap: string | null = null;
-
-        if (input.vendorId) {
-            const v = await tx.vendor.findUnique({
-                where: { id: input.vendorId },
-                select: { id: true, name: true },
-            });
-            if (!v) throw new Error("Vendor không tồn tại");
-            vendorNameSnap = v.name;
-        }
-
-        return serviceRequestRepo.bulkAssignVendor(tx, {
-            ids: input.ids,
-            vendorId: input.vendorId ?? null,
-            vendorNameSnap,
+        const vendor = await tx.vendor.findUnique({
+            where: { id: vendorId },
+            select: { id: true, name: true },
         });
+        if (!vendor) throw new Error("Vendor not found");
+
+        // 1) update SR
+        const count = await serviceRequestRepo.bulkAssignVendor(tx, {
+            ids,
+            vendorId: vendor.id,
+            vendorNameSnap: vendor.name,
+            //onlyFromDraft: input.onlyFromDraft ?? true,
+        });
+
+        if (count === 0) return { count: 0, maintenance: 0 };
+
+        // 2) lấy SR đã assign để tạo maintenance record
+        const assigned = await tx.serviceRequest.findMany({
+            where: {
+                id: { in: ids },
+                //...(input.onlyFromDraft ?? true ? { status: ServiceRequestStatus.IN_PROGRESS } : {}),
+                vendorId: vendor.id,
+            },
+            select: { id: true, productId: true, variantId: true },
+        });
+
+        const now = new Date();
+        const note = (input.note ?? "").trim();
+        const defaultNote = `Assign vendor: ${vendor.name}`;
+        const finalNote = note ? `${defaultNote}\n${note}` : defaultNote;
+
+        // 3) create maintenance logs
+        const logs = assigned.map((sr) => ({
+            serviceRequestId: sr.id,
+            productId: sr.productId ?? null,
+            variantId: sr.variantId ?? null,
+            vendorId: vendor.id,
+            vendorName: vendor.name,
+            notes: finalNote,
+            servicedAt: now,
+            currency: "VND",
+            // totalCost/billed/etc để null default
+        }));
+
+        const created = await maintRepo.createMany(tx, logs);
+
+        // (optional) chạm updatedAt lần nữa cho chắc, nhưng updateMany ở trên đã set updatedAt rồi
+        return { count, maintenance: created.count };
     });
 }
 

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing ids" }, { status: 400 });
         }
 
-        const result = await srService.bulkAssignVendor({ ids, vendorId });
+        const result = await srService.bulkAssignVendorAndCreateMaintenance({ ids, vendorId });
         return NextResponse.json(result);
     } catch (e: any) {
         return NextResponse.json({ error: e?.message ?? "Internal error" }, { status: 500 });
