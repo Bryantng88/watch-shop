@@ -468,18 +468,19 @@ export default function ServiceRequestListPageClient({
                                             <GenericActionMenu
                                                 id={r.id}
                                                 maintenance={{
-                                                    href: `/admin/maintenance?serviceRequestId=${r.id}`,
                                                     label: "Maintenance",
+                                                    onOpen: () => {
+                                                        setMaintSrId(r.id);
+                                                        setOpenMaint(true);
+                                                    },
                                                 }}
                                                 actions={[
                                                     {
                                                         label: "Xem chi tiết",
                                                         onClick: () => (window.location.href = `/admin/service-requests/${r.id}`),
                                                     },
-                                                    // các action khác...
                                                 ]}
                                             />
-
                                         </td>
                                     </tr>
                                 );

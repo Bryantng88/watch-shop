@@ -285,3 +285,22 @@ export async function listAssignedAfterBulk(
     },
   });
 }
+
+
+export async function findByIdForMaintenance(tx: DB, id: string) {
+  const db = dbOrTx(tx);
+  return db.serviceRequest.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      type: true,
+      billable: true,
+
+      productId: true,
+      variantId: true,
+
+      vendorId: true,
+      vendorNameSnap: true,
+    },
+  });
+}

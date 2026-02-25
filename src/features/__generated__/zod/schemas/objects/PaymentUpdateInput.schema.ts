@@ -13,7 +13,8 @@ import { EnumPaymentStatusFieldUpdateOperationsInputObjectSchema as EnumPaymentS
 import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
 import { EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema as EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentPurposeFieldUpdateOperationsInput.schema';
 import { PaymentTypeSchema } from '../enums/PaymentType.schema';
-import { EnumPaymentTypeFieldUpdateOperationsInputObjectSchema as EnumPaymentTypeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentTypeFieldUpdateOperationsInput.schema'
+import { EnumPaymentTypeFieldUpdateOperationsInputObjectSchema as EnumPaymentTypeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentTypeFieldUpdateOperationsInput.schema';
+import { MaintenanceRecordUpdateManyWithoutPaymentNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutPaymentNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutPaymentNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   status: z.union([PaymentStatusSchema, z.lazy(() => EnumPaymentStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   purpose: z.union([PaymentPurposeSchema, z.lazy(() => EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema)]).optional(),
   shipment_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  type: z.union([PaymentTypeSchema, z.lazy(() => EnumPaymentTypeFieldUpdateOperationsInputObjectSchema)]).optional()
+  type: z.union([PaymentTypeSchema, z.lazy(() => EnumPaymentTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutPaymentNestedInputObjectSchema).optional()
 }).strict();
 export const PaymentUpdateInputObjectSchema: z.ZodType<Prisma.PaymentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUpdateInput>;
 export const PaymentUpdateInputObjectZodSchema = makeSchema();

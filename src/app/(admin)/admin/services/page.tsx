@@ -34,7 +34,7 @@ export default async function ServiceRequestListPage({
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
 
-    console.log('in ra test service req body :' + JSON.stringify(items))
+    //console.log('in ra test service req body :' + JSON.stringify(items))
 
     return (
         <ServiceRequestsClient

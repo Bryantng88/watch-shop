@@ -21,6 +21,11 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
   currency: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  prevVendorId: z.string(),
+  prevVendorName: z.string(),
+  paymentId: z.string(),
+  paidAmount: z.number(),
+  paidAt: z.date(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -44,7 +49,14 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     currency: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    eventType: z.number(),
+    prevVendorId: z.number(),
+    prevVendorName: z.number(),
+    paymentId: z.number(),
+    paidAmount: z.number(),
+    paidAt: z.number(),
     parts: z.number(),
+    Payment: z.number(),
     product: z.number(),
     serviceRequest: z.number(),
     variant: z.number(),
@@ -53,11 +65,13 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
   }).optional(),
   _sum: z.object({
     totalCost: z.number().nullable(),
-    revenueAmount: z.number().nullable()
+    revenueAmount: z.number().nullable(),
+    paidAmount: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     totalCost: z.number().nullable(),
-    revenueAmount: z.number().nullable()
+    revenueAmount: z.number().nullable(),
+    paidAmount: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -78,7 +92,12 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     revenueAmount: z.number().nullable(),
     currency: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    prevVendorId: z.string().nullable(),
+    prevVendorName: z.string().nullable(),
+    paymentId: z.string().nullable(),
+    paidAmount: z.number().nullable(),
+    paidAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -99,6 +118,11 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     revenueAmount: z.number().nullable(),
     currency: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    prevVendorId: z.string().nullable(),
+    prevVendorName: z.string().nullable(),
+    paymentId: z.string().nullable(),
+    paidAmount: z.number().nullable(),
+    paidAt: z.date().nullable()
   }).nullable().optional()
 }));

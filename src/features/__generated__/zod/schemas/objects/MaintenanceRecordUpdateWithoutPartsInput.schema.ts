@@ -8,6 +8,9 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
+import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
+import { PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './PaymentUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordsNestedInput.schema';
 import { ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenanceRecordNestedInput.schema';
@@ -33,6 +36,12 @@ const makeSchema = () => z.object({
   currency: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  eventType: z.union([MaintenanceEventTypeSchema, z.lazy(() => EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  prevVendorId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  prevVendorName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paidAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  Payment: z.lazy(() => PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),

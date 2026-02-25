@@ -22,7 +22,14 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     currency: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    eventType: z.number(),
+    prevVendorId: z.number(),
+    prevVendorName: z.number(),
+    paymentId: z.number(),
+    paidAmount: z.number(),
+    paidAt: z.number(),
     parts: z.number(),
+    Payment: z.number(),
     product: z.number(),
     serviceRequest: z.number(),
     variant: z.number(),
@@ -31,11 +38,13 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
   }).optional(),
   _sum: z.object({
     totalCost: z.number().nullable(),
-    revenueAmount: z.number().nullable()
+    revenueAmount: z.number().nullable(),
+    paidAmount: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     totalCost: z.number().nullable(),
-    revenueAmount: z.number().nullable()
+    revenueAmount: z.number().nullable(),
+    paidAmount: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -56,7 +65,12 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     revenueAmount: z.number().nullable(),
     currency: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    prevVendorId: z.string().nullable(),
+    prevVendorName: z.string().nullable(),
+    paymentId: z.string().nullable(),
+    paidAmount: z.number().nullable(),
+    paidAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -77,5 +91,10 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     revenueAmount: z.number().nullable(),
     currency: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    prevVendorId: z.string().nullable(),
+    prevVendorName: z.string().nullable(),
+    paymentId: z.string().nullable(),
+    paidAmount: z.number().nullable(),
+    paidAt: z.date().nullable()
   }).nullable().optional()});

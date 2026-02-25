@@ -17,7 +17,8 @@ export const PaymentFindManyResultSchema = z.object({
   status: z.unknown(),
   purpose: z.unknown(),
   shipment_id: z.string().optional(),
-  type: z.unknown()
+  type: z.unknown(),
+  MaintenanceRecord: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

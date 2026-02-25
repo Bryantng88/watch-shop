@@ -7,7 +7,9 @@ import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectS
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
-import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { EnumMaintenanceEventTypeWithAggregatesFilterObjectSchema as EnumMaintenanceEventTypeWithAggregatesFilterObjectSchema } from './EnumMaintenanceEventTypeWithAggregatesFilter.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
 
 const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -34,7 +36,13 @@ const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   revenueAmount: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
   currency: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  eventType: z.union([z.lazy(() => EnumMaintenanceEventTypeWithAggregatesFilterObjectSchema), MaintenanceEventTypeSchema]).optional(),
+  prevVendorId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  prevVendorName: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  paymentId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  paidAmount: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  paidAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput> = maintenancerecordscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput>;
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectZodSchema = maintenancerecordscalarwherewithaggregatesinputSchema;

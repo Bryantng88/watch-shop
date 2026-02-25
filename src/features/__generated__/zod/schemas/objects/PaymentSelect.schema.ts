@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-
+import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } from '../findManyMaintenanceRecord.schema';
+import { PaymentCountOutputTypeArgsObjectSchema as PaymentCountOutputTypeArgsObjectSchema } from './PaymentCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
   id: z.boolean().optional(),
@@ -19,7 +20,9 @@ const makeSchema = () => z.object({
   status: z.boolean().optional(),
   purpose: z.boolean().optional(),
   shipment_id: z.boolean().optional(),
-  type: z.boolean().optional()
+  type: z.boolean().optional(),
+  MaintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => PaymentCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const PaymentSelectObjectSchema: z.ZodType<Prisma.PaymentSelect> = makeSchema() as unknown as z.ZodType<Prisma.PaymentSelect>;
 export const PaymentSelectObjectZodSchema = makeSchema();

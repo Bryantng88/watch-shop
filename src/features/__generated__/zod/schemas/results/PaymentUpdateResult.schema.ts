@@ -16,5 +16,6 @@ export const PaymentUpdateResultSchema = z.nullable(z.object({
   status: z.unknown(),
   purpose: z.unknown(),
   shipment_id: z.string().optional(),
-  type: z.unknown()
+  type: z.unknown(),
+  MaintenanceRecord: z.array(z.unknown())
 }));

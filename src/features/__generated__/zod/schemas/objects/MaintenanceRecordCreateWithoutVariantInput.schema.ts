@@ -1,7 +1,9 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema as MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutRecordInput.schema';
+import { PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './PaymentCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema as ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema } from './ProductCreateNestedOneWithoutMaintenanceRecordsInput.schema';
 import { ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema as ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutMaintenanceInput.schema';
 import { VendorCreateNestedOneWithoutServicesInputObjectSchema as VendorCreateNestedOneWithoutServicesInputObjectSchema } from './VendorCreateNestedOneWithoutServicesInput.schema';
@@ -26,7 +28,13 @@ const makeSchema = () => z.object({
   currency: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  eventType: MaintenanceEventTypeSchema.optional(),
+  prevVendorId: z.string().optional().nullable(),
+  prevVendorName: z.string().optional().nullable(),
+  paidAmount: z.number().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
   parts: z.lazy(() => MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema).optional(),
+  Payment: z.lazy(() => PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutServicesInputObjectSchema).optional(),

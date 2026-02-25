@@ -13,7 +13,8 @@ import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentPurposeFilterObjectSchema as EnumPaymentPurposeFilterObjectSchema } from './EnumPaymentPurposeFilter.schema';
 import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
 import { EnumPaymentTypeFilterObjectSchema as EnumPaymentTypeFilterObjectSchema } from './EnumPaymentTypeFilter.schema';
-import { PaymentTypeSchema } from '../enums/PaymentType.schema'
+import { PaymentTypeSchema } from '../enums/PaymentType.schema';
+import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema'
 
 const paymentwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => PaymentWhereInputObjectSchema), z.lazy(() => PaymentWhereInputObjectSchema).array()]).optional(),
@@ -35,7 +36,8 @@ const paymentwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumPaymentStatusFilterObjectSchema), PaymentStatusSchema]).optional(),
   purpose: z.union([z.lazy(() => EnumPaymentPurposeFilterObjectSchema), PaymentPurposeSchema]).optional(),
   shipment_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  type: z.union([z.lazy(() => EnumPaymentTypeFilterObjectSchema), PaymentTypeSchema]).optional()
+  type: z.union([z.lazy(() => EnumPaymentTypeFilterObjectSchema), PaymentTypeSchema]).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional()
 }).strict();
 export const PaymentWhereInputObjectSchema: z.ZodType<Prisma.PaymentWhereInput> = paymentwhereinputSchema as unknown as z.ZodType<Prisma.PaymentWhereInput>;
 export const PaymentWhereInputObjectZodSchema = paymentwhereinputSchema;

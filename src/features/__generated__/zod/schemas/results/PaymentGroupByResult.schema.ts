@@ -29,7 +29,8 @@ export const PaymentGroupByResultSchema = z.array(z.object({
     status: z.number(),
     purpose: z.number(),
     shipment_id: z.number(),
-    type: z.number()
+    type: z.number(),
+    MaintenanceRecord: z.number()
   }).optional(),
   _sum: z.object({
     amount: z.number().nullable()

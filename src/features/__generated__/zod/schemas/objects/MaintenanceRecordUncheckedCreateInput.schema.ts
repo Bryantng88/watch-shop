@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema as MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema } from './MaintenancePartUncheckedCreateNestedManyWithoutRecordInput.schema';
 import { ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInput.schema'
 
@@ -27,6 +28,12 @@ const makeSchema = () => z.object({
   currency: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  eventType: MaintenanceEventTypeSchema.optional(),
+  prevVendorId: z.string().optional().nullable(),
+  prevVendorName: z.string().optional().nullable(),
+  paymentId: z.string().optional().nullable(),
+  paidAmount: z.number().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable(),
   parts: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema)
 }).strict();

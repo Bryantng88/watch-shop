@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { ServiceTypeSchema } from '../enums/ServiceType.schema'
+import { ServiceTypeSchema } from '../enums/ServiceType.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -24,7 +25,13 @@ const makeSchema = () => z.object({
   revenueAmount: z.number().optional().nullable(),
   currency: z.string().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  eventType: MaintenanceEventTypeSchema.optional(),
+  prevVendorId: z.string().optional().nullable(),
+  prevVendorName: z.string().optional().nullable(),
+  paymentId: z.string().optional().nullable(),
+  paidAmount: z.number().optional().nullable(),
+  paidAt: z.coerce.date().optional().nullable()
 }).strict();
 export const MaintenanceRecordCreateManyInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyInput>;
 export const MaintenanceRecordCreateManyInputObjectZodSchema = makeSchema();

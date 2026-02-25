@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { MaintenancePartFindManySchema as MaintenancePartFindManySchema } from '../findManyMaintenancePart.schema';
+import { PaymentArgsObjectSchema as PaymentArgsObjectSchema } from './PaymentArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
 import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
@@ -31,7 +32,14 @@ const makeSchema = () => z.object({
   currency: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  eventType: z.boolean().optional(),
+  prevVendorId: z.boolean().optional(),
+  prevVendorName: z.boolean().optional(),
+  paymentId: z.boolean().optional(),
+  paidAmount: z.boolean().optional(),
+  paidAt: z.boolean().optional(),
   parts: z.union([z.boolean(), z.lazy(() => MaintenancePartFindManySchema)]).optional(),
+  Payment: z.union([z.boolean(), z.lazy(() => PaymentArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),

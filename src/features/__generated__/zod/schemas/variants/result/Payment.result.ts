@@ -23,7 +23,8 @@ export const PaymentResultSchema = z.object({
     status: PaymentStatusSchema,
     purpose: PaymentPurposeSchema,
     shipment_id: z.string().nullable(),
-    type: PaymentTypeSchema
+    type: PaymentTypeSchema,
+    MaintenanceRecord: z.array(z.unknown())
 }).strict();
 
 export type PaymentResultType = z.infer<typeof PaymentResultSchema>;

@@ -13,21 +13,21 @@ export type ActionItem = {
     hidden?: boolean;
 };
 
-type MaintenanceConfig = {
-    href: string;              // ví dụ: `/admin/maintenance?serviceRequestId=${id}`
-    label?: string;            // default: "Maintenance"
+type MaintenanceAction = {
+    label?: string;        // default: "Maintenance"
+    onOpen: () => void;    // ✅ mở modal
     hidden?: boolean;
 };
 
 export default function GenericActionMenu({
     id,
     actions,
-    maintenance,               // ✅ NEW
-    maintenancePlacement = "top", // ✅ NEW: "top" | "bottom"
+    maintenance,
+    maintenancePlacement = "top",
 }: {
     id: string;
     actions: ActionItem[];
-    maintenance?: MaintenanceConfig;
+    maintenance?: MaintenanceAction;
     maintenancePlacement?: "top" | "bottom";
 }) {
     const btnRef = useRef<HTMLButtonElement>(null);
@@ -50,7 +50,6 @@ export default function GenericActionMenu({
         if (open) measure();
     }, [open]);
 
-    // đóng khi click ra ngoài
     useEffect(() => {
         if (!open) return;
 
@@ -75,23 +74,18 @@ export default function GenericActionMenu({
         };
     }, [open, id]);
 
-    const maintenanceItem =
+    const maintenanceItem: ActionItem | null =
         maintenance && !maintenance.hidden
-            ? ({
+            ? {
                 label: maintenance.label ?? "Maintenance",
-                onClick: () => {
-                    // dùng location để chắc chắn hoạt động mọi nơi (kể cả outside Next router context)
-                    window.location.href = maintenance.href;
-                },
-            } satisfies ActionItem)
+                onClick: () => maintenance.onOpen(),
+            }
             : null;
 
-    const mergedActions: ActionItem[] = (() => {
+    const mergedActions = (() => {
         const base = actions.filter((a) => !a.hidden);
         if (!maintenanceItem) return base;
-
-        if (maintenancePlacement === "top") return [maintenanceItem, ...base];
-        return [...base, maintenanceItem];
+        return maintenancePlacement === "top" ? [maintenanceItem, ...base] : [...base, maintenanceItem];
     })();
 
     return (

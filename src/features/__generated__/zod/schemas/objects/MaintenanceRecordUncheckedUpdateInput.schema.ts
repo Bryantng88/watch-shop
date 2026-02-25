@@ -8,6 +8,8 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
+import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
 import { MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutRecordNestedInput.schema';
 import { ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInput.schema'
 
@@ -34,6 +36,12 @@ const makeSchema = () => z.object({
   currency: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  eventType: z.union([MaintenanceEventTypeSchema, z.lazy(() => EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  prevVendorId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  prevVendorName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paymentId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paidAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   parts: z.lazy(() => MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()
 }).strict();

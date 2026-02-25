@@ -24,7 +24,13 @@ const makeSchema = () => z.object({
   revenueAmount: z.literal(true).optional(),
   currency: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  eventType: z.literal(true).optional(),
+  prevVendorId: z.literal(true).optional(),
+  prevVendorName: z.literal(true).optional(),
+  paymentId: z.literal(true).optional(),
+  paidAmount: z.literal(true).optional(),
+  paidAt: z.literal(true).optional()
 }).strict();
 export const MaintenanceRecordMaxAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordMaxAggregateInputType>;
 export const MaintenanceRecordMaxAggregateInputObjectZodSchema = makeSchema();

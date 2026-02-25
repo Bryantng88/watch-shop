@@ -7,7 +7,9 @@ import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.s
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumMaintenanceEventTypeFilterObjectSchema as EnumMaintenanceEventTypeFilterObjectSchema } from './EnumMaintenanceEventTypeFilter.schema';
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
 
 const maintenancerecordscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => MaintenanceRecordScalarWhereInputObjectSchema), z.lazy(() => MaintenanceRecordScalarWhereInputObjectSchema).array()]).optional(),
@@ -34,7 +36,13 @@ const maintenancerecordscalarwhereinputSchema = z.object({
   revenueAmount: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   currency: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  eventType: z.union([z.lazy(() => EnumMaintenanceEventTypeFilterObjectSchema), MaintenanceEventTypeSchema]).optional(),
+  prevVendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  prevVendorName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  paymentId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  paidAmount: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  paidAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const MaintenanceRecordScalarWhereInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordScalarWhereInput> = maintenancerecordscalarwhereinputSchema as unknown as z.ZodType<Prisma.MaintenanceRecordScalarWhereInput>;
 export const MaintenanceRecordScalarWhereInputObjectZodSchema = maintenancerecordscalarwhereinputSchema;

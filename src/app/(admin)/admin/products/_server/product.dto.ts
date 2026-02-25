@@ -145,6 +145,9 @@ export type CreateProductWithAcqInput = z.infer<typeof CreateProductWithAcqSchem
 export const UpdateProductWithAcqSchema = CreateProductWithAcqSchema.partial();
 export type CreateProductWithOutAcqInput = z.infer<typeof CreateProductWithOutAcqSchema>;
 
+
+
+
 export const AdminFiltersSchema = z.object({
     page: z.coerce.number().min(1).default(1),
     pageSize: z.coerce.number().min(1).max(200).default(50),

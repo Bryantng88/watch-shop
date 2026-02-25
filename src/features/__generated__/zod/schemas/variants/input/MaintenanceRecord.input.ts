@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 import { ServiceTypeSchema } from '../../enums/ServiceType.schema';
+import { MaintenanceEventTypeSchema } from '../../enums/MaintenanceEventType.schema';
 // prettier-ignore
 export const MaintenanceRecordInputSchema = z.object({
     id: z.string(),
@@ -25,7 +26,14 @@ export const MaintenanceRecordInputSchema = z.object({
     currency: z.string(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    eventType: MaintenanceEventTypeSchema,
+    prevVendorId: z.string().optional().nullable(),
+    prevVendorName: z.string().optional().nullable(),
+    paymentId: z.string().optional().nullable(),
+    paidAmount: z.number().optional().nullable(),
+    paidAt: z.date().optional().nullable(),
     parts: z.array(z.unknown()),
+    Payment: z.unknown().optional().nullable(),
     product: z.unknown().optional().nullable(),
     serviceRequest: z.unknown().optional().nullable(),
     variant: z.unknown().optional().nullable(),
