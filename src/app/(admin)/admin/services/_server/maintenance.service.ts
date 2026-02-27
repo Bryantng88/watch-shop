@@ -139,3 +139,49 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
     return serialize(created);
   });
 }
+
+export async function assignVendorForServiceRequest(input: {
+  serviceRequestId: string;
+  vendorId: string;
+  setInProgress?: boolean; // default true
+}) {
+  const serviceRequestId = String(input.serviceRequestId || "").trim();
+  const vendorId = String(input.vendorId || "").trim();
+  if (!serviceRequestId) throw new Error("Missing serviceRequestId");
+  if (!vendorId) throw new Error("Missing vendorId");
+
+  return prisma.$transaction(async (tx) => {
+    // 1) load SR current vendorId
+    const sr = await tx.serviceRequest.findUnique({
+      where: { id: serviceRequestId },
+      select: {
+        id: true,
+        vendorId: true,
+      },
+    });
+
+    if (!sr) throw new Error("Service request not found");
+
+    // 2) nếu chọn đúng vendor hiện tại -> SKIP (không tạo log)
+    if (sr.vendorId && sr.vendorId === vendorId) {
+      return serialize({ ok: true, skipped: true, reason: "SAME_VENDOR" });
+    }
+
+    // 3) lookup vendorName (bắt buộc để snap + log)
+    const v = await tx.vendor.findUnique({
+      where: { id: vendorId },
+      select: { id: true, name: true },
+    });
+    if (!v) throw new Error("Vendor not found");
+
+    // 4) update SR + create maintenance log (ASSIGN/CHANGE) trong repo
+    await maintenanceRepo.assignVendorOne(tx, {
+      serviceRequestId,
+      vendorId: v.id,
+      vendorName: v.name,
+      setInProgress: input.setInProgress !== false,
+    });
+
+    return serialize({ ok: true, skipped: false });
+  });
+}
