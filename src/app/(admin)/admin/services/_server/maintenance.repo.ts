@@ -152,12 +152,12 @@ export async function assignVendorOne(
         serviceRequestId: string;
         vendorId: string;
         vendorName: string;
-        setInProgress?: boolean; // default true
+        reason?: string | null;
+        setInProgress?: boolean;
     }
 ) {
     const db = dbOrTx(tx);
 
-    // load current vendor
     const sr = await db.serviceRequest.findUnique({
         where: { id: args.serviceRequestId },
         select: {
@@ -179,22 +179,29 @@ export async function assignVendorOne(
 
     const prevVendorId = sr.vendorId ?? null;
     const prevVendorName = sr.vendorNameSnap ?? null;
-
     const isChange = !!prevVendorId && prevVendorId !== args.vendorId;
 
-    // 1) update SR
+    // 1) update SR (không set undefined)
     await db.serviceRequest.update({
         where: { id: sr.id },
         data: {
             vendorId: args.vendorId,
             vendorNameSnap: args.vendorName,
-
-            status: args.setInProgress === false ? undefined : ServiceRequestStatus.IN_PROGRESS,
+            ...(args.setInProgress === false ? {} : { status: ServiceRequestStatus.IN_PROGRESS }),
             updatedAt: new Date(),
         },
     });
 
-    // 2) create maintenance log
+    // 2) create maintenance log (1 log, notes gộp)
+    const base = isChange
+        ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}`
+        : `Assign vendor: ${args.vendorName}`;
+
+    const mergedNotes =
+        args.reason && String(args.reason).trim()
+            ? `${base}\n${String(args.reason).trim()}`
+            : base;
+
     await createLog(db, {
         serviceRequestId: sr.id,
         eventType: isChange ? MaintenanceEventType.CHANGE_VENDOR : MaintenanceEventType.ASSIGN_VENDOR,
@@ -205,11 +212,8 @@ export async function assignVendorOne(
         prevVendorId,
         prevVendorName,
 
-        notes: isChange
-            ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}`
-            : `Assign vendor: ${args.vendorName}`,
+        notes: mergedNotes,
 
-        // snapshots
         productId: sr.productId ?? null,
         variantId: sr.variantId ?? null,
         brandSnapshot: sr.brandSnapshot ?? null,
@@ -220,7 +224,6 @@ export async function assignVendorOne(
 
     return { ok: true };
 }
-
 /** =========================
  *  WRITE: bulk assign vendor
  *  - updateMany SR

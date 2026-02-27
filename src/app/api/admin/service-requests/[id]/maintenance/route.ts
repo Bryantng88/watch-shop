@@ -16,10 +16,7 @@ export async function GET(
     }
 }
 
-export async function POST(
-    req: Request,
-    { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
     try {
         const serviceRequestId = String(params?.id || "").trim();
         if (!serviceRequestId) {
@@ -27,17 +24,20 @@ export async function POST(
         }
 
         const body = await req.json().catch(() => ({}));
-        //console.log('in ra test body maintenance log : ' + JSON.stringify(body))
+
         const created = await maintenanceService.createMaintenanceLogForServiceRequest({
             serviceRequestId,
             vendorId: body.vendorId ?? null,
             notes: body.notes ?? null,
             servicedAt: body.servicedAt ? new Date(body.servicedAt) : null,
-
             totalCost: body.totalCost ?? null,
-            billed: body.billed ?? null,
-            invoiceId: body.invoiceId ?? null,
             currency: body.currency ?? null,
+
+            // optional (nếu bạn muốn set payment method/status từ UI)
+            paymentMethod: body.paymentMethod ?? null,
+            paymentStatus: body.paymentStatus ?? null,
+            paymentType: body.paymentType ?? null,
+            paymentPurpose: body.paymentPurpose ?? null,
         });
 
         return NextResponse.json({ item: created });

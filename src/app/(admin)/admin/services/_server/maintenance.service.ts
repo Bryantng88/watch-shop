@@ -3,6 +3,8 @@
 import { prisma } from "@/server/db/client";
 import * as maintenanceRepo from "./maintenance.repo";
 import { MaintenanceEventType, Prisma } from "@prisma/client";
+import { createPayment } from "../../payments/_server/payment.repo";
+
 
 type CreateMaintenanceLogInput = {
   serviceRequestId: string;
@@ -25,6 +27,16 @@ type CreateMaintenanceLogInput = {
   paymentId?: string | null;
   paidAmount?: number | null;
   paidAt?: Date | null;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  paymentType?: string | null;
+  paymentPurpose?: string | null;
+};
+type AssignVendorInput = {
+  serviceRequestId: string;
+  vendorId: string;
+  reason?: string | null;
+  setInProgress?: boolean;
 };
 
 function serialize(obj: any) {
@@ -70,8 +82,8 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
       where: { id: serviceRequestId },
       select: {
         id: true,
-        type: true,
-        billable: true,
+        vendorId: true,
+        vendorNameSnap: true,
 
         productId: true,
         variantId: true,
@@ -79,18 +91,14 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
         modelSnapshot: true,
         refSnapshot: true,
         serialSnapshot: true,
-
-        vendorId: true,
-        vendorNameSnap: true,
       },
     });
 
     if (!sr) throw new Error("Service request not found");
 
-    // vendorId ưu tiên input, fallback SR.vendorId
     const vendorId = (input.vendorId ?? sr.vendorId ?? null) as string | null;
 
-    // vendorName ưu tiên lookup theo vendorId; fallback snapshot SR
+    // vendorName ưu tiên lookup; fallback snapshot
     let vendorName: string | null = sr.vendorNameSnap ?? null;
     if (vendorId) {
       const v = await tx.vendor.findUnique({
@@ -100,9 +108,41 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
       vendorName = v?.name ?? vendorName;
     }
 
+    const currency = input.currency ?? "VND";
+
+    // (A) nếu có cost => tạo Payment
+    let paymentId: string | null = null;
+    let paidAmount: Prisma.Decimal | null = null;
+    let paidAt: Date | null = null;
+
+    if (input.totalCost != null) {
+      const amountDec = new Prisma.Decimal(String(input.totalCost));
+      const createdPayment = await createPayment(tx, {
+        amount: amountDec,
+        currency,
+        service_request_id: sr.id,
+        vendor_id: vendorId,
+        note: input.notes ?? null,
+
+        // default values - TUỲ ENUM CỦA BẠN
+        method: (input.paymentMethod ?? "CASH") as any,
+        status: (input.paymentStatus ?? "UNPAID") as any,
+        direction: ("OUT" as any),
+        type: (input.paymentType ?? "ORDER") as any,
+        purpose: (input.paymentPurpose ?? "ORDER_FULL") as any,
+      });
+
+      paymentId = createdPayment.id;
+      paidAmount = amountDec;
+      // paidAt schema bạn đang default(now) => vẫn set rõ ràng cho thống nhất
+      paidAt = new Date();
+    }
+
+    // (B) tạo maintenance log
     const created = await maintenanceRepo.createLog(tx, {
       serviceRequestId: sr.id,
-      eventType: MaintenanceEventType.NOTE, // bạn có thể đổi: COST_ADDED / WORKLOG / ...
+      eventType:
+        input.totalCost != null ? MaintenanceEventType.COST_ADDED : MaintenanceEventType.NOTE,
 
       vendorId,
       vendorName,
@@ -110,24 +150,13 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
       notes: input.notes ?? null,
       servicedAt: input.servicedAt ?? null,
 
-      totalCost:
-        input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)),
-      currency: input.currency ?? "VND",
+      totalCost: input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)),
+      currency,
 
-      // invoice/billed (nếu bạn vẫn giữ)
-      // (chỉ set nếu schema maintenanceRecord có field tương ứng)
-      // @ts-ignore
-      billed: input.billed ?? undefined,
-      // @ts-ignore
-      invoiceId: input.invoiceId ?? undefined,
+      paymentId,
+      paidAmount,
+      paidAt,
 
-      // payment fields (nếu bạn đã add)
-      paymentId: input.paymentId ?? null,
-      paidAmount:
-        input.paidAmount == null ? null : new Prisma.Decimal(String(input.paidAmount)),
-      paidAt: input.paidAt ?? null,
-
-      // snapshots
       productId: sr.productId ?? null,
       variantId: sr.variantId ?? null,
       brandSnapshot: sr.brandSnapshot ?? null,
@@ -140,45 +169,42 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
   });
 }
 
-export async function assignVendorForServiceRequest(input: {
-  serviceRequestId: string;
-  vendorId: string;
-  setInProgress?: boolean; // default true
-}) {
+/**
+ * Assign/change vendor:
+ * - update SR vendor + status IN_PROGRESS
+ * - create 1 maintenance log (ASSIGN_VENDOR / CHANGE_VENDOR)
+ * - nếu có reason -> gộp reason vào notes của log này (1 log)
+ */
+export async function assignVendorForServiceRequest(input: AssignVendorInput) {
   const serviceRequestId = String(input.serviceRequestId || "").trim();
   const vendorId = String(input.vendorId || "").trim();
+
   if (!serviceRequestId) throw new Error("Missing serviceRequestId");
   if (!vendorId) throw new Error("Missing vendorId");
 
   return prisma.$transaction(async (tx) => {
-    // 1) load SR current vendorId
     const sr = await tx.serviceRequest.findUnique({
       where: { id: serviceRequestId },
-      select: {
-        id: true,
-        vendorId: true,
-      },
+      select: { id: true, vendorId: true },
     });
-
     if (!sr) throw new Error("Service request not found");
 
-    // 2) nếu chọn đúng vendor hiện tại -> SKIP (không tạo log)
+    // chọn đúng vendor hiện tại -> skip
     if (sr.vendorId && sr.vendorId === vendorId) {
       return serialize({ ok: true, skipped: true, reason: "SAME_VENDOR" });
     }
 
-    // 3) lookup vendorName (bắt buộc để snap + log)
     const v = await tx.vendor.findUnique({
       where: { id: vendorId },
       select: { id: true, name: true },
     });
     if (!v) throw new Error("Vendor not found");
 
-    // 4) update SR + create maintenance log (ASSIGN/CHANGE) trong repo
     await maintenanceRepo.assignVendorOne(tx, {
       serviceRequestId,
       vendorId: v.id,
       vendorName: v.name,
+      reason: input.reason ?? null,
       setInProgress: input.setInProgress !== false,
     });
 

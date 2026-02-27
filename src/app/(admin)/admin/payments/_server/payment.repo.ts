@@ -58,3 +58,31 @@ export async function createShippingFeePayment(
         } as any,
     });
 }
+
+export async function createPayment(tx: DB, input: CreatePaymentInput) {
+    const db = dbOrTx(tx);
+
+    return db.payment.create({
+        data: {
+            method: input.method,
+            amount: input.amount,
+            currency: input.currency,
+
+            paidAt: input.paidAt ?? new Date(),
+            reference: input.reference ?? null,
+            note: input.note ?? null,
+
+            direction: input.direction,
+            status: input.status,
+            purpose: input.purpose,
+            type: input.type,
+
+            order_id: input.order_id ?? null,
+            service_request_id: input.service_request_id ?? null,
+            vendor_id: input.vendor_id ?? null,
+            acquisition_id: input.acquisition_id ?? null,
+            shipment_id: input.shipment_id ?? null,
+        },
+        select: { id: true },
+    });
+}
