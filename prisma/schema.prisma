@@ -953,6 +953,9 @@ enum PaymentPurpose {
   ORDER_DEPOSIT
   ORDER_REMAIN
   ORDER_FULL
+  SERVICE_REQUEST
+  MAINTENANCE_COST
+  SERVICE_FEE
 }
 
 enum OrderSource {

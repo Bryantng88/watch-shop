@@ -430,9 +430,8 @@ export default function ServiceRequestListPageClient({
                                                 type="button"
                                                 className="mt-1 inline-flex"
                                                 onClick={() => {
-                                                    setLogSrId(r.id);
-                                                    setLogTitle(`${r.refNo ?? "-"} • ${r.productTitle ?? ""} • ${r.serviceName ?? ""}`);
-                                                    setOpenLogs(true);
+                                                    setMaintSrId(r.id);
+                                                    setOpenMaint(true);
                                                 }}
                                             >
                                                 {r.maintenanceCount > 0 ? (

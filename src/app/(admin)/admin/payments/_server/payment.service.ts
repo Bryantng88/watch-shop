@@ -1,5 +1,7 @@
 import { Order, ReserveType, PaymentPurpose } from "@prisma/client";
 import * as paymentRepo from "./payment.repo";
+import type { PaymentListInput } from "../_helper/SearchParams";
+
 
 export async function createPaymentsForOrder(
     tx: any,
@@ -56,4 +58,31 @@ export async function createPaymentsForOrder(
     }
 
     await paymentRepo.createMany(tx, payments);
+}
+function serialize(obj: any) {
+    return JSON.parse(
+        JSON.stringify(obj, (_k, v) => {
+            if (v instanceof Date) return v.toISOString();
+            if (typeof v === "object" && v?._isDecimal) return Number(v);
+            return v;
+        })
+    );
+}
+
+export async function getAdminPaymentList(input: PaymentListInput) {
+    const page = Math.max(1, Number(input.page ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));
+
+    const { items, total } = await paymentRepo.listAdmin(prisma, {
+        ...input,
+        page,
+        pageSize,
+    });
+
+    return serialize({
+        items,
+        total,
+        page,
+        pageSize,
+    });
 }

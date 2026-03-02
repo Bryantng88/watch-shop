@@ -14,6 +14,7 @@ import {
     ClipboardList,
     Receipt,
     Warehouse,
+    CreditCard
 
 } from "lucide-react";
 import ActiveLink from "./AdminActiveLink";
@@ -36,6 +37,7 @@ const NAV = [
     { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW },
     { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
     { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW },
+    { href: "/admin/payments", label: "Payment", icon: CreditCard, permission: PERMISSIONS.PAYMENT_VIEW },
 
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },

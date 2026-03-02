@@ -128,8 +128,8 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
         method: (input.paymentMethod ?? "CASH") as any,
         status: (input.paymentStatus ?? "UNPAID") as any,
         direction: ("OUT" as any),
-        type: (input.paymentType ?? "ORDER") as any,
-        purpose: (input.paymentPurpose ?? "ORDER_FULL") as any,
+        type: (input.paymentType ?? "SERVICE") as any,
+        purpose: (input.paymentPurpose ?? "MAINTENANCE_COST") as any,
       });
 
       paymentId = createdPayment.id;
@@ -142,7 +142,7 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
     const created = await maintenanceRepo.createLog(tx, {
       serviceRequestId: sr.id,
       eventType:
-        input.totalCost != null ? MaintenanceEventType.COST_ADDED : MaintenanceEventType.NOTE,
+        input.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE,
 
       vendorId,
       vendorName,
