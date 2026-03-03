@@ -22,23 +22,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
 
 
+    // app/(admin)/admin/layout.tsx
     return (
-        <div className="flex min-h-screen">
-            <AdminSidebar
-                user={{
-                    permissions: Array.from(new Set(permissions)), // tránh trùng
-                }}
-            />
-            <div className="flex-1">
-                <AdminTopbar
-                    title="Admin"
-                    user={{
-                        name: user.name,
-                        roles: user.roles, // đã là string[]
-                    }}
-                />
+        <div className="flex h-screen overflow-hidden">
+            {/* Sidebar */}
+            <div className="hidden lg:block w-52 shrink-0 bg-[#11191f]">
+                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} />
+            </div>
 
-                <main className="p-6">{children}</main>
+            {/* Sidebar mobile */}
+            <div className="lg:hidden">
+                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} />
+            </div>
+
+            {/* Main */}
+            <div className="flex-1 min-w-0 flex flex-col">
+                <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
+
+                {/* CHỖ NÀY SCROLL */}
+                <main className="flex-1 min-h-0 overflow-y-auto p-6">
+                    {children}
+                </main>
             </div>
         </div>
     );

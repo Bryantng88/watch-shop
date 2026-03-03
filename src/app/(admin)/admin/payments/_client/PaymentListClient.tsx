@@ -1,3 +1,4 @@
+// src/app/(admin)/admin/payments/_client/PaymentListClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -6,33 +7,54 @@ import { useSearchParams } from "next/navigation";
 
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { StatusBadge } from "@/components/badges/StatusBadge";
-// TODO: tạo PAYMENT_STATUS map giống SERVICE_REQUEST_STATUS
-// import { PAYMENT_STATUS } from "@/components/badges/StatusMaps";
+import DotLabel from "../../__components/DotLabel";
 import GenericActionMenu from "../../__components/GenericActionMenu";
 
-type PaymentItem = {
+// Nếu bạn có map riêng cho PAYMENT status thì import map đó.
+// Tạm thời dùng map service (nếu bạn đã có map payment thì đổi lại).
+import { SERVICE_REQUEST_STATUS as PAYMENT_STATUS_MAP } from "@/components/badges/StatusMaps";
+
+type PaymentStatus = "UNPAID" | "PAID" | "CANCELED" | string;
+type PaymentDirection = "IN" | "OUT" | null;
+type PaymentType = "ORDER" | "SHIPMENT" | "INVOICE" | "ACQUISITION" | "SERVICE" | "OTHER" | string;
+type PaymentPurpose =
+    | "ORDER_DEPOSIT"
+    | "ORDER_REMAIN"
+    | "ORDER_FULL"
+    | "SERVICE_REQUEST"
+    | "MAINTENANCE_COST"
+    | "SERVICE_FEE"
+    | "SHIPMENT_DEPOSIT"
+    | "SHIPMENT_REMAIN"
+    | "SHIPMENT_FULL"
+    | "ACQUISITION_DEPOSIT"
+    | "ACQUISITION_REMAIN"
+    | "ACQUISITION_FULL"
+    | string;
+
+export type PaymentItem = {
     id: string;
 
-    status: string; // PaymentStatus
-    purpose: string; // PaymentPurpose
-    type: string; // PaymentType
-    direction: string | null; // paymentdirection?
-    method: string; // PaymentMethod
-
-    amount: number;
-    currency: string;
-
-    paidAt: string;
     createdAt: string;
+    paidAt?: string | null;
 
-    reference: string | null;
-    note: string | null;
+    amount: number; // bạn đang serialize Decimal -> Number rồi
+    currency: string; // "VND"
+    status: PaymentStatus;
 
-    order_id: string | null;
-    service_request_id: string | null;
-    vendor_id: string | null;
-    acquisition_id: string | null;
-    shipment_id: string | null;
+    direction?: PaymentDirection; // IN/OUT/null
+    method?: string | null; // CASH/BANK_TRANSFER/COD...
+    purpose?: PaymentPurpose | null;
+    type?: PaymentType | null;
+
+    reference?: string | null;
+    note?: string | null;
+
+    order_id?: string | null;
+    service_request_id?: string | null;
+    vendor_id?: string | null;
+    acquisition_id?: string | null;
+    shipment_id?: string | null;
 };
 
 type PageProps = {
@@ -48,22 +70,26 @@ function cls(...xs: Array<string | false | null | undefined>) {
     return xs.filter(Boolean).join(" ");
 }
 
-function fmtDate(d?: string | null) {
+function fmtDateTime(d?: string | null) {
     if (!d) return "-";
-    return new Date(d).toLocaleString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    const dt = new Date(d);
+    const time = dt.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    const date = dt.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return { time, date };
 }
 
-function fmtMoney(amount?: number | null, currency?: string | null) {
-    if (amount == null) return "-";
-    const x = Number(amount);
-    const label = Number.isFinite(x) ? x.toLocaleString("vi-VN") : String(amount);
-    return `${label}${currency ? ` ${currency}` : ""}`;
+function fmtMoney(n?: number | null) {
+    if (n == null) return "-";
+    // format VND kiểu 3.500.000
+    const s = Math.round(n).toString();
+    const parts: string[] = [];
+    let i = s.length;
+    while (i > 3) {
+        parts.unshift(s.slice(i - 3, i));
+        i -= 3;
+    }
+    parts.unshift(s.slice(0, i));
+    return parts.join(".");
 }
 
 /** =====================
@@ -92,7 +118,43 @@ function matchesView(o: PaymentItem, view: ViewKey) {
     }
 }
 
-export default function PaymentListPageClient({
+function DirectionDot({ dir }: { dir?: PaymentDirection }) {
+    if (!dir) return <span className="text-gray-400">-</span>;
+    if (dir === "IN") return <DotLabel label="IN" tone="green" />;
+    return <DotLabel label="OUT" tone="orange" />;
+}
+
+function PurposeBadge({ purpose }: { purpose?: string | null }) {
+    if (!purpose) return <span className="text-gray-400">-</span>;
+    return (
+        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+            {purpose}
+        </span>
+    );
+}
+
+function TypeBadge({ type }: { type?: string | null }) {
+    if (!type) return <span className="text-gray-400">-</span>;
+    return (
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+            {type}
+        </span>
+    );
+}
+
+function MonoId({ v, prefix }: { v?: string | null; prefix?: string }) {
+    if (!v) return <span className="text-gray-400">-</span>;
+    return (
+        <div className="max-w-[260px]">
+            {prefix ? <div className="text-xs font-medium text-gray-700">{prefix}</div> : null}
+            <div className="truncate font-mono text-[11px] text-gray-500" title={v}>
+                {v}
+            </div>
+        </div>
+    );
+}
+
+export default function PaymentListClient({
     items,
     total,
     page,
@@ -100,13 +162,12 @@ export default function PaymentListPageClient({
     totalPages,
     rawSearchParams,
 }: PageProps) {
+    const sp = useSearchParams();
+    const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
+
     // bulk states
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
-
-    const sp = useSearchParams();
-    const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
 
     const currentView = useMemo(() => (sp.get("view") || "all") as ViewKey, [sp]);
 
@@ -114,7 +175,6 @@ export default function PaymentListPageClient({
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-        setShowBulkConfirm(false);
     }, [currentView]);
 
     const setViewHref = (view: ViewKey) => {
@@ -125,10 +185,7 @@ export default function PaymentListPageClient({
         return `/admin/payments?${next.toString()}`;
     };
 
-    const displayItems = useMemo(
-        () => items.filter((o) => matchesView(o, currentView)),
-        [items, currentView]
-    );
+    const displayItems = useMemo(() => items.filter((o) => matchesView(o, currentView)), [items, currentView]);
 
     const countsByView: Record<ViewKey, number> = useMemo(
         () => ({
@@ -147,7 +204,7 @@ export default function PaymentListPageClient({
         return `/admin/payments?${next.toString()}`;
     };
 
-    // rule bulk: cho phép select mọi status (bạn đổi rule ở đây nếu muốn)
+    // rule bulk: cho phép select mọi status
     const isRowSelectable = (_o: PaymentItem) => true;
 
     const allSelectableIdsInView = useMemo(
@@ -184,6 +241,7 @@ export default function PaymentListPageClient({
             {/* HEADER */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Payments</h1>
+
                 <Link href="/admin" className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">
                     ← Admin
                 </Link>
@@ -211,8 +269,8 @@ export default function PaymentListPageClient({
                     <input
                         name="status"
                         defaultValue={(rawSearchParams.status as string) ?? ""}
-                        placeholder="UNPAID / PAID..."
-                        className="h-9 rounded border px-2 w-44"
+                        placeholder="UNPAID / PAID / ..."
+                        className="h-9 rounded border px-2"
                     />
                 </div>
 
@@ -222,7 +280,7 @@ export default function PaymentListPageClient({
                         name="purpose"
                         defaultValue={(rawSearchParams.purpose as string) ?? ""}
                         placeholder="ORDER_FULL / MAINTENANCE_COST..."
-                        className="h-9 rounded border px-2 w-56"
+                        className="h-9 rounded border px-2"
                     />
                 </div>
 
@@ -232,7 +290,7 @@ export default function PaymentListPageClient({
                         name="direction"
                         defaultValue={(rawSearchParams.direction as string) ?? ""}
                         placeholder="IN / OUT"
-                        className="h-9 rounded border px-2 w-28"
+                        className="h-9 rounded border px-2"
                     />
                 </div>
 
@@ -268,14 +326,6 @@ export default function PaymentListPageClient({
                     <span className="font-medium text-blue-700">{selectedIds.length} payment đã chọn</span>
 
                     <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                        onClick={() => setShowBulkConfirm(true)}
-                        type="button"
-                    >
-                        Bulk action
-                    </button>
-
-                    <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
                             setSelectedIds([]);
@@ -288,52 +338,12 @@ export default function PaymentListPageClient({
                 </div>
             )}
 
-            {/* BULK CONFIRM MODAL (placeholder) */}
-            {showBulkConfirm && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
-                    <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
-                        <h3 className="font-semibold text-lg">Bulk action</h3>
-
-                        <div className="text-sm text-gray-600">
-                            Bạn đang chọn <b>{selectedIds.length}</b> payment.
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                            TODO: ở đây bạn có thể làm “Mark PAID”, “Mark UNPAID”, “Cancel”, v.v…
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-3">
-                            <button
-                                className="px-3 py-1 border rounded"
-                                onClick={() => setShowBulkConfirm(false)}
-                                type="button"
-                            >
-                                Hủy
-                            </button>
-
-                            <button
-                                className="px-3 py-1 bg-blue-600 text-white rounded"
-                                onClick={async () => {
-                                    // TODO: thay endpoint theo hệ thống của bạn
-                                    // await fetch("/api/admin/payments/bulk-update", { ... })
-                                    setShowBulkConfirm(false);
-                                    location.reload();
-                                }}
-                                type="button"
-                            >
-                                Xác nhận
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
-                    <thead className="bg-gray-50 border-b">
+                    <thead className="bg-gray-50 border-b sticky top-0 z-10">
                         <tr>
-                            <th className="px-3 py-2">
+                            <th className="px-3 py-2 w-[42px]">
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
@@ -342,43 +352,44 @@ export default function PaymentListPageClient({
                                 />
                             </th>
 
-                            <th className="px-3 py-2 text-left">PaidAt</th>
-                            <th className="px-3 py-2 text-left">Amount</th>
-                            <th className="px-3 py-2 text-left">Purpose</th>
-                            <th className="px-3 py-2 text-left">Type</th>
-
-                            <th className="px-3 py-2 text-left">Status</th>
-                            <th className="px-3 py-2 text-left">Direction</th>
-                            <th className="px-3 py-2 text-left">Method</th>
-                            <th className="px-3 py-2 text-left">Ref</th>
+                            <th className="px-3 py-2 text-left w-[130px]">CreatedAt</th>
+                            <th className="px-3 py-2 text-left w-[150px]">Amount</th>
+                            <th className="px-3 py-2 text-left w-[170px]">Purpose</th>
+                            <th className="px-3 py-2 text-left w-[120px]">Type</th>
+                            <th className="px-3 py-2 text-left w-[120px]">Status</th>
+                            <th className="px-3 py-2 text-left w-[110px]">Direction</th>
+                            <th className="px-3 py-2 text-left w-[140px]">Method</th>
+                            <th className="px-3 py-2 text-left w-[120px]">Ref</th>
                             <th className="px-3 py-2 text-left">Link</th>
-                            <th className="px-3 py-2 text-left">Note</th>
-                            <th className="px-3 py-2 text-right">Hành động</th>
+                            <th className="px-3 py-2 text-left w-[260px]">Note</th>
+                            <th className="px-3 py-2 text-right w-[70px]">Hành động</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {displayItems.length === 0 ? (
                             <tr>
-                                <td colSpan={11} className="py-8 text-center text-gray-500">
+                                <td colSpan={12} className="py-8 text-center text-gray-500">
                                     Không có dữ liệu trong tab này
                                 </td>
                             </tr>
                         ) : (
-                            displayItems.map((r) => {
-                                const selectable = isRowSelectable(r);
+                            displayItems.map((p, idx) => {
+                                const selectable = isRowSelectable(p);
+                                const created = fmtDateTime(p.createdAt);
+                                const paid = fmtDateTime(p.paidAt ?? null);
 
                                 return (
-                                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                                        <td className="px-3 py-2">
+                                    <tr key={p.id} className={cls("border-b hover:bg-gray-50", idx % 2 === 1 && "bg-gray-50/30")}>
+                                        <td className="px-3 py-3 align-top">
                                             <input
                                                 type="checkbox"
                                                 disabled={!selectable}
-                                                checked={selectedIds.includes(r.id)}
+                                                checked={selectedIds.includes(p.id)}
                                                 onChange={(e) => {
                                                     const next = e.target.checked
-                                                        ? [...selectedIds, r.id]
-                                                        : selectedIds.filter((id) => id !== r.id);
+                                                        ? [...selectedIds, p.id]
+                                                        : selectedIds.filter((id) => id !== p.id);
 
                                                     setSelectedIds(next);
                                                     setShowBulkBar(next.length > 0);
@@ -386,79 +397,122 @@ export default function PaymentListPageClient({
                                             />
                                         </td>
 
-                                        <td className="px-3 py-2">{fmtDate(r.paidAt)}</td>
-
-                                        <td className="px-3 py-2">
-                                            <div className="font-medium">{fmtMoney(r.amount, r.currency)}</div>
-                                            <div className="text-xs text-gray-500">created: {fmtDate(r.createdAt)}</div>
-                                        </td>
-                                        <td className="px-3 py-2 font-mono text-xs">{r.purpose}</td>
-                                        <td className="px-3 py-2 font-mono text-xs">{r.type}</td>
-                                        <td className="px-3 py-2">
-                                            {/* thay map ở đây nếu bạn đã có PAYMENT_STATUS */}
-                                            <StatusBadge value={r.status} map={{} as any} />
-                                        </td>
-
-                                        <td className="px-3 py-2 font-mono text-xs">{r.direction ?? "-"}</td>
-                                        <td className="px-3 py-2 font-mono text-xs">{r.method}</td>
-                                        <td className="px-3 py-2 font-mono text-xs">{r.reference ?? "-"}</td>
-
-                                        <td className="px-3 py-2 text-xs space-y-1">
-                                            {r.order_id ? (
-                                                <div>
-                                                    Order:{" "}
-                                                    <Link className="hover:underline" href={`/admin/orders/${r.order_id}`}>
-                                                        {r.order_id}
-                                                    </Link>
+                                        {/* CreatedAt (2 lines) */}
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="leading-5">{created.time}</div>
+                                            <div className="text-gray-600">{created.date}</div>
+                                            {p.paidAt ? (
+                                                <div className="mt-1 text-[11px] text-gray-500">
+                                                    paid: {paid.time} {paid.date}
                                                 </div>
                                             ) : null}
-
-                                            {r.service_request_id ? (
-                                                <div>
-                                                    SR:{" "}
-                                                    <Link
-                                                        className="hover:underline"
-                                                        href={`/admin/service-requests/${r.service_request_id}`}
-                                                    >
-                                                        {r.service_request_id}
-                                                    </Link>
-                                                </div>
-                                            ) : null}
-
-                                            {r.vendor_id ? <div>Vendor: {r.vendor_id}</div> : null}
-                                            {r.acquisition_id ? <div>Acq: {r.acquisition_id}</div> : null}
-                                            {r.shipment_id ? <div>Ship: {r.shipment_id}</div> : null}
-
-                                            {!r.order_id &&
-                                                !r.service_request_id &&
-                                                !r.vendor_id &&
-                                                !r.acquisition_id &&
-                                                !r.shipment_id ? (
-                                                <span className="text-gray-400">-</span>
-                                            ) : null}
                                         </td>
 
-                                        <td className="px-3 py-2 max-w-[420px]">
-                                            {r.note ? (
-                                                <div className="whitespace-pre-wrap">{r.note}</div>
+                                        {/* Amount (primary) */}
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="text-base font-semibold leading-5">{fmtMoney(p.amount)}</div>
+                                            <div className="text-xs text-gray-600 font-medium">{p.currency ?? "VND"}</div>
+                                        </td>
+
+                                        {/* Purpose badge */}
+                                        <td className="px-3 py-3 align-top">
+                                            <PurposeBadge purpose={p.purpose ?? null} />
+                                        </td>
+
+                                        {/* Type badge */}
+                                        <td className="px-3 py-3 align-top">
+                                            <TypeBadge type={p.type ?? null} />
+                                        </td>
+
+                                        {/* Status badge */}
+                                        <td className="px-3 py-3 align-top">
+                                            <StatusBadge value={p.status} map={PAYMENT_STATUS_MAP} />
+                                        </td>
+
+                                        {/* Direction Dot */}
+                                        <td className="px-3 py-3 align-top">
+                                            <DirectionDot dir={p.direction ?? null} />
+                                        </td>
+
+                                        {/* Method */}
+                                        <td className="px-3 py-3 align-top">
+                                            <span className={cls("text-xs", !p.method && "text-gray-400")}>
+                                                {p.method ?? "-"}
+                                            </span>
+                                        </td>
+
+                                        {/* Ref */}
+                                        <td className="px-3 py-3 align-top">
+                                            {p.reference ? (
+                                                <div className="font-mono text-[11px] truncate max-w-[110px]" title={p.reference}>
+                                                    {p.reference}
+                                                </div>
                                             ) : (
                                                 <span className="text-gray-400">-</span>
                                             )}
                                         </td>
 
-                                        <td className="relative px-3 py-2 text-right">
+                                        {/* Link (Order/SR/Vendor/Shipment/Acq) */}
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="space-y-1">
+                                                {p.order_id ? (
+                                                    <Link href={`/admin/orders/${p.order_id}`} className="block hover:underline">
+                                                        <MonoId v={p.order_id} prefix="Order" />
+                                                    </Link>
+                                                ) : null}
+
+                                                {p.service_request_id ? (
+                                                    <Link
+                                                        href={`/admin/services?open=${encodeURIComponent(p.service_request_id)}`}
+                                                        className="block hover:underline"
+                                                    >
+                                                        <MonoId v={p.service_request_id} prefix="SR" />
+                                                    </Link>
+                                                ) : null}
+
+                                                {p.vendor_id ? (
+                                                    <Link href={`/admin/vendors/${p.vendor_id}`} className="block hover:underline">
+                                                        <MonoId v={p.vendor_id} prefix="Vendor" />
+                                                    </Link>
+                                                ) : null}
+
+                                                {p.shipment_id ? (
+                                                    <Link href={`/admin/shipments/${p.shipment_id}`} className="block hover:underline">
+                                                        <MonoId v={p.shipment_id} prefix="Shipment" />
+                                                    </Link>
+                                                ) : null}
+
+                                                {p.acquisition_id ? (
+                                                    <Link href={`/admin/acquisitions/${p.acquisition_id}`} className="block hover:underline">
+                                                        <MonoId v={p.acquisition_id} prefix="Acquisition" />
+                                                    </Link>
+                                                ) : null}
+
+                                                {!p.order_id && !p.service_request_id && !p.vendor_id && !p.shipment_id && !p.acquisition_id ? (
+                                                    <span className="text-gray-400">-</span>
+                                                ) : null}
+                                            </div>
+                                        </td>
+
+                                        {/* Note */}
+                                        <td className="px-3 py-3 align-top">
+                                            {p.note ? (
+                                                <div className="text-sm text-gray-700 line-clamp-2" title={p.note}>
+                                                    {p.note}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+
+                                        {/* Action */}
+                                        <td className="relative px-3 py-3 text-right align-top">
                                             <GenericActionMenu
-                                                id={r.id}
+                                                id={p.id}
                                                 actions={[
                                                     {
-                                                        label: "Copy ID",
-                                                        onClick: async () => {
-                                                            await navigator.clipboard.writeText(r.id);
-                                                        },
-                                                    },
-                                                    {
-                                                        label: "Xem JSON (API)",
-                                                        onClick: () => window.open(`/api/admin/payments/list?q=${r.id}`, "_blank"),
+                                                        label: "Xem chi tiết",
+                                                        onClick: () => (window.location.href = `/admin/payments/${p.id}`),
                                                     },
                                                 ]}
                                             />
