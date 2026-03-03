@@ -12,7 +12,7 @@ const makeSchema = () => z.object({
   method: PaymentMethodSchema,
   amount: z.number(),
   currency: z.string(),
-  paidAt: z.coerce.date().optional(),
+  paidAt: z.coerce.date().optional().nullable(),
   reference: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -25,6 +25,7 @@ const makeSchema = () => z.object({
   purpose: PaymentPurposeSchema.optional(),
   shipment_id: z.string().optional().nullable(),
   type: PaymentTypeSchema.optional(),
+  refNo: z.string().max(30).optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutPaymentInputObjectSchema)
 }).strict();
 export const PaymentUncheckedCreateInputObjectSchema: z.ZodType<Prisma.PaymentUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUncheckedCreateInput>;

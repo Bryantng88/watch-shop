@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   purpose: z.boolean().optional(),
   shipment_id: z.boolean().optional(),
   type: z.boolean().optional(),
+  refNo: z.boolean().optional(),
   MaintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => PaymentCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

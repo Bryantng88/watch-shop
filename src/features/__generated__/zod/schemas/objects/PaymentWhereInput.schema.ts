@@ -4,8 +4,9 @@ import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFi
 import { EnumPaymentMethodFilterObjectSchema as EnumPaymentMethodFilterObjectSchema } from './EnumPaymentMethodFilter.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './DecimalFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumPaymentDirectionNullableFilterObjectSchema as EnumPaymentDirectionNullableFilterObjectSchema } from './EnumPaymentDirectionNullableFilter.schema';
 import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema';
 import { EnumPaymentStatusFilterObjectSchema as EnumPaymentStatusFilterObjectSchema } from './EnumPaymentStatusFilter.schema';
@@ -24,7 +25,7 @@ const paymentwhereinputSchema = z.object({
   method: z.union([z.lazy(() => EnumPaymentMethodFilterObjectSchema), PaymentMethodSchema]).optional(),
   amount: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   currency: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  paidAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  paidAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   reference: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
@@ -37,6 +38,7 @@ const paymentwhereinputSchema = z.object({
   purpose: z.union([z.lazy(() => EnumPaymentPurposeFilterObjectSchema), PaymentPurposeSchema]).optional(),
   shipment_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   type: z.union([z.lazy(() => EnumPaymentTypeFilterObjectSchema), PaymentTypeSchema]).optional(),
+  refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string().max(30)]).optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional()
 }).strict();
 export const PaymentWhereInputObjectSchema: z.ZodType<Prisma.PaymentWhereInput> = paymentwhereinputSchema as unknown as z.ZodType<Prisma.PaymentWhereInput>;

@@ -11,7 +11,7 @@ export const PaymentInputSchema = z.object({
     method: PaymentMethodSchema,
     amount: z.number(),
     currency: z.string(),
-    paidAt: z.date(),
+    paidAt: z.date().optional().nullable(),
     reference: z.string().optional().nullable(),
     note: z.string().optional().nullable(),
     createdAt: z.date(),
@@ -24,6 +24,7 @@ export const PaymentInputSchema = z.object({
     purpose: PaymentPurposeSchema,
     shipment_id: z.string().optional().nullable(),
     type: PaymentTypeSchema,
+    refNo: z.string().optional().nullable(),
     MaintenanceRecord: z.array(z.unknown())
 }).strict();
 

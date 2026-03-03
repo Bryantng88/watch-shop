@@ -27,6 +27,7 @@ export const PaymentFindFirstOrThrowSelectSchema: z.ZodType<Prisma.PaymentSelect
     purpose: z.boolean().optional(),
     shipment_id: z.boolean().optional(),
     type: z.boolean().optional(),
+    refNo: z.boolean().optional(),
     MaintenanceRecord: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PaymentSelect>;
@@ -49,6 +50,7 @@ export const PaymentFindFirstOrThrowSelectZodSchema = z.object({
     purpose: z.boolean().optional(),
     shipment_id: z.boolean().optional(),
     type: z.boolean().optional(),
+    refNo: z.boolean().optional(),
     MaintenanceRecord: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

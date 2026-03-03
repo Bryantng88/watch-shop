@@ -401,10 +401,11 @@ export default function PaymentListClient({
                                         <td className="px-3 py-3 align-top">
                                             <div className="leading-5">{created.time}</div>
                                             <div className="text-gray-600">{created.date}</div>
-                                            {p.paidAt ? (
-                                                <div className="mt-1 text-[11px] text-gray-500">
-                                                    paid: {paid.time} {paid.date}
-                                                </div>
+                                            {p.direction === "OUT" ? (
+                                                <DotLabel label="Chi phí" tone="orange" />
+                                            ) : null}
+                                            {p.direction === "IN" ? (
+                                                <DotLabel label="Doanh thu" tone="green" />
                                             ) : null}
                                         </td>
 

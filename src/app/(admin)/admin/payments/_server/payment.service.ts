@@ -1,13 +1,19 @@
 import { Order, ReserveType, PaymentPurpose, PaymentType, PaymentMethod, PaymentDirection } from "@prisma/client";
 import * as paymentRepo from "./payment.repo";
 import type { PaymentListInput } from "../_helper/SearchParams";
-
+import { genRefNo } from "../../__components/AutoGenRef";
 
 export async function createPaymentsForOrder(
     tx: any,
     order: Order
 ) {
     const payments = [];
+    const refNo = await genRefNo(tx, {
+        model: tx.serviceRequest,
+        prefix: "PM",
+        field: "refNo",
+        padding: 6,
+    });
 
     const subtotal = Number(order.subtotal || 0);
     const deposit = Number(order.depositRequired || 0);
@@ -18,6 +24,7 @@ export async function createPaymentsForOrder(
     if (order.paymentMethod === "COD") {
         if (deposit > 0) {
             payments.push({
+                refNo: refNo,
                 order_id: order.id,
                 amount: deposit,
                 currency: "VND",
@@ -29,6 +36,7 @@ export async function createPaymentsForOrder(
         }
 
         payments.push({
+            refNo: refNo,
             order_id: order.id,
             amount: subtotal - deposit,
             currency: "VND",
@@ -42,6 +50,7 @@ export async function createPaymentsForOrder(
     // CASE 2: HOLD (đặt cọc giữ hàng)
     else if (order.reserveType === ReserveType.DEPOSIT && deposit > 0) {
         payments.push({
+            refNo: refNo,
             order_id: order.id,
             amount: deposit,
             currency: "VND",
@@ -55,6 +64,7 @@ export async function createPaymentsForOrder(
     // CASE 3: đơn thường
     else {
         payments.push({
+            refNo: refNo,
             order_id: order.id,
             amount: subtotal,
             currency: "VND",

@@ -9,7 +9,7 @@ const makeSchema = () => z.object({
   method: SortOrderSchema.optional(),
   amount: SortOrderSchema.optional(),
   currency: SortOrderSchema.optional(),
-  paidAt: SortOrderSchema.optional(),
+  paidAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   reference: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   note: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
@@ -22,6 +22,7 @@ const makeSchema = () => z.object({
   purpose: SortOrderSchema.optional(),
   shipment_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   type: SortOrderSchema.optional(),
+  refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const PaymentOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.PaymentOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentOrderByWithRelationInput>;

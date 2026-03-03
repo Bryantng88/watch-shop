@@ -5,7 +5,7 @@ export type CreatePaymentInput = {
     method: any; // PaymentMethod
     amount: Prisma.Decimal;
     currency: string;
-
+    refNo: string;
     paidAt?: Date | null; // default(now) nhưng set cũng ok
     reference?: string | null;
     note?: string | null;

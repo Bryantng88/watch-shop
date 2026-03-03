@@ -5,7 +5,7 @@ export const PaymentFindManyResultSchema = z.object({
   method: z.unknown(),
   amount: z.number(),
   currency: z.string(),
-  paidAt: z.date(),
+  paidAt: z.date().optional(),
   reference: z.string().optional(),
   note: z.string().optional(),
   createdAt: z.date(),
@@ -18,6 +18,7 @@ export const PaymentFindManyResultSchema = z.object({
   purpose: z.unknown(),
   shipment_id: z.string().optional(),
   type: z.unknown(),
+  refNo: z.string().optional(),
   MaintenanceRecord: z.array(z.unknown())
 })),
   pagination: z.object({
