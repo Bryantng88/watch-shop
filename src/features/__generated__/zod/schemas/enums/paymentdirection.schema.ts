@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const paymentdirectionSchema = z.enum(['IN', 'OUT'])
+export const PaymentDirectionSchema = z.enum(['IN', 'OUT'])
 
-export type paymentdirection = z.infer<typeof paymentdirectionSchema>;
+export type PaymentDirection = z.infer<typeof PaymentDirectionSchema>;

@@ -3,15 +3,15 @@ import type { Prisma } from '@prisma/client';
 import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { DecimalWithAggregatesFilterObjectSchema as DecimalWithAggregatesFilterObjectSchema } from './DecimalWithAggregatesFilter.schema';
-import { Enumdiscount_typeNullableWithAggregatesFilterObjectSchema as Enumdiscount_typeNullableWithAggregatesFilterObjectSchema } from './Enumdiscount_typeNullableWithAggregatesFilter.schema';
-import { discount_typeSchema } from '../enums/discount_type.schema';
+import { EnumDiscountTypeNullableWithAggregatesFilterObjectSchema as EnumDiscountTypeNullableWithAggregatesFilterObjectSchema } from './EnumDiscountTypeNullableWithAggregatesFilter.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
 import { IntWithAggregatesFilterObjectSchema as IntWithAggregatesFilterObjectSchema } from './IntWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { EnumProductTypeNullableWithAggregatesFilterObjectSchema as EnumProductTypeNullableWithAggregatesFilterObjectSchema } from './EnumProductTypeNullableWithAggregatesFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumorderitemkindWithAggregatesFilterObjectSchema as EnumorderitemkindWithAggregatesFilterObjectSchema } from './EnumorderitemkindWithAggregatesFilter.schema';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { EnumOrderItemKindWithAggregatesFilterObjectSchema as EnumOrderItemKindWithAggregatesFilterObjectSchema } from './EnumOrderItemKindWithAggregatesFilter.schema';
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumServiceScopeNullableWithAggregatesFilterObjectSchema as EnumServiceScopeNullableWithAggregatesFilterObjectSchema } from './EnumServiceScopeNullableWithAggregatesFilter.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema'
 
@@ -25,7 +25,7 @@ const orderitemscalarwherewithaggregatesinputSchema = z.object({
   variantId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   title: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   listPrice: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
-  discountType: z.union([z.lazy(() => Enumdiscount_typeNullableWithAggregatesFilterObjectSchema), discount_typeSchema]).optional().nullable(),
+  discountType: z.union([z.lazy(() => EnumDiscountTypeNullableWithAggregatesFilterObjectSchema), DiscountTypeSchema]).optional().nullable(),
   discountValue: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
   unitPriceAgreed: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
   taxRate: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
@@ -34,7 +34,7 @@ const orderitemscalarwherewithaggregatesinputSchema = z.object({
   img: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   productType: z.union([z.lazy(() => EnumProductTypeNullableWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
-  kind: z.union([z.lazy(() => EnumorderitemkindWithAggregatesFilterObjectSchema), orderitemkindSchema]).optional(),
+  kind: z.union([z.lazy(() => EnumOrderItemKindWithAggregatesFilterObjectSchema), OrderItemKindSchema]).optional(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableWithAggregatesFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),

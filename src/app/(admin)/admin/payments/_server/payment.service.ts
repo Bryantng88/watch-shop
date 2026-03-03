@@ -1,4 +1,4 @@
-import { Order, ReserveType, PaymentPurpose } from "@prisma/client";
+import { Order, ReserveType, PaymentPurpose, PaymentType, PaymentMethod, PaymentDirection } from "@prisma/client";
 import * as paymentRepo from "./payment.repo";
 import type { PaymentListInput } from "../_helper/SearchParams";
 
@@ -18,18 +18,22 @@ export async function createPaymentsForOrder(
     if (order.paymentMethod === "COD") {
         if (deposit > 0) {
             payments.push({
-                orderId: order.id,
+                order_id: order.id,
                 amount: deposit,
                 currency: "VND",
+                type: PaymentType.ORDER,
+                direction: PaymentDirection.IN,
                 purpose: PaymentPurpose.ORDER_DEPOSIT,
                 method: "COD"
             });
         }
 
         payments.push({
-            orderId: order.id,
+            order_id: order.id,
             amount: subtotal - deposit,
             currency: "VND",
+            type: PaymentType.ORDER,
+            direction: PaymentDirection.IN,
             purpose: PaymentPurpose.ORDER_REMAIN,
             method: "COD"
         });
@@ -38,22 +42,26 @@ export async function createPaymentsForOrder(
     // CASE 2: HOLD (đặt cọc giữ hàng)
     else if (order.reserveType === ReserveType.DEPOSIT && deposit > 0) {
         payments.push({
-            orderId: order.id,
+            order_id: order.id,
             amount: deposit,
             currency: "VND",
+            type: PaymentType.ORDER,
+            direction: PaymentDirection.IN,    // ✅ IN cho order
             purpose: PaymentPurpose.ORDER_DEPOSIT,
-            method: "BANK_TRANSFER"
+            method: PaymentMethod.BANK_TRANSFER,
         });
     }
 
     // CASE 3: đơn thường
     else {
         payments.push({
-            orderId: order.id,
+            order_id: order.id,
             amount: subtotal,
             currency: "VND",
+            type: PaymentType.ORDER,
+            direction: PaymentDirection.IN,
             purpose: PaymentPurpose.ORDER_FULL,
-            method: "BANK_TRANSFER"
+            method: PaymentMethod.BANK_TRANSFER
         });
     }
 

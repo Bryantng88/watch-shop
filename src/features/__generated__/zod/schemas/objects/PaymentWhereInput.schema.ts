@@ -6,8 +6,8 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './DecimalFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
-import { EnumpaymentdirectionNullableFilterObjectSchema as EnumpaymentdirectionNullableFilterObjectSchema } from './EnumpaymentdirectionNullableFilter.schema';
-import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
+import { EnumPaymentDirectionNullableFilterObjectSchema as EnumPaymentDirectionNullableFilterObjectSchema } from './EnumPaymentDirectionNullableFilter.schema';
+import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema';
 import { EnumPaymentStatusFilterObjectSchema as EnumPaymentStatusFilterObjectSchema } from './EnumPaymentStatusFilter.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentPurposeFilterObjectSchema as EnumPaymentPurposeFilterObjectSchema } from './EnumPaymentPurposeFilter.schema';
@@ -28,7 +28,7 @@ const paymentwhereinputSchema = z.object({
   reference: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  direction: z.union([z.lazy(() => EnumpaymentdirectionNullableFilterObjectSchema), paymentdirectionSchema]).optional().nullable(),
+  direction: z.union([z.lazy(() => EnumPaymentDirectionNullableFilterObjectSchema), PaymentDirectionSchema]).optional().nullable(),
   order_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   service_request_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   vendor_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

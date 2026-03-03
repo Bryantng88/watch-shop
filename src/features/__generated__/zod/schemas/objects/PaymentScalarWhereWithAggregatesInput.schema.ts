@@ -6,8 +6,8 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { DecimalWithAggregatesFilterObjectSchema as DecimalWithAggregatesFilterObjectSchema } from './DecimalWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
-import { EnumpaymentdirectionNullableWithAggregatesFilterObjectSchema as EnumpaymentdirectionNullableWithAggregatesFilterObjectSchema } from './EnumpaymentdirectionNullableWithAggregatesFilter.schema';
-import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
+import { EnumPaymentDirectionNullableWithAggregatesFilterObjectSchema as EnumPaymentDirectionNullableWithAggregatesFilterObjectSchema } from './EnumPaymentDirectionNullableWithAggregatesFilter.schema';
+import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema';
 import { EnumPaymentStatusWithAggregatesFilterObjectSchema as EnumPaymentStatusWithAggregatesFilterObjectSchema } from './EnumPaymentStatusWithAggregatesFilter.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { EnumPaymentPurposeWithAggregatesFilterObjectSchema as EnumPaymentPurposeWithAggregatesFilterObjectSchema } from './EnumPaymentPurposeWithAggregatesFilter.schema';
@@ -27,7 +27,7 @@ const paymentscalarwherewithaggregatesinputSchema = z.object({
   reference: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   note: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  direction: z.union([z.lazy(() => EnumpaymentdirectionNullableWithAggregatesFilterObjectSchema), paymentdirectionSchema]).optional().nullable(),
+  direction: z.union([z.lazy(() => EnumPaymentDirectionNullableWithAggregatesFilterObjectSchema), PaymentDirectionSchema]).optional().nullable(),
   order_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   service_request_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   vendor_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),

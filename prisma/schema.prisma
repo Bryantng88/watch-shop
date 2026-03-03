@@ -229,7 +229,7 @@ model OrderItem {
   variantId         String?
   title             String
   listPrice         Decimal           @db.Decimal(12, 2)
-  discountType      discount_type?
+  discountType      DiscountType?
   discountValue     Decimal?          @db.Decimal(12, 2)
   unitPriceAgreed   Decimal           @db.Decimal(12, 2)
   taxRate           Decimal?          @db.Decimal(12, 2)
@@ -238,7 +238,7 @@ model OrderItem {
   img               String?
   createdAt         DateTime          @default(now())
   productType       ProductType?
-  kind              orderitemkind
+  kind              OrderItemKind
   serviceCatalogId  String?
   serviceScope      ServiceScope?
   linkedOrderItemId String?
@@ -597,7 +597,7 @@ model Payment {
   reference          String?
   note               String?
   createdAt          DateTime            @default(now())
-  direction          paymentdirection?
+  direction          PaymentDirection?
   order_id           String?
   service_request_id String?
   vendor_id          String?
@@ -642,7 +642,7 @@ model Shipment {
   notes        String?
   createdAt    DateTime       @default(now()) @db.Timestamp(6)
   updatedAt    DateTime       @default(now()) @db.Timestamp(6)
-  status       shipmentstatus @default(DRAFT)
+  status       ShipmentStatus @default(DRAFT)
   refNo        String?
   orderRefNo   String?
   customerName String?
@@ -919,30 +919,6 @@ enum AcquisitionItemStatus {
   CANCELLED
 }
 
-enum discount_type {
-  PERCENT
-  AMOUNT
-}
-
-enum orderitemkind {
-  PRODUCT
-  SERVICE
-  DISCOUNT
-}
-
-enum shipmentstatus {
-  DRAFT
-  READY
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
-enum paymentdirection {
-  IN
-  OUT
-}
-
 enum ReserveType {
   NONE
   COD
@@ -956,6 +932,10 @@ enum PaymentPurpose {
   SERVICE_REQUEST
   MAINTENANCE_COST
   SERVICE_FEE
+  ACQUISITION_DEPOSIT
+  ACQUISITION_REMAIN
+  ACQUISITION_FULL
+  SHIPMENT_COST
 }
 
 enum OrderSource {
@@ -1011,4 +991,28 @@ enum MaintenanceEventType {
   CHANGE_VENDOR
   NOTE
   COST
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum OrderItemKind {
+  PRODUCT
+  SERVICE
+  DISCOUNT
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum ShipmentStatus {
+  DRAFT
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }

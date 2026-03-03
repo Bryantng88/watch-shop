@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { shipmentstatusSchema } from '../../enums/shipmentstatus.schema';
+import { ShipmentStatusSchema } from '../../enums/ShipmentStatus.schema';
 // prettier-ignore
 export const ShipmentResultSchema = z.object({
     id: z.string(),
@@ -19,7 +19,7 @@ export const ShipmentResultSchema = z.object({
     notes: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    status: shipmentstatusSchema,
+    status: ShipmentStatusSchema,
     refNo: z.string().nullable(),
     orderRefNo: z.string().nullable(),
     customerName: z.string().nullable(),

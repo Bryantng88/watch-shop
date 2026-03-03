@@ -1,4 +1,4 @@
-import { PaymentStatus, PaymentType } from "@prisma/client";
+import { PaymentStatus, PaymentType, Prisma } from "@prisma/client";
 import { CreatePaymentInput } from "./payment.type";
 import { DB, dbOrTx } from "@/server/db/client";
 

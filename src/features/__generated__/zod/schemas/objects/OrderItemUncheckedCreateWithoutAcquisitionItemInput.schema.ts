@@ -1,8 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { discount_typeSchema } from '../enums/discount_type.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutOrderItemInput.schema';
 import { ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInput.schema'
@@ -14,7 +14,7 @@ const makeSchema = () => z.object({
   variantId: z.string().optional().nullable(),
   title: z.string(),
   listPrice: z.number(),
-  discountType: discount_typeSchema.optional().nullable(),
+  discountType: DiscountTypeSchema.optional().nullable(),
   discountValue: z.number().optional().nullable(),
   unitPriceAgreed: z.number(),
   taxRate: z.number().optional().nullable(),
@@ -23,7 +23,7 @@ const makeSchema = () => z.object({
   img: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   productType: ProductTypeSchema.optional().nullable(),
-  kind: orderitemkindSchema,
+  kind: OrderItemKindSchema,
   serviceCatalogId: z.string().optional().nullable(),
   serviceScope: ServiceScopeSchema.optional().nullable(),
   linkedOrderItemId: z.string().optional().nullable(),

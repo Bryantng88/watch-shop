@@ -1,9 +1,9 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { shipmentstatusSchema } from '../enums/shipmentstatus.schema'
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema'
 
 const makeSchema = () => z.object({
-  set: shipmentstatusSchema.optional()
+  set: ShipmentStatusSchema.optional()
 }).strict();
-export const EnumshipmentstatusFieldUpdateOperationsInputObjectSchema: z.ZodType<Prisma.EnumshipmentstatusFieldUpdateOperationsInput> = makeSchema() as unknown as z.ZodType<Prisma.EnumshipmentstatusFieldUpdateOperationsInput>;
-export const EnumshipmentstatusFieldUpdateOperationsInputObjectZodSchema = makeSchema();
+export const EnumShipmentStatusFieldUpdateOperationsInputObjectSchema: z.ZodType<Prisma.EnumShipmentStatusFieldUpdateOperationsInput> = makeSchema() as unknown as z.ZodType<Prisma.EnumShipmentStatusFieldUpdateOperationsInput>;
+export const EnumShipmentStatusFieldUpdateOperationsInputObjectZodSchema = makeSchema();

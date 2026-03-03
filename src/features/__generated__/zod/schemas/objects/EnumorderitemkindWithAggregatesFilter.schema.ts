@@ -1,18 +1,18 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema';
-import { NestedEnumorderitemkindWithAggregatesFilterObjectSchema as NestedEnumorderitemkindWithAggregatesFilterObjectSchema } from './NestedEnumorderitemkindWithAggregatesFilter.schema';
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
+import { NestedEnumOrderItemKindWithAggregatesFilterObjectSchema as NestedEnumOrderItemKindWithAggregatesFilterObjectSchema } from './NestedEnumOrderItemKindWithAggregatesFilter.schema';
 import { NestedIntFilterObjectSchema as NestedIntFilterObjectSchema } from './NestedIntFilter.schema';
-import { NestedEnumorderitemkindFilterObjectSchema as NestedEnumorderitemkindFilterObjectSchema } from './NestedEnumorderitemkindFilter.schema'
+import { NestedEnumOrderItemKindFilterObjectSchema as NestedEnumOrderItemKindFilterObjectSchema } from './NestedEnumOrderItemKindFilter.schema'
 
 const makeSchema = () => z.object({
-  equals: orderitemkindSchema.optional(),
-  in: orderitemkindSchema.array().optional(),
-  notIn: orderitemkindSchema.array().optional(),
-  not: z.union([orderitemkindSchema, z.lazy(() => NestedEnumorderitemkindWithAggregatesFilterObjectSchema)]).optional(),
+  equals: OrderItemKindSchema.optional(),
+  in: OrderItemKindSchema.array().optional(),
+  notIn: OrderItemKindSchema.array().optional(),
+  not: z.union([OrderItemKindSchema, z.lazy(() => NestedEnumOrderItemKindWithAggregatesFilterObjectSchema)]).optional(),
   _count: z.lazy(() => NestedIntFilterObjectSchema).optional(),
-  _min: z.lazy(() => NestedEnumorderitemkindFilterObjectSchema).optional(),
-  _max: z.lazy(() => NestedEnumorderitemkindFilterObjectSchema).optional()
+  _min: z.lazy(() => NestedEnumOrderItemKindFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedEnumOrderItemKindFilterObjectSchema).optional()
 }).strict();
-export const EnumorderitemkindWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumorderitemkindWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumorderitemkindWithAggregatesFilter>;
-export const EnumorderitemkindWithAggregatesFilterObjectZodSchema = makeSchema();
+export const EnumOrderItemKindWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumOrderItemKindWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumOrderItemKindWithAggregatesFilter>;
+export const EnumOrderItemKindWithAggregatesFilterObjectZodSchema = makeSchema();

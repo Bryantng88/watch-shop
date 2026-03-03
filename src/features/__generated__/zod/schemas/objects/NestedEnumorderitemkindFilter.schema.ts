@@ -1,12 +1,12 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema'
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema'
 
 const nestedenumorderitemkindfilterSchema = z.object({
-  equals: orderitemkindSchema.optional(),
-  in: orderitemkindSchema.array().optional(),
-  notIn: orderitemkindSchema.array().optional(),
-  not: z.union([orderitemkindSchema, z.lazy(() => NestedEnumorderitemkindFilterObjectSchema)]).optional()
+  equals: OrderItemKindSchema.optional(),
+  in: OrderItemKindSchema.array().optional(),
+  notIn: OrderItemKindSchema.array().optional(),
+  not: z.union([OrderItemKindSchema, z.lazy(() => NestedEnumOrderItemKindFilterObjectSchema)]).optional()
 }).strict();
-export const NestedEnumorderitemkindFilterObjectSchema: z.ZodType<Prisma.NestedEnumorderitemkindFilter> = nestedenumorderitemkindfilterSchema as unknown as z.ZodType<Prisma.NestedEnumorderitemkindFilter>;
-export const NestedEnumorderitemkindFilterObjectZodSchema = nestedenumorderitemkindfilterSchema;
+export const NestedEnumOrderItemKindFilterObjectSchema: z.ZodType<Prisma.NestedEnumOrderItemKindFilter> = nestedenumorderitemkindfilterSchema as unknown as z.ZodType<Prisma.NestedEnumOrderItemKindFilter>;
+export const NestedEnumOrderItemKindFilterObjectZodSchema = nestedenumorderitemkindfilterSchema;

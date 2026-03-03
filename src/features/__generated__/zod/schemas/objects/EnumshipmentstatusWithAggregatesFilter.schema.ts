@@ -1,18 +1,18 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { shipmentstatusSchema } from '../enums/shipmentstatus.schema';
-import { NestedEnumshipmentstatusWithAggregatesFilterObjectSchema as NestedEnumshipmentstatusWithAggregatesFilterObjectSchema } from './NestedEnumshipmentstatusWithAggregatesFilter.schema';
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
+import { NestedEnumShipmentStatusWithAggregatesFilterObjectSchema as NestedEnumShipmentStatusWithAggregatesFilterObjectSchema } from './NestedEnumShipmentStatusWithAggregatesFilter.schema';
 import { NestedIntFilterObjectSchema as NestedIntFilterObjectSchema } from './NestedIntFilter.schema';
-import { NestedEnumshipmentstatusFilterObjectSchema as NestedEnumshipmentstatusFilterObjectSchema } from './NestedEnumshipmentstatusFilter.schema'
+import { NestedEnumShipmentStatusFilterObjectSchema as NestedEnumShipmentStatusFilterObjectSchema } from './NestedEnumShipmentStatusFilter.schema'
 
 const makeSchema = () => z.object({
-  equals: shipmentstatusSchema.optional(),
-  in: shipmentstatusSchema.array().optional(),
-  notIn: shipmentstatusSchema.array().optional(),
-  not: z.union([shipmentstatusSchema, z.lazy(() => NestedEnumshipmentstatusWithAggregatesFilterObjectSchema)]).optional(),
+  equals: ShipmentStatusSchema.optional(),
+  in: ShipmentStatusSchema.array().optional(),
+  notIn: ShipmentStatusSchema.array().optional(),
+  not: z.union([ShipmentStatusSchema, z.lazy(() => NestedEnumShipmentStatusWithAggregatesFilterObjectSchema)]).optional(),
   _count: z.lazy(() => NestedIntFilterObjectSchema).optional(),
-  _min: z.lazy(() => NestedEnumshipmentstatusFilterObjectSchema).optional(),
-  _max: z.lazy(() => NestedEnumshipmentstatusFilterObjectSchema).optional()
+  _min: z.lazy(() => NestedEnumShipmentStatusFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedEnumShipmentStatusFilterObjectSchema).optional()
 }).strict();
-export const EnumshipmentstatusWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumshipmentstatusWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumshipmentstatusWithAggregatesFilter>;
-export const EnumshipmentstatusWithAggregatesFilterObjectZodSchema = makeSchema();
+export const EnumShipmentStatusWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumShipmentStatusWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumShipmentStatusWithAggregatesFilter>;
+export const EnumShipmentStatusWithAggregatesFilterObjectZodSchema = makeSchema();

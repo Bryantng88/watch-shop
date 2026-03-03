@@ -1,12 +1,12 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { shipmentstatusSchema } from '../enums/shipmentstatus.schema'
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema'
 
 const nestedenumshipmentstatusfilterSchema = z.object({
-  equals: shipmentstatusSchema.optional(),
-  in: shipmentstatusSchema.array().optional(),
-  notIn: shipmentstatusSchema.array().optional(),
-  not: z.union([shipmentstatusSchema, z.lazy(() => NestedEnumshipmentstatusFilterObjectSchema)]).optional()
+  equals: ShipmentStatusSchema.optional(),
+  in: ShipmentStatusSchema.array().optional(),
+  notIn: ShipmentStatusSchema.array().optional(),
+  not: z.union([ShipmentStatusSchema, z.lazy(() => NestedEnumShipmentStatusFilterObjectSchema)]).optional()
 }).strict();
-export const NestedEnumshipmentstatusFilterObjectSchema: z.ZodType<Prisma.NestedEnumshipmentstatusFilter> = nestedenumshipmentstatusfilterSchema as unknown as z.ZodType<Prisma.NestedEnumshipmentstatusFilter>;
-export const NestedEnumshipmentstatusFilterObjectZodSchema = nestedenumshipmentstatusfilterSchema;
+export const NestedEnumShipmentStatusFilterObjectSchema: z.ZodType<Prisma.NestedEnumShipmentStatusFilter> = nestedenumshipmentstatusfilterSchema as unknown as z.ZodType<Prisma.NestedEnumShipmentStatusFilter>;
+export const NestedEnumShipmentStatusFilterObjectZodSchema = nestedenumshipmentstatusfilterSchema;

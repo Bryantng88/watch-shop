@@ -1,8 +1,8 @@
 import * as z from 'zod';
 
-import { discount_typeSchema } from '../../enums/discount_type.schema';
+import { DiscountTypeSchema } from '../../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
-import { orderitemkindSchema } from '../../enums/orderitemkind.schema';
+import { OrderItemKindSchema } from '../../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../../enums/ServiceScope.schema';
 // prettier-ignore
 export const OrderItemInputSchema = z.object({
@@ -12,7 +12,7 @@ export const OrderItemInputSchema = z.object({
     variantId: z.string().optional().nullable(),
     title: z.string(),
     listPrice: z.number(),
-    discountType: discount_typeSchema.optional().nullable(),
+    discountType: DiscountTypeSchema.optional().nullable(),
     discountValue: z.number().optional().nullable(),
     unitPriceAgreed: z.number(),
     taxRate: z.number().optional().nullable(),
@@ -21,7 +21,7 @@ export const OrderItemInputSchema = z.object({
     img: z.string().optional().nullable(),
     createdAt: z.date(),
     productType: ProductTypeSchema.optional().nullable(),
-    kind: orderitemkindSchema,
+    kind: OrderItemKindSchema,
     serviceCatalogId: z.string().optional().nullable(),
     serviceScope: ServiceScopeSchema.optional().nullable(),
     linkedOrderItemId: z.string().optional().nullable(),

@@ -1,18 +1,18 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { paymentdirectionSchema } from '../enums/paymentdirection.schema';
-import { NestedEnumpaymentdirectionNullableWithAggregatesFilterObjectSchema as NestedEnumpaymentdirectionNullableWithAggregatesFilterObjectSchema } from './NestedEnumpaymentdirectionNullableWithAggregatesFilter.schema';
+import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema';
+import { NestedEnumPaymentDirectionNullableWithAggregatesFilterObjectSchema as NestedEnumPaymentDirectionNullableWithAggregatesFilterObjectSchema } from './NestedEnumPaymentDirectionNullableWithAggregatesFilter.schema';
 import { NestedIntNullableFilterObjectSchema as NestedIntNullableFilterObjectSchema } from './NestedIntNullableFilter.schema';
-import { NestedEnumpaymentdirectionNullableFilterObjectSchema as NestedEnumpaymentdirectionNullableFilterObjectSchema } from './NestedEnumpaymentdirectionNullableFilter.schema'
+import { NestedEnumPaymentDirectionNullableFilterObjectSchema as NestedEnumPaymentDirectionNullableFilterObjectSchema } from './NestedEnumPaymentDirectionNullableFilter.schema'
 
 const makeSchema = () => z.object({
-  equals: paymentdirectionSchema.optional().nullable(),
-  in: paymentdirectionSchema.array().optional().nullable(),
-  notIn: paymentdirectionSchema.array().optional().nullable(),
-  not: z.union([paymentdirectionSchema, z.lazy(() => NestedEnumpaymentdirectionNullableWithAggregatesFilterObjectSchema)]).optional().nullable(),
+  equals: PaymentDirectionSchema.optional().nullable(),
+  in: PaymentDirectionSchema.array().optional().nullable(),
+  notIn: PaymentDirectionSchema.array().optional().nullable(),
+  not: z.union([PaymentDirectionSchema, z.lazy(() => NestedEnumPaymentDirectionNullableWithAggregatesFilterObjectSchema)]).optional().nullable(),
   _count: z.lazy(() => NestedIntNullableFilterObjectSchema).optional(),
-  _min: z.lazy(() => NestedEnumpaymentdirectionNullableFilterObjectSchema).optional(),
-  _max: z.lazy(() => NestedEnumpaymentdirectionNullableFilterObjectSchema).optional()
+  _min: z.lazy(() => NestedEnumPaymentDirectionNullableFilterObjectSchema).optional(),
+  _max: z.lazy(() => NestedEnumPaymentDirectionNullableFilterObjectSchema).optional()
 }).strict();
-export const EnumpaymentdirectionNullableWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumpaymentdirectionNullableWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumpaymentdirectionNullableWithAggregatesFilter>;
-export const EnumpaymentdirectionNullableWithAggregatesFilterObjectZodSchema = makeSchema();
+export const EnumPaymentDirectionNullableWithAggregatesFilterObjectSchema: z.ZodType<Prisma.EnumPaymentDirectionNullableWithAggregatesFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumPaymentDirectionNullableWithAggregatesFilter>;
+export const EnumPaymentDirectionNullableWithAggregatesFilterObjectZodSchema = makeSchema();

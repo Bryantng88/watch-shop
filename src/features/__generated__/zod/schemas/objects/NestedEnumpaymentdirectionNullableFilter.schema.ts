@@ -1,12 +1,12 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { paymentdirectionSchema } from '../enums/paymentdirection.schema'
+import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema'
 
 const nestedenumpaymentdirectionnullablefilterSchema = z.object({
-  equals: paymentdirectionSchema.optional().nullable(),
-  in: paymentdirectionSchema.array().optional().nullable(),
-  notIn: paymentdirectionSchema.array().optional().nullable(),
-  not: z.union([paymentdirectionSchema, z.lazy(() => NestedEnumpaymentdirectionNullableFilterObjectSchema)]).optional().nullable()
+  equals: PaymentDirectionSchema.optional().nullable(),
+  in: PaymentDirectionSchema.array().optional().nullable(),
+  notIn: PaymentDirectionSchema.array().optional().nullable(),
+  not: z.union([PaymentDirectionSchema, z.lazy(() => NestedEnumPaymentDirectionNullableFilterObjectSchema)]).optional().nullable()
 }).strict();
-export const NestedEnumpaymentdirectionNullableFilterObjectSchema: z.ZodType<Prisma.NestedEnumpaymentdirectionNullableFilter> = nestedenumpaymentdirectionnullablefilterSchema as unknown as z.ZodType<Prisma.NestedEnumpaymentdirectionNullableFilter>;
-export const NestedEnumpaymentdirectionNullableFilterObjectZodSchema = nestedenumpaymentdirectionnullablefilterSchema;
+export const NestedEnumPaymentDirectionNullableFilterObjectSchema: z.ZodType<Prisma.NestedEnumPaymentDirectionNullableFilter> = nestedenumpaymentdirectionnullablefilterSchema as unknown as z.ZodType<Prisma.NestedEnumPaymentDirectionNullableFilter>;
+export const NestedEnumPaymentDirectionNullableFilterObjectZodSchema = nestedenumpaymentdirectionnullablefilterSchema;

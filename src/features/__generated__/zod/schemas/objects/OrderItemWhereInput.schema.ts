@@ -3,15 +3,15 @@ import type { Prisma } from '@prisma/client';
 import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './DecimalFilter.schema';
-import { Enumdiscount_typeNullableFilterObjectSchema as Enumdiscount_typeNullableFilterObjectSchema } from './Enumdiscount_typeNullableFilter.schema';
-import { discount_typeSchema } from '../enums/discount_type.schema';
+import { EnumDiscountTypeNullableFilterObjectSchema as EnumDiscountTypeNullableFilterObjectSchema } from './EnumDiscountTypeNullableFilter.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumProductTypeNullableFilterObjectSchema as EnumProductTypeNullableFilterObjectSchema } from './EnumProductTypeNullableFilter.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumorderitemkindFilterObjectSchema as EnumorderitemkindFilterObjectSchema } from './EnumorderitemkindFilter.schema';
-import { orderitemkindSchema } from '../enums/orderitemkind.schema';
+import { EnumOrderItemKindFilterObjectSchema as EnumOrderItemKindFilterObjectSchema } from './EnumOrderItemKindFilter.schema';
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumServiceScopeNullableFilterObjectSchema as EnumServiceScopeNullableFilterObjectSchema } from './EnumServiceScopeNullableFilter.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
@@ -35,7 +35,7 @@ const orderitemwhereinputSchema = z.object({
   variantId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   title: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   listPrice: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
-  discountType: z.union([z.lazy(() => Enumdiscount_typeNullableFilterObjectSchema), discount_typeSchema]).optional().nullable(),
+  discountType: z.union([z.lazy(() => EnumDiscountTypeNullableFilterObjectSchema), DiscountTypeSchema]).optional().nullable(),
   discountValue: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   unitPriceAgreed: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   taxRate: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
@@ -44,7 +44,7 @@ const orderitemwhereinputSchema = z.object({
   img: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   productType: z.union([z.lazy(() => EnumProductTypeNullableFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
-  kind: z.union([z.lazy(() => EnumorderitemkindFilterObjectSchema), orderitemkindSchema]).optional(),
+  kind: z.union([z.lazy(() => EnumOrderItemKindFilterObjectSchema), OrderItemKindSchema]).optional(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
