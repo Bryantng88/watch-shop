@@ -2,7 +2,6 @@ import { parsePaymentListSearchParams } from "./_helper/SearchParams";
 import PaymentListClient from "./_client/PaymentListClient";
 import { getAdminPaymentList } from "./_server/payment.service";
 
-
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 function serialize(obj: any) {
@@ -15,11 +14,7 @@ function serialize(obj: any) {
     );
 }
 
-export default async function PaymentListPage({
-    searchParams,
-}: {
-    searchParams: SearchParams;
-}) {
+export default async function PaymentListPage({ searchParams }: { searchParams: SearchParams }) {
     const sp = new URLSearchParams(
         Object.entries(searchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
@@ -27,7 +22,9 @@ export default async function PaymentListPage({
     );
 
     const input = parsePaymentListSearchParams(sp);
-    const { items, total, page, pageSize } = await getAdminPaymentList(input);
+
+    // ✅ lấy counts từ service
+    const { items, total, counts, page, pageSize } = await getAdminPaymentList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -35,6 +32,7 @@ export default async function PaymentListPage({
         <PaymentListClient
             items={serialize(items)}
             total={total}
+            counts={counts} // ✅ truyền xuống client
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}

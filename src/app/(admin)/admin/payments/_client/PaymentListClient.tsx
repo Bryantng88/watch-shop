@@ -34,7 +34,7 @@ type PaymentPurpose =
 
 export type PaymentItem = {
     id: string;
-
+    refNo: string;
     createdAt: string;
     paidAt?: string | null;
 
@@ -64,6 +64,12 @@ type PageProps = {
     pageSize: number;
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
+    counts?: {
+        ALL: number;
+        UNPAID: number;
+        PAID: number;
+        CANCELED: number;
+    };
 };
 
 function cls(...xs: Array<string | false | null | undefined>) {
@@ -160,6 +166,7 @@ export default function PaymentListClient({
     page,
     pageSize,
     totalPages,
+    counts,
     rawSearchParams,
 }: PageProps) {
     const sp = useSearchParams();
@@ -187,15 +194,24 @@ export default function PaymentListClient({
 
     const displayItems = useMemo(() => items.filter((o) => matchesView(o, currentView)), [items, currentView]);
 
-    const countsByView: Record<ViewKey, number> = useMemo(
-        () => ({
-            all: items.length,
-            unpaid: items.filter((o) => o.status === "UNPAID").length,
-            paid: items.filter((o) => o.status === "PAID").length,
-            canceled: items.filter((o) => o.status === "CANCELED").length,
-        }),
-        [items]
-    );
+    const countsByView: Record<ViewKey, number> = useMemo(() => {
+        // fallback: nếu vì lý do nào đó server chưa gửi counts thì vẫn đếm tạm theo items
+        if (!counts) {
+            return {
+                all: items.length,
+                unpaid: items.filter((o) => o.status === "UNPAID").length,
+                paid: items.filter((o) => o.status === "PAID").length,
+                canceled: items.filter((o) => o.status === "CANCELED").length,
+            };
+        }
+
+        return {
+            all: counts.ALL,
+            unpaid: counts.UNPAID,
+            paid: counts.PAID,
+            canceled: counts.CANCELED,
+        };
+    }, [counts, items]);
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(url);
@@ -352,16 +368,14 @@ export default function PaymentListClient({
                                 />
                             </th>
 
-                            <th className="px-3 py-2 text-left w-[130px]">CreatedAt</th>
+                            <th className="px-3 py-2 text-left w-[130px]">RefNo</th>
                             <th className="px-3 py-2 text-left w-[150px]">Amount</th>
-                            <th className="px-3 py-2 text-left w-[170px]">Purpose</th>
-                            <th className="px-3 py-2 text-left w-[120px]">Type</th>
-                            <th className="px-3 py-2 text-left w-[120px]">Status</th>
-                            <th className="px-3 py-2 text-left w-[110px]">Direction</th>
-                            <th className="px-3 py-2 text-left w-[140px]">Method</th>
-                            <th className="px-3 py-2 text-left w-[120px]">Ref</th>
-                            <th className="px-3 py-2 text-left">Link</th>
                             <th className="px-3 py-2 text-left w-[260px]">Note</th>
+                            <th className="px-3 py-2 text-left w-[120px]">Status</th>
+                            <th className="px-3 py-2 text-left w-[140px]">Method</th>
+                            <th className="px-3 py-2 text-left w-[120px]">Ngày tạo</th>
+                            <th className="px-3 py-2 text-left">Link</th>
+
                             <th className="px-3 py-2 text-right w-[70px]">Hành động</th>
                         </tr>
                     </thead>
@@ -399,12 +413,18 @@ export default function PaymentListClient({
 
                                         {/* CreatedAt (2 lines) */}
                                         <td className="px-3 py-3 align-top">
-                                            <div className="leading-5">{created.time}</div>
-                                            <div className="text-gray-600">{created.date}</div>
-                                            {p.direction === "OUT" ? (
-                                                <DotLabel label="Chi phí" tone="orange" />
+                                            <div className="leading-5">{p.refNo}</div>
+
+                                            {p.direction === "OUT" && p.type === "SERVICE" ? (
+                                                <DotLabel label="Phí sữa chữa" tone="orange" />
                                             ) : null}
-                                            {p.direction === "IN" ? (
+                                            {p.direction === "OUT" && p.type === "ACQUISITION" ? (
+                                                <DotLabel label="Phí mua hàng" tone="orange" />
+                                            ) : null}
+                                            {p.direction === "OUT" && p.type === "SHIPMENT" ? (
+                                                <DotLabel label="Phí giao hàng" tone="orange" />
+                                            ) : null}
+                                            {p.direction === "IN" && p.type === "ORDER" ? (
                                                 <DotLabel label="Doanh thu" tone="green" />
                                             ) : null}
                                         </td>
@@ -415,25 +435,32 @@ export default function PaymentListClient({
                                             <div className="text-xs text-gray-600 font-medium">{p.currency ?? "VND"}</div>
                                         </td>
 
-                                        {/* Purpose badge */}
-                                        <td className="px-3 py-3 align-top">
-                                            <PurposeBadge purpose={p.purpose ?? null} />
-                                        </td>
 
-                                        {/* Type badge */}
                                         <td className="px-3 py-3 align-top">
-                                            <TypeBadge type={p.type ?? null} />
+                                            {p.note ? (
+                                                <div className="text-sm text-gray-700 line-clamp-2" title={p.note}>
+                                                    {p.note}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
                                         </td>
 
                                         {/* Status badge */}
                                         <td className="px-3 py-3 align-top">
                                             <StatusBadge value={p.status} map={PAYMENT_STATUS_MAP} />
+                                            {p.purpose === "ORDER_FULL" ? (
+                                                <DotLabel label="Full" tone="gray" />
+                                            ) : null}
+                                            {p.purpose === "ORDER_DEPOSIT" ? (
+                                                <DotLabel label="Cọc" tone="gray" />
+                                            ) : null}
+                                            {p.purpose === "ORDER_REMAIN" ? (
+                                                <DotLabel label="Còn lại" tone="gray" />
+                                            ) : null}
+
                                         </td>
 
-                                        {/* Direction Dot */}
-                                        <td className="px-3 py-3 align-top">
-                                            <DirectionDot dir={p.direction ?? null} />
-                                        </td>
 
                                         {/* Method */}
                                         <td className="px-3 py-3 align-top">
@@ -496,15 +523,7 @@ export default function PaymentListClient({
                                         </td>
 
                                         {/* Note */}
-                                        <td className="px-3 py-3 align-top">
-                                            {p.note ? (
-                                                <div className="text-sm text-gray-700 line-clamp-2" title={p.note}>
-                                                    {p.note}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
+
 
                                         {/* Action */}
                                         <td className="relative px-3 py-3 text-right align-top">

@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2026-03-03T12:00:23.027Z",
-  "outputPath": "D:\\workspace\\project\\watch-shop\\src\\features\\__generated__\\zod",
+  "generatedAt": "2026-03-04T03:27:13.526Z",
+  "outputPath": "D:\\workspace\\project\\watch-shop\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",
     "schemas\\enums\\MarketSegmentScalarFieldEnum.schema.ts",
