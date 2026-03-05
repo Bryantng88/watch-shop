@@ -1,7 +1,57 @@
-// src/app/(admin)/admin/payments/_server/payment.repo.ts
-import { Prisma, PaymentStatus, PaymentType } from "@prisma/client";
+import {
+    Prisma,
+    PaymentStatus,
+    PaymentType,
+    PaymentDirection,
+    PaymentPurpose,
+    PaymentMethod,
+} from "@prisma/client";
 import { DB, dbOrTx } from "@/server/db/client";
 import type { PaymentListInput, PaymentListSort } from "../_helper/SearchParams";
+import { genRefNo } from "../../__components/AutoGenRef";
+
+/**
+ * Input chuẩn cho payment creation (để nhiều nơi gọi chung)
+ * - refNo sẽ được repo tự gen => không bắt buộc truyền vào
+ * - hỗ trợ snake_case & camelCase để đỡ vướng chỗ gọi
+ */
+export type CreatePaymentInput = {
+    refNo?: string;
+
+    amount: any; // number | Prisma.Decimal
+    currency: string;
+
+    method: PaymentMethod | string;
+    purpose: PaymentPurpose | string;
+    type: PaymentType | string;
+    direction: PaymentDirection | string;
+
+    status?: PaymentStatus | string;
+    paidAt?: Date | null;
+    reference?: string | null;
+    note?: string | null;
+
+    order_id?: string | null;
+    service_request_id?: string | null;
+    vendor_id?: string | null;
+    acquisition_id?: string | null;
+    shipment_id?: string | null;
+
+    // convenience camelCase
+    orderId?: string | null;
+};
+
+async function ensureRefNo(db: any, tx: any, maybeRefNo?: string) {
+    if (maybeRefNo) return maybeRefNo;
+
+    // ✅ gen dựa trên model payment, prefix PM
+    return genRefNo(tx, {
+        model: db.payment,
+        prefix: "PM",
+        field: "refNo",
+        padding: 6,
+    });
+}
 
 function buildOrderBy(sort?: PaymentListSort): Prisma.PaymentOrderByWithRelationInput {
     switch (sort) {
@@ -27,26 +77,157 @@ function parseDateMaybe(s?: string) {
     return Number.isFinite(d.getTime()) ? d : undefined;
 }
 
-/**
- * Build where from filters.
- * - includeStatus: true => include status filter (for list)
- * - includeStatus: false => ignore status filter (for segment counts)
- */
-function buildWhere(input: PaymentListInput, includeStatus: boolean): Prisma.PaymentWhereInput {
-    const q = (input.q || "").trim();
-    const where: Prisma.PaymentWhereInput = {};
+/** =========================
+ * Create ONE payment
+ * ========================= */
+export async function createPayment(tx: DB, input: CreatePaymentInput) {
+    const db = dbOrTx(tx);
+    const refNo = await ensureRefNo(db, tx, input.refNo);
 
-    if (includeStatus && input.status) where.status = input.status as any;
-    if (input.purpose) where.purpose = input.purpose as any;
-    if (input.type) where.type = input.type as any;
-    if (input.direction) where.direction = input.direction as any;
-    if (input.method) where.method = input.method as any;
-    if (input.currency) where.currency = input.currency;
+    return db.payment.create({
+        data: {
+            refNo,
+
+            method: input.method as any,
+            amount: input.amount as any,
+            currency: input.currency,
+
+            /**
+             * ⚠️ Nếu schema paidAt của bạn NOT NULL:
+             * - set default new Date() để tránh lỗi.
+             * Nếu bạn đã cho paidAt nullable thì có thể đổi về `?? null`.
+             */
+            paidAt: input.paidAt ?? new Date(),
+
+            reference: input.reference ?? null,
+            note: input.note ?? null,
+
+            direction: input.direction as any,
+            status: (input.status ?? PaymentStatus.UNPAID) as any,
+            purpose: input.purpose as any,
+            type: input.type as any,
+
+            order_id: (input.order_id ?? input.orderId ?? null) as any,
+            service_request_id: input.service_request_id ?? null,
+            vendor_id: input.vendor_id ?? null,
+            acquisition_id: input.acquisition_id ?? null,
+            shipment_id: input.shipment_id ?? null,
+        },
+        select: { id: true, refNo: true },
+    });
+}
+
+/** =========================
+ * Create MANY payments
+ * - ✅ mỗi record 1 refNo riêng
+ * - ✅ đảm bảo refNo unique theo ngày
+ * - ✅ tránh createMany vì không gen refNo theo từng row
+ * ========================= */
+export async function createMany(tx: DB, payments: CreatePaymentInput[]) {
+    if (!payments.length) return;
+    const db = dbOrTx(tx);
+
+    const createdIds: string[] = [];
+
+    for (const p of payments) {
+        const refNo = await ensureRefNo(db, tx, p.refNo);
+
+        const created = await db.payment.create({
+            data: {
+                refNo,
+
+                order_id: (p.order_id ?? p.orderId ?? null) as any,
+                service_request_id: p.service_request_id ?? null,
+                vendor_id: p.vendor_id ?? null,
+                acquisition_id: p.acquisition_id ?? null,
+                shipment_id: p.shipment_id ?? null,
+
+                amount: p.amount as any,
+                currency: p.currency,
+
+                status: (p.status ?? PaymentStatus.UNPAID) as any,
+                method: p.method as any,
+                purpose: p.purpose as any,
+                type: p.type as any,
+                direction: p.direction as any,
+
+                paidAt: p.paidAt ?? new Date(),
+                reference: p.reference ?? null,
+                note: p.note ?? null,
+            },
+            select: { id: true },
+        });
+
+        createdIds.push(created.id);
+    }
+
+    return { createdIds };
+}
+
+/** =========================
+ * Shipment fee helpers
+ * ========================= */
+export async function findShippingFeePaymentByShipmentId(shipment_id: string, tx: DB) {
+    const db = dbOrTx(tx);
+    return db.payment.findFirst({
+        where: { shipment_id, type: PaymentType.SHIPMENT },
+    });
+}
+
+export async function createShippingFeePayment(
+    input: {
+        shipmentId: string;
+        orderId: string | null;
+        amount: number;
+        currency: string;
+        method: PaymentMethod | string;
+        status?: PaymentStatus | string;
+        note?: string;
+    },
+    tx: DB
+) {
+    return createPayment(tx, {
+        orderId: input.orderId,
+        shipment_id: input.shipmentId,
+        amount: input.amount,
+        currency: input.currency,
+        method: input.method,
+        status: input.status ?? PaymentStatus.UNPAID,
+
+        type: PaymentType.SHIPMENT,
+        direction: PaymentDirection.OUT,
+        purpose: "SHIPPING_FEE" as any, // nếu bạn có enum purpose đúng thì thay vào
+
+        note: input.note ?? null,
+    });
+}
+
+/** =========================
+ * Admin LIST + COUNTS (fix segment count)
+ * - ✅ Server filter theo status (tab) rồi mới paginate
+ * - ✅ countsByView đếm trên toàn bộ dataset (không theo trang)
+ * ========================= */
+export async function listAdmin(
+    tx: DB,
+    input: PaymentListInput & { page: number; pageSize: number }
+) {
+    const db = dbOrTx(tx);
+
+    const q = (input.q || "").trim();
+
+    // whereBase: tất cả filter trừ status-tab
+    const whereBase: Prisma.PaymentWhereInput = {};
+
+    if (input.purpose) whereBase.purpose = input.purpose as any;
+    if (input.type) whereBase.type = input.type as any;
+    if (input.direction) whereBase.direction = input.direction as any;
+    if (input.method) whereBase.method = input.method as any;
+    if (input.currency) whereBase.currency = input.currency;
 
     const paidFrom = parseDateMaybe(input.paidFrom);
     const paidTo = parseDateMaybe(input.paidTo);
     if (paidFrom || paidTo) {
-        where.paidAt = {
+        whereBase.paidAt = {
             ...(paidFrom ? { gte: paidFrom } : {}),
             ...(paidTo ? { lte: paidTo } : {}),
         };
@@ -55,14 +236,14 @@ function buildWhere(input: PaymentListInput, includeStatus: boolean): Prisma.Pay
     const createdFrom = parseDateMaybe(input.createdFrom);
     const createdTo = parseDateMaybe(input.createdTo);
     if (createdFrom || createdTo) {
-        where.createdAt = {
+        whereBase.createdAt = {
             ...(createdFrom ? { gte: createdFrom } : {}),
             ...(createdTo ? { lte: createdTo } : {}),
         };
     }
 
     if (q) {
-        where.OR = [
+        whereBase.OR = [
             { id: { contains: q, mode: "insensitive" } },
             { refNo: { contains: q, mode: "insensitive" } },
             { reference: { contains: q, mode: "insensitive" } },
@@ -76,69 +257,64 @@ function buildWhere(input: PaymentListInput, includeStatus: boolean): Prisma.Pay
         ];
     }
 
-    return where;
-}
-
-export async function listAdmin(
-    tx: DB,
-    input: PaymentListInput & { page: number; pageSize: number }
-) {
-    const db = dbOrTx(tx);
-
-    const where = buildWhere(input, true);
-    const baseWhere = buildWhere(input, false); // ✅ bỏ status để đếm segment
+    // whereList: filter theo tab (status) rồi mới paginate
+    const whereList: Prisma.PaymentWhereInput = {
+        ...whereBase,
+        ...(input.status ? { status: input.status as any } : {}),
+    };
 
     const skip = (input.page - 1) * input.pageSize;
     const take = input.pageSize;
 
-    const [total, items, grouped] = await Promise.all([
-        db.payment.count({ where: baseWhere }), // ✅ total theo filter chung (không theo status)
+    const select: Prisma.PaymentSelect = {
+        id: true,
+        refNo: true,
+
+        method: true,
+        amount: true,
+        currency: true,
+        paidAt: true,
+        createdAt: true,
+
+        reference: true,
+        note: true,
+
+        direction: true,
+        status: true,
+        purpose: true,
+        type: true,
+
+        order_id: true,
+        service_request_id: true,
+        vendor_id: true,
+        acquisition_id: true,
+        shipment_id: true,
+    };
+
+    const [totalAll, total, items, cPaid, cUnpaid, cCanceled] = await Promise.all([
+        db.payment.count({ where: whereBase }),
+        db.payment.count({ where: whereList }),
         db.payment.findMany({
-            where,
+            where: whereList,
             orderBy: buildOrderBy(input.sort),
             skip,
             take,
-            select: {
-                id: true,
-                refNo: true,
-
-                method: true,
-                amount: true,
-                currency: true,
-                paidAt: true,
-                createdAt: true,
-
-                reference: true,
-                note: true,
-
-                direction: true,
-                status: true,
-                purpose: true,
-                type: true,
-
-                order_id: true,
-                service_request_id: true,
-                vendor_id: true,
-                acquisition_id: true,
-                shipment_id: true,
-            },
+            select,
         }),
-        db.payment.groupBy({
-            by: ["status"],
-            where: baseWhere,
-            _count: { _all: true },
-        }),
+        db.payment.count({ where: { ...whereBase, status: "PAID" as any } }),
+        db.payment.count({ where: { ...whereBase, status: "UNPAID" as any } }),
+        db.payment.count({ where: { ...whereBase, status: "CANCELED" as any } }),
     ]);
 
-    const map: Record<string, number> = {};
-    for (const g of grouped) map[String(g.status)] = g._count._all;
-
-    const counts = {
-        ALL: total,
-        UNPAID: map[String(PaymentStatus.UNPAID)] ?? 0,
-        PAID: map[String(PaymentStatus.PAID)] ?? 0,
-        CANCELED: map[String(PaymentStatus.CANCELED)] ?? 0,
+    return {
+        total,
+        totalAll,
+        items,
+        counts: {
+            all: totalAll,
+            paid: cPaid,
+            unpaid: cUnpaid,
+            canceled: cCanceled,
+        },
     };
-
-    return { total, items, counts };
 }
