@@ -2,50 +2,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import SegmentTabs from "@/components/tabs/SegmenTabs";
-import { StatusBadge } from "@/components/badges/StatusBadge";
-import DotLabel from "../../__components/DotLabel";
-import GenericActionMenu from "../../__components/GenericActionMenu";
-
-// Nếu bạn có map riêng cho PAYMENT status thì import map đó.
-// Tạm thời dùng map service (nếu bạn đã có map payment thì đổi lại).
-import { SERVICE_REQUEST_STATUS as PAYMENT_STATUS_MAP } from "@/components/badges/StatusMaps";
-
-type PaymentStatus = "UNPAID" | "PAID" | "CANCELED" | string;
-type PaymentDirection = "IN" | "OUT" | null;
-type PaymentType = "ORDER" | "SHIPMENT" | "INVOICE" | "ACQUISITION" | "SERVICE" | "OTHER" | string;
-type PaymentPurpose =
-    | "ORDER_DEPOSIT"
-    | "ORDER_REMAIN"
-    | "ORDER_FULL"
-    | "SERVICE_REQUEST"
-    | "MAINTENANCE_COST"
-    | "SERVICE_FEE"
-    | "SHIPMENT_DEPOSIT"
-    | "SHIPMENT_REMAIN"
-    | "SHIPMENT_FULL"
-    | "ACQUISITION_DEPOSIT"
-    | "ACQUISITION_REMAIN"
-    | "ACQUISITION_FULL"
-    | string;
-
-export type PaymentItem = {
+type PaymentRow = {
     id: string;
-    refNo: string;
+    refNo?: string | null;
+
+    amount: number;
+    currency: string;
+
+    method: string;
+    status: string;
+    purpose: string;
+    type: string;
+    direction?: string | null;
+
     createdAt: string;
     paidAt?: string | null;
-
-    amount: number; // bạn đang serialize Decimal -> Number rồi
-    currency: string; // "VND"
-    status: PaymentStatus;
-
-    direction?: PaymentDirection; // IN/OUT/null
-    method?: string | null; // CASH/BANK_TRANSFER/COD...
-    purpose?: PaymentPurpose | null;
-    type?: PaymentType | null;
 
     reference?: string | null;
     note?: string | null;
@@ -57,289 +30,423 @@ export type PaymentItem = {
     shipment_id?: string | null;
 };
 
-type PageProps = {
-    items: PaymentItem[];
+type ViewKey = "all" | "unpaid" | "paid" | "canceled";
+
+type Counts = {
+    all: number;
+    unpaid: number;
+    paid: number;
+    canceled: number;
+};
+
+function fmtMoney(n: number) {
+    try {
+        return n.toLocaleString("vi-VN");
+    } catch {
+        return String(n);
+    }
+}
+
+function fmtDT(s?: string | null) {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return "-";
+    return d.toLocaleString("vi-VN");
+}
+
+function dotColorByType(type?: string) {
+    switch ((type || "").toUpperCase()) {
+        case "ORDER":
+            return "bg-emerald-500";
+        case "SERVICE":
+            return "bg-indigo-500";
+        case "SHIPMENT":
+            return "bg-orange-500";
+        case "ACQUISITION":
+            return "bg-pink-500";
+        default:
+            return "bg-slate-400";
+    }
+}
+
+function pillClassByDirection(dir?: string | null) {
+    const d = (dir || "").toUpperCase();
+    if (d === "IN") return "bg-blue-50 text-blue-700 border-blue-200";
+    if (d === "OUT") return "bg-orange-50 text-orange-700 border-orange-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
+}
+
+function statusPillClass(status?: string) {
+    const s = (status || "").toUpperCase();
+    if (s === "PAID") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (s === "UNPAID") return "bg-gray-50 text-gray-700 border-gray-200";
+    if (s === "CANCELED" || s === "CANCELLED")
+        return "bg-red-50 text-red-700 border-red-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
+}
+
+function viewToStatus(view: ViewKey): string | null {
+    switch (view) {
+        case "unpaid":
+            return "UNPAID";
+        case "paid":
+            return "PAID";
+        case "canceled":
+            return "CANCELED";
+        case "all":
+        default:
+            return null;
+    }
+}
+
+export default function PaymentListClient(props: {
+    items: PaymentRow[];
     total: number;
     page: number;
     pageSize: number;
     totalPages: number;
-    rawSearchParams: Record<string, string | string[] | undefined>;
-    counts?: {
-        ALL: number;
-        UNPAID: number;
-        PAID: number;
-        CANCELED: number;
-    };
-};
+    rawSearchParams: { [key: string]: string | string[] | undefined };
 
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
-}
-
-function fmtDateTime(d?: string | null) {
-    if (!d) return "-";
-    const dt = new Date(d);
-    const time = dt.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-    const date = dt.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
-    return { time, date };
-}
-
-function fmtMoney(n?: number | null) {
-    if (n == null) return "-";
-    // format VND kiểu 3.500.000
-    const s = Math.round(n).toString();
-    const parts: string[] = [];
-    let i = s.length;
-    while (i > 3) {
-        parts.unshift(s.slice(i - 3, i));
-        i -= 3;
-    }
-    parts.unshift(s.slice(0, i));
-    return parts.join(".");
-}
-
-/** =====================
- * Tabs / Segments
- * ===================== */
-type ViewKey = "all" | "unpaid" | "paid" | "canceled";
-
-const VIEW_LABELS: Record<ViewKey, string> = {
-    all: "Tất cả",
-    unpaid: "UNPAID",
-    paid: "PAID",
-    canceled: "CANCELED",
-};
-
-function matchesView(o: PaymentItem, view: ViewKey) {
-    switch (view) {
-        case "unpaid":
-            return o.status === "UNPAID";
-        case "paid":
-            return o.status === "PAID";
-        case "canceled":
-            return o.status === "CANCELED";
-        case "all":
-        default:
-            return true;
-    }
-}
-
-function DirectionDot({ dir }: { dir?: PaymentDirection }) {
-    if (!dir) return <span className="text-gray-400">-</span>;
-    if (dir === "IN") return <DotLabel label="IN" tone="green" />;
-    return <DotLabel label="OUT" tone="orange" />;
-}
-
-function PurposeBadge({ purpose }: { purpose?: string | null }) {
-    if (!purpose) return <span className="text-gray-400">-</span>;
-    return (
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-            {purpose}
-        </span>
-    );
-}
-
-function TypeBadge({ type }: { type?: string | null }) {
-    if (!type) return <span className="text-gray-400">-</span>;
-    return (
-        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-            {type}
-        </span>
-    );
-}
-
-function MonoId({ v, prefix }: { v?: string | null; prefix?: string }) {
-    if (!v) return <span className="text-gray-400">-</span>;
-    return (
-        <div className="max-w-[260px]">
-            {prefix ? <div className="text-xs font-medium text-gray-700">{prefix}</div> : null}
-            <div className="truncate font-mono text-[11px] text-gray-500" title={v}>
-                {v}
-            </div>
-        </div>
-    );
-}
-
-export default function PaymentListClient({
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages,
-    counts,
-    rawSearchParams,
-}: PageProps) {
+    /**
+     * ✅ OPTIONAL nhưng rất nên có để tab đếm theo toàn bộ dataset (không theo trang)
+     * Nếu bạn đã fix server trả counts, truyền vào đây.
+     */
+    counts?: Partial<Counts>;
+}) {
+    const router = useRouter();
+    const pathname = usePathname();
     const sp = useSearchParams();
-    const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
 
-    // bulk states
-    const [showBulkBar, setShowBulkBar] = useState(false);
+    const items = props.items ?? [];
+
+    // ======== Current view from URL (view=all|unpaid|paid|canceled) ========
+    const currentView: ViewKey = useMemo(() => {
+        const v = (sp.get("view") || "all").toLowerCase();
+        if (v === "unpaid" || v === "paid" || v === "canceled" || v === "all")
+            return v;
+        return "all";
+    }, [sp]);
+
+    // ======== Effective status (tab controls status) ========
+    const effectiveStatus = useMemo(() => viewToStatus(currentView), [currentView]);
+
+    // ======== Other filters from URL ========
+    const q = sp.get("q") ?? "";
+    const purpose = sp.get("purpose") ?? "";
+    const direction = sp.get("direction") ?? "";
+    const method = sp.get("method") ?? "";
+    const sort = sp.get("sort") ?? "createdDesc";
+
+    // ======== Selection ========
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [showBulkBar, setShowBulkBar] = useState(false);
 
-    const currentView = useMemo(() => (sp.get("view") || "all") as ViewKey, [sp]);
-
-    // reset selection khi đổi tab
+    // Reset selection when view/filter changes (đúng behavior bạn muốn)
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-    }, [currentView]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentView, q, purpose, direction, method, sort, props.page]);
 
-    const setViewHref = (view: ViewKey) => {
-        const next = new URLSearchParams(url);
-        if (view === "all") next.delete("view");
-        else next.set("view", view);
-        next.set("page", "1");
-        return `/admin/payments?${next.toString()}`;
-    };
+    // Auto show/hide bulk bar
+    useEffect(() => {
+        setShowBulkBar(selectedIds.length > 0);
+    }, [selectedIds.length]);
 
-    const displayItems = useMemo(() => items.filter((o) => matchesView(o, currentView)), [items, currentView]);
+    // ======== Display items (server đã lọc status theo view rồi thì không cần filter nữa)
+    // Nhưng để an toàn: nếu server chưa lọc theo view => lọc client-side theo effectiveStatus
+    const displayItems = useMemo(() => {
+        if (!effectiveStatus) return items;
+        return items.filter((x) => (x.status || "").toUpperCase() === effectiveStatus);
+    }, [items, effectiveStatus]);
 
-    const countsByView: Record<ViewKey, number> = useMemo(() => {
-        // fallback: nếu vì lý do nào đó server chưa gửi counts thì vẫn đếm tạm theo items
-        if (!counts) {
+    // ======== Select all helpers (trên trang hiện tại) ========
+    const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
+
+    const allChecked =
+        pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const someChecked =
+        pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
+
+    // ======== Counts for tabs ========
+    const counts: Counts = useMemo(() => {
+        // nếu server có counts => dùng luôn
+        if (props.counts?.all != null) {
             return {
-                all: items.length,
-                unpaid: items.filter((o) => o.status === "UNPAID").length,
-                paid: items.filter((o) => o.status === "PAID").length,
-                canceled: items.filter((o) => o.status === "CANCELED").length,
+                all: props.counts.all ?? 0,
+                unpaid: props.counts.unpaid ?? 0,
+                paid: props.counts.paid ?? 0,
+                canceled: props.counts.canceled ?? 0,
             };
         }
 
-        return {
-            all: counts.ALL,
-            unpaid: counts.UNPAID,
-            paid: counts.PAID,
-            canceled: counts.CANCELED,
-        };
-    }, [counts, items]);
+        // fallback: dùng total của view hiện tại (không hoàn hảo, nhưng không sai theo trang)
+        const base: Counts = { all: 0, unpaid: 0, paid: 0, canceled: 0 };
+        if (currentView === "all") base.all = props.total;
+        if (currentView === "unpaid") base.unpaid = props.total;
+        if (currentView === "paid") base.paid = props.total;
+        if (currentView === "canceled") base.canceled = props.total;
+        // nếu bạn muốn hiển thị luôn "All" khi chưa có counts => set all=total khi view!=all cũng được,
+        // nhưng sẽ misleading nên mình để 0.
+        return base;
+    }, [props.counts, props.total, currentView]);
 
-    const gotoPageHref = (p: number) => {
-        const next = new URLSearchParams(url);
+    // ======== URL helpers ========
+    function setParam(next: URLSearchParams, key: string, value: string | null) {
+        if (!value) next.delete(key);
+        else next.set(key, value);
+    }
+
+    function pushWith(next: URLSearchParams) {
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+
+        // ✅ tab đổi => reset page
+        next.set("page", "1");
+
+        // IMPORTANT: status select là “filter phụ”, nhưng tab là filter chính
+        // => không store status param riêng nữa để tránh PAID mà vẫn UNPAID do URL bẩn
+        next.delete("status");
+
+        pushWith(next);
+    }
+
+    function applyFilters(form: {
+        q: string;
+        purpose: string;
+        direction: string;
+        method: string;
+        sort: string;
+    }) {
+        const next = new URLSearchParams(sp.toString());
+        setParam(next, "q", form.q.trim() || null);
+        setParam(next, "purpose", form.purpose || null);
+        setParam(next, "direction", form.direction || null);
+        setParam(next, "method", form.method || null);
+        setParam(next, "sort", form.sort || "createdDesc");
+
+        next.set("page", "1");
+        pushWith(next);
+    }
+
+    function clearFilters() {
+        const next = new URLSearchParams(sp.toString());
+        next.delete("q");
+        next.delete("purpose");
+        next.delete("direction");
+        next.delete("method");
+        next.delete("sort");
+        next.set("page", "1");
+        pushWith(next);
+    }
+
+    function goPage(p: number) {
+        const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
-        next.set("pageSize", String(pageSize));
-        return `/admin/payments?${next.toString()}`;
-    };
+        pushWith(next);
+    }
 
-    // rule bulk: cho phép select mọi status
-    const isRowSelectable = (_o: PaymentItem) => true;
+    // ======== Local controlled inputs (so you can type then click "Lọc") ========
+    const [formQ, setFormQ] = useState(q);
+    const [formPurpose, setFormPurpose] = useState(purpose);
+    const [formDirection, setFormDirection] = useState(direction);
+    const [formMethod, setFormMethod] = useState(method);
+    const [formSort, setFormSort] = useState(sort);
 
-    const allSelectableIdsInView = useMemo(
-        () => displayItems.filter(isRowSelectable).map((o) => o.id),
-        [displayItems]
-    );
-
-    const allChecked =
-        allSelectableIdsInView.length > 0 &&
-        allSelectableIdsInView.every((id) => selectedIds.includes(id));
-
-    const toggleAllInView = (checked: boolean) => {
-        if (!checked) {
-            const next = selectedIds.filter((id) => !allSelectableIdsInView.includes(id));
-            setSelectedIds(next);
-            setShowBulkBar(next.length > 0);
-            return;
-        }
-        const merged = Array.from(new Set([...selectedIds, ...allSelectableIdsInView]));
-        setSelectedIds(merged);
-        setShowBulkBar(merged.length > 0);
-    };
-
-    const tabs = (Object.keys(VIEW_LABELS) as ViewKey[]).map((k) => ({
-        key: k,
-        label: VIEW_LABELS[k],
-        count: countsByView[k],
-        href: setViewHref(k),
-        active: currentView === k,
-    }));
+    useEffect(() => setFormQ(q), [q]);
+    useEffect(() => setFormPurpose(purpose), [purpose]);
+    useEffect(() => setFormDirection(direction), [direction]);
+    useEffect(() => setFormMethod(method), [method]);
+    useEffect(() => setFormSort(sort), [sort]);
 
     return (
         <div className="space-y-4">
-            {/* HEADER */}
+            {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Payments</h1>
-
-                <Link href="/admin" className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">
+                <div>
+                    <h1 className="text-2xl font-semibold">Payments</h1>
+                </div>
+                <button
+                    type="button"
+                    className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                    onClick={() => router.push("/admin")}
+                >
                     ← Admin
-                </Link>
+                </button>
             </div>
 
-            {/* TABS */}
-            <SegmentTabs tabs={tabs} />
-
-            {/* FILTER FORM */}
-            <form action="/admin/payments" method="get" className="flex flex-wrap gap-2 items-end">
-                {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Tìm kiếm</label>
-                    <input
-                        name="q"
-                        defaultValue={(rawSearchParams.q as string) ?? ""}
-                        placeholder="id / reference / note / SR..."
-                        className="h-9 rounded border px-2"
-                    />
-                </div>
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Status</label>
-                    <input
-                        name="status"
-                        defaultValue={(rawSearchParams.status as string) ?? ""}
-                        placeholder="UNPAID / PAID / ..."
-                        className="h-9 rounded border px-2"
-                    />
-                </div>
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Purpose</label>
-                    <input
-                        name="purpose"
-                        defaultValue={(rawSearchParams.purpose as string) ?? ""}
-                        placeholder="ORDER_FULL / MAINTENANCE_COST..."
-                        className="h-9 rounded border px-2"
-                    />
-                </div>
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Direction</label>
-                    <input
-                        name="direction"
-                        defaultValue={(rawSearchParams.direction as string) ?? ""}
-                        placeholder="IN / OUT"
-                        className="h-9 rounded border px-2"
-                    />
-                </div>
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Sắp xếp</label>
-                    <select
-                        name="sort"
-                        defaultValue={(rawSearchParams.sort as string) ?? "createdDesc"}
-                        className="h-9 rounded border px-2"
+            {/* Tabs */}
+            <div className="border-b">
+                <div className="flex gap-8 items-end">
+                    <button
+                        type="button"
+                        onClick={() => setView("all")}
+                        className={`pb-2 text-sm ${currentView === "all"
+                                ? "border-b-2 border-black font-semibold"
+                                : "text-gray-500"
+                            }`}
                     >
-                        <option value="createdDesc">Tạo ↓</option>
-                        <option value="createdAsc">Tạo ↑</option>
-                        <option value="paidDesc">Paid ↓</option>
-                        <option value="paidAsc">Paid ↑</option>
-                        <option value="amountDesc">Amount ↓</option>
-                        <option value="amountAsc">Amount ↑</option>
-                    </select>
+                        Tất cả{" "}
+                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
+                            {counts.all ?? 0}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setView("unpaid")}
+                        className={`pb-2 text-sm ${currentView === "unpaid"
+                                ? "border-b-2 border-black font-semibold"
+                                : "text-gray-500"
+                            }`}
+                    >
+                        UNPAID{" "}
+                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
+                            {counts.unpaid ?? 0}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setView("paid")}
+                        className={`pb-2 text-sm ${currentView === "paid"
+                                ? "border-b-2 border-black font-semibold"
+                                : "text-gray-500"
+                            }`}
+                    >
+                        PAID{" "}
+                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-black text-white text-xs">
+                            {counts.paid ?? 0}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setView("canceled")}
+                        className={`pb-2 text-sm ${currentView === "canceled"
+                                ? "border-b-2 border-black font-semibold"
+                                : "text-gray-500"
+                            }`}
+                    >
+                        CANCELED{" "}
+                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
+                            {counts.canceled ?? 0}
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    applyFilters({
+                        q: formQ,
+                        purpose: formPurpose,
+                        direction: formDirection,
+                        method: formMethod,
+                        sort: formSort,
+                    });
+                }}
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
+                        <input
+                            value={formQ}
+                            onChange={(e) => setFormQ(e.target.value)}
+                            placeholder="id / refNo / reference / note / SR..."
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Purpose</div>
+                        <input
+                            value={formPurpose}
+                            onChange={(e) => setFormPurpose(e.target.value)}
+                            placeholder="ORDER_FULL / MAINTENANCE_COST..."
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Direction</div>
+                        <select
+                            value={formDirection}
+                            onChange={(e) => setFormDirection(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="">(All)</option>
+                            <option value="IN">IN</option>
+                            <option value="OUT">OUT</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Method</div>
+                        <select
+                            value={formMethod}
+                            onChange={(e) => setFormMethod(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="">(All)</option>
+                            <option value="CASH">CASH</option>
+                            <option value="BANK_TRANSFER">BANK_TRANSFER</option>
+                            <option value="COD">COD</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
+                        <select
+                            value={formSort}
+                            onChange={(e) => setFormSort(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="createdDesc">Tạo ↓</option>
+                            <option value="createdAsc">Tạo ↑</option>
+                            <option value="paidDesc">Paid ↓</option>
+                            <option value="paidAsc">Paid ↑</option>
+                            <option value="amountDesc">Amount ↓</option>
+                            <option value="amountAsc">Amount ↑</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <button className="h-9 rounded border px-3" type="submit">
+                <div className="flex items-center gap-3">
+                    <button
+                        type="submit"
+                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                    >
                         Lọc
                     </button>
-                    <Link href="/admin/payments" className="h-9 rounded border px-3 flex items-center">
+                    <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                    >
                         Clear
-                    </Link>
+                    </button>
+
+                    <div className="ml-auto text-sm text-gray-600">
+                        Đã chọn: <b>{selectedIds.length}</b>
+                    </div>
                 </div>
             </form>
 
-            {/* BULK BAR */}
+            {/* BULK BAR (đúng như ảnh bạn gửi) */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span className="font-medium text-blue-700">{selectedIds.length} payment đã chọn</span>
+                    <span className="font-medium text-blue-700">
+                        {selectedIds.length} payment đã chọn
+                    </span>
 
                     <button
                         className="px-3 py-1 border rounded text-sm"
@@ -351,220 +458,230 @@ export default function PaymentListClient({
                     >
                         Bỏ chọn
                     </button>
+
+                    {/* Bạn thêm bulk actions ở đây nếu muốn */}
                 </div>
             )}
 
-            {/* TABLE */}
-            <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full text-sm border-collapse">
-                    <thead className="bg-gray-50 border-b sticky top-0 z-10">
-                        <tr>
-                            <th className="px-3 py-2 w-[42px]">
-                                <input
-                                    type="checkbox"
-                                    checked={allChecked}
-                                    onChange={(e) => toggleAllInView(e.target.checked)}
-                                    disabled={allSelectableIdsInView.length === 0}
-                                />
-                            </th>
+            {/* Table */}
+            <div className="border rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr className="text-left text-gray-700">
+                                <th className="w-10 px-3 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={allChecked}
+                                        ref={(el) => {
+                                            if (el) el.indeterminate = someChecked;
+                                        }}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedIds((prev) =>
+                                                    Array.from(new Set([...prev, ...pageIds]))
+                                                );
+                                            } else {
+                                                setSelectedIds((prev) =>
+                                                    prev.filter((id) => !pageIds.includes(id))
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </th>
 
-                            <th className="px-3 py-2 text-left w-[130px]">RefNo</th>
-                            <th className="px-3 py-2 text-left w-[150px]">Amount</th>
-                            <th className="px-3 py-2 text-left w-[260px]">Note</th>
-                            <th className="px-3 py-2 text-left w-[120px]">Status</th>
-                            <th className="px-3 py-2 text-left w-[140px]">Method</th>
-                            <th className="px-3 py-2 text-left w-[120px]">Ngày tạo</th>
-                            <th className="px-3 py-2 text-left">Link</th>
-
-                            <th className="px-3 py-2 text-right w-[70px]">Hành động</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {displayItems.length === 0 ? (
-                            <tr>
-                                <td colSpan={12} className="py-8 text-center text-gray-500">
-                                    Không có dữ liệu trong tab này
-                                </td>
+                                <th className="px-3 py-3">RefNo</th>
+                                <th className="px-3 py-3">Amount</th>
+                                <th className="px-3 py-3">Note</th>
+                                <th className="px-3 py-3">Status</th>
+                                <th className="px-3 py-3">Method</th>
+                                <th className="px-3 py-3">Ngày tạo</th>
+                                <th className="px-3 py-3">Link</th>
+                                <th className="px-3 py-3 text-right">Hành động</th>
                             </tr>
-                        ) : (
-                            displayItems.map((p, idx) => {
-                                const selectable = isRowSelectable(p);
-                                const created = fmtDateTime(p.createdAt);
-                                const paid = fmtDateTime(p.paidAt ?? null);
+                        </thead>
 
-                                return (
-                                    <tr key={p.id} className={cls("border-b hover:bg-gray-50", idx % 2 === 1 && "bg-gray-50/30")}>
-                                        <td className="px-3 py-3 align-top">
-                                            <input
-                                                type="checkbox"
-                                                disabled={!selectable}
-                                                checked={selectedIds.includes(p.id)}
-                                                onChange={(e) => {
-                                                    const next = e.target.checked
-                                                        ? [...selectedIds, p.id]
-                                                        : selectedIds.filter((id) => id !== p.id);
+                        <tbody>
+                            {displayItems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                        Không có dữ liệu trong tab này
+                                    </td>
+                                </tr>
+                            ) : (
+                                displayItems.map((row) => {
+                                    const checked = selectedIds.includes(row.id);
 
-                                                    setSelectedIds(next);
-                                                    setShowBulkBar(next.length > 0);
-                                                }}
-                                            />
-                                        </td>
+                                    return (
+                                        <tr key={row.id} className="border-t">
+                                            <td className="w-10 px-3 py-4 align-top">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedIds((prev) =>
+                                                                Array.from(new Set([...prev, row.id]))
+                                                            );
+                                                        } else {
+                                                            setSelectedIds((prev) => prev.filter((id) => id !== row.id));
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
 
-                                        {/* CreatedAt (2 lines) */}
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="leading-5">{p.refNo}</div>
-
-                                            {p.direction === "OUT" && p.type === "SERVICE" ? (
-                                                <DotLabel label="Phí sữa chữa" tone="orange" />
-                                            ) : null}
-                                            {p.direction === "OUT" && p.type === "ACQUISITION" ? (
-                                                <DotLabel label="Phí mua hàng" tone="orange" />
-                                            ) : null}
-                                            {p.direction === "OUT" && p.type === "SHIPMENT" ? (
-                                                <DotLabel label="Phí giao hàng" tone="orange" />
-                                            ) : null}
-                                            {p.direction === "IN" && p.type === "ORDER" ? (
-                                                <DotLabel label="Doanh thu" tone="green" />
-                                            ) : null}
-                                        </td>
-
-                                        {/* Amount (primary) */}
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="text-base font-semibold leading-5">{fmtMoney(p.amount)}</div>
-                                            <div className="text-xs text-gray-600 font-medium">{p.currency ?? "VND"}</div>
-                                        </td>
-
-
-                                        <td className="px-3 py-3 align-top">
-                                            {p.note ? (
-                                                <div className="text-sm text-gray-700 line-clamp-2" title={p.note}>
-                                                    {p.note}
+                                            {/* RefNo + meta line */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="flex items-start gap-2">
+                                                    <span className={`mt-1 inline-block w-2 h-2 rounded-full ${dotColorByType(row.type)}`} />
+                                                    <div>
+                                                        <div className="font-medium">
+                                                            {row.refNo && row.refNo.trim() ? row.refNo : "-"}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">
+                                                            {row.purpose} • {row.type}
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <span
+                                                                className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${pillClassByDirection(
+                                                                    row.direction
+                                                                )}`}
+                                                            >
+                                                                {(row.direction || "-").toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
+                                            </td>
 
-                                        {/* Status badge */}
-                                        <td className="px-3 py-3 align-top">
-                                            <StatusBadge value={p.status} map={PAYMENT_STATUS_MAP} />
-                                            {p.purpose === "ORDER_FULL" ? (
-                                                <DotLabel label="Full" tone="gray" />
-                                            ) : null}
-                                            {p.purpose === "ORDER_DEPOSIT" ? (
-                                                <DotLabel label="Cọc" tone="gray" />
-                                            ) : null}
-                                            {p.purpose === "ORDER_REMAIN" ? (
-                                                <DotLabel label="Còn lại" tone="gray" />
-                                            ) : null}
-
-                                        </td>
-
-
-                                        {/* Method */}
-                                        <td className="px-3 py-3 align-top">
-                                            <span className={cls("text-xs", !p.method && "text-gray-400")}>
-                                                {p.method ?? "-"}
-                                            </span>
-                                        </td>
-
-                                        {/* Ref */}
-                                        <td className="px-3 py-3 align-top">
-                                            {p.reference ? (
-                                                <div className="font-mono text-[11px] truncate max-w-[110px]" title={p.reference}>
-                                                    {p.reference}
+                                            {/* Amount */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-semibold text-base">
+                                                    {fmtMoney(Number(row.amount || 0))}
                                                 </div>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </td>
+                                                <div className="text-xs text-gray-500">{row.currency}</div>
+                                            </td>
 
-                                        {/* Link (Order/SR/Vendor/Shipment/Acq) */}
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="space-y-1">
-                                                {p.order_id ? (
-                                                    <Link href={`/admin/orders/${p.order_id}`} className="block hover:underline">
-                                                        <MonoId v={p.order_id} prefix="Order" />
-                                                    </Link>
-                                                ) : null}
+                                            {/* Note */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="text-sm">{row.note || "-"}</div>
+                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
+                                            </td>
 
-                                                {p.service_request_id ? (
-                                                    <Link
-                                                        href={`/admin/services?open=${encodeURIComponent(p.service_request_id)}`}
-                                                        className="block hover:underline"
-                                                    >
-                                                        <MonoId v={p.service_request_id} prefix="SR" />
-                                                    </Link>
-                                                ) : null}
+                                            {/* Status */}
+                                            <td className="px-3 py-4 align-top">
+                                                <span
+                                                    className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
+                                                        row.status
+                                                    )}`}
+                                                >
+                                                    {(row.status || "-").toUpperCase()}
+                                                </span>
+                                            </td>
 
-                                                {p.vendor_id ? (
-                                                    <Link href={`/admin/vendors/${p.vendor_id}`} className="block hover:underline">
-                                                        <MonoId v={p.vendor_id} prefix="Vendor" />
-                                                    </Link>
-                                                ) : null}
+                                            {/* Method */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-medium">{row.method}</div>
+                                            </td>
 
-                                                {p.shipment_id ? (
-                                                    <Link href={`/admin/shipments/${p.shipment_id}`} className="block hover:underline">
-                                                        <MonoId v={p.shipment_id} prefix="Shipment" />
-                                                    </Link>
-                                                ) : null}
+                                            {/* Dates */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="text-sm">{fmtDT(row.createdAt)}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Paid: {fmtDT(row.paidAt)}
+                                                </div>
+                                            </td>
 
-                                                {p.acquisition_id ? (
-                                                    <Link href={`/admin/acquisitions/${p.acquisition_id}`} className="block hover:underline">
-                                                        <MonoId v={p.acquisition_id} prefix="Acquisition" />
-                                                    </Link>
-                                                ) : null}
+                                            {/* Link */}
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="space-y-1 text-sm">
+                                                    {row.order_id ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Order</span>{" "}
+                                                            <span className="text-gray-600">{row.order_id}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {row.service_request_id ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">SR</span>{" "}
+                                                            <span className="text-gray-600">{row.service_request_id}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {row.vendor_id ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Vendor</span>{" "}
+                                                            <span className="text-gray-600">{row.vendor_id}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {row.shipment_id ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Shipment</span>{" "}
+                                                            <span className="text-gray-600">{row.shipment_id}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {row.acquisition_id ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Acq</span>{" "}
+                                                            <span className="text-gray-600">{row.acquisition_id}</span>
+                                                        </div>
+                                                    ) : null}
 
-                                                {!p.order_id && !p.service_request_id && !p.vendor_id && !p.shipment_id && !p.acquisition_id ? (
-                                                    <span className="text-gray-400">-</span>
-                                                ) : null}
-                                            </div>
-                                        </td>
+                                                    {!row.order_id &&
+                                                        !row.service_request_id &&
+                                                        !row.vendor_id &&
+                                                        !row.shipment_id &&
+                                                        !row.acquisition_id ? (
+                                                        <span className="text-gray-400">-</span>
+                                                    ) : null}
+                                                </div>
+                                            </td>
 
-                                        {/* Note */}
-
-
-                                        {/* Action */}
-                                        <td className="relative px-3 py-3 text-right align-top">
-                                            <GenericActionMenu
-                                                id={p.id}
-                                                actions={[
-                                                    {
-                                                        label: "Xem chi tiết",
-                                                        onClick: () => (window.location.href = `/admin/payments/${p.id}`),
-                                                    },
-                                                ]}
-                                            />
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
+                                            {/* Actions */}
+                                            <td className="px-3 py-4 align-top text-right">
+                                                <button
+                                                    type="button"
+                                                    className="px-2 py-1 border rounded-lg text-xs hover:bg-gray-50"
+                                                    onClick={() => {
+                                                        // bạn có thể mở menu / drawer ở đây
+                                                        // tạm thời: copy id
+                                                        navigator.clipboard?.writeText(row.id);
+                                                    }}
+                                                >
+                                                    ⋮
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* PAGINATION */}
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                    Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
+            {/* Footer pagination */}
+            <div className="flex items-center justify-between text-sm text-gray-700">
+                <div>
+                    Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
 
-                <div className="flex gap-2">
-                    <Link
-                        href={gotoPageHref(Math.max(1, page - 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page <= 1 && "pointer-events-none opacity-50")}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page <= 1}
+                        onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
                         ← Trước
-                    </Link>
-
-                    <Link
-                        href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page >= totalPages && "pointer-events-none opacity-50")}
+                    </button>
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page >= props.totalPages}
+                        onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
                         Sau →
-                    </Link>
+                    </button>
                 </div>
             </div>
         </div>
