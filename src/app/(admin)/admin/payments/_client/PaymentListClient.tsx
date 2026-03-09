@@ -2,35 +2,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-type PaymentRow = {
+type ViewKey = "all" | "unpaid" | "paid" | "canceled";
+
+type PaymentItem = {
     id: string;
-    refNo?: string | null;
-
-    amount: number;
-    currency: string;
+    refNo: string | null;
 
     method: string;
+    amount: number;
+    currency: string;
+    paidAt: string | null;
+    createdAt: string;
+
+    reference: string | null;
+    note: string | null;
+
+    direction: string | null;
     status: string;
     purpose: string;
     type: string;
-    direction?: string | null;
 
-    createdAt: string;
-    paidAt?: string | null;
-
-    reference?: string | null;
-    note?: string | null;
-
-    order_id?: string | null;
-    service_request_id?: string | null;
-    vendor_id?: string | null;
-    acquisition_id?: string | null;
-    shipment_id?: string | null;
+    order_id: string | null;
+    service_request_id: string | null;
+    vendor_id: string | null;
+    acquisition_id: string | null;
+    shipment_id: string | null;
 };
-
-type ViewKey = "all" | "unpaid" | "paid" | "canceled";
 
 type Counts = {
     all: number;
@@ -39,22 +39,40 @@ type Counts = {
     canceled: number;
 };
 
-function fmtMoney(n: number) {
-    try {
-        return n.toLocaleString("vi-VN");
-    } catch {
-        return String(n);
-    }
+type PageProps = {
+    items: PaymentItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    rawSearchParams: Record<string, string | string[] | undefined>;
+    counts?: Counts;
+};
+
+function cls(...xs: Array<string | false | null | undefined>) {
+    return xs.filter(Boolean).join(" ");
 }
 
-function fmtDT(s?: string | null) {
-    if (!s) return "-";
-    const d = new Date(s);
-    if (!Number.isFinite(d.getTime())) return "-";
-    return d.toLocaleString("vi-VN");
+function fmtDate(d?: string | null) {
+    if (!d) return "-";
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return "-";
+    return dt.toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    });
 }
 
-function dotColorByType(type?: string) {
+function fmtMoney(v?: number | null) {
+    if (v == null) return "-";
+    return Number(v).toLocaleString("vi-VN");
+}
+
+function purposeDotClass(type?: string) {
     switch ((type || "").toUpperCase()) {
         case "ORDER":
             return "bg-emerald-500";
@@ -65,323 +83,231 @@ function dotColorByType(type?: string) {
         case "ACQUISITION":
             return "bg-pink-500";
         default:
-            return "bg-slate-400";
+            return "bg-gray-400";
     }
 }
 
-function pillClassByDirection(dir?: string | null) {
-    const d = (dir || "").toUpperCase();
-    if (d === "IN") return "bg-blue-50 text-blue-700 border-blue-200";
-    if (d === "OUT") return "bg-orange-50 text-orange-700 border-orange-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
+function directionPill(direction?: string | null) {
+    const d = (direction || "").toUpperCase();
+    if (d === "IN") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                IN
+            </span>
+        );
+    }
+    if (d === "OUT") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                OUT
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+            -
+        </span>
+    );
 }
 
 function statusPillClass(status?: string) {
-    const s = (status || "").toUpperCase();
-    if (s === "PAID") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    if (s === "UNPAID") return "bg-gray-50 text-gray-700 border-gray-200";
-    if (s === "CANCELED" || s === "CANCELLED")
-        return "bg-red-50 text-red-700 border-red-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
-}
-
-function viewToStatus(view: ViewKey): string | null {
-    switch (view) {
-        case "unpaid":
-            return "UNPAID";
-        case "paid":
-            return "PAID";
-        case "canceled":
-            return "CANCELED";
-        case "all":
+    switch ((status || "").toUpperCase()) {
+        case "PAID":
+            return "border-emerald-200 bg-emerald-50 text-emerald-700";
+        case "UNPAID":
+            return "border-gray-200 bg-gray-50 text-gray-700";
+        case "CANCELED":
+            return "border-red-200 bg-red-50 text-red-700";
         default:
-            return null;
+            return "border-gray-200 bg-gray-50 text-gray-700";
     }
 }
 
-export default function PaymentListClient(props: {
-    items: PaymentRow[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    rawSearchParams: { [key: string]: string | string[] | undefined };
+const VIEW_LABELS: Record<ViewKey, string> = {
+    all: "Tất cả",
+    unpaid: "UNPAID",
+    paid: "PAID",
+    canceled: "CANCELED",
+};
 
-    /**
-     * ✅ OPTIONAL nhưng rất nên có để tab đếm theo toàn bộ dataset (không theo trang)
-     * Nếu bạn đã fix server trả counts, truyền vào đây.
-     */
-    counts?: Partial<Counts>;
-}) {
-    const router = useRouter();
-    const pathname = usePathname();
+export default function PaymentListClient({
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    rawSearchParams,
+    counts,
+}: PageProps) {
+    const [showBulkBar, setShowBulkBar] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const sp = useSearchParams();
 
-    const items = props.items ?? [];
+    const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
 
-    // ======== Current view from URL (view=all|unpaid|paid|canceled) ========
-    const currentView: ViewKey = useMemo(() => {
-        const v = (sp.get("view") || "all").toLowerCase();
-        if (v === "unpaid" || v === "paid" || v === "canceled" || v === "all")
-            return v;
+    // ✅ Tab đọc từ STATUS, không đọc từ view nữa
+    const currentView = useMemo((): ViewKey => {
+        const status = (sp.get("status") || "").toUpperCase();
+        if (status === "UNPAID") return "unpaid";
+        if (status === "PAID") return "paid";
+        if (status === "CANCELED") return "canceled";
         return "all";
     }, [sp]);
 
-    // ======== Effective status (tab controls status) ========
-    const effectiveStatus = useMemo(() => viewToStatus(currentView), [currentView]);
-
-    // ======== Other filters from URL ========
-    const q = sp.get("q") ?? "";
-    const purpose = sp.get("purpose") ?? "";
-    const direction = sp.get("direction") ?? "";
-    const method = sp.get("method") ?? "";
-    const sort = sp.get("sort") ?? "createdDesc";
-
-    // ======== Selection ========
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [showBulkBar, setShowBulkBar] = useState(false);
-
-    // Reset selection when view/filter changes (đúng behavior bạn muốn)
+    // reset selection khi đổi tab / page
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentView, q, purpose, direction, method, sort, props.page]);
+    }, [currentView, page]);
 
-    // Auto show/hide bulk bar
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);
     }, [selectedIds.length]);
 
-    // ======== Display items (server đã lọc status theo view rồi thì không cần filter nữa)
-    // Nhưng để an toàn: nếu server chưa lọc theo view => lọc client-side theo effectiveStatus
-    const displayItems = useMemo(() => {
-        if (!effectiveStatus) return items;
-        return items.filter((x) => (x.status || "").toUpperCase() === effectiveStatus);
-    }, [items, effectiveStatus]);
+    // ✅ server đã filter theo status rồi => không filter lại ở client
+    const displayItems = useMemo(() => items, [items]);
 
-    // ======== Select all helpers (trên trang hiện tại) ========
-    const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
+    const countsByView: Record<ViewKey, number> = useMemo(
+        () => ({
+            all: counts?.all ?? 0,
+            unpaid: counts?.unpaid ?? 0,
+            paid: counts?.paid ?? 0,
+            canceled: counts?.canceled ?? 0,
+        }),
+        [counts]
+    );
+
+    const gotoPageHref = (p: number) => {
+        const next = new URLSearchParams(url);
+        next.set("page", String(p));
+        next.set("pageSize", String(pageSize));
+        return `/admin/payments?${next.toString()}`;
+    };
+
+
+
+    // ✅ tab set status, không set view
+    const setViewHref = (view: ViewKey) => {
+        const next = new URLSearchParams(url);
+
+        if (view === "all") next.delete("status");
+        else if (view === "unpaid") next.set("status", "UNPAID");
+        else if (view === "paid") next.set("status", "PAID");
+        else if (view === "canceled") next.set("status", "CANCELED");
+
+        next.set("page", "1");
+        next.set("pageSize", String(pageSize));
+        return `/admin/payments?${next.toString()}`;
+    };
+
+    const tabs = (Object.keys(VIEW_LABELS) as ViewKey[]).map((k) => ({
+        key: k,
+        label: VIEW_LABELS[k],
+        count: countsByView[k],
+        href: setViewHref(k),
+        active: currentView === k,
+    }));
+
+    // select all on current page
+    const allSelectableIdsInView = useMemo(() => displayItems.map((o) => o.id), [displayItems]);
 
     const allChecked =
-        pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+        allSelectableIdsInView.length > 0 &&
+        allSelectableIdsInView.every((id) => selectedIds.includes(id));
+
     const someChecked =
-        pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
+        allSelectableIdsInView.some((id) => selectedIds.includes(id)) && !allChecked;
 
-    // ======== Counts for tabs ========
-    const counts: Counts = useMemo(() => {
-        // nếu server có counts => dùng luôn
-        if (props.counts?.all != null) {
-            return {
-                all: props.counts.all ?? 0,
-                unpaid: props.counts.unpaid ?? 0,
-                paid: props.counts.paid ?? 0,
-                canceled: props.counts.canceled ?? 0,
-            };
-        }
+    const buildFilterHref = (patch: Record<string, string | null>) => {
+        const next = new URLSearchParams(url);
 
-        // fallback: dùng total của view hiện tại (không hoàn hảo, nhưng không sai theo trang)
-        const base: Counts = { all: 0, unpaid: 0, paid: 0, canceled: 0 };
-        if (currentView === "all") base.all = props.total;
-        if (currentView === "unpaid") base.unpaid = props.total;
-        if (currentView === "paid") base.paid = props.total;
-        if (currentView === "canceled") base.canceled = props.total;
-        // nếu bạn muốn hiển thị luôn "All" khi chưa có counts => set all=total khi view!=all cũng được,
-        // nhưng sẽ misleading nên mình để 0.
-        return base;
-    }, [props.counts, props.total, currentView]);
-
-    // ======== URL helpers ========
-    function setParam(next: URLSearchParams, key: string, value: string | null) {
-        if (!value) next.delete(key);
-        else next.set(key, value);
-    }
-
-    function pushWith(next: URLSearchParams) {
-        router.push(`${pathname}?${next.toString()}`);
-    }
-
-    function setView(view: ViewKey) {
-        const next = new URLSearchParams(sp.toString());
-        if (view === "all") next.delete("view");
-        else next.set("view", view);
-
-        // ✅ tab đổi => reset page
-        next.set("page", "1");
-
-        // IMPORTANT: status select là “filter phụ”, nhưng tab là filter chính
-        // => không store status param riêng nữa để tránh PAID mà vẫn UNPAID do URL bẩn
-        next.delete("status");
-
-        pushWith(next);
-    }
-
-    function applyFilters(form: {
-        q: string;
-        purpose: string;
-        direction: string;
-        method: string;
-        sort: string;
-    }) {
-        const next = new URLSearchParams(sp.toString());
-        setParam(next, "q", form.q.trim() || null);
-        setParam(next, "purpose", form.purpose || null);
-        setParam(next, "direction", form.direction || null);
-        setParam(next, "method", form.method || null);
-        setParam(next, "sort", form.sort || "createdDesc");
+        Object.entries(patch).forEach(([k, v]) => {
+            if (!v) next.delete(k);
+            else next.set(k, v);
+        });
 
         next.set("page", "1");
-        pushWith(next);
-    }
+        next.set("pageSize", String(pageSize));
 
-    function clearFilters() {
-        const next = new URLSearchParams(sp.toString());
-        next.delete("q");
-        next.delete("purpose");
-        next.delete("direction");
-        next.delete("method");
-        next.delete("sort");
-        next.set("page", "1");
-        pushWith(next);
-    }
-
-    function goPage(p: number) {
-        const next = new URLSearchParams(sp.toString());
-        next.set("page", String(p));
-        pushWith(next);
-    }
-
-    // ======== Local controlled inputs (so you can type then click "Lọc") ========
-    const [formQ, setFormQ] = useState(q);
-    const [formPurpose, setFormPurpose] = useState(purpose);
-    const [formDirection, setFormDirection] = useState(direction);
-    const [formMethod, setFormMethod] = useState(method);
-    const [formSort, setFormSort] = useState(sort);
-
-    useEffect(() => setFormQ(q), [q]);
-    useEffect(() => setFormPurpose(purpose), [purpose]);
-    useEffect(() => setFormDirection(direction), [direction]);
-    useEffect(() => setFormMethod(method), [method]);
-    useEffect(() => setFormSort(sort), [sort]);
+        return `/admin/payments?${next.toString()}`;
+    };
 
     return (
         <div className="space-y-4">
-            {/* Header */}
+            {/* HEADER */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">Payments</h1>
-                </div>
-                <button
-                    type="button"
-                    className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                    onClick={() => router.push("/admin")}
+                <h1 className="text-xl font-semibold">Payments</h1>
+
+                <Link
+                    href="/admin"
+                    className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
                 >
                     ← Admin
-                </button>
+                </Link>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b">
-                <div className="flex gap-8 items-end">
-                    <button
-                        type="button"
-                        onClick={() => setView("all")}
-                        className={`pb-2 text-sm ${currentView === "all"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
+            {/* TABS */}
+            <div className="flex items-end gap-8 border-b">
+                {tabs.map((t) => (
+                    <Link
+                        key={t.key}
+                        href={t.href}
+                        className={cls(
+                            "pb-2 text-sm",
+                            t.active ? "border-b-2 border-black font-semibold text-black" : "text-gray-500"
+                        )}
                     >
-                        Tất cả{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.all ?? 0}
+                        {t.label}
+                        <span
+                            className={cls(
+                                "ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs",
+                                t.active ? "bg-black text-white" : "bg-gray-100 text-gray-700"
+                            )}
+                        >
+                            {t.count}
                         </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("unpaid")}
-                        className={`pb-2 text-sm ${currentView === "unpaid"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        UNPAID{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.unpaid ?? 0}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("paid")}
-                        className={`pb-2 text-sm ${currentView === "paid"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        PAID{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-black text-white text-xs">
-                            {counts.paid ?? 0}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("canceled")}
-                        className={`pb-2 text-sm ${currentView === "canceled"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        CANCELED{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.canceled ?? 0}
-                        </span>
-                    </button>
-                </div>
+                    </Link>
+                ))}
             </div>
 
-            {/* Filters */}
+            {/* FILTER FORM */}
             <form
+                action="/admin/payments"
+                method="get"
                 className="space-y-3"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    applyFilters({
-                        q: formQ,
-                        purpose: formPurpose,
-                        direction: formDirection,
-                        method: formMethod,
-                        sort: formSort,
-                    });
-                }}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                {/* Giữ status từ tab */}
+                {currentView === "unpaid" && <input type="hidden" name="status" value="UNPAID" />}
+                {currentView === "paid" && <input type="hidden" name="status" value="PAID" />}
+                {currentView === "canceled" && <input type="hidden" name="status" value="CANCELED" />}
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
+                        <div className="mb-1 text-xs text-gray-500">Tìm kiếm</div>
                         <input
-                            value={formQ}
-                            onChange={(e) => setFormQ(e.target.value)}
+                            name="q"
+                            defaultValue={(rawSearchParams.q as string) ?? ""}
                             placeholder="id / refNo / reference / note / SR..."
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            className="h-10 w-full rounded-md border px-3 text-sm"
                         />
                     </div>
 
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Purpose</div>
+                        <div className="mb-1 text-xs text-gray-500">Purpose</div>
                         <input
-                            value={formPurpose}
-                            onChange={(e) => setFormPurpose(e.target.value)}
+                            name="purpose"
+                            defaultValue={(rawSearchParams.purpose as string) ?? ""}
                             placeholder="ORDER_FULL / MAINTENANCE_COST..."
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            className="h-10 w-full rounded-md border px-3 text-sm"
                         />
                     </div>
 
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Direction</div>
+                        <div className="mb-1 text-xs text-gray-500">Direction</div>
                         <select
-                            value={formDirection}
-                            onChange={(e) => setFormDirection(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            name="direction"
+                            defaultValue={(rawSearchParams.direction as string) ?? ""}
+                            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
                         >
                             <option value="">(All)</option>
                             <option value="IN">IN</option>
@@ -390,11 +316,11 @@ export default function PaymentListClient(props: {
                     </div>
 
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Method</div>
+                        <div className="mb-1 text-xs text-gray-500">Method</div>
                         <select
-                            value={formMethod}
-                            onChange={(e) => setFormMethod(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            name="method"
+                            defaultValue={(rawSearchParams.method as string) ?? ""}
+                            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
                         >
                             <option value="">(All)</option>
                             <option value="CASH">CASH</option>
@@ -404,11 +330,11 @@ export default function PaymentListClient(props: {
                     </div>
 
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
+                        <div className="mb-1 text-xs text-gray-500">Sắp xếp</div>
                         <select
-                            value={formSort}
-                            onChange={(e) => setFormSort(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            name="sort"
+                            defaultValue={(rawSearchParams.sort as string) ?? "createdDesc"}
+                            className="h-10 w-full rounded-md border px-3 text-sm bg-white"
                         >
                             <option value="createdDesc">Tạo ↓</option>
                             <option value="createdAsc">Tạo ↑</option>
@@ -420,20 +346,20 @@ export default function PaymentListClient(props: {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
+                        className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
                         type="submit"
-                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
                         Lọc
                     </button>
-                    <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+
+                    <Link
+                        href="/admin/payments"
+                        className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
                     >
                         Clear
-                    </button>
+                    </Link>
 
                     <div className="ml-auto text-sm text-gray-600">
                         Đã chọn: <b>{selectedIds.length}</b>
@@ -441,15 +367,15 @@ export default function PaymentListClient(props: {
                 </div>
             </form>
 
-            {/* BULK BAR (đúng như ảnh bạn gửi) */}
+            {/* BULK BAR */}
             {showBulkBar && (
-                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
+                <div className="mb-3 flex items-center gap-4 rounded border bg-blue-50 p-3">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} payment đã chọn
                     </span>
 
                     <button
-                        className="px-3 py-1 border rounded text-sm"
+                        className="rounded border px-3 py-1 text-sm"
                         onClick={() => {
                             setSelectedIds([]);
                             setShowBulkBar(false);
@@ -458,230 +384,231 @@ export default function PaymentListClient(props: {
                     >
                         Bỏ chọn
                     </button>
-
-                    {/* Bạn thêm bulk actions ở đây nếu muốn */}
                 </div>
             )}
 
-            {/* Table */}
-            <div className="border rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                            <tr className="text-left text-gray-700">
-                                <th className="w-10 px-3 py-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={allChecked}
-                                        ref={(el) => {
-                                            if (el) el.indeterminate = someChecked;
-                                        }}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedIds((prev) =>
-                                                    Array.from(new Set([...prev, ...pageIds]))
-                                                );
-                                            } else {
-                                                setSelectedIds((prev) =>
-                                                    prev.filter((id) => !pageIds.includes(id))
-                                                );
-                                            }
-                                        }}
-                                    />
-                                </th>
+            {/* TABLE */}
+            <div className="overflow-x-auto rounded-xl border bg-white">
+                <table className="min-w-full border-collapse text-sm">
+                    <thead className="border-b bg-gray-50">
+                        <tr>
+                            <th className="w-10 px-3 py-3">
+                                <input
+                                    type="checkbox"
+                                    checked={allChecked}
+                                    ref={(el) => {
+                                        if (el) el.indeterminate = someChecked;
+                                    }}
+                                    onChange={(e) => {
+                                        if (!e.target.checked) {
+                                            const next = selectedIds.filter(
+                                                (id) => !allSelectableIdsInView.includes(id)
+                                            );
+                                            setSelectedIds(next);
+                                            setShowBulkBar(next.length > 0);
+                                            return;
+                                        }
 
-                                <th className="px-3 py-3">RefNo</th>
-                                <th className="px-3 py-3">Amount</th>
-                                <th className="px-3 py-3">Note</th>
-                                <th className="px-3 py-3">Status</th>
-                                <th className="px-3 py-3">Method</th>
-                                <th className="px-3 py-3">Ngày tạo</th>
-                                <th className="px-3 py-3">Link</th>
-                                <th className="px-3 py-3 text-right">Hành động</th>
+                                        const merged = Array.from(
+                                            new Set([...selectedIds, ...allSelectableIdsInView])
+                                        );
+                                        setSelectedIds(merged);
+                                        setShowBulkBar(merged.length > 0);
+                                    }}
+                                />
+                            </th>
+
+                            <th className="px-3 py-3 text-left">RefNo</th>
+                            <th className="px-3 py-3 text-left">Amount</th>
+                            <th className="px-3 py-3 text-left">Note</th>
+                            <th className="px-3 py-3 text-left">Status</th>
+                            <th className="px-3 py-3 text-left">Method</th>
+                            <th className="px-3 py-3 text-left">Ngày tạo</th>
+                            <th className="px-3 py-3 text-left">Link</th>
+                            <th className="px-3 py-3 text-right">Hành động</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {displayItems.length === 0 ? (
+                            <tr>
+                                <td colSpan={9} className="py-10 text-center text-gray-500">
+                                    Không có dữ liệu trong tab này
+                                </td>
                             </tr>
-                        </thead>
+                        ) : (
+                            displayItems.map((row) => (
+                                <tr key={row.id} className="border-t hover:bg-gray-50">
+                                    <td className="px-3 py-4 align-top">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(row.id)}
+                                            onChange={(e) => {
+                                                const next = e.target.checked
+                                                    ? [...selectedIds, row.id]
+                                                    : selectedIds.filter((id) => id !== row.id);
 
-                        <tbody>
-                            {displayItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
-                                        Không có dữ liệu trong tab này
+                                                setSelectedIds(Array.from(new Set(next)));
+                                                setShowBulkBar(next.length > 0);
+                                            }}
+                                        />
+                                    </td>
+
+                                    {/* RefNo */}
+                                    <td className="px-3 py-4 align-top">
+                                        <div className="flex items-start gap-2">
+                                            <span
+                                                className={cls(
+                                                    "mt-1 inline-block h-2 w-2 rounded-full",
+                                                    purposeDotClass(row.type)
+                                                )}
+                                            />
+                                            <div>
+                                                <div className="font-medium">
+                                                    {row.refNo && row.refNo.trim() ? row.refNo : "-"}
+                                                </div>
+                                                <div className="mt-1 text-xs text-gray-500">
+                                                    {row.purpose} • {row.type}
+                                                </div>
+                                                <div className="mt-2">
+                                                    {directionPill(row.direction)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {/* Amount */}
+                                    <td className="px-3 py-4 align-top">
+                                        <div className="text-base font-semibold">
+                                            {fmtMoney(row.amount)}
+                                        </div>
+                                        <div className="text-xs text-gray-500">{row.currency}</div>
+                                    </td>
+
+                                    {/* Note */}
+                                    <td className="px-3 py-4 align-top">
+                                        <div className="text-sm">{row.note || "-"}</div>
+                                        <div className="mt-1 text-xs text-gray-500">ID: {row.id}</div>
+                                    </td>
+
+                                    {/* Status */}
+                                    <td className="px-3 py-4 align-top">
+                                        <span
+                                            className={cls(
+                                                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs",
+                                                statusPillClass(row.status)
+                                            )}
+                                        >
+                                            {String(row.status || "-").toUpperCase()}
+                                        </span>
+                                    </td>
+
+                                    {/* Method */}
+                                    <td className="px-3 py-4 align-top font-medium">
+                                        {row.method || "-"}
+                                    </td>
+
+                                    {/* Dates */}
+                                    <td className="px-3 py-4 align-top">
+                                        <div className="text-sm">{fmtDate(row.createdAt)}</div>
+                                        <div className="mt-1 text-xs text-gray-500">
+                                            Paid: {fmtDate(row.paidAt)}
+                                        </div>
+                                    </td>
+
+                                    {/* Link */}
+                                    <td className="px-3 py-4 align-top">
+                                        <div className="space-y-1 text-sm">
+                                            {row.order_id ? (
+                                                <div>
+                                                    <span className="font-medium text-blue-600">Order</span>{" "}
+                                                    <span className="text-gray-600">{row.order_id}</span>
+                                                </div>
+                                            ) : null}
+
+                                            {row.service_request_id ? (
+                                                <div>
+                                                    <span className="font-medium text-blue-600">SR</span>{" "}
+                                                    <span className="text-gray-600">{row.service_request_id}</span>
+                                                </div>
+                                            ) : null}
+
+                                            {row.vendor_id ? (
+                                                <div>
+                                                    <span className="font-medium text-blue-600">Vendor</span>{" "}
+                                                    <span className="text-gray-600">{row.vendor_id}</span>
+                                                </div>
+                                            ) : null}
+
+                                            {row.shipment_id ? (
+                                                <div>
+                                                    <span className="font-medium text-blue-600">Shipment</span>{" "}
+                                                    <span className="text-gray-600">{row.shipment_id}</span>
+                                                </div>
+                                            ) : null}
+
+                                            {row.acquisition_id ? (
+                                                <div>
+                                                    <span className="font-medium text-blue-600">Acq</span>{" "}
+                                                    <span className="text-gray-600">{row.acquisition_id}</span>
+                                                </div>
+                                            ) : null}
+
+                                            {!row.order_id &&
+                                                !row.service_request_id &&
+                                                !row.vendor_id &&
+                                                !row.shipment_id &&
+                                                !row.acquisition_id ? (
+                                                <span className="text-gray-400">-</span>
+                                            ) : null}
+                                        </div>
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="px-3 py-4 text-right align-top">
+                                        <button
+                                            type="button"
+                                            className="rounded-lg border px-2 py-1 text-xs hover:bg-gray-50"
+                                            onClick={() => {
+                                                navigator.clipboard?.writeText(row.id);
+                                            }}
+                                        >
+                                            ⋮
+                                        </button>
                                     </td>
                                 </tr>
-                            ) : (
-                                displayItems.map((row) => {
-                                    const checked = selectedIds.includes(row.id);
-
-                                    return (
-                                        <tr key={row.id} className="border-t">
-                                            <td className="w-10 px-3 py-4 align-top">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedIds((prev) =>
-                                                                Array.from(new Set([...prev, row.id]))
-                                                            );
-                                                        } else {
-                                                            setSelectedIds((prev) => prev.filter((id) => id !== row.id));
-                                                        }
-                                                    }}
-                                                />
-                                            </td>
-
-                                            {/* RefNo + meta line */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="flex items-start gap-2">
-                                                    <span className={`mt-1 inline-block w-2 h-2 rounded-full ${dotColorByType(row.type)}`} />
-                                                    <div>
-                                                        <div className="font-medium">
-                                                            {row.refNo && row.refNo.trim() ? row.refNo : "-"}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 mt-0.5">
-                                                            {row.purpose} • {row.type}
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <span
-                                                                className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${pillClassByDirection(
-                                                                    row.direction
-                                                                )}`}
-                                                            >
-                                                                {(row.direction || "-").toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Amount */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="font-semibold text-base">
-                                                    {fmtMoney(Number(row.amount || 0))}
-                                                </div>
-                                                <div className="text-xs text-gray-500">{row.currency}</div>
-                                            </td>
-
-                                            {/* Note */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="text-sm">{row.note || "-"}</div>
-                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="px-3 py-4 align-top">
-                                                <span
-                                                    className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
-                                                        row.status
-                                                    )}`}
-                                                >
-                                                    {(row.status || "-").toUpperCase()}
-                                                </span>
-                                            </td>
-
-                                            {/* Method */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="font-medium">{row.method}</div>
-                                            </td>
-
-                                            {/* Dates */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="text-sm">{fmtDT(row.createdAt)}</div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Paid: {fmtDT(row.paidAt)}
-                                                </div>
-                                            </td>
-
-                                            {/* Link */}
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="space-y-1 text-sm">
-                                                    {row.order_id ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">Order</span>{" "}
-                                                            <span className="text-gray-600">{row.order_id}</span>
-                                                        </div>
-                                                    ) : null}
-                                                    {row.service_request_id ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">SR</span>{" "}
-                                                            <span className="text-gray-600">{row.service_request_id}</span>
-                                                        </div>
-                                                    ) : null}
-                                                    {row.vendor_id ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">Vendor</span>{" "}
-                                                            <span className="text-gray-600">{row.vendor_id}</span>
-                                                        </div>
-                                                    ) : null}
-                                                    {row.shipment_id ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">Shipment</span>{" "}
-                                                            <span className="text-gray-600">{row.shipment_id}</span>
-                                                        </div>
-                                                    ) : null}
-                                                    {row.acquisition_id ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">Acq</span>{" "}
-                                                            <span className="text-gray-600">{row.acquisition_id}</span>
-                                                        </div>
-                                                    ) : null}
-
-                                                    {!row.order_id &&
-                                                        !row.service_request_id &&
-                                                        !row.vendor_id &&
-                                                        !row.shipment_id &&
-                                                        !row.acquisition_id ? (
-                                                        <span className="text-gray-400">-</span>
-                                                    ) : null}
-                                                </div>
-                                            </td>
-
-                                            {/* Actions */}
-                                            <td className="px-3 py-4 align-top text-right">
-                                                <button
-                                                    type="button"
-                                                    className="px-2 py-1 border rounded-lg text-xs hover:bg-gray-50"
-                                                    onClick={() => {
-                                                        // bạn có thể mở menu / drawer ở đây
-                                                        // tạm thời: copy id
-                                                        navigator.clipboard?.writeText(row.id);
-                                                    }}
-                                                >
-                                                    ⋮
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Footer pagination */}
+            {/* FOOTER PAGINATION */}
             <div className="flex items-center justify-between text-sm text-gray-700">
                 <div>
-                    Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
+                    Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
-                        disabled={props.page <= 1}
-                        onClick={() => goPage(Math.max(1, props.page - 1))}
+                    <Link
+                        href={gotoPageHref(Math.max(1, page - 1))}
+                        className={cls(
+                            "rounded-lg border px-3 py-2 hover:bg-gray-50",
+                            page <= 1 && "pointer-events-none opacity-50"
+                        )}
                     >
                         ← Trước
-                    </button>
-                    <button
-                        type="button"
-                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
-                        disabled={props.page >= props.totalPages}
-                        onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
+                    </Link>
+
+                    <Link
+                        href={gotoPageHref(Math.min(totalPages, page + 1))}
+                        className={cls(
+                            "rounded-lg border px-3 py-2 hover:bg-gray-50",
+                            page >= totalPages && "pointer-events-none opacity-50"
+                        )}
                     >
                         Sau →
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>

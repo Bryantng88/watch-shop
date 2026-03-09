@@ -291,8 +291,7 @@ export async function listAdmin(
         shipment_id: true,
     };
 
-    const [totalAll, total, items, cPaid, cUnpaid, cCanceled] = await Promise.all([
-        db.payment.count({ where: whereBase }),
+    const [total, items, totalAll, cPaid, cUnpaid, cCanceled] = await Promise.all([
         db.payment.count({ where: whereList }),
         db.payment.findMany({
             where: whereList,
@@ -301,6 +300,7 @@ export async function listAdmin(
             take,
             select,
         }),
+        db.payment.count({ where: whereBase }),
         db.payment.count({ where: { ...whereBase, status: "PAID" as any } }),
         db.payment.count({ where: { ...whereBase, status: "UNPAID" as any } }),
         db.payment.count({ where: { ...whereBase, status: "CANCELED" as any } }),
@@ -308,7 +308,6 @@ export async function listAdmin(
 
     return {
         total,
-        totalAll,
         items,
         counts: {
             all: totalAll,
