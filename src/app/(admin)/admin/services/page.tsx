@@ -1,6 +1,4 @@
-// app/(admin)/admin/service-requests/page.tsx
-
-import { parseListSearchParams } from "../__helpers/SearchParams";
+import { parseServiceRequestSearchParams } from "./_helper/SearchParams";
 import { getAdminServiceRequestList } from "./_server/service_request.service";
 import ServiceRequestsClient from "./_client/ServiceRequestList";
 
@@ -8,7 +6,7 @@ type SearchParams = { [key: string]: string | string[] | undefined };
 
 function serialize(obj: any) {
     return JSON.parse(
-        JSON.stringify(obj, (key, value) => {
+        JSON.stringify(obj, (_key, value) => {
             if (value instanceof Date) return value.toISOString();
             if (typeof value === "object" && value?._isDecimal) return Number(value);
             return value;
@@ -27,19 +25,16 @@ export default async function ServiceRequestListPage({
         )
     );
 
-    const input = parseListSearchParams(sp);
-
-    const { items, total, page, pageSize } = await getAdminServiceRequestList(input);
+    const input = parseServiceRequestSearchParams(sp);
+    const { items, total, counts, page, pageSize } = await getAdminServiceRequestList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const normalizedItems = serialize(items);
-
-    //console.log('in ra test service req body :' + JSON.stringify(items))
 
     return (
         <ServiceRequestsClient
-            items={normalizedItems}
+            items={serialize(items)}
             total={total}
+            counts={counts}
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}

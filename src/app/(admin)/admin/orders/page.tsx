@@ -1,6 +1,6 @@
 // app/(admin)/admin/orders/page.tsx
 import { parseOrderSearchParams } from "./utils/search-params";
-import { getAdminOrderList } from "./_servers/order.service"
+import { getAdminOrderList } from "./_servers/order.service";
 import OrderListPageClient from "./_client/ListOrder";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
@@ -14,6 +14,7 @@ function serialize(obj: any) {
         })
     );
 }
+
 export default async function OrderListPage({
     searchParams,
 }: {
@@ -26,12 +27,7 @@ export default async function OrderListPage({
     );
 
     const input = parseOrderSearchParams(sp);
-
-    // 👇 lấy page + pageSize từ input
-    //const { page, pageSize } = input;
-
-    const { items, total, page, pageSize } = await getAdminOrderList(input);
-
+    const { items, total, counts, page, pageSize } = await getAdminOrderList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
@@ -40,6 +36,7 @@ export default async function OrderListPage({
         <OrderListPageClient
             items={normalizedItems}
             total={total}
+            counts={counts}
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}

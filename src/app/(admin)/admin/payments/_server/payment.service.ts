@@ -1,4 +1,3 @@
-// src/app/(admin)/admin/payments/_server/payment.service.ts
 import {
     Order,
     ReserveType,
@@ -9,8 +8,8 @@ import {
 } from "@prisma/client";
 
 import * as paymentRepo from "./payment.repo";
-import type { PaymentListInput } from "../_helper/SearchParams";
-import { prisma } from "@/server/db/client"; // ✅ nhớ import prisma đúng project bạn
+import type { PaymentListInput, PaymentViewKey } from "../_helper/SearchParams";
+import { prisma } from "@/server/db/client";
 
 export async function createPaymentsForOrder(tx: any, order: Order) {
     const payments: paymentRepo.CreatePaymentInput[] = [];
@@ -30,9 +29,8 @@ export async function createPaymentsForOrder(tx: any, order: Order) {
                 type: PaymentType.ORDER,
                 direction: PaymentDirection.IN,
                 purpose: PaymentPurpose.ORDER_DEPOSIT,
-                method: "COD", // hoặc PaymentMethod.COD nếu enum có
+                method: "COD",
                 status: "UNPAID",
-                // paidAt: repo sẽ tự set new Date() nếu schema NOT NULL
             });
         }
 
@@ -48,7 +46,7 @@ export async function createPaymentsForOrder(tx: any, order: Order) {
         });
     }
 
-    // CASE 2: HOLD (đặt cọc giữ hàng)
+    // CASE 2: HOLD
     else if (order.reserveType === ReserveType.DEPOSIT && deposit > 0) {
         payments.push({
             order_id: order.id,
@@ -76,7 +74,6 @@ export async function createPaymentsForOrder(tx: any, order: Order) {
         });
     }
 
-    // ✅ repo tự gen refNo từng dòng + auto paidAt
     await paymentRepo.createMany(tx, payments);
 }
 
@@ -90,17 +87,35 @@ function serialize(obj: any) {
     );
 }
 
+function viewToStatus(view?: PaymentViewKey): string | undefined {
+    switch (view) {
+        case "paid":
+            return "PAID";
+        case "unpaid":
+            return "UNPAID";
+        case "canceled":
+            return "CANCELED";
+        case "all":
+        default:
+            return undefined;
+    }
+}
+
 /**
  * ✅ Admin list payments
- * - trả về items + total (theo tab/status hiện tại)
- * - trả về counts (đếm theo toàn bộ dataset, KHÔNG phụ thuộc page)
+ * - view là từ tab UI
+ * - status là filter thực thi ở repo
+ * - ưu tiên status explicit nếu có, còn không thì map từ view
  */
 export async function getAdminPaymentList(input: PaymentListInput) {
     const page = Math.max(1, Number(input.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));
 
+    const effectiveStatus = input.status || viewToStatus(input.view);
+
     const { items, total, counts } = await paymentRepo.listAdmin(prisma, {
         ...input,
+        status: effectiveStatus,
         page,
         pageSize,
     });
@@ -108,7 +123,7 @@ export async function getAdminPaymentList(input: PaymentListInput) {
     return serialize({
         items,
         total,
-        counts, // ✅ thêm counts
+        counts,
         page,
         pageSize,
     });

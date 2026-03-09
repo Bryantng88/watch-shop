@@ -11,9 +11,7 @@ import type { PaymentListInput, PaymentListSort } from "../_helper/SearchParams"
 import { genRefNo } from "../../__components/AutoGenRef";
 
 /**
- * Input chuẩn cho payment creation (để nhiều nơi gọi chung)
- * - refNo sẽ được repo tự gen => không bắt buộc truyền vào
- * - hỗ trợ snake_case & camelCase để đỡ vướng chỗ gọi
+ * Input chuẩn cho payment creation
  */
 export type CreatePaymentInput = {
     refNo?: string;
@@ -44,7 +42,6 @@ export type CreatePaymentInput = {
 async function ensureRefNo(db: any, tx: any, maybeRefNo?: string) {
     if (maybeRefNo) return maybeRefNo;
 
-    // ✅ gen dựa trên model payment, prefix PM
     return genRefNo(tx, {
         model: db.payment,
         prefix: "PM",
@@ -92,11 +89,6 @@ export async function createPayment(tx: DB, input: CreatePaymentInput) {
             amount: input.amount as any,
             currency: input.currency,
 
-            /**
-             * ⚠️ Nếu schema paidAt của bạn NOT NULL:
-             * - set default new Date() để tránh lỗi.
-             * Nếu bạn đã cho paidAt nullable thì có thể đổi về `?? null`.
-             */
             paidAt: input.paidAt ?? new Date(),
 
             reference: input.reference ?? null,
@@ -119,9 +111,6 @@ export async function createPayment(tx: DB, input: CreatePaymentInput) {
 
 /** =========================
  * Create MANY payments
- * - ✅ mỗi record 1 refNo riêng
- * - ✅ đảm bảo refNo unique theo ngày
- * - ✅ tránh createMany vì không gen refNo theo từng row
  * ========================= */
 export async function createMany(tx: DB, payments: CreatePaymentInput[]) {
     if (!payments.length) return;
@@ -196,16 +185,15 @@ export async function createShippingFeePayment(
 
         type: PaymentType.SHIPMENT,
         direction: PaymentDirection.OUT,
-        purpose: "SHIPPING_FEE" as any, // nếu bạn có enum purpose đúng thì thay vào
+        purpose: "SHIPPING_FEE" as any,
 
         note: input.note ?? null,
     });
 }
 
 /** =========================
- * Admin LIST + COUNTS (fix segment count)
- * - ✅ Server filter theo status (tab) rồi mới paginate
- * - ✅ countsByView đếm trên toàn bộ dataset (không theo trang)
+ * Admin LIST + COUNTS
+ * - filter theo status trước rồi mới paginate
  * ========================= */
 export async function listAdmin(
     tx: DB,
@@ -215,7 +203,6 @@ export async function listAdmin(
 
     const q = (input.q || "").trim();
 
-    // whereBase: tất cả filter trừ status-tab
     const whereBase: Prisma.PaymentWhereInput = {};
 
     if (input.purpose) whereBase.purpose = input.purpose as any;
@@ -257,7 +244,6 @@ export async function listAdmin(
         ];
     }
 
-    // whereList: filter theo tab (status) rồi mới paginate
     const whereList: Prisma.PaymentWhereInput = {
         ...whereBase,
         ...(input.status ? { status: input.status as any } : {}),
