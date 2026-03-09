@@ -1,4 +1,3 @@
-// src/app/(admin)/admin/payments/_client/PaymentListClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -80,23 +79,10 @@ function statusPillClass(status?: string) {
     const s = (status || "").toUpperCase();
     if (s === "PAID") return "bg-emerald-50 text-emerald-700 border-emerald-200";
     if (s === "UNPAID") return "bg-gray-50 text-gray-700 border-gray-200";
-    if (s === "CANCELED" || s === "CANCELLED")
+    if (s === "CANCELED" || s === "CANCELLED") {
         return "bg-red-50 text-red-700 border-red-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
-}
-
-function viewToStatus(view: ViewKey): string | null {
-    switch (view) {
-        case "unpaid":
-            return "UNPAID";
-        case "paid":
-            return "PAID";
-        case "canceled":
-            return "CANCELED";
-        case "all":
-        default:
-            return null;
     }
+    return "bg-gray-50 text-gray-700 border-gray-200";
 }
 
 export default function PaymentListClient(props: {
@@ -106,11 +92,6 @@ export default function PaymentListClient(props: {
     pageSize: number;
     totalPages: number;
     rawSearchParams: { [key: string]: string | string[] | undefined };
-
-    /**
-     * ✅ OPTIONAL nhưng rất nên có để tab đếm theo toàn bộ dataset (không theo trang)
-     * Nếu bạn đã fix server trả counts, truyền vào đây.
-     */
     counts?: Partial<Counts>;
 }) {
     const router = useRouter();
@@ -119,48 +100,35 @@ export default function PaymentListClient(props: {
 
     const items = props.items ?? [];
 
-    // ======== Current view from URL (view=all|unpaid|paid|canceled) ========
     const currentView: ViewKey = useMemo(() => {
         const v = (sp.get("view") || "all").toLowerCase();
-        if (v === "unpaid" || v === "paid" || v === "canceled" || v === "all")
+        if (v === "unpaid" || v === "paid" || v === "canceled" || v === "all") {
             return v;
+        }
         return "all";
     }, [sp]);
 
-    // ======== Effective status (tab controls status) ========
-    const effectiveStatus = useMemo(() => viewToStatus(currentView), [currentView]);
-
-    // ======== Other filters from URL ========
     const q = sp.get("q") ?? "";
     const purpose = sp.get("purpose") ?? "";
     const direction = sp.get("direction") ?? "";
     const method = sp.get("method") ?? "";
     const sort = sp.get("sort") ?? "createdDesc";
 
-    // ======== Selection ========
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
 
-    // Reset selection when view/filter changes (đúng behavior bạn muốn)
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentView, q, purpose, direction, method, sort, props.page]);
 
-    // Auto show/hide bulk bar
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);
     }, [selectedIds.length]);
 
-    // ======== Display items (server đã lọc status theo view rồi thì không cần filter nữa)
-    // Nhưng để an toàn: nếu server chưa lọc theo view => lọc client-side theo effectiveStatus
-    const displayItems = useMemo(() => {
-        if (!effectiveStatus) return items;
-        return items.filter((x) => (x.status || "").toUpperCase() === effectiveStatus);
-    }, [items, effectiveStatus]);
+    // ✅ server đã filter đúng theo view/status rồi
+    const displayItems = items;
 
-    // ======== Select all helpers (trên trang hiện tại) ========
     const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
 
     const allChecked =
@@ -168,9 +136,7 @@ export default function PaymentListClient(props: {
     const someChecked =
         pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
-    // ======== Counts for tabs ========
     const counts: Counts = useMemo(() => {
-        // nếu server có counts => dùng luôn
         if (props.counts?.all != null) {
             return {
                 all: props.counts.all ?? 0,
@@ -180,18 +146,14 @@ export default function PaymentListClient(props: {
             };
         }
 
-        // fallback: dùng total của view hiện tại (không hoàn hảo, nhưng không sai theo trang)
         const base: Counts = { all: 0, unpaid: 0, paid: 0, canceled: 0 };
         if (currentView === "all") base.all = props.total;
         if (currentView === "unpaid") base.unpaid = props.total;
         if (currentView === "paid") base.paid = props.total;
         if (currentView === "canceled") base.canceled = props.total;
-        // nếu bạn muốn hiển thị luôn "All" khi chưa có counts => set all=total khi view!=all cũng được,
-        // nhưng sẽ misleading nên mình để 0.
         return base;
     }, [props.counts, props.total, currentView]);
 
-    // ======== URL helpers ========
     function setParam(next: URLSearchParams, key: string, value: string | null) {
         if (!value) next.delete(key);
         else next.set(key, value);
@@ -203,14 +165,14 @@ export default function PaymentListClient(props: {
 
     function setView(view: ViewKey) {
         const next = new URLSearchParams(sp.toString());
+
         if (view === "all") next.delete("view");
         else next.set("view", view);
 
-        // ✅ tab đổi => reset page
+        // reset page khi đổi tab
         next.set("page", "1");
 
-        // IMPORTANT: status select là “filter phụ”, nhưng tab là filter chính
-        // => không store status param riêng nữa để tránh PAID mà vẫn UNPAID do URL bẩn
+        // không dùng status ở client URL để tránh conflict
         next.delete("status");
 
         pushWith(next);
@@ -251,7 +213,6 @@ export default function PaymentListClient(props: {
         pushWith(next);
     }
 
-    // ======== Local controlled inputs (so you can type then click "Lọc") ========
     const [formQ, setFormQ] = useState(q);
     const [formPurpose, setFormPurpose] = useState(purpose);
     const [formDirection, setFormDirection] = useState(direction);
@@ -266,7 +227,6 @@ export default function PaymentListClient(props: {
 
     return (
         <div className="space-y-4">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold">Payments</h1>
@@ -280,7 +240,6 @@ export default function PaymentListClient(props: {
                 </button>
             </div>
 
-            {/* Tabs */}
             <div className="border-b">
                 <div className="flex gap-8 items-end">
                     <button
@@ -320,7 +279,12 @@ export default function PaymentListClient(props: {
                             }`}
                     >
                         PAID{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-black text-white text-xs">
+                        <span
+                            className={`ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full text-xs ${currentView === "paid"
+                                    ? "bg-black text-white"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                        >
                             {counts.paid ?? 0}
                         </span>
                     </button>
@@ -341,7 +305,6 @@ export default function PaymentListClient(props: {
                 </div>
             </div>
 
-            {/* Filters */}
             <form
                 className="space-y-3"
                 onSubmit={(e) => {
@@ -441,7 +404,6 @@ export default function PaymentListClient(props: {
                 </div>
             </form>
 
-            {/* BULK BAR (đúng như ảnh bạn gửi) */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">
@@ -458,12 +420,9 @@ export default function PaymentListClient(props: {
                     >
                         Bỏ chọn
                     </button>
-
-                    {/* Bạn thêm bulk actions ở đây nếu muốn */}
                 </div>
             )}
 
-            {/* Table */}
             <div className="border rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -524,16 +483,21 @@ export default function PaymentListClient(props: {
                                                                 Array.from(new Set([...prev, row.id]))
                                                             );
                                                         } else {
-                                                            setSelectedIds((prev) => prev.filter((id) => id !== row.id));
+                                                            setSelectedIds((prev) =>
+                                                                prev.filter((id) => id !== row.id)
+                                                            );
                                                         }
                                                     }}
                                                 />
                                             </td>
 
-                                            {/* RefNo + meta line */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="flex items-start gap-2">
-                                                    <span className={`mt-1 inline-block w-2 h-2 rounded-full ${dotColorByType(row.type)}`} />
+                                                    <span
+                                                        className={`mt-1 inline-block w-2 h-2 rounded-full ${dotColorByType(
+                                                            row.type
+                                                        )}`}
+                                                    />
                                                     <div>
                                                         <div className="font-medium">
                                                             {row.refNo && row.refNo.trim() ? row.refNo : "-"}
@@ -554,7 +518,6 @@ export default function PaymentListClient(props: {
                                                 </div>
                                             </td>
 
-                                            {/* Amount */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="font-semibold text-base">
                                                     {fmtMoney(Number(row.amount || 0))}
@@ -562,13 +525,11 @@ export default function PaymentListClient(props: {
                                                 <div className="text-xs text-gray-500">{row.currency}</div>
                                             </td>
 
-                                            {/* Note */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="text-sm">{row.note || "-"}</div>
                                                 <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
                                             </td>
 
-                                            {/* Status */}
                                             <td className="px-3 py-4 align-top">
                                                 <span
                                                     className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
@@ -579,12 +540,10 @@ export default function PaymentListClient(props: {
                                                 </span>
                                             </td>
 
-                                            {/* Method */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="font-medium">{row.method}</div>
                                             </td>
 
-                                            {/* Dates */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="text-sm">{fmtDT(row.createdAt)}</div>
                                                 <div className="text-xs text-gray-500 mt-1">
@@ -592,7 +551,6 @@ export default function PaymentListClient(props: {
                                                 </div>
                                             </td>
 
-                                            {/* Link */}
                                             <td className="px-3 py-4 align-top">
                                                 <div className="space-y-1 text-sm">
                                                     {row.order_id ? (
@@ -604,7 +562,9 @@ export default function PaymentListClient(props: {
                                                     {row.service_request_id ? (
                                                         <div>
                                                             <span className="text-blue-600 font-medium">SR</span>{" "}
-                                                            <span className="text-gray-600">{row.service_request_id}</span>
+                                                            <span className="text-gray-600">
+                                                                {row.service_request_id}
+                                                            </span>
                                                         </div>
                                                     ) : null}
                                                     {row.vendor_id ? (
@@ -615,14 +575,18 @@ export default function PaymentListClient(props: {
                                                     ) : null}
                                                     {row.shipment_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">Shipment</span>{" "}
+                                                            <span className="text-blue-600 font-medium">
+                                                                Shipment
+                                                            </span>{" "}
                                                             <span className="text-gray-600">{row.shipment_id}</span>
                                                         </div>
                                                     ) : null}
                                                     {row.acquisition_id ? (
                                                         <div>
                                                             <span className="text-blue-600 font-medium">Acq</span>{" "}
-                                                            <span className="text-gray-600">{row.acquisition_id}</span>
+                                                            <span className="text-gray-600">
+                                                                {row.acquisition_id}
+                                                            </span>
                                                         </div>
                                                     ) : null}
 
@@ -636,14 +600,11 @@ export default function PaymentListClient(props: {
                                                 </div>
                                             </td>
 
-                                            {/* Actions */}
                                             <td className="px-3 py-4 align-top text-right">
                                                 <button
                                                     type="button"
                                                     className="px-2 py-1 border rounded-lg text-xs hover:bg-gray-50"
                                                     onClick={() => {
-                                                        // bạn có thể mở menu / drawer ở đây
-                                                        // tạm thời: copy id
                                                         navigator.clipboard?.writeText(row.id);
                                                     }}
                                                 >
@@ -659,7 +620,6 @@ export default function PaymentListClient(props: {
                 </div>
             </div>
 
-            {/* Footer pagination */}
             <div className="flex items-center justify-between text-sm text-gray-700">
                 <div>
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>

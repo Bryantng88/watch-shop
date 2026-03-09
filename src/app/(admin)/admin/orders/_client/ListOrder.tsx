@@ -5,16 +5,10 @@ import Link from "next/link";
 import ItemPopover from "../../__components/GenericPopover";
 import ActionMenu from "../../acquisitions/components/ActionMenu";
 import { StatusBadge } from "@/components/badges/StatusBadge";
-import {
-    ORDER_STATUS,
-    ORDER_SOURCE,
-    VERIFICATION_STATUS,
-    RESERVE_TYPE,
-} from "@/components/badges/StatusMaps";
+import { ORDER_STATUS } from "@/components/badges/StatusMaps";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { useSearchParams } from "next/navigation";
 import DotLabel from "../../__components/DotLabel";
-
 
 type OrderItem = {
     id: string;
@@ -35,6 +29,17 @@ type OrderItem = {
     hasShipment: boolean | null;
 };
 
+type ViewKey =
+    | "all"
+    | "web_pending"
+    | "need_action"
+    | "processing"
+    | "delivered"
+    | "completed"
+    | "cancelled";
+
+type Counts = Record<ViewKey, number>;
+
 type PageProps = {
     items: OrderItem[];
     total: number;
@@ -42,6 +47,7 @@ type PageProps = {
     pageSize: number;
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
+    counts?: Partial<Counts>;
 };
 
 function cls(...xs: Array<string | false | null | undefined>) {
@@ -60,23 +66,10 @@ function fmtDate(d?: string | null) {
     });
 }
 
-
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
 }
-
-/** =====================
- * Tabs / Segments
- * ===================== */
-type ViewKey =
-    | "all"
-    | "web_pending"
-    | "need_action"
-    | "processing"
-    | "delivered"
-    | "completed"
-    | "cancelled";
 
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
@@ -87,41 +80,6 @@ const VIEW_LABELS: Record<ViewKey, string> = {
     completed: "Hoàn thành",
     cancelled: "Đã hủy",
 };
-function matchesView(o: OrderItem, view: ViewKey) {
-    switch (view) {
-        case "web_pending":
-            return o.source === "WEB" && o.verificationStatus === "PENDING";
-
-        case "need_action":
-            // Chờ duyệt: chỉ ADMIN, không lấy WEB
-            return (
-                o.source === "ADMIN" &&
-                (o.status === "DRAFT" || o.status === "RESERVED") &&
-                o.verificationStatus !== "PENDING"
-            );
-
-        case "processing":
-            return o.status === "POSTED";
-
-        case "delivered":
-            return o.status === "SHIPPED";
-
-        case "completed":
-            return o.status === "COMPLETED";
-
-        case "cancelled":
-            return (
-                o.status === "CANCELLED" ||
-                o.verificationStatus === "REJECTED" ||
-                o.verificationStatus === "EXPIRED"
-            );
-
-        case "all":
-        default:
-            return true;
-    }
-}
-
 
 export default function OrderListPageClient({
     items,
@@ -130,74 +88,68 @@ export default function OrderListPageClient({
     pageSize,
     totalPages,
     rawSearchParams,
+    counts: serverCounts,
 }: PageProps) {
-    // bulk states (giữ nguyên)
     const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
     const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [bulkHasShipment, setBulkHasShipment] = useState(true);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
     const sp = useSearchParams();
 
     const url = useMemo(() => {
-        // clone readonly searchParams -> URLSearchParams mutable
         return new URLSearchParams(sp.toString());
     }, [sp]);
 
     const currentView = useMemo(() => {
-        return ((sp.get("view") || "all") as ViewKey);
+        const v = (sp.get("view") || "all") as ViewKey;
+        return v;
     }, [sp]);
 
-    // reset selection khi đổi tab (tránh carry selection)
+    const displayItems = items;
+
+    const countsByView: Counts = useMemo(() => {
+        if (serverCounts?.all != null) {
+            return {
+                all: serverCounts.all ?? 0,
+                web_pending: serverCounts.web_pending ?? 0,
+                need_action: serverCounts.need_action ?? 0,
+                processing: serverCounts.processing ?? 0,
+                delivered: serverCounts.delivered ?? 0,
+                completed: serverCounts.completed ?? 0,
+                cancelled: serverCounts.cancelled ?? 0,
+            };
+        }
+
+        const base: Counts = {
+            all: 0,
+            web_pending: 0,
+            need_action: 0,
+            processing: 0,
+            delivered: 0,
+            completed: 0,
+            cancelled: 0,
+        };
+
+        base[currentView] = total;
+        return base;
+    }, [serverCounts, currentView, total]);
+
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
         setShowBulkConfirm(false);
-    }, [currentView]);
+    }, [currentView, page, total]);
 
     const setViewHref = (view: ViewKey) => {
         const next = new URLSearchParams(url);
         if (view === "all") next.delete("view");
         else next.set("view", view);
-        next.set("page", "1"); // đổi tab => về trang 1
+        next.set("page", "1");
+        next.set("pageSize", String(pageSize));
         return `/admin/orders?${next.toString()}`;
     };
-
-    const displayItems = useMemo(
-        () => items.filter((o) => matchesView(o, currentView)),
-        [items, currentView]
-    );
-
-    const countsByView: Record<ViewKey, number> = useMemo(
-        () => ({
-            all: items.length,
-
-            web_pending: items.filter(
-                (o) => o.source === "WEB" && o.verificationStatus === "PENDING"
-            ).length,
-
-            need_action: items.filter(
-                (o) => o.status === "DRAFT" || o.status === "RESERVED"
-            ).length,
-
-            processing: items.filter((o) => o.status === "POSTED").length,
-
-            delivered: items.filter((o) => o.status === "SHIPPED").length,
-
-            completed: items.filter((o) => o.status === "COMPLETED").length,
-
-            cancelled: items.filter(
-                (o) =>
-                    o.status === "CANCELLED" ||
-                    o.verificationStatus === "REJECTED" ||
-                    o.verificationStatus === "EXPIRED"
-            ).length,
-        }),
-        [items]
-    );
-
 
     const gotoPageHref = (p: number) => {
         const next = new URLSearchParams(url);
@@ -206,7 +158,7 @@ export default function OrderListPageClient({
         return `/admin/orders?${next.toString()}`;
     };
 
-    const isRowSelectable = (o: OrderItem) => o.status === "DRAFT"; // rule bulk hiện tại của bạn
+    const isRowSelectable = (o: OrderItem) => o.status === "DRAFT";
 
     const allSelectableIdsInView = useMemo(
         () => displayItems.filter(isRowSelectable).map((o) => o.id),
@@ -219,7 +171,6 @@ export default function OrderListPageClient({
 
     const toggleAllInView = (checked: boolean) => {
         if (!checked) {
-            // chỉ bỏ chọn các id trong view (đỡ ảnh hưởng view khác)
             const next = selectedIds.filter((id) => !allSelectableIdsInView.includes(id));
             setSelectedIds(next);
             setShowBulkBar(next.length > 0);
@@ -230,7 +181,6 @@ export default function OrderListPageClient({
         setShowBulkBar(merged.length > 0);
     };
 
-    // tabs props (tách ra component)
     const tabs = (Object.keys(VIEW_LABELS) as ViewKey[]).map((k) => ({
         key: k,
         label: VIEW_LABELS[k],
@@ -241,7 +191,6 @@ export default function OrderListPageClient({
 
     return (
         <div className="space-y-4">
-            {/* HEADER */}
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Đơn hàng</h1>
                 <Link
@@ -252,12 +201,9 @@ export default function OrderListPageClient({
                 </Link>
             </div>
 
-            {/* TABS (import component) */}
             <SegmentTabs tabs={tabs} />
 
-            {/* FILTER FORM */}
             <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
-                {/* giữ tab hiện tại */}
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
 
                 <div className="flex flex-col">
@@ -284,6 +230,19 @@ export default function OrderListPageClient({
                     </select>
                 </div>
 
+                <div className="flex flex-col">
+                    <label className="text-xs text-gray-600">Page size</label>
+                    <select
+                        name="pageSize"
+                        defaultValue={String(pageSize)}
+                        className="h-9 rounded border px-2"
+                    >
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+
                 <div className="flex gap-2">
                     <button className="h-9 rounded border px-3" type="submit">
                         Lọc
@@ -294,7 +253,6 @@ export default function OrderListPageClient({
                 </div>
             </form>
 
-            {/* BULK BAR */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">{selectedIds.length} đơn hàng đã chọn</span>
@@ -320,7 +278,6 @@ export default function OrderListPageClient({
                 </div>
             )}
 
-            {/* BULK CONFIRM MODAL */}
             {showBulkConfirm && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
                     <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
@@ -329,8 +286,6 @@ export default function OrderListPageClient({
                         <div className="text-sm text-gray-600">
                             Bạn đang duyệt <b>{selectedIds.length}</b> đơn hàng.
                         </div>
-
-
 
                         <div className="flex justify-end gap-2 pt-3">
                             <button
@@ -362,12 +317,10 @@ export default function OrderListPageClient({
                 </div>
             )}
 
-            {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-gray-50 border-b">
                         <tr>
-                            {/* ✅ header checkbox bulk (giữ nguyên nhưng theo view) */}
                             <th className="px-3 py-2">
                                 <input
                                     type="checkbox"
@@ -381,7 +334,6 @@ export default function OrderListPageClient({
                             <th className="px-3 py-2 text-left">Khách hàng</th>
                             <th className="px-3 py-2 text-left">Số ĐT</th>
                             <th className="px-3 py-2 text-left">Trạng thái</th>
-
                             <th className="px-3 py-2 text-left">Ngày tạo</th>
                             <th className="px-3 py-2 text-left">Tổng tiền</th>
                             <th className="px-3 py-2 text-left">Số dòng</th>
@@ -425,25 +377,25 @@ export default function OrderListPageClient({
                                             <div className="leading-tight">
                                                 <div className="font-medium">{o.refNo ?? "-"}</div>
 
-                                                {o.hasShipment ? (
-                                                    <DotLabel label="Shipment" tone="green" />
+                                                {o.hasShipment ? <DotLabel label="Shipment" tone="green" /> : null}
+                                                {o.reserveType === "COD" ? (
+                                                    <DotLabel label="COD" tone="green" />
                                                 ) : null}
-                                                {o.reserveType === "COD" ? <DotLabel label="COD" tone="green" /> : null}
-                                                {o.reserveType === "DEPOSIT" ? <DotLabel label="Deposit" tone="green" /> : null}
-                                                {o.source === "WEB" ? <DotLabel label="Web" tone="blue" /> : null}
-
+                                                {o.reserveType === "DEPOSIT" ? (
+                                                    <DotLabel label="Deposit" tone="green" />
+                                                ) : null}
+                                                {o.source === "WEB" ? (
+                                                    <DotLabel label="Web" tone="blue" />
+                                                ) : null}
                                             </div>
                                         </td>
+
                                         <td className="px-3 py-2">{o.customerName ?? "-"}</td>
                                         <td className="px-3 py-2">{o.shipPhone ?? "-"}</td>
 
                                         <td className="px-3 py-2">
                                             <StatusBadge value={o.status} map={ORDER_STATUS} />
                                         </td>
-
-
-
-
 
                                         <td className="px-3 py-2">{fmtDate(o.createdAt)}</td>
                                         <td className="px-3 py-2">{fmtMoney(totalMoney, o.currency)}</td>
@@ -466,7 +418,12 @@ export default function OrderListPageClient({
                                         <td className="px-3 py-2">{o.notes ?? "-"}</td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            <ActionMenu entityId={o.id} entityType="orders" status={o.status} mode="edit" />
+                                            <ActionMenu
+                                                entityId={o.id}
+                                                entityType="orders"
+                                                status={o.status}
+                                                mode="edit"
+                                            />
                                         </td>
                                     </tr>
                                 );
@@ -476,7 +433,6 @@ export default function OrderListPageClient({
                 </table>
             </div>
 
-            {/* PAGINATION */}
             <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                     Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>

@@ -6,10 +6,19 @@ export type PaymentListSort =
     | "amountDesc"
     | "amountAsc";
 
+export type PaymentViewKey = "all" | "unpaid" | "paid" | "canceled";
+
 export type PaymentListInput = {
     q?: string;
     purpose?: string;
+
+    /**
+     * status là filter thực thi ở server
+     * view là filter UI từ tab
+     */
     status?: string;
+    view?: PaymentViewKey;
+
     type?: string;
     direction?: string;
     method?: string;
@@ -28,20 +37,30 @@ export type PaymentListInput = {
     pageSize?: number;
 };
 
-function toStr(v: any) {
+function toStr(v: unknown) {
     const s = Array.isArray(v) ? v[0] : v;
     return typeof s === "string" ? s : "";
 }
 
-function toInt(v: any, fallback: number) {
+function toInt(v: unknown, fallback: number) {
     const n = Number(toStr(v));
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+function toView(v: unknown): PaymentViewKey | undefined {
+    const s = toStr(v).toLowerCase();
+    if (s === "all" || s === "unpaid" || s === "paid" || s === "canceled") {
+        return s;
+    }
+    return undefined;
 }
 
 export function parsePaymentListSearchParams(sp: URLSearchParams): PaymentListInput {
     const q = toStr(sp.get("q"));
     const purpose = toStr(sp.get("purpose"));
     const status = toStr(sp.get("status"));
+    const view = toView(sp.get("view"));
+
     const type = toStr(sp.get("type"));
     const direction = toStr(sp.get("direction"));
     const method = toStr(sp.get("method"));
@@ -61,6 +80,7 @@ export function parsePaymentListSearchParams(sp: URLSearchParams): PaymentListIn
         q: q || undefined,
         purpose: purpose || undefined,
         status: status || undefined,
+        view: view || "all",
         type: type || undefined,
         direction: direction || undefined,
         method: method || undefined,

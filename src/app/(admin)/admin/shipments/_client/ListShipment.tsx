@@ -6,10 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ActionMenu from "../../acquisitions/components/ActionMenu";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 
-/* ==============================
- * Types
- * ============================== */
 type ShipmentStatus = "DRAFT" | "READY" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+type ViewKey = "all" | "draft" | "ready" | "shipped" | "delivered" | "cancelled";
 
 type ShipmentRow = {
     id: string;
@@ -27,7 +25,10 @@ type ShipmentRow = {
     carrier: string | null;
     trackingNo: string | null;
     shippingFee: number | null;
+    currency?: string | null;
 };
+
+type Counts = Record<ViewKey, number>;
 
 type PageProps = {
     items: ShipmentRow[];
@@ -36,6 +37,7 @@ type PageProps = {
     pageSize: number;
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
+    counts?: Partial<Counts>;
 };
 
 function cls(...xs: Array<string | false | null | undefined>) {
@@ -97,11 +99,6 @@ function fmtDate(d?: string | null) {
     });
 }
 
-/** =====================
- * Tabs / Segments
- * ===================== */
-type ViewKey = "all" | "draft" | "ready" | "shipped" | "delivered" | "cancelled";
-
 const VIEW_LABELS: Record<ViewKey, string> = {
     all: "Tất cả",
     draft: "Chờ duyệt",
@@ -111,27 +108,6 @@ const VIEW_LABELS: Record<ViewKey, string> = {
     cancelled: "Đã huỷ",
 };
 
-function matchesView(s: ShipmentRow, view: ViewKey) {
-    switch (view) {
-        case "draft":
-            return s.status === "DRAFT";
-        case "ready":
-            return s.status === "READY";
-        case "shipped":
-            return s.status === "SHIPPED";
-        case "delivered":
-            return s.status === "DELIVERED";
-        case "cancelled":
-            return s.status === "CANCELLED";
-        case "all":
-        default:
-            return true;
-    }
-}
-
-/* ==============================
- * Component
- * ============================== */
 export default function ShipmentListClient({
     items,
     total,
@@ -139,10 +115,9 @@ export default function ShipmentListClient({
     pageSize,
     totalPages,
     rawSearchParams,
+    counts: serverCounts,
 }: PageProps) {
     const router = useRouter();
-
-    // ✅ FIX: đọc view từ URL hiện tại giống Order
     const sp = useSearchParams();
 
     const url = useMemo(() => {
@@ -153,26 +128,34 @@ export default function ShipmentListClient({
         return ((sp.get("view") || "all") as ViewKey);
     }, [sp]);
 
-    // local rows for smooth UI
     const [rows, setRows] = useState<ShipmentRow[]>(items);
     useEffect(() => setRows(items), [items]);
 
-    const displayItems = useMemo(
-        () => rows.filter((x) => matchesView(x, currentView)),
-        [rows, currentView]
-    );
+    const displayItems = rows;
 
-    const countsByView: Record<ViewKey, number> = useMemo(
-        () => ({
-            all: rows.length,
-            draft: rows.filter((x) => x.status === "DRAFT").length,
-            ready: rows.filter((x) => x.status === "READY").length,
-            shipped: rows.filter((x) => x.status === "SHIPPED").length,
-            delivered: rows.filter((x) => x.status === "DELIVERED").length,
-            cancelled: rows.filter((x) => x.status === "CANCELLED").length,
-        }),
-        [rows]
-    );
+    const countsByView: Counts = useMemo(() => {
+        if (serverCounts?.all != null) {
+            return {
+                all: serverCounts.all ?? 0,
+                draft: serverCounts.draft ?? 0,
+                ready: serverCounts.ready ?? 0,
+                shipped: serverCounts.shipped ?? 0,
+                delivered: serverCounts.delivered ?? 0,
+                cancelled: serverCounts.cancelled ?? 0,
+            };
+        }
+
+        const base: Counts = {
+            all: 0,
+            draft: 0,
+            ready: 0,
+            shipped: 0,
+            delivered: 0,
+            cancelled: 0,
+        };
+        base[currentView] = total;
+        return base;
+    }, [serverCounts, currentView, total]);
 
     const setViewHref = (view: ViewKey) => {
         const next = new URLSearchParams(url);
@@ -200,9 +183,6 @@ export default function ShipmentListClient({
         active: currentView === k,
     }));
 
-    /** ==========================
-     * BULK states (y như Order)
-     * ========================== */
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -214,7 +194,7 @@ export default function ShipmentListClient({
         setShowBulkBar(false);
         setShowBulkConfirm(false);
         setBulkErr(null);
-    }, [currentView]);
+    }, [currentView, page, total]);
 
     const isRowSelectable = (s: ShipmentRow) => s.status === "DRAFT";
 
@@ -271,7 +251,6 @@ export default function ShipmentListClient({
 
     return (
         <div className="space-y-4">
-            {/* HEADER */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-semibold">Shipment</h1>
@@ -288,10 +267,8 @@ export default function ShipmentListClient({
                 </Link>
             </div>
 
-            {/* ✅ TABS dùng chung */}
             <SegmentTabs tabs={tabs} />
 
-            {/* FILTER FORM */}
             <form action="/admin/shipments" method="get" className="flex flex-wrap gap-2 items-end">
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
 
@@ -324,7 +301,6 @@ export default function ShipmentListClient({
                 </div>
             </form>
 
-            {/* BULK BAR */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">{selectedIds.length} shipment đã chọn</span>
@@ -350,7 +326,6 @@ export default function ShipmentListClient({
                 </div>
             )}
 
-            {/* BULK CONFIRM MODAL */}
             {showBulkConfirm && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
                     <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
@@ -385,7 +360,6 @@ export default function ShipmentListClient({
                 </div>
             )}
 
-            {/* TABLE */}
             <div className="overflow-x-auto border rounded-lg bg-white">
                 <table className="min-w-full text-sm border-collapse">
                     <thead className="bg-gray-50 border-b">
@@ -449,27 +423,40 @@ export default function ShipmentListClient({
                                             <div className="font-medium">{s.customerName}</div>
                                             <div className="text-xs text-gray-500">{s.shipPhone}</div>
                                             {s.shipAddress && (
-                                                <div className="text-xs text-gray-400 line-clamp-1">{s.shipAddress}</div>
+                                                <div className="text-xs text-gray-400 line-clamp-1">
+                                                    {s.shipAddress}
+                                                </div>
                                             )}
                                         </td>
 
                                         <td className="px-3 py-2">
                                             <div>{s.carrier ?? "-"}</div>
                                             {s.trackingNo && (
-                                                <div className="text-xs text-gray-500">Tracking: {s.trackingNo}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    Tracking: {s.trackingNo}
+                                                </div>
                                             )}
                                         </td>
 
-                                        <td className="px-3 py-2 text-right font-medium">{money(s.shippingFee)}</td>
+                                        <td className="px-3 py-2 text-right font-medium">
+                                            {money(s.shippingFee)}
+                                        </td>
 
                                         <td className="px-3 py-2">
                                             <Badge tone={statusTone(s.status)}>{s.status}</Badge>
                                         </td>
 
-                                        <td className="px-3 py-2 text-right text-xs text-gray-500">{fmtDate(s.createdAt)}</td>
+                                        <td className="px-3 py-2 text-right text-xs text-gray-500">
+                                            {fmtDate(s.createdAt)}
+                                        </td>
 
                                         <td className="relative px-3 py-2 text-right">
-                                            <ActionMenu entityId={s.id} entityType="shipments" status={s.status} mode="edit" />
+                                            <ActionMenu
+                                                entityId={s.id}
+                                                entityType="shipments"
+                                                status={s.status}
+                                                mode="edit"
+                                            />
                                         </td>
                                     </tr>
                                 );
@@ -479,7 +466,6 @@ export default function ShipmentListClient({
                 </table>
             </div>
 
-            {/* PAGINATION */}
             <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                     Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
@@ -488,14 +474,20 @@ export default function ShipmentListClient({
                 <div className="flex gap-2">
                     <Link
                         href={gotoPageHref(Math.max(1, page - 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page <= 1 && "pointer-events-none opacity-50")}
+                        className={cls(
+                            "rounded border px-3 py-1 text-sm",
+                            page <= 1 && "pointer-events-none opacity-50"
+                        )}
                     >
                         ← Trước
                     </Link>
 
                     <Link
                         href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page >= totalPages && "pointer-events-none opacity-50")}
+                        className={cls(
+                            "rounded border px-3 py-1 text-sm",
+                            page >= totalPages && "pointer-events-none opacity-50"
+                        )}
                     >
                         Sau →
                     </Link>

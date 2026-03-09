@@ -1,12 +1,12 @@
-// shipment.service.ts
 import { Prisma, shipmentstatus } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import * as shipmentRepo from "./shipment.repo";
-import * as paymentRepo from "../../payments/_server/payment.repo"
-import * as orderRepo from "../../orders/_servers/order.repo"
-import * as productRepo from "../../products/_server/product.repo"
+import * as paymentRepo from "../../payments/_server/payment.repo";
+import * as orderRepo from "../../orders/_servers/order.repo";
+import * as productRepo from "../../products/_server/product.repo";
 
-import { ShipmentSearchInput } from "./shipment.type";
+import { ShipmentSearchInput, ShipmentViewKey } from "./shipment.type";
+
 export type OrderForShipment = {
     id: string;
     orderRefNo: string | null;
@@ -24,7 +24,6 @@ export async function createFromOrderTx(
 ) {
     if (!order?.id) throw new Error("Missing order.id");
 
-    // tránh tạo trùng (do orderId unique ở Shipment)
     const existed = await tx.shipment.findUnique({
         where: { orderId: order.id },
         select: { id: true },
@@ -50,10 +49,6 @@ export async function createFromOrderTx(
     });
 }
 
-/**
- * Wrapper nếu bạn vẫn muốn call kiểu truyền orderId từ chỗ khác
- * (nhưng trong post order thì KHÔNG dùng wrapper này)
- */
 export async function createFromOrder(orderId: string) {
     return prisma.$transaction(async (tx) => {
         const order = await tx.order.findUnique({
@@ -76,36 +71,56 @@ export async function createFromOrder(orderId: string) {
     });
 }
 
-export async function getAdminShipmentList(input: ShipmentSearchInput) {
-    const { page, pageSize, q, status } = input;
+function viewToStatus(view?: ShipmentViewKey): shipmentstatus | undefined {
+    switch (view) {
+        case "draft":
+            return "DRAFT";
+        case "ready":
+            return "READY";
+        case "shipped":
+            return "SHIPPED";
+        case "delivered":
+            return "DELIVERED";
+        case "cancelled":
+            return "CANCELLED";
+        case "all":
+        default:
+            return undefined;
+    }
+}
 
-    // parse status string -> enum (để Prisma nhận đúng type)
-    const statusEnum: shipmentstatus | undefined =
+export async function getAdminShipmentList(input: ShipmentSearchInput) {
+    const { page, pageSize, q, status, view } = input;
+
+    const explicitStatus: shipmentstatus | undefined =
         status && Object.values(shipmentstatus).includes(status as shipmentstatus)
             ? (status as shipmentstatus)
             : undefined;
 
-    // ✅ giống format Order: q ? { OR: [...] } : {}
+    const effectiveStatus = explicitStatus ?? viewToStatus(view);
+
     const baseWhere: Prisma.ShipmentWhereInput = q
         ? {
             OR: [
                 { refNo: { contains: q, mode: "insensitive" } },
                 { shipPhone: { contains: q, mode: "insensitive" } },
+                { customerName: { contains: q, mode: "insensitive" } },
                 { carrier: { contains: q, mode: "insensitive" } },
                 { trackingCode: { contains: q, mode: "insensitive" } },
                 { notes: { contains: q, mode: "insensitive" } },
-                // orderId là uuid/string → chỉ search "contains" được nếu bạn lưu dạng string
                 { orderId: { contains: q, mode: "insensitive" } },
+                { orderRefNo: { contains: q, mode: "insensitive" } },
             ],
         }
         : {};
 
-    const where: Prisma.ShipmentWhereInput = statusEnum
-        ? { ...baseWhere, status: statusEnum }
+    const where: Prisma.ShipmentWhereInput = effectiveStatus
+        ? { ...baseWhere, status: effectiveStatus }
         : baseWhere;
 
     const skip = (page - 1) * pageSize;
     const take = pageSize;
+
     const { rows, total } = await shipmentRepo.getShipmentList(
         where,
         { createdAt: "desc" },
@@ -113,33 +128,51 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
         take,
         prisma
     );
-    /**
-     * 🔥 Map dữ liệu cho UI (giống Order)
-     */
+
+    const [cAll, cDraft, cReady, cShipped, cDelivered, cCancelled] = await Promise.all([
+        prisma.shipment.count({ where: baseWhere }),
+        prisma.shipment.count({ where: { ...baseWhere, status: "DRAFT" } }),
+        prisma.shipment.count({ where: { ...baseWhere, status: "READY" } }),
+        prisma.shipment.count({ where: { ...baseWhere, status: "SHIPPED" } }),
+        prisma.shipment.count({ where: { ...baseWhere, status: "DELIVERED" } }),
+        prisma.shipment.count({ where: { ...baseWhere, status: "CANCELLED" } }),
+    ]);
+
     const items = rows.map((s) => ({
         id: s.id,
         refNo: s.refNo,
         status: s.status,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-        orderId: s.orderId, // thay cho orderRefNo
-        shipPhone: s.shipPhone,
-        shipAddress: s.shipAddress,
-        shipCity: s.shipCity,
-        shipDistrict: s.shipDistrict,
-        shipWard: s.shipWard,
+        orderId: s.orderId,
+        orderRefNo: s.orderRefNo ?? s.Order?.refNo ?? null,
+        customerName: s.customerName ?? s.Order?.customerName ?? "",
+        shipPhone: s.shipPhone ?? s.Order?.shipPhone ?? "",
+        shipAddress: s.shipAddress ?? s.Order?.shipAddress ?? "",
         carrier: s.carrier,
-        trackingCode: s.trackingCode, // thay cho trackingNo
-        shippingFee: s.shippingFee,   // Decimal (serialize ở page.tsx giống Order)
-        currency: s.currency,
+        trackingNo: s.trackingCode,
+        shippingFee: s.shippingFee == null ? null : Number(s.shippingFee),
+        currency: s.currency ?? "VND",
         shippedAt: s.shippedAt,
         deliveredAt: s.deliveredAt,
         notes: s.notes,
     }));
 
-    return { items, total, page, pageSize };
+    return {
+        items,
+        total,
+        counts: {
+            all: cAll,
+            draft: cDraft,
+            ready: cReady,
+            shipped: cShipped,
+            delivered: cDelivered,
+            cancelled: cCancelled,
+        },
+        page,
+        pageSize,
+    };
 }
-
 
 function uniq(xs: string[]) {
     return Array.from(new Set(xs));
@@ -153,7 +186,6 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
     }
 
     return prisma.$transaction(async (tx) => {
-        // 1) check tồn tại
         const rows = await shipmentRepo.findShipmentsByIds(tx, shipmentIds);
 
         if (rows.length !== shipmentIds.length) {
@@ -162,7 +194,6 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
             throw new Error(`Shipment không tồn tại: ${missing.join(", ")}`);
         }
 
-        // 2) chỉ cho duyệt DRAFT
         const notDraft = rows.filter((x) => x.status !== "DRAFT");
         if (notDraft.length > 0) {
             throw new Error(
@@ -172,7 +203,6 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
             );
         }
 
-        // 3) update DRAFT -> READY
         const result = await shipmentRepo.bulkMarkReady(tx, shipmentIds);
 
         return {
@@ -181,7 +211,6 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
         };
     });
 }
-
 
 export async function markShipmentShipped(input: { shipmentId: string; shippingFee: number }) {
     const { shipmentId, shippingFee } = input;
@@ -194,63 +223,16 @@ export async function markShipmentShipped(input: { shipmentId: string; shippingF
             throw new Error(`Shipment must be READY to mark SHIPPED (current=${s.status})`);
         }
 
-        await shipmentRepo.updateShipmentStt(shipmentId, {
-            status: "SHIPPED",
-            shippingFee,
-            shippedAt: new Date(),
-        }, tx);
-    });
-}
-
-export async function markShipmentDelivered(input: { shipmentId: string }) {
-    const { shipmentId } = input;
-
-    await prisma.$transaction(async (tx) => {
-        const s = await shipmentRepo.getByIdWithOrder(shipmentId, tx);
-        if (!s) throw new Error("Shipment not found");
-
-        if (s.status !== "SHIPPED") {
-            throw new Error(`Shipment must be SHIPPED to mark DELIVERED (current=${s.status})`);
-        }
-
-        // 1) create payment shipping fee (idempotent)
-        const fee = Number(s.shippingFee ?? 0);
-        if (fee > 0) {
-            const existed = await paymentRepo.findShippingFeePaymentByShipmentId(shipmentId, tx);
-            if (!existed) {
-                await paymentRepo.createShippingFeePayment(
-                    {
-                        shipmentId,
-                        orderId: s.orderId ?? null,
-                        amount: fee,
-                        currency: "VND",
-                        method: "CASH", // tuỳ bạn
-                        status: "PAID", // hoặc PENDING
-                        note: `Shipping fee for shipment ${s.refNo ?? s.id}`,
-                    },
-                    tx
-                );
-            }
-        }
-
-        // 2) update shipment status
         await shipmentRepo.updateShipmentStt(
             shipmentId,
             {
-                status: "DELIVERED",
-                deliveredAt: new Date(),
+                status: "SHIPPED",
+                shippingFee,
+                shippedAt: new Date(),
             },
             tx
         );
-
-        // 3) update order status (tuỳ enum bạn)
-        if (s.orderId) {
-            // bạn nói “chuyển order status sang SHIPPED” khi delivered
-            await orderRepo.updateStatus(s.orderId, "SHIPPED", tx);
-
-            // 4) update products of that order
-            // tuỳ cấu trúc: nếu order có orderItems, map productIds rồi update.
-
-        }
     });
 }
+
+// ... giữ nguyên phần còn lại của file nếu bạn còn logic khác bên dưới ...

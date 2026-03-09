@@ -1,47 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-
-import ActionMenu from "../../acquisitions/components/ActionMenu";
-import SegmentTabs from "@/components/tabs/SegmenTabs";
-import { StatusBadge } from "@/components/badges/StatusBadge";
-import { SERVICE_REQUEST_STATUS } from "@/components/badges/StatusMaps";
-import DotLabel from "../../__components/DotLabel";
-import BulkAssignVendorModal from "./BulkAssignVendorModal";
-import MaintenanceDrawer
-    from "./MaintenanceDrawer";
-import MaintenanceLogModal from "./MaintenaceLogModel";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import GenericActionMenu from "../../__components/GenericActionMenu";
+import BulkAssignVendorModal from "./BulkAssignVendorModal";
+import MaintenanceDrawer from "./MaintenanceDrawer";
+import MaintenanceLogModal from "./MaintenaceLogModel";
 
 type ServiceReqItem = {
     id: string;
-
+    refNo: string | null;
     status: string;
     createdAt: string;
-    scope: string;
-    customerItemNote: string;
-    orderRefNo: string;
-    refNo: string;
-    serviceName: string;
-    productTitle: string;
-    // optional (tùy API bạn trả)
-    orderItemId?: string | null;
-    vendorName: string;
-    orderItem?: {
-        id: string;
-        title?: string | null;
-        serviceScope?: string | null;
-        customerItemNote?: string | null;
-        serviceCatalogId?: string | null;
-        order?: { id: string; refNo?: string | null } | null;
-    } | null;
+    updatedAt: string;
+    scope: string | null;
+    customerItemNote: string | null;
+    orderRefNo: string | null;
+    serviceName: string | null;
+    productTitle: string | null;
+    vendorName: string | null;
     maintenanceCount: number;
-    lastMaintenanceAt?: string | null;
-    serviceCatalogId?: string | null;
-    serviceCatalog?: { id: string; code?: string | null; name: string } | null;
-    ServiceCatalog?: { id: string; code?: string | null; name: string } | null; // fallback key
+};
+
+type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
+
+type Counts = {
+    all: number;
+    draft: number;
+    in_progress: number;
+    done: number;
+    canceled: number;
 };
 
 type PageProps = {
@@ -51,224 +39,256 @@ type PageProps = {
     pageSize: number;
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
+    counts?: Partial<Counts>;
 };
 
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
+function fmtDT(s?: string | null) {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return "-";
+    return d.toLocaleString("vi-VN");
 }
 
-function fmtDate(d?: string | null) {
-    if (!d) return "-";
-    const dt = new Date(d);
-    return dt.toLocaleString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-}
-
-/** =====================
- * Tabs / Segments
- * ===================== */
-type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
-
-const VIEW_LABELS: Record<ViewKey, string> = {
-    all: "Tất cả",
-    draft: "DRAFT",
-    in_progress: "IN_PROGRESS",
-    done: "DONE",
-    canceled: "CANCELED",
-};
-
-function matchesView(o: ServiceReqItem, view: ViewKey) {
-    switch (view) {
-        case "draft":
-            return o.status === "DRAFT";
-        case "in_progress":
-            return o.status === "IN_PROGRESS";
-        case "done":
-            return o.status === "COMPLETED";
-        case "canceled":
-            return o.status === "CANCELED";
-        case "all":
-        default:
-            return true;
+function statusPillClass(status?: string) {
+    const s = (status || "").toUpperCase();
+    if (s === "DRAFT") return "bg-gray-50 text-gray-700 border-gray-200";
+    if (s === "DIAGNOSING" || s === "WAIT_APPROVAL" || s === "IN_PROGRESS") {
+        return "bg-blue-50 text-blue-700 border-blue-200";
     }
+    if (s === "COMPLETED" || s === "DELIVERED") {
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+    if (s === "CANCELED") return "bg-red-50 text-red-700 border-red-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
 }
 
-export default function ServiceRequestListPageClient({
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages,
-    rawSearchParams,
-}: PageProps) {
-    // bulk states
-    const [showBulkBar, setShowBulkBar] = useState(false);
+function pillClassByScope(scope?: string | null) {
+    const s = (scope || "").toUpperCase();
+    if (s === "INTERNAL") return "bg-indigo-50 text-indigo-700 border-indigo-200";
+    if (s === "CUSTOMER_ITEM") return "bg-orange-50 text-orange-700 border-orange-200";
+    if (s === "PRODUCT_ITEM") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
+}
+
+export default function ServiceRequestListClient(props: PageProps) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const sp = useSearchParams();
+
+    const items = props.items ?? [];
+
+    const currentView: ViewKey = useMemo(() => {
+        const v = (sp.get("view") || "all").toLowerCase();
+        if (v === "draft" || v === "in_progress" || v === "done" || v === "canceled") {
+            return v as ViewKey;
+        }
+        return "all";
+    }, [sp]);
+
+    const q = sp.get("q") ?? "";
+    const sort = sp.get("sort") ?? "updatedDesc";
+
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+    const [showBulkBar, setShowBulkBar] = useState(false);
+
     const [openBulkAssignVendor, setOpenBulkAssignVendor] = useState(false);
     const [openMaint, setOpenMaint] = useState(false);
     const [maintSrId, setMaintSrId] = useState<string | null>(null);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
-    const sp = useSearchParams();
 
-    const url = useMemo(() => new URLSearchParams(sp.toString()), [sp]);
-
-    const currentView = useMemo(() => (sp.get("view") || "all") as ViewKey, [sp]);
-
-    // reset selection khi đổi tab
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
-        setShowBulkConfirm(false);
-    }, [currentView]);
+    }, [currentView, q, sort, props.page]);
 
-    const setViewHref = (view: ViewKey) => {
-        const next = new URLSearchParams(url);
+    useEffect(() => {
+        setShowBulkBar(selectedIds.length > 0);
+    }, [selectedIds.length]);
+
+    const displayItems = items;
+
+    const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
+    const allChecked =
+        pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const someChecked =
+        pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
+
+    const counts: Counts = useMemo(() => {
+        if (props.counts?.all != null) {
+            return {
+                all: props.counts.all ?? 0,
+                draft: props.counts.draft ?? 0,
+                in_progress: props.counts.in_progress ?? 0,
+                done: props.counts.done ?? 0,
+                canceled: props.counts.canceled ?? 0,
+            };
+        }
+        const base: Counts = { all: 0, draft: 0, in_progress: 0, done: 0, canceled: 0 };
+        base[currentView] = props.total;
+        return base;
+    }, [props.counts, props.total, currentView]);
+
+    function setParam(next: URLSearchParams, key: string, value: string | null) {
+        if (!value) next.delete(key);
+        else next.set(key, value);
+    }
+
+    function pushWith(next: URLSearchParams) {
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
         if (view === "all") next.delete("view");
         else next.set("view", view);
         next.set("page", "1");
-        return `/admin/services?${next.toString()}`;
-    };
+        pushWith(next);
+    }
 
-    const displayItems = useMemo(
-        () => items.filter((o) => matchesView(o, currentView)),
-        [items, currentView]
-    );
+    function applyFilters(form: { q: string; sort: string }) {
+        const next = new URLSearchParams(sp.toString());
+        setParam(next, "q", form.q.trim() || null);
+        setParam(next, "sort", form.sort || "updatedDesc");
+        next.set("page", "1");
+        pushWith(next);
+    }
 
-    const countsByView: Record<ViewKey, number> = useMemo(
-        () => ({
-            all: items.length,
-            draft: items.filter((o) => o.status === "DRAFT").length,
+    function clearFilters() {
+        const next = new URLSearchParams(sp.toString());
+        next.delete("q");
+        next.delete("sort");
+        next.set("page", "1");
+        pushWith(next);
+    }
 
-            pending: items.filter((o) => o.status === "PENDING").length,
-            in_progress: items.filter((o) => o.status === "IN_PROGRESS").length,
-            done: items.filter((o) => o.status === "DONE").length,
-            canceled: items.filter((o) => o.status === "CANCELED").length,
-        }),
-        [items]
-    );
-
-    const gotoPageHref = (p: number) => {
-        const next = new URLSearchParams(url);
+    function goPage(p: number) {
+        const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
-        next.set("pageSize", String(pageSize));
-        return `/admin/service-requests?${next.toString()}`;
-    };
+        pushWith(next);
+    }
 
-    // rule bulk: cho phép select mọi status (bạn đổi rule ở đây nếu muốn)
-    const isRowSelectable = (_o: ServiceReqItem) => true;
+    const [formQ, setFormQ] = useState(q);
+    const [formSort, setFormSort] = useState(sort);
 
-    const allSelectableIdsInView = useMemo(
-        () => displayItems.filter(isRowSelectable).map((o) => o.id),
-        [displayItems]
-    );
-
-    const allChecked =
-        allSelectableIdsInView.length > 0 &&
-        allSelectableIdsInView.every((id) => selectedIds.includes(id));
-
-    const toggleAllInView = (checked: boolean) => {
-        if (!checked) {
-            const next = selectedIds.filter((id) => !allSelectableIdsInView.includes(id));
-            setSelectedIds(next);
-            setShowBulkBar(next.length > 0);
-            return;
-        }
-        const merged = Array.from(new Set([...selectedIds, ...allSelectableIdsInView]));
-        setSelectedIds(merged);
-        setShowBulkBar(merged.length > 0);
-    };
-
-    const tabs = (Object.keys(VIEW_LABELS) as ViewKey[]).map((k) => ({
-        key: k,
-        label: VIEW_LABELS[k],
-        count: countsByView[k],
-        href: setViewHref(k),
-        active: currentView === k,
-    }));
+    useEffect(() => setFormQ(q), [q]);
+    useEffect(() => setFormSort(sort), [sort]);
 
     return (
         <div className="space-y-4">
-            {/* HEADER */}
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Service Requests</h1>
-                <Link
-                    href="/admin/orders"
-                    className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                <div>
+                    <h1 className="text-2xl font-semibold">Service Requests</h1>
+                </div>
+                <button
+                    type="button"
+                    className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                    onClick={() => router.push("/admin/orders")}
                 >
                     ← Orders
-                </Link>
+                </button>
             </div>
 
-            {/* TABS */}
-            <SegmentTabs tabs={tabs} />
+            <div className="border-b">
+                <div className="flex gap-8 items-end">
+                    {[
+                        ["all", "Tất cả", counts.all],
+                        ["draft", "DRAFT", counts.draft],
+                        ["in_progress", "IN_PROGRESS", counts.in_progress],
+                        ["done", "DONE", counts.done],
+                        ["canceled", "CANCELED", counts.canceled],
+                    ].map(([key, label, count]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => setView(key as ViewKey)}
+                            className={`pb-2 text-sm ${currentView === key
+                                    ? "border-b-2 border-black font-semibold"
+                                    : "text-gray-500"
+                                }`}
+                        >
+                            {label}{" "}
+                            <span
+                                className={`ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full text-xs ${currentView === key
+                                        ? "bg-black text-white"
+                                        : "bg-gray-100 text-gray-800"
+                                    }`}
+                            >
+                                {count ?? 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
-            {/* FILTER FORM */}
             <form
-                action="/admin/service-requests"
-                method="get"
-                className="flex flex-wrap gap-2 items-end"
+                className="space-y-3"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    applyFilters({ q: formQ, sort: formSort });
+                }}
             >
-                {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
+                        <input
+                            value={formQ}
+                            onChange={(e) => setFormQ(e.target.value)}
+                            placeholder="refNo / order / service / vendor / notes..."
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                    </div>
 
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Tìm kiếm</label>
-                    <input
-                        name="q"
-                        defaultValue={(rawSearchParams.q as string) ?? ""}
-                        placeholder="ID / Order RefNo / Notes..."
-                        className="h-9 rounded border px-2"
-                    />
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
+                        <select
+                            value={formSort}
+                            onChange={(e) => setFormSort(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="updatedDesc">Cập nhật ↓</option>
+                            <option value="updatedAsc">Cập nhật ↑</option>
+                            <option value="createdDesc">Tạo ↓</option>
+                            <option value="createdAsc">Tạo ↑</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Sắp xếp</label>
-                    <select
-                        name="sort"
-                        defaultValue={(rawSearchParams.sort as string) ?? "createdDesc"}
-                        className="h-9 rounded border px-2"
+                <div className="flex items-center gap-3">
+                    <button
+                        type="submit"
+                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
-                        <option value="createdDesc">Tạo ↓</option>
-                        <option value="createdAsc">Tạo ↑</option>
-                        <option value="updatedDesc">Cập nhật ↓</option>
-                        <option value="updatedAsc">Cập nhật ↑</option>
-                    </select>
-                </div>
-
-                <div className="flex gap-2">
-                    <button className="h-9 rounded border px-3" type="submit">
                         Lọc
                     </button>
-                    <Link
-                        href="/admin/service-requests"
-                        className="h-9 rounded border px-3 flex items-center"
+                    <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
                         Clear
-                    </Link>
+                    </button>
+
+                    <div className="ml-auto text-sm text-gray-600">
+                        Đã chọn: <b>{selectedIds.length}</b>
+                    </div>
                 </div>
             </form>
 
-            {/* BULK BAR */}
             {showBulkBar && (
                 <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} service request đã chọn
                     </span>
-                    <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                        onClick={() => setOpenBulkAssignVendor(true)}
-                        type="button"
-                    >
-                        Assign vendor
-                    </button>
 
+                    <button
+                        type="button"
+                        className="px-3 py-1 border rounded text-sm"
+                        onClick={() => setOpenBulkAssignVendor(true)}
+                    >
+                        Gán vendor
+                    </button>
 
                     <button
                         className="px-3 py-1 border rounded text-sm"
@@ -283,255 +303,237 @@ export default function ServiceRequestListPageClient({
                 </div>
             )}
 
-            {/* BULK CONFIRM MODAL (placeholder) */}
-            {showBulkConfirm && (
-                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
-                    <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
-                        <h3 className="font-semibold text-lg">Bulk action</h3>
-
-                        <div className="text-sm text-gray-600">
-                            Bạn đang chọn <b>{selectedIds.length}</b> service request.
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-3">
-                            <button
-                                className="px-3 py-1 border rounded"
-                                onClick={() => setShowBulkConfirm(false)}
-                                type="button"
-                            >
-                                Hủy
-                            </button>
-
-                            <button
-                                className="px-3 py-1 bg-blue-600 text-white rounded"
-                                onClick={async () => {
-                                    // TODO: thay endpoint theo hệ thống của bạn
-                                    await fetch("/api/admin/service-requests/bulk-post", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ ids: selectedIds }),
-                                    });
-                                    location.reload();
-                                }}
-                                type="button"
-                            >
-                                Xác nhận
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* TABLE */}
-            <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full text-sm border-collapse">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="px-3 py-2">
-                                <input
-                                    type="checkbox"
-                                    checked={allChecked}
-                                    onChange={(e) => toggleAllInView(e.target.checked)}
-                                    disabled={allSelectableIdsInView.length === 0}
-                                />
-                            </th>
-
-                            <th className="px-3 py-2 text-left">RefNo</th>
-                            <th className="px-3 py-2 text-left">Dịch vụ</th>
-                            <th className="px-3 py-2 text-left">Sản phẩm</th>
-                            <th className="px-3 py-2 text-left">Vendor</th>
-                            <th className="px-3 py-2 text-left">Order</th>
-                            <th className="px-3 py-2 text-left">Note</th>
-                            <th className="px-3 py-2 text-left">Status</th>
-                            <th className="px-3 py-2 text-left">Ngày tạo</th>
-                            <th className="px-3 py-2 text-right">Hành động</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {displayItems.length === 0 ? (
-                            <tr>
-                                <td colSpan={8} className="py-8 text-center text-gray-500">
-                                    Không có dữ liệu trong tab này
-                                </td>
+            <div className="border rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr className="text-left text-gray-700">
+                                <th className="w-10 px-3 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={allChecked}
+                                        ref={(el) => {
+                                            if (el) el.indeterminate = someChecked;
+                                        }}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedIds((prev) =>
+                                                    Array.from(new Set([...prev, ...pageIds]))
+                                                );
+                                            } else {
+                                                setSelectedIds((prev) =>
+                                                    prev.filter((id) => !pageIds.includes(id))
+                                                );
+                                            }
+                                        }}
+                                    />
+                                </th>
+                                <th className="px-3 py-3">RefNo</th>
+                                <th className="px-3 py-3">Service</th>
+                                <th className="px-3 py-3">Scope / Vendor</th>
+                                <th className="px-3 py-3">Status</th>
+                                <th className="px-3 py-3">Ngày tạo</th>
+                                <th className="px-3 py-3">Link</th>
+                                <th className="px-3 py-3 text-right">Hành động</th>
                             </tr>
-                        ) : (
-                            displayItems.map((r) => {
-                                const selectable = isRowSelectable(r);
+                        </thead>
 
-                                const cat =
-                                    r.serviceCatalog ??
-                                    r.ServiceCatalog ??
-                                    r.orderItem?.serviceCatalogId ??
-                                    null;
+                        <tbody>
+                            {displayItems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-3 py-10 text-center text-gray-500">
+                                        Không có dữ liệu trong tab này
+                                    </td>
+                                </tr>
+                            ) : (
+                                displayItems.map((row) => {
+                                    const checked = selectedIds.includes(row.id);
 
-                                const serviceName =
-                                    r.serviceCatalog?.name ??
-                                    r.ServiceCatalog?.name ??
-                                    r.orderItem?.title ??
-                                    "-";
+                                    return (
+                                        <tr key={row.id} className="border-t">
+                                            <td className="w-10 px-3 py-4 align-top">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedIds((prev) =>
+                                                                Array.from(new Set([...prev, row.id]))
+                                                            );
+                                                        } else {
+                                                            setSelectedIds((prev) =>
+                                                                prev.filter((id) => id !== row.id)
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
 
-                                const orderId = r.orderItem?.order?.id ?? null;
-                                const orderRefNo = r.orderItem?.order?.refNo ?? null;
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-medium">
+                                                    {row.refNo && row.refNo.trim() ? row.refNo : "-"}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    ID: {row.id}
+                                                </div>
+                                            </td>
 
-                                return (
-                                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                                        <td className="px-3 py-2">
-                                            <input
-                                                type="checkbox"
-                                                disabled={!selectable}
-                                                checked={selectedIds.includes(r.id)}
-                                                onChange={(e) => {
-                                                    const next = e.target.checked
-                                                        ? [...selectedIds, r.id]
-                                                        : selectedIds.filter((id) => id !== r.id);
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-medium">
+                                                    {row.serviceName || "-"}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Product: {row.productTitle || "-"}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Note: {row.customerItemNote || "-"}
+                                                </div>
+                                            </td>
 
-                                                    setSelectedIds(next);
-                                                    setShowBulkBar(next.length > 0);
-                                                }}
-                                            />
-                                        </td>
-
-                                        <td className="px-3 py-2 font-mono text-xs">
-
-                                            <div className="font-medium">{r.refNo ?? "-"}</div>
-
-                                            {r.scope === "CUSTOMER_OWNED" ? (
-                                                <DotLabel label="Đồ Khách" tone="green" />
-                                            ) : null}
-
-                                            {r.scope === "WITH_PURCHASE" ? (
-                                                <DotLabel label="Dịch Vụ" tone="blue" />
-                                            ) : null}
-
-                                            {r.scope === "INTERNAL" ? (
-                                                <DotLabel label="Nội bộ" tone="gray" />
-                                            ) : null}
-                                        </td>
-
-                                        <td className="px-3 py-2">
-                                            <div className="font-medium">{r.serviceName}</div>
-                                            {(r.serviceCatalogId || r.orderItem?.serviceCatalogId) && (
-                                                <div className="text-xs text-gray-500">
-                                                    catalogId:{" "}
-                                                    <span className="font-mono">
-                                                        {r.serviceCatalogId ?? r.orderItem?.serviceCatalogId}
+                                            <td className="px-3 py-4 align-top">
+                                                <div>
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${pillClassByScope(
+                                                            row.scope
+                                                        )}`}
+                                                    >
+                                                        {(row.scope || "-").toUpperCase()}
                                                     </span>
                                                 </div>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-2 font-mono text-xs">
-                                            {r.productTitle}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <div className="text-sm">{r.vendorName ?? "-"}</div>
+                                                <div className="text-sm mt-2">
+                                                    {row.vendorName || "-"}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Maintenance: {row.maintenanceCount ?? 0}
+                                                </div>
+                                            </td>
 
-                                            <button
-                                                type="button"
-                                                className="mt-1 inline-flex"
-                                                onClick={() => {
-                                                    setMaintSrId(r.id);
-                                                    setOpenMaint(true);
-                                                }}
-                                            >
-                                                {r.maintenanceCount > 0 ? (
-                                                    <DotLabel label={`${r.maintenanceCount} log`} tone="blue" />
-                                                ) : (
-                                                    <DotLabel label="Chưa có log" tone="gray" />
-                                                )}
-                                            </button>
-                                        </td>
+                                            <td className="px-3 py-4 align-top">
+                                                <span
+                                                    className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
+                                                        row.status
+                                                    )}`}
+                                                >
+                                                    {(row.status || "-").toUpperCase()}
+                                                </span>
+                                            </td>
 
-                                        <td className="px-3 py-2">
-                                            {r.orderRefNo ? (
-                                                <Link className="hover:underline" href={`/admin/orders/${orderId}`}>
-                                                    {r.orderRefNo ?? r.orderId}
-                                                </Link>
-                                            ) : (
-                                                "-"
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-2 font-mono text-xs">
-                                            {r.customerItemNote}
-                                        </td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="text-sm">{fmtDT(row.createdAt)}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Updated: {fmtDT(row.updatedAt)}
+                                                </div>
+                                            </td>
 
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="space-y-1 text-sm">
+                                                    {row.orderRefNo ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">
+                                                                Order
+                                                            </span>{" "}
+                                                            <span className="text-gray-600">
+                                                                {row.orderRefNo}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-
-                                        <td className="px-3 py-2">
-                                            <StatusBadge value={r.status} map={SERVICE_REQUEST_STATUS} />
-                                        </td>
-
-                                        <td className="px-3 py-2">{fmtDate(r.createdAt)}</td>
-
-                                        <td className="relative px-3 py-2 text-right">
-                                            <GenericActionMenu
-                                                id={r.id}
-                                                maintenance={{
-                                                    label: "Maintenance",
-                                                    onOpen: () => {
-                                                        setMaintSrId(r.id);
-                                                        setOpenMaint(true);
-                                                    },
-                                                }}
-                                                actions={[
-                                                    {
-                                                        label: "Xem chi tiết",
-                                                        onClick: () => (window.location.href = `/admin/service-requests/${r.id}`),
-                                                    },
-                                                ]}
-                                            />
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-                <BulkAssignVendorModal
-                    open={openBulkAssignVendor}
-                    onClose={() => setOpenBulkAssignVendor(false)}
-                    selectedCount={selectedIds.length}
-                    selectedIds={selectedIds}
-                />
-
+                                            <td className="px-3 py-4 align-top text-right">
+                                                <GenericActionMenu
+                                                    id={row.id}
+                                                    maintenance={{
+                                                        onOpen: () => {
+                                                            setMaintSrId(row.id);
+                                                            setOpenMaint(true);
+                                                        },
+                                                    }}
+                                                    actions={[
+                                                        {
+                                                            label: "Xem logs",
+                                                            onClick: () => {
+                                                                setLogSrId(row.id);
+                                                                setLogTitle(
+                                                                    row.refNo || row.serviceName || row.id
+                                                                );
+                                                                setOpenLogs(true);
+                                                            },
+                                                        },
+                                                        {
+                                                            label: "Copy ID",
+                                                            onClick: async () => {
+                                                                await navigator.clipboard?.writeText(
+                                                                    row.id
+                                                                );
+                                                            },
+                                                        },
+                                                    ]}
+                                                />
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* PAGINATION */}
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                    Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
+            <div className="flex items-center justify-between text-sm text-gray-700">
+                <div>
+                    Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
 
-                <div className="flex gap-2">
-                    <Link
-                        href={gotoPageHref(Math.max(1, page - 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page <= 1 && "pointer-events-none opacity-50")}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page <= 1}
+                        onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
                         ← Trước
-                    </Link>
-
-                    <Link
-                        href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={cls("rounded border px-3 py-1 text-sm", page >= totalPages && "pointer-events-none opacity-50")}
+                    </button>
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page >= props.totalPages}
+                        onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
                         Sau →
-                    </Link>
+                    </button>
                 </div>
             </div>
-            <MaintenanceDrawer
-                open={openMaint}
-                serviceRequestId={maintSrId ?? ""}
-                onClose={() => setOpenMaint(false)}
-                onChanged={() => location.reload()} // đơn giản: reload list sau khi add log/assign vendor
+
+            <BulkAssignVendorModal
+                open={openBulkAssignVendor}
+                onClose={() => setOpenBulkAssignVendor(false)}
+                serviceRequestIds={selectedIds}
+                onAssigned={() => {
+                    setOpenBulkAssignVendor(false);
+                    setSelectedIds([]);
+                    setShowBulkBar(false);
+                    router.refresh();
+                }}
             />
+
+            {maintSrId ? (
+                <MaintenanceDrawer
+                    open={openMaint}
+                    onClose={() => setOpenMaint(false)}
+                    serviceRequestId={maintSrId}
+                    onChanged={() => router.refresh()}
+                />
+            ) : null}
+
             <MaintenanceLogModal
                 open={openLogs}
                 onClose={() => setOpenLogs(false)}
                 serviceRequestId={logSrId}
                 title={logTitle}
             />
-
         </div>
-
     );
 }

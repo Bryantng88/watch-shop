@@ -1,6 +1,6 @@
 // app/(admin)/admin/shipments/page.tsx
 import ShipmentsClient from "./_client/ListShipment";
-import { getAdminShipmentList } from "./_server/shipment.service"; // chỉnh lại path đúng của bạn
+import { getAdminShipmentList } from "./_server/shipment.service";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -14,49 +14,55 @@ function serialize(obj: any) {
     );
 }
 
+function toStr(v: string | string[] | undefined) {
+    if (Array.isArray(v)) return v[0] ?? "";
+    return v ?? "";
+}
+
+function toInt(v: string | string[] | undefined, fallback: number) {
+    const n = Number(toStr(v));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
 export default async function ShipmentListPage({
     searchParams,
 }: {
     searchParams: SearchParams;
 }) {
-    const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
-            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
-        )
-    );
+    const page = toInt(searchParams.page, 1);
+    const pageSize = toInt(searchParams.pageSize, 20);
+    const q = toStr(searchParams.q) || undefined;
 
-    // mặc định
-    const page = Number(sp.get("page") ?? "1");
-    const pageSize = Number(sp.get("pageSize") ?? "20");
-    const q = sp.get("q") ?? undefined;
+    const viewRaw = toStr(searchParams.view).toLowerCase();
+    const view =
+        viewRaw === "all" ||
+            viewRaw === "draft" ||
+            viewRaw === "ready" ||
+            viewRaw === "shipped" ||
+            viewRaw === "delivered" ||
+            viewRaw === "cancelled"
+            ? viewRaw
+            : "all";
 
-    // service của bạn hiện trả { items, total }
-    const { items, total } = await getAdminShipmentList({
+    const { items, total, counts } = await getAdminShipmentList({
         page,
         pageSize,
         q,
+        view: view as any,
     });
-
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const normalizedItems = serialize(items);
-    // normalize theo format client cần: rows
-    const data = {
-        page,
-        pageSize,
-        total,
-        totalPages,
-        items: serialize(items), // truyền items y như Order đang làm
-        rawSearchParams: searchParams,
-    };
 
-    return <ShipmentsClient
-        items={normalizedItems}
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        totalPages={totalPages}
-        rawSearchParams={searchParams}
-
-    />;
+    return (
+        <ShipmentsClient
+            items={normalizedItems}
+            total={total}
+            counts={counts}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            rawSearchParams={searchParams}
+        />
+    );
 }
