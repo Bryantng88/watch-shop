@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import DotLabel from "../../__components/DotLabel";
 
 type PaymentRow = {
     id: string;
@@ -53,36 +54,33 @@ function fmtDT(s?: string | null) {
     return d.toLocaleString("vi-VN");
 }
 
-function dotColorByType(type?: string) {
-    switch ((type || "").toUpperCase()) {
-        case "ORDER":
-            return "bg-emerald-500";
-        case "SERVICE":
-            return "bg-indigo-500";
-        case "SHIPMENT":
-            return "bg-orange-500";
-        case "ACQUISITION":
-            return "bg-pink-500";
-        default:
-            return "bg-slate-400";
-    }
-}
-
-function pillClassByDirection(dir?: string | null) {
-    const d = (dir || "").toUpperCase();
-    if (d === "IN") return "bg-blue-50 text-blue-700 border-blue-200";
-    if (d === "OUT") return "bg-orange-50 text-orange-700 border-orange-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
-}
-
 function statusPillClass(status?: string) {
     const s = (status || "").toUpperCase();
-    if (s === "PAID") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    if (s === "UNPAID") return "bg-gray-50 text-gray-700 border-gray-200";
+
+    if (s === "PAID") {
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+
+    if (s === "UNPAID") {
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+
     if (s === "CANCELED" || s === "CANCELLED") {
         return "bg-red-50 text-red-700 border-red-200";
     }
+
     return "bg-gray-50 text-gray-700 border-gray-200";
+}
+
+function directionTone(dir?: string | null): "blue" | "orange" | "green" {
+    const d = (dir || "").toUpperCase();
+    if (d === "IN") return "blue";
+    return "orange";
+}
+
+function formatMetaText(s?: string | null) {
+    if (!s) return "-";
+    return s.replaceAll("_", " ").toLowerCase();
 }
 
 export default function PaymentListClient(props: {
@@ -126,7 +124,6 @@ export default function PaymentListClient(props: {
         setShowBulkBar(selectedIds.length > 0);
     }, [selectedIds.length]);
 
-    // ✅ server đã filter đúng theo view/status rồi
     const displayItems = items;
 
     const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
@@ -169,10 +166,7 @@ export default function PaymentListClient(props: {
         if (view === "all") next.delete("view");
         else next.set("view", view);
 
-        // reset page khi đổi tab
         next.set("page", "1");
-
-        // không dùng status ở client URL để tránh conflict
         next.delete("status");
 
         pushWith(next);
@@ -492,28 +486,23 @@ export default function PaymentListClient(props: {
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <div className="flex items-start gap-2">
-                                                    <span
-                                                        className={`mt-1 inline-block w-2 h-2 rounded-full ${dotColorByType(
-                                                            row.type
-                                                        )}`}
-                                                    />
-                                                    <div>
-                                                        <div className="font-medium">
-                                                            {row.refNo && row.refNo.trim() ? row.refNo : "-"}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 mt-0.5">
-                                                            {row.purpose} • {row.type}
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            <span
-                                                                className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${pillClassByDirection(
-                                                                    row.direction
-                                                                )}`}
-                                                            >
-                                                                {(row.direction || "-").toUpperCase()}
-                                                            </span>
-                                                        </div>
+                                                <div className="leading-tight">
+                                                    <div className="font-medium text-sm">
+                                                        {row.refNo && row.refNo.trim()
+                                                            ? row.refNo
+                                                            : "-"}
+                                                    </div>
+
+                                                    <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
+                                                        {formatMetaText(row.purpose)} ·{" "}
+                                                        {formatMetaText(row.type)}
+                                                    </div>
+
+                                                    <div className="mt-1.5">
+                                                        <DotLabel
+                                                            label={(row.direction || "-").toUpperCase()}
+                                                            tone={directionTone(row.direction)}
+                                                        />
                                                     </div>
                                                 </div>
                                             </td>
@@ -522,17 +511,21 @@ export default function PaymentListClient(props: {
                                                 <div className="font-semibold text-base">
                                                     {fmtMoney(Number(row.amount || 0))}
                                                 </div>
-                                                <div className="text-xs text-gray-500">{row.currency}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {row.currency}
+                                                </div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
                                                 <div className="text-sm">{row.note || "-"}</div>
-                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    ID: {row.id}
+                                                </div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
                                                 <span
-                                                    className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
+                                                    className={`inline-flex items-center px-2.5 py-0.5 border rounded-full text-xs font-medium ${statusPillClass(
                                                         row.status
                                                     )}`}
                                                 >
@@ -555,13 +548,19 @@ export default function PaymentListClient(props: {
                                                 <div className="space-y-1 text-sm">
                                                     {row.order_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">Order</span>{" "}
-                                                            <span className="text-gray-600">{row.order_id}</span>
+                                                            <span className="text-blue-600 font-medium">
+                                                                Order
+                                                            </span>{" "}
+                                                            <span className="text-gray-600">
+                                                                {row.order_id}
+                                                            </span>
                                                         </div>
                                                     ) : null}
                                                     {row.service_request_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">SR</span>{" "}
+                                                            <span className="text-blue-600 font-medium">
+                                                                SR
+                                                            </span>{" "}
                                                             <span className="text-gray-600">
                                                                 {row.service_request_id}
                                                             </span>
@@ -569,8 +568,12 @@ export default function PaymentListClient(props: {
                                                     ) : null}
                                                     {row.vendor_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">Vendor</span>{" "}
-                                                            <span className="text-gray-600">{row.vendor_id}</span>
+                                                            <span className="text-blue-600 font-medium">
+                                                                Vendor
+                                                            </span>{" "}
+                                                            <span className="text-gray-600">
+                                                                {row.vendor_id}
+                                                            </span>
                                                         </div>
                                                     ) : null}
                                                     {row.shipment_id ? (
@@ -578,12 +581,16 @@ export default function PaymentListClient(props: {
                                                             <span className="text-blue-600 font-medium">
                                                                 Shipment
                                                             </span>{" "}
-                                                            <span className="text-gray-600">{row.shipment_id}</span>
+                                                            <span className="text-gray-600">
+                                                                {row.shipment_id}
+                                                            </span>
                                                         </div>
                                                     ) : null}
                                                     {row.acquisition_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">Acq</span>{" "}
+                                                            <span className="text-blue-600 font-medium">
+                                                                Acq
+                                                            </span>{" "}
                                                             <span className="text-gray-600">
                                                                 {row.acquisition_id}
                                                             </span>
