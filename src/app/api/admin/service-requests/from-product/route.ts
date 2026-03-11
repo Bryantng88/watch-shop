@@ -1,39 +1,46 @@
 import { NextResponse } from "next/server";
-import * as  serviceRequest from "@/app/(admin)/admin/services/_server/service_request.service"
+import * as serviceRequest from "@/app/(admin)/admin/services/_server/service_request.service";
 import { ServiceScope } from "@prisma/client";
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        console.log('test body ' + JSON.stringify(body))
 
         const productId = String(body.productId || "").trim();
         if (!productId) {
             return NextResponse.json({ error: "Missing productId" }, { status: 400 });
         }
 
-        // services: [{ serviceCatalogId, notes? }, ...]
         const services = Array.isArray(body.services) ? body.services : [];
         if (!services.length) {
             return NextResponse.json({ error: "Missing services" }, { status: 400 });
         }
 
+        const created = [];
+        for (const s of services) {
+            const serviceCatalogId = String(s?.serviceCatalogId || "").trim();
+            if (!serviceCatalogId) continue;
 
-        const created = await serviceRequest.createFromProductMany({
-            productId,
-            customerId: body.customerId ?? null,
-            scope: (body.scope ?? "INTERNAL") as ServiceScope,
-            services: services.map((s: any) => ({
-                serviceCatalogId: String(s.serviceCatalogId || "").trim(),
-                notes: s.notes ?? null,
-            })),
+            const item = await serviceRequest.createFromProduct({
+                productId,
+                customerId: body.customerId ?? null,
+                scope: (body.scope ?? "INTERNAL") as ServiceScope,
+                serviceCatalogId,
+                notes: s?.notes ?? null,
+            });
+
+            created.push(item);
+        }
+
+        return NextResponse.json({
+            ok: true,
+            items: created,
         });
-        console.log('test created ' + JSON.stringify(created))
-
-        return NextResponse.json({ items: created });
-    } catch (e: any) {
-        const msg = e?.message ?? "Internal error";
-        return NextResponse.json({ error: msg }, { status: 500 });
+    } catch (error: any) {
+        console.error("from-product route error:", error);
+        return NextResponse.json(
+            { error: error?.message || "Create service request failed" },
+            { status: 500 }
+        );
     }
-
 }

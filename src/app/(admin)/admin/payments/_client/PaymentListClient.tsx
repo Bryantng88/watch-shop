@@ -3,27 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DotLabel from "../../__components/DotLabel";
+
+
 import SegmentTabs from "@/components/tabs/SegmenTabs";
+import StatusBadge from "@/components/badges/StatusBadge";
+
 
 type PaymentRow = {
     id: string;
     refNo?: string | null;
-
     amount: number;
     currency: string;
-
     method: string;
     status: string;
     purpose: string;
     type: string;
     direction?: string | null;
-
     createdAt: string;
     paidAt?: string | null;
-
     reference?: string | null;
     note?: string | null;
-
     order_id?: string | null;
     service_request_id?: string | null;
     vendor_id?: string | null;
@@ -53,24 +52,6 @@ function fmtDT(s?: string | null) {
     const d = new Date(s);
     if (!Number.isFinite(d.getTime())) return "-";
     return d.toLocaleString("vi-VN");
-}
-
-function statusPillClass(status?: string) {
-    const s = (status || "").toUpperCase();
-
-    if (s === "PAID") {
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    }
-
-    if (s === "UNPAID") {
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
-
-    if (s === "CANCELED" || s === "CANCELLED") {
-        return "bg-red-50 text-red-700 border-red-200";
-    }
-
-    return "bg-gray-50 text-gray-700 border-gray-200";
 }
 
 function directionTone(dir?: string | null): "blue" | "orange" | "green" {
@@ -107,6 +88,15 @@ export default function PaymentListClient(props: {
         return "all";
     }, [sp]);
 
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+        next.set("page", "1");
+        next.delete("status");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
     const q = sp.get("q") ?? "";
     const purpose = sp.get("purpose") ?? "";
     const direction = sp.get("direction") ?? "";
@@ -128,7 +118,6 @@ export default function PaymentListClient(props: {
     const displayItems = items;
 
     const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
-
     const allChecked =
         pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
     const someChecked =
@@ -144,33 +133,17 @@ export default function PaymentListClient(props: {
             };
         }
 
-        const base: Counts = { all: 0, unpaid: 0, paid: 0, canceled: 0 };
-        if (currentView === "all") base.all = props.total;
-        if (currentView === "unpaid") base.unpaid = props.total;
-        if (currentView === "paid") base.paid = props.total;
-        if (currentView === "canceled") base.canceled = props.total;
-        return base;
+        return {
+            all: currentView === "all" ? props.total : 0,
+            unpaid: currentView === "unpaid" ? props.total : 0,
+            paid: currentView === "paid" ? props.total : 0,
+            canceled: currentView === "canceled" ? props.total : 0,
+        };
     }, [props.counts, props.total, currentView]);
 
     function setParam(next: URLSearchParams, key: string, value: string | null) {
         if (!value) next.delete(key);
         else next.set(key, value);
-    }
-
-    function pushWith(next: URLSearchParams) {
-        router.push(`${pathname}?${next.toString()}`);
-    }
-
-    function setView(view: ViewKey) {
-        const next = new URLSearchParams(sp.toString());
-
-        if (view === "all") next.delete("view");
-        else next.set("view", view);
-
-        next.set("page", "1");
-        next.delete("status");
-
-        pushWith(next);
     }
 
     function applyFilters(form: {
@@ -186,9 +159,8 @@ export default function PaymentListClient(props: {
         setParam(next, "direction", form.direction || null);
         setParam(next, "method", form.method || null);
         setParam(next, "sort", form.sort || "createdDesc");
-
         next.set("page", "1");
-        pushWith(next);
+        router.push(`${pathname}?${next.toString()}`);
     }
 
     function clearFilters() {
@@ -199,13 +171,13 @@ export default function PaymentListClient(props: {
         next.delete("method");
         next.delete("sort");
         next.set("page", "1");
-        pushWith(next);
+        router.push(`${pathname}?${next.toString()}`);
     }
 
     function goPage(p: number) {
         const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
-        pushWith(next);
+        router.push(`${pathname}?${next.toString()}`);
     }
 
     const [formQ, setFormQ] = useState(q);
@@ -223,9 +195,7 @@ export default function PaymentListClient(props: {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">Payments</h1>
-                </div>
+                <h1 className="text-2xl font-semibold">Payments</h1>
                 <button
                     type="button"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
@@ -245,6 +215,7 @@ export default function PaymentListClient(props: {
                     { key: "canceled", label: "CANCELED", count: counts.canceled },
                 ]}
             />
+
             <form
                 className="space-y-3"
                 onSubmit={(e) => {
@@ -268,7 +239,6 @@ export default function PaymentListClient(props: {
                             className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                     </div>
-
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Purpose</div>
                         <input
@@ -278,7 +248,6 @@ export default function PaymentListClient(props: {
                             className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                     </div>
-
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Direction</div>
                         <select
@@ -291,7 +260,6 @@ export default function PaymentListClient(props: {
                             <option value="OUT">OUT</option>
                         </select>
                     </div>
-
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Method</div>
                         <select
@@ -305,7 +273,6 @@ export default function PaymentListClient(props: {
                             <option value="COD">COD</option>
                         </select>
                     </div>
-
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
                         <select
@@ -324,10 +291,7 @@ export default function PaymentListClient(props: {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        type="submit"
-                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                    >
+                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                         Lọc
                     </button>
                     <button
@@ -337,7 +301,6 @@ export default function PaymentListClient(props: {
                     >
                         Clear
                     </button>
-
                     <div className="ml-auto text-sm text-gray-600">
                         Đã chọn: <b>{selectedIds.length}</b>
                     </div>
@@ -345,11 +308,10 @@ export default function PaymentListClient(props: {
             </form>
 
             {showBulkBar && (
-                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
+                <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} payment đã chọn
                     </span>
-
                     <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
@@ -388,7 +350,6 @@ export default function PaymentListClient(props: {
                                         }}
                                     />
                                 </th>
-
                                 <th className="px-3 py-3">RefNo</th>
                                 <th className="px-3 py-3">Amount</th>
                                 <th className="px-3 py-3">Note</th>
@@ -399,7 +360,6 @@ export default function PaymentListClient(props: {
                                 <th className="px-3 py-3 text-right">Hành động</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             {displayItems.length === 0 ? (
                                 <tr>
@@ -434,16 +394,11 @@ export default function PaymentListClient(props: {
                                             <td className="px-3 py-4 align-top">
                                                 <div className="leading-tight">
                                                     <div className="font-medium text-sm">
-                                                        {row.refNo && row.refNo.trim()
-                                                            ? row.refNo
-                                                            : "-"}
+                                                        {row.refNo?.trim() ? row.refNo : "-"}
                                                     </div>
-
                                                     <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
-                                                        {formatMetaText(row.purpose)} ·{" "}
-                                                        {formatMetaText(row.type)}
+                                                        {formatMetaText(row.purpose)} · {formatMetaText(row.type)}
                                                     </div>
-
                                                     <div className="mt-1.5">
                                                         <DotLabel
                                                             label={(row.direction || "-").toUpperCase()}
@@ -457,26 +412,16 @@ export default function PaymentListClient(props: {
                                                 <div className="font-semibold text-base">
                                                     {fmtMoney(Number(row.amount || 0))}
                                                 </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {row.currency}
-                                                </div>
+                                                <div className="text-xs text-gray-500">{row.currency}</div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
                                                 <div className="text-sm">{row.note || "-"}</div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    ID: {row.id}
-                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <span
-                                                    className={`inline-flex items-center px-2.5 py-0.5 border rounded-full text-xs font-medium ${statusPillClass(
-                                                        row.status
-                                                    )}`}
-                                                >
-                                                    {(row.status || "-").toUpperCase()}
-                                                </span>
+                                                <StatusBadge status={row.status} />
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
@@ -494,55 +439,34 @@ export default function PaymentListClient(props: {
                                                 <div className="space-y-1 text-sm">
                                                     {row.order_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                Order
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.order_id}
-                                                            </span>
+                                                            <span className="text-blue-600 font-medium">Order</span>{" "}
+                                                            <span className="text-gray-600">{row.order_id}</span>
                                                         </div>
                                                     ) : null}
                                                     {row.service_request_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                SR
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.service_request_id}
-                                                            </span>
+                                                            <span className="text-blue-600 font-medium">SR</span>{" "}
+                                                            <span className="text-gray-600">{row.service_request_id}</span>
                                                         </div>
                                                     ) : null}
                                                     {row.vendor_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                Vendor
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.vendor_id}
-                                                            </span>
+                                                            <span className="text-blue-600 font-medium">Vendor</span>{" "}
+                                                            <span className="text-gray-600">{row.vendor_id}</span>
                                                         </div>
                                                     ) : null}
                                                     {row.shipment_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                Shipment
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.shipment_id}
-                                                            </span>
+                                                            <span className="text-blue-600 font-medium">Shipment</span>{" "}
+                                                            <span className="text-gray-600">{row.shipment_id}</span>
                                                         </div>
                                                     ) : null}
                                                     {row.acquisition_id ? (
                                                         <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                Acq
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.acquisition_id}
-                                                            </span>
+                                                            <span className="text-blue-600 font-medium">Acq</span>{" "}
+                                                            <span className="text-gray-600">{row.acquisition_id}</span>
                                                         </div>
                                                     ) : null}
-
                                                     {!row.order_id &&
                                                         !row.service_request_id &&
                                                         !row.vendor_id &&
@@ -577,7 +501,6 @@ export default function PaymentListClient(props: {
                 <div>
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
-
                 <div className="flex items-center gap-2">
                     <button
                         type="button"

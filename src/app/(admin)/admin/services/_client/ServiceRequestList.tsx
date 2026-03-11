@@ -6,6 +6,10 @@ import GenericActionMenu from "../../__components/GenericActionMenu";
 import BulkAssignVendorModal from "./BulkAssignVendorModal";
 import MaintenanceDrawer from "./MaintenanceDrawer";
 import MaintenanceLogModal from "./MaintenaceLogModel";
+import DotLabel from "../../__components/DotLabel";
+
+import StatusBadge from "@/components/badges/StatusBadge";
+import SegmentTabs from "@/components/tabs/SegmenTabs";
 
 type ServiceReqItem = {
     id: string;
@@ -49,25 +53,15 @@ function fmtDT(s?: string | null) {
     return d.toLocaleString("vi-VN");
 }
 
-function statusPillClass(status?: string) {
-    const s = (status || "").toUpperCase();
-    if (s === "DRAFT") return "bg-gray-50 text-gray-700 border-gray-200";
-    if (s === "DIAGNOSING" || s === "WAIT_APPROVAL" || s === "IN_PROGRESS") {
-        return "bg-blue-50 text-blue-700 border-blue-200";
-    }
-    if (s === "COMPLETED" || s === "DELIVERED") {
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    }
-    if (s === "CANCELED") return "bg-red-50 text-red-700 border-red-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
+function scopeTone(scope?: string | null): "blue" | "orange" | "green" {
+    const s = (scope || "").toUpperCase();
+    if (s === "INTERNAL") return "blue";
+    if (s === "PRODUCT_ITEM") return "green";
+    return "orange";
 }
 
-function pillClassByScope(scope?: string | null) {
-    const s = (scope || "").toUpperCase();
-    if (s === "INTERNAL") return "bg-indigo-50 text-indigo-700 border-indigo-200";
-    if (s === "CUSTOMER_ITEM") return "bg-orange-50 text-orange-700 border-orange-200";
-    if (s === "PRODUCT_ITEM") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
+function formatScope(scope?: string | null) {
+    return (scope || "-").replaceAll("_", " ").toLowerCase();
 }
 
 export default function ServiceRequestListClient(props: PageProps) {
@@ -84,6 +78,14 @@ export default function ServiceRequestListClient(props: PageProps) {
         }
         return "all";
     }, [sp]);
+
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
 
     const q = sp.get("q") ?? "";
     const sort = sp.get("sort") ?? "updatedDesc";
@@ -125,49 +127,14 @@ export default function ServiceRequestListClient(props: PageProps) {
                 canceled: props.counts.canceled ?? 0,
             };
         }
-        const base: Counts = { all: 0, draft: 0, in_progress: 0, done: 0, canceled: 0 };
-        base[currentView] = props.total;
-        return base;
+        return {
+            all: currentView === "all" ? props.total : 0,
+            draft: currentView === "draft" ? props.total : 0,
+            in_progress: currentView === "in_progress" ? props.total : 0,
+            done: currentView === "done" ? props.total : 0,
+            canceled: currentView === "canceled" ? props.total : 0,
+        };
     }, [props.counts, props.total, currentView]);
-
-    function setParam(next: URLSearchParams, key: string, value: string | null) {
-        if (!value) next.delete(key);
-        else next.set(key, value);
-    }
-
-    function pushWith(next: URLSearchParams) {
-        router.push(`${pathname}?${next.toString()}`);
-    }
-
-    function setView(view: ViewKey) {
-        const next = new URLSearchParams(sp.toString());
-        if (view === "all") next.delete("view");
-        else next.set("view", view);
-        next.set("page", "1");
-        pushWith(next);
-    }
-
-    function applyFilters(form: { q: string; sort: string }) {
-        const next = new URLSearchParams(sp.toString());
-        setParam(next, "q", form.q.trim() || null);
-        setParam(next, "sort", form.sort || "updatedDesc");
-        next.set("page", "1");
-        pushWith(next);
-    }
-
-    function clearFilters() {
-        const next = new URLSearchParams(sp.toString());
-        next.delete("q");
-        next.delete("sort");
-        next.set("page", "1");
-        pushWith(next);
-    }
-
-    function goPage(p: number) {
-        const next = new URLSearchParams(sp.toString());
-        next.set("page", String(p));
-        pushWith(next);
-    }
 
     const [formQ, setFormQ] = useState(q);
     const [formSort, setFormSort] = useState(sort);
@@ -175,12 +142,37 @@ export default function ServiceRequestListClient(props: PageProps) {
     useEffect(() => setFormQ(q), [q]);
     useEffect(() => setFormSort(sort), [sort]);
 
+    function setParam(next: URLSearchParams, key: string, value: string | null) {
+        if (!value) next.delete(key);
+        else next.set(key, value);
+    }
+
+    function applyFilters(form: { q: string; sort: string }) {
+        const next = new URLSearchParams(sp.toString());
+        setParam(next, "q", form.q.trim() || null);
+        setParam(next, "sort", form.sort || "updatedDesc");
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function clearFilters() {
+        const next = new URLSearchParams(sp.toString());
+        next.delete("q");
+        next.delete("sort");
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function goPage(p: number) {
+        const next = new URLSearchParams(sp.toString());
+        next.set("page", String(p));
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">Service Requests</h1>
-                </div>
+                <h1 className="text-2xl font-semibold">Service Requests</h1>
                 <button
                     type="button"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
@@ -190,37 +182,17 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </button>
             </div>
 
-            <div className="border-b">
-                <div className="flex gap-8 items-end">
-                    {[
-                        ["all", "Tất cả", counts.all],
-                        ["draft", "DRAFT", counts.draft],
-                        ["in_progress", "IN_PROGRESS", counts.in_progress],
-                        ["done", "DONE", counts.done],
-                        ["canceled", "CANCELED", counts.canceled],
-                    ].map(([key, label, count]) => (
-                        <button
-                            key={key}
-                            type="button"
-                            onClick={() => setView(key as ViewKey)}
-                            className={`pb-2 text-sm ${currentView === key
-                                    ? "border-b-2 border-black font-semibold"
-                                    : "text-gray-500"
-                                }`}
-                        >
-                            {label}{" "}
-                            <span
-                                className={`ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full text-xs ${currentView === key
-                                        ? "bg-black text-white"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
-                            >
-                                {count ?? 0}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <SegmentTabs
+                active={currentView}
+                onChange={(v) => setView(v as ViewKey)}
+                tabs={[
+                    { key: "all", label: "Tất cả", count: counts.all },
+                    { key: "draft", label: "DRAFT", count: counts.draft },
+                    { key: "in_progress", label: "IN_PROGRESS", count: counts.in_progress },
+                    { key: "done", label: "DONE", count: counts.done },
+                    { key: "canceled", label: "CANCELED", count: counts.canceled },
+                ]}
+            />
 
             <form
                 className="space-y-3"
@@ -239,7 +211,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                             className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                     </div>
-
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
                         <select
@@ -256,10 +227,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        type="submit"
-                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                    >
+                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                         Lọc
                     </button>
                     <button
@@ -269,7 +237,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                     >
                         Clear
                     </button>
-
                     <div className="ml-auto text-sm text-gray-600">
                         Đã chọn: <b>{selectedIds.length}</b>
                     </div>
@@ -277,11 +244,10 @@ export default function ServiceRequestListClient(props: PageProps) {
             </form>
 
             {showBulkBar && (
-                <div className="mb-3 p-3 bg-blue-50 border rounded flex items-center gap-4">
+                <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} service request đã chọn
                     </span>
-
                     <button
                         type="button"
                         className="px-3 py-1 border rounded text-sm"
@@ -289,7 +255,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                     >
                         Gán vendor
                     </button>
-
                     <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
@@ -351,7 +316,7 @@ export default function ServiceRequestListClient(props: PageProps) {
 
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="w-10 px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-top">
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
@@ -370,20 +335,14 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <div className="font-medium">
-                                                    {row.refNo && row.refNo.trim() ? row.refNo : "-"}
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    ID: {row.id}
-                                                </div>
+                                                <div className="font-medium text-sm">{row.refNo || "-"}</div>
+                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <div className="font-medium">
-                                                    {row.serviceName || "-"}
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Product: {row.productTitle || "-"}
+                                                <div className="font-medium">{row.serviceName || "-"}</div>
+                                                <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
+                                                    product · {row.productTitle || "-"}
                                                 </div>
                                                 <div className="text-xs text-gray-500 mt-1">
                                                     Note: {row.customerItemNote || "-"}
@@ -391,31 +350,15 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <div>
-                                                    <span
-                                                        className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${pillClassByScope(
-                                                            row.scope
-                                                        )}`}
-                                                    >
-                                                        {(row.scope || "-").toUpperCase()}
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm mt-2">
-                                                    {row.vendorName || "-"}
-                                                </div>
+                                                <DotLabel label={formatScope(row.scope)} tone={scopeTone(row.scope)} />
+                                                <div className="text-sm mt-2">{row.vendorName || "-"}</div>
                                                 <div className="text-xs text-gray-500 mt-1">
                                                     Maintenance: {row.maintenanceCount ?? 0}
                                                 </div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <span
-                                                    className={`inline-flex items-center px-2 py-0.5 border rounded-full text-xs ${statusPillClass(
-                                                        row.status
-                                                    )}`}
-                                                >
-                                                    {(row.status || "-").toUpperCase()}
-                                                </span>
+                                                <StatusBadge status={row.status} />
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
@@ -426,20 +369,14 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
-                                                <div className="space-y-1 text-sm">
-                                                    {row.orderRefNo ? (
-                                                        <div>
-                                                            <span className="text-blue-600 font-medium">
-                                                                Order
-                                                            </span>{" "}
-                                                            <span className="text-gray-600">
-                                                                {row.orderRefNo}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-gray-400">-</span>
-                                                    )}
-                                                </div>
+                                                {row.orderRefNo ? (
+                                                    <div className="text-sm">
+                                                        <span className="text-blue-600 font-medium">Order</span>{" "}
+                                                        <span className="text-gray-600">{row.orderRefNo}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
                                             </td>
 
                                             <td className="px-3 py-4 align-top text-right">
@@ -456,18 +393,14 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                             label: "Xem logs",
                                                             onClick: () => {
                                                                 setLogSrId(row.id);
-                                                                setLogTitle(
-                                                                    row.refNo || row.serviceName || row.id
-                                                                );
+                                                                setLogTitle(row.refNo || row.serviceName || row.id);
                                                                 setOpenLogs(true);
                                                             },
                                                         },
                                                         {
                                                             label: "Copy ID",
                                                             onClick: async () => {
-                                                                await navigator.clipboard?.writeText(
-                                                                    row.id
-                                                                );
+                                                                await navigator.clipboard?.writeText(row.id);
                                                             },
                                                         },
                                                     ]}
@@ -486,7 +419,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                 <div>
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
-
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
