@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DotLabel from "../../__components/DotLabel";
+import SegmentTabs from "@/components/tabs/SegmenTabs";
 
 type PaymentRow = {
     id: string;
@@ -234,71 +235,16 @@ export default function PaymentListClient(props: {
                 </button>
             </div>
 
-            <div className="border-b">
-                <div className="flex gap-8 items-end">
-                    <button
-                        type="button"
-                        onClick={() => setView("all")}
-                        className={`pb-2 text-sm ${currentView === "all"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        Tất cả{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.all ?? 0}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("unpaid")}
-                        className={`pb-2 text-sm ${currentView === "unpaid"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        UNPAID{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.unpaid ?? 0}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("paid")}
-                        className={`pb-2 text-sm ${currentView === "paid"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        PAID{" "}
-                        <span
-                            className={`ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full text-xs ${currentView === "paid"
-                                    ? "bg-black text-white"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                        >
-                            {counts.paid ?? 0}
-                        </span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setView("canceled")}
-                        className={`pb-2 text-sm ${currentView === "canceled"
-                                ? "border-b-2 border-black font-semibold"
-                                : "text-gray-500"
-                            }`}
-                    >
-                        CANCELED{" "}
-                        <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-gray-100 text-gray-800 text-xs">
-                            {counts.canceled ?? 0}
-                        </span>
-                    </button>
-                </div>
-            </div>
-
+            <SegmentTabs
+                active={currentView}
+                onChange={(v) => setView(v as ViewKey)}
+                tabs={[
+                    { key: "all", label: "Tất cả", count: counts.all },
+                    { key: "unpaid", label: "UNPAID", count: counts.unpaid },
+                    { key: "paid", label: "PAID", count: counts.paid },
+                    { key: "canceled", label: "CANCELED", count: counts.canceled },
+                ]}
+            />
             <form
                 className="space-y-3"
                 onSubmit={(e) => {

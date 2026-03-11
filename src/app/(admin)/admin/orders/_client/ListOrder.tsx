@@ -7,7 +7,7 @@ import ActionMenu from "../../acquisitions/components/ActionMenu";
 import { StatusBadge } from "@/components/badges/StatusBadge";
 import { ORDER_STATUS } from "@/components/badges/StatusMaps";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DotLabel from "../../__components/DotLabel";
 
 type OrderItem = {
@@ -96,6 +96,8 @@ export default function OrderListPageClient({
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
+    const router = useRouter();
+    const pathname = usePathname();
     const sp = useSearchParams();
 
     const url = useMemo(() => {
@@ -106,7 +108,17 @@ export default function OrderListPageClient({
         const v = (sp.get("view") || "all") as ViewKey;
         return v;
     }, [sp]);
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
 
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+
+        next.set("page", "1");
+        next.set("pageSize", String(pageSize));
+
+        router.push(`${pathname}?${next.toString()}`);
+    }
     const displayItems = items;
 
     const countsByView: Counts = useMemo(() => {
@@ -201,7 +213,19 @@ export default function OrderListPageClient({
                 </Link>
             </div>
 
-            <SegmentTabs tabs={tabs} />
+            <SegmentTabs
+                active={currentView}
+                onChange={(v) => setView(v as ViewKey)}
+                tabs={[
+                    { key: "all", label: "Tất cả", count: countsByView.all },
+                    { key: "web_pending", label: "Chờ xác minh", count: countsByView.web_pending },
+                    { key: "need_action", label: "Chờ duyệt", count: countsByView.need_action },
+                    { key: "processing", label: "Đang xử lý", count: countsByView.processing },
+                    { key: "delivered", label: "Đã giao", count: countsByView.delivered },
+                    { key: "completed", label: "Hoàn thành", count: countsByView.completed },
+                    { key: "cancelled", label: "Đã hủy", count: countsByView.cancelled },
+                ]}
+            />
 
             <form action="/admin/orders" method="get" className="flex flex-wrap gap-2 items-end">
                 {currentView !== "all" && <input type="hidden" name="view" value={currentView} />}
