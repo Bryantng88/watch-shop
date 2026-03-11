@@ -219,24 +219,29 @@ export default function AdminProductListPageClient(props: PageProps) {
     }
 
     async function updateProductImage(productId: string, fileKey: string) {
-        const res = await fetch(`/api/admin/products/${productId}/image`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                fileKey,
-            }),
-        });
+        try {
+            const res = await fetch(`/api/admin/products/${productId}/images`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    files: [{ key: fileKey }],
+                }),
+            });
 
-        if (!res.ok) {
+            if (!res.ok) {
+                const text = await res.text().catch(() => "");
+                alert(text || "Cập nhật ảnh thất bại");
+                return;
+            }
+
+            router.refresh();
+        } catch (error) {
+            console.error(error);
             alert("Cập nhật ảnh thất bại");
-            return;
         }
-
-        router.refresh();
     }
-
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -505,13 +510,12 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     }}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 align-middle">
-                                                <div className="scale-110 origin-left">
-                                                    <InlineImagePicker
-                                                        imageUrl={(p as any).primaryImageUrl ?? null}
-                                                        onPick={(fileKey) => updateProductImage(p.id, fileKey)}
-                                                    />
-                                                </div>
+
+                                            <td className="px-4 py-2 align-middle">
+                                                <InlineImagePicker
+                                                    imageUrl={(p as any).primaryImageUrl ?? null}
+                                                    onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                                />
                                             </td>
 
                                             <td className="px-3 py-4 align-top">

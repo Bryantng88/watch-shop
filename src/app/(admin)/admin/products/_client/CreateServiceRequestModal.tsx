@@ -184,13 +184,12 @@ export default function CreateServiceRequestModal({
                                     });
 
                                     if (!res.ok) {
-                                        const text = await res.text();     // ✅ đọc text để không nổ json
-                                        alert(text || "Tạo service thất bại");
+                                        const data = await res.json().catch(() => null);
+                                        alert(data?.error || "Tạo service thất bại");
                                         return;
                                     }
-                                    const data = await res.json(); // nếu API trả items: [{id, refNo}, ...]
-                                    // bạn có thể điều hướng tới list hoặc item đầu tiên
-                                    // window.location.href = `/admin/service-requests`;
+
+                                    await res.json().catch(() => null);
                                     onClose();
                                 } finally {
                                     setLoading(false);
