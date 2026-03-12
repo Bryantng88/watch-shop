@@ -1,22 +1,15 @@
-//import AdminProductPage from "@/features/products/_admin/admin-product-page";
-//export default AdminProductPage;
-
-// features/products/_admin/page.tsx
+import ProductListClient from "./_client/ListProducts";
 import { getAdminProductList } from "./_server/product.service";
-import { parseProductSearchParams } from "./ultis/search-params";
-
-import AdminProductList from "./_client/ListProducts";
-import { listBrands } from "@/features/catalog/server/brands.repo";
-import { PRODUCT_TYPES } from "@/features/meta/server/enum";
+import { parseProductListSearchParams } from "./_helper/search-params";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 function serialize(obj: any) {
     return JSON.parse(
-        JSON.stringify(obj, (k, v) => {
-            if (v instanceof Date) return v.toISOString();
-            if (typeof v === "object" && v?._isDecimal) return Number(v);
-            return v;
+        JSON.stringify(obj, (_key, value) => {
+            if (value instanceof Date) return value.toISOString();
+            if (typeof value === "object" && value?._isDecimal) return Number(value);
+            return value;
         })
     );
 }
@@ -32,27 +25,31 @@ export default async function ProductListPage({
         )
     );
 
-    const input = parseProductSearchParams(sp);
-    const { items, total, page, pageSize } = await getAdminProductList(input);
-    const brands = await listBrands();
-    const productTypes = Object.values(PRODUCT_TYPES).map((v) => ({
-        label: v,
-        value: v,
-    }));
+    const input = parseProductListSearchParams(sp);
+
+    const {
+        items,
+        total,
+        counts,
+        page,
+        pageSize,
+        brands,
+        productTypes,
+    } = await getAdminProductList(input);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return (
-        <AdminProductList
+        <ProductListClient
             items={serialize(items)}
-            brands={brands}
-            productTypes={productTypes}
             total={total}
+            counts={counts}
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
             rawSearchParams={searchParams}
+            brands={serialize(brands)}
+            productTypes={serialize(productTypes)}
         />
     );
 }
-
