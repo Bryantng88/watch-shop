@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import DrawerHost from "../components/Drawer";
-import ItemsHover from "../components/ItemsHover";
-import AcqItemsPopover from "../components/ItemsPopover";
-import ChangeToPostedButton from "../components/ChangeToPostedButton";
 import ActionMenu from "../components/ActionMenu";
-import ItemPopover from "../../__components/GenericPopover";
+import SegmentTabs from "@/components/tabs/SegmenTabs";
+import StatusBadge from "@/components/badges/StatusBadge";
 
 type AcquisitionItem = {
     id: string;
@@ -24,344 +22,462 @@ type AcquisitionItem = {
     updatedAt: string;
 };
 
+type ViewKey = "all" | "draft" | "posted" | "canceled";
+
+type Counts = {
+    all: number;
+    draft: number;
+    posted: number;
+    canceled: number;
+};
+
 type PageProps = {
     items: AcquisitionItem[];
     total: number;
+    counts?: Partial<Counts>;
     page: number;
     pageSize: number;
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
 };
 
-// ======================================
-// Formatters
-// ======================================
-function fmtDate(d?: string | null) {
-    if (!d) return "-";
-    const dt = new Date(d);
-    return dt.toLocaleString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+function fmtDT(s?: string | null) {
+    if (!s) return "-";
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return "-";
+    return d.toLocaleString("vi-VN");
 }
 
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(Number(n)) + (cur ? ` ${cur}` : "");
+    return `${new Intl.NumberFormat("vi-VN").format(Number(n))} ${cur}`;
 }
 
-// ======================================
-// MAIN CLIENT COMPONENT
-// ======================================
-export default function AcquisitionListPageClient({
-    items,
-    total,
-    page,
-    pageSize,
-    totalPages,
-    rawSearchParams
-}: PageProps) {
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const [rowCounts, setRowCounts] = useState<Record<string, number>>({});
-    const [rowTotals, setRowTotals] = useState<Record<string, number>>({});
-    // ============================
-    // BULK CHECKBOX HANDLING
-    // ============================
+export default function AcquisitionListClient(props: PageProps) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const sp = useSearchParams();
+
+    const items = props.items ?? [];
+
+    const currentView: ViewKey = useMemo(() => {
+        const v = (sp.get("view") || "all").toLowerCase();
+        if (v === "draft" || v === "posted" || v === "canceled") return v as ViewKey;
+        return "all";
+    }, [sp]);
+
+    function setView(view: ViewKey) {
+        const next = new URLSearchParams(sp.toString());
+        if (view === "all") next.delete("view");
+        else next.set("view", view);
+        next.delete("status");
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    const q = sp.get("q") ?? "";
+    const vendorId = sp.get("vendorId") ?? "";
+    const type = sp.get("type") ?? "";
+    const sort = sp.get("sort") ?? "updatedDesc";
+
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [showBulkBar, setShowBulkBar] = useState(false);
+
     useEffect(() => {
-        const selectAll = document.getElementById("select-all") as HTMLInputElement;
-        const checks = Array.from(document.querySelectorAll<HTMLInputElement>(".row-check"));
-        const bar = document.getElementById("bulk-bar")!;
-        const countSpan = document.getElementById("selected-count")!;
-        const btnApprove = document.getElementById("bulk-approve")!;
-        const btnClear = document.getElementById("bulk-clear")!;
-        // ========================
-        // Bulk Approve Handler
-        // ========================
-        btnApprove.addEventListener("click", async () => {
-            const checked = checks.filter((c) => c.checked);
+        setSelectedIds([]);
+        setShowBulkBar(false);
+    }, [currentView, q, vendorId, type, sort, props.page]);
 
-            if (checked.length === 0) return;
+    useEffect(() => {
+        setShowBulkBar(selectedIds.length > 0);
+    }, [selectedIds.length]);
 
-            // tạo payload
-            const payload = checked.map((c) => ({
-                id: c.dataset.id!,
-                vendor: c.dataset.vendorname!,
-                type: c.dataset.type!,
-                cost: c.dataset.cost!,
-            }));
+    const displayItems = items;
 
-            // gọi API
-            const res = await fetch("/api/admin/acquisitions/bulk-post", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ items: payload }),
-            });
-
-            if (!res.ok) {
-                alert("Có lỗi khi duyệt phiếu!");
-                return;
-            }
-
-            // reload lại trang
-            window.location.reload();
-        });
-
-        function refresh() {
-            const sel = checks.filter((c) => c.checked);
-            if (sel.length > 0) {
-                bar.classList.remove("hidden");
-                countSpan.textContent = `${sel.length} phiếu đã chọn`;
-            } else {
-                bar.classList.add("hidden");
-            }
+    const counts: Counts = useMemo(() => {
+        if (props.counts?.all != null) {
+            return {
+                all: props.counts.all ?? 0,
+                draft: props.counts.draft ?? 0,
+                posted: props.counts.posted ?? 0,
+                canceled: props.counts.canceled ?? 0,
+            };
         }
+        return {
+            all: currentView === "all" ? props.total : 0,
+            draft: currentView === "draft" ? props.total : 0,
+            posted: currentView === "posted" ? props.total : 0,
+            canceled: currentView === "canceled" ? props.total : 0,
+        };
+    }, [props.counts, props.total, currentView]);
 
-        if (selectAll)
-            selectAll.addEventListener("change", () => {
-                checks.forEach((c) => {
-                    if (!c.disabled) c.checked = selectAll.checked;
-                });
-                refresh();
-            });
+    const selectableIds = useMemo(
+        () => displayItems.filter((x) => (x.status || "").toUpperCase() === "DRAFT").map((x) => x.id),
+        [displayItems]
+    );
 
-        checks.forEach((c) => c.addEventListener("change", refresh));
+    const allChecked =
+        selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+    const someChecked =
+        selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
-        btnClear.addEventListener("click", () => {
-            if (selectAll) selectAll.checked = false;
-            checks.forEach((c) => (c.checked = false));
-            refresh();
-        });
+    const [formQ, setFormQ] = useState(q);
+    const [formVendorId, setFormVendorId] = useState(vendorId);
+    const [formType, setFormType] = useState(type);
+    const [formSort, setFormSort] = useState(sort);
 
+    useEffect(() => setFormQ(q), [q]);
+    useEffect(() => setFormVendorId(vendorId), [vendorId]);
+    useEffect(() => setFormType(type), [type]);
+    useEffect(() => setFormSort(sort), [sort]);
 
-    }, []);
+    function setParam(next: URLSearchParams, key: string, value: string | null) {
+        if (!value) next.delete(key);
+        else next.set(key, value);
+    }
 
-    // ============================
-    // Utilities
-    // ============================
-    const url = new URLSearchParams(rawSearchParams as any);
+    function applyFilters(form: {
+        q: string;
+        vendorId: string;
+        type: string;
+        sort: string;
+    }) {
+        const next = new URLSearchParams(sp.toString());
+        setParam(next, "q", form.q.trim() || null);
+        setParam(next, "vendorId", form.vendorId || null);
+        setParam(next, "type", form.type || null);
+        setParam(next, "sort", form.sort || "updatedDesc");
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
 
-    const gotoPageHref = (p: number) => {
-        const next = new URLSearchParams(url);
+    function clearFilters() {
+        const next = new URLSearchParams(sp.toString());
+        next.delete("q");
+        next.delete("vendorId");
+        next.delete("type");
+        next.delete("sort");
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function goPage(p: number) {
+        const next = new URLSearchParams(sp.toString());
         next.set("page", String(p));
-        return `/admin/acquisitions?${next.toString()}`;
-    };
-
-    const spObj = rawSearchParams;
+        router.push(`${pathname}?${next.toString()}`);
+    }
 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Phiếu nhập hàng</h1>
+                <h1 className="text-2xl font-semibold">Phiếu nhập hàng</h1>
                 <Link
                     href="/admin/acquisitions/new"
-                    className="rounded-md bg-black text-white text-sm px-3 py-2 hover:bg-neutral-800"
+                    className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
                 >
                     + Tạo phiếu nhập
                 </Link>
             </div>
 
-            {/* Filters */}
-            <form action="/admin/acquisitions" method="get" className="flex flex-wrap gap-2 items-end">
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Tìm kiếm</label>
-                    <input
-                        name="q"
-                        defaultValue={(spObj.q as string) ?? ""}
-                        placeholder="RefNo, ghi chú…"
-                        className="h-9 rounded border px-2"
-                    />
+            <SegmentTabs
+                active={currentView}
+                onChange={(v) => setView(v as ViewKey)}
+                tabs={[
+                    { key: "all", label: "Tất cả", count: counts.all },
+                    { key: "draft", label: "DRAFT", count: counts.draft },
+                    { key: "posted", label: "POSTED", count: counts.posted },
+                    { key: "canceled", label: "CANCELED", count: counts.canceled },
+                ]}
+            />
+
+            <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    applyFilters({
+                        q: formQ,
+                        vendorId: formVendorId,
+                        type: formType,
+                        sort: formSort,
+                    });
+                }}
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
+                        <input
+                            value={formQ}
+                            onChange={(e) => setFormQ(e.target.value)}
+                            placeholder="refNo / notes / vendor..."
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Vendor ID</div>
+                        <input
+                            value={formVendorId}
+                            onChange={(e) => setFormVendorId(e.target.value)}
+                            placeholder="vendorId"
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Type</div>
+                        <select
+                            value={formType}
+                            onChange={(e) => setFormType(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="">(All)</option>
+                            <option value="PURCHASE">PURCHASE</option>
+                            <option value="SALE">SALE</option>
+                            <option value="RETURN">RETURN</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
+                        <select
+                            value={formSort}
+                            onChange={(e) => setFormSort(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="updatedDesc">Cập nhật ↓</option>
+                            <option value="updatedAsc">Cập nhật ↑</option>
+                            <option value="createdDesc">Tạo ↓</option>
+                            <option value="createdAsc">Tạo ↑</option>
+                            <option value="acquiredDesc">Acquired ↓</option>
+                            <option value="acquiredAsc">Acquired ↑</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-600">Sắp xếp</label>
-                    <select
-                        name="sort"
-                        defaultValue={(spObj.sort as string) ?? "updatedDesc"}
-                        className="h-9 rounded border px-2"
+                <div className="flex items-center gap-3">
+                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                        Lọc
+                    </button>
+                    <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
-                        <option value="updatedDesc">Cập nhật ↓</option>
-                        <option value="updatedAsc">Cập nhật ↑</option>
-                        <option value="createdDesc">Tạo ↓</option>
-                        <option value="createdAsc">Tạo ↑</option>
-                        <option value="acquiredDesc">Ngày nhập ↓</option>
-                        <option value="acquiredAsc">Ngày nhập ↑</option>
-                    </select>
-                </div>
-
-                <div className="flex gap-2">
-                    <button className="h-9 rounded border px-3">Lọc</button>
-                    <Link href="/admin/acquisitions" className="h-9 rounded border px-3 flex items-center">
                         Clear
-                    </Link>
+                    </button>
+                    <div className="ml-auto text-sm text-gray-600">
+                        Đã chọn: <b>{selectedIds.length}</b>
+                    </div>
                 </div>
             </form>
 
-            {/* Bulk Bar */}
-            <div className="overflow-x-auto border rounded-lg">
-                <div id="bulk-bar" className="hidden mb-2 p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span id="selected-count" className="font-medium text-blue-700">0 phiếu đã chọn</span>
+            {showBulkBar && (
+                <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
+                    <span className="font-medium text-blue-700">{selectedIds.length} phiếu đã chọn</span>
                     <button
-                        id="bulk-approve"
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                    >
-                        Duyệt các phiếu đã chọn
-                    </button>
-                    <button
-                        id="bulk-clear"
                         className="px-3 py-1 border rounded text-sm"
+                        onClick={async () => {
+                            const payload = displayItems
+                                .filter((x) => selectedIds.includes(x.id))
+                                .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
+
+                            const res = await fetch("/api/admin/acquisitions/bulk-post", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ items: payload }),
+                            });
+
+                            if (!res.ok) {
+                                alert("Có lỗi khi duyệt phiếu!");
+                                return;
+                            }
+
+                            setSelectedIds([]);
+                            setShowBulkBar(false);
+                            router.refresh();
+                        }}
+                        type="button"
+                    >
+                        Duyệt phiếu
+                    </button>
+
+                    <button
+                        className="px-3 py-1 border rounded text-sm"
+                        onClick={() => {
+                            setSelectedIds([]);
+                            setShowBulkBar(false);
+                        }}
+                        type="button"
                     >
                         Bỏ chọn
                     </button>
                 </div>
+            )}
 
-                {/* TABLE */}
-                <table className="min-w-full text-sm border-collapse">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="px-3 py-2">
-                                <input type="checkbox" id="select-all" />
-                            </th>
-                            <th className="px-3 py-2 text-left">RefNo</th>
-                            <th className="px-3 py-2 text-left">Vendor</th>
-                            <th className="px-3 py-2 text-left">Loại</th>
-                            <th className="px-3 py-2 text-left">Trạng thái</th>
-                            <th className="px-3 py-2 text-left">Ngày nhập</th>
-                            <th className="px-3 py-2 text-left">Tổng tiền</th>
-                            <th className="px-3 py-2 text-left">Số dòng</th>
-                            <th className="px-3 py-2 text-left">HĐ</th>
-                            <th className="px-3 py-2 text-left">Cập nhật</th>
-                            <th className="px-3 py-2 text-left">Note</th>
-                            <th className="px-3 py-2 text-right">Hành động</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {items.length === 0 ? (
-                            <tr>
-                                <td colSpan={11} className="py-8 text-center text-gray-500">
-                                    Không có phiếu nhập
-                                </td>
+            <div className="border rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr className="text-left text-gray-700">
+                                <th className="w-10 px-3 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={allChecked}
+                                        ref={(el) => {
+                                            if (el) el.indeterminate = someChecked;
+                                        }}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                const merged = Array.from(new Set([...selectedIds, ...selectableIds]));
+                                                setSelectedIds(merged);
+                                                setShowBulkBar(merged.length > 0);
+                                            } else {
+                                                const next = selectedIds.filter((id) => !selectableIds.includes(id));
+                                                setSelectedIds(next);
+                                                setShowBulkBar(next.length > 0);
+                                            }
+                                        }}
+                                    />
+                                </th>
+                                <th className="px-3 py-3">RefNo</th>
+                                <th className="px-3 py-3">Amount</th>
+                                <th className="px-3 py-3">Note</th>
+                                <th className="px-3 py-3">Status</th>
+                                <th className="px-3 py-3">Type</th>
+                                <th className="px-3 py-3">Ngày tạo</th>
+                                <th className="px-3 py-3">Link</th>
+                                <th className="px-3 py-3 text-right">Hành động</th>
                             </tr>
-                        ) : (
-                            items.map((a) => {
-                                // NEW: compute values override sau khi update popover
-                                const displayCount = rowCounts[a.id] ?? a.itemCount;
-                                const displayTotal = rowTotals[a.id] ?? Number(a.cost ?? 0);
+                        </thead>
 
-                                return (
-                                    <tr key={a.id} className="border-b hover:bg-gray-50">
+                        <tbody>
+                            {displayItems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                        Không có dữ liệu trong tab này
+                                    </td>
+                                </tr>
+                            ) : (
+                                displayItems.map((row) => {
+                                    const checked = selectedIds.includes(row.id);
 
-                                        <td className="px-3 py-2">
-                                            <input
-                                                type="checkbox"
-                                                className="row-check"
-                                                data-id={a.id}
-                                                data-vendorname={a.vendorName || ""}
-                                                disabled={a.status === "POSTED"}
-                                            />
-                                        </td>
+                                    return (
+                                        <tr key={row.id} className="border-t">
+                                            <td className="px-3 py-4 align-top">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    disabled={(row.status || "").toUpperCase() !== "DRAFT"}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedIds((prev) =>
+                                                                Array.from(new Set([...prev, row.id]))
+                                                            );
+                                                        } else {
+                                                            setSelectedIds((prev) =>
+                                                                prev.filter((id) => id !== row.id)
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                            </td>
 
-                                        <td className="px-3 py-2 font-medium">{a.refNo ?? "-"}</td>
-                                        <td className="px-3 py-2">{a.vendorName ?? "-"}</td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-medium text-sm">
+                                                    {row.refNo && row.refNo.trim() ? row.refNo : "-"}
+                                                </div>
+                                                <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
+                                                    {(row.type || "-").toLowerCase()}
+                                                </div>
+                                            </td>
 
-                                        <td className="px-3 py-2">{a.type}</td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-semibold text-base">
+                                                    {fmtMoney(Number(row.cost || 0), row.currency)}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Items: {row.itemCount}
+                                                </div>
+                                            </td>
 
-                                        <td className="px-3 py-2">
-                                            <span
-                                                className={`px-2 py-1 rounded text-xs font-medium ${a.status === "POSTED"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : a.status === "DRAFT"
-                                                        ? "bg-amber-100 text-amber-700"
-                                                        : "bg-gray-100 text-gray-700"
-                                                    }`}
-                                            >
-                                                {a.status}
-                                            </span>
-                                        </td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="text-sm">{row.notes || "-"}</div>
+                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
+                                            </td>
 
-                                        <td className="px-3 py-2">{fmtDate(a.createdAt)}</td>
+                                            <td className="px-3 py-4 align-top">
+                                                <StatusBadge status={row.status} />
+                                            </td>
 
-                                        {/* Tổng tiền (dùng displayTotal) */}
-                                        <td className="px-3 py-2">
-                                            {fmtMoney(displayTotal, a.currency)}
-                                        </td>
+                                            <td className="px-3 py-4 align-top">{row.type}</td>
 
-                                        {/* Số dòng (dùng displayCount) */}
-                                        <td className="px-3 py-2">
-                                            <ItemPopover
-                                                parentId={a.id}
-                                                type="acquisitions"
-                                                count={displayCount}
-                                                currency={a.currency}
-                                                status={a.status}
-                                                mode={a.status === "DRAFT" ? "edit" : "view"}
-                                                onUpdated={({ count, total }) => {
-                                                    setRowCounts((prev) => ({ ...prev, [a.id]: count }));
-                                                    setRowTotals((prev) => ({ ...prev, [a.id]: total }));
-                                                }}
-                                            />
-                                        </td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="text-sm">{fmtDT(row.createdAt)}</div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Updated: {fmtDT(row.updatedAt)}
+                                                </div>
+                                            </td>
 
-                                        <td className="px-3 py-2">{a.hasInvoice ? "✓" : "-"}</td>
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="space-y-1 text-sm">
+                                                    {row.vendorName ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Vendor</span>{" "}
+                                                            <span className="text-gray-600">{row.vendorName}</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {row.hasInvoice ? (
+                                                        <div>
+                                                            <span className="text-blue-600 font-medium">Invoice</span>{" "}
+                                                            <span className="text-gray-600">Yes</span>
+                                                        </div>
+                                                    ) : null}
+                                                    {!row.vendorName && !row.hasInvoice ? (
+                                                        <span className="text-gray-400">-</span>
+                                                    ) : null}
+                                                </div>
+                                            </td>
 
-                                        <td className="px-3 py-2">
-                                            {(a.updatedAt && a.updatedAt !== a.createdAt)
-                                                ? fmtDate(a.updatedAt)
-                                                : "-"}
-                                        </td>
-
-                                        <td className="px-3 py-2">{a.notes}</td>
-
-                                        <td className="relative px-3 py-2 text-right">
-                                            <button
-                                                className="p-2 rounded hover:bg-gray-100"
-                                                onClick={() =>
-                                                    setOpenMenuId(openMenuId === a.id ? null : a.id)
-                                                }
-                                            ></button>
-
-                                            <ActionMenu
-                                                acqId={a.id}
-                                                status={a.status}
-                                                vendor={a.vendorName || ""}
-                                            />
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
+                                            <td className="px-3 py-4 align-top text-right">
+                                                <ActionMenu
+                                                    entityId={row.id}
+                                                    entityType="acquisitions"
+                                                    status={row.status}
+                                                    mode="edit"
+                                                />
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                    Tổng: <b>{total}</b> • Trang <b>{page}</b>/<b>{totalPages}</b>
+            <div className="flex items-center justify-between text-sm text-gray-700">
+                <div>
+                    Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
-
-                <div className="flex gap-2">
-                    <Link
-                        href={gotoPageHref(Math.max(1, page - 1))}
-                        className={`rounded border px-3 py-1 text-sm ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page <= 1}
+                        onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
                         ← Trước
-                    </Link>
-
-                    <Link
-                        href={gotoPageHref(Math.min(totalPages, page + 1))}
-                        className={`rounded border px-3 py-1 text-sm ${page >= totalPages ? "pointer-events-none opacity-50" : ""
-                            }`}
+                    </button>
+                    <button
+                        type="button"
+                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        disabled={props.page >= props.totalPages}
+                        onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
                         Sau →
-                    </Link>
+                    </button>
                 </div>
             </div>
-
-            <DrawerHost />
         </div>
     );
 }

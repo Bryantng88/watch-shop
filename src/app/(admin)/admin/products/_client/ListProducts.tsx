@@ -11,8 +11,6 @@ import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 
-
-
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 
 type Counts = {
@@ -124,14 +122,15 @@ export default function AdminProductListPageClient(props: PageProps) {
     const displayItems = items;
 
     const counts: Counts = useMemo(() => {
-        if (props.counts?.all != null) {
+        const server = props.counts;
+        if (server && Object.values(server).some((v) => Number(v ?? 0) > 0)) {
             return {
-                all: props.counts.all ?? 0,
-                draft: props.counts.draft ?? 0,
-                posted: props.counts.posted ?? 0,
-                in_service: props.counts.in_service ?? 0,
-                hold: props.counts.hold ?? 0,
-                sold: props.counts.sold ?? 0,
+                all: Number(server.all ?? 0),
+                draft: Number(server.draft ?? 0),
+                posted: Number(server.posted ?? 0),
+                in_service: Number(server.in_service ?? 0),
+                hold: Number(server.hold ?? 0),
+                sold: Number(server.sold ?? 0),
             };
         }
 
@@ -231,8 +230,8 @@ export default function AdminProductListPageClient(props: PageProps) {
             });
 
             if (!res.ok) {
-                const text = await res.text().catch(() => "");
-                alert(text || "Cập nhật ảnh thất bại");
+                const msg = await res.text().catch(() => "");
+                alert(msg || "Cập nhật ảnh thất bại");
                 return;
             }
 
@@ -242,6 +241,7 @@ export default function AdminProductListPageClient(props: PageProps) {
             alert("Cập nhật ảnh thất bại");
         }
     }
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -511,11 +511,13 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 />
                                             </td>
 
-                                            <td className="px-4 py-2 align-middle">
-                                                <InlineImagePicker
-                                                    imageUrl={(p as any).primaryImageUrl ?? null}
-                                                    onPick={(fileKey) => updateProductImage(p.id, fileKey)}
-                                                />
+                                            <td className="px-4 py-3 align-middle">
+                                                <div className="scale-110 origin-left">
+                                                    <InlineImagePicker
+                                                        imageUrl={(p as any).primaryImageUrl ?? null}
+                                                        onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                                    />
+                                                </div>
                                             </td>
 
                                             <td className="px-3 py-4 align-top">
