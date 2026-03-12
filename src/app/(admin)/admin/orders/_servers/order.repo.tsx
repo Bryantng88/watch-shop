@@ -1,8 +1,16 @@
 import { DB, dbOrTx } from "@/server/db/client";
-import { Prisma, ServiceScope, PaymentMethod, OrderStatus, orderitemkind, ReserveType, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
+import {
+    Prisma,
+    ServiceScope,
+    PaymentMethod,
+    OrderStatus,
+    OrderItemKind,
+    ReserveType,
+    OrderSource,
+    OrderVerificationStatus,
+} from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
 import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
-import { DevBundlerService } from "next/dist/server/lib/dev-bundler-service";
 
 /* ================================
    TYPES
@@ -28,6 +36,7 @@ export type CreateOrderRow = {
     depositRequired: number | null;
     reserveUntil: Date | null;
 };
+
 function normalizeReserve(data: CreateOrderRow) {
     if (!data.reserveType) {
         return {
@@ -50,15 +59,266 @@ export type CreateOrderItemRow = {
     title: string;
     img?: string;
     quantity: number;
-    kind: orderitemkind;
+    kind: OrderItemKind;
     serviceCatalogId: string;
     serviceScope: ServiceScope;
     listPrice: number;
-    unitPriceAgreed: number; // 👈 service tính, repo chỉ lưu
+    unitPriceAgreed: number;
     taxRate?: number;
     customerItemNote: string;
 };
 
+export type OrderViewKey =
+    | "all"
+    | "web_pending"
+    | "need_action"
+    | "processing"
+    | "delivered"
+    | "completed"
+    | "cancelled";
+
+export type OrderListSort =
+    | "updatedDesc"
+    | "updatedAsc"
+    | "createdDesc"
+    | "createdAsc";
+
+function buildOrderBy(sort?: OrderListSort): Prisma.OrderOrderByWithRelationInput {
+    switch (sort) {
+        case "updatedAsc":
+            return { updatedAt: "asc" };
+        case "createdDesc":
+            return { createdAt: "desc" };
+        case "createdAsc":
+            return { createdAt: "asc" };
+        case "updatedDesc":
+        default:
+            return { updatedAt: "desc" };
+    }
+}
+
+function buildWhereBase(q?: string): Prisma.OrderWhereInput {
+    const keyword = (q || "").trim();
+    if (!keyword) return {};
+
+    return {
+        OR: [
+            { refNo: { contains: keyword, mode: "insensitive" } },
+            { customerName: { contains: keyword, mode: "insensitive" } },
+            { shipPhone: { contains: keyword, mode: "insensitive" } },
+        ],
+    };
+}
+
+function buildWhereForView(
+    whereBase: Prisma.OrderWhereInput,
+    view?: OrderViewKey
+): Prisma.OrderWhereInput {
+    switch (view) {
+        case "web_pending":
+            return {
+                AND: [
+                    whereBase,
+                    {
+                        source: "WEB",
+                        verificationStatus: "PENDING",
+                    },
+                ],
+            };
+
+        case "need_action":
+            return {
+                AND: [
+                    whereBase,
+                    {
+                        source: "ADMIN",
+                        status: { in: ["DRAFT", "RESERVED"] as any },
+                        NOT: {
+                            verificationStatus: "PENDING",
+                        },
+                    },
+                ],
+            };
+
+        case "processing":
+            return {
+                AND: [whereBase, { status: "POSTED" as any }],
+            };
+
+        case "delivered":
+            return {
+                AND: [whereBase, { status: "SHIPPED" as any }],
+            };
+
+        case "completed":
+            return {
+                AND: [whereBase, { status: "COMPLETED" as any }],
+            };
+
+        case "cancelled":
+            return {
+                AND: [
+                    whereBase,
+                    {
+                        OR: [
+                            { status: "CANCELLED" as any },
+                            { verificationStatus: "REJECTED" as any },
+                            { verificationStatus: "EXPIRED" as any },
+                        ],
+                    },
+                ],
+            };
+
+        case "all":
+        default:
+            return whereBase;
+    }
+}
+
+/* ================================
+   ADMIN LIST + COUNTS
+================================ */
+
+export async function listAdminOrders(
+    tx: DB,
+    input: {
+        q?: string;
+        view?: OrderViewKey;
+        sort?: OrderListSort;
+        page: number;
+        pageSize: number;
+    }
+) {
+    const db = dbOrTx(tx);
+
+    const whereBase = buildWhereBase(input.q);
+    const whereList = buildWhereForView(whereBase, input.view);
+
+    const skip = (input.page - 1) * input.pageSize;
+    const take = input.pageSize;
+
+    const select: Prisma.OrderSelect = {
+        id: true,
+        refNo: true,
+        status: true,
+        reserveType: true,
+        depositRequired: true,
+        customerName: true,
+        shipPhone: true,
+        shipCity: true,
+        shipDistrict: true,
+        shipWard: true,
+        notes: true,
+        paymentMethod: true,
+        subtotal: true,
+        source: true,
+        verificationStatus: true,
+        hasShipment: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+            select: {
+                items: true,
+            },
+        },
+    };
+
+    const [
+        totalAll,
+        total,
+        rows,
+        cWebPending,
+        cNeedAction,
+        cProcessing,
+        cDelivered,
+        cCompleted,
+        cCancelled,
+    ] = await Promise.all([
+        db.order.count({ where: whereBase }),
+        db.order.count({ where: whereList }),
+        db.order.findMany({
+            where: whereList,
+            orderBy: buildOrderBy(input.sort),
+            skip,
+            take,
+            select,
+        }),
+
+        db.order.count({
+            where: {
+                AND: [
+                    whereBase,
+                    {
+                        source: "WEB",
+                        verificationStatus: "PENDING",
+                    },
+                ],
+            },
+        }),
+
+        db.order.count({
+            where: {
+                AND: [
+                    whereBase,
+                    {
+                        source: "ADMIN",
+                        status: { in: ["DRAFT", "RESERVED"] as any },
+                        NOT: {
+                            verificationStatus: "PENDING",
+                        },
+                    },
+                ],
+            },
+        }),
+
+        db.order.count({
+            where: {
+                AND: [whereBase, { status: "POSTED" as any }],
+            },
+        }),
+
+        db.order.count({
+            where: {
+                AND: [whereBase, { status: "SHIPPED" as any }],
+            },
+        }),
+
+        db.order.count({
+            where: {
+                AND: [whereBase, { status: "COMPLETED" as any }],
+            },
+        }),
+
+        db.order.count({
+            where: {
+                AND: [
+                    whereBase,
+                    {
+                        OR: [
+                            { status: "CANCELLED" as any },
+                            { verificationStatus: "REJECTED" as any },
+                            { verificationStatus: "EXPIRED" as any },
+                        ],
+                    },
+                ],
+            },
+        }),
+    ]);
+
+    return {
+        rows,
+        total,
+        counts: {
+            all: totalAll,
+            web_pending: cWebPending,
+            need_action: cNeedAction,
+            processing: cProcessing,
+            delivered: cDelivered,
+            completed: cCompleted,
+            cancelled: cCancelled,
+        },
+    };
+}
 /* ================================
    QUERIES
 ================================ */

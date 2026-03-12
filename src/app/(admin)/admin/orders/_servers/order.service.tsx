@@ -1,31 +1,23 @@
 "use server";
 
-import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { OrderSearchInput, OrderListSort, OrderViewKey } from "../utils/search-params";
+//import { prisma, DB, dbOrTx } from "@/server/db/client";
+import { OrderSearchInput } from "../utils/search-params";
 import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
-import {
-  PaymentMethod,
-  Prisma,
-  orderitemkind,
-  ReserveType,
-  OrderStatus,
-  OrderSource,
-  OrderVerificationStatus,
-  PrismaClient,
-} from "@prisma/client";
-import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo";
+import { PaymentMethod, Prisma, OrderItemKind, ReserveType, OrderStatus, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
+import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
 import { updateProductVariantStt } from "../../products/_server/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipments/_server/shipment.service";
-import * as paymentService from "../../payments/_server/payment.service";
+import * as paymentService from "../../payments/_server/payment.service"
 import { OrderDraftInput } from "./order.type";
 import { genRefNo } from "../../__components/AutoGenRef";
-
 /* ================================
    TYPES
 ================================ */
-//const prisma = new PrismaClient();
+const prisma = new PrismaClient();
+
+
 
 export type CreateOrderItemInput = {
   productId?: string;
@@ -35,14 +27,14 @@ export type CreateOrderItemInput = {
 
   quantity: number;
   listPrice: number;
-  kind: orderitemkind;
+  kind: OrderItemKind;
   discountType?: "PERCENT" | "AMOUNT";
   discountValue?: number;
   serviceCatalogId: string;
   taxRate?: number;
 };
 type ReserveInput = {
-  type: ReserveType;
+  type: ReserveType;     // HOLD | COD
   amount?: number;
   expiresAt?: Date | null;
 };
@@ -58,22 +50,23 @@ export type ResolvedOrderItem = {
   variantId: string;
   title: string;
   quantity: number;
-  listPrice: number;
+  listPrice: number; // number để tạo orderItem
   primaryImageUrl?: string | null;
-  productType?: string;
+  productType?: string; // nếu bạn cần
 };
-
 function toNumberPrice(v: unknown): number {
+  // prisma Decimal -> object có toNumber() hoặc valueOf()
   if (v == null) return 0;
   if (typeof v === "number") return v;
 
+  // Prisma.Decimal thường có toNumber()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const anyV = v as any;
   if (typeof anyV?.toNumber === "function") return anyV.toNumber();
 
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-
 type ProductRow = Prisma.ProductGetPayload<{
   select: {
     id: true;
@@ -115,21 +108,25 @@ export type CreateOrderInput = {
   shipWard: string;
   paymentMethod: PaymentMethod;
   notes: string | null;
-  createdAt: Date;
+  orderDate: Date;
   status: OrderStatus;
   items: CreateOrderItemInput[];
   source: OrderSource;
   verificationStatus: OrderVerificationStatus;
 };
 
-function resolveReserve(paymentMethod: PaymentMethod, reserve?: ReserveInput | null) {
+
+function resolveReserve(
+  paymentMethod: PaymentMethod,
+  reserve?: ReserveInput | null
+) {
   if (!reserve) return null;
 
   if (paymentMethod === "COD") {
     return {
       reserveType: "COD" as ReserveType,
       depositRequired: reserve.amount ?? 0,
-      reserveUntil: null,
+      reserveUntil: null, // COD không giữ hàng
     };
   }
 
@@ -139,12 +136,10 @@ function resolveReserve(paymentMethod: PaymentMethod, reserve?: ReserveInput | n
     reserveUntil: reserve.expiresAt ?? null,
   };
 }
-
 function norm(v: unknown) {
   const s = typeof v === "string" ? v.trim() : "";
-  return s;
+  return s; // giữ "" nếu user xóa
 }
-
 export async function serialize(obj: any) {
   return JSON.parse(
     JSON.stringify(obj, (key, value) => {
@@ -161,6 +156,7 @@ export async function resolveItemsFromDb(
 ): Promise<ResolvedOrderItem[]> {
   if (!items?.length) return [];
 
+  // 1) normalize + cộng dồn qty nếu trùng productId
   const qtyByProductId = new Map<string, number>();
 
   for (const it of items) {
@@ -172,6 +168,7 @@ export async function resolveItemsFromDb(
 
   const productIds = Array.from(qtyByProductId.keys());
 
+  // 2) query product + variants ACTIVE
   const products: ProductRow[] = await tx.product.findMany({
     where: { id: { in: productIds } },
     select: {
@@ -180,8 +177,11 @@ export async function resolveItemsFromDb(
       primaryImageUrl: true,
       type: true,
       variants: {
-        where: { availabilityStatus: "ACTIVE" },
-        orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
+        where: { availabilityStatus: "ACTIVE" }, // ✅ theo schema bạn
+        orderBy: [
+          { stockQty: "desc" },   // ưu tiên variant còn hàng nhiều
+          { createdAt: "asc" },   // tie-break
+        ],
         select: {
           id: true,
           availabilityStatus: true,
@@ -193,12 +193,14 @@ export async function resolveItemsFromDb(
     },
   });
 
+  // 3) check missing
   const productMap = new Map<string, ProductRow>(products.map((p) => [p.id, p]));
   const missing = productIds.filter((id) => !productMap.has(id));
   if (missing.length) {
     throw new Error(`Products not found: ${missing.join(", ")}`);
   }
 
+  // 4) resolve mỗi product -> chọn 1 variant ACTIVE
   const resolved: ResolvedOrderItem[] = [];
 
   for (const productId of productIds) {
@@ -210,6 +212,7 @@ export async function resolveItemsFromDb(
       throw new Error(`No ACTIVE variant for productId=${productId}`);
     }
 
+    // optional: check stock if managed (bạn có isStockManaged ở ProductVariant)
     const qty = qtyByProductId.get(productId)!;
     if (chosenVariant.stockQty != null && chosenVariant.stockQty < qty) {
       throw new Error(
@@ -242,6 +245,7 @@ async function resolveCustomer(
   const shipAddress = norm(input.shipAddress);
   const shipPhone = norm(input.shipPhone);
 
+  // 1) Nếu có customerId => ưu tiên update theo ID
   if (input.customerId) {
     const existing = await customerRepo.findCustomerById(tx, input.customerId);
     if (!existing) return null;
@@ -264,18 +268,20 @@ async function resolveCustomer(
     return existing.id;
   }
 
+  // 2) Không có customerId => resolve theo phone
   if (!shipPhone) return null;
 
-  const existingByPhone = await customerRepo.findCustomerByPhone(tx, shipPhone);
-  if (existingByPhone) {
+  const existing = await customerRepo.findByPhone(tx, shipPhone);
+
+  if (existing) {
     const needUpdate =
-      shipCity !== norm(existingByPhone.city) ||
-      shipDistrict !== norm(existingByPhone.district) ||
-      shipWard !== norm(existingByPhone.ward) ||
-      shipAddress !== norm(existingByPhone.address);
+      shipCity !== norm(existing.city) ||
+      shipDistrict !== norm(existing.district) ||
+      shipWard !== norm(existing.ward) ||
+      shipAddress !== norm(existing.address);
 
     if (needUpdate) {
-      await customerRepo.updateCustomer(tx, existingByPhone.id, {
+      await customerRepo.updateCustomer(tx, existing.id, {
         city: shipCity,
         district: shipDistrict,
         ward: shipWard,
@@ -283,9 +289,10 @@ async function resolveCustomer(
       });
     }
 
-    return existingByPhone.id;
+    return existing.id;
   }
 
+  // 3) Không có => create
   const created = await customerRepo.createCustomer(tx, {
     name: input.customerName,
     phone: shipPhone,
@@ -301,120 +308,17 @@ async function resolveCustomer(
 /* ================================
    QUERIES
 ================================ */
-
-function buildOrderBy(sort?: OrderListSort): Prisma.OrderOrderByWithRelationInput {
-  switch (sort) {
-    case "updatedAsc":
-      return { updatedAt: "asc" };
-    case "createdDesc":
-      return { createdAt: "desc" };
-    case "createdAsc":
-      return { createdAt: "asc" };
-    case "updatedDesc":
-    default:
-      return { updatedAt: "desc" };
-  }
-}
-
-function viewToWhere(view?: OrderViewKey): Prisma.OrderWhereInput | undefined {
-  switch (view) {
-    case "web_pending":
-      return {
-        source: "WEB",
-        verificationStatus: "PENDING",
-      };
-
-    case "need_action":
-      return {
-        source: "ADMIN",
-        status: { in: ["DRAFT", "RESERVED"] },
-        verificationStatus: { not: "PENDING" },
-      };
-
-    case "processing":
-      return {
-        status: "POSTED",
-      };
-
-    case "delivered":
-      return {
-        status: "SHIPPED",
-      };
-
-    case "completed":
-      return {
-        status: "COMPLETED",
-      };
-
-    case "cancelled":
-      return {
-        OR: [
-          { status: "CANCELLED" },
-          { verificationStatus: "REJECTED" },
-          { verificationStatus: "EXPIRED" },
-        ],
-      };
-
-    case "all":
-    default:
-      return undefined;
-  }
-}
-
-function combineWhere(
-  baseWhere?: Prisma.OrderWhereInput,
-  extraWhere?: Prisma.OrderWhereInput
-): Prisma.OrderWhereInput {
-  if (baseWhere && extraWhere) {
-    return { AND: [baseWhere, extraWhere] };
-  }
-  return baseWhere ?? extraWhere ?? {};
-}
-
 export async function getAdminOrderList(input: OrderSearchInput) {
-  const { page, pageSize, q, sort, view } = input;
+  const page = Math.max(1, Number(input.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));
 
-  const baseWhere: Prisma.OrderWhereInput = q
-    ? {
-      OR: [
-        { refNo: { contains: q, mode: "insensitive" } },
-        { customerName: { contains: q, mode: "insensitive" } },
-        { shipPhone: { contains: q, mode: "insensitive" } },
-      ],
-    }
-    : {};
-
-  const viewWhere = viewToWhere(view);
-  const where = combineWhere(baseWhere, viewWhere);
-
-  const skip = (page - 1) * pageSize;
-  const take = pageSize;
-
-  const { rows, total } = await orderRepo.getOrdList(
-    where,
-    buildOrderBy(sort),
-    skip,
-    take,
-    prisma
-  );
-
-  const [
-    cAll,
-    cWebPending,
-    cNeedAction,
-    cProcessing,
-    cDelivered,
-    cCompleted,
-    cCancelled,
-  ] = await Promise.all([
-    prisma.order.count({ where: baseWhere }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("web_pending")) }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("need_action")) }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("processing")) }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("delivered")) }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("completed")) }),
-    prisma.order.count({ where: combineWhere(baseWhere, viewToWhere("cancelled")) }),
-  ]);
+  const { rows, total, counts } = await orderRepo.listAdminOrders(prisma, {
+    q: input.q,
+    view: input.view,
+    sort: input.sort,
+    page,
+    pageSize,
+  });
 
   const items = rows.map((o) => ({
     id: o.id,
@@ -438,21 +342,14 @@ export async function getAdminOrderList(input: OrderSearchInput) {
   return {
     items,
     total,
-    counts: {
-      all: cAll,
-      web_pending: cWebPending,
-      need_action: cNeedAction,
-      processing: cProcessing,
-      delivered: cDelivered,
-      completed: cCompleted,
-      cancelled: cCancelled,
-    },
+    counts,
     page,
     pageSize,
   };
 }
 
 export async function getAdminOrderDetail(id: string) {
+
   const row = await orderRepo.getOrderDetail(id, prisma);
   if (!row) throw new Error("Order không tồn tại");
   return serialize(row);
@@ -462,4 +359,240 @@ export async function getAdminOrderDetail(id: string) {
    COMMAND
 ================================ */
 
-// ... giữ nguyên phần còn lại của file như code hiện tại của bạn ...
+export async function createOrderWithItems(raw: any) {
+  const input: CreateOrderInput = {
+    shipPhone: raw.shipPhone ?? null,
+    customerId: raw.customerId ?? null,
+    customerName: raw.customerName,
+    reserve: raw.reserve
+      ? {
+        type: raw.reserve.type as ReserveType,
+        amount: Number(raw.reserve.amount || 0),
+        expiresAt: raw.reserve.expiresAt
+          ? new Date(raw.reserve.expiresAt)
+          : null,
+      }
+      : null,
+    status: raw.status as OrderStatus,
+    shipAddress: raw.shipAddress ?? null,
+    shipCity: raw.shipCity ?? null,
+    shipDistrict: raw.shipDistrict ?? null,
+    hasShipment: raw.hasShipment,
+    shipWard: raw.shipWard ?? null,
+    source: raw.source as OrderSource,
+    verificationStatus: raw.verificationStatus as OrderVerificationStatus,
+    paymentMethod: raw.paymentMethod as PaymentMethod,
+    notes: raw.notes ?? null,
+    orderDate:
+      raw.orderDate instanceof Date
+        ? raw.orderDate
+        : new Date(raw.orderDate),
+
+    items: (raw.items ?? []).map((i: any) => ({
+      productId: i.productId ?? null,
+      serviceCatalogId: i.serviceCatalogId ?? null,
+      quantity: Number(i.quantity ?? 1),
+      taxRate: i.taxRate ?? null,
+    })),
+  };
+
+  return prisma.$transaction(async (tx) => {
+    /* =====================================================
+     * 1️⃣ Resolve CUSTOMER
+     * ===================================================== */
+    const resolvedCustomerId = await resolveCustomer(tx, input);
+    const reserveData = resolveReserve(input.paymentMethod, input.reserve)
+    /* =====================================================
+     * 2️⃣ Reserve PRODUCT variants (lock inventory)
+     * ===================================================== */
+
+    const rawProductItems = input.items
+      .filter((i) => i.productId) // bỏ item rỗng
+      .map((i) => ({
+        productId: i.productId as string,
+        quantity: i.quantity,
+        taxRate: i.taxRate ?? null,
+      }));
+
+    const resolvedItems = await resolveItemsFromDb(tx, rawProductItems);
+
+    for (const item of resolvedItems) {
+      if (item.kind !== "PRODUCT") continue;
+
+      await updateProductVariantStt(tx, {
+        productId: item.productId!,
+        status: "RESERVED",
+        fromStatuses: ["ACTIVE"],
+      });
+    }
+    if (reserveData?.reserveType === "DEPOSIT" || reserveData?.reserveType === "COD") {
+      input.status === OrderStatus.RESERVED
+    } else {
+      //input.status === OrderStatus.DRAFT
+    }
+    /* =====================================================
+     * 3️⃣ Create ORDER (DRAFT)
+     * ===================================================== */
+    const order = await orderRepo.createOrder(tx, {
+      customerId: resolvedCustomerId,
+      customerName: input.customerName,
+      shipPhone: input.shipPhone!,
+      shipAddress: input.shipAddress,
+      shipCity: input.shipCity,
+      shipDistrict: input.shipDistrict,
+      shipWard: input.shipWard,
+      paymentMethod: input.paymentMethod!,
+      hasShipment: input.hasShipment,
+      notes: input.notes,
+      createdAt: input.orderDate,
+      status: input.status,
+      source: input.source,
+      verificationStatus: input.verificationStatus,
+      reserveType: reserveData?.reserveType ?? null,
+      depositRequired: reserveData?.depositRequired ?? null,
+      reserveUntil: reserveData?.reserveUntil ?? null
+    });
+
+    /* =====================================================
+     * 4️⃣ Create ORDER ITEMS
+     * ===================================================== */
+    const orderItemsPayload = resolvedItems.map((i) => {
+      // nếu bạn chưa support discount/service ở endpoint này thì discountType/value luôn null
+      const unitPriceAgreed = calcUnitPriceAgreed({
+        listPrice: i.listPrice,
+        discountType: null,
+        discountValue: null,
+      });
+
+      return {
+        kind: "PRODUCT" as const,
+        productId: i.productId,
+        variantId: i.variantId,
+        title: i.title,
+        quantity: i.quantity,
+        listPrice: i.listPrice,
+        unitPriceAgreed,
+
+        // primaryImageUrl: i.primaryImageUrl ?? null, // nếu bạn muốn snapshot
+      };
+    });
+
+    const createdItems = await orderRepo.createOrderItems(tx, order.id, orderItemsPayload);
+
+    /* =====================================================
+     * 5️⃣ Compute & update SUBTOTAL
+     * ===================================================== */
+    const subtotal = createdItems.reduce(
+      (sum, i) => sum + i.subtotal,
+      0
+    );
+
+    await orderRepo.updateSubtotal(tx, order.id, subtotal);
+
+    /* =====================================================
+     * 6️⃣ Return lite order
+     * ===================================================== */
+    return orderRepo.getOrderLite(tx, order.id);
+  });
+}
+
+export async function getOrderDetail(id: string) {
+  return orderRepo.getOrderDetail(id, prisma);
+
+}
+
+export async function postOneOrderTx(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+) {
+  const order = await orderRepo.getOrderForPost(tx, orderId);
+  if (!order) throw new Error("Order not found");
+
+  if (order.status !== OrderStatus.DRAFT) {
+    throw new Error(`Order status must be DRAFT. Current: ${order.status}`);
+  }
+  const refNo =
+    order.refNo ??
+    (await genRefNo(tx, {
+      model: tx.order,
+      prefix: "OD",
+      field: "refNo",
+      padding: 6,
+    }));
+
+  await orderRepo.markPosted(tx, order.id, refNo);
+
+  if (order.verificationStatus === OrderVerificationStatus.PENDING) {
+    await orderRepo.verifyOrder(order.id, tx, OrderVerificationStatus.VERIFIED)
+  }
+
+  await paymentService.createPaymentsForOrder(tx, order);
+
+  if (order.hasShipment) {
+    // ✅ FIX: truyền order object, không truyền id
+    await shipmentService.createFromOrderTx(tx, {
+      id: order.id,
+      orderRefNo: order.refNo,
+      customerName: order.customerName,
+      shipPhone: order.shipPhone,
+      shipAddress: order.shipAddress,
+      shipCity: (order as any).shipCity ?? null,
+      shipDistrict: (order as any).shipDistrict ?? null,
+      shipWard: (order as any).shipWard ?? null,
+    });
+  }
+
+  if (order.items.some((i: any) => i.kind === "SERVICE")) {
+    await serviceReqtService.createFromOrder(tx, order);
+  }
+
+  return { id: order.id, status: "POSTED" as const };
+}
+
+// 2) Wrapper: gọi cho trường hợp post 1 đơn lẻ (API /orders/[id]/post)
+export async function postOneOrder(orderId: string, hasShipment: boolean) {
+  return prisma.$transaction((tx) => postOneOrderTx(tx, orderId, hasShipment));
+}
+
+// order-post.service.ts
+export async function postOrders(orderIds: string[], hasShipment: boolean) {
+  return prisma.$transaction(async (tx) => {
+    const orders = await orderRepo.getOrdersForPost(tx, orderIds);
+    if (!orders.length) throw new Error("No orders found");
+
+    let posted = 0;
+
+    for (const o of orders) {
+      // bulk -> bạn muốn “skip” những cái không DRAFT thì keep continue
+      if (o.status !== OrderStatus.DRAFT) continue;
+
+      // ✅ gọi core tx handler cho gọn
+      await postOneOrderTx(tx, o.id, hasShipment);
+      posted++;
+    }
+
+    return { count: posted };
+  });
+}
+
+export async function cancelOrder(input: { id: string; reason?: string | null }) {
+  const updated = await orderRepo.cancelOrder(input.id, prisma, input.reason ?? null);
+  return serialize(updated);
+}
+
+export async function verifyOrder(input: { id: string; status: "VERIFIED" | "REJECTED" }) {
+  const updated = await orderRepo.verifyOrder(input.id, prisma, input.status);
+  return serialize(updated);
+}
+
+export async function getOrderDraftForEdit(orderId: string) {
+  const data = await orderRepo.getDraftForEdit(prisma, orderId);
+  if (!data) throw new Error("Order not found");
+  return data;
+}
+export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
+  return prisma.$transaction(async (tx) => {
+    await orderRepo.assertCanEditDraft(tx, orderId);
+    return orderRepo.updateDraft(tx, orderId, input);
+  });
+}
