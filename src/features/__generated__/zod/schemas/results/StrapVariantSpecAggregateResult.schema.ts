@@ -1,32 +1,36 @@
 import * as z from 'zod';
 export const StrapVariantSpecAggregateResultSchema = z.object({  _count: z.object({
     variantId: z.number(),
-    widthMM: z.number(),
-    lengthLabel: z.number(),
     color: z.number(),
     material: z.number(),
     quickRelease: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    lugWidthMM: z.number(),
+    buckleWidthMM: z.number(),
     variant: z.number()
   }).optional(),
   _sum: z.object({
-    widthMM: z.number().nullable()
+    lugWidthMM: z.number().nullable(),
+    buckleWidthMM: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    widthMM: z.number().nullable()
+    lugWidthMM: z.number().nullable(),
+    buckleWidthMM: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     variantId: z.string().nullable(),
-    widthMM: z.number().int().nullable(),
     color: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    lugWidthMM: z.number().int().nullable(),
+    buckleWidthMM: z.number().int().nullable()
   }).nullable().optional(),
   _max: z.object({
     variantId: z.string().nullable(),
-    widthMM: z.number().int().nullable(),
     color: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    lugWidthMM: z.number().int().nullable(),
+    buckleWidthMM: z.number().int().nullable()
   }).nullable().optional()});

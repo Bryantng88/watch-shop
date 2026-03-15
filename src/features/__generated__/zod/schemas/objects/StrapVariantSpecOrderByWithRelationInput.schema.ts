@@ -6,13 +6,13 @@ import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrd
 
 const makeSchema = () => z.object({
   variantId: SortOrderSchema.optional(),
-  widthMM: SortOrderSchema.optional(),
-  lengthLabel: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   color: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   material: SortOrderSchema.optional(),
   quickRelease: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  lugWidthMM: SortOrderSchema.optional(),
+  buckleWidthMM: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const StrapVariantSpecOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput>;

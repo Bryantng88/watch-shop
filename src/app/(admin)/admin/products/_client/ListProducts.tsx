@@ -12,6 +12,7 @@ import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
+type CatalogKey = "product" | "strap";
 
 type Counts = {
     all: number;
@@ -27,6 +28,7 @@ type ProductRow = ProductListItem & {
     brand?: string | null;
     type?: string | null;
     vendorName?: string | null;
+    material?: string | null;
     variantsCount?: number;
     imagesCount?: number;
     ordersCount?: number;
@@ -37,6 +39,7 @@ type ProductRow = ProductListItem & {
     createdAt?: string | null;
     status?: string | null;
     title?: string | null;
+    minPrice?: number | null;
 };
 
 type PageProps = {
@@ -64,7 +67,7 @@ function fmtDT(s?: string | null) {
 }
 
 function hasValidPrice(p: ProductRow) {
-    const price = Number((p as any).minPrice ?? 0);
+    const price = Number(p.minPrice ?? 0);
     return Number.isFinite(price) && price > 0;
 }
 
@@ -88,10 +91,28 @@ export default function AdminProductListPageClient(props: PageProps) {
         return "all";
     }, [sp]);
 
+    const currentCatalog: CatalogKey = useMemo(() => {
+        const v = (sp.get("catalog") || "product").toLowerCase();
+        return v === "strap" ? "strap" : "product";
+    }, [sp]);
+
+    const isStrapCatalog = currentCatalog === "strap";
+
     function setView(view: ViewKey) {
         const next = new URLSearchParams(sp.toString());
         if (view === "all") next.delete("view");
         else next.set("view", view);
+        next.set("page", "1");
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function setCatalog(catalog: CatalogKey) {
+        const next = new URLSearchParams(sp.toString());
+
+        if (catalog === "product") next.delete("catalog");
+        else next.set("catalog", "strap");
+
+        next.delete("type");
         next.set("page", "1");
         router.push(`${pathname}?${next.toString()}`);
     }
@@ -113,7 +134,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         setSelectedIds([]);
         setShowBulkBar(false);
         setShowBulkConfirm(false);
-    }, [currentView, q, type, brandId, hasImages, sort, props.page]);
+    }, [currentCatalog, currentView, q, type, brandId, hasImages, sort, props.page]);
 
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);
@@ -244,14 +265,48 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Sản phẩm</h1>
+            <div className="flex items-center justify-between gap-4">
+                <div className="space-y-3">
+                    <div className="inline-flex rounded-lg border bg-white p-1">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = new URLSearchParams(sp.toString());
+                                next.delete("catalog");
+                                next.set("page", "1");
+                                router.push(`${pathname}?${next.toString()}`);
+                            }}
+                            className={`rounded-md px-3 py-1.5 text-sm ${!isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                        >
+                            Sản phẩm
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = new URLSearchParams(sp.toString());
+                                next.set("catalog", "strap");
+                                next.delete("type");
+                                next.set("page", "1");
+                                router.push(`${pathname}?${next.toString()}`);
+                            }}
+                            className={`rounded-md px-3 py-1.5 text-sm ${isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                        >
+                            Dây
+                        </button>
+                    </div>
+
+                    <h1 className="text-2xl font-semibold">
+                        {isStrapCatalog ? "Quản lý dây" : "Sản phẩm"}
+                    </h1>
+                </div>
 
                 <Link
-                    href="/admin/products/new"
+                    href={isStrapCatalog ? "/admin/acquisitions/new?focus=strap" : "/admin/products/new"}
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
                 >
-                    + Tạo sản phẩm
+                    {isStrapCatalog ? "+ Nhập dây" : "+ Tạo sản phẩm"}
                 </Link>
             </div>
 
@@ -281,32 +336,34 @@ export default function AdminProductListPageClient(props: PageProps) {
                     });
                 }}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
                         <input
                             value={formQ}
                             onChange={(e) => setFormQ(e.target.value)}
-                            placeholder="Tên / mã / brand..."
+                            placeholder={isStrapCatalog ? "Tên dây / chất liệu..." : "Tên / mã / brand..."}
                             className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                     </div>
 
-                    <div>
-                        <div className="text-xs text-gray-500 mb-1">Type</div>
-                        <select
-                            value={formType}
-                            onChange={(e) => setFormType(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
-                        >
-                            <option value="">(All)</option>
-                            {props.productTypes.map((x) => (
-                                <option key={x.value} value={x.value}>
-                                    {x.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {!isStrapCatalog && (
+                        <div>
+                            <div className="text-xs text-gray-500 mb-1">Type</div>
+                            <select
+                                value={formType}
+                                onChange={(e) => setFormType(e.target.value)}
+                                className="w-full border rounded-lg px-3 py-2 text-sm"
+                            >
+                                <option value="">(All)</option>
+                                {props.productTypes.map((x) => (
+                                    <option key={x.value} value={x.value}>
+                                        {x.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Brand</div>
@@ -375,7 +432,9 @@ export default function AdminProductListPageClient(props: PageProps) {
 
             {showBulkBar && (
                 <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span className="font-medium text-blue-700">{selectedIds.length} product đã chọn</span>
+                    <span className="font-medium text-blue-700">
+                        {selectedIds.length} {isStrapCatalog ? "dây" : "product"} đã chọn
+                    </span>
 
                     <button
                         className="px-3 py-1 border rounded text-sm"
@@ -401,10 +460,12 @@ export default function AdminProductListPageClient(props: PageProps) {
             {showBulkConfirm && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
                     <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
-                        <h3 className="font-semibold text-lg">Post products</h3>
+                        <h3 className="font-semibold text-lg">
+                            {isStrapCatalog ? "Post dây" : "Post products"}
+                        </h3>
 
                         <div className="text-sm text-gray-600">
-                            Bạn đang post <b>{selectedIds.length}</b> sản phẩm.
+                            Bạn đang post <b>{selectedIds.length}</b> {isStrapCatalog ? "dây" : "sản phẩm"}.
                         </div>
 
                         <div className="flex justify-end gap-2 pt-3">
@@ -446,135 +507,212 @@ export default function AdminProductListPageClient(props: PageProps) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
-                            <tr className="text-left text-gray-700">
-                                <th className="w-10 px-3 py-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={allChecked}
-                                        ref={(el) => {
-                                            if (el) el.indeterminate = someChecked;
-                                        }}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                const merged = Array.from(new Set([...selectedIds, ...selectableIds]));
-                                                setSelectedIds(merged);
-                                                setShowBulkBar(merged.length > 0);
-                                            } else {
-                                                const next = selectedIds.filter((id) => !selectableIds.includes(id));
-                                                setSelectedIds(next);
-                                                setShowBulkBar(next.length > 0);
-                                            }
-                                        }}
-                                    />
-                                </th>
+                            {isStrapCatalog ? (
+                                <tr className="text-left text-gray-700">
+                                    <th className="px-3 py-3">Ảnh</th>
+                                    <th className="px-3 py-3">Tên dây</th>
+                                    <th className="px-3 py-3">Spec</th>
+                                    <th className="px-3 py-3 text-right">Tồn kho</th>
+                                    <th className="px-3 py-3 text-right">Giá nhập</th>
+                                    <th className="px-3 py-3 text-right">Giá bán</th>
+                                    <th className="px-3 py-3">Vendor</th>
+                                    <th className="px-3 py-3">Cập nhật</th>
+                                    <th className="px-3 py-3 text-right">Hành động</th>
+                                </tr>
+                            ) : (
+                                // giữ bảng cũ của bạn
 
-                                <th className="px-3 py-3">Ảnh</th>
-                                <th className="px-3 py-3">Tên</th>
-                                <th className="px-3 py-3">Vendor</th>
-                                <th className="px-3 py-3">Giá bán</th>
-                                <th className="px-3 py-3">Trạng thái</th>
-                                <th className="px-3 py-3">Cập nhật</th>
-                                <th className="px-3 py-3">Tạo lúc</th>
-                                <th className="px-3 py-3 text-right">Hành động</th>
-                            </tr>
+                                <tr className="text-left text-gray-700">
+                                    <th className="w-10 px-3 py-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={allChecked}
+                                            ref={(el) => {
+                                                if (el) el.indeterminate = someChecked;
+                                            }}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    const merged = Array.from(new Set([...selectedIds, ...selectableIds]));
+                                                    setSelectedIds(merged);
+                                                    setShowBulkBar(merged.length > 0);
+                                                } else {
+                                                    const next = selectedIds.filter((id) => !selectableIds.includes(id));
+                                                    setSelectedIds(next);
+                                                    setShowBulkBar(next.length > 0);
+                                                }
+                                            }}
+                                        />
+                                    </th>
+
+                                    <th className="px-3 py-3">Ảnh</th>
+                                    <th className="px-3 py-3">Tên</th>
+                                    <th className="px-3 py-3">{isStrapCatalog ? "Chất liệu" : "Vendor"}</th>
+                                    <th className="px-3 py-3">Giá bán</th>
+                                    <th className="px-3 py-3">Trạng thái</th>
+                                    <th className="px-3 py-3">Cập nhật</th>
+                                    <th className="px-3 py-3">Tạo lúc</th>
+                                    <th className="px-3 py-3 text-right">Hành động</th>
+                                </tr>
+
+                            )}
                         </thead>
 
                         <tbody>
-                            {displayItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
-                                        Không có dữ liệu trong tab này
-                                    </td>
-                                </tr>
+                            {isStrapCatalog ? (
+                                displayItems.map((p: any) => (
+                                    <tr key={p.id} className="border-t">
+                                        <td className="px-4 py-3 align-middle">
+                                            <InlineImagePicker
+                                                imageUrl={p.primaryImageUrl ?? null}
+                                                onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                            />
+                                        </td>
+
+                                        <td className="px-3 py-4 align-top">
+                                            <div className="font-medium text-sm">{p.title || "-"}</div>
+                                        </td>
+
+                                        <td className="px-3 py-4 align-top">
+                                            <div className="text-sm">
+                                                {(p.strapSpec?.material || "-")} / {p.strapSpec?.widthMM || "-"}mm /{" "}
+                                                {p.strapSpec?.lengthLabel || "-"} / {p.strapSpec?.color || "-"} /{" "}
+                                                {p.strapSpec?.quickRelease ? "QR" : "No QR"}
+                                            </div>
+                                        </td>
+
+                                        <td className="px-3 py-4 text-right font-semibold">
+                                            {Number(p.stockQty ?? 0)}
+                                        </td>
+
+                                        <td className="px-3 py-4 text-right">
+                                            {fmtMoney(p.purchasePrice)}
+                                        </td>
+
+                                        <td className="px-3 py-4 text-right">
+                                            {fmtMoney(p.minPrice)}
+                                        </td>
+
+                                        <td className="px-3 py-4 align-top">{p.vendorName || "-"}</td>
+
+                                        <td className="px-3 py-4 align-top">{fmtDT(p.updatedAt)}</td>
+
+                                        <td className="px-3 py-4 align-top text-right">
+                                            <RowActionsMenu
+                                                onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
+                                                onDelete={() => handleDelete(p.id)}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))
                             ) : (
-                                displayItems.map((p) => {
-                                    const checked = selectedIds.includes(p.id);
+                                // giữ body cũ
 
-                                    return (
-                                        <tr key={p.id} className="border-t">
-                                            <td className="px-3 py-4 align-top">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    disabled={!hasValidPrice(p) || !hasValidImage(p)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedIds((prev) =>
-                                                                Array.from(new Set([...prev, p.id]))
-                                                            );
-                                                        } else {
-                                                            setSelectedIds((prev) =>
-                                                                prev.filter((id) => id !== p.id)
-                                                            );
+                                displayItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                            {isStrapCatalog
+                                                ? "Không có dây nào trong tab này"
+                                                : "Không có dữ liệu trong tab này"}
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    displayItems.map((p) => {
+                                        const checked = selectedIds.includes(p.id);
+
+                                        return (
+                                            <tr key={p.id} className="border-t">
+                                                <td className="px-3 py-4 align-top">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        disabled={!hasValidPrice(p) || !hasValidImage(p)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedIds((prev) =>
+                                                                    Array.from(new Set([...prev, p.id]))
+                                                                );
+                                                            } else {
+                                                                setSelectedIds((prev) =>
+                                                                    prev.filter((id) => id !== p.id)
+                                                                );
+                                                            }
+                                                        }}
+                                                    />
+                                                </td>
+
+                                                <td className="px-4 py-3 align-middle">
+                                                    <div className="scale-110 origin-left">
+                                                        <InlineImagePicker
+                                                            imageUrl={p.primaryImageUrl ?? null}
+                                                            onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                                        />
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    <div className="font-medium text-sm">{p.title || "-"}</div>
+
+                                                    <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
+                                                        {isStrapCatalog
+                                                            ? `${(p.brand || "-").toLowerCase()} · ${(p.material || "-").toLowerCase()}`
+                                                            : `${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
+                                                    </div>
+
+                                                    <div className="mt-1 flex flex-wrap gap-2">
+                                                        <DotLabel
+                                                            label={p.primaryImageUrl ? "Hiển thị ảnh" : "Thiếu ảnh"}
+                                                            tone={p.primaryImageUrl ? "green" : "orange"}
+                                                        />
+                                                        <DotLabel
+                                                            label={hasValidPrice(p) ? "Hiển thị giá" : "Thiếu giá"}
+                                                            tone={hasValidPrice(p) ? "green" : "orange"}
+                                                        />
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    {isStrapCatalog ? p.material || "-" : p.vendorName || "-"}
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    <div className="font-semibold text-base">
+                                                        {fmtMoney(p.minPrice)}
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    <StatusBadge status={p.status} />
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    <div className="text-sm">{fmtDT(p.updatedAt)}</div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top">
+                                                    <div className="text-sm">{fmtDT(p.createdAt)}</div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top text-right">
+                                                    <RowActionsMenu
+                                                        onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
+                                                        onDelete={() => handleDelete(p.id)}
+                                                        onService={
+                                                            isStrapCatalog
+                                                                ? undefined
+                                                                : () => {
+                                                                    setServiceProductId(p.id);
+                                                                    setOpenService(true);
+                                                                }
                                                         }
-                                                    }}
-                                                />
-                                            </td>
-
-                                            <td className="px-4 py-3 align-middle">
-                                                <div className="scale-110 origin-left">
-                                                    <InlineImagePicker
-                                                        imageUrl={(p as any).primaryImageUrl ?? null}
-                                                        onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                     />
-                                                </div>
-                                            </td>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )
 
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="font-medium text-sm">{p.title || "-"}</div>
-
-                                                <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
-                                                    {(p.brand || "-").toLowerCase()} · {(p.type || "-").toLowerCase()}
-                                                </div>
-
-                                                <div className="mt-1 flex flex-wrap gap-2">
-                                                    <DotLabel
-                                                        label={p.primaryImageUrl ? "Hiển thị ảnh" : "Thiếu ảnh"}
-                                                        tone={p.primaryImageUrl ? "green" : "orange"}
-                                                    />
-                                                    <DotLabel
-                                                        label={hasValidPrice(p) ? "Hiển thị giá" : "Thiếu giá"}
-                                                        tone={hasValidPrice(p) ? "green" : "orange"}
-                                                    />
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top">
-                                                {p.vendorName || "-"}
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="font-semibold text-base">
-                                                    {fmtMoney((p as any).minPrice)}
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top">
-                                                <StatusBadge status={p.status} />
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="text-sm">{fmtDT(p.updatedAt)}</div>
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="text-sm">{fmtDT(p.createdAt)}</div>
-                                            </td>
-
-                                            <td className="px-3 py-4 align-top text-right">
-                                                <RowActionsMenu
-                                                    onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
-                                                    onDelete={() => handleDelete(p.id)}
-                                                    onService={() => {
-                                                        setServiceProductId(p.id);
-                                                        setOpenService(true);
-                                                    }}
-                                                />
-                                            </td>
-                                        </tr>
-                                    );
-                                })
                             )}
+
                         </tbody>
                     </table>
                 </div>
@@ -612,7 +750,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                     setOpenService(false);
                     setServiceProductId(null);
                 }}
-                productId={serviceProductId}
+                productId={serviceProductId ?? ""}
             />
         </div>
     );

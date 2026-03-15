@@ -316,7 +316,7 @@ export default function ServiceRequestListClient(props: PageProps) {
 
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
@@ -357,7 +357,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 </div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={row.status} />
                                             </td>
 
@@ -368,7 +368,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 </div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 {row.orderRefNo ? (
                                                     <div className="text-sm">
                                                         <span className="text-blue-600 font-medium">Order</span>{" "}
@@ -379,7 +379,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 )}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-4 align-middle text-right">
                                                 <GenericActionMenu
                                                     id={row.id}
                                                     maintenance={{

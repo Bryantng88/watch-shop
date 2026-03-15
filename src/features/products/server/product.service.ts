@@ -252,17 +252,19 @@ async function create(input: unknown) {
             }
         }
         // 5) Acquisition (header)
-        const acq = acquisitionRepo(tx);
+        const qty = dto.stockQty != null ? Number(dto.stockQty) : 1;
+        const unitCost = dto.purchasePrice ?? 0;
+
         const acquisition = await acq.createWithItem({
             vendorId,
             acquiredAt: dto.acquiredAt ? new Date(dto.acquiredAt) : undefined,
-            cost: dto.purchasePrice,
+            cost: unitCost * qty,
             currency: dto.currency,
             refNo: dto.refNo ?? null,
             notes: dto.notes ?? null,
             productId: product.id,
-            unitCost: dto.purchasePrice ?? 0,
-            qty: 1,
+            unitCost,
+            qty,
         });
 
         // 6) (Optional) AcquisitionItem link tới product

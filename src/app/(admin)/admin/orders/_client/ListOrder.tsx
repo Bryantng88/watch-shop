@@ -361,7 +361,7 @@ export default function OrderListPageClient({
 
                                     return (
                                         <tr key={o.id} className="border-t">
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <input
                                                     type="checkbox"
                                                     disabled={!selectable}
@@ -399,27 +399,27 @@ export default function OrderListPageClient({
                                                 </div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 {o.customerName ?? "-"}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 {o.shipPhone ?? "-"}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={o.status} />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 {fmtDate(o.createdAt)}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top font-semibold">
+                                            <td className="px-3 py-4 align-middle font-semibold">
                                                 {fmtMoney(totalMoney, o.currency)}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <ItemPopover
                                                     parentId={o.id}
                                                     type="orders"
@@ -444,7 +444,7 @@ export default function OrderListPageClient({
                                                 {o.notes ?? "-"}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-4 align-middle text-right">
                                                 <ActionMenu
                                                     entityId={o.id}
                                                     entityType="orders"

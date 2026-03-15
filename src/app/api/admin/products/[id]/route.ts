@@ -30,7 +30,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
         // ✅ FIX lỗi của bạn: parse trực tiếp body (partial), KHÔNG bắt { product: {...} }
         const patch = UpdateProductPatchSchema.parse(body);
-        console.log('in ra test image url : ' + JSON.stringify(body))
         const updated = await adminProductService.updateProduct(id, patch);
         return NextResponse.json(updated, { status: 200 });
     } catch (err: any) {

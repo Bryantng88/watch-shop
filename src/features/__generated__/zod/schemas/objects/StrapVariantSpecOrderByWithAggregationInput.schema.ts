@@ -10,13 +10,13 @@ import { StrapVariantSpecSumOrderByAggregateInputObjectSchema as StrapVariantSpe
 
 const makeSchema = () => z.object({
   variantId: SortOrderSchema.optional(),
-  widthMM: SortOrderSchema.optional(),
-  lengthLabel: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   color: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   material: SortOrderSchema.optional(),
   quickRelease: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  lugWidthMM: SortOrderSchema.optional(),
+  buckleWidthMM: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => StrapVariantSpecCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => StrapVariantSpecAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => StrapVariantSpecMaxOrderByAggregateInputObjectSchema).optional(),

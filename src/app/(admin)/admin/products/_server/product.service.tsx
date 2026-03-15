@@ -1,34 +1,67 @@
-import { CreateProductWithOutAcqInput, CreateProductWithOutAcqSchema } from "./product.dto";
-import { prisma, DB } from "@/server/db/client";
-import { ProductStatus } from "@prisma/client";
-import * as ultil from "./helper"
-import * as prodRepo from "./product.repo"
+import { prisma } from "@/server/db/client";
+import { ProductStatus, ProductType } from "@prisma/client";
+import * as prodRepo from "./product.repo";
 import { AdminFiltersSchema } from "./product.dto";
-import { mapProductToAdminRow } from "./product.mapper";
 
-const asDate = (v: unknown) =>
-    v == null || v === "" ? undefined : new Date(String(v));
+const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
-const asNumber = (v: unknown) =>
-    v == null || v === "" ? undefined : Number(v);
+const asDate = (v: unknown) => {
+    const raw = firstValue(v);
+    if (raw == null || raw === "") return undefined;
+    const d = new Date(String(raw));
+    return Number.isNaN(d.getTime()) ? undefined : d;
+};
 
-/** Một số field có thể đi theo dạng nhiều giá trị trên query (?status=A&status=B) */
+const asNumber = (v: unknown) => {
+    const raw = firstValue(v);
+    if (raw == null || raw === "") return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : undefined;
+};
+
+const asString = (v: unknown) => {
+    const raw = firstValue(v);
+    if (raw == null || raw === "") return undefined;
+    return String(raw);
+};
+
 const arrayify = (v: unknown): string[] => {
     if (Array.isArray(v)) return v.filter(Boolean).map(String);
     if (v == null || v === "") return [];
     return [String(v)];
 };
 
+function normalizeView(v: unknown) {
+    const raw = String(firstValue(v) ?? "all").toLowerCase();
+    if (
+        raw === "all" ||
+        raw === "draft" ||
+        raw === "posted" ||
+        raw === "in_service" ||
+        raw === "hold" ||
+        raw === "sold"
+    ) {
+        return raw;
+    }
+    return "all";
+}
+
+function normalizeCatalog(v: unknown): "product" | "strap" {
+    const raw = String(firstValue(v) ?? "product").toLowerCase();
+    return raw === "strap" ? "strap" : "product";
+}
 
 export async function createProductDraft(title: string) {
     return prisma.$transaction(async (tx) => {
-        const product = await prodRepo.createProductDraft(tx, { title })
-        return product;
+        return prodRepo.createProductDraft(
+            tx,
+            title,
+            ProductType.WATCH,
+            1,
+            null as any
+        );
     });
 }
-
-
-// app/(admin)/admin/products/_server/product.service.ts
 
 export async function detail(id: string) {
     return prisma.product.findUnique({
@@ -37,49 +70,38 @@ export async function detail(id: string) {
 }
 
 export async function getAdminProductList(raw: Record<string, unknown>) {
-    // helper nhỏ để convert string[] sang enum ProductStatus[]
-    const parseStatusArray = (input: unknown): ProductStatus[] | undefined => {
-        const arr = Array.isArray(input) ? input : [input];
-        const valid = arr
-            .filter(Boolean)
-            .map((s) => String(s).toUpperCase())
-            .filter((s): s is ProductStatus =>
-                Object.values(ProductStatus).includes(s as ProductStatus)
-            );
-        return valid.length ? valid : undefined;
-    };
-
     const parsed = AdminFiltersSchema.parse({
-
         page: asNumber(raw.page) ?? 1,
         pageSize: asNumber(raw.pageSize) ?? 50,
         q: raw.q ?? undefined,
         sort: raw.sort ?? undefined,
-        status: parseStatusArray(raw.status), // ✅ chuyển sang enum
         type: arrayify(raw.type),
-        brandIds: arrayify(raw.brandIds),
+        brandIds: arrayify(raw.brandIds ?? raw.brandId),
         hasImages: raw.hasImages ?? undefined,
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
 
+    const catalog = String(raw.catalog ?? "product") === "strap" ? "strap" : "product";
 
-    const { items, total, page, pageSize } =
-        await prodRepo.listAdminProducts(parsed);
+    const result = await prodRepo.listAdminProducts(prisma, {
+        q: parsed.q,
+        sort: parsed.sort as any,
+        page: parsed.page,
+        pageSize: parsed.pageSize,
+        view: (String(raw.view ?? "all") as any),
+        type: parsed.type?.[0],
+        brandId: parsed.brandIds?.[0],
+        hasImages: parsed.hasImages,
+        catalog,
+    } as any);
 
-    // 3️⃣ Map → Admin View Model
-
-    const rows = items.map(mapProductToAdminRow);
-
-    // 4️⃣ Return
     return {
-        items: rows,
-        total,
-        page,
-        pageSize,
+        ...result,
+        page: parsed.page,
+        pageSize: parsed.pageSize,
     };
 }
-
 export async function updateProduct(
     id: string,
     patch: {
@@ -92,26 +114,16 @@ export async function updateProduct(
     }
 ) {
     return prisma.$transaction(async (tx) => {
-        // map field UI -> field DB (tuỳ schema của bạn)
-        // Nếu DB bạn là primaryImageUrl thay vì image, đổi chỗ này:
         const data: any = {};
 
         if (patch.title !== undefined) data.title = patch.title;
         if (patch.minPrice !== undefined) data.minPrice = patch.minPrice;
-
-        // ✅ nếu DB bạn lưu ở primaryImageUrl:
-        // if (patch.image !== undefined) data.primaryImageUrl = patch.image;
-        // ✅ nếu DB bạn lưu trực tiếp field image:
         if (patch.primaryImageUrl !== undefined) data.primaryImageUrl = patch.primaryImageUrl;
-
         if (patch.contentStatus !== undefined) data.contentStatus = patch.contentStatus;
         if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
         if (patch.availabilityStatus !== undefined) data.availabilityStatus = patch.availabilityStatus;
-        console.log('in ra image url :' + patch.primaryImageUrl)
-        const updated = await prodRepo.updateProduct(tx, id, data);
 
-        // trả ra tối thiểu cho list
-        return updated;
+        return prodRepo.updateProduct(tx, id, data);
     });
 }
 
@@ -125,7 +137,6 @@ export async function remove(id: string) {
 export async function searchProductService(q: string) {
     return prisma.$transaction(async (tx) => {
         return prodRepo.searchProductsRepo(tx, q);
-
     });
 }
 
@@ -143,8 +154,6 @@ function toNumberPrice(v: unknown): number {
     if (v == null) return 0;
     if (typeof v === "number") return v;
 
-    // Prisma.Decimal thường có toNumber()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyV = v as any;
     if (typeof anyV?.toNumber === "function") return anyV.toNumber();
 
@@ -160,13 +169,6 @@ function hasImage(p: { primaryImageUrl: string | null }) {
     return !!p.primaryImageUrl && p.primaryImageUrl.trim().length > 0;
 }
 
-/**
- * Bulk POST Products (y như orders bulk post: chạy trong transaction)
- * Điều kiện hoàn thành:
- * - status phải DRAFT
- * - có minPrice > 0
- * - có primaryImageUrl
- */
 export async function bulkPostProducts(productIds: string[]): Promise<BulkPostProductsResult> {
     const ids = Array.from(new Set((productIds ?? []).filter(Boolean)));
 
@@ -182,33 +184,30 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
 
         const failed: BulkPostProductsResult["failed"] = [];
 
-        // not found
         for (const id of notFound) {
             failed.push({ id, title: null, reasons: ["NOT_FOUND"] });
         }
 
-        // validate
         const eligibleIds: string[] = [];
-        for (const p of rows) {
+
+        for (const p of rows as Array<any>) {
             const reasons: string[] = [];
 
-            if (p.status !== ProductStatus.DRAFT) reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
-            //if (!hasPrice(p)) reasons.push("MISSING_PRICE");
+            if (p.status !== ProductStatus.DRAFT) {
+                reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
+            }
             if (!hasImage(p)) reasons.push("MISSING_IMAGE");
+            if (!hasPrice(p)) reasons.push("MISSING_PRICE");
 
             if (reasons.length) {
                 failed.push({ id: p.id, title: p.title ?? null, reasons });
             } else {
                 eligibleIds.push(p.id);
             }
-            console.log('tét prod repo : ')
-
         }
 
-        // giống orders: skip cái fail, vẫn post cái ok
         if (eligibleIds.length) {
             await prodRepo.markPostedMany(tx, eligibleIds);
-            console.log('tét prod repo : ')
         }
 
         return {

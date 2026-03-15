@@ -317,9 +317,9 @@ export async function createFromProductTx(
         padding: 6,
     });
 
-    const brandSnapshot = (product as any).brand?.name ?? null;
-    const modelSnapshot = (product as any).model ?? null;
-    const refSnapshot = (product as any).ref ?? null;
+    const brandSnapshot = product.brand?.name ?? null;
+    const modelSnapshot = product.watchSpec?.model ?? product.title ?? null;
+    const refSnapshot = product.watchSpec?.ref ?? null;
 
     const created = await serviceRequestRepo.createOne(tx, {
         refNo,
@@ -329,7 +329,7 @@ export async function createFromProductTx(
         product: { connect: { id: input.productId } },
         ...(variantId ? { variant: { connect: { id: variantId } } } : {}),
         ServiceCatalog: { connect: { id: input.serviceCatalogId } },
-        serviceScope: input.scope,
+        scope: input.scope,
         customer: input.customerId ? { connect: { id: input.customerId } } : undefined,
         notes: input.notes ?? null,
         brandSnapshot,

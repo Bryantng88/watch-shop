@@ -1,11 +1,39 @@
+import { DB, dbOrTx } from "@/server/db/client";
+import {
+    ProductType,
+    Prisma,
+    AvailabilityStatus,
+    ProductStatus,
+} from "@prisma/client";
+import type {
+    ProductListInput,
+    ProductListSort,
+    ProductCatalogKey,
+} from "../_helper/search-params";
 
-import { DB, dbOrTx, prisma } from "@/server/db/client";
-import { ProductType, Prisma, AvailabilityStatus, ProductStatus } from "@prisma/client";
-import * as helper from "./helper";
-import type { ProductListInput, ProductListSort } from "../_helper/search-params";
 const DEFAULT_PAGE_SIZE = 50;
 
 type ProductViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
+
+type AdminProductListRepoInput = ProductListInput & {
+    page?: number;
+    pageSize?: number;
+    updatedFrom?: Date;
+    updatedTo?: Date;
+    catalog?: ProductCatalogKey;
+};
+
+function startOfDay(date: Date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function endOfDay(date: Date) {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+}
 
 function buildOrderBy(sort?: ProductListSort): Prisma.ProductOrderByWithRelationInput {
     switch (sort) {
@@ -25,45 +53,63 @@ function buildOrderBy(sort?: ProductListSort): Prisma.ProductOrderByWithRelation
     }
 }
 
-function buildWhereBase(input?: ProductListInput): Prisma.ProductWhereInput {
+function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereInput {
     const q = (input?.q || "").trim();
+    const and: Prisma.ProductWhereInput[] = [];
 
-    const where: Prisma.ProductWhereInput = {};
+    if (input?.catalog === "strap") {
+        and.push({ type: ProductType.WATCH_STRAP });
+    } else {
+        and.push({
+            type: {
+                not: ProductType.WATCH_STRAP,
+            } as any,
+        });
+    }
 
     if (q) {
-        where.OR = [
-            { title: { contains: q, mode: "insensitive" } },
-            { slug: { contains: q, mode: "insensitive" } },
-            { sku: { contains: q, mode: "insensitive" } } as any,
-            { code: { contains: q, mode: "insensitive" } } as any,
-        ];
+        and.push({
+            OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { slug: { contains: q, mode: "insensitive" } },
+                { sku: { contains: q, mode: "insensitive" } } as any,
+                { code: { contains: q, mode: "insensitive" } } as any,
+            ],
+        });
     }
 
     if (input?.type) {
-        where.type = input.type as any;
+        and.push({ type: input.type as any });
     }
 
     if (input?.brandId) {
-        where.brandId = input.brandId;
+        and.push({ brandId: input.brandId });
     }
 
     if (input?.hasImages === "yes") {
-        where.NOT = {
-            OR: [
-                { primaryImageUrl: null },
-                { primaryImageUrl: "" },
-            ],
-        };
+        and.push({
+            NOT: {
+                OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
+            },
+        });
     }
 
     if (input?.hasImages === "no") {
-        where.OR = [
-            { primaryImageUrl: null },
-            { primaryImageUrl: "" },
-        ];
+        and.push({
+            OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
+        });
     }
 
-    return where;
+    if (input?.updatedFrom || input?.updatedTo) {
+        and.push({
+            updatedAt: {
+                ...(input.updatedFrom ? { gte: startOfDay(input.updatedFrom) } : {}),
+                ...(input.updatedTo ? { lte: endOfDay(input.updatedTo) } : {}),
+            },
+        });
+    }
+
+    return and.length ? { AND: and } : {};
 }
 
 function buildWhereForView(
@@ -73,17 +119,17 @@ function buildWhereForView(
     switch (view) {
         case "draft":
             return {
-                AND: [whereBase, { status: "DRAFT" as any }],
+                AND: [whereBase, { status: ProductStatus.DRAFT }],
             };
 
         case "posted":
             return {
-                AND: [whereBase, { status: "POSTED" as any }],
+                AND: [whereBase, { status: ProductStatus.POSTED }],
             };
 
         case "in_service":
             return {
-                AND: [whereBase, { status: "IN_SERVICE" as any }],
+                AND: [whereBase, { status: ProductStatus.IN_SERVICE }],
             };
 
         case "hold":
@@ -92,7 +138,11 @@ function buildWhereForView(
                     whereBase,
                     {
                         status: {
-                            in: ["HOLD", "CONSIGNED", "RESERVED"] as any,
+                            in: [
+                                ProductStatus.HOLD,
+                                ProductStatus.CONSIGNED_FROM,
+                                ProductStatus.CONSIGNED_TO,
+                            ],
                         },
                     },
                 ],
@@ -100,7 +150,7 @@ function buildWhereForView(
 
         case "sold":
             return {
-                AND: [whereBase, { status: "SOLD" as any }],
+                AND: [whereBase, { status: ProductStatus.SOLD }],
             };
 
         case "all":
@@ -109,125 +159,115 @@ function buildWhereForView(
     }
 }
 
+function labelizeProductType(value: string) {
+    if (value === "WATCH_STRAP") return "WATCH_STRAP";
+    return value;
+}
+
 export async function listAdminProducts(
     tx: DB,
-    input: ProductListInput & { page: number; pageSize: number }
+    input?: ProductListInput & { page?: number; pageSize?: number; catalog?: "product" | "strap" }
 ) {
     const db = dbOrTx(tx);
+
     const safeInput = {
         q: input?.q,
         type: input?.type,
         brandId: input?.brandId,
         hasImages: input?.hasImages,
-        view: input?.view ?? "all",
-        sort: input?.sort ?? "updatedDesc",
+        view: (input?.view ?? "all") as ProductViewKey,
+        sort: (input?.sort ?? "updatedDesc") as ProductListSort,
         page: Math.max(1, Number(input?.page ?? 1)),
         pageSize: Math.max(1, Number(input?.pageSize ?? 20)),
+        catalog: input?.catalog ?? "product",
     };
-    const whereBase = buildWhereBase(safeInput);
-    const whereList = buildWhereForView(whereBase, safeInput.view as ProductViewKey);
 
+    const baseWhere = buildWhereBase({
+        ...safeInput,
+        type:
+            safeInput.catalog === "strap"
+                ? ("WATCH_STRAP" as any)
+                : safeInput.type,
+    } as any);
+
+    if (safeInput.catalog === "product") {
+        (baseWhere as any).NOT = {
+            ...(baseWhere as any).NOT,
+            type: "WATCH_STRAP",
+        };
+    }
+
+    const whereList = buildWhereForView(baseWhere, safeInput.view);
     const skip = (safeInput.page - 1) * safeInput.pageSize;
     const take = safeInput.pageSize;
-
     const orderBy = buildOrderBy(safeInput.sort);
 
-    const productSelect: Prisma.ProductSelect = {
-        id: true,
-        title: true,
-        slug: true,
-        type: true,
-        status: true,
-        primaryImageUrl: true,
-        //minPrice: true as any,
-        createdAt: true,
-        updatedAt: true,
-        brand: {
-            select: {
-                id: true,
-                name: true,
-            },
-        },
-        vendor: {
-            select: {
-                id: true,
-                name: true,
-            },
-        },
-        _count: {
-            select: {
-                variants: true,
-                Reservation: true as any,
-                ServiceRequest: true as any,
-                orderItems: true,
-                image: true as any,
-            },
-        },
-    };
-
-    const [
-        totalAll,
-        total,
-        rows,
-        cDraft,
-        cPosted,
-        cInService,
-        cHold,
-        cSold,
-        brands,
-    ] = await Promise.all([
-        db.product.count({ where: whereBase }),
-        db.product.count({ where: whereList }),
-        db.product.findMany({
-            where: whereList,
-            orderBy,
-            skip,
-            take,
-            select: productSelect,
-        }),
-
-        db.product.count({
-            where: {
-                AND: [whereBase, { status: "DRAFT" as any }],
-            },
-        }),
-
-        db.product.count({
-            where: {
-                AND: [whereBase, { status: "POSTED" as any }],
-            },
-        }),
-
-        db.product.count({
-            where: {
-                AND: [whereBase, { status: "IN_SERVICE" as any }],
-            },
-        }),
-
-        db.product.count({
-            where: {
-                AND: [
-                    whereBase,
-                    {
-                        status: {
-                            in: ["HOLD", "CONSIGNED", "RESERVED"] as any,
+    const [totalAll, total, rows, cDraft, cPosted, cInService, cHold, cSold, brands] =
+        await Promise.all([
+            db.product.count({ where: baseWhere }),
+            db.product.count({ where: whereList }),
+            db.product.findMany({
+                where: whereList,
+                orderBy,
+                skip,
+                take,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    type: true,
+                    status: true,
+                    primaryImageUrl: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    brand: { select: { id: true, name: true } },
+                    vendor: { select: { id: true, name: true } },
+                    variants: {
+                        orderBy: { updatedAt: "desc" },
+                        take: 1,
+                        select: {
+                            id: true,
+                            stockQty: true,
+                            price: true,
+                            strapSpec: {
+                                select: {
+                                    widthMM: true,
+                                    lengthLabel: true,
+                                    color: true,
+                                    material: true,
+                                    quickRelease: true,
+                                },
+                            },
                         },
                     },
-                ],
-            },
-        }),
-
-        db.product.count({
-            where: {
-                AND: [whereBase, { status: "SOLD" as any }],
-            },
-        }),
-
-        db.brand.findMany({
-            orderBy: { name: "asc" },
-            select: { id: true, name: true },
-        }),
-    ]);
+                    AcquisitionItem: {
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        select: {
+                            unitCost: true,
+                        },
+                    },
+                    _count: {
+                        select: {
+                            variants: true,
+                            Reservation: true as any,
+                            ServiceRequest: true as any,
+                            orderItems: true,
+                            image: true as any,
+                        },
+                    },
+                },
+            }),
+            db.product.count({ where: buildWhereForView(baseWhere, "draft") }),
+            db.product.count({ where: buildWhereForView(baseWhere, "posted") }),
+            db.product.count({ where: buildWhereForView(baseWhere, "in_service") }),
+            db.product.count({ where: buildWhereForView(baseWhere, "hold") }),
+            db.product.count({ where: buildWhereForView(baseWhere, "sold") }),
+            db.brand.findMany({
+                orderBy: { name: "asc" },
+                select: { id: true, name: true },
+            }),
+        ]);
 
     const items = rows.map((p: any) => ({
         id: p.id,
@@ -236,13 +276,17 @@ export async function listAdminProducts(
         type: p.type,
         status: p.status,
         primaryImageUrl: p.primaryImageUrl,
-        minPrice: p.minPrice,
+        minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
+        stockQty: Number(p.variants?.[0]?.stockQty ?? 0),
+        purchasePrice:
+            p.AcquisitionItem?.[0]?.unitCost != null ? Number(p.AcquisitionItem[0].unitCost) : null,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         brand: p.brand?.name ?? null,
         brandId: p.brand?.id ?? null,
         vendorName: p.vendor?.name ?? null,
         vendorId: p.vendor?.id ?? null,
+        strapSpec: p.variants?.[0]?.strapSpec ?? null,
         variantsCount: p._count?.variants ?? 0,
         imagesCount: p._count?.image ?? 0,
         ordersCount: p._count?.orderItems ?? 0,
@@ -250,11 +294,14 @@ export async function listAdminProducts(
         reservations: p._count?.Reservation ?? 0,
     }));
 
-    const productTypes = [
-        { label: "WATCH", value: "WATCH" },
-        { label: "ACCESSORY", value: "ACCESSORY" },
-        { label: "OTHER", value: "OTHER" },
-    ];
+    const productTypes =
+        safeInput.catalog === "strap"
+            ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
+            : [
+                { label: "WATCH", value: "WATCH" },
+                { label: "ACCESSORY", value: "ACCESSORY" },
+                { label: "OTHER", value: "OTHER" },
+            ];
 
     return {
         items,
@@ -271,52 +318,45 @@ export async function listAdminProducts(
         productTypes,
     };
 }
-
 export async function createProductDraft(
     tx: DB,
     title: string,
     type: ProductType,
     quantity: number,
-    vendorId: string,
-    // hoặc ProductUncheckedCreateInput
+    vendorId: string | null
 ) {
     const db = dbOrTx(tx);
+
     return db.product.create({
         data: {
-            title: title,
-            vendorId,
-            status: "DRAFT",
-            type: type,
+            title,
+            vendorId: vendorId ?? undefined,
+            status: ProductStatus.DRAFT,
+            type,
             variants: {
-                create: [{
-                    stockQty: quantity
-                }]
-            }
+                create: [
+                    {
+                        stockQty: quantity,
+                    },
+                ],
+            },
         },
-        select: { id: true, slug: true }  // <-- đúng cấp với data
+        select: { id: true, slug: true },
     });
 }
 
+export async function searchProductsRepo(tx: DB, q: string) {
+    const db = dbOrTx(tx);
 
-export async function searchProductsRepo(
-    tx: DB,
-    q: string
-) {
-    const product = await tx.product.findMany({
+    const product = await db.product.findMany({
         where: {
-            OR: [
-                { title: { contains: q, mode: "insensitive" } },
-                // sau này mở SKU thì thêm ở đây
-            ],
-            status: "DRAFT", // admin search
-
+            OR: [{ title: { contains: q, mode: "insensitive" } }],
+            status: ProductStatus.DRAFT,
             variants: {
                 some: {
-                    availabilityStatus: "ACTIVE",
+                    availabilityStatus: AvailabilityStatus.ACTIVE,
                 },
             },
-
-
         },
         select: {
             id: true,
@@ -325,7 +365,7 @@ export async function searchProductsRepo(
             primaryImageUrl: true,
             variants: {
                 where: {
-                    availabilityStatus: "ACTIVE", // ✅ CHỈ LẤY VARIANT ACTIVE
+                    availabilityStatus: AvailabilityStatus.ACTIVE,
                 },
                 select: {
                     id: true,
@@ -339,11 +379,9 @@ export async function searchProductsRepo(
             },
             vendor: {
                 select: {
-
                     name: true,
-                }
-            }
-
+                },
+            },
         },
         take: 20,
         orderBy: { updatedAt: "desc" },
@@ -354,15 +392,10 @@ export async function searchProductsRepo(
         title: p.title,
         type: p.type,
         primaryImageUrl: p.primaryImageUrl,
-        price: p.variants[0]
-            ? Number(p.variants[0].price)
-            : 0,
+        price: p.variants[0] ? Number(p.variants[0].price) : 0,
         vendorName: p.vendor?.name ?? null,
     }));
 }
-
-// app/(admin)/admin/products/_server/product.repo.ts
-
 
 export async function updateProduct(
     tx: DB,
@@ -370,24 +403,22 @@ export async function updateProduct(
     data: Prisma.ProductUpdateInput
 ) {
     const db = dbOrTx(tx);
+
     return db.product.update({
         where: { id },
         data,
         select: {
             id: true,
             title: true,
-            // chọn field ảnh đúng với DB bạn
             image: true,
             primaryImageUrl: true,
-            //minPrice: true,
             status: true,
             priceVisibility: true,
             variants: {
                 select: {
                     availabilityStatus: true,
-                }
+                },
             },
-
             updatedAt: true,
             createdAt: true,
         },
@@ -399,13 +430,12 @@ export async function deleteProduct(tx: DB, id: string) {
     return db.product.delete({ where: { id } });
 }
 
-
 export async function updateProductVariantStt(
     tx: DB,
     params: {
         productId: string;
         status: AvailabilityStatus;
-        fromStatuses?: AvailabilityStatus[]; // optional guard
+        fromStatuses?: AvailabilityStatus[];
     }
 ) {
     const { productId, status, fromStatuses } = params;
@@ -416,7 +446,9 @@ export async function updateProductVariantStt(
             ? { availabilityStatus: { in: fromStatuses } }
             : {}),
     };
+
     const db = dbOrTx(tx);
+
     const result = await db.productVariant.updateMany({
         where,
         data: {
@@ -434,7 +466,6 @@ export async function updateProductVariantStt(
 }
 
 export async function markProductsShippedOrDelivered(
-    // Tuỳ schema product status
     productIds: string[],
     status: AvailabilityStatus,
     tx: DB
@@ -459,13 +490,9 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         title: true,
         status: true,
         primaryImageUrl: true,
-
-        // ⚠️ CHỈ ĐỂ minPrice nếu Product thật sự có field này trong prisma schema
-        // minPrice: true,
     },
 });
 
-// ✅ 2) Type lấy từ args => auto khớp schema
 export type ProductForBulkPost = Prisma.ProductGetPayload<typeof productForBulkPostArgs>;
 
 export async function getProductsForBulkPost(tx: DB, ids: string[]) {

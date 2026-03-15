@@ -4,6 +4,7 @@ import AdminSidebar from './_client/AdmidSideBar';
 import { ROLE_PERMISSIONS } from '@/server/auth/rolePermissions';
 import { getCurrentUser } from '@/server/auth/getCurrentUser';
 import { redirect } from "next/navigation";
+import { AppToastProvider } from '@/components/feedback/AppToastProvider';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const user = await getCurrentUser();
@@ -40,10 +41,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
 
                 {/* CHỖ NÀY SCROLL */}
-                <main className="flex-1 min-h-0 overflow-y-auto p-6">
-                    {children}
-                </main>
+                <AppToastProvider>
+                    <main className="flex-1 min-h-0 overflow-y-auto p-6">
+                        {children}
+                    </main>
+                </AppToastProvider>
+
             </div>
+
+
         </div>
+
     );
 }

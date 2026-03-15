@@ -170,19 +170,19 @@ model WatchSpec {
 }
 
 model StrapVariantSpec {
-  variantId    String         @id
-  widthMM      Int
-  lengthLabel  LengthLabel?
-  color        String?
-  material     Strap          @default(LEATHER)
-  quickRelease Boolean?       @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId     String         @id
+  color         String?
+  material      Strap          @default(LEATHER)
+  quickRelease  Boolean?       @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lugWidthMM    Int
+  buckleWidthMM Int?
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@index([widthMM])
   @@index([material])
-  @@index([lengthLabel])
+  @@index([buckleWidthMM])
+  @@index([lugWidthMM])
 }
 
 model Order {

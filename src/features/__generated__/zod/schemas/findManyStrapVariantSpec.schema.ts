@@ -11,25 +11,25 @@ import { StrapVariantSpecScalarFieldEnumSchema } from './enums/StrapVariantSpecS
 
 export const StrapVariantSpecFindManySelectSchema: z.ZodType<Prisma.StrapVariantSpecSelect> = z.object({
     variantId: z.boolean().optional(),
-    widthMM: z.boolean().optional(),
-    lengthLabel: z.boolean().optional(),
     color: z.boolean().optional(),
     material: z.boolean().optional(),
     quickRelease: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    lugWidthMM: z.boolean().optional(),
+    buckleWidthMM: z.boolean().optional(),
     variant: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.StrapVariantSpecSelect>;
 
 export const StrapVariantSpecFindManySelectZodSchema = z.object({
     variantId: z.boolean().optional(),
-    widthMM: z.boolean().optional(),
-    lengthLabel: z.boolean().optional(),
     color: z.boolean().optional(),
     material: z.boolean().optional(),
     quickRelease: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    lugWidthMM: z.boolean().optional(),
+    buckleWidthMM: z.boolean().optional(),
     variant: z.boolean().optional()
   }).strict();
 

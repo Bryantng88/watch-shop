@@ -335,7 +335,7 @@ export default function ShipmentListClient({
 
                                     return (
                                         <tr key={s.id} className="border-t">
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <input
                                                     type="checkbox"
                                                     disabled={!selectable}
@@ -380,15 +380,15 @@ export default function ShipmentListClient({
                                                 ) : null}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top font-semibold">{money(s.shippingFee)}</td>
+                                            <td className="px-3 py-4 align-middle font-semibold">{money(s.shippingFee)}</td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={s.status} />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">{fmtDate(s.createdAt)}</td>
+                                            <td className="px-3 py-4 align-middle">{fmtDate(s.createdAt)}</td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-4 align-middle text-right">
                                                 <ActionMenu
                                                     entityId={s.id}
                                                     entityType="shipments"

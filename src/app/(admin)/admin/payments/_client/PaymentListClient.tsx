@@ -373,7 +373,7 @@ export default function PaymentListClient(props: {
 
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="w-10 px-3 py-4 align-top">
+                                            <td className="w-10 px-3 py-4 align-middle">
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
@@ -420,11 +420,11 @@ export default function PaymentListClient(props: {
                                                 <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={row.status} />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <div className="font-medium">{row.method}</div>
                                             </td>
 
@@ -477,7 +477,7 @@ export default function PaymentListClient(props: {
                                                 </div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-4 align-middle text-right">
                                                 <button
                                                     type="button"
                                                     className="px-2 py-1 border rounded-lg text-xs hover:bg-gray-50"

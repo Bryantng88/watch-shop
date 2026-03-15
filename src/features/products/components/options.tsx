@@ -1,33 +1,42 @@
 import { prisma } from "@/server/db/client";
-import { CASE_TYPES, PRODUCT_TYPES, PRODUCT_STATUSES, MOVEMENT_TYPES } from "@/features/meta/server/enum";
+import {
+    AVAILABILITY_STATUS,
+    CASE_TYPES,
+    PRODUCT_TYPES,
+    MOVEMENT_TYPES,
+} from "@/features/meta/server/enum";
 
 export async function getOptions() {
-    // các option tĩnh (enum)
-    const status = Object.entries(PRODUCT_STATUSES).map(([key, value]) => ({
+    const status = (AVAILABILITY_STATUS as string[]).map((value) => ({
         label: value,
-        value: key,
+        value,
     }));
 
-    const type = Object.entries(PRODUCT_TYPES).map(([key, value]) => ({
+    const type = (PRODUCT_TYPES as string[]).map((value) => ({
         label: value,
-        value: key,
+        value,
     }));
 
-    const case_ = Object.entries(CASE_TYPES).map(([key, value]) => ({
+    const case_ = (CASE_TYPES as string[]).map((value) => ({
         label: value,
-        value: key,
+        value,
     }));
 
-    const movement = Object.entries(MOVEMENT_TYPES).map(([key, value]) => ({
+    const movement = (MOVEMENT_TYPES as string[]).map((value) => ({
         label: value,
-        value: key,
+        value,
     }));
 
-    // complication lấy từ DB
     const complication = await prisma.complication.findMany({
         orderBy: { name: "asc" },
         select: { id: true, name: true },
     });
 
-    return { status, type, case: case_, movement, complication };
+    return {
+        status,
+        type,
+        case: case_,
+        movement,
+        complication,
+    };
 }

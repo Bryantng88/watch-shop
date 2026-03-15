@@ -14,6 +14,8 @@ export type ProductViewKey =
     | "hold"
     | "sold";
 
+export type ProductCatalogKey = "product" | "strap";
+
 export type ProductListInput = {
     q?: string;
     type?: string;
@@ -23,6 +25,7 @@ export type ProductListInput = {
     sort?: ProductListSort;
     page?: number;
     pageSize?: number;
+    catalog?: ProductCatalogKey;
 };
 
 function toStr(v: any) {
@@ -44,6 +47,7 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
     const sort = (toStr(sp.get("sort")) as ProductListSort) || "updatedDesc";
     const page = toInt(sp.get("page"), 1);
     const pageSize = toInt(sp.get("pageSize"), 20);
+    const catalog = (toStr(sp.get("catalog")) || "product") === "strap" ? "strap" : "product";
 
     return {
         q: q || undefined,
@@ -54,5 +58,6 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
         sort,
         page,
         pageSize,
+        catalog,
     };
 }

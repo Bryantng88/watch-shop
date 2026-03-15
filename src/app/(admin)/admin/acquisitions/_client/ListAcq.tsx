@@ -363,7 +363,7 @@ export default function AcquisitionListClient(props: PageProps) {
 
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
@@ -405,11 +405,11 @@ export default function AcquisitionListClient(props: PageProps) {
                                                 <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={row.status} />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">{row.type}</td>
+                                            <td className="px-3 py-4 align-middle">{row.type}</td>
 
                                             <td className="px-3 py-4 align-top">
                                                 <div className="text-sm">{fmtDT(row.createdAt)}</div>
@@ -438,7 +438,7 @@ export default function AcquisitionListClient(props: PageProps) {
                                                 </div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-4 align-middle text-right">
                                                 <ActionMenu
                                                     entityId={row.id}
                                                     entityType="acquisitions"

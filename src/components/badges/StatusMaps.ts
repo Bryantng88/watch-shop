@@ -61,8 +61,7 @@ export const PAYMENT_METHOD: Record<string, StatusMeta> = {
 export const SERVICE_REQUEST_STATUS: Record<string, StatusMeta> = {
     DRAFT: { label: "DRAFT", tone: "amber" },
     IN_PROGRESS: { label: "IN_PROGRESS", tone: "green" },
-    SHIPPED: { label: "SHIPPED", tone: "blue" },
-    DELIVERED: { label: "DELIVERED", tone: "gray" },
+    COMPLETED: { label: "DONE", tone: "blue" },
     CANCELLED: { label: "CANCELLED", tone: "red" },
 };
 

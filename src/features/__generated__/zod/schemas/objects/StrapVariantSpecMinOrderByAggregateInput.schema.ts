@@ -4,13 +4,13 @@ import { SortOrderSchema } from '../enums/SortOrder.schema'
 
 const makeSchema = () => z.object({
   variantId: SortOrderSchema.optional(),
-  widthMM: SortOrderSchema.optional(),
-  lengthLabel: SortOrderSchema.optional(),
   color: SortOrderSchema.optional(),
   material: SortOrderSchema.optional(),
   quickRelease: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  lugWidthMM: SortOrderSchema.optional(),
+  buckleWidthMM: SortOrderSchema.optional()
 }).strict();
 export const StrapVariantSpecMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecMinOrderByAggregateInput>;
 export const StrapVariantSpecMinOrderByAggregateInputObjectZodSchema = makeSchema();
