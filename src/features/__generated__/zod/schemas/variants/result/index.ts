@@ -31,3 +31,4 @@ export { InvoiceItemResultSchema } from './InvoiceItem.result';
 export { PaymentResultSchema } from './Payment.result';
 export { BankResultSchema } from './Bank.result';
 export { ShipmentResultSchema } from './Shipment.result';
+export { ProductCategoryResultSchema } from './ProductCategory.result';

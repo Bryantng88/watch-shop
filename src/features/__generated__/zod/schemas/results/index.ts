@@ -362,3 +362,16 @@ export { ShipmentDeleteManyResultSchema } from './ShipmentDeleteManyResult.schem
 export { ShipmentAggregateResultSchema } from './ShipmentAggregateResult.schema';
 export { ShipmentGroupByResultSchema } from './ShipmentGroupByResult.schema';
 export { ShipmentCountResultSchema } from './ShipmentCountResult.schema';
+export { ProductCategoryFindUniqueResultSchema } from './ProductCategoryFindUniqueResult.schema';
+export { ProductCategoryFindFirstResultSchema } from './ProductCategoryFindFirstResult.schema';
+export { ProductCategoryFindManyResultSchema } from './ProductCategoryFindManyResult.schema';
+export { ProductCategoryCreateResultSchema } from './ProductCategoryCreateResult.schema';
+export { ProductCategoryCreateManyResultSchema } from './ProductCategoryCreateManyResult.schema';
+export { ProductCategoryUpdateResultSchema } from './ProductCategoryUpdateResult.schema';
+export { ProductCategoryUpdateManyResultSchema } from './ProductCategoryUpdateManyResult.schema';
+export { ProductCategoryUpsertResultSchema } from './ProductCategoryUpsertResult.schema';
+export { ProductCategoryDeleteResultSchema } from './ProductCategoryDeleteResult.schema';
+export { ProductCategoryDeleteManyResultSchema } from './ProductCategoryDeleteManyResult.schema';
+export { ProductCategoryAggregateResultSchema } from './ProductCategoryAggregateResult.schema';
+export { ProductCategoryGroupByResultSchema } from './ProductCategoryGroupByResult.schema';
+export { ProductCategoryCountResultSchema } from './ProductCategoryCountResult.schema';

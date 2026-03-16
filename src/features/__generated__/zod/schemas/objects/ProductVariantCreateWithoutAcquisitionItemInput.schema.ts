@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema as InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutVariantInput.schema';
 import { MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema as MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutVariantInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutVariantInput.schema';
@@ -20,6 +21,13 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   availabilityStatus: AvailabilityStatusSchema.optional(),
+  listPrice: z.number().optional().nullable(),
+  discountType: DiscountTypeSchema.optional().nullable(),
+  discountValue: z.number().optional().nullable(),
+  salePrice: z.number().optional().nullable(),
+  saleStartsAt: z.coerce.date().optional().nullable(),
+  saleEndsAt: z.coerce.date().optional().nullable(),
+  costPrice: z.number().optional().nullable(),
   invoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   maintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema).optional(),

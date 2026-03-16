@@ -20,6 +20,8 @@ import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordLis
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
 import { BrandNullableScalarRelationFilterObjectSchema as BrandNullableScalarRelationFilterObjectSchema } from './BrandNullableScalarRelationFilter.schema';
 import { BrandWhereInputObjectSchema as BrandWhereInputObjectSchema } from './BrandWhereInput.schema';
+import { ProductCategoryNullableScalarRelationFilterObjectSchema as ProductCategoryNullableScalarRelationFilterObjectSchema } from './ProductCategoryNullableScalarRelationFilter.schema';
+import { ProductCategoryWhereInputObjectSchema as ProductCategoryWhereInputObjectSchema } from './ProductCategoryWhereInput.schema';
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
 import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema';
 import { ProductImageListRelationFilterObjectSchema as ProductImageListRelationFilterObjectSchema } from './ProductImageListRelationFilter.schema';
@@ -50,11 +52,13 @@ const productwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional(),
   status: z.union([z.lazy(() => EnumProductStatusFilterObjectSchema), ProductStatusSchema]).optional(),
+  categoryId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   brand: z.union([z.lazy(() => BrandNullableScalarRelationFilterObjectSchema), z.lazy(() => BrandWhereInputObjectSchema)]).optional(),
+  ProductCategory: z.union([z.lazy(() => ProductCategoryNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductCategoryWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   image: z.lazy(() => ProductImageListRelationFilterObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantListRelationFilterObjectSchema).optional(),

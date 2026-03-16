@@ -11,6 +11,13 @@ export const ProductVariantAggregateResultSchema = z.object({  _count: z.object(
     createdAt: z.number(),
     updatedAt: z.number(),
     availabilityStatus: z.number(),
+    listPrice: z.number(),
+    discountType: z.number(),
+    discountValue: z.number(),
+    salePrice: z.number(),
+    saleStartsAt: z.number(),
+    saleEndsAt: z.number(),
+    costPrice: z.number(),
     acquisitionItem: z.number(),
     invoiceItem: z.number(),
     maintenancePart: z.number(),
@@ -23,12 +30,20 @@ export const ProductVariantAggregateResultSchema = z.object({  _count: z.object(
   _sum: z.object({
     price: z.number().nullable(),
     stockQty: z.number().nullable(),
-    maxQtyPerOrder: z.number().nullable()
+    maxQtyPerOrder: z.number().nullable(),
+    listPrice: z.number().nullable(),
+    discountValue: z.number().nullable(),
+    salePrice: z.number().nullable(),
+    costPrice: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     price: z.number().nullable(),
     stockQty: z.number().nullable(),
-    maxQtyPerOrder: z.number().nullable()
+    maxQtyPerOrder: z.number().nullable(),
+    listPrice: z.number().nullable(),
+    discountValue: z.number().nullable(),
+    salePrice: z.number().nullable(),
+    costPrice: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -39,7 +54,13 @@ export const ProductVariantAggregateResultSchema = z.object({  _count: z.object(
     stockQty: z.number().int().nullable(),
     maxQtyPerOrder: z.number().int().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    listPrice: z.number().nullable(),
+    discountValue: z.number().nullable(),
+    salePrice: z.number().nullable(),
+    saleStartsAt: z.date().nullable(),
+    saleEndsAt: z.date().nullable(),
+    costPrice: z.number().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -50,5 +71,11 @@ export const ProductVariantAggregateResultSchema = z.object({  _count: z.object(
     stockQty: z.number().int().nullable(),
     maxQtyPerOrder: z.number().int().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    listPrice: z.number().nullable(),
+    discountValue: z.number().nullable(),
+    salePrice: z.number().nullable(),
+    saleStartsAt: z.date().nullable(),
+    saleEndsAt: z.date().nullable(),
+    costPrice: z.number().nullable()
   }).nullable().optional()});

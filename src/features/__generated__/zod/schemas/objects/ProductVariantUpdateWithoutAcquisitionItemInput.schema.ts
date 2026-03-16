@@ -8,6 +8,9 @@ import { NullableBoolFieldUpdateOperationsInputObjectSchema as NullableBoolField
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema as EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema } from './EnumAvailabilityStatusFieldUpdateOperationsInput.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
+import { NullableEnumDiscountTypeFieldUpdateOperationsInputObjectSchema as NullableEnumDiscountTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumDiscountTypeFieldUpdateOperationsInput.schema';
+import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema as InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutVariantNestedInput.schema';
 import { MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema as MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutVariantNestedInput.schema';
 import { MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutVariantNestedInput.schema';
@@ -27,6 +30,13 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   availabilityStatus: z.union([AvailabilityStatusSchema, z.lazy(() => EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  listPrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  discountType: z.union([DiscountTypeSchema, z.lazy(() => NullableEnumDiscountTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  discountValue: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  salePrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  saleStartsAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  saleEndsAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  costPrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   invoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   maintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema).optional(),

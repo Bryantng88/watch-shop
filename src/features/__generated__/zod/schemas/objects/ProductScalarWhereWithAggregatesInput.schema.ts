@@ -35,7 +35,8 @@ const productscalarwherewithaggregatesinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   tag: z.union([z.lazy(() => EnumTagWithAggregatesFilterObjectSchema), TagSchema]).optional(),
-  status: z.union([z.lazy(() => EnumProductStatusWithAggregatesFilterObjectSchema), ProductStatusSchema]).optional()
+  status: z.union([z.lazy(() => EnumProductStatusWithAggregatesFilterObjectSchema), ProductStatusSchema]).optional(),
+  categoryId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ProductScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput> = productscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput>;
 export const ProductScalarWhereWithAggregatesInputObjectZodSchema = productscalarwherewithaggregatesinputSchema;

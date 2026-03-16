@@ -14,6 +14,13 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   availabilityStatus: z.literal(true).optional(),
+  listPrice: z.literal(true).optional(),
+  discountType: z.literal(true).optional(),
+  discountValue: z.literal(true).optional(),
+  salePrice: z.literal(true).optional(),
+  saleStartsAt: z.literal(true).optional(),
+  saleEndsAt: z.literal(true).optional(),
+  costPrice: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ProductVariantCountAggregateInputObjectSchema: z.ZodType<Prisma.ProductVariantCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantCountAggregateInputType>;

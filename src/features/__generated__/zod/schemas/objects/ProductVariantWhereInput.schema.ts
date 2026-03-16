@@ -8,6 +8,9 @@ import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumAvailabilityStatusFilterObjectSchema as EnumAvailabilityStatusFilterObjectSchema } from './EnumAvailabilityStatusFilter.schema';
 import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
+import { EnumDiscountTypeNullableFilterObjectSchema as EnumDiscountTypeNullableFilterObjectSchema } from './EnumDiscountTypeNullableFilter.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenancePartListRelationFilterObjectSchema as MaintenancePartListRelationFilterObjectSchema } from './MaintenancePartListRelationFilter.schema';
@@ -35,6 +38,13 @@ const productvariantwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   availabilityStatus: z.union([z.lazy(() => EnumAvailabilityStatusFilterObjectSchema), AvailabilityStatusSchema]).optional(),
+  listPrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  discountType: z.union([z.lazy(() => EnumDiscountTypeNullableFilterObjectSchema), DiscountTypeSchema]).optional().nullable(),
+  discountValue: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  salePrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  saleStartsAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  saleEndsAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  costPrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   invoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),

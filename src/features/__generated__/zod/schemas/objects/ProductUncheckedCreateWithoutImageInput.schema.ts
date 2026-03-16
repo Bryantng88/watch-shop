@@ -31,6 +31,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
+  categoryId: z.string().optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),

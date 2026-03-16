@@ -1,4 +1,4 @@
-import { PriceVisibility, ProductType, CaseType, ContentStatus, Gender, AvailabilityStatus } from "@prisma/client";
+import { PriceVisibility, ProductType, CaseType, ContentStatus, DiscountType, Gender, ProductStatus, AvailabilityStatus } from "@prisma/client";
 import { z } from "zod";
 export type CreateProductDTO = {
     title: string;
@@ -148,6 +148,7 @@ export type CreateProductWithOutAcqInput = z.infer<typeof CreateProductWithOutAc
 
 
 
+
 export const AdminFiltersSchema = z.object({
     page: z.coerce.number().min(1).default(1),
     pageSize: z.coerce.number().min(1).max(200).default(50),
@@ -166,6 +167,7 @@ export const AdminFiltersSchema = z.object({
     availabilitiStatus: z.array(z.nativeEnum(AvailabilityStatus)).optional(),
     type: z.array(z.nativeEnum(ProductType)).optional(),
     brandIds: z.array(z.string()).optional(),
+    categoryIds: z.array(z.string()).optional(),
     hasImages: z.enum(["yes", "no"]).optional(),
 
     updatedFrom: z.coerce.date().optional(),
@@ -173,58 +175,31 @@ export const AdminFiltersSchema = z.object({
 });
 
 export type AdminFiltersInput = z.infer<typeof AdminFiltersSchema>;
-export type UpdateProductWithAcqInput = z.infer<typeof UpdateProductWithAcqSchema>;
 
-export const ContentStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional();
-
-export const PriceVisibilitySchema = z.enum(["SHOW", "HIDE"]).optional();
+export const ProductStatusSchema = z.nativeEnum(ProductStatus).optional();
+export const PriceVisibilitySchema = z.nativeEnum(PriceVisibility).optional();
 export const AvailabilityStatusSchema = z.enum(["ACTIVE", "HIDDEN"]).optional();
 
-// ✅ PATCH schema: nhận body dạng partial, không bọc {product:...}
 export const UpdateProductPatchSchema = z
     .object({
         title: z.string().min(1).optional(),
-
-        minPrice: z.number().nullable().optional(),
-
-        // thêm để chỉnh nhanh giá bán ngay trên list
-        price: z.number().nullable().optional(),
-
+        categoryId: z.string().nullable().optional(),
         primaryImageUrl: z.string().nullable().optional(),
 
-        contentStatus: ContentStatusSchema,
+        // alias cũ để không gãy UI cũ
+        minPrice: z.coerce.number().nullable().optional(),
+
+        // pricing mới
+        listPrice: z.coerce.number().nullable().optional(),
+        discountType: z.nativeEnum(DiscountType).nullable().optional(),
+        discountValue: z.coerce.number().nullable().optional(),
+        salePrice: z.coerce.number().nullable().optional(),
+        saleStartsAt: z.coerce.date().nullable().optional(),
+        saleEndsAt: z.coerce.date().nullable().optional(),
+        purchasePrice: z.coerce.number().nullable().optional(),
+
+        status: ProductStatusSchema,
         priceVisibility: PriceVisibilitySchema,
         availabilityStatus: AvailabilityStatusSchema,
     })
     .strict();
-
-// Update DTO
-{/*export const UpdateProductWithAcqSchema = z.object({
-    title: z.string().optional(),
-    brandId: z.string().optional().nullable(),
-    price: z.coerce.number().optional(),          // coerce từ "123" -> 123
-    description: z.string().optional().nullable(),
-    seoTitle: z.string().optional().nullable(),
-    seoDescription: z.string().optional().nullable(),
-
-    // watch spec
-    caseType: z.string().optional().nullable(),
-    length: z.coerce.number().optional().nullable(),
-    width: z.coerce.number().optional().nullable(),
-    thickness: z.coerce.number().optional().nullable(),
-    movement: z.string().optional().nullable(),
-
-    complicationIds: z.array(z.string()).optional(),
-
-    image: z.array(z.object({
-        fileKey: z.string(),
-        alt: z.string().nullable().optional(),
-        sortOrder: z.coerce.number().nullable().optional()
-    })).optional(),
-
-    // acquisition
-    purchasePrice: z.coerce.number().optional().nullable(),
-    currency: z.string().optional().nullable(),
-    acquiredAt: z.string().optional().nullable(), // yyyy-mm-dd
-    notes: z.string().optional().nullable(),
-}).partial(); */}

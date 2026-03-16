@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 import { AvailabilityStatusSchema } from '../../enums/AvailabilityStatus.schema';
+import { DiscountTypeSchema } from '../../enums/DiscountType.schema';
 // prettier-ignore
 export const ProductVariantInputSchema = z.object({
     id: z.string(),
@@ -14,6 +15,13 @@ export const ProductVariantInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     availabilityStatus: AvailabilityStatusSchema,
+    listPrice: z.number().optional().nullable(),
+    discountType: DiscountTypeSchema.optional().nullable(),
+    discountValue: z.number().optional().nullable(),
+    salePrice: z.number().optional().nullable(),
+    saleStartsAt: z.date().optional().nullable(),
+    saleEndsAt: z.date().optional().nullable(),
+    costPrice: z.number().optional().nullable(),
     acquisitionItem: z.array(z.unknown()),
     invoiceItem: z.array(z.unknown()),
     maintenancePart: z.array(z.unknown()),

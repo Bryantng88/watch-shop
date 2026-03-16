@@ -17,11 +17,13 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     tag: z.number(),
     status: z.number(),
+    categoryId: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
     orderItems: z.number(),
     brand: z.number(),
+    ProductCategory: z.number(),
     vendor: z.number(),
     image: z.number(),
     variants: z.number(),
@@ -47,7 +49,8 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     publishedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    categoryId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -61,5 +64,6 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     publishedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    categoryId: z.string().nullable()
   }).nullable().optional()});

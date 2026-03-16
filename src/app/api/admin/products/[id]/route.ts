@@ -1,12 +1,28 @@
-// app/api/admin/products/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import * as adminProductService from "@/app/(admin)/admin/products/_server/product.service";
 import { UpdateProductPatchSchema } from "@/app/(admin)/admin/products/_server/product.dto";
+import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { PERMISSIONS } from "@/constants/permissions";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// GET /api/admin/products/:id
+function hasPricingFields(body: any) {
+    return (
+        body?.minPrice !== undefined ||
+        body?.listPrice !== undefined ||
+        body?.discountType !== undefined ||
+        body?.discountValue !== undefined ||
+        body?.salePrice !== undefined ||
+        body?.saleStartsAt !== undefined ||
+        body?.saleEndsAt !== undefined ||
+        body?.purchasePrice !== undefined
+    );
+}
+
 export async function GET(_req: NextRequest, ctx: Ctx) {
+    const user = await requirePermissionApi(PERMISSIONS.PRODUCT_VIEW);
+    if (user instanceof NextResponse) return user;
+
     try {
         const { id } = await ctx.params;
         const data = await adminProductService.detail(id);
@@ -20,28 +36,36 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     }
 }
 
-// PATCH /api/admin/products/:id
-// Body: { title?, minPrice?, image?, priceVisibility?, availabilityStatus?, contentStatus? ... }
-// => PATCH PARTIAL (gom vào 1 cái, update field nào gửi field đó)
 export async function PATCH(req: NextRequest, ctx: Ctx) {
+    const baseUser = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+    if (baseUser instanceof NextResponse) return baseUser;
+
     try {
         const { id } = await ctx.params;
         const body = await req.json();
 
-        // ✅ FIX lỗi của bạn: parse trực tiếp body (partial), KHÔNG bắt { product: {...} }
+        if (hasPricingFields(body) && !baseUser.permissions.includes(PERMISSIONS.PRODUCT_PRICE_EDIT)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        if (body?.purchasePrice !== undefined && !baseUser.permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
         const patch = UpdateProductPatchSchema.parse(body);
-        const updated = await adminProductService.updateProduct(id, patch);
+        const updated = await adminProductService.updateProduct(id, patch as any);
         return NextResponse.json(updated, { status: 200 });
     } catch (err: any) {
         console.error("❌ [PATCH /api/admin/products/:id] Update failed:", err);
-        const message =
-            err?.issues ? JSON.stringify(err.issues) : err?.message ?? "Unexpected error";
+        const message = err?.issues ? JSON.stringify(err.issues) : err?.message ?? "Unexpected error";
         return NextResponse.json({ error: message }, { status: 400 });
     }
 }
 
-// DELETE /api/admin/products/:id
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
+    const user = await requirePermissionApi(PERMISSIONS.PRODUCT_DELETE);
+    if (user instanceof NextResponse) return user;
+
     try {
         const { id } = await ctx.params;
         const result = await adminProductService.remove(id);

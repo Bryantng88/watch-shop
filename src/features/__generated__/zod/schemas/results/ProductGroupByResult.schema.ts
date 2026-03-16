@@ -13,6 +13,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
   vendorId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  categoryId: z.string(),
   _count: z.object({
     id: z.number(),
     slug: z.number(),
@@ -31,11 +32,13 @@ export const ProductGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     tag: z.number(),
     status: z.number(),
+    categoryId: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
     orderItems: z.number(),
     brand: z.number(),
+    ProductCategory: z.number(),
     vendor: z.number(),
     image: z.number(),
     variants: z.number(),
@@ -61,7 +64,8 @@ export const ProductGroupByResultSchema = z.array(z.object({
     publishedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    categoryId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -75,6 +79,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
     publishedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    categoryId: z.string().nullable()
   }).nullable().optional()
 }));

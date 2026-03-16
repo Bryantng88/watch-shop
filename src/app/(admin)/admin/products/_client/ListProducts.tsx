@@ -29,21 +29,29 @@ type ProductRow = ProductListItem & {
     brand?: string | null;
     type?: string | null;
     vendorName?: string | null;
+    material?: string | null;
+    variantsCount?: number;
+    imagesCount?: number;
+    ordersCount?: number;
+    serviceRequests?: number;
+    reservations?: number;
     primaryImageUrl?: string | null;
     updatedAt?: string | null;
     createdAt?: string | null;
     status?: string | null;
     title?: string | null;
     minPrice?: number | null;
-    stockQty?: number | null;
+    effectivePrice?: number | null;
+    listPrice?: number | null;
     purchasePrice?: number | null;
-    strapSpec?: {
-        lugWidthMM?: number | null;
-        buckleWidthMM?: number | null;
-        color?: string | null;
-        material?: string | null;
-        quickRelease?: boolean | null;
-    } | null;
+    discountType?: "PERCENT" | "AMOUNT" | null;
+    discountValue?: number | null;
+    salePrice?: number | null;
+    saleStartsAt?: string | null;
+    saleEndsAt?: string | null;
+    discountPercent?: number | null;
+    categoryId?: string | null;
+    categoryName?: string | null;
 };
 
 type PageProps = {
@@ -55,7 +63,10 @@ type PageProps = {
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
     brands: BrandLite[];
+    categories: Array<{ id: string; name: string; code: string; scope: string }>;
     productTypes: Array<{ label: string; value: string }>;
+    canViewCost: boolean;
+    canEditPrice: boolean;
 };
 
 function fmtMoney(n?: number | null) {
@@ -724,7 +735,10 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên</th>
                                     <th className="px-3 py-3">Vendor</th>
-                                    <th className="px-3 py-3">Giá bán</th>
+                                    <th className="px-3 py-3 text-right">Giá niêm yết</th>
+                                    <th className="px-3 py-3 text-right">Sale</th>
+                                    <th className="px-3 py-3 text-right">Giá bán</th>
+                                    {props.canViewCost ? <th className="px-3 py-3 text-right">Giá mua</th> : null}
                                     <th className="px-3 py-3">Trạng thái</th>
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3">Tạo lúc</th>
@@ -795,7 +809,31 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 <td className="px-3 py-4 align-top">
                                                     {p.vendorName || "-"}
                                                 </td>
+                                                <td className="px-3 py-4 align-top text-right">
+                                                    <div className="font-medium">{fmtMoney(p.listPrice)}</div>
+                                                </td>
 
+                                                <td className="px-3 py-4 align-top text-right">
+                                                    <div className="text-sm text-emerald-700">
+                                                        {p.discountType === "PERCENT"
+                                                            ? `${Number(p.discountValue ?? 0)}%`
+                                                            : p.discountType === "AMOUNT"
+                                                                ? fmtMoney(p.discountValue)
+                                                                : p.salePrice != null
+                                                                    ? fmtMoney(p.salePrice)
+                                                                    : "-"}
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-3 py-4 align-top text-right">
+                                                    <div className="font-semibold text-base">{fmtMoney(p.effectivePrice ?? p.minPrice)}</div>
+                                                </td>
+
+                                                {props.canViewCost ? (
+                                                    <td className="px-3 py-4 align-top text-right">
+                                                        <div className="text-sm">{fmtMoney(p.purchasePrice)}</div>
+                                                    </td>
+                                                ) : null}
                                                 <td className="px-3 py-4 align-top">
                                                     <InlinePriceEditor
                                                         productId={p.id}

@@ -18,6 +18,7 @@ import { AcquisitionItemUpdateManyWithoutProductNestedInputObjectSchema as Acqui
 import { InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema as InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutProductNestedInput.schema';
 import { MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutProductNestedInput.schema';
 import { BrandUpdateOneWithoutProductsNestedInputObjectSchema as BrandUpdateOneWithoutProductsNestedInputObjectSchema } from './BrandUpdateOneWithoutProductsNestedInput.schema';
+import { ProductCategoryUpdateOneWithoutProductNestedInputObjectSchema as ProductCategoryUpdateOneWithoutProductNestedInputObjectSchema } from './ProductCategoryUpdateOneWithoutProductNestedInput.schema';
 import { VendorUpdateOneWithoutProductNestedInputObjectSchema as VendorUpdateOneWithoutProductNestedInputObjectSchema } from './VendorUpdateOneWithoutProductNestedInput.schema';
 import { ProductImageUpdateManyWithoutProductNestedInputObjectSchema as ProductImageUpdateManyWithoutProductNestedInputObjectSchema } from './ProductImageUpdateManyWithoutProductNestedInput.schema';
 import { ProductVariantUpdateManyWithoutProductNestedInputObjectSchema as ProductVariantUpdateManyWithoutProductNestedInputObjectSchema } from './ProductVariantUpdateManyWithoutProductNestedInput.schema';
@@ -45,6 +46,7 @@ const makeSchema = () => z.object({
   InvoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   brand: z.lazy(() => BrandUpdateOneWithoutProductsNestedInputObjectSchema).optional(),
+  ProductCategory: z.lazy(() => ProductCategoryUpdateOneWithoutProductNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutProductNestedInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantUpdateManyWithoutProductNestedInputObjectSchema).optional(),

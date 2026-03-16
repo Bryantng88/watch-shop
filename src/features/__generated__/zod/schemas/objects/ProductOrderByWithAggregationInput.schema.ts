@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   tag: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
+  categoryId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ProductCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => ProductAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ProductMaxOrderByAggregateInputObjectSchema).optional(),

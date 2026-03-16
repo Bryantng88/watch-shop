@@ -1,7 +1,8 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, ProductType } from "@prisma/client";
+import { ProductStatus, ProductType, DiscountType } from "@prisma/client";
 import * as prodRepo from "./product.repo";
 import { AdminFiltersSchema } from "./product.dto";
+import { computeEffectivePrice } from "../helpers/price";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
@@ -69,70 +70,149 @@ export async function detail(id: string) {
     });
 }
 
-export async function getAdminProductList(raw: Record<string, unknown>) {
+export async function getAdminProductList(
+    raw: Record<string, unknown>,
+    opts?: { canViewCost?: boolean }
+) {
     const parsed = AdminFiltersSchema.parse({
         page: asNumber(raw.page) ?? 1,
-        pageSize: asNumber(raw.pageSize) ?? 20,
-        q: asString(raw.q),
-        sort: asString(raw.sort),
+        pageSize: asNumber(raw.pageSize) ?? 50,
+        q: raw.q ?? undefined,
+        sort: raw.sort ?? undefined,
         type: arrayify(raw.type),
         brandIds: arrayify(raw.brandIds ?? raw.brandId),
-        hasImages: asString(raw.hasImages),
+        categoryIds: arrayify(raw.categoryIds ?? raw.categoryId),
+        hasImages: raw.hasImages ?? undefined,
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
 
-    const catalog = normalizeCatalog(raw.catalog);
+    const catalog = String(raw.catalog ?? "product") === "strap" ? "strap" : "product";
 
-    return prodRepo.listAdminProducts(prisma, {
+    const result = await prodRepo.listAdminProducts(prisma, {
         q: parsed.q,
         sort: parsed.sort as any,
         page: parsed.page,
         pageSize: parsed.pageSize,
-        view: normalizeView(raw.view) as any,
-        type:
-            catalog === "strap"
-                ? "WATCH_STRAP"
-                : parsed.type?.[0] === "WATCH_STRAP"
-                    ? undefined
-                    : parsed.type?.[0],
+        view: String(raw.view ?? "all") as any,
+        type: parsed.type?.[0],
         brandId: parsed.brandIds?.[0],
+        categoryId: parsed.categoryIds?.[0],
         hasImages: parsed.hasImages,
-        updatedFrom: parsed.updatedFrom,
-        updatedTo: parsed.updatedTo,
         catalog,
+        includeCost: !!opts?.canViewCost,
     } as any);
+
+    return {
+        ...result,
+        page: parsed.page,
+        pageSize: parsed.pageSize,
+    };
 }
 
 export async function updateProduct(
     id: string,
     patch: {
         title?: string;
+        categoryId?: string | null;
         minPrice?: number | null;
-        price?: number | null;
+        listPrice?: number | null;
+        discountType?: DiscountType | null;
+        discountValue?: number | null;
+        salePrice?: number | null;
+        saleStartsAt?: Date | null;
+        saleEndsAt?: Date | null;
+        purchasePrice?: number | null;
         primaryImageUrl?: string | null;
-        contentStatus?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+        status?: string;
         priceVisibility?: "SHOW" | "HIDE";
         availabilityStatus?: "ACTIVE" | "HIDDEN";
     }
 ) {
     return prisma.$transaction(async (tx) => {
-        const data: any = {};
-
-        if (patch.title !== undefined) data.title = patch.title;
-        if (patch.primaryImageUrl !== undefined) data.primaryImageUrl = patch.primaryImageUrl;
-        if (patch.contentStatus !== undefined) data.contentStatus = patch.contentStatus;
-        if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
-        if (patch.availabilityStatus !== undefined) data.availabilityStatus = patch.availabilityStatus;
-
-        // giá bán thực tế nằm ở variant
-        if (patch.price !== undefined) {
-            data._variantPrice = patch.price;
-        } else if (patch.minPrice !== undefined) {
-            data._variantPrice = patch.minPrice;
+        const current = await prodRepo.getLatestVariantForAdmin(tx, id);
+        if (!current) {
+            throw new Error("Không tìm thấy product.");
         }
 
-        return prodRepo.updateProduct(tx, id, data);
+        const variant = current.variants?.[0] ?? null;
+        const currentList = variant?.listPrice != null ? Number(variant.listPrice) : Number(variant?.price ?? 0);
+
+        const nextListPrice =
+            patch.listPrice !== undefined
+                ? patch.listPrice
+                : patch.minPrice !== undefined
+                    ? patch.minPrice
+                    : currentList;
+
+        const nextDiscountType =
+            patch.discountType !== undefined ? patch.discountType : (variant?.discountType ?? null);
+        const nextDiscountValue =
+            patch.discountValue !== undefined
+                ? patch.discountValue
+                : variant?.discountValue != null
+                    ? Number(variant.discountValue)
+                    : null;
+        const nextSalePrice =
+            patch.salePrice !== undefined
+                ? patch.salePrice
+                : variant?.salePrice != null
+                    ? Number(variant.salePrice)
+                    : null;
+        const nextSaleStartsAt =
+            patch.saleStartsAt !== undefined ? patch.saleStartsAt : (variant?.saleStartsAt ?? null);
+        const nextSaleEndsAt =
+            patch.saleEndsAt !== undefined ? patch.saleEndsAt : (variant?.saleEndsAt ?? null);
+        const nextCostPrice =
+            patch.purchasePrice !== undefined
+                ? patch.purchasePrice
+                : variant?.costPrice != null
+                    ? Number(variant.costPrice)
+                    : null;
+
+        const shouldTouchPricing =
+            patch.minPrice !== undefined ||
+            patch.listPrice !== undefined ||
+            patch.discountType !== undefined ||
+            patch.discountValue !== undefined ||
+            patch.salePrice !== undefined ||
+            patch.saleStartsAt !== undefined ||
+            patch.saleEndsAt !== undefined ||
+            patch.purchasePrice !== undefined ||
+            patch.availabilityStatus !== undefined;
+
+        if (shouldTouchPricing) {
+            const effectivePrice = computeEffectivePrice({
+                listPrice: nextListPrice,
+                discountType: nextDiscountType,
+                discountValue: nextDiscountValue,
+                salePrice: nextSalePrice,
+                saleStartsAt: nextSaleStartsAt,
+                saleEndsAt: nextSaleEndsAt,
+                fallbackPrice: variant?.price,
+            });
+
+            await prodRepo.updateLatestVariantPricing(tx, id, {
+                price: effectivePrice,
+                listPrice: nextListPrice,
+                discountType: nextDiscountType,
+                discountValue: nextDiscountValue,
+                salePrice: nextSalePrice,
+                saleStartsAt: nextSaleStartsAt,
+                saleEndsAt: nextSaleEndsAt,
+                costPrice: nextCostPrice,
+                ...(patch.availabilityStatus ? { availabilityStatus: patch.availabilityStatus as any } : {}),
+            } as any);
+        }
+
+        const data: any = {};
+        if (patch.title !== undefined) data.title = patch.title;
+        if (patch.categoryId !== undefined) data.categoryId = patch.categoryId || null;
+        if (patch.primaryImageUrl !== undefined) data.primaryImageUrl = patch.primaryImageUrl;
+        if (patch.status !== undefined) data.status = patch.status;
+        if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
+
+        return prodRepo.updateProductBase(tx, id, data);
     });
 }
 

@@ -88,11 +88,13 @@ model Product {
   updatedAt          DateTime            @updatedAt
   tag                Tag                 @default(PRE_OWNED)
   status             ProductStatus       @default(DRAFT)
+  categoryId         String?
   AcquisitionItem    AcquisitionItem[]
   InvoiceItem        InvoiceItem[]
   maintenanceRecords MaintenanceRecord[]
   orderItems         OrderItem[]
   brand              Brand?              @relation(fields: [brandId], references: [id])
+  ProductCategory    ProductCategory?    @relation(fields: [categoryId], references: [id])
   vendor             Vendor?             @relation(fields: [vendorId], references: [id])
   image              ProductImage[]
   variants           ProductVariant[]
@@ -104,6 +106,7 @@ model Product {
   @@index([type])
   @@index([createdAt])
   @@index([updatedAt])
+  @@index([categoryId])
 }
 
 model ProductVariant {
@@ -118,6 +121,13 @@ model ProductVariant {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   availabilityStatus AvailabilityStatus  @default(HIDDEN)
+  listPrice          Decimal?            @db.Decimal(18, 2)
+  discountType       DiscountType?
+  discountValue      Decimal?            @db.Decimal(18, 2)
+  salePrice          Decimal?            @db.Decimal(18, 2)
+  saleStartsAt       DateTime?           @db.Timestamptz(6)
+  saleEndsAt         DateTime?           @db.Timestamptz(6)
+  costPrice          Decimal?            @db.Decimal(18, 2)
   acquisitionItem    AcquisitionItem[]
   invoiceItem        InvoiceItem[]
   maintenancePart    MaintenancePart[]
@@ -129,6 +139,7 @@ model ProductVariant {
 
   @@index([productId])
   @@index([availabilityStatus])
+  @@index([saleStartsAt, saleEndsAt])
 }
 
 model PartVariantSpec {
@@ -650,6 +661,20 @@ model Shipment {
   Order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
 }
 
+model ProductCategory {
+  id        String               @id
+  code      String               @unique
+  name      String
+  scope     ProductCategoryScope @default(ALL)
+  isActive  Boolean              @default(true)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime             @default(now()) @db.Timestamptz(6)
+  Product   Product[]
+
+  @@index([scope, isActive, sortOrder], map: "ProductCategory_scope_isActive_sort_idx")
+}
+
 enum Category {
   ENTRY
   MID_RANGE
@@ -1017,4 +1042,10 @@ enum ShipmentStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum ProductCategoryScope {
+  WATCH
+  WATCH_STRAP
+  ALL
 }

@@ -7,6 +7,7 @@ import { InvoiceItemOrderByRelationAggregateInputObjectSchema as InvoiceItemOrde
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
 import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByRelationAggregateInputObjectSchema } from './OrderItemOrderByRelationAggregateInput.schema';
 import { BrandOrderByWithRelationInputObjectSchema as BrandOrderByWithRelationInputObjectSchema } from './BrandOrderByWithRelationInput.schema';
+import { ProductCategoryOrderByWithRelationInputObjectSchema as ProductCategoryOrderByWithRelationInputObjectSchema } from './ProductCategoryOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { ProductImageOrderByRelationAggregateInputObjectSchema as ProductImageOrderByRelationAggregateInputObjectSchema } from './ProductImageOrderByRelationAggregateInput.schema';
 import { ProductVariantOrderByRelationAggregateInputObjectSchema as ProductVariantOrderByRelationAggregateInputObjectSchema } from './ProductVariantOrderByRelationAggregateInput.schema';
@@ -32,11 +33,13 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   tag: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
+  categoryId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
   brand: z.lazy(() => BrandOrderByWithRelationInputObjectSchema).optional(),
+  ProductCategory: z.lazy(() => ProductCategoryOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageOrderByRelationAggregateInputObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantOrderByRelationAggregateInputObjectSchema).optional(),

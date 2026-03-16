@@ -9,6 +9,7 @@ import { InvoiceItemCreateNestedManyWithoutProductInputObjectSchema as InvoiceIt
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
 import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemCreateNestedManyWithoutProductInput.schema';
 import { BrandCreateNestedOneWithoutProductsInputObjectSchema as BrandCreateNestedOneWithoutProductsInputObjectSchema } from './BrandCreateNestedOneWithoutProductsInput.schema';
+import { ProductCategoryCreateNestedOneWithoutProductInputObjectSchema as ProductCategoryCreateNestedOneWithoutProductInputObjectSchema } from './ProductCategoryCreateNestedOneWithoutProductInput.schema';
 import { VendorCreateNestedOneWithoutProductInputObjectSchema as VendorCreateNestedOneWithoutProductInputObjectSchema } from './VendorCreateNestedOneWithoutProductInput.schema';
 import { ProductImageCreateNestedManyWithoutProductInputObjectSchema as ProductImageCreateNestedManyWithoutProductInputObjectSchema } from './ProductImageCreateNestedManyWithoutProductInput.schema';
 import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as ProductVariantCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantCreateNestedManyWithoutProductInput.schema';
@@ -36,6 +37,7 @@ const makeSchema = () => z.object({
   maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   brand: z.lazy(() => BrandCreateNestedOneWithoutProductsInputObjectSchema).optional(),
+  ProductCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutProductInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageCreateNestedManyWithoutProductInputObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantCreateNestedManyWithoutProductInputObjectSchema).optional(),

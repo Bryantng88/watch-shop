@@ -41,6 +41,7 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   tag: z.union([TagSchema, z.lazy(() => EnumTagFieldUpdateOperationsInputObjectSchema)]).optional(),
   status: z.union([ProductStatusSchema, z.lazy(() => EnumProductStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  categoryId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),

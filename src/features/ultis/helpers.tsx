@@ -5,8 +5,10 @@ import {
     Gender,
     MovementType,
     Strap,
+    DiscountType
 } from "@prisma/client";
 import slugify from "slugify";
+import { computeEffectivePrice } from "@/app/(admin)/admin/products/helpers/price";
 import { Tx } from "@/server/db/client";
 
 export async function genUniqueSlug(db: Tx, title: string) {
@@ -76,9 +78,26 @@ export function buildWatchSpec(dto: any) {
 }
 
 export function buildVariants(dto: any, skuBase: string) {
-    const price = dto.price != null ? Number(dto.price) : 0;
+    const listPrice = dto.listPrice != null ? Number(dto.listPrice) : dto.price != null ? Number(dto.price) : 0;
     const stockQty = dto.stockQty != null ? Number(dto.stockQty) : 1;
     const type = String(dto.type ?? "WATCH").toUpperCase();
+
+    const discountType = dto.discountType ? (String(dto.discountType).toUpperCase() as DiscountType) : undefined;
+    const discountValue = dto.discountValue != null ? Number(dto.discountValue) : undefined;
+    const salePrice = dto.salePrice != null ? Number(dto.salePrice) : undefined;
+    const saleStartsAt = dto.saleStartsAt ? new Date(dto.saleStartsAt) : undefined;
+    const saleEndsAt = dto.saleEndsAt ? new Date(dto.saleEndsAt) : undefined;
+    const costPrice = dto.purchasePrice != null ? Number(dto.purchasePrice) : undefined;
+
+    const effectivePrice = computeEffectivePrice({
+        listPrice,
+        discountType,
+        discountValue,
+        salePrice,
+        saleStartsAt,
+        saleEndsAt,
+        fallbackPrice: listPrice,
+    });
 
     const rawMaterial = String(dto.material ?? dto.strap ?? "").toUpperCase();
     const strapMaterial = Object.values(Strap).includes(rawMaterial as Strap)
@@ -88,7 +107,14 @@ export function buildVariants(dto: any, skuBase: string) {
     return {
         create: [
             {
-                price,
+                price: effectivePrice,
+                listPrice,
+                discountType,
+                discountValue,
+                salePrice,
+                saleStartsAt,
+                saleEndsAt,
+                costPrice,
                 stockQty,
                 availabilityStatus: "HIDDEN",
                 sku: skuBase,
@@ -106,7 +132,6 @@ export function buildVariants(dto: any, skuBase: string) {
         ],
     } satisfies Prisma.ProductVariantCreateNestedManyWithoutProductInput;
 }
-
 export function toPublicUrl(key?: string | null): string | undefined {
     if (!key) return undefined;
     const base = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE;
@@ -115,3 +140,4 @@ export function toPublicUrl(key?: string | null): string | undefined {
     const cleaned = String(key).replace(/^\/+/, "");
     return `${base.replace(/\/$/, "")}/${encodeURI(cleaned)}`;
 }
+

@@ -31,3 +31,4 @@ export { InvoiceItemModelSchema } from './InvoiceItem.pure';
 export { PaymentModelSchema } from './Payment.pure';
 export { BankModelSchema } from './Bank.pure';
 export { ShipmentModelSchema } from './Shipment.pure';
+export { ProductCategoryModelSchema } from './ProductCategory.pure';
