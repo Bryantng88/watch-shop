@@ -72,8 +72,8 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
             OR: [
                 { title: { contains: q, mode: "insensitive" } },
                 { slug: { contains: q, mode: "insensitive" } },
-                { sku: { contains: q, mode: "insensitive" } } as any,
-                { code: { contains: q, mode: "insensitive" } } as any,
+                { brand: { name: { contains: q, mode: "insensitive" } } },
+                { vendor: { name: { contains: q, mode: "insensitive" } } },
             ],
         });
     }
@@ -166,7 +166,7 @@ function labelizeProductType(value: string) {
 
 export async function listAdminProducts(
     tx: DB,
-    input?: ProductListInput & { page?: number; pageSize?: number; catalog?: "product" | "strap" }
+    input?: AdminProductListRepoInput
 ) {
     const db = dbOrTx(tx);
 
@@ -175,36 +175,25 @@ export async function listAdminProducts(
         type: input?.type,
         brandId: input?.brandId,
         hasImages: input?.hasImages,
+        updatedFrom: input?.updatedFrom,
+        updatedTo: input?.updatedTo,
+        catalog: (input?.catalog ?? "product") as ProductCatalogKey,
         view: (input?.view ?? "all") as ProductViewKey,
         sort: (input?.sort ?? "updatedDesc") as ProductListSort,
         page: Math.max(1, Number(input?.page ?? 1)),
-        pageSize: Math.max(1, Number(input?.pageSize ?? 20)),
-        catalog: input?.catalog ?? "product",
+        pageSize: Math.max(1, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE)),
     };
 
-    const baseWhere = buildWhereBase({
-        ...safeInput,
-        type:
-            safeInput.catalog === "strap"
-                ? ("WATCH_STRAP" as any)
-                : safeInput.type,
-    } as any);
+    const whereBase = buildWhereBase(safeInput);
+    const whereList = buildWhereForView(whereBase, safeInput.view);
 
-    if (safeInput.catalog === "product") {
-        (baseWhere as any).NOT = {
-            ...(baseWhere as any).NOT,
-            type: "WATCH_STRAP",
-        };
-    }
-
-    const whereList = buildWhereForView(baseWhere, safeInput.view);
     const skip = (safeInput.page - 1) * safeInput.pageSize;
     const take = safeInput.pageSize;
     const orderBy = buildOrderBy(safeInput.sort);
 
     const [totalAll, total, rows, cDraft, cPosted, cInService, cHold, cSold, brands] =
         await Promise.all([
-            db.product.count({ where: baseWhere }),
+            db.product.count({ where: whereBase }),
             db.product.count({ where: whereList }),
             db.product.findMany({
                 where: whereList,
@@ -220,19 +209,30 @@ export async function listAdminProducts(
                     primaryImageUrl: true,
                     createdAt: true,
                     updatedAt: true,
-                    brand: { select: { id: true, name: true } },
-                    vendor: { select: { id: true, name: true } },
+                    brand: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                    vendor: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
                     variants: {
-                        orderBy: { updatedAt: "desc" },
+                        orderBy: [{ updatedAt: "desc" }],
                         take: 1,
                         select: {
                             id: true,
-                            stockQty: true,
                             price: true,
+                            stockQty: true,
+                            availabilityStatus: true,
                             strapSpec: {
                                 select: {
-                                    widthMM: true,
-                                    lengthLabel: true,
+                                    lugWidthMM: true,
+                                    buckleWidthMM: true,
                                     color: true,
                                     material: true,
                                     quickRelease: true,
@@ -241,7 +241,7 @@ export async function listAdminProducts(
                         },
                     },
                     AcquisitionItem: {
-                        orderBy: { createdAt: "desc" },
+                        orderBy: [{ createdAt: "desc" }],
                         take: 1,
                         select: {
                             unitCost: true,
@@ -258,11 +258,11 @@ export async function listAdminProducts(
                     },
                 },
             }),
-            db.product.count({ where: buildWhereForView(baseWhere, "draft") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "posted") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "in_service") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "hold") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "sold") }),
+            db.product.count({ where: buildWhereForView(whereBase, "draft") }),
+            db.product.count({ where: buildWhereForView(whereBase, "posted") }),
+            db.product.count({ where: buildWhereForView(whereBase, "in_service") }),
+            db.product.count({ where: buildWhereForView(whereBase, "hold") }),
+            db.product.count({ where: buildWhereForView(whereBase, "sold") }),
             db.brand.findMany({
                 orderBy: { name: "asc" },
                 select: { id: true, name: true },
@@ -275,18 +275,18 @@ export async function listAdminProducts(
         slug: p.slug,
         type: p.type,
         status: p.status,
-        primaryImageUrl: p.primaryImageUrl,
+        primaryImageUrl: p.primaryImageUrl ?? null,
         minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
         stockQty: Number(p.variants?.[0]?.stockQty ?? 0),
         purchasePrice:
             p.AcquisitionItem?.[0]?.unitCost != null ? Number(p.AcquisitionItem[0].unitCost) : null,
+        strapSpec: p.variants?.[0]?.strapSpec ?? null,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         brand: p.brand?.name ?? null,
         brandId: p.brand?.id ?? null,
         vendorName: p.vendor?.name ?? null,
         vendorId: p.vendor?.id ?? null,
-        strapSpec: p.variants?.[0]?.strapSpec ?? null,
         variantsCount: p._count?.variants ?? 0,
         imagesCount: p._count?.image ?? 0,
         ordersCount: p._count?.orderItems ?? 0,
@@ -294,18 +294,22 @@ export async function listAdminProducts(
         reservations: p._count?.Reservation ?? 0,
     }));
 
-    const productTypes =
-        safeInput.catalog === "strap"
-            ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
-            : [
-                { label: "WATCH", value: "WATCH" },
-                { label: "ACCESSORY", value: "ACCESSORY" },
-                { label: "OTHER", value: "OTHER" },
-            ];
+    const productTypes = Object.values(ProductType)
+        .filter((value) =>
+            safeInput.catalog === "strap"
+                ? value === ProductType.WATCH_STRAP
+                : value !== ProductType.WATCH_STRAP
+        )
+        .map((value) => ({
+            label: labelizeProductType(value),
+            value,
+        }));
 
     return {
         items,
         total,
+        page: safeInput.page,
+        pageSize: safeInput.pageSize,
         counts: {
             all: totalAll,
             draft: cDraft,
@@ -318,6 +322,7 @@ export async function listAdminProducts(
         productTypes,
     };
 }
+
 export async function createProductDraft(
     tx: DB,
     title: string,
@@ -400,27 +405,61 @@ export async function searchProductsRepo(tx: DB, q: string) {
 export async function updateProduct(
     tx: DB,
     id: string,
-    data: Prisma.ProductUpdateInput
+    data: Prisma.ProductUpdateInput & { _variantPrice?: number | null }
 ) {
     const db = dbOrTx(tx);
+    const { _variantPrice, ...productData } = data as any;
 
-    return db.product.update({
+    if (Object.keys(productData).length > 0) {
+        await db.product.update({
+            where: { id },
+            data: productData,
+        });
+    }
+
+    if (_variantPrice !== undefined) {
+        const firstVariant = await db.productVariant.findFirst({
+            where: { productId: id },
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+            select: { id: true },
+        });
+
+        if (firstVariant) {
+            await db.productVariant.update({
+                where: { id: firstVariant.id },
+                data: {
+                    price: new Prisma.Decimal(Number(_variantPrice ?? 0)),
+                },
+            });
+        } else {
+            await db.productVariant.create({
+                data: {
+                    productId: id,
+                    stockQty: 0,
+                    availabilityStatus: AvailabilityStatus.HIDDEN,
+                    price: new Prisma.Decimal(Number(_variantPrice ?? 0)),
+                },
+            });
+        }
+    }
+
+    return db.product.findUnique({
         where: { id },
-        data,
         select: {
             id: true,
             title: true,
-            image: true,
             primaryImageUrl: true,
             status: true,
-            priceVisibility: true,
+            updatedAt: true,
+            createdAt: true,
             variants: {
+                orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+                take: 1,
                 select: {
+                    price: true,
                     availabilityStatus: true,
                 },
             },
-            updatedAt: true,
-            createdAt: true,
         },
     });
 }
@@ -448,7 +487,6 @@ export async function updateProductVariantStt(
     };
 
     const db = dbOrTx(tx);
-
     const result = await db.productVariant.updateMany({
         where,
         data: {
@@ -490,6 +528,13 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         title: true,
         status: true,
         primaryImageUrl: true,
+        variants: {
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+            take: 1,
+            select: {
+                price: true,
+            },
+        },
     },
 });
 

@@ -72,41 +72,44 @@ export async function detail(id: string) {
 export async function getAdminProductList(raw: Record<string, unknown>) {
     const parsed = AdminFiltersSchema.parse({
         page: asNumber(raw.page) ?? 1,
-        pageSize: asNumber(raw.pageSize) ?? 50,
-        q: raw.q ?? undefined,
-        sort: raw.sort ?? undefined,
+        pageSize: asNumber(raw.pageSize) ?? 20,
+        q: asString(raw.q),
+        sort: asString(raw.sort),
         type: arrayify(raw.type),
         brandIds: arrayify(raw.brandIds ?? raw.brandId),
-        hasImages: raw.hasImages ?? undefined,
+        hasImages: asString(raw.hasImages),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
 
-    const catalog = String(raw.catalog ?? "product") === "strap" ? "strap" : "product";
+    const catalog = normalizeCatalog(raw.catalog);
 
-    const result = await prodRepo.listAdminProducts(prisma, {
+    return prodRepo.listAdminProducts(prisma, {
         q: parsed.q,
         sort: parsed.sort as any,
         page: parsed.page,
         pageSize: parsed.pageSize,
-        view: (String(raw.view ?? "all") as any),
-        type: parsed.type?.[0],
+        view: normalizeView(raw.view) as any,
+        type:
+            catalog === "strap"
+                ? "WATCH_STRAP"
+                : parsed.type?.[0] === "WATCH_STRAP"
+                    ? undefined
+                    : parsed.type?.[0],
         brandId: parsed.brandIds?.[0],
         hasImages: parsed.hasImages,
+        updatedFrom: parsed.updatedFrom,
+        updatedTo: parsed.updatedTo,
         catalog,
     } as any);
-
-    return {
-        ...result,
-        page: parsed.page,
-        pageSize: parsed.pageSize,
-    };
 }
+
 export async function updateProduct(
     id: string,
     patch: {
         title?: string;
         minPrice?: number | null;
+        price?: number | null;
         primaryImageUrl?: string | null;
         contentStatus?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
         priceVisibility?: "SHOW" | "HIDE";
@@ -117,11 +120,17 @@ export async function updateProduct(
         const data: any = {};
 
         if (patch.title !== undefined) data.title = patch.title;
-        if (patch.minPrice !== undefined) data.minPrice = patch.minPrice;
         if (patch.primaryImageUrl !== undefined) data.primaryImageUrl = patch.primaryImageUrl;
         if (patch.contentStatus !== undefined) data.contentStatus = patch.contentStatus;
         if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
         if (patch.availabilityStatus !== undefined) data.availabilityStatus = patch.availabilityStatus;
+
+        // giá bán thực tế nằm ở variant
+        if (patch.price !== undefined) {
+            data._variantPrice = patch.price;
+        } else if (patch.minPrice !== undefined) {
+            data._variantPrice = patch.minPrice;
+        }
 
         return prodRepo.updateProduct(tx, id, data);
     });
@@ -196,8 +205,8 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
             if (p.status !== ProductStatus.DRAFT) {
                 reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
             }
-            if (!hasImage(p)) reasons.push("MISSING_IMAGE");
             if (!hasPrice(p)) reasons.push("MISSING_PRICE");
+            if (!hasImage(p)) reasons.push("MISSING_IMAGE");
 
             if (reasons.length) {
                 failed.push({ id: p.id, title: p.title ?? null, reasons });

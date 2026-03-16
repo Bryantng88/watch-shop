@@ -185,10 +185,11 @@ export const UpdateProductPatchSchema = z
     .object({
         title: z.string().min(1).optional(),
 
-        // list của bạn đang dùng p.minPrice
         minPrice: z.number().nullable().optional(),
 
-        // list của bạn đang dùng p.image (string | null)
+        // thêm để chỉnh nhanh giá bán ngay trên list
+        price: z.number().nullable().optional(),
+
         primaryImageUrl: z.string().nullable().optional(),
 
         contentStatus: ContentStatusSchema,

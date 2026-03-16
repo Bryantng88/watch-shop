@@ -47,7 +47,9 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
     const sort = (toStr(sp.get("sort")) as ProductListSort) || "updatedDesc";
     const page = toInt(sp.get("page"), 1);
     const pageSize = toInt(sp.get("pageSize"), 20);
-    const catalog = (toStr(sp.get("catalog")) || "product") === "strap" ? "strap" : "product";
+
+    const rawCatalog = (toStr(sp.get("catalog")) || "product").toLowerCase();
+    const catalog: ProductCatalogKey = rawCatalog === "strap" ? "strap" : "product";
 
     return {
         q: q || undefined,

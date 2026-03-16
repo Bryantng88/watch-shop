@@ -12,6 +12,7 @@ import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
+type StrapViewKey = "all" | "draft" | "posted";
 type CatalogKey = "product" | "strap";
 
 type Counts = {
@@ -28,18 +29,21 @@ type ProductRow = ProductListItem & {
     brand?: string | null;
     type?: string | null;
     vendorName?: string | null;
-    material?: string | null;
-    variantsCount?: number;
-    imagesCount?: number;
-    ordersCount?: number;
-    serviceRequests?: number;
-    reservations?: number;
     primaryImageUrl?: string | null;
     updatedAt?: string | null;
     createdAt?: string | null;
     status?: string | null;
     title?: string | null;
     minPrice?: number | null;
+    stockQty?: number | null;
+    purchasePrice?: number | null;
+    strapSpec?: {
+        lugWidthMM?: number | null;
+        buckleWidthMM?: number | null;
+        color?: string | null;
+        material?: string | null;
+        quickRelease?: boolean | null;
+    } | null;
 };
 
 type PageProps = {
@@ -76,12 +80,118 @@ function hasValidImage(p: ProductRow) {
     return typeof img === "string" && img.trim().length > 0;
 }
 
+function StrapSpecText({ p }: { p: ProductRow }) {
+    const s = p.strapSpec;
+    if (!s) return <span>-</span>;
+
+    return (
+        <span>
+            {s.material || "-"} / {s.lugWidthMM || "-"} - {s.buckleWidthMM || "-"} / {s.color || "-"} /{" "}
+            {s.quickRelease ? "QR" : "No QR"}
+        </span>
+    );
+}
+
+function InlinePriceEditor({
+    productId,
+    value,
+    onSaved,
+}: {
+    productId: string;
+    value: number | null | undefined;
+    onSaved: (v: number) => void;
+}) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(String(value ?? 0));
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setDraft(String(value ?? 0));
+    }, [value]);
+
+    async function save() {
+        const nextValue = Number(draft || 0);
+        if (!Number.isFinite(nextValue) || nextValue < 0) {
+            alert("Giá bán không hợp lệ");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const res = await fetch(`/api/admin/products/${productId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ price: nextValue }),
+            });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                throw new Error(data?.error || "Cập nhật giá thất bại");
+            }
+
+            onSaved(nextValue);
+            setEditing(false);
+        } catch (e: any) {
+            alert(e?.message || "Cập nhật giá thất bại");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    if (editing) {
+        return (
+            <div className="flex items-center justify-end gap-2">
+                <input
+                    type="number"
+                    min={0}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className="w-28 rounded border px-2 py-1 text-right"
+                />
+                <button
+                    type="button"
+                    onClick={save}
+                    disabled={saving}
+                    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                    {saving ? "..." : "Lưu"}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setEditing(false);
+                        setDraft(String(value ?? 0));
+                    }}
+                    disabled={saving}
+                    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                    Hủy
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="group inline-flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
+            title="Chỉnh nhanh giá bán"
+        >
+            <span className="font-semibold">{fmtMoney(value)}</span>
+            <span className="text-xs text-gray-400 opacity-0 transition group-hover:opacity-100">sửa</span>
+        </button>
+    );
+}
+
 export default function AdminProductListPageClient(props: PageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
 
-    const items = props.items ?? [];
+    const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
+    useEffect(() => setRows(props.items ?? []), [props.items]);
 
     const currentView: ViewKey = useMemo(() => {
         const v = (sp.get("view") || "all").toLowerCase();
@@ -98,7 +208,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     const isStrapCatalog = currentCatalog === "strap";
 
-    function setView(view: ViewKey) {
+    function setView(view: string) {
         const next = new URLSearchParams(sp.toString());
         if (view === "all") next.delete("view");
         else next.set("view", view);
@@ -108,10 +218,8 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     function setCatalog(catalog: CatalogKey) {
         const next = new URLSearchParams(sp.toString());
-
         if (catalog === "product") next.delete("catalog");
         else next.set("catalog", "strap");
-
         next.delete("type");
         next.set("page", "1");
         router.push(`${pathname}?${next.toString()}`);
@@ -140,11 +248,9 @@ export default function AdminProductListPageClient(props: PageProps) {
         setShowBulkBar(selectedIds.length > 0);
     }, [selectedIds.length]);
 
-    const displayItems = items;
-
     const counts: Counts = useMemo(() => {
         const server = props.counts;
-        if (server && Object.values(server).some((v) => Number(v ?? 0) > 0)) {
+        if (server && Object.values(server).some((v) => Number(v ?? 0) >= 0)) {
             return {
                 all: Number(server.all ?? 0),
                 draft: Number(server.draft ?? 0),
@@ -166,8 +272,8 @@ export default function AdminProductListPageClient(props: PageProps) {
     }, [props.counts, props.total, currentView]);
 
     const selectableIds = useMemo(
-        () => displayItems.filter((p) => hasValidPrice(p) && hasValidImage(p)).map((x) => x.id),
-        [displayItems]
+        () => rows.filter((p) => hasValidPrice(p) && hasValidImage(p)).map((x) => x.id),
+        [rows]
     );
 
     const allChecked =
@@ -202,8 +308,15 @@ export default function AdminProductListPageClient(props: PageProps) {
     }) {
         const next = new URLSearchParams(sp.toString());
         setParam(next, "q", form.q.trim() || null);
-        setParam(next, "type", form.type || null);
-        setParam(next, "brandId", form.brandId || null);
+
+        if (!isStrapCatalog) {
+            setParam(next, "type", form.type || null);
+            setParam(next, "brandId", form.brandId || null);
+        } else {
+            next.delete("type");
+            next.delete("brandId");
+        }
+
         setParam(next, "hasImages", form.hasImages || null);
         setParam(next, "sort", form.sort || "updatedDesc");
         next.set("page", "1");
@@ -263,6 +376,27 @@ export default function AdminProductListPageClient(props: PageProps) {
         }
     }
 
+    function patchLocalPrice(id: string, price: number) {
+        setRows((prev) =>
+            prev.map((row) => (row.id === id ? { ...row, minPrice: price } : row))
+        );
+    }
+
+    const segmentTabs = isStrapCatalog
+        ? [
+            { key: "all", label: "Tất cả", count: counts.all },
+            { key: "draft", label: "Chờ duyệt", count: counts.draft },
+            { key: "posted", label: "Đã post", count: counts.posted },
+        ]
+        : [
+            { key: "all", label: "Tất cả", count: counts.all },
+            { key: "draft", label: "Chờ duyệt", count: counts.draft },
+            { key: "posted", label: "Đã post", count: counts.posted },
+            { key: "in_service", label: "Chờ service", count: counts.in_service },
+            { key: "hold", label: "Ký gửi / Giữ hàng", count: counts.hold },
+            { key: "sold", label: "Đã bán", count: counts.sold },
+        ];
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
@@ -270,26 +404,16 @@ export default function AdminProductListPageClient(props: PageProps) {
                     <div className="inline-flex rounded-lg border bg-white p-1">
                         <button
                             type="button"
-                            onClick={() => {
-                                const next = new URLSearchParams(sp.toString());
-                                next.delete("catalog");
-                                next.set("page", "1");
-                                router.push(`${pathname}?${next.toString()}`);
-                            }}
+                            onClick={() => setCatalog("product")}
                             className={`rounded-md px-3 py-1.5 text-sm ${!isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
                                 }`}
                         >
                             Sản phẩm
                         </button>
+
                         <button
                             type="button"
-                            onClick={() => {
-                                const next = new URLSearchParams(sp.toString());
-                                next.set("catalog", "strap");
-                                next.delete("type");
-                                next.set("page", "1");
-                                router.push(`${pathname}?${next.toString()}`);
-                            }}
+                            onClick={() => setCatalog("strap")}
                             className={`rounded-md px-3 py-1.5 text-sm ${isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"
                                 }`}
                         >
@@ -312,15 +436,8 @@ export default function AdminProductListPageClient(props: PageProps) {
 
             <SegmentTabs
                 active={currentView}
-                onChange={(v) => setView(v as ViewKey)}
-                tabs={[
-                    { key: "all", label: "Tất cả", count: counts.all },
-                    { key: "draft", label: "Chờ duyệt", count: counts.draft },
-                    { key: "posted", label: "Đã post", count: counts.posted },
-                    { key: "in_service", label: "Chờ service", count: counts.in_service },
-                    { key: "hold", label: "Ký gửi / Giữ hàng", count: counts.hold },
-                    { key: "sold", label: "Đã bán", count: counts.sold },
-                ]}
+                onChange={(v) => setView(v as string)}
+                tabs={segmentTabs as any}
             />
 
             <form
@@ -336,7 +453,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                     });
                 }}
             >
-                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
+                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-3" : "lg:grid-cols-5"}`}>
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
                         <input
@@ -348,38 +465,40 @@ export default function AdminProductListPageClient(props: PageProps) {
                     </div>
 
                     {!isStrapCatalog && (
-                        <div>
-                            <div className="text-xs text-gray-500 mb-1">Type</div>
-                            <select
-                                value={formType}
-                                onChange={(e) => setFormType(e.target.value)}
-                                className="w-full border rounded-lg px-3 py-2 text-sm"
-                            >
-                                <option value="">(All)</option>
-                                {props.productTypes.map((x) => (
-                                    <option key={x.value} value={x.value}>
-                                        {x.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                        <>
+                            <div>
+                                <div className="text-xs text-gray-500 mb-1">Type</div>
+                                <select
+                                    value={formType}
+                                    onChange={(e) => setFormType(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                                >
+                                    <option value="">(All)</option>
+                                    {props.productTypes.map((x) => (
+                                        <option key={x.value} value={x.value}>
+                                            {x.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                    <div>
-                        <div className="text-xs text-gray-500 mb-1">Brand</div>
-                        <select
-                            value={formBrandId}
-                            onChange={(e) => setFormBrandId(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
-                        >
-                            <option value="">(All)</option>
-                            {props.brands.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                    {b.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                            <div>
+                                <div className="text-xs text-gray-500 mb-1">Brand</div>
+                                <select
+                                    value={formBrandId}
+                                    onChange={(e) => setFormBrandId(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                                >
+                                    <option value="">(All)</option>
+                                    {props.brands.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </>
+                    )}
 
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Image</div>
@@ -424,16 +543,18 @@ export default function AdminProductListPageClient(props: PageProps) {
                         Clear
                     </button>
 
-                    <div className="ml-auto text-sm text-gray-600">
-                        Đã chọn: <b>{selectedIds.length}</b>
-                    </div>
+                    {!isStrapCatalog && (
+                        <div className="ml-auto text-sm text-gray-600">
+                            Đã chọn: <b>{selectedIds.length}</b>
+                        </div>
+                    )}
                 </div>
             </form>
 
-            {showBulkBar && (
+            {!isStrapCatalog && showBulkBar && (
                 <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">
-                        {selectedIds.length} {isStrapCatalog ? "dây" : "product"} đã chọn
+                        {selectedIds.length} product đã chọn
                     </span>
 
                     <button
@@ -457,15 +578,13 @@ export default function AdminProductListPageClient(props: PageProps) {
                 </div>
             )}
 
-            {showBulkConfirm && (
+            {!isStrapCatalog && showBulkConfirm && (
                 <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
                     <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
-                        <h3 className="font-semibold text-lg">
-                            {isStrapCatalog ? "Post dây" : "Post products"}
-                        </h3>
+                        <h3 className="font-semibold text-lg">Post products</h3>
 
                         <div className="text-sm text-gray-600">
-                            Bạn đang post <b>{selectedIds.length}</b> {isStrapCatalog ? "dây" : "sản phẩm"}.
+                            Bạn đang post <b>{selectedIds.length}</b> sản phẩm.
                         </div>
 
                         <div className="flex justify-end gap-2 pt-3">
@@ -505,9 +624,9 @@ export default function AdminProductListPageClient(props: PageProps) {
 
             <div className="border rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                            {isStrapCatalog ? (
+                    {isStrapCatalog ? (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
                                 <tr className="text-left text-gray-700">
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên dây</th>
@@ -519,9 +638,67 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3 text-right">Hành động</th>
                                 </tr>
-                            ) : (
-                                // giữ bảng cũ của bạn
+                            </thead>
 
+                            <tbody>
+                                {rows.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                            Không có dây nào trong tab này
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    rows.map((p) => (
+                                        <tr key={p.id} className="border-t">
+                                            <td className="px-4 py-3 align-middle">
+                                                <InlineImagePicker
+                                                    imageUrl={p.primaryImageUrl ?? null}
+                                                    onPick={(fileKey) => updateProductImage(p.id, fileKey)}
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-4 align-top">
+                                                <div className="font-medium text-sm">{p.title || "-"}</div>
+                                            </td>
+
+                                            <td className="px-3 py-4 align-top">
+                                                <StrapSpecText p={p} />
+                                            </td>
+
+                                            <td className="px-3 py-4 text-right font-semibold">
+                                                {Number(p.stockQty ?? 0)}
+                                            </td>
+
+                                            <td className="px-3 py-4 text-right">
+                                                {fmtMoney(p.purchasePrice)}
+                                            </td>
+
+                                            <td className="px-3 py-4 text-right">
+                                                <InlinePriceEditor
+                                                    productId={p.id}
+                                                    value={p.minPrice}
+                                                    onSaved={(v) => patchLocalPrice(p.id, v)}
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-4 align-top">{p.vendorName || "-"}</td>
+
+                                            <td className="px-3 py-4 align-top">{fmtDT(p.updatedAt)}</td>
+
+                                            <td className="px-3 py-4 align-top text-right">
+                                                <RowActionsMenu
+                                                    onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
+                                                    onDelete={() => handleDelete(p.id)}
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
                                 <tr className="text-left text-gray-700">
                                     <th className="w-10 px-3 py-3">
                                         <input
@@ -546,77 +723,24 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên</th>
-                                    <th className="px-3 py-3">{isStrapCatalog ? "Chất liệu" : "Vendor"}</th>
+                                    <th className="px-3 py-3">Vendor</th>
                                     <th className="px-3 py-3">Giá bán</th>
                                     <th className="px-3 py-3">Trạng thái</th>
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3">Tạo lúc</th>
                                     <th className="px-3 py-3 text-right">Hành động</th>
                                 </tr>
+                            </thead>
 
-                            )}
-                        </thead>
-
-                        <tbody>
-                            {isStrapCatalog ? (
-                                displayItems.map((p: any) => (
-                                    <tr key={p.id} className="border-t">
-                                        <td className="px-4 py-3 align-middle">
-                                            <InlineImagePicker
-                                                imageUrl={p.primaryImageUrl ?? null}
-                                                onPick={(fileKey) => updateProductImage(p.id, fileKey)}
-                                            />
-                                        </td>
-
-                                        <td className="px-3 py-4 align-top">
-                                            <div className="font-medium text-sm">{p.title || "-"}</div>
-                                        </td>
-
-                                        <td className="px-3 py-4 align-top">
-                                            <div className="text-sm">
-                                                {(p.strapSpec?.material || "-")} / {p.strapSpec?.widthMM || "-"}mm /{" "}
-                                                {p.strapSpec?.lengthLabel || "-"} / {p.strapSpec?.color || "-"} /{" "}
-                                                {p.strapSpec?.quickRelease ? "QR" : "No QR"}
-                                            </div>
-                                        </td>
-
-                                        <td className="px-3 py-4 text-right font-semibold">
-                                            {Number(p.stockQty ?? 0)}
-                                        </td>
-
-                                        <td className="px-3 py-4 text-right">
-                                            {fmtMoney(p.purchasePrice)}
-                                        </td>
-
-                                        <td className="px-3 py-4 text-right">
-                                            {fmtMoney(p.minPrice)}
-                                        </td>
-
-                                        <td className="px-3 py-4 align-top">{p.vendorName || "-"}</td>
-
-                                        <td className="px-3 py-4 align-top">{fmtDT(p.updatedAt)}</td>
-
-                                        <td className="px-3 py-4 align-top text-right">
-                                            <RowActionsMenu
-                                                onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
-                                                onDelete={() => handleDelete(p.id)}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                // giữ body cũ
-
-                                displayItems.length === 0 ? (
+                            <tbody>
+                                {rows.length === 0 ? (
                                     <tr>
                                         <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
-                                            {isStrapCatalog
-                                                ? "Không có dây nào trong tab này"
-                                                : "Không có dữ liệu trong tab này"}
+                                            Không có dữ liệu trong tab này
                                         </td>
                                     </tr>
                                 ) : (
-                                    displayItems.map((p) => {
+                                    rows.map((p) => {
                                         const checked = selectedIds.includes(p.id);
 
                                         return (
@@ -653,9 +777,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     <div className="font-medium text-sm">{p.title || "-"}</div>
 
                                                     <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
-                                                        {isStrapCatalog
-                                                            ? `${(p.brand || "-").toLowerCase()} · ${(p.material || "-").toLowerCase()}`
-                                                            : `${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
+                                                        {(p.brand || "-").toLowerCase()} · {(p.type || "-").toLowerCase()}
                                                     </div>
 
                                                     <div className="mt-1 flex flex-wrap gap-2">
@@ -671,13 +793,15 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 </td>
 
                                                 <td className="px-3 py-4 align-top">
-                                                    {isStrapCatalog ? p.material || "-" : p.vendorName || "-"}
+                                                    {p.vendorName || "-"}
                                                 </td>
 
                                                 <td className="px-3 py-4 align-top">
-                                                    <div className="font-semibold text-base">
-                                                        {fmtMoney(p.minPrice)}
-                                                    </div>
+                                                    <InlinePriceEditor
+                                                        productId={p.id}
+                                                        value={p.minPrice}
+                                                        onSaved={(v) => patchLocalPrice(p.id, v)}
+                                                    />
                                                 </td>
 
                                                 <td className="px-3 py-4 align-top">
@@ -696,25 +820,19 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     <RowActionsMenu
                                                         onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
                                                         onDelete={() => handleDelete(p.id)}
-                                                        onService={
-                                                            isStrapCatalog
-                                                                ? undefined
-                                                                : () => {
-                                                                    setServiceProductId(p.id);
-                                                                    setOpenService(true);
-                                                                }
-                                                        }
+                                                        onService={() => {
+                                                            setServiceProductId(p.id);
+                                                            setOpenService(true);
+                                                        }}
                                                     />
                                                 </td>
                                             </tr>
                                         );
                                     })
-                                )
-
-                            )}
-
-                        </tbody>
-                    </table>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
