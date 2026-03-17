@@ -251,7 +251,22 @@ export async function postAcquisition(acqId: string, vendorName: string) {
         const items = acq.acquisitionItem ?? [];
 
         for (const item of items) {
-            if (item.productId) continue;
+            if (item.productId) {
+                if (!item.variantId) {
+                    const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
+                        tx,
+                        item.productId
+                    );
+
+                    if (resolvedVariantId) {
+                        await tx.acquisitionItem.update({
+                            where: { id: item.id },
+                            data: { variantId: resolvedVariantId },
+                        });
+                    }
+                }
+                continue;
+            }
 
             if (item.productType === "WATCH_STRAP") {
                 const strapSpec = parseStrapSpecFromDescription(item.description);

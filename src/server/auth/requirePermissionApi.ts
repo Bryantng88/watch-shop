@@ -11,6 +11,14 @@ export async function requirePermissionApi(code: string) {
         );
     }
 
+    const isAdmin =
+        Array.isArray(user.roles) &&
+        user.roles.includes("ADMIN");
+
+    if (isAdmin) {
+        return user;
+    }
+
     if (!user.permissions.includes(code)) {
         return NextResponse.json(
             { message: "Forbidden" },

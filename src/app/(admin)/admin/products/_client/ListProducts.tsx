@@ -12,7 +12,6 @@ import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
-type StrapViewKey = "all" | "draft" | "posted";
 type CatalogKey = "product" | "strap";
 
 type Counts = {
@@ -41,17 +40,16 @@ type ProductRow = ProductListItem & {
     status?: string | null;
     title?: string | null;
     minPrice?: number | null;
-    effectivePrice?: number | null;
-    listPrice?: number | null;
     purchasePrice?: number | null;
-    discountType?: "PERCENT" | "AMOUNT" | null;
-    discountValue?: number | null;
     salePrice?: number | null;
-    saleStartsAt?: string | null;
-    saleEndsAt?: string | null;
-    discountPercent?: number | null;
-    categoryId?: string | null;
-    categoryName?: string | null;
+    stockQty?: number | null;
+    strapSpec?: {
+        lugWidthMM?: number | null;
+        buckleWidthMM?: number | null;
+        color?: string | null;
+        material?: string | null;
+        quickRelease?: boolean | null;
+    } | null;
 };
 
 type PageProps = {
@@ -63,7 +61,7 @@ type PageProps = {
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
     brands: BrandLite[];
-    categories: Array<{ id: string; name: string; code: string; scope: string }>;
+    categories?: Array<{ id: string; name: string; code: string; scope: string }>;
     productTypes: Array<{ label: string; value: string }>;
     canViewCost: boolean;
     canEditPrice: boolean;
@@ -103,48 +101,56 @@ function StrapSpecText({ p }: { p: ProductRow }) {
     );
 }
 
-function InlinePriceEditor({
+function InlineMoneyEditor({
     productId,
+    field,
     value,
+    label,
     onSaved,
 }: {
     productId: string;
+    field: "minPrice" | "salePrice";
     value: number | null | undefined;
-    onSaved: (v: number) => void;
+    label: string;
+    onSaved: (v: number | null) => void;
 }) {
     const [editing, setEditing] = useState(false);
-    const [draft, setDraft] = useState(String(value ?? 0));
+    const [draft, setDraft] = useState(value == null ? "" : String(value));
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        setDraft(String(value ?? 0));
+        setDraft(value == null ? "" : String(value));
     }, [value]);
 
     async function save() {
-        const nextValue = Number(draft || 0);
-        if (!Number.isFinite(nextValue) || nextValue < 0) {
-            alert("Giá bán không hợp lệ");
+        const trimmed = draft.trim();
+        const nextValue = trimmed === "" ? null : Number(trimmed);
+
+        if (nextValue != null && (!Number.isFinite(nextValue) || nextValue < 0)) {
+            alert(`${label} không hợp lệ`);
             return;
         }
 
         try {
             setSaving(true);
+
             const res = await fetch(`/api/admin/products/${productId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ price: nextValue }),
+                body: JSON.stringify({
+                    [field]: nextValue,
+                }),
             });
 
             const data = await res.json().catch(() => null);
-
             if (!res.ok) {
-                throw new Error(data?.error || "Cập nhật giá thất bại");
+                throw new Error(data?.error || `Cập nhật ${label.toLowerCase()} thất bại`);
             }
 
             onSaved(nextValue);
             setEditing(false);
         } catch (e: any) {
-            alert(e?.message || "Cập nhật giá thất bại");
+            alert(e?.message || `Cập nhật ${label.toLowerCase()} thất bại`);
         } finally {
             setSaving(false);
         }
@@ -159,6 +165,7 @@ function InlinePriceEditor({
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     className="w-28 rounded border px-2 py-1 text-right"
+                    placeholder="Để trống = bỏ"
                 />
                 <button
                     type="button"
@@ -172,7 +179,7 @@ function InlinePriceEditor({
                     type="button"
                     onClick={() => {
                         setEditing(false);
-                        setDraft(String(value ?? 0));
+                        setDraft(value == null ? "" : String(value));
                     }}
                     disabled={saving}
                     className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
@@ -187,11 +194,15 @@ function InlinePriceEditor({
         <button
             type="button"
             onClick={() => setEditing(true)}
-            className="group inline-flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-50"
-            title="Chỉnh nhanh giá bán"
+            className="group inline-flex items-center justify-end gap-2 rounded px-2 py-1 hover:bg-gray-50"
+            title={`Chỉnh nhanh ${label.toLowerCase()}`}
         >
-            <span className="font-semibold">{fmtMoney(value)}</span>
-            <span className="text-xs text-gray-400 opacity-0 transition group-hover:opacity-100">sửa</span>
+            <span className={field === "salePrice" ? "text-emerald-700 font-medium" : "font-semibold"}>
+                {fmtMoney(value)}
+            </span>
+            <span className="text-xs text-gray-400 opacity-0 transition group-hover:opacity-100">
+                sửa
+            </span>
         </button>
     );
 }
@@ -245,6 +256,9 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+    const [showBulkSaleModal, setShowBulkSaleModal] = useState(false);
+    const [bulkSaleValue, setBulkSaleValue] = useState("");
+    const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
 
     const [openService, setOpenService] = useState(false);
     const [serviceProductId, setServiceProductId] = useState<string | null>(null);
@@ -253,6 +267,8 @@ export default function AdminProductListPageClient(props: PageProps) {
         setSelectedIds([]);
         setShowBulkBar(false);
         setShowBulkConfirm(false);
+        setShowBulkSaleModal(false);
+        setBulkSaleValue("");
     }, [currentCatalog, currentView, q, type, brandId, hasImages, sort, props.page]);
 
     useEffect(() => {
@@ -282,10 +298,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         };
     }, [props.counts, props.total, currentView]);
 
-    const selectableIds = useMemo(
-        () => rows.filter((p) => hasValidPrice(p) && hasValidImage(p)).map((x) => x.id),
-        [rows]
-    );
+    const selectableIds = useMemo(() => rows.map((x) => x.id), [rows]);
 
     const allChecked =
         selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
@@ -387,10 +400,60 @@ export default function AdminProductListPageClient(props: PageProps) {
         }
     }
 
-    function patchLocalPrice(id: string, price: number) {
+    function patchLocalPrice(id: string, price: number | null) {
         setRows((prev) =>
             prev.map((row) => (row.id === id ? { ...row, minPrice: price } : row))
         );
+    }
+
+    function patchLocalSalePrice(id: string, salePrice: number | null) {
+        setRows((prev) =>
+            prev.map((row) => (row.id === id ? { ...row, salePrice } : row))
+        );
+    }
+
+    async function applyBulkSale() {
+        const trimmed = bulkSaleValue.trim();
+        const nextSalePrice = trimmed === "" ? null : Number(trimmed);
+
+        if (nextSalePrice != null && (!Number.isFinite(nextSalePrice) || nextSalePrice < 0)) {
+            alert("Giá sale không hợp lệ");
+            return;
+        }
+
+        try {
+            setBulkSaleSaving(true);
+
+            const res = await fetch("/api/admin/products/bulk-sale", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productIds: selectedIds,
+                    salePrice: nextSalePrice,
+                }),
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || "Bulk sale thất bại");
+            }
+
+            setRows((prev) =>
+                prev.map((row) =>
+                    selectedIds.includes(row.id)
+                        ? { ...row, salePrice: nextSalePrice }
+                        : row
+                )
+            );
+
+            setShowBulkSaleModal(false);
+            setBulkSaleValue("");
+            router.refresh();
+        } catch (e: any) {
+            alert(e?.message || "Bulk sale thất bại");
+        } finally {
+            setBulkSaleSaving(false);
+        }
     }
 
     const segmentTabs = isStrapCatalog
@@ -578,6 +641,14 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                     <button
                         className="px-3 py-1 border rounded text-sm"
+                        onClick={() => setShowBulkSaleModal(true)}
+                        type="button"
+                    >
+                        Bulk sale
+                    </button>
+
+                    <button
+                        className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
                             setSelectedIds([]);
                             setShowBulkBar(false);
@@ -633,6 +704,56 @@ export default function AdminProductListPageClient(props: PageProps) {
                 </div>
             )}
 
+            {!isStrapCatalog && showBulkSaleModal && (
+                <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+                    <div className="bg-white rounded-lg w-[420px] p-5 space-y-4">
+                        <h3 className="font-semibold text-lg">Bulk sale</h3>
+
+                        <div className="text-sm text-gray-600">
+                            Áp dụng giá sale cho <b>{selectedIds.length}</b> sản phẩm.
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium">Giá sale</div>
+                            <input
+                                type="number"
+                                min={0}
+                                value={bulkSaleValue}
+                                onChange={(e) => setBulkSaleValue(e.target.value)}
+                                className="w-full rounded border px-3 py-2"
+                                placeholder="Để trống để xóa sale"
+                            />
+                            <div className="text-xs text-gray-500">
+                                Nhập giá sale cố định. Để trống để bỏ sale hàng loạt.
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3">
+                            <button
+                                className="px-3 py-1 border rounded"
+                                onClick={() => {
+                                    setShowBulkSaleModal(false);
+                                    setBulkSaleValue("");
+                                }}
+                                type="button"
+                                disabled={bulkSaleSaving}
+                            >
+                                Hủy
+                            </button>
+
+                            <button
+                                className="px-3 py-1 bg-blue-600 text-white rounded"
+                                onClick={applyBulkSale}
+                                type="button"
+                                disabled={bulkSaleSaving}
+                            >
+                                {bulkSaleSaving ? "Đang lưu..." : "Xác nhận"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="border rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     {isStrapCatalog ? (
@@ -660,43 +781,49 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     </tr>
                                 ) : (
                                     rows.map((p) => (
-                                        <tr key={p.id} className="border-t">
-                                            <td className="px-4 py-3 align-middle">
+                                        <tr key={p.id} className="border-t [&>td]:align-middle">
+                                            <td className="px-4 py-5">
                                                 <InlineImagePicker
                                                     imageUrl={p.primaryImageUrl ?? null}
                                                     onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                 />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-5">
                                                 <div className="font-medium text-sm">{p.title || "-"}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="px-3 py-5">
                                                 <StrapSpecText p={p} />
                                             </td>
 
-                                            <td className="px-3 py-4 text-right font-semibold">
+                                            <td className="px-3 py-5 text-right font-semibold">
                                                 {Number(p.stockQty ?? 0)}
                                             </td>
 
-                                            <td className="px-3 py-4 text-right">
+                                            <td className="px-3 py-5 text-right">
                                                 {fmtMoney(p.purchasePrice)}
                                             </td>
 
-                                            <td className="px-3 py-4 text-right">
-                                                <InlinePriceEditor
-                                                    productId={p.id}
-                                                    value={p.minPrice}
-                                                    onSaved={(v) => patchLocalPrice(p.id, v)}
-                                                />
+                                            <td className="px-3 py-5 text-right">
+                                                {props.canEditPrice ? (
+                                                    <InlineMoneyEditor
+                                                        productId={p.id}
+                                                        field="minPrice"
+                                                        value={p.minPrice}
+                                                        label="Giá bán"
+                                                        onSaved={(v) => patchLocalPrice(p.id, v)}
+                                                    />
+                                                ) : (
+                                                    <div className="font-semibold">{fmtMoney(p.minPrice)}</div>
+                                                )}
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">{p.vendorName || "-"}</td>
+                                            <td className="px-3 py-5">{p.vendorName || "-"}</td>
 
-                                            <td className="px-3 py-4 align-top">{fmtDT(p.updatedAt)}</td>
+                                            <td className="px-3 py-5">{fmtDT(p.updatedAt)}</td>
 
-                                            <td className="px-3 py-4 align-top text-right">
+                                            <td className="px-3 py-5 text-right">
                                                 <RowActionsMenu
                                                     onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
                                                     onDelete={() => handleDelete(p.id)}
@@ -724,9 +851,8 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     setSelectedIds(merged);
                                                     setShowBulkBar(merged.length > 0);
                                                 } else {
-                                                    const next = selectedIds.filter((id) => !selectableIds.includes(id));
-                                                    setSelectedIds(next);
-                                                    setShowBulkBar(next.length > 0);
+                                                    setSelectedIds([]);
+                                                    setShowBulkBar(false);
                                                 }
                                             }}
                                         />
@@ -735,10 +861,9 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên</th>
                                     <th className="px-3 py-3">Vendor</th>
-                                    <th className="px-3 py-3 text-right">Giá niêm yết</th>
-                                    <th className="px-3 py-3 text-right">Sale</th>
                                     <th className="px-3 py-3 text-right">Giá bán</th>
-                                    {props.canViewCost ? <th className="px-3 py-3 text-right">Giá mua</th> : null}
+                                    <th className="px-3 py-3 text-right">Sale</th>
+                                    {props.canViewCost && <th className="px-3 py-3 text-right">Giá mua</th>}
                                     <th className="px-3 py-3">Trạng thái</th>
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3">Tạo lúc</th>
@@ -749,7 +874,10 @@ export default function AdminProductListPageClient(props: PageProps) {
                             <tbody>
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                        <td
+                                            colSpan={props.canViewCost ? 11 : 10}
+                                            className="px-3 py-10 text-center text-gray-500"
+                                        >
                                             Không có dữ liệu trong tab này
                                         </td>
                                     </tr>
@@ -758,27 +886,22 @@ export default function AdminProductListPageClient(props: PageProps) {
                                         const checked = selectedIds.includes(p.id);
 
                                         return (
-                                            <tr key={p.id} className="border-t">
-                                                <td className="px-3 py-4 align-top">
+                                            <tr key={p.id} className="border-t [&>td]:align-middle">
+                                                <td className="px-3 py-5">
                                                     <input
                                                         type="checkbox"
                                                         checked={checked}
-                                                        disabled={!hasValidPrice(p) || !hasValidImage(p)}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
-                                                                setSelectedIds((prev) =>
-                                                                    Array.from(new Set([...prev, p.id]))
-                                                                );
+                                                                setSelectedIds((prev) => Array.from(new Set([...prev, p.id])));
                                                             } else {
-                                                                setSelectedIds((prev) =>
-                                                                    prev.filter((id) => id !== p.id)
-                                                                );
+                                                                setSelectedIds((prev) => prev.filter((id) => id !== p.id));
                                                             }
                                                         }}
                                                     />
                                                 </td>
 
-                                                <td className="px-4 py-3 align-middle">
+                                                <td className="px-4 py-5">
                                                     <div className="scale-110 origin-left">
                                                         <InlineImagePicker
                                                             imageUrl={p.primaryImageUrl ?? null}
@@ -787,74 +910,78 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     </div>
                                                 </td>
 
-                                                <td className="px-3 py-4 align-top">
-                                                    <div className="font-medium text-sm">{p.title || "-"}</div>
+                                                <td className="px-3 py-5">
+                                                    <div className="space-y-1">
+                                                        <div className="font-medium text-sm leading-5">{p.title || "-"}</div>
 
-                                                    <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
-                                                        {(p.brand || "-").toLowerCase()} · {(p.type || "-").toLowerCase()}
+                                                        <div className="text-[11px] text-gray-400 uppercase tracking-wide">
+                                                            {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
+                                                        </div>
+
+                                                        <div className="flex flex-wrap gap-2 pt-1">
+                                                            <DotLabel
+                                                                label={p.primaryImageUrl ? "Hiển thị ảnh" : "Thiếu ảnh"}
+                                                                tone={p.primaryImageUrl ? "green" : "orange"}
+                                                            />
+                                                            <DotLabel
+                                                                label={hasValidPrice(p) ? "Hiển thị giá" : "Thiếu giá"}
+                                                                tone={hasValidPrice(p) ? "green" : "orange"}
+                                                            />
+                                                        </div>
                                                     </div>
+                                                </td>
 
-                                                    <div className="mt-1 flex flex-wrap gap-2">
-                                                        <DotLabel
-                                                            label={p.primaryImageUrl ? "Hiển thị ảnh" : "Thiếu ảnh"}
-                                                            tone={p.primaryImageUrl ? "green" : "orange"}
+                                                <td className="px-3 py-5 whitespace-nowrap">{p.vendorName || "-"}</td>
+
+                                                <td className="px-3 py-5 text-right">
+                                                    {props.canEditPrice ? (
+                                                        <InlineMoneyEditor
+                                                            productId={p.id}
+                                                            field="minPrice"
+                                                            value={p.minPrice}
+                                                            label="Giá bán"
+                                                            onSaved={(v) => patchLocalPrice(p.id, v)}
                                                         />
-                                                        <DotLabel
-                                                            label={hasValidPrice(p) ? "Hiển thị giá" : "Thiếu giá"}
-                                                            tone={hasValidPrice(p) ? "green" : "orange"}
+                                                    ) : (
+                                                        <div className="font-semibold text-base">{fmtMoney(p.minPrice)}</div>
+                                                    )}
+                                                </td>
+
+                                                <td className="px-3 py-5 text-right">
+                                                    {props.canEditPrice ? (
+                                                        <InlineMoneyEditor
+                                                            productId={p.id}
+                                                            field="salePrice"
+                                                            value={p.salePrice}
+                                                            label="Giá sale"
+                                                            onSaved={(v) => patchLocalSalePrice(p.id, v)}
                                                         />
-                                                    </div>
+                                                    ) : (
+                                                        <div className="text-sm text-emerald-700">
+                                                            {p.salePrice != null ? fmtMoney(p.salePrice) : "-"}
+                                                        </div>
+                                                    )}
                                                 </td>
 
-                                                <td className="px-3 py-4 align-top">
-                                                    {p.vendorName || "-"}
-                                                </td>
-                                                <td className="px-3 py-4 align-top text-right">
-                                                    <div className="font-medium">{fmtMoney(p.listPrice)}</div>
-                                                </td>
-
-                                                <td className="px-3 py-4 align-top text-right">
-                                                    <div className="text-sm text-emerald-700">
-                                                        {p.discountType === "PERCENT"
-                                                            ? `${Number(p.discountValue ?? 0)}%`
-                                                            : p.discountType === "AMOUNT"
-                                                                ? fmtMoney(p.discountValue)
-                                                                : p.salePrice != null
-                                                                    ? fmtMoney(p.salePrice)
-                                                                    : "-"}
-                                                    </div>
-                                                </td>
-
-                                                <td className="px-3 py-4 align-top text-right">
-                                                    <div className="font-semibold text-base">{fmtMoney(p.effectivePrice ?? p.minPrice)}</div>
-                                                </td>
-
-                                                {props.canViewCost ? (
-                                                    <td className="px-3 py-4 align-top text-right">
+                                                {props.canViewCost && (
+                                                    <td className="px-3 py-5 text-right">
                                                         <div className="text-sm">{fmtMoney(p.purchasePrice)}</div>
                                                     </td>
-                                                ) : null}
-                                                <td className="px-3 py-4 align-top">
-                                                    <InlinePriceEditor
-                                                        productId={p.id}
-                                                        value={p.minPrice}
-                                                        onSaved={(v) => patchLocalPrice(p.id, v)}
-                                                    />
-                                                </td>
+                                                )}
 
-                                                <td className="px-3 py-4 align-top">
+                                                <td className="px-3 py-5 whitespace-nowrap">
                                                     <StatusBadge status={p.status} />
                                                 </td>
 
-                                                <td className="px-3 py-4 align-top">
-                                                    <div className="text-sm">{fmtDT(p.updatedAt)}</div>
+                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                    <div className="text-sm leading-5">{fmtDT(p.updatedAt)}</div>
                                                 </td>
 
-                                                <td className="px-3 py-4 align-top">
-                                                    <div className="text-sm">{fmtDT(p.createdAt)}</div>
+                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                    <div className="text-sm leading-5">{fmtDT(p.createdAt)}</div>
                                                 </td>
 
-                                                <td className="px-3 py-4 align-top text-right">
+                                                <td className="px-3 py-5 text-right">
                                                     <RowActionsMenu
                                                         onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
                                                         onDelete={() => handleDelete(p.id)}

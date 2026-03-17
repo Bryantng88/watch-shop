@@ -64,10 +64,13 @@ export type CreateAcquisitionInput = {
         quantity: number;
         unitCost: number;
         productType?: ProductType;
+        productId?: string | null;
+        variantId?: string | null;
         strapSpec?: StrapSpecInput;
     }[];
     quickVendorName: string;
 };
+
 
 export type CreateAcqDTO = {
     vendorId: string;
@@ -85,6 +88,8 @@ export const ItemDTO = z.object({
     quantity: z.number().nonnegative(),
     unitPrice: z.number().nonnegative(),
     productType: z.nativeEnum(ProductType).optional(),
+    productId: z.string().nullable().optional(),
+    variantId: z.string().nullable().optional(),
     strapSpec: z
         .object({
             material: z.string().optional(),

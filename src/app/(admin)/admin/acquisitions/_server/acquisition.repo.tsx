@@ -31,7 +31,21 @@ export async function createDraft(
         select: { id: true },
     });
 }
+export async function resolveVariantIdForProduct(
+    tx: DB,
+    productId?: string | null
+) {
+    const db = dbOrTx(tx);
+    if (!productId) return null;
 
+    const v = await db.productVariant.findFirst({
+        where: { productId },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+    });
+
+    return v?.id ?? null;
+}
 export async function updateAcquisitionCost(tx: DB, acqId: string, total: number) {
     const db = dbOrTx(tx);
     return db.acquisition.update({
@@ -113,13 +127,21 @@ export async function createAcqItem(
     item: any
 ) {
     const db = dbOrTx(tx);
+
+    const productId = item.productId ?? null;
+    const variantId =
+        item.variantId ??
+        (productId ? await resolveVariantIdForProduct(tx, productId) : null);
+
     return db.acquisitionItem.create({
         data: {
             acquisitionId: acqId,
             productTitle: item.title,
             quantity: item.quantity,
-            unitCost: item.unitCost,
+            unitCost: item.unitCost ?? item.unitPrice ?? 0,
             productType: item.productType ?? ProductType.WATCH,
+            productId,
+            variantId,
             description: item.strapSpec ? JSON.stringify(item.strapSpec) : null,
         },
     });
@@ -133,12 +155,21 @@ export async function findAcqItems(tx: DB, acqId: string) {
 
 export async function updateAcqItem(tx: DB, it: any) {
     const db = dbOrTx(tx);
+
+    const productId = it.productId ?? null;
+    const variantId =
+        it.variantId ??
+        (productId ? await resolveVariantIdForProduct(tx, productId) : null);
+
     return db.acquisitionItem.update({
         where: { id: it.id },
         data: {
             productTitle: it.title,
             quantity: it.quantity,
             unitCost: it.unitPrice,
+            productType: it.productType ?? undefined,
+            productId,
+            variantId,
             description: it.strapSpec ? JSON.stringify(it.strapSpec) : undefined,
         },
     });
