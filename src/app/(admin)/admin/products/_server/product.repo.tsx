@@ -4,6 +4,7 @@ import {
     Prisma,
     AvailabilityStatus,
     ProductStatus,
+    ServiceRequestStatus,
 } from "@prisma/client";
 import type {
     ProductListInput,
@@ -12,6 +13,14 @@ import type {
 } from "../_helper/search-params";
 
 const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 100;
+
+const OPEN_SERVICE_REQUEST_STATUSES = [
+    ServiceRequestStatus.DRAFT,
+    ServiceRequestStatus.DIAGNOSING,
+    ServiceRequestStatus.WAIT_APPROVAL,
+    ServiceRequestStatus.IN_PROGRESS,
+];
 
 type ProductViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 
@@ -159,7 +168,7 @@ export async function listAdminProducts(
         view: (input?.view ?? "all") as ProductViewKey,
         sort: (input?.sort ?? "updatedDesc") as ProductListSort,
         page: Math.max(1, Number(input?.page ?? 1)),
-        pageSize: Math.max(1, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE)),
+        pageSize: Math.max(1, Math.min(MAX_PAGE_SIZE, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE))),
         catalog: input?.catalog ?? "product",
     };
 
@@ -198,7 +207,9 @@ export async function listAdminProducts(
                         take: 1,
                         select: {
                             id: true,
+                            sku: true,
                             stockQty: true,
+                            availabilityStatus: true,
                             price: true,
                             salePrice: true,
                             costPrice: true,
@@ -218,6 +229,23 @@ export async function listAdminProducts(
                                     quickRelease: true,
                                 },
                             },
+                        },
+                    },
+                    watchSpec: {
+                        select: {
+                            model: true,
+                            year: true,
+                            caseType: true,
+                            movement: true,
+                            length: true,
+                            width: true,
+                            thickness: true,
+                            dialColor: true,
+                            strap: true,
+                            glass: true,
+                            boxIncluded: true,
+                            bookletIncluded: true,
+                            cardIncluded: true,
                         },
                     },
                     _count: {
@@ -265,6 +293,14 @@ export async function listAdminProducts(
         vendorName: p.vendor?.name ?? null,
         vendorId: p.vendor?.id ?? null,
         strapSpec: p.variants?.[0]?.strapSpec ?? null,
+        variantSnapshot: p.variants?.[0]
+            ? {
+                sku: p.variants[0].sku ?? null,
+                stockQty: p.variants[0].stockQty ?? null,
+                availabilityStatus: p.variants[0].availabilityStatus ?? null,
+            }
+            : null,
+        watchSpecSnapshot: p.watchSpec ?? null,
         variantsCount: p._count?.variants ?? 0,
         imagesCount: p._count?.image ?? 0,
         ordersCount: p._count?.orderItems ?? 0,
@@ -573,12 +609,33 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         id: true,
         title: true,
         status: true,
+        type: true,
         primaryImageUrl: true,
         variants: {
             orderBy: { updatedAt: "desc" },
             take: 1,
             select: {
+                sku: true,
                 price: true,
+                stockQty: true,
+                availabilityStatus: true,
+            },
+        },
+        watchSpec: {
+            select: {
+                model: true,
+                year: true,
+                caseType: true,
+                movement: true,
+                length: true,
+                width: true,
+                thickness: true,
+                dialColor: true,
+                strap: true,
+                glass: true,
+                boxIncluded: true,
+                bookletIncluded: true,
+                cardIncluded: true,
             },
         },
     },
@@ -598,9 +655,53 @@ export async function getProductsForBulkPost(tx: DB, ids: string[]) {
         id: p.id,
         title: p.title,
         status: p.status,
+        type: p.type,
         primaryImageUrl: p.primaryImageUrl,
         minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
+        variantSnapshot: p.variants?.[0]
+            ? {
+                sku: p.variants[0].sku ?? null,
+                stockQty: p.variants[0].stockQty ?? null,
+                availabilityStatus: p.variants[0].availabilityStatus ?? null,
+            }
+            : null,
+        watchSpecSnapshot: p.watchSpec ?? null,
     }));
+}
+
+export async function getOpenServiceProducts(tx: DB, productIds: string[]) {
+    const db = dbOrTx(tx);
+
+    if (!productIds.length) return [] as Array<{ productId: string; status: ServiceRequestStatus }>;
+
+    return db.serviceRequest.findMany({
+        where: {
+            productId: { in: productIds },
+            status: { in: OPEN_SERVICE_REQUEST_STATUSES },
+        },
+        select: {
+            productId: true,
+            status: true,
+        },
+        distinct: ["productId"],
+    });
+}
+
+export async function listDraftProductIdsForAutoBulkPost(tx: DB) {
+    const db = dbOrTx(tx);
+
+    const rows = await db.product.findMany({
+        where: {
+            status: ProductStatus.DRAFT,
+            NOT: {
+                type: ProductType.WATCH_STRAP,
+            },
+        },
+        select: { id: true },
+        orderBy: { updatedAt: "asc" },
+    });
+
+    return rows.map((row) => row.id);
 }
 
 export async function markPostedMany(tx: DB, ids: string[]) {
@@ -621,10 +722,17 @@ export async function getLatestVariantForAdmin(tx: DB, productId: string) {
         select: {
             id: true,
             productId: true,
+            sku: true,
             price: true,
+            listPrice: true,
+            discountType: true,
+            discountValue: true,
             salePrice: true,
+            saleStartsAt: true,
+            saleEndsAt: true,
             costPrice: true,
             stockQty: true,
+            availabilityStatus: true,
             updatedAt: true,
             createdAt: true,
             acquisitionItem: {
@@ -636,4 +744,238 @@ export async function getLatestVariantForAdmin(tx: DB, productId: string) {
             },
         },
     });
+}
+
+export async function upsertPrimaryVariantForAdmin(
+    tx: DB,
+    productId: string,
+    patch: {
+        id?: string;
+        sku?: string | null;
+        stockQty?: number | null;
+        availabilityStatus?: AvailabilityStatus;
+        price?: number | null;
+        listPrice?: number | null;
+        discountType?: Prisma.ProductVariantUpdateInput["discountType"];
+        discountValue?: number | null;
+        salePrice?: number | null;
+        saleStartsAt?: Date | null;
+        saleEndsAt?: Date | null;
+        costPrice?: number | null;
+    }
+) {
+    const db = dbOrTx(tx);
+
+    const existing = patch.id
+        ? await db.productVariant.findUnique({ where: { id: patch.id }, select: { id: true } })
+        : await db.productVariant.findFirst({
+            where: { productId },
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+            select: { id: true },
+        });
+
+    const data: any = {
+        updatedAt: new Date(),
+        ...(patch.sku !== undefined ? { sku: patch.sku || null } : {}),
+        ...(patch.stockQty !== undefined ? { stockQty: Number(patch.stockQty ?? 0) } : {}),
+        ...(patch.availabilityStatus !== undefined ? { availabilityStatus: patch.availabilityStatus } : {}),
+        ...(patch.price !== undefined ? { price: patch.price } : {}),
+        ...(patch.listPrice !== undefined ? { listPrice: patch.listPrice } : {}),
+        ...(patch.discountType !== undefined ? { discountType: patch.discountType as any } : {}),
+        ...(patch.discountValue !== undefined ? { discountValue: patch.discountValue } : {}),
+        ...(patch.salePrice !== undefined ? { salePrice: patch.salePrice } : {}),
+        ...(patch.saleStartsAt !== undefined ? { saleStartsAt: patch.saleStartsAt } : {}),
+        ...(patch.saleEndsAt !== undefined ? { saleEndsAt: patch.saleEndsAt } : {}),
+        ...(patch.costPrice !== undefined ? { costPrice: patch.costPrice } : {}),
+    };
+
+    if (existing?.id) {
+        return db.productVariant.update({ where: { id: existing.id }, data });
+    }
+
+    return db.productVariant.create({
+        data: {
+            productId,
+            sku: patch.sku ?? null,
+            stockQty: Number(patch.stockQty ?? 0),
+            availabilityStatus: patch.availabilityStatus ?? AvailabilityStatus.ACTIVE,
+            price: patch.price ?? patch.listPrice ?? null,
+            listPrice: patch.listPrice ?? null,
+            discountType: (patch.discountType as any) ?? null,
+            discountValue: patch.discountValue ?? null,
+            salePrice: patch.salePrice ?? null,
+            saleStartsAt: patch.saleStartsAt ?? null,
+            saleEndsAt: patch.saleEndsAt ?? null,
+            costPrice: patch.costPrice ?? null,
+            maxQtyPerOrder: 1,
+        } as any,
+    });
+}
+
+export async function replaceProductImages(
+    tx: DB,
+    productId: string,
+    images: Array<{ fileKey: string; alt?: string | null; sortOrder?: number | null }>
+) {
+    const db = dbOrTx(tx);
+    await db.productImage.deleteMany({ where: { productId } });
+
+    if (images.length) {
+        await db.productImage.createMany({
+            data: images.map((img, index) => ({
+                productId,
+                fileKey: img.fileKey,
+                alt: img.alt ?? null,
+                sortOrder: img.sortOrder ?? index,
+            })),
+        });
+    }
+
+    return db.product.update({
+        where: { id: productId },
+        data: { primaryImageUrl: images[0]?.fileKey ?? null },
+        select: { id: true, primaryImageUrl: true },
+    });
+}
+
+export async function upsertWatchSpecForAdmin(
+    tx: DB,
+    productId: string,
+    payload: {
+        watchSpec?: Record<string, any>;
+        complicationIds?: string[];
+    }
+) {
+    const db = dbOrTx(tx);
+    const raw = payload.watchSpec ?? {};
+
+    const specData: any = {
+        ...(raw.ref !== undefined ? { ref: raw.ref || null } : {}),
+        ...(raw.model !== undefined ? { model: raw.model || null } : {}),
+        ...(raw.year !== undefined ? { year: raw.year || null } : {}),
+        ...(raw.caseType !== undefined ? { caseType: raw.caseType || null } : {}),
+        ...(raw.gender !== undefined ? { gender: raw.gender || null } : {}),
+        ...(raw.movement !== undefined ? { movement: raw.movement || null } : {}),
+        ...(raw.caliber !== undefined ? { caliber: raw.caliber || null } : {}),
+        ...(raw.caseMaterial !== undefined ? { caseMaterial: raw.caseMaterial || "OTHER" } : {}),
+        ...(raw.goldKarat !== undefined ? { goldKarat: raw.goldKarat ?? null } : {}),
+        ...(raw.goldColor !== undefined ? { goldColor: raw.goldColor || null } : {}),
+        ...(raw.caseSize !== undefined ? { caseSize: raw.caseSize || null } : {}),
+        ...(raw.length !== undefined ? { length: raw.length ?? null } : {}),
+        ...(raw.width !== undefined ? { width: raw.width ?? null } : {}),
+        ...(raw.thickness !== undefined ? { thickness: raw.thickness ?? null } : {}),
+        ...(raw.dialColor !== undefined ? { dialColor: raw.dialColor || null } : {}),
+        ...(raw.strap !== undefined ? { strap: raw.strap || null } : {}),
+        ...(raw.glass !== undefined ? { glass: raw.glass || null } : {}),
+        ...(raw.boxIncluded !== undefined ? { boxIncluded: !!raw.boxIncluded } : {}),
+        ...(raw.bookletIncluded !== undefined ? { bookletIncluded: !!raw.bookletIncluded } : {}),
+        ...(raw.cardIncluded !== undefined ? { cardIncluded: !!raw.cardIncluded } : {}),
+    };
+
+    const hasSpecFields = Object.keys(specData).length > 0;
+    const hasComplications = Array.isArray(payload.complicationIds);
+    if (!hasSpecFields && !hasComplications) return null;
+
+    const existing = await db.watchSpec.findUnique({
+        where: { productId },
+        select: { productId: true },
+    });
+
+    if (existing) {
+        return db.watchSpec.update({
+            where: { productId },
+            data: {
+                ...specData,
+                ...(hasComplications
+                    ? { complication: { set: payload.complicationIds!.map((id) => ({ id })) } }
+                    : {}),
+            } as any,
+            select: { productId: true },
+        });
+    }
+
+    return db.watchSpec.create({
+        data: {
+            productId,
+            caseMaterial: specData.caseMaterial ?? "OTHER",
+            boxIncluded: specData.boxIncluded ?? false,
+            bookletIncluded: specData.bookletIncluded ?? false,
+            cardIncluded: specData.cardIncluded ?? false,
+            ...specData,
+            ...(hasComplications
+                ? { complication: { connect: payload.complicationIds!.map((id) => ({ id })) } }
+                : {}),
+        } as any,
+        select: { productId: true },
+    });
+}
+
+export async function getProductServiceHistory(tx: DB, productId: string) {
+    const db = dbOrTx(tx);
+    const rows = await db.serviceRequest.findMany({
+        where: { productId },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+            id: true,
+            refNo: true,
+            status: true,
+            scope: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            vendorNameSnap: true,
+            ServiceCatalog: {
+                select: { id: true, code: true, name: true },
+            },
+            orderItem: {
+                select: {
+                    id: true,
+                    order: { select: { id: true, refNo: true } },
+                },
+            },
+            _count: { select: { maintenance: true } },
+            maintenance: {
+                orderBy: { createdAt: "desc" },
+                take: 3,
+                select: {
+                    id: true,
+                    eventType: true,
+                    vendorName: true,
+                    notes: true,
+                    totalCost: true,
+                    currency: true,
+                    servicedAt: true,
+                    createdAt: true,
+                },
+            },
+        },
+    });
+
+    return rows.map((row: any) => ({
+        id: row.id,
+        refNo: row.refNo ?? null,
+        status: row.status ?? null,
+        scope: row.scope ?? null,
+        notes: row.notes ?? null,
+        createdAt: row.createdAt?.toISOString?.() ?? null,
+        updatedAt: row.updatedAt?.toISOString?.() ?? null,
+        vendorName: row.vendorNameSnap ?? null,
+        serviceCatalog: row.ServiceCatalog
+            ? { id: row.ServiceCatalog.id, code: row.ServiceCatalog.code ?? null, name: row.ServiceCatalog.name }
+            : null,
+        order: row.orderItem?.order
+            ? { id: row.orderItem.order.id, refNo: row.orderItem.order.refNo ?? null }
+            : null,
+        maintenanceCount: row._count?.maintenance ?? row.maintenance?.length ?? 0,
+        latestLogs: (row.maintenance ?? []).map((log: any) => ({
+            id: log.id,
+            eventType: log.eventType ?? null,
+            vendorName: log.vendorName ?? null,
+            notes: log.notes ?? null,
+            totalCost: log.totalCost != null ? Number(log.totalCost) : null,
+            currency: log.currency ?? null,
+            servicedAt: log.servicedAt?.toISOString?.() ?? null,
+            createdAt: log.createdAt?.toISOString?.() ?? null,
+        })),
+    }));
 }
