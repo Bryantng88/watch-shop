@@ -37,8 +37,6 @@ const PRODUCT_KEYS = [
     'primaryImageUrl',
     'seoTitle',
     'seoDescription',
-    'isStockManaged',
-    'maxQtyPerOrder',
     'tag',
 ] as const;
 
@@ -149,6 +147,7 @@ function normalizeInitial(initial: any) {
         variantPrice: firstVariant?.price != null ? Number(firstVariant.price) : '',
         variantSalePrice: firstVariant?.salePrice != null ? Number(firstVariant.salePrice) : '',
         primaryImageUrl: initial?.primaryImageUrl ?? images?.[0]?.fileKey ?? '',
+        tag: initial?.tag ?? '',
     };
 }
 
@@ -392,353 +391,382 @@ export default function EditProductForm({
 
     return (
         <form onSubmit={submit} className="space-y-6">
-            <div className="space-y-6">
-                <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                    <SectionTitle
-                        title="Chỉnh sửa sản phẩm"
-                        subtitle="Bổ sung đầy đủ thông tin cơ bản, variant và watch spec để sản phẩm sẵn sàng đăng."
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <InputField
-                            label="Tên sản phẩm"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleChange as any}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+                <div className="space-y-6 xl:col-span-8">
+                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Chỉnh sửa sản phẩm"
+                            subtitle="Bổ sung đầy đủ thông tin cơ bản để sản phẩm sẵn sàng đăng."
                         />
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Thương hiệu
-                            </label>
-                            <select
-                                name="brandId"
-                                value={formData.brandId ?? ''}
-                                onChange={handleChange}
-                                className="mt-1 block w-full rounded border px-3 py-2"
-                            >
-                                <option value="">-- Chọn thương hiệu --</option>
-                                {(brands ?? []).map((b) => (
-                                    <option key={b.id} value={b.id}>
-                                        {b.name}
-                                    </option>
-                                ))}
-                            </select>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <InputField
+                                label="Tên sản phẩm"
+                                name="title"
+                                value={formData.title}
+                                onChange={handleChange as any}
+                            />
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Thương hiệu
+                                </label>
+                                <select
+                                    name="brandId"
+                                    value={formData.brandId ?? ''}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full rounded border px-3 py-2"
+                                >
+                                    <option value="">-- Chọn thương hiệu --</option>
+                                    {brands.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Vendor
+                                </label>
+                                <select
+                                    name="vendorId"
+                                    value={formData.vendorId ?? ''}
+                                    onChange={handleChange}
+                                    className="mt-1 block w-full rounded border px-3 py-2"
+                                >
+                                    <option value="">-- Chọn vendor --</option>
+                                    {vendors.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <SelectField
+                                label="Loại sản phẩm"
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange as any}
+                                options={safeTypeOptions}
+                                placeholder="-- Chọn loại --"
+                            />
+                            <SelectField
+                                label="Trạng thái"
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange as any}
+                                options={safeProductStatusOptions}
+                                placeholder="-- Chọn trạng thái --"
+                            />
+                            <InputField
+                                label="SEO title"
+                                name="seoTitle"
+                                value={formData.seoTitle}
+                                onChange={handleChange as any}
+                            />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Vendor
+                                Mô tả sản phẩm
                             </label>
-                            <select
-                                name="vendorId"
-                                value={formData.vendorId ?? ''}
+                            <textarea
+                                name="description"
+                                value={formData.description ?? ''}
                                 onChange={handleChange}
-                                className="mt-1 block w-full rounded border px-3 py-2"
-                            >
-                                <option value="">-- Chọn vendor --</option>
-                                {(vendors ?? []).map((v) => (
-                                    <option key={v.id} value={v.id}>
-                                        {v.name}
-                                    </option>
-                                ))}
-                            </select>
+                                className="mt-1 min-h-[140px] w-full rounded border px-3 py-2"
+                            />
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <SelectField
-                            label="Loại sản phẩm"
-                            name="type"
-                            value={formData.type}
-                            onChange={handleChange as any}
-                            options={safeTypeOptions}
-                            placeholder="-- Chọn loại --"
-                        />
-                        <SelectField
-                            label="Trạng thái"
-                            name="status"
-                            value={formData.status}
-                            onChange={handleChange as any}
-                            options={safeProductStatusOptions}
-                            placeholder="-- Chọn trạng thái --"
-                        />
-                        <InputField
-                            label="SEO title"
-                            name="seoTitle"
-                            value={formData.seoTitle}
-                            onChange={handleChange as any}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                            Mô tả sản phẩm
-                        </label>
-                        <textarea
-                            name="description"
-                            value={formData.description ?? ''}
-                            onChange={handleChange}
-                            className="mt-1 min-h-[120px] w-full rounded border px-3 py-2"
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                    <SectionTitle
-                        title="Product variant"
-                        subtitle="Các trường này đang được dùng để kiểm tra đủ điều kiện đăng."
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <InputField
-                            label="Giá bán"
-                            name="variantPrice"
-                            value={formData.variantPrice}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                        <InputField
-                            label="Giá sale"
-                            name="variantSalePrice"
-                            value={formData.variantSalePrice}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <InputField
-                            label="Tồn kho"
-                            name="variantStockQty"
-                            value={formData.variantStockQty}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                        <SelectField
-                            label="Trạng thái kho"
-                            name="variantAvailabilityStatus"
-                            value={formData.variantAvailabilityStatus}
-                            onChange={handleChange as any}
-                            options={safeAvailabilityOptions}
-                            placeholder="-- Chọn trạng thái kho --"
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                    <SectionTitle
-                        title="Watch spec"
-                        subtitle={'Bổ sung các thông số đang được dùng cho nhãn "Chưa đủ thông tin" và publish readiness.'}
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <InputField
-                            label="Reference"
-                            name="ref"
-                            value={formData.ref}
-                            onChange={handleChange as any}
-                        />
-                        <InputField
-                            label="Model"
-                            name="model"
-                            value={formData.model}
-                            onChange={handleChange as any}
-                        />
-                        <InputField
-                            label="Năm sản xuất"
-                            name="year"
-                            value={formData.year}
-                            onChange={handleChange as any}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <SelectField
-                            label="Dạng vỏ"
-                            name="caseType"
-                            value={formData.caseType}
-                            onChange={handleChange as any}
-                            options={caseOptions}
-                            placeholder="-- Chọn dạng vỏ --"
-                        />
-                        <SelectField
-                            label="Giới tính"
-                            name="gender"
-                            value={formData.gender}
-                            onChange={handleChange as any}
-                            options={genderOptions}
-                            placeholder="-- Chọn giới tính --"
-                        />
-                        <SelectField
-                            label="Chất liệu vỏ"
-                            name="caseMaterial"
-                            value={formData.caseMaterial}
-                            onChange={handleChange as any}
-                            options={caseMaterialOptions}
-                            placeholder="-- Chọn chất liệu --"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <SelectField
-                            label="Bộ máy"
-                            name="movement"
-                            value={formData.movement}
-                            onChange={handleChange as any}
-                            options={movementOptions}
-                            placeholder="-- Chọn bộ máy --"
-                        />
-                        <InputField
-                            label="Caliber"
-                            name="caliber"
-                            value={formData.caliber}
-                            onChange={handleChange as any}
-                        />
-                        <InputField
-                            label="Case size"
-                            name="caseSize"
-                            value={formData.caseSize}
-                            onChange={handleChange as any}
-                            placeholder="Ví dụ 39mm"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <InputField
-                            label="Dài"
-                            name="length"
-                            value={formData.length}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                        <InputField
-                            label="Rộng"
-                            name="width"
-                            value={formData.width}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                        <InputField
-                            label="Độ dày"
-                            name="thickness"
-                            value={formData.thickness}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <InputField
-                            label="Màu mặt số"
-                            name="dialColor"
-                            value={formData.dialColor}
-                            onChange={handleChange as any}
-                        />
-                        <SelectField
-                            label="Dây / Strap"
-                            name="strap"
-                            value={formData.strap}
-                            onChange={handleChange as any}
-                            options={strapOptions}
-                            placeholder="-- Chọn strap --"
-                        />
-                        <SelectField
-                            label="Kính"
-                            name="glass"
-                            value={formData.glass}
-                            onChange={handleChange as any}
-                            options={glassOptions}
-                            placeholder="-- Chọn kính --"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <InputField
-                            label="K vàng"
-                            name="goldKarat"
-                            value={formData.goldKarat}
-                            onChange={handleChange as any}
-                            type="number"
-                        />
-                        <SelectField
-                            label="Màu vàng"
-                            name="goldColor"
-                            value={formData.goldColor}
-                            onChange={handleChange as any}
-                            options={goldColorOptions}
-                            placeholder="-- Chọn màu vàng --"
-                        />
-                        <div className="rounded border bg-gray-50 px-3 py-3 text-sm text-gray-600">
-                            Có thể để trống nhóm vàng nếu đồng hồ không dùng chất liệu vàng.
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
-                            <input
-                                type="checkbox"
-                                name="boxIncluded"
-                                checked={!!formData.boxIncluded}
-                                onChange={handleChange as any}
-                            />
-                            Kèm hộp
-                        </label>
-                        <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
-                            <input
-                                type="checkbox"
-                                name="bookletIncluded"
-                                checked={!!formData.bookletIncluded}
-                                onChange={handleChange as any}
-                            />
-                            Kèm sổ
-                        </label>
-                        <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
-                            <input
-                                type="checkbox"
-                                name="cardIncluded"
-                                checked={!!formData.cardIncluded}
-                                onChange={handleChange as any}
-                            />
-                            Kèm thẻ
-                        </label>
-                    </div>
-                </div>
-
-                <div className="rounded-md border border-gray-200 bg-white p-5 shadow">
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         <div>
-                            <SectionTitle
-                                title="Hình ảnh"
-                                subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện nếu bạn chưa chọn riêng."
+                            <label className="block text-sm font-medium text-gray-700">
+                                SEO description
+                            </label>
+                            <textarea
+                                name="seoDescription"
+                                value={formData.seoDescription ?? ''}
+                                onChange={handleChange}
+                                className="mt-1 min-h-[100px] w-full rounded border px-3 py-2"
                             />
-                            <div className="mt-4">
+                        </div>
+                    </div>
+
+                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Product variant"
+                            subtitle="Các trường này đang được dùng để kiểm tra đủ điều kiện đăng."
+                        />
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <InputField
+                                label="Giá bán"
+                                name="variantPrice"
+                                value={formData.variantPrice}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                            <InputField
+                                label="Giá sale"
+                                name="variantSalePrice"
+                                value={formData.variantSalePrice}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <InputField
+                                label="Tồn kho"
+                                name="variantStockQty"
+                                value={formData.variantStockQty}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                            <SelectField
+                                label="Trạng thái kho"
+                                name="variantAvailabilityStatus"
+                                value={formData.variantAvailabilityStatus}
+                                onChange={handleChange as any}
+                                options={safeAvailabilityOptions}
+                                placeholder="-- Chọn trạng thái kho --"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Watch spec"
+                            subtitle={'Bổ sung các metadata quan trọng đang được dùng cho nhãn "Chưa đủ thông tin" và publish readiness.'}
+                        />
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <InputField
+                                label="Reference"
+                                name="ref"
+                                value={formData.ref}
+                                onChange={handleChange as any}
+                            />
+                            <InputField
+                                label="Model"
+                                name="model"
+                                value={formData.model}
+                                onChange={handleChange as any}
+                            />
+                            <InputField
+                                label="Năm sản xuất"
+                                name="year"
+                                value={formData.year}
+                                onChange={handleChange as any}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <SelectField
+                                label="Dạng vỏ"
+                                name="caseType"
+                                value={formData.caseType}
+                                onChange={handleChange as any}
+                                options={caseOptions}
+                                placeholder="-- Chọn dạng vỏ --"
+                            />
+                            <SelectField
+                                label="Giới tính"
+                                name="gender"
+                                value={formData.gender}
+                                onChange={handleChange as any}
+                                options={genderOptions}
+                                placeholder="-- Chọn giới tính --"
+                            />
+                            <SelectField
+                                label="Chất liệu vỏ"
+                                name="caseMaterial"
+                                value={formData.caseMaterial}
+                                onChange={handleChange as any}
+                                options={caseMaterialOptions}
+                                placeholder="-- Chọn chất liệu --"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <SelectField
+                                label="Bộ máy"
+                                name="movement"
+                                value={formData.movement}
+                                onChange={handleChange as any}
+                                options={movementOptions}
+                                placeholder="-- Chọn bộ máy --"
+                            />
+                            <InputField
+                                label="Caliber"
+                                name="caliber"
+                                value={formData.caliber}
+                                onChange={handleChange as any}
+                            />
+                            <InputField
+                                label="Case size"
+                                name="caseSize"
+                                value={formData.caseSize}
+                                onChange={handleChange as any}
+                                placeholder="Ví dụ 39mm"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <InputField
+                                label="Dài"
+                                name="length"
+                                value={formData.length}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                            <InputField
+                                label="Rộng"
+                                name="width"
+                                value={formData.width}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                            <InputField
+                                label="Độ dày"
+                                name="thickness"
+                                value={formData.thickness}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <InputField
+                                label="Màu mặt số"
+                                name="dialColor"
+                                value={formData.dialColor}
+                                onChange={handleChange as any}
+                            />
+                            <SelectField
+                                label="Dây / Strap"
+                                name="strap"
+                                value={formData.strap}
+                                onChange={handleChange as any}
+                                options={strapOptions}
+                                placeholder="-- Chọn strap --"
+                            />
+                            <SelectField
+                                label="Kính"
+                                name="glass"
+                                value={formData.glass}
+                                onChange={handleChange as any}
+                                options={glassOptions}
+                                placeholder="-- Chọn kính --"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <InputField
+                                label="K vàng"
+                                name="goldKarat"
+                                value={formData.goldKarat}
+                                onChange={handleChange as any}
+                                type="number"
+                            />
+                            <SelectField
+                                label="Màu vàng"
+                                name="goldColor"
+                                value={formData.goldColor}
+                                onChange={handleChange as any}
+                                options={goldColorOptions}
+                                placeholder="-- Chọn màu vàng --"
+                            />
+                            <div className="rounded border bg-gray-50 px-3 py-3 text-sm text-gray-600">
+                                Có thể để trống nhóm vàng nếu đồng hồ không dùng chất liệu vàng.
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    name="boxIncluded"
+                                    checked={!!formData.boxIncluded}
+                                    onChange={handleChange as any}
+                                />
+                                Kèm hộp
+                            </label>
+                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    name="bookletIncluded"
+                                    checked={!!formData.bookletIncluded}
+                                    onChange={handleChange as any}
+                                />
+                                Kèm sổ
+                            </label>
+                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    name="cardIncluded"
+                                    checked={!!formData.cardIncluded}
+                                    onChange={handleChange as any}
+                                />
+                                Kèm thẻ
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <aside className="space-y-6 self-start xl:col-span-4">
+                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Product image"
+                            subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện nếu bạn chưa chọn riêng."
+                        />
+                        <div className="w-[170px]">
+                            <div className="aspect-square overflow-hidden rounded-md border border-dashed border-gray-300">
                                 <ImagePicker value={images} onChange={onImagesChange} />
                             </div>
                         </div>
+                    </div>
 
-                        <div className="rounded-md border border-gray-200 bg-white p-5 shadow-sm">
-                            <SectionTitle title="Complications" />
-                            <div className="mt-4 grid max-h-72 grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
-                                {(complicationOptions ?? []).map((c) => (
-                                    <label
-                                        key={c.id}
-                                        className="inline-flex items-center gap-2 text-sm"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={(formData.complicationIds ?? []).includes(
-                                                c.id
-                                            )}
-                                            onChange={() => toggleComp(c.id)}
-                                        />
-                                        <span>{c.name}</span>
-                                    </label>
-                                ))}
-                            </div>
+                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Tag"
+                            subtitle="Nhập tag ngắn gọn để dễ nhóm và lọc sản phẩm."
+                        />
+                        <InputField
+                            label="Tag"
+                            name="tag"
+                            value={formData.tag}
+                            onChange={handleChange as any}
+                            placeholder="Ví dụ: dress, diver, vintage..."
+                        />
+                    </div>
+
+                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
+                        <SectionTitle
+                            title="Product complications"
+                            subtitle="Chọn các complication quan trọng của sản phẩm."
+                        />
+                        <div className="grid max-h-80 grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
+                            {complicationOptions.map((c) => (
+                                <label
+                                    key={c.id}
+                                    className="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={(formData.complicationIds ?? []).includes(c.id)}
+                                        onChange={() => toggleComp(c.id)}
+                                    />
+                                    <span>{c.name}</span>
+                                </label>
+                            ))}
                         </div>
                     </div>
-                </div>
+                </aside>
             </div>
 
             {err ? <div className="text-sm text-red-600">{err}</div> : null}
