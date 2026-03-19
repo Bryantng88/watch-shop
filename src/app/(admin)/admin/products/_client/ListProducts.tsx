@@ -10,6 +10,7 @@ import DotLabel from "../../__components/DotLabel";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
+import ServiceHistoryModal from "./ServiceHistoryModal";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 type CatalogKey = "product" | "strap";
@@ -50,6 +51,13 @@ type ProductRow = ProductListItem & {
         material?: string | null;
         quickRelease?: boolean | null;
     } | null;
+    isVariantInfoComplete?: boolean;
+    isWatchSpecComplete?: boolean;
+    isInfoComplete?: boolean;
+    missingVariantFields?: string[];
+    missingWatchSpecFields?: string[];
+    hasOpenService?: boolean;
+    openServiceStatus?: string | null;
 };
 
 type PageProps = {
@@ -87,6 +95,20 @@ function hasValidPrice(p: ProductRow) {
 function hasValidImage(p: ProductRow) {
     const img = p.primaryImageUrl;
     return typeof img === "string" && img.trim().length > 0;
+}
+
+function hasMissingReadinessInfo(p: ProductRow) {
+    return !hasValidImage(p) || !hasValidPrice(p) || !p.isInfoComplete;
+}
+
+function getQuickFixHints(p: ProductRow) {
+    const hints: string[] = [];
+
+    if (!hasValidImage(p)) hints.push("Thêm ảnh ngay ở ô ảnh bên trái của dòng sản phẩm.");
+    if (!hasValidPrice(p)) hints.push("Có thể chỉnh nhanh giá ngay tại cột Giá bán.");
+    if (!p.isInfoComplete) hints.push("Các trường variant/spec cần bổ sung ở trang chỉnh sửa sản phẩm.");
+
+    return hints;
 }
 
 function StrapSpecText({ p }: { p: ProductRow }) {
@@ -207,6 +229,131 @@ function InlineMoneyEditor({
     );
 }
 
+function ReadinessDetailModal({
+    product,
+    open,
+    onClose,
+    onEdit,
+}: {
+    product: ProductRow | null;
+    open: boolean;
+    onClose: () => void;
+    onEdit: (id: string) => void;
+}) {
+    if (!open || !product) return null;
+
+    const missingVariantFields = Array.from(new Set(product.missingVariantFields ?? []));
+    const missingWatchSpecFields = Array.from(new Set(product.missingWatchSpecFields ?? []));
+    const quickFixHints = getQuickFixHints(product);
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
+            <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
+                <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
+                    <div>
+                        <div className="text-lg font-semibold">Kiểm tra thông tin sản phẩm</div>
+                        <div className="mt-1 text-sm text-gray-600">{product.title || "-"}</div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                        Đóng
+                    </button>
+                </div>
+
+                <div className="space-y-4 px-5 py-4 text-sm">
+                    <div className="flex flex-wrap gap-2">
+                        <DotLabel
+                            label={hasValidImage(product) ? "Đã có ảnh" : "Thiếu ảnh"}
+                            tone={hasValidImage(product) ? "green" : "orange"}
+                        />
+                        <DotLabel
+                            label={hasValidPrice(product) ? "Đã có giá" : "Thiếu giá"}
+                            tone={hasValidPrice(product) ? "green" : "orange"}
+                        />
+                        <DotLabel
+                            label={product.isInfoComplete ? "Đủ variant/spec" : "Thiếu variant/spec"}
+                            tone={product.isInfoComplete ? "green" : "orange"}
+                        />
+                        {product.hasOpenService ? (
+                            <DotLabel
+                                label={`Đang service${product.openServiceStatus ? ` (${product.openServiceStatus})` : ""}`}
+                                tone="blue"
+                            />
+                        ) : null}
+                    </div>
+
+                    {hasMissingReadinessInfo(product) ? (
+                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                            <div className="font-medium text-orange-900">Các mục còn thiếu</div>
+
+                            <div className="mt-3 space-y-3 text-orange-900">
+                                {!hasValidImage(product) ? <div>• Chưa có ảnh hiển thị</div> : null}
+                                {!hasValidPrice(product) ? <div>• Chưa có giá bán hợp lệ</div> : null}
+
+                                {!!missingVariantFields.length && (
+                                    <div>
+                                        <div className="font-medium">Variant còn thiếu</div>
+                                        <div className="mt-1 text-sm">{missingVariantFields.join(", ")}</div>
+                                    </div>
+                                )}
+
+                                {!!missingWatchSpecFields.length && (
+                                    <div>
+                                        <div className="font-medium">Watch spec còn thiếu</div>
+                                        <div className="mt-1 text-sm">{missingWatchSpecFields.join(", ")}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+                            Sản phẩm đã đủ thông tin cơ bản để post.
+                        </div>
+                    )}
+
+                    {quickFixHints.length ? (
+                        <div className="rounded-lg border bg-gray-50 p-4">
+                            <div className="font-medium text-gray-900">Gợi ý bổ sung nhanh</div>
+                            <div className="mt-2 space-y-1 text-gray-700">
+                                {quickFixHints.map((hint) => (
+                                    <div key={hint}>• {hint}</div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {product.hasOpenService ? (
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
+                            Sản phẩm đang trong quá trình service nên chưa nên bulk post cho đến khi hoàn tất.
+                        </div>
+                    ) : null}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t px-5 py-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
+                    >
+                        Đóng
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onEdit(product.id)}
+                        className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+                    >
+                        Bổ sung ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminProductListPageClient(props: PageProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -259,6 +406,12 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [showBulkSaleModal, setShowBulkSaleModal] = useState(false);
     const [bulkSaleValue, setBulkSaleValue] = useState("");
     const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
+
+    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(null);
+    const [openReadinessModal, setOpenReadinessModal] = useState(false);
+
+    const [serviceHistoryProduct, setServiceHistoryProduct] = useState<ProductRow | null>(null);
+    const [serviceHistoryOpen, setServiceHistoryOpen] = useState(false);
 
     const [openService, setOpenService] = useState(false);
     const [serviceProductId, setServiceProductId] = useState<string | null>(null);
@@ -373,6 +526,20 @@ export default function AdminProductListPageClient(props: PageProps) {
             return;
         }
         router.refresh();
+    }
+
+    function openReadinessDetail(product: ProductRow) {
+        setServiceHistoryOpen(false);
+        setServiceHistoryProduct(null);
+        setReadinessProduct(product);
+        setOpenReadinessModal(true);
+    }
+
+    function openServiceHistory(product: ProductRow) {
+        setOpenReadinessModal(false);
+        setReadinessProduct(null);
+        setServiceHistoryProduct(product);
+        setServiceHistoryOpen(true);
     }
 
     async function updateProductImage(productId: string, fileKey: string) {
@@ -686,10 +853,24 @@ export default function AdminProductListPageClient(props: PageProps) {
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({ productIds: selectedIds }),
                                     });
+                                    const data = await res.json().catch(() => null);
                                     if (!res.ok) {
-                                        alert(await res.text());
+                                        alert(data?.message || data?.error || "Bulk post thất bại");
                                         return;
                                     }
+
+                                    if (Array.isArray(data?.failed) && data.failed.length > 0) {
+                                        const firstFailed = data.failed.slice(0, 3).map((item: any) => {
+                                            const title = item?.title || item?.id || "Unknown";
+                                            const reasons = Array.isArray(item?.reasons)
+                                                ? item.reasons.join(" | ")
+                                                : "";
+                                            return `- ${title}: ${reasons}`;
+                                        });
+
+                                        alert(`Đã post ${data?.count ?? 0} sản phẩm. Còn ${data.failed.length} sản phẩm chưa đạt điều kiện.\n\n${firstFailed.join("\n")}`);
+                                    }
+
                                     setShowBulkConfirm(false);
                                     setSelectedIds([]);
                                     setShowBulkBar(false);
@@ -918,15 +1099,37 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
 
-                                                        <div className="flex flex-wrap gap-2 pt-1">
-                                                            <DotLabel
-                                                                label={p.primaryImageUrl ? "Hiển thị ảnh" : "Thiếu ảnh"}
-                                                                tone={p.primaryImageUrl ? "green" : "orange"}
-                                                            />
-                                                            <DotLabel
-                                                                label={hasValidPrice(p) ? "Hiển thị giá" : "Thiếu giá"}
-                                                                tone={hasValidPrice(p) ? "green" : "orange"}
-                                                            />
+                                                        <div className="flex flex-col items-start gap-1 pt-1">
+                                                            {hasMissingReadinessInfo(p) ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openReadinessDetail(p);
+                                                                    }}
+                                                                    className="rounded-full text-left"
+                                                                >
+                                                                    <DotLabel label="Chưa đủ thông tin" tone="orange" />
+                                                                </button>
+                                                            ) : (
+                                                                <DotLabel label="Đã đủ thông tin" tone="green" />
+                                                            )}
+
+                                                            {p.hasOpenService || !!p.openServiceStatus ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openServiceHistory(p);
+                                                                    }}
+                                                                    className="rounded-full text-left"
+                                                                >
+                                                                    <DotLabel
+                                                                        label={`Đang service${p.openServiceStatus ? ` (${p.openServiceStatus})` : ""}`}
+                                                                        tone="blue"
+                                                                    />
+                                                                </button>
+                                                            ) : null}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1026,6 +1229,30 @@ export default function AdminProductListPageClient(props: PageProps) {
                     </button>
                 </div>
             </div>
+
+            <ReadinessDetailModal
+                open={openReadinessModal}
+                product={readinessProduct}
+                onClose={() => {
+                    setOpenReadinessModal(false);
+                    setReadinessProduct(null);
+                }}
+                onEdit={(id) => router.push(`/admin/products/${id}/edit`)}
+            />
+
+
+            <ServiceHistoryModal
+                open={serviceHistoryOpen}
+                onClose={() => {
+                    setServiceHistoryOpen(false);
+                    setServiceHistoryProduct(null);
+                }}
+                product={serviceHistoryProduct ? {
+                    id: serviceHistoryProduct.id,
+                    title: serviceHistoryProduct.title,
+                    openServiceStatus: serviceHistoryProduct.openServiceStatus,
+                } : null}
+            />
 
             <CreateServiceRequestModal
                 open={openService}

@@ -1,5 +1,5 @@
-// app/admin/products/[id]/edit/page.tsx
-import EditProductForm from "@/features/products/_admin/product-edit-form";
+import EditProductForm from "../../_client/EditProductForm";
+
 import { getOptions } from "@/features/products/components/options";
 
 import { listBrands } from "@/features/catalog/server/brands.repo";
@@ -12,7 +12,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         getAdminProductDetail(id),
         listBrands(),
         listVendor(),
-        getOptions(), // gom statusOptions, typeOptions, caseOptions, movementOptions, complicationOptions
+        getOptions(),
     ]);
     const parse = JSON.parse(JSON.stringify(product));
 
@@ -21,10 +21,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             initial={parse}
             brands={brands}
             vendors={vendors}
-            statusOptions={opts.status}
+            productStatusOptions={opts.productStatus}
+            availabilityStatusOptions={opts.availabilityStatus}
             typeOptions={opts.type}
             caseOptions={opts.case}
             movementOptions={opts.movement}
+            caseMaterialOptions={opts.caseMaterial}
+            genderOptions={opts.gender}
+            strapOptions={opts.strap}
+            glassOptions={opts.glass}
+            goldColorOptions={opts.goldColor}
             complicationOptions={opts.complication}
         />
     );

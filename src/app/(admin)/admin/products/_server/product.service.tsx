@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, ProductType, DiscountType } from "@prisma/client";
+import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus } from "@prisma/client";
 import * as prodRepo from "./product.repo";
-import { AdminFiltersSchema } from "./product.dto";
+import { z } from "zod";
 import { computeEffectivePrice } from "../helpers/price";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
@@ -52,6 +52,28 @@ function normalizeCatalog(v: unknown): "product" | "strap" {
     return raw === "strap" ? "strap" : "product";
 }
 
+const AdminListQuerySchema = z.object({
+    page: z.coerce.number().min(1).default(1),
+    pageSize: z.coerce.number().min(1).max(200).default(50),
+    q: z.string().optional(),
+    sort: z
+        .enum(["updatedDesc", "updatedAsc", "createdDesc", "createdAsc", "titleAsc", "titleDesc"])
+        .optional(),
+    type: z.array(z.string()).optional(),
+    brandIds: z.array(z.string()).optional(),
+    categoryIds: z.array(z.string()).optional(),
+    hasImages: z.enum(["yes", "no"]).optional(),
+    updatedFrom: z.date().optional(),
+    updatedTo: z.date().optional(),
+});
+
+const OPEN_SERVICE_REQUEST_STATUSES = [
+    ServiceRequestStatus.DRAFT,
+    ServiceRequestStatus.DIAGNOSING,
+    ServiceRequestStatus.WAIT_APPROVAL,
+    ServiceRequestStatus.IN_PROGRESS,
+] as const;
+
 export async function createProductDraft(title: string) {
     return prisma.$transaction(async (tx) => {
         return prodRepo.createProductDraft(
@@ -74,27 +96,43 @@ export async function getAdminProductList(
     raw: Record<string, unknown>,
     opts?: { canViewCost?: boolean }
 ) {
-    const parsed = AdminFiltersSchema.parse({
+    const parsedResult = AdminListQuerySchema.safeParse({
         page: asNumber(raw.page) ?? 1,
         pageSize: asNumber(raw.pageSize) ?? 50,
-        q: raw.q ?? undefined,
-        sort: raw.sort ?? undefined,
+        q: asString(raw.q),
+        sort: asString(raw.sort),
         type: arrayify(raw.type),
         brandIds: arrayify(raw.brandIds ?? raw.brandId),
         categoryIds: arrayify(raw.categoryIds ?? raw.categoryId),
-        hasImages: raw.hasImages ?? undefined,
+        hasImages: asString(raw.hasImages),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
 
-    const catalog = String(raw.catalog ?? "product") === "strap" ? "strap" : "product";
+    const parsed = parsedResult.success
+        ? parsedResult.data
+        : {
+            page: 1,
+            pageSize: 50,
+            q: undefined,
+            sort: undefined,
+            type: undefined,
+            brandIds: undefined,
+            categoryIds: undefined,
+            hasImages: undefined,
+            updatedFrom: undefined,
+            updatedTo: undefined,
+        };
+
+    const catalog = normalizeCatalog(raw.catalog);
+    const view = normalizeView(raw.view);
 
     const result = await prodRepo.listAdminProducts(prisma, {
         q: parsed.q,
         sort: parsed.sort as any,
         page: parsed.page,
         pageSize: parsed.pageSize,
-        view: String(raw.view ?? "all") as any,
+        view: view as any,
         type: parsed.type?.[0],
         brandId: parsed.brandIds?.[0],
         categoryId: parsed.categoryIds?.[0],
@@ -103,8 +141,37 @@ export async function getAdminProductList(
         includeCost: !!opts?.canViewCost,
     } as any);
 
+    const itemIds = (result.items ?? []).map((item: any) => item.id).filter(Boolean);
+
+    const openServices = itemIds.length
+        ? await prisma.serviceRequest.findMany({
+            where: {
+                productId: { in: itemIds },
+                status: { in: [...OPEN_SERVICE_REQUEST_STATUSES] },
+            },
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+            select: {
+                productId: true,
+                status: true,
+            },
+        })
+        : [];
+
+    const openServiceMap = new Map<string, string>();
+    for (const row of openServices) {
+        if (!row.productId || openServiceMap.has(row.productId)) continue;
+        openServiceMap.set(row.productId, String(row.status));
+    }
+
+    const items = (result.items ?? []).map((item: any) => ({
+        ...item,
+        hasOpenService: openServiceMap.has(item.id),
+        openServiceStatus: openServiceMap.get(item.id) ?? null,
+    }));
+
     return {
         ...result,
+        items,
         page: parsed.page,
         pageSize: parsed.pageSize,
     };
@@ -192,7 +259,7 @@ export async function updateProduct(
                 fallbackPrice: variant?.price,
             });
 
-            await prodRepo.updateLatestVariantPricing(tx, id, {
+            await prodRepo.updatePrimaryVariantPricing(tx, id, {
                 price: effectivePrice,
                 listPrice: nextListPrice,
                 discountType: nextDiscountType,
@@ -212,7 +279,7 @@ export async function updateProduct(
         if (patch.status !== undefined) data.status = patch.status;
         if (patch.priceVisibility !== undefined) data.priceVisibility = patch.priceVisibility;
 
-        return prodRepo.updateProductBase(tx, id, data);
+        return prodRepo.updateProduct(tx, id, data);
     });
 }
 
