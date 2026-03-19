@@ -312,3 +312,179 @@ a {
     color-scheme: dark;
   }
 }
+
+/* =========================
+   ADMIN FORM SYSTEM
+   Áp cho toàn bộ form trong admin
+   ========================= */
+
+.admin-surface {
+  background: #f3f5f7;
+}
+
+/* form spacing */
+.admin-ui form {
+  --af-gap-1: 8px;
+  --af-gap-2: 12px;
+  --af-gap-3: 16px;
+  --af-gap-4: 20px;
+  --af-border: #d8dee6;
+  --af-border-strong: #cfd6df;
+  --af-bg: #ffffff;
+  --af-bg-soft: #f8fafc;
+  --af-text: #0f172a;
+  --af-muted: #64748b;
+}
+
+/* section title ngoài block */
+.admin-ui form h1,
+.admin-ui form h2,
+.admin-ui form h3,
+.admin-ui form h4 {
+  color: var(--af-text);
+}
+
+/* card / block form */
+.admin-ui form .rounded-xl,
+.admin-ui form .rounded-lg,
+.admin-ui form .rounded-md {
+  border-radius: 0 !important;
+}
+
+.admin-ui form [class*="border"][class*="bg-white"] {
+  border-color: var(--af-border);
+}
+
+.admin-ui form .shadow,
+.admin-ui form .shadow-sm,
+.admin-ui form .shadow-md {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* label */
+.admin-ui form label {
+  color: #334155;
+}
+
+/* input / select / textarea */
+.admin-ui form input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.admin-ui form select,
+.admin-ui form textarea {
+  border-radius: 0 !important;
+  border: 1px solid var(--af-border) !important;
+  background: var(--af-bg) !important;
+  color: var(--af-text) !important;
+  min-height: 42px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-ui form textarea {
+  min-height: 110px;
+}
+
+.admin-ui form input::placeholder,
+.admin-ui form textarea::placeholder {
+  color: #94a3b8;
+}
+
+.admin-ui form input:not([type='checkbox']):not([type='radio']):focus,
+.admin-ui form select:focus,
+.admin-ui form textarea:focus {
+  outline: none !important;
+  border-color: var(--af-border-strong) !important;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.12) !important;
+}
+
+/* giảm cảm giác cứng của viền */
+.admin-ui form .border {
+  border-color: var(--af-border) !important;
+}
+
+/* các block note / helper */
+.admin-ui form .bg-slate-50,
+.admin-ui form .bg-gray-50 {
+  background: var(--af-bg-soft) !important;
+}
+
+/* checkbox card / option card */
+.admin-ui form label:has(input[type='checkbox']),
+.admin-ui form label:has(input[type='radio']) {
+  border-color: var(--af-border);
+}
+
+/* table/list filter form cũng đồng bộ nhẹ */
+.admin-ui form button {
+  border-radius: 0 !important;
+}
+
+/* khoảng cách giữa title và block gần hơn một chút */
+.admin-ui form section {
+  row-gap: 12px;
+}
+
+/* khoảng cách giữa các row trong block form */
+.admin-ui form .space-y-10> :not([hidden])~ :not([hidden]) {
+  margin-top: 2rem !important;
+}
+
+.admin-ui form .space-y-8> :not([hidden])~ :not([hidden]) {
+  margin-top: 1.5rem !important;
+}
+
+.admin-ui form .space-y-7> :not([hidden])~ :not([hidden]) {
+  margin-top: 1.25rem !important;
+}
+
+.admin-ui form .space-y-6> :not([hidden])~ :not([hidden]) {
+  margin-top: 1rem !important;
+}
+
+.admin-ui form .space-y-5> :not([hidden])~ :not([hidden]) {
+  margin-top: 0.875rem !important;
+}
+
+.admin-ui form .space-y-4> :not([hidden])~ :not([hidden]) {
+  margin-top: 0.75rem !important;
+}
+
+.admin-ui form .space-y-3> :not([hidden])~ :not([hidden]) {
+  margin-top: 0.625rem !important;
+}
+
+.admin-ui form .space-y-2> :not([hidden])~ :not([hidden]) {
+  margin-top: 0.5rem !important;
+}
+
+/* khoảng cách giữa label và control */
+.admin-ui form label.mb-3 {
+  margin-bottom: 0.55rem !important;
+}
+
+.admin-ui form label.mb-2 {
+  margin-bottom: 0.45rem !important;
+}
+
+/* grid form thoáng vừa phải, không dính sát */
+.admin-ui form .gap-y-6 {
+  row-gap: 1rem !important;
+}
+
+.admin-ui form .gap-y-5 {
+  row-gap: 0.875rem !important;
+}
+
+.admin-ui form .gap-y-4 {
+  row-gap: 0.75rem !important;
+}
+
+.admin-ui form .gap-x-5 {
+  column-gap: 1rem !important;
+}
+
+.admin-ui form .gap-5 {
+  gap: 1rem !important;
+}
+
+.admin-ui form .gap-4 {
+  gap: 0.875rem !important;
+}

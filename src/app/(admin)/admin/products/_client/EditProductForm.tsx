@@ -1,6 +1,13 @@
 'use client';
 
-import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import {
+    useMemo,
+    useRef,
+    useState,
+    type ChangeEvent,
+    type FormEvent,
+    type ReactNode,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 
@@ -9,13 +16,30 @@ type Option = { label: string; value: string };
 type Brand = { id: string; name: string };
 type Vendor = { id: string; name: string };
 type Complication = { id: string; name: string };
+type CategoryOption = { id: string; name: string; scope: string };
+type StrapInventoryItem = {
+    productId: string;
+    variantId: string;
+    title: string;
+    vendorName?: string | null;
+    stockQty: number;
+    availabilityStatus?: string | null;
+    price?: number | null;
+    costPrice?: number | null;
+    strapSpec?: {
+        lugWidthMM?: number | null;
+        buckleWidthMM?: number | null;
+        color?: string | null;
+        material?: string | null;
+        quickRelease?: boolean | null;
+    } | null;
+};
 
 type Props = {
     initial: any;
     brands?: Brand[];
     vendors?: Vendor[];
     productStatusOptions?: Option[];
-    availabilityStatusOptions?: Option[];
     typeOptions?: Option[];
     caseOptions?: Option[];
     movementOptions?: Option[];
@@ -25,6 +49,8 @@ type Props = {
     glassOptions?: Option[];
     goldColorOptions?: Option[];
     complicationOptions?: Complication[];
+    categoryOptions?: CategoryOption[];
+    strapInventoryOptions?: StrapInventoryItem[];
 };
 
 const PRODUCT_KEYS = [
@@ -34,6 +60,7 @@ const PRODUCT_KEYS = [
     'vendorId',
     'status',
     'type',
+    'categoryId',
     'primaryImageUrl',
     'seoTitle',
     'seoDescription',
@@ -63,12 +90,22 @@ const WATCHSPEC_KEYS = [
     'cardIncluded',
 ] as const;
 
-const VARIANT_KEYS = [
-    'variantStockQty',
-    'variantAvailabilityStatus',
-    'variantPrice',
-    'variantSalePrice',
-] as const;
+const VARIANT_KEYS = ['variantPrice'] as const;
+
+const REQUIRED_PRODUCT_FIELDS = new Set(['title', 'brandId', 'type', 'categoryId']);
+const REQUIRED_WATCH_FIELDS = new Set([
+    'ref',
+    'model',
+    'year',
+    'caseType',
+    'movement',
+    'caseSize',
+    'length',
+    'width',
+    'thickness',
+    'dialColor',
+    'glass',
+]);
 
 const pickKeys = (obj: Record<string, any>, keys: readonly string[]) =>
     Object.fromEntries(Object.entries(obj ?? {}).filter(([k]) => keys.includes(k)));
@@ -121,6 +158,15 @@ function mergeCurrentValueOption(options: Option[] | undefined, value: any) {
     return [{ label: strValue, value: strValue }, ...base];
 }
 
+function hasValue(value: any) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'boolean') return true;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+}
+
 function normalizeInitial(initial: any) {
     const firstVariant = initial?.variants?.[0] ?? null;
     const ws = initial?.watchSpec ?? {};
@@ -141,22 +187,78 @@ function normalizeInitial(initial: any) {
         ...ws,
         complicationIds,
         images,
+        categoryId: initial?.categoryId ?? initial?.ProductCategory?.id ?? '',
         variantId: firstVariant?.id ?? undefined,
-        variantStockQty: firstVariant?.stockQty ?? 0,
-        variantAvailabilityStatus: firstVariant?.availabilityStatus ?? '',
         variantPrice: firstVariant?.price != null ? Number(firstVariant.price) : '',
-        variantSalePrice: firstVariant?.salePrice != null ? Number(firstVariant.salePrice) : '',
         primaryImageUrl: initial?.primaryImageUrl ?? images?.[0]?.fileKey ?? '',
         tag: initial?.tag ?? '',
+        strapMode: ws?.strap ? 'INCLUDED' : 'NONE',
+        linkedStrapProductId: '',
+        linkedStrapVariantId: '',
+        linkedStrapTitle: '',
+        linkedStrapCostPrice: '',
     };
 }
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionHeading({
+    title,
+    subtitle,
+}: {
+    title: string;
+    subtitle?: string;
+}) {
     return (
-        <div>
-            <div className="text-base font-semibold text-gray-900">{title}</div>
-            {subtitle ? <div className="mt-1 text-sm text-gray-500">{subtitle}</div> : null}
+        <div className="space-y-1.5">
+            <h2 className="text-[19px] font-semibold tracking-tight text-slate-900">{title}</h2>
+            {subtitle ? <p className="text-sm leading-6 text-slate-500">{subtitle}</p> : null}
         </div>
+    );
+}
+
+function SectionBlock({
+    children,
+    compact = false,
+}: {
+    children: ReactNode;
+    compact?: boolean;
+}) {
+    return (
+        <div
+            className={[
+                'rounded-none border border-slate-200 bg-white shadow-sm',
+                compact ? 'space-y-5 p-4' : 'space-y-6 p-5',
+            ].join(' ')}
+        >
+            {children}
+        </div>
+    );
+}
+
+function Section({
+    title,
+    subtitle,
+    children,
+    compact = false,
+}: {
+    title: string;
+    subtitle?: string;
+    children: ReactNode;
+    compact?: boolean;
+}) {
+    return (
+        <section className="space-y-3">
+            <SectionHeading title={title} subtitle={subtitle} />
+            <SectionBlock compact={compact}>{children}</SectionBlock>
+        </section>
+    );
+}
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+    return (
+        <label className="mb-2 block text-sm font-medium text-slate-700">
+            {label}
+            {required ? <span className="ml-1 text-rose-500">*</span> : null}
+        </label>
     );
 }
 
@@ -167,6 +269,7 @@ function InputField({
     onChange,
     type = 'text',
     placeholder,
+    required,
 }: {
     label: string;
     name: string;
@@ -174,17 +277,18 @@ function InputField({
     onChange: (e: ChangeEvent<HTMLInputElement>) => void;
     type?: string;
     placeholder?: string;
+    required?: boolean;
 }) {
     return (
         <div>
-            <label className="block text-sm font-medium text-gray-700">{label}</label>
+            <FieldLabel label={label} required={required} />
             <input
                 name={name}
                 type={type}
                 value={value ?? ''}
                 onChange={onChange}
                 placeholder={placeholder}
-                className="mt-1 block w-full rounded border px-3 py-2"
+                className="block w-full rounded-none border border-slate-200 bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             />
         </div>
     );
@@ -197,6 +301,7 @@ function SelectField({
     onChange,
     options = [],
     placeholder,
+    required,
 }: {
     label: string;
     name: string;
@@ -204,15 +309,16 @@ function SelectField({
     onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
     options?: Option[];
     placeholder?: string;
+    required?: boolean;
 }) {
     return (
         <div>
-            <label className="block text-sm font-medium text-gray-700">{label}</label>
+            <FieldLabel label={label} required={required} />
             <select
                 name={name}
                 value={value ?? ''}
                 onChange={onChange}
-                className="mt-1 block w-full rounded border px-3 py-2"
+                className="block w-full rounded-none border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
                 <option value="">{placeholder ?? '-- Chọn --'}</option>
                 {(options ?? []).map((opt) => (
@@ -225,12 +331,16 @@ function SelectField({
     );
 }
 
+function formatMoney(value: number | null | undefined) {
+    if (value == null || !Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('vi-VN').format(Number(value));
+}
+
 export default function EditProductForm({
     initial,
     brands = [],
     vendors = [],
     productStatusOptions = [],
-    availabilityStatusOptions = [],
     typeOptions = [],
     caseOptions = [],
     movementOptions = [],
@@ -240,6 +350,8 @@ export default function EditProductForm({
     glassOptions = [],
     goldColorOptions = [],
     complicationOptions = [],
+    categoryOptions = [],
+    strapInventoryOptions = [],
 }: Props) {
     const router = useRouter();
     const id: string = initial?.id;
@@ -261,15 +373,87 @@ export default function EditProductForm({
         [productStatusOptions, formData.status]
     );
 
-    const safeAvailabilityOptions = useMemo(
-        () => mergeCurrentValueOption(availabilityStatusOptions, formData.variantAvailabilityStatus),
-        [availabilityStatusOptions, formData.variantAvailabilityStatus]
-    );
-
     const safeTypeOptions = useMemo(
         () => mergeCurrentValueOption(typeOptions, formData.type),
         [typeOptions, formData.type]
     );
+
+    const safeCategoryOptions = useMemo(() => {
+        const selectedType = String(formData.type ?? '').toUpperCase();
+        const shouldFilter = selectedType === 'WATCH' || selectedType === 'WATCH_STRAP';
+
+        const filtered = shouldFilter
+            ? categoryOptions.filter((item) => item.scope === 'ALL' || item.scope === selectedType)
+            : categoryOptions;
+
+        const mapped = filtered.map((item) => ({
+            label: item.name,
+            value: item.id,
+        }));
+
+        if (!formData.categoryId) return mapped;
+
+        const existed = mapped.some((item) => item.value === formData.categoryId);
+        if (existed) return mapped;
+
+        const current = categoryOptions.find((item) => item.id === formData.categoryId);
+        return [
+            {
+                label: current?.name ?? String(formData.categoryId),
+                value: String(formData.categoryId),
+            },
+            ...mapped,
+        ];
+    }, [categoryOptions, formData.categoryId, formData.type]);
+
+    const selectedInventoryStrap = useMemo(
+        () =>
+            strapInventoryOptions.find(
+                (item) => String(item.variantId) === String(formData.linkedStrapVariantId ?? '')
+            ) ?? null,
+        [strapInventoryOptions, formData.linkedStrapVariantId]
+    );
+
+    const inventoryStrapSelectOptions = useMemo(
+        () =>
+            strapInventoryOptions.map((item) => ({
+                label: `${item.title} · ${item.strapSpec?.lugWidthMM ?? '—'}-${item.strapSpec?.buckleWidthMM ?? '—'} · ${item.strapSpec?.color ?? '—'} · tồn ${item.stockQty}`,
+                value: item.variantId,
+            })),
+        [strapInventoryOptions]
+    );
+
+    const bulkPostMissing = useMemo(() => {
+        const missing: string[] = [];
+
+        if (!hasValue(formData.title)) missing.push('Tên sản phẩm');
+        if (!hasValue(formData.brandId)) missing.push('Thương hiệu');
+        if (!hasValue(formData.type)) missing.push('Loại sản phẩm');
+        if (!hasValue(formData.categoryId)) missing.push('Category');
+        if (!hasValue(formData.variantPrice) || Number(formData.variantPrice) <= 0) missing.push('Giá bán');
+        if (images.length < 4) missing.push(`Tối thiểu 4 ảnh (${images.length}/4)`);
+
+        if (!hasValue(formData.ref)) missing.push('Reference');
+        if (!hasValue(formData.model)) missing.push('Model');
+        if (!hasValue(formData.year)) missing.push('Năm sản xuất');
+        if (!hasValue(formData.caseType)) missing.push('Dạng vỏ');
+        if (!hasValue(formData.movement)) missing.push('Bộ máy');
+        if (!hasValue(formData.caseSize)) missing.push('Case size');
+        if (!hasValue(formData.length)) missing.push('Dài');
+        if (!hasValue(formData.width)) missing.push('Rộng');
+        if (!hasValue(formData.thickness)) missing.push('Độ dày');
+        if (!hasValue(formData.dialColor)) missing.push('Màu mặt số');
+        if (!hasValue(formData.glass)) missing.push('Kính');
+
+        if (formData.strapMode === 'INVENTORY' && !hasValue(formData.linkedStrapVariantId)) {
+            missing.push('Chọn dây trong kho');
+        }
+        if (formData.strapMode !== 'NONE' && !hasValue(formData.strap)) {
+            missing.push('Loại dây / Strap');
+        }
+
+        return missing;
+    }, [formData, images.length]);
 
     const handleChange = (
         e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -310,6 +494,41 @@ export default function EditProductForm({
                 sortOrder: i,
             })),
             primaryImageUrl: next[0]?.key ?? '',
+        }));
+    };
+
+    const handleStrapModeChange = (mode: 'INCLUDED' | 'INVENTORY' | 'NONE') => {
+        setFormData((prev) => ({
+            ...prev,
+            strapMode: mode,
+            ...(mode !== 'INVENTORY'
+                ? {
+                    linkedStrapProductId: '',
+                    linkedStrapVariantId: '',
+                    linkedStrapTitle: '',
+                    linkedStrapCostPrice: '',
+                }
+                : {}),
+            ...(mode === 'NONE' ? { strap: '' } : {}),
+        }));
+    };
+
+    const handleInventoryStrapChange = (e: ChangeEvent<HTMLSelectElement>) => {
+        const nextVariantId = e.target.value;
+        const picked = strapInventoryOptions.find((item) => item.variantId === nextVariantId) ?? null;
+        const inferredStrapType = picked?.strapSpec?.material
+            ? strapOptions.find(
+                (opt) => String(opt.value).toUpperCase() === String(picked.strapSpec?.material).toUpperCase()
+            )?.value ?? ''
+            : '';
+
+        setFormData((prev) => ({
+            ...prev,
+            linkedStrapVariantId: nextVariantId,
+            linkedStrapProductId: picked?.productId ?? '',
+            linkedStrapTitle: picked?.title ?? '',
+            linkedStrapCostPrice: picked?.costPrice ?? '',
+            strap: inferredStrapType || prev.strap || '',
         }));
     };
 
@@ -355,10 +574,7 @@ export default function EditProductForm({
             const variantPart = sanitizeDeep(variantRaw)
                 ? {
                     id: formData.variantId,
-                    stockQty: variantRaw.variantStockQty,
-                    availabilityStatus: variantRaw.variantAvailabilityStatus,
                     price: variantRaw.variantPrice,
-                    salePrice: variantRaw.variantSalePrice,
                 }
                 : undefined;
 
@@ -390,32 +606,34 @@ export default function EditProductForm({
     };
 
     return (
-        <form onSubmit={submit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-                <div className="space-y-6 xl:col-span-8">
-                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Chỉnh sửa sản phẩm"
-                            subtitle="Bổ sung đầy đủ thông tin cơ bản để sản phẩm sẵn sàng đăng."
-                        />
+        <form onSubmit={submit} className="space-y-8">
+            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <span className="font-medium text-slate-700">Quy ước:</span>{' '}
+                <span className="text-rose-500">*</span> là các trường đang được dùng để kiểm tra readiness trước khi bulk post.
+            </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-7 xl:grid-cols-12">
+                <div className="space-y-8 xl:col-span-8">
+                    <Section
+                        title="Chỉnh sửa sản phẩm"
+                        subtitle="Rà soát kỹ thông tin nền tảng của sản phẩm trước khi đưa vào workflow bulk post."
+                    >
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
                                 label="Tên sản phẩm"
                                 name="title"
                                 value={formData.title}
                                 onChange={handleChange as any}
+                                required={REQUIRED_PRODUCT_FIELDS.has('title')}
                             />
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Thương hiệu
-                                </label>
+                                <FieldLabel label="Thương hiệu" required={REQUIRED_PRODUCT_FIELDS.has('brandId')} />
                                 <select
                                     name="brandId"
                                     value={formData.brandId ?? ''}
                                     onChange={handleChange}
-                                    className="mt-1 block w-full rounded border px-3 py-2"
+                                    className="block w-full rounded-none border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
                                 >
                                     <option value="">-- Chọn thương hiệu --</option>
                                     {brands.map((b) => (
@@ -427,14 +645,12 @@ export default function EditProductForm({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Vendor
-                                </label>
+                                <FieldLabel label="Vendor" />
                                 <select
                                     name="vendorId"
                                     value={formData.vendorId ?? ''}
                                     onChange={handleChange}
-                                    className="mt-1 block w-full rounded border px-3 py-2"
+                                    className="block w-full rounded-none border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
                                 >
                                     <option value="">-- Chọn vendor --</option>
                                     {vendors.map((v) => (
@@ -446,7 +662,7 @@ export default function EditProductForm({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <SelectField
                                 label="Loại sản phẩm"
                                 name="type"
@@ -454,6 +670,16 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={safeTypeOptions}
                                 placeholder="-- Chọn loại --"
+                                required={REQUIRED_PRODUCT_FIELDS.has('type')}
+                            />
+                            <SelectField
+                                label="Category"
+                                name="categoryId"
+                                value={formData.categoryId}
+                                onChange={handleChange as any}
+                                options={safeCategoryOptions}
+                                placeholder="-- Chọn category --"
+                                required={REQUIRED_PRODUCT_FIELDS.has('categoryId')}
                             />
                             <SelectField
                                 label="Trạng thái"
@@ -463,6 +689,9 @@ export default function EditProductForm({
                                 options={safeProductStatusOptions}
                                 placeholder="-- Chọn trạng thái --"
                             />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
                                 label="SEO title"
                                 name="seoTitle"
@@ -472,100 +701,45 @@ export default function EditProductForm({
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Mô tả sản phẩm
-                            </label>
+                            <FieldLabel label="Mô tả sản phẩm" />
                             <textarea
                                 name="description"
                                 value={formData.description ?? ''}
                                 onChange={handleChange}
-                                className="mt-1 min-h-[140px] w-full rounded border px-3 py-2"
+                                className="block min-h-[140px] w-full rounded-none border border-slate-200 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
                             />
                         </div>
+                    </Section>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                SEO description
-                            </label>
-                            <textarea
-                                name="seoDescription"
-                                value={formData.seoDescription ?? ''}
-                                onChange={handleChange}
-                                className="mt-1 min-h-[100px] w-full rounded border px-3 py-2"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Product variant"
-                            subtitle="Các trường này đang được dùng để kiểm tra đủ điều kiện đăng."
-                        />
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <InputField
-                                label="Giá bán"
-                                name="variantPrice"
-                                value={formData.variantPrice}
-                                onChange={handleChange as any}
-                                type="number"
-                            />
-                            <InputField
-                                label="Giá sale"
-                                name="variantSalePrice"
-                                value={formData.variantSalePrice}
-                                onChange={handleChange as any}
-                                type="number"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <InputField
-                                label="Tồn kho"
-                                name="variantStockQty"
-                                value={formData.variantStockQty}
-                                onChange={handleChange as any}
-                                type="number"
-                            />
-                            <SelectField
-                                label="Trạng thái kho"
-                                name="variantAvailabilityStatus"
-                                value={formData.variantAvailabilityStatus}
-                                onChange={handleChange as any}
-                                options={safeAvailabilityOptions}
-                                placeholder="-- Chọn trạng thái kho --"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-5 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Watch spec"
-                            subtitle={'Bổ sung các metadata quan trọng đang được dùng cho nhãn "Chưa đủ thông tin" và publish readiness.'}
-                        />
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <Section
+                        title="Watch spec"
+                        subtitle='Các trường có dấu * trong block này sẽ được dùng để kiểm tra đủ thông tin trước khi bulk post.'
+                    >
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
                                 label="Reference"
                                 name="ref"
                                 value={formData.ref}
                                 onChange={handleChange as any}
+                                required={REQUIRED_WATCH_FIELDS.has('ref')}
                             />
                             <InputField
                                 label="Model"
                                 name="model"
                                 value={formData.model}
                                 onChange={handleChange as any}
+                                required={REQUIRED_WATCH_FIELDS.has('model')}
                             />
                             <InputField
                                 label="Năm sản xuất"
                                 name="year"
                                 value={formData.year}
                                 onChange={handleChange as any}
+                                required={REQUIRED_WATCH_FIELDS.has('year')}
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <SelectField
                                 label="Dạng vỏ"
                                 name="caseType"
@@ -573,6 +747,7 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={caseOptions}
                                 placeholder="-- Chọn dạng vỏ --"
+                                required={REQUIRED_WATCH_FIELDS.has('caseType')}
                             />
                             <SelectField
                                 label="Giới tính"
@@ -592,7 +767,7 @@ export default function EditProductForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <SelectField
                                 label="Bộ máy"
                                 name="movement"
@@ -600,6 +775,7 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={movementOptions}
                                 placeholder="-- Chọn bộ máy --"
+                                required={REQUIRED_WATCH_FIELDS.has('movement')}
                             />
                             <InputField
                                 label="Caliber"
@@ -613,16 +789,18 @@ export default function EditProductForm({
                                 value={formData.caseSize}
                                 onChange={handleChange as any}
                                 placeholder="Ví dụ 39mm"
+                                required={REQUIRED_WATCH_FIELDS.has('caseSize')}
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
                                 label="Dài"
                                 name="length"
                                 value={formData.length}
                                 onChange={handleChange as any}
                                 type="number"
+                                required={REQUIRED_WATCH_FIELDS.has('length')}
                             />
                             <InputField
                                 label="Rộng"
@@ -630,6 +808,7 @@ export default function EditProductForm({
                                 value={formData.width}
                                 onChange={handleChange as any}
                                 type="number"
+                                required={REQUIRED_WATCH_FIELDS.has('width')}
                             />
                             <InputField
                                 label="Độ dày"
@@ -637,23 +816,17 @@ export default function EditProductForm({
                                 value={formData.thickness}
                                 onChange={handleChange as any}
                                 type="number"
+                                required={REQUIRED_WATCH_FIELDS.has('thickness')}
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
                             <InputField
                                 label="Màu mặt số"
                                 name="dialColor"
                                 value={formData.dialColor}
                                 onChange={handleChange as any}
-                            />
-                            <SelectField
-                                label="Dây / Strap"
-                                name="strap"
-                                value={formData.strap}
-                                onChange={handleChange as any}
-                                options={strapOptions}
-                                placeholder="-- Chọn strap --"
+                                required={REQUIRED_WATCH_FIELDS.has('dialColor')}
                             />
                             <SelectField
                                 label="Kính"
@@ -662,10 +835,11 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={glassOptions}
                                 placeholder="-- Chọn kính --"
+                                required={REQUIRED_WATCH_FIELDS.has('glass')}
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
                                 label="K vàng"
                                 name="goldKarat"
@@ -681,13 +855,13 @@ export default function EditProductForm({
                                 options={goldColorOptions}
                                 placeholder="-- Chọn màu vàng --"
                             />
-                            <div className="rounded border bg-gray-50 px-3 py-3 text-sm text-gray-600">
+                            <div className="border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-600">
                                 Có thể để trống nhóm vàng nếu đồng hồ không dùng chất liệu vàng.
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-3">
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
                                 <input
                                     type="checkbox"
                                     name="boxIncluded"
@@ -696,7 +870,7 @@ export default function EditProductForm({
                                 />
                                 Kèm hộp
                             </label>
-                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
                                 <input
                                     type="checkbox"
                                     name="bookletIncluded"
@@ -705,7 +879,7 @@ export default function EditProductForm({
                                 />
                                 Kèm sổ
                             </label>
-                            <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
                                 <input
                                     type="checkbox"
                                     name="cardIncluded"
@@ -715,27 +889,179 @@ export default function EditProductForm({
                                 Kèm thẻ
                             </label>
                         </div>
-                    </div>
+                    </Section>
                 </div>
 
-                <aside className="space-y-6 self-start xl:col-span-4">
-                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Product image"
-                            subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện nếu bạn chưa chọn riêng."
-                        />
-                        <div className="w-[170px]">
-                            <div className="aspect-square overflow-hidden rounded-md border border-dashed border-gray-300">
+                <aside className="space-y-8 self-start xl:col-span-4">
+                    <Section
+                        title={`Bulk post readiness${bulkPostMissing.length ? '' : ' · Ready'}`}
+                        subtitle={
+                            bulkPostMissing.length
+                                ? 'Các mục dưới đây đang thiếu và sẽ chặn bulk post.'
+                                : 'Sản phẩm đã đủ các trường cốt lõi để đi tiếp workflow bulk post.'
+                        }
+                        compact
+                    >
+                        {bulkPostMissing.length ? (
+                            <div className="space-y-2">
+                                {bulkPostMissing.map((item) => (
+                                    <div
+                                        key={item}
+                                        className="border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                                    >
+                                        {item}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
+                                Không còn trường bắt buộc nào bị thiếu.
+                            </div>
+                        )}
+                    </Section>
+
+                    <Section
+                        title="Product image *"
+                        subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện. Khuyến nghị tối thiểu 4 ảnh để đủ điều kiện bulk post."
+                        compact
+                    >
+                        <div className="w-[170px] max-w-full">
+                            <div className="aspect-square overflow-hidden border border-dashed border-slate-200 bg-slate-50">
                                 <ImagePicker value={images} onChange={onImagesChange} />
                             </div>
                         </div>
-                    </div>
+                        <div className="text-sm text-slate-500">Hiện có {images.length}/4 ảnh.</div>
+                    </Section>
 
-                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Tag"
-                            subtitle="Nhập tag ngắn gọn để dễ nhóm và lọc sản phẩm."
+                    <Section
+                        title="Pricing"
+                        subtitle="Chỉ giữ ô giá bán chính để đồng bộ với workflow edit nhanh."
+                        compact
+                    >
+                        <InputField
+                            label="Giá bán"
+                            name="variantPrice"
+                            value={formData.variantPrice}
+                            onChange={handleChange as any}
+                            type="number"
+                            required
                         />
+                    </Section>
+
+                    <Section
+                        title="Strap setup"
+                        subtitle="Xác định dây đi kèm theo đồng hồ hay lấy từ kho. Phần này ảnh hưởng trực tiếp đến readiness và workflow tồn/cost."
+                        compact
+                    >
+                        <div className="space-y-3">
+                            <label className="flex items-start gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="radio"
+                                    name="strapModeRadio"
+                                    checked={formData.strapMode === 'INCLUDED'}
+                                    onChange={() => handleStrapModeChange('INCLUDED')}
+                                />
+                                <span>
+                                    <span className="block font-medium text-slate-800">Dây đã đi kèm sẵn</span>
+                                    <span className="text-slate-500">Không lấy thêm dây từ kho, chỉ khai báo loại dây hiện có.</span>
+                                </span>
+                            </label>
+
+                            <label className="flex items-start gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="radio"
+                                    name="strapModeRadio"
+                                    checked={formData.strapMode === 'INVENTORY'}
+                                    onChange={() => handleStrapModeChange('INVENTORY')}
+                                />
+                                <span>
+                                    <span className="block font-medium text-slate-800">Lấy dây từ kho</span>
+                                    <span className="text-slate-500">Chọn một dây đang có tồn để ghép với sản phẩm.</span>
+                                </span>
+                            </label>
+
+                            <label className="flex items-start gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="radio"
+                                    name="strapModeRadio"
+                                    checked={formData.strapMode === 'NONE'}
+                                    onChange={() => handleStrapModeChange('NONE')}
+                                />
+                                <span>
+                                    <span className="block font-medium text-slate-800">Không kèm dây</span>
+                                    <span className="text-slate-500">Dùng cho head-only hoặc sản phẩm chưa chốt cấu hình dây.</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        {formData.strapMode === 'INCLUDED' ? (
+                            <SelectField
+                                label="Loại dây đi kèm"
+                                name="strap"
+                                value={formData.strap}
+                                onChange={handleChange as any}
+                                options={strapOptions}
+                                placeholder="-- Chọn loại dây --"
+                                required
+                            />
+                        ) : null}
+
+                        {formData.strapMode === 'INVENTORY' ? (
+                            <>
+                                <div>
+                                    <FieldLabel label="Chọn dây trong kho" required />
+                                    <select
+                                        name="linkedStrapVariantId"
+                                        value={formData.linkedStrapVariantId ?? ''}
+                                        onChange={handleInventoryStrapChange}
+                                        className="block w-full rounded-none border border-slate-200 bg-white px-3 py-2.5 text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
+                                    >
+                                        <option value="">-- Chọn dây trong kho --</option>
+                                        {inventoryStrapSelectOptions.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <SelectField
+                                    label="Loại dây / Strap"
+                                    name="strap"
+                                    value={formData.strap}
+                                    onChange={handleChange as any}
+                                    options={strapOptions}
+                                    placeholder="-- Chọn loại dây --"
+                                    required
+                                />
+
+                                {selectedInventoryStrap ? (
+                                    <div className="space-y-2 border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                                        <div className="font-medium text-slate-800">{selectedInventoryStrap.title}</div>
+                                        <div>
+                                            Size: {selectedInventoryStrap.strapSpec?.lugWidthMM ?? '—'}-
+                                            {selectedInventoryStrap.strapSpec?.buckleWidthMM ?? '—'} · Màu:{' '}
+                                            {selectedInventoryStrap.strapSpec?.color ?? '—'}
+                                        </div>
+                                        <div>Vendor: {selectedInventoryStrap.vendorName ?? '—'}</div>
+                                        <div>Tồn hiện tại: {selectedInventoryStrap.stockQty}</div>
+                                        <div>Dự kiến tồn sau khi gắn: {Math.max(Number(selectedInventoryStrap.stockQty || 0) - 1, 0)}</div>
+                                        <div>Giá bán dây: {formatMoney(selectedInventoryStrap.price ?? null)}</div>
+                                        <div>Chi phí dây cộng thêm: {formatMoney(selectedInventoryStrap.costPrice ?? null)}</div>
+                                        <div className="text-xs leading-5 text-slate-500">
+                                            Lưu ý: UI đã tách workflow chọn dây trong kho. Để tự động lưu ràng buộc, cộng giá vốn và trừ tồn khi save/bulk post, backend cần thêm relation strap variant cho product/watch.
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </>
+                        ) : null}
+                    </Section>
+
+                    <Section
+                        title="Tag"
+                        subtitle="Nhập tag ngắn gọn để dễ nhóm và lọc sản phẩm."
+                        compact
+                    >
                         <InputField
                             label="Tag"
                             name="tag"
@@ -743,18 +1069,18 @@ export default function EditProductForm({
                             onChange={handleChange as any}
                             placeholder="Ví dụ: dress, diver, vintage..."
                         />
-                    </div>
+                    </Section>
 
-                    <div className="space-y-4 rounded-md border border-gray-200 bg-white p-5 shadow">
-                        <SectionTitle
-                            title="Product complications"
-                            subtitle="Chọn các complication quan trọng của sản phẩm."
-                        />
-                        <div className="grid max-h-80 grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
+                    <Section
+                        title="Product complications"
+                        subtitle="Chọn các complication quan trọng của sản phẩm."
+                        compact
+                    >
+                        <div className="grid max-h-80 grid-cols-1 gap-2 overflow-auto pr-1 sm:grid-cols-2">
                             {complicationOptions.map((c) => (
                                 <label
                                     key={c.id}
-                                    className="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm"
+                                    className="inline-flex items-center gap-2 border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
                                 >
                                     <input
                                         type="checkbox"
@@ -765,16 +1091,20 @@ export default function EditProductForm({
                                 </label>
                             ))}
                         </div>
-                    </div>
+                    </Section>
                 </aside>
             </div>
 
-            {err ? <div className="text-sm text-red-600">{err}</div> : null}
+            {err ? (
+                <div className="border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {err}
+                </div>
+            ) : null}
 
             <div className="flex justify-end gap-3">
                 <button
                     type="button"
-                    className="rounded-md border px-3 py-2"
+                    className="border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                     onClick={() => router.push('/admin/products')}
                     disabled={saving}
                 >
@@ -782,7 +1112,7 @@ export default function EditProductForm({
                 </button>
                 <button
                     type="submit"
-                    className="rounded-md border border-gray-300 bg-[#11191f] px-3 py-2 text-sm font-medium text-gray-200 shadow-sm"
+                    className="border border-slate-800 bg-[#11191f] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:opacity-95 disabled:opacity-60"
                     disabled={saving}
                 >
                     {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
