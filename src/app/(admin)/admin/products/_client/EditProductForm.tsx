@@ -78,7 +78,6 @@ const WATCHSPEC_KEYS = [
     'caseMaterial',
     'goldKarat',
     'goldColor',
-    'caseSize',
     'length',
     'width',
     'thickness',
@@ -93,14 +92,12 @@ const WATCHSPEC_KEYS = [
 const VARIANT_KEYS = ['variantPrice'] as const;
 
 const REQUIRED_PRODUCT_FIELDS = new Set(['title', 'brandId', 'type', 'categoryId']);
-const REQUIRED_WATCH_FIELDS = new Set([
+const BASE_REQUIRED_WATCH_FIELDS = new Set([
     'ref',
     'model',
     'year',
     'caseType',
     'movement',
-    'caseSize',
-    'length',
     'width',
     'thickness',
     'dialColor',
@@ -188,11 +185,12 @@ function normalizeInitial(initial: any) {
         complicationIds,
         images,
         categoryId: initial?.categoryId ?? initial?.ProductCategory?.id ?? '',
+        caseMaterial: ws?.caseMaterial ?? 'STAINLESS_STEEL',
         variantId: firstVariant?.id ?? undefined,
         variantPrice: firstVariant?.price != null ? Number(firstVariant.price) : '',
         primaryImageUrl: initial?.primaryImageUrl ?? images?.[0]?.fileKey ?? '',
         tag: initial?.tag ?? '',
-        strapMode: ws?.strap ? 'INCLUDED' : 'NONE',
+        strapMode: 'INCLUDED',
         linkedStrapProductId: '',
         linkedStrapVariantId: '',
         linkedStrapTitle: '',
@@ -406,6 +404,30 @@ export default function EditProductForm({
         ];
     }, [categoryOptions, formData.categoryId, formData.type]);
 
+    const safeCaseMaterialOptions = useMemo(
+        () => mergeCurrentValueOption(caseMaterialOptions, formData.caseMaterial),
+        [caseMaterialOptions, formData.caseMaterial]
+    );
+
+    const safeGlassOptions = useMemo(
+        () => mergeCurrentValueOption(glassOptions, formData.glass),
+        [glassOptions, formData.glass]
+    );
+
+    const isRoundCase = String(formData.caseType ?? '').toUpperCase() === 'ROUND';
+    const isGoldCase = String(formData.caseMaterial ?? '').toUpperCase() === 'GOLD';
+
+    const requiredWatchFields = useMemo(() => {
+        const fields = new Set(BASE_REQUIRED_WATCH_FIELDS);
+        if (!isRoundCase) fields.add('length');
+        if (formData.strapMode === 'INCLUDED') fields.add('strap');
+        if (isGoldCase) {
+            fields.add('goldKarat');
+            fields.add('goldColor');
+        }
+        return fields;
+    }, [formData.strapMode, isGoldCase, isRoundCase]);
+
     const selectedInventoryStrap = useMemo(
         () =>
             strapInventoryOptions.find(
@@ -438,22 +460,26 @@ export default function EditProductForm({
         if (!hasValue(formData.year)) missing.push('Năm sản xuất');
         if (!hasValue(formData.caseType)) missing.push('Dạng vỏ');
         if (!hasValue(formData.movement)) missing.push('Bộ máy');
-        if (!hasValue(formData.caseSize)) missing.push('Case size');
-        if (!hasValue(formData.length)) missing.push('Dài');
-        if (!hasValue(formData.width)) missing.push('Rộng');
+        if (!isRoundCase && !hasValue(formData.length)) missing.push('Dài');
+        if (!hasValue(formData.width)) missing.push(isRoundCase ? 'Đường kính / Rộng' : 'Rộng');
         if (!hasValue(formData.thickness)) missing.push('Độ dày');
         if (!hasValue(formData.dialColor)) missing.push('Màu mặt số');
         if (!hasValue(formData.glass)) missing.push('Kính');
 
+        if (isGoldCase) {
+            if (!hasValue(formData.goldKarat)) missing.push('K vàng');
+            if (!hasValue(formData.goldColor)) missing.push('Màu vàng');
+        }
+
         if (formData.strapMode === 'INVENTORY' && !hasValue(formData.linkedStrapVariantId)) {
             missing.push('Chọn dây trong kho');
         }
-        if (formData.strapMode !== 'NONE' && !hasValue(formData.strap)) {
-            missing.push('Loại dây / Strap');
+        if (formData.strapMode === 'INCLUDED' && !hasValue(formData.strap)) {
+            missing.push('Loại dây đi kèm');
         }
 
         return missing;
-    }, [formData, images.length]);
+    }, [formData, images.length, isGoldCase, isRoundCase]);
 
     const handleChange = (
         e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -469,10 +495,19 @@ export default function EditProductForm({
                     ? (e.target as HTMLInputElement).checked
                     : value;
 
-        setFormData((prev) => ({
-            ...prev,
-            [name]: nextValue,
-        }));
+        setFormData((prev) => {
+            const next = {
+                ...prev,
+                [name]: nextValue,
+            } as Record<string, any>;
+
+            if (name === 'caseMaterial' && String(nextValue).toUpperCase() !== 'GOLD') {
+                next.goldKarat = '';
+                next.goldColor = '';
+            }
+
+            return next;
+        });
     };
 
     const toggleComp = (cid: string) => {
@@ -497,7 +532,7 @@ export default function EditProductForm({
         }));
     };
 
-    const handleStrapModeChange = (mode: 'INCLUDED' | 'INVENTORY' | 'NONE') => {
+    const handleStrapModeChange = (mode: 'INCLUDED' | 'INVENTORY') => {
         setFormData((prev) => ({
             ...prev,
             strapMode: mode,
@@ -509,7 +544,6 @@ export default function EditProductForm({
                     linkedStrapCostPrice: '',
                 }
                 : {}),
-            ...(mode === 'NONE' ? { strap: '' } : {}),
         }));
     };
 
@@ -519,7 +553,7 @@ export default function EditProductForm({
         const inferredStrapType = picked?.strapSpec?.material
             ? strapOptions.find(
                 (opt) => String(opt.value).toUpperCase() === String(picked.strapSpec?.material).toUpperCase()
-            )?.value ?? ''
+            )?.value ?? String(picked.strapSpec.material).toUpperCase()
             : '';
 
         setFormData((prev) => ({
@@ -555,7 +589,6 @@ export default function EditProductForm({
                     caseMaterial: watchSpecRaw.caseMaterial,
                     goldKarat: watchSpecRaw.goldKarat,
                     goldColor: watchSpecRaw.goldColor,
-                    caseSize: watchSpecRaw.caseSize,
                     length: watchSpecRaw.length,
                     width: watchSpecRaw.width,
                     thickness: watchSpecRaw.thickness,
@@ -721,21 +754,21 @@ export default function EditProductForm({
                                 name="ref"
                                 value={formData.ref}
                                 onChange={handleChange as any}
-                                required={REQUIRED_WATCH_FIELDS.has('ref')}
+                                required={requiredWatchFields.has('ref')}
                             />
                             <InputField
                                 label="Model"
                                 name="model"
                                 value={formData.model}
                                 onChange={handleChange as any}
-                                required={REQUIRED_WATCH_FIELDS.has('model')}
+                                required={requiredWatchFields.has('model')}
                             />
                             <InputField
                                 label="Năm sản xuất"
                                 name="year"
                                 value={formData.year}
                                 onChange={handleChange as any}
-                                required={REQUIRED_WATCH_FIELDS.has('year')}
+                                required={requiredWatchFields.has('year')}
                             />
                         </div>
 
@@ -747,7 +780,7 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={caseOptions}
                                 placeholder="-- Chọn dạng vỏ --"
-                                required={REQUIRED_WATCH_FIELDS.has('caseType')}
+                                required={requiredWatchFields.has('caseType')}
                             />
                             <SelectField
                                 label="Giới tính"
@@ -762,12 +795,12 @@ export default function EditProductForm({
                                 name="caseMaterial"
                                 value={formData.caseMaterial}
                                 onChange={handleChange as any}
-                                options={caseMaterialOptions}
+                                options={safeCaseMaterialOptions}
                                 placeholder="-- Chọn chất liệu --"
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
                             <SelectField
                                 label="Bộ máy"
                                 name="movement"
@@ -775,7 +808,7 @@ export default function EditProductForm({
                                 onChange={handleChange as any}
                                 options={movementOptions}
                                 placeholder="-- Chọn bộ máy --"
-                                required={REQUIRED_WATCH_FIELDS.has('movement')}
+                                required={requiredWatchFields.has('movement')}
                             />
                             <InputField
                                 label="Caliber"
@@ -783,32 +816,26 @@ export default function EditProductForm({
                                 value={formData.caliber}
                                 onChange={handleChange as any}
                             />
-                            <InputField
-                                label="Case size"
-                                name="caseSize"
-                                value={formData.caseSize}
-                                onChange={handleChange as any}
-                                placeholder="Ví dụ 39mm"
-                                required={REQUIRED_WATCH_FIELDS.has('caseSize')}
-                            />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
+                        <div className={`grid grid-cols-1 gap-x-5 gap-y-5 ${isRoundCase ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+                            {!isRoundCase ? (
+                                <InputField
+                                    label="Dài"
+                                    name="length"
+                                    value={formData.length}
+                                    onChange={handleChange as any}
+                                    type="number"
+                                    required={requiredWatchFields.has('length')}
+                                />
+                            ) : null}
                             <InputField
-                                label="Dài"
-                                name="length"
-                                value={formData.length}
-                                onChange={handleChange as any}
-                                type="number"
-                                required={REQUIRED_WATCH_FIELDS.has('length')}
-                            />
-                            <InputField
-                                label="Rộng"
+                                label={isRoundCase ? 'Đường kính / Rộng' : 'Rộng'}
                                 name="width"
                                 value={formData.width}
                                 onChange={handleChange as any}
                                 type="number"
-                                required={REQUIRED_WATCH_FIELDS.has('width')}
+                                required={requiredWatchFields.has('width')}
                             />
                             <InputField
                                 label="Độ dày"
@@ -816,7 +843,7 @@ export default function EditProductForm({
                                 value={formData.thickness}
                                 onChange={handleChange as any}
                                 type="number"
-                                required={REQUIRED_WATCH_FIELDS.has('thickness')}
+                                required={requiredWatchFields.has('thickness')}
                             />
                         </div>
 
@@ -826,39 +853,43 @@ export default function EditProductForm({
                                 name="dialColor"
                                 value={formData.dialColor}
                                 onChange={handleChange as any}
-                                required={REQUIRED_WATCH_FIELDS.has('dialColor')}
+                                required={requiredWatchFields.has('dialColor')}
                             />
                             <SelectField
                                 label="Kính"
                                 name="glass"
                                 value={formData.glass}
                                 onChange={handleChange as any}
-                                options={glassOptions}
+                                options={safeGlassOptions}
                                 placeholder="-- Chọn kính --"
-                                required={REQUIRED_WATCH_FIELDS.has('glass')}
+                                required={requiredWatchFields.has('glass')}
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
-                            <InputField
-                                label="K vàng"
-                                name="goldKarat"
-                                value={formData.goldKarat}
-                                onChange={handleChange as any}
-                                type="number"
-                            />
-                            <SelectField
-                                label="Màu vàng"
-                                name="goldColor"
-                                value={formData.goldColor}
-                                onChange={handleChange as any}
-                                options={goldColorOptions}
-                                placeholder="-- Chọn màu vàng --"
-                            />
-                            <div className="border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-600">
-                                Có thể để trống nhóm vàng nếu đồng hồ không dùng chất liệu vàng.
+                        {isGoldCase ? (
+                            <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
+                                <InputField
+                                    label="K vàng"
+                                    name="goldKarat"
+                                    value={formData.goldKarat}
+                                    onChange={handleChange as any}
+                                    type="number"
+                                    required={requiredWatchFields.has('goldKarat')}
+                                />
+                                <SelectField
+                                    label="Màu vàng"
+                                    name="goldColor"
+                                    value={formData.goldColor}
+                                    onChange={handleChange as any}
+                                    options={goldColorOptions}
+                                    placeholder="-- Chọn màu vàng --"
+                                    required={requiredWatchFields.has('goldColor')}
+                                />
+                                <div className="border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-6 text-amber-800">
+                                    Khi chọn chất liệu vỏ là vàng, cần khai báo thêm K vàng và màu vàng.
+                                </div>
                             </div>
-                        </div>
+                        ) : null}
 
                         <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-3">
                             <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
@@ -950,7 +981,7 @@ export default function EditProductForm({
 
                     <Section
                         title="Strap setup"
-                        subtitle="Xác định dây đi kèm theo đồng hồ hay lấy từ kho. Phần này ảnh hưởng trực tiếp đến readiness và workflow tồn/cost."
+                        subtitle="Xác định dây đi kèm sẵn theo đồng hồ hoặc chọn trực tiếp từ kho. Phần này ảnh hưởng trực tiếp đến readiness và workflow tồn/cost."
                         compact
                     >
                         <div className="space-y-3">
@@ -976,22 +1007,10 @@ export default function EditProductForm({
                                 />
                                 <span>
                                     <span className="block font-medium text-slate-800">Lấy dây từ kho</span>
-                                    <span className="text-slate-500">Chọn một dây đang có tồn để ghép với sản phẩm.</span>
+                                    <span className="text-slate-500">Chọn trực tiếp một dây đang có tồn để ghép với sản phẩm.</span>
                                 </span>
                             </label>
 
-                            <label className="flex items-start gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
-                                <input
-                                    type="radio"
-                                    name="strapModeRadio"
-                                    checked={formData.strapMode === 'NONE'}
-                                    onChange={() => handleStrapModeChange('NONE')}
-                                />
-                                <span>
-                                    <span className="block font-medium text-slate-800">Không kèm dây</span>
-                                    <span className="text-slate-500">Dùng cho head-only hoặc sản phẩm chưa chốt cấu hình dây.</span>
-                                </span>
-                            </label>
                         </div>
 
                         {formData.strapMode === 'INCLUDED' ? (
@@ -1024,16 +1043,6 @@ export default function EditProductForm({
                                         ))}
                                     </select>
                                 </div>
-
-                                <SelectField
-                                    label="Loại dây / Strap"
-                                    name="strap"
-                                    value={formData.strap}
-                                    onChange={handleChange as any}
-                                    options={strapOptions}
-                                    placeholder="-- Chọn loại dây --"
-                                    required
-                                />
 
                                 {selectedInventoryStrap ? (
                                     <div className="space-y-2 border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">

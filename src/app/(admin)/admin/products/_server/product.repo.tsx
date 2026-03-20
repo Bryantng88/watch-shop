@@ -610,7 +610,12 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         title: true,
         status: true,
         type: true,
+        brandId: true,
+        categoryId: true,
         primaryImageUrl: true,
+        image: {
+            select: { id: true },
+        },
         variants: {
             orderBy: { updatedAt: "desc" },
             take: 1,
@@ -623,10 +628,14 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         },
         watchSpec: {
             select: {
+                ref: true,
                 model: true,
                 year: true,
                 caseType: true,
                 movement: true,
+                caseMaterial: true,
+                goldKarat: true,
+                goldColor: true,
                 length: true,
                 width: true,
                 thickness: true,
@@ -656,7 +665,10 @@ export async function getProductsForBulkPost(tx: DB, ids: string[]) {
         title: p.title,
         status: p.status,
         type: p.type,
+        brandId: p.brandId ?? null,
+        categoryId: p.categoryId ?? null,
         primaryImageUrl: p.primaryImageUrl,
+        imageCount: Array.isArray(p.image) ? p.image.length : 0,
         minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
         variantSnapshot: p.variants?.[0]
             ? {

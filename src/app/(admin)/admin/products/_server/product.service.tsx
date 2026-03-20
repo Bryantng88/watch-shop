@@ -3,6 +3,7 @@ import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus } from "
 import * as prodRepo from "./product.repo";
 import { z } from "zod";
 import { computeEffectivePrice } from "../helpers/price";
+import { MIN_IMAGES, REQUIRED_PRODUCT_FIELDS, REQUIRED_VARIANT_FIELDS, getRequiredWatchSpecFields, hasValue } from "./rules";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
@@ -321,8 +322,38 @@ function hasPrice(p: { minPrice: unknown }) {
     return toNumberPrice(p.minPrice) > 0;
 }
 
-function hasImage(p: { primaryImageUrl: string | null }) {
+function hasEnoughImages(p: { imageCount?: number; primaryImageUrl: string | null }) {
+    if (typeof p.imageCount === "number") return p.imageCount >= MIN_IMAGES;
     return !!p.primaryImageUrl && p.primaryImageUrl.trim().length > 0;
+}
+
+function buildBulkPostMissingReasons(p: any) {
+    const reasons: string[] = [];
+
+    for (const field of REQUIRED_PRODUCT_FIELDS) {
+        if (!hasValue(p?.[field.key])) {
+            reasons.push(`MISSING_${field.key.toUpperCase()}`);
+        }
+    }
+
+    if (!hasEnoughImages(p)) {
+        reasons.push(`MISSING_IMAGES_MIN_${MIN_IMAGES}`);
+    }
+
+    if (!hasPrice(p)) {
+        reasons.push('MISSING_PRICE');
+    }
+
+    if (p?.type !== ProductType.WATCH_STRAP) {
+        const watchSpec = p?.watchSpecSnapshot ?? {};
+        for (const field of getRequiredWatchSpecFields(watchSpec)) {
+            if (!hasValue(watchSpec?.[field.key])) {
+                reasons.push(`MISSING_WATCHSPEC_${field.key.toUpperCase()}`);
+            }
+        }
+    }
+
+    return reasons;
 }
 
 export async function bulkPostProducts(productIds: string[]): Promise<BulkPostProductsResult> {
@@ -352,8 +383,7 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
             if (p.status !== ProductStatus.DRAFT) {
                 reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
             }
-            if (!hasPrice(p)) reasons.push("MISSING_PRICE");
-            if (!hasImage(p)) reasons.push("MISSING_IMAGE");
+            reasons.push(...buildBulkPostMissingReasons(p));
 
             if (reasons.length) {
                 failed.push({ id: p.id, title: p.title ?? null, reasons });
