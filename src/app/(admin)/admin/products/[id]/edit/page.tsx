@@ -1,116 +1,85 @@
-import EditProductForm from '../../_client/EditProductForm';
+import ProductListClient from "./_client/ListProducts";
+import { getAdminProductList } from "./_server/product.service";
 
-import { getOptions } from '../../_components/options';
-import { prisma } from '@/server/db/client';
-import { listBrands } from '@/features/catalog/server/brands.repo';
-import { listVendor } from '@/features/vendors/server/vendor.repo';
-import { getAdminProductDetail } from '@/features/products/server/product.repo';
+import { parseProductListSearchParams } from "./helpers/search-params";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import { PERMISSIONS } from "@/constants/permissions";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+type SearchParams = { [key: string]: string | string[] | undefined };
 
-    const [product, brands, vendors, opts, categories, strapInventory] = await Promise.all([
-        getAdminProductDetail(id),
-        listBrands(),
-        listVendor(),
-        getOptions(),
-        prisma.productCategory.findMany({
-            where: { isActive: true },
-            orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-            select: {
-                id: true,
-                name: true,
-                scope: true,
-            },
-        }),
-        prisma.product.findMany({
-            where: {
-                type: 'WATCH_STRAP' as any,
-                variants: {
-                    some: {
-                        stockQty: { gt: 0 },
-                    },
-                },
-            },
-            orderBy: [{ updatedAt: 'desc' }, { title: 'asc' }],
-            take: 200,
-            select: {
-                id: true,
-                title: true,
-                vendor: {
-                    select: {
-                        name: true,
-                    },
-                },
-                variants: {
-                    orderBy: [{ updatedAt: 'desc' }, { createdAt: 'asc' }],
-                    take: 1,
-                    select: {
-                        id: true,
-                        stockQty: true,
-                        availabilityStatus: true,
-                        price: true,
-                        costPrice: true,
-                        strapSpec: {
-                            select: {
-                                lugWidthMM: true,
-                                buckleWidthMM: true,
-                                color: true,
-                                material: true,
-                                quickRelease: true,
-                            },
-                        },
-                    },
-                },
-            },
-        }),
+
+function hasRole(user: any, roleName: string) {
+    const roles = user?.roles ?? [];
+    return roles.some((r: any) => {
+        if (typeof r === "string") return r === roleName;
+        if (typeof r?.name === "string") return r.name === roleName;
+        if (typeof r?.code === "string") return r.code === roleName;
+        return false;
+    });
+}
+
+function hasPermission(user: any, permission: string) {
+    const permissions = user?.permissions ?? [];
+    return permissions.some((p: any) => {
+        if (typeof p === "string") return p === permission;
+        if (typeof p?.name === "string") return p.name === permission;
+        if (typeof p?.code === "string") return p.code === permission;
+        if (typeof p?.key === "string") return p.key === permission;
+        return false;
+    });
+}
+
+export default async function ProductListPage({
+    searchParams,
+}: {
+    searchParams: SearchParams;
+}) {
+    const sp = new URLSearchParams(
+        Object.entries(searchParams).flatMap(([k, v]) =>
+            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
+        )
+    );
+
+    const input = parseProductListSearchParams(sp);
+
+    const [user, productList] = await Promise.all([
+        getCurrentUser(),
+        getAdminProductList(input),
     ]);
 
-    const parse = JSON.parse(JSON.stringify(product));
-    const strapInventoryOptions = strapInventory
-        .map((item) => {
-            const variant = item.variants?.[0];
-            if (!variant?.id) return null;
+    const isAdmin = hasRole(user, "ADMIN");
 
-            return {
-                productId: item.id,
-                variantId: variant.id,
-                title: item.title,
-                vendorName: item.vendor?.name ?? null,
-                stockQty: Number(variant.stockQty ?? 0),
-                availabilityStatus: variant.availabilityStatus ?? null,
-                price: variant.price != null ? Number(variant.price) : null,
-                costPrice: variant.costPrice != null ? Number(variant.costPrice) : null,
-                strapSpec: variant.strapSpec
-                    ? {
-                        lugWidthMM: Number(variant.strapSpec.lugWidthMM ?? 0),
-                        buckleWidthMM: Number(variant.strapSpec.buckleWidthMM ?? 0),
-                        color: variant.strapSpec.color ?? null,
-                        material: variant.strapSpec.material ?? null,
-                        quickRelease: variant.strapSpec.quickRelease ?? null,
-                    }
-                    : null,
-            };
-        })
-        .filter(Boolean);
+    const canViewCost =
+        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
+
+    const canEditPrice =
+        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_UPDATE);
+
+    const {
+        items,
+        total,
+        counts,
+        page,
+        pageSize,
+        brands,
+        productTypes,
+    } = productList;
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return (
-        <EditProductForm
-            initial={parse}
+        <ProductListClient
+            items={items}
+            total={total}
+            counts={counts}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            rawSearchParams={searchParams}
             brands={brands}
-            vendors={vendors}
-            productStatusOptions={opts.productStatus}
-            typeOptions={opts.type}
-            caseOptions={opts.case}
-            movementOptions={opts.movement}
-            caseMaterialOptions={opts.caseMaterial}
-            genderOptions={opts.gender}
-            strapOptions={opts.strap}
-            glassOptions={opts.glass}
-            goldColorOptions={opts.goldColor}
-            complicationOptions={opts.complication}
-            categoryOptions={categories}
-            strapInventoryOptions={strapInventoryOptions as any}
+            productTypes={productTypes}
+            canViewCost={canViewCost}
+            canEditPrice={canEditPrice}
         />
     );
 }

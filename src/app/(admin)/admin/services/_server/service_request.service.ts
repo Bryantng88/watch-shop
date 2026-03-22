@@ -339,3 +339,73 @@ export async function createFromProductTx(
 
     return created;
 }
+
+export async function completeServiceRequest(input: {
+    serviceRequestId: string;
+    note?: string | null;
+}) {
+    const serviceRequestId = String(input.serviceRequestId || '').trim();
+    if (!serviceRequestId) throw new Error('Missing serviceRequestId');
+
+    return prisma.$transaction(async (tx) => {
+        const existing = await tx.serviceRequest.findUnique({
+            where: { id: serviceRequestId },
+            select: {
+                id: true,
+                status: true,
+                vendorId: true,
+                vendorNameSnap: true,
+                productId: true,
+                variantId: true,
+                brandSnapshot: true,
+                modelSnapshot: true,
+                refSnapshot: true,
+                serialSnapshot: true,
+            },
+        });
+
+        if (!existing) throw new Error('Service request not found');
+        if (existing.status === ServiceRequestStatus.CANCELED) {
+            throw new Error('Service request đã bị hủy, không thể kết thúc');
+        }
+        if (
+            existing.status === ServiceRequestStatus.COMPLETED ||
+            existing.status === ServiceRequestStatus.DELIVERED
+        ) {
+            return { ok: true, skipped: true, status: existing.status };
+        }
+
+        const completedAt = new Date();
+        const updated = await serviceRequestRepo.completeServiceRequestOne(tx, {
+            id: serviceRequestId,
+            completedAt,
+        });
+
+        const baseNote = 'Kết thúc service';
+        const mergedNote = input.note && String(input.note).trim()
+            ? `${baseNote}
+${String(input.note).trim()}`
+            : baseNote;
+
+        await maintRepo.createLog(tx, {
+            serviceRequestId: updated.id,
+            eventType: 'NOTE' as any,
+            vendorId: updated.vendorId ?? null,
+            vendorName: updated.vendorNameSnap ?? null,
+            notes: mergedNote,
+            servicedAt: completedAt,
+            productId: updated.productId ?? null,
+            variantId: updated.variantId ?? null,
+            brandSnapshot: updated.brandSnapshot ?? null,
+            modelSnapshot: updated.modelSnapshot ?? null,
+            refSnapshot: updated.refSnapshot ?? null,
+            serialSnapshot: updated.serialSnapshot ?? null,
+        });
+
+        return {
+            ok: true,
+            skipped: false,
+            status: updated.status,
+        };
+    });
+}

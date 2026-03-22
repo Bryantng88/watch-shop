@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import SlideOverPanel from "./SlideOverPanel";
 import ServiceHistoryTable, { type ServiceHistoryRow } from "./ServiceHistoryTable";
 
-type ProductLite = { id: string; title?: string | null; openServiceStatus?: string | null } | null;
+type ProductLite = { id: string; title?: string | null; openServiceStatus?: string | null; latestServiceStatus?: string | null } | null;
 
 type ApiResponse = {
     product?: { id: string; title?: string | null } | null;
@@ -59,6 +59,10 @@ export default function ServiceHistoryModal({
             {product?.openServiceStatus ? (
                 <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                     Sản phẩm hiện đang có service mở với trạng thái <b>{product.openServiceStatus}</b>.
+                </div>
+            ) : product?.latestServiceStatus === "COMPLETED" || product?.latestServiceStatus === "DELIVERED" ? (
+                <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                    Service gần nhất của sản phẩm đã hoàn tất.
                 </div>
             ) : null}
 

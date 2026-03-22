@@ -1,9 +1,16 @@
-// src/app/(admin)/admin/services/_client/BulkAssignVendorModal.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
 type VendorLite = { id: string; name: string };
+
+function normalizeVendorItems(payload: unknown): VendorLite[] {
+    if (Array.isArray(payload)) return payload as VendorLite[];
+    if (payload && typeof payload === "object" && Array.isArray((payload as any).items)) {
+        return (payload as any).items as VendorLite[];
+    }
+    return [];
+}
 
 export default function BulkAssignVendorModal({
     open,
@@ -22,13 +29,12 @@ export default function BulkAssignVendorModal({
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        if (!open) return;
-        if (loaded) return;
+        if (!open || loaded) return;
 
         (async () => {
             const res = await fetch("/api/admin/vendors/dropdown", { cache: "no-store" });
             const data = await res.json();
-            const items = data.items ?? [];
+            const items = normalizeVendorItems(data);
             setVendors(items);
             setVendorId(items?.[0]?.id ?? "");
             setLoaded(true);
@@ -57,12 +63,17 @@ export default function BulkAssignVendorModal({
                         className="h-9 w-full rounded border px-2"
                         value={vendorId}
                         onChange={(e) => setVendorId(e.target.value)}
+                        disabled={vendors.length === 0}
                     >
-                        {vendors.map((v) => (
-                            <option key={v.id} value={v.id}>
-                                {v.name}
-                            </option>
-                        ))}
+                        {vendors.length === 0 ? (
+                            <option value="">Không có vendor</option>
+                        ) : (
+                            vendors.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                    {v.name}
+                                </option>
+                            ))
+                        )}
                     </select>
 
                     <div className="text-xs text-gray-500">

@@ -58,6 +58,7 @@ type ProductRow = ProductListItem & {
     missingWatchSpecFields?: string[];
     hasOpenService?: boolean;
     openServiceStatus?: string | null;
+    latestServiceStatus?: string | null;
 };
 
 type PageProps = {
@@ -109,6 +110,38 @@ function getQuickFixHints(p: ProductRow) {
     if (!p.isInfoComplete) hints.push("Các trường variant/spec cần bổ sung ở trang chỉnh sửa sản phẩm.");
 
     return hints;
+}
+
+function getServiceLabel(p: ProductRow) {
+    if (p.hasOpenService || p.openServiceStatus) {
+        return {
+            label: `Đang service${p.openServiceStatus ? ` (${p.openServiceStatus})` : ""}`,
+            tone: "blue" as const,
+        };
+    }
+
+    if (p.latestServiceStatus === "COMPLETED" || p.latestServiceStatus === "DELIVERED") {
+        return {
+            label: "Đã service xong",
+            tone: "green" as const,
+        };
+    }
+
+    if (p.latestServiceStatus === "CANCELED") {
+        return {
+            label: "Service đã hủy",
+            tone: "gray" as const,
+        };
+    }
+
+    if (p.latestServiceStatus) {
+        return {
+            label: `Service gần nhất (${p.latestServiceStatus})`,
+            tone: "blue" as const,
+        };
+    }
+
+    return null;
 }
 
 function StrapSpecText({ p }: { p: ProductRow }) {
@@ -278,12 +311,12 @@ function ReadinessDetailModal({
                             label={product.isInfoComplete ? "Đủ variant/spec" : "Thiếu variant/spec"}
                             tone={product.isInfoComplete ? "green" : "orange"}
                         />
-                        {product.hasOpenService ? (
-                            <DotLabel
-                                label={`Đang service${product.openServiceStatus ? ` (${product.openServiceStatus})` : ""}`}
-                                tone="blue"
-                            />
-                        ) : null}
+                        {(() => {
+                            const serviceLabel = getServiceLabel(product);
+                            return serviceLabel ? (
+                                <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
+                            ) : null;
+                        })()}
                     </div>
 
                     {hasMissingReadinessInfo(product) ? (
@@ -329,6 +362,10 @@ function ReadinessDetailModal({
                     {product.hasOpenService ? (
                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
                             Sản phẩm đang trong quá trình service nên chưa nên bulk post cho đến khi hoàn tất.
+                        </div>
+                    ) : product.latestServiceStatus === "COMPLETED" || product.latestServiceStatus === "DELIVERED" ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+                            Sản phẩm đã có service hoàn tất gần nhất.
                         </div>
                     ) : null}
                 </div>
@@ -1115,21 +1152,21 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                                 <DotLabel label="Đã đủ thông tin" tone="green" />
                                                             )}
 
-                                                            {p.hasOpenService || !!p.openServiceStatus ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openServiceHistory(p);
-                                                                    }}
-                                                                    className="rounded-full text-left"
-                                                                >
-                                                                    <DotLabel
-                                                                        label={`Đang service${p.openServiceStatus ? ` (${p.openServiceStatus})` : ""}`}
-                                                                        tone="blue"
-                                                                    />
-                                                                </button>
-                                                            ) : null}
+                                                            {(() => {
+                                                                const serviceLabel = getServiceLabel(p);
+                                                                return serviceLabel ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            openServiceHistory(p);
+                                                                        }}
+                                                                        className="rounded-full text-left"
+                                                                    >
+                                                                        <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
+                                                                    </button>
+                                                                ) : null;
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1251,6 +1288,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                     id: serviceHistoryProduct.id,
                     title: serviceHistoryProduct.title,
                     openServiceStatus: serviceHistoryProduct.openServiceStatus,
+                    latestServiceStatus: serviceHistoryProduct.latestServiceStatus,
                 } : null}
             />
 

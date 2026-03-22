@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-type Picked = { key: string; url: string };
+type Picked = { key: string; url?: string };
+
+const imageSrc = (item: Picked) =>
+    item.url?.trim() ? item.url : `/api/media/sign?key=${encodeURIComponent(item.key)}`;
 
 export default function ImagePicker({
     value,
@@ -84,9 +87,18 @@ export default function ImagePicker({
                 </p>
 
                 {value.length > 0 && (
-                    <p className="mt-3 text-xs text-blue-600 font-medium">
-                        {value.length} image{value.length > 1 ? "s" : ""} selected
-                    </p>
+                    <div className="mt-4 w-full space-y-3">
+                        <div className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
+                            <img
+                                src={imageSrc(value[0])}
+                                alt="Selected product"
+                                className="h-36 w-full object-cover"
+                            />
+                        </div>
+                        <p className="text-xs text-blue-600 font-medium">
+                            {value.length} image{value.length > 1 ? "s" : ""} selected
+                        </p>
+                    </div>
                 )}
             </div>
 
@@ -100,7 +112,7 @@ export default function ImagePicker({
                             title={v.key}
                         >
                             <img
-                                src={v.url}
+                                src={imageSrc(v)}
                                 alt=""
                                 className="h-24 w-full object-cover group-hover:opacity-90"
                             />
@@ -128,6 +140,7 @@ export default function ImagePicker({
                                 /{prefix}
                             </div>
                             <button
+                                type="button"
                                 className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
                                 onClick={() => setOpen(false)}
                             >
@@ -139,6 +152,7 @@ export default function ImagePicker({
                             {folders.map((f) => (
                                 <button
                                     key={f.prefix}
+                                    type="button"
                                     className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
                                     onClick={() => load(f.prefix)}
                                 >
@@ -156,11 +170,11 @@ export default function ImagePicker({
                                         type="button"
                                         onClick={() => toggle(f)}
                                         className={`relative overflow-hidden rounded-lg border transition ${picked
-                                                ? "ring-2 ring-blue-500 border-blue-400"
-                                                : "hover:shadow-sm"
+                                            ? "ring-2 ring-blue-500 border-blue-400"
+                                            : "hover:shadow-sm"
                                             }`}
                                     >
-                                        <img src={f.url} className="h-28 w-full object-cover" />
+                                        <img src={imageSrc(f)} alt="" className="h-28 w-full object-cover" />
                                         {picked && (
                                             <div className="absolute inset-0 bg-blue-500/20" />
                                         )}
@@ -171,6 +185,7 @@ export default function ImagePicker({
 
                         <div className="flex justify-end">
                             <button
+                                type="button"
                                 className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
                                 onClick={() => setOpen(false)}
                             >

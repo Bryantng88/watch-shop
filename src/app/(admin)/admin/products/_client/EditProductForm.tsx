@@ -9,6 +9,7 @@ import {
     type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNotify } from '@/components/feedback/AppToastProvider';
 import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 
 type Picked = { key: string; url: string };
@@ -62,7 +63,6 @@ const PRODUCT_KEYS = [
     'type',
     'categoryId',
     'primaryImageUrl',
-    'seoTitle',
     'seoDescription',
     'tag',
 ] as const;
@@ -81,7 +81,6 @@ const WATCHSPEC_KEYS = [
     'length',
     'width',
     'thickness',
-    'dialColor',
     'strap',
     'glass',
     'boxIncluded',
@@ -100,7 +99,6 @@ const BASE_REQUIRED_WATCH_FIELDS = new Set([
     'movement',
     'width',
     'thickness',
-    'dialColor',
     'glass',
 ]);
 
@@ -155,17 +153,27 @@ function mergeCurrentValueOption(options: Option[] | undefined, value: any) {
     return [{ label: strValue, value: strValue }, ...base];
 }
 
-function hasValue(value: any) {
-    if (value === null || value === undefined) return false;
-    if (typeof value === 'string') return value.trim().length > 0;
-    if (typeof value === 'number') return Number.isFinite(value);
-    if (typeof value === 'boolean') return true;
-    if (Array.isArray(value)) return value.length > 0;
-    return true;
+const STRAP_ATTACHMENT_PREFIX = '__STRAP_LINK__:';
+
+function toNullableNumber(value: any) {
+    if (value === '' || value === null || value === undefined) return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+}
+
+function parseStoredStrapAttachment(raw: any) {
+    if (typeof raw !== 'string' || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
+    try {
+        const parsed = JSON.parse(raw.slice(STRAP_ATTACHMENT_PREFIX.length));
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+        return null;
+    }
 }
 
 function normalizeInitial(initial: any) {
     const firstVariant = initial?.variants?.[0] ?? null;
+    const storedStrapAttachment = parseStoredStrapAttachment(firstVariant?.name);
     const ws = initial?.watchSpec ?? {};
     const complicationIds =
         ws?.complication?.map((c: any) => c.id) ??
@@ -179,6 +187,13 @@ function normalizeInitial(initial: any) {
         url: img.url,
     }));
 
+    const currentVariantCost = toNullableNumber(firstVariant?.costPrice);
+    const attachedStrapCost = toNullableNumber(storedStrapAttachment?.costPrice) ?? 0;
+    const baseVariantCostPrice =
+        currentVariantCost != null
+            ? Math.max(currentVariantCost - attachedStrapCost, 0)
+            : null;
+
     return {
         ...initial,
         ...ws,
@@ -188,13 +203,15 @@ function normalizeInitial(initial: any) {
         caseMaterial: ws?.caseMaterial ?? 'STAINLESS_STEEL',
         variantId: firstVariant?.id ?? undefined,
         variantPrice: firstVariant?.price != null ? Number(firstVariant.price) : '',
+        variantCostPrice: currentVariantCost ?? '',
+        baseVariantCostPrice: baseVariantCostPrice ?? '',
         primaryImageUrl: initial?.primaryImageUrl ?? images?.[0]?.fileKey ?? '',
         tag: initial?.tag ?? '',
-        strapMode: 'INCLUDED',
-        linkedStrapProductId: '',
-        linkedStrapVariantId: '',
-        linkedStrapTitle: '',
-        linkedStrapCostPrice: '',
+        strapMode: storedStrapAttachment?.variantId ? 'INVENTORY' : 'INCLUDED',
+        linkedStrapProductId: storedStrapAttachment?.productId ?? '',
+        linkedStrapVariantId: storedStrapAttachment?.variantId ?? '',
+        linkedStrapTitle: storedStrapAttachment?.title ?? '',
+        linkedStrapCostPrice: toNullableNumber(storedStrapAttachment?.costPrice) ?? '',
     };
 }
 
@@ -334,6 +351,35 @@ function formatMoney(value: number | null | undefined) {
     return new Intl.NumberFormat('vi-VN').format(Number(value));
 }
 
+const REQUIRED_FIELD_LABELS: Record<string, string> = {
+    title: 'Tên sản phẩm',
+    brandId: 'Thương hiệu',
+    type: 'Loại sản phẩm',
+    categoryId: 'Category',
+    ref: 'Reference',
+    model: 'Model',
+    year: 'Năm sản xuất',
+    caseType: 'Dạng vỏ',
+    movement: 'Bộ máy',
+    length: 'Dài',
+    width: 'Đường kính / Rộng',
+    thickness: 'Độ dày',
+    glass: 'Kính',
+    goldKarat: 'K vàng',
+    goldColor: 'Màu vàng',
+    strap: 'Loại dây đi kèm',
+    linkedStrapVariantId: 'Chọn dây trong kho',
+    variantPrice: 'Giá bán',
+    images: 'Ảnh sản phẩm',
+};
+
+function hasFilledValue(value: any) {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'boolean') return true;
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
 export default function EditProductForm({
     initial,
     brands = [],
@@ -352,6 +398,7 @@ export default function EditProductForm({
     strapInventoryOptions = [],
 }: Props) {
     const router = useRouter();
+    const notify = useNotify();
     const id: string = initial?.id;
     const normalizedInitial = useMemo(() => normalizeInitial(initial), [initial]);
     const snapshotRef = useRef<any>(normalizedInitial);
@@ -445,41 +492,34 @@ export default function EditProductForm({
         [strapInventoryOptions]
     );
 
-    const bulkPostMissing = useMemo(() => {
-        const missing: string[] = [];
+    const baseVariantCostPrice = useMemo(
+        () => toNullableNumber(formData.baseVariantCostPrice),
+        [formData.baseVariantCostPrice]
+    );
 
-        if (!hasValue(formData.title)) missing.push('Tên sản phẩm');
-        if (!hasValue(formData.brandId)) missing.push('Thương hiệu');
-        if (!hasValue(formData.type)) missing.push('Loại sản phẩm');
-        if (!hasValue(formData.categoryId)) missing.push('Category');
-        if (!hasValue(formData.variantPrice) || Number(formData.variantPrice) <= 0) missing.push('Giá bán');
-        if (images.length < 4) missing.push(`Tối thiểu 4 ảnh (${images.length}/4)`);
+    const strapAddedCost = useMemo(() => {
+        if (formData.strapMode !== 'INVENTORY') return 0;
+        return (
+            toNullableNumber(selectedInventoryStrap?.costPrice) ??
+            toNullableNumber(formData.linkedStrapCostPrice) ??
+            0
+        );
+    }, [formData.strapMode, formData.linkedStrapCostPrice, selectedInventoryStrap?.costPrice]);
 
-        if (!hasValue(formData.ref)) missing.push('Reference');
-        if (!hasValue(formData.model)) missing.push('Model');
-        if (!hasValue(formData.year)) missing.push('Năm sản xuất');
-        if (!hasValue(formData.caseType)) missing.push('Dạng vỏ');
-        if (!hasValue(formData.movement)) missing.push('Bộ máy');
-        if (!isRoundCase && !hasValue(formData.length)) missing.push('Dài');
-        if (!hasValue(formData.width)) missing.push(isRoundCase ? 'Đường kính / Rộng' : 'Rộng');
-        if (!hasValue(formData.thickness)) missing.push('Độ dày');
-        if (!hasValue(formData.dialColor)) missing.push('Màu mặt số');
-        if (!hasValue(formData.glass)) missing.push('Kính');
-
-        if (isGoldCase) {
-            if (!hasValue(formData.goldKarat)) missing.push('K vàng');
-            if (!hasValue(formData.goldColor)) missing.push('Màu vàng');
+    const effectiveVariantCostPrice = useMemo(() => {
+        if (baseVariantCostPrice == null) {
+            return formData.strapMode === 'INVENTORY' && strapAddedCost > 0
+                ? Number(strapAddedCost)
+                : null;
         }
+        return Number(baseVariantCostPrice) + Number(strapAddedCost ?? 0);
+    }, [baseVariantCostPrice, formData.strapMode, strapAddedCost]);
 
-        if (formData.strapMode === 'INVENTORY' && !hasValue(formData.linkedStrapVariantId)) {
-            missing.push('Chọn dây trong kho');
-        }
-        if (formData.strapMode === 'INCLUDED' && !hasValue(formData.strap)) {
-            missing.push('Loại dây đi kèm');
-        }
-
-        return missing;
-    }, [formData, images.length, isGoldCase, isRoundCase]);
+    const priceGapVsCost = useMemo(() => {
+        const sellPrice = toNullableNumber(formData.variantPrice);
+        if (sellPrice == null || effectiveVariantCostPrice == null) return null;
+        return sellPrice - effectiveVariantCostPrice;
+    }, [effectiveVariantCostPrice, formData.variantPrice]);
 
     const handleChange = (
         e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -494,6 +534,8 @@ export default function EditProductForm({
                 : type === 'checkbox'
                     ? (e.target as HTMLInputElement).checked
                     : value;
+
+        setErr(null);
 
         setFormData((prev) => {
             const next = {
@@ -511,6 +553,7 @@ export default function EditProductForm({
     };
 
     const toggleComp = (cid: string) => {
+        setErr(null);
         setFormData((prev) => {
             const arr: string[] = prev.complicationIds ?? [];
             return arr.includes(cid)
@@ -520,6 +563,7 @@ export default function EditProductForm({
     };
 
     const onImagesChange = (next: Picked[]) => {
+        setErr(null);
         setImages(next);
         setFormData((prev) => ({
             ...prev,
@@ -533,6 +577,7 @@ export default function EditProductForm({
     };
 
     const handleStrapModeChange = (mode: 'INCLUDED' | 'INVENTORY') => {
+        setErr(null);
         setFormData((prev) => ({
             ...prev,
             strapMode: mode,
@@ -548,6 +593,7 @@ export default function EditProductForm({
     };
 
     const handleInventoryStrapChange = (e: ChangeEvent<HTMLSelectElement>) => {
+        setErr(null);
         const nextVariantId = e.target.value;
         const picked = strapInventoryOptions.find((item) => item.variantId === nextVariantId) ?? null;
         const inferredStrapType = picked?.strapSpec?.material
@@ -566,10 +612,49 @@ export default function EditProductForm({
         }));
     };
 
+    const validateBeforeSubmit = () => {
+        const missing = new Set<string>();
+
+        REQUIRED_PRODUCT_FIELDS.forEach((field) => {
+            if (!hasFilledValue(formData[field])) missing.add(field);
+        });
+
+        requiredWatchFields.forEach((field) => {
+            if (!hasFilledValue(formData[field])) missing.add(field);
+        });
+
+        if (!hasFilledValue(formData.variantPrice)) missing.add('variantPrice');
+        if (!Array.isArray(images) || images.length === 0) missing.add('images');
+
+        if (formData.strapMode === 'INCLUDED') {
+            if (!hasFilledValue(formData.strap)) missing.add('strap');
+        }
+
+        if (formData.strapMode === 'INVENTORY') {
+            if (!hasFilledValue(formData.linkedStrapVariantId)) missing.add('linkedStrapVariantId');
+        }
+
+        const labels = Array.from(missing).map((key) => REQUIRED_FIELD_LABELS[key] ?? key);
+        return { missing: Array.from(missing), labels };
+    };
+
     const submit = async (e: FormEvent) => {
         e.preventDefault();
-        setSaving(true);
         setErr(null);
+
+        const validation = validateBeforeSubmit();
+        if (validation.missing.length) {
+            const message = `Vui lòng điền đủ các trường bắt buộc: ${validation.labels.join(', ')}`;
+            setErr(message);
+            notify.warning({
+                title: 'Thiếu thông tin bắt buộc',
+                message,
+                duration: 4800,
+            });
+            return;
+        }
+
+        setSaving(true);
 
         try {
             const changed = diffFlat(snapshotRef.current, formData);
@@ -592,7 +677,6 @@ export default function EditProductForm({
                     length: watchSpecRaw.length,
                     width: watchSpecRaw.width,
                     thickness: watchSpecRaw.thickness,
-                    dialColor: watchSpecRaw.dialColor,
                     strap: watchSpecRaw.strap,
                     glass: watchSpecRaw.glass,
                     boxIncluded: watchSpecRaw.boxIncluded,
@@ -611,11 +695,34 @@ export default function EditProductForm({
                 }
                 : undefined;
 
+            const strapAttachment =
+                formData.strapMode === 'INVENTORY' && (selectedInventoryStrap || formData.linkedStrapVariantId)
+                    ? {
+                        productId: selectedInventoryStrap?.productId ?? formData.linkedStrapProductId,
+                        variantId: selectedInventoryStrap?.variantId ?? formData.linkedStrapVariantId,
+                        title: selectedInventoryStrap?.title ?? formData.linkedStrapTitle ?? null,
+                        vendorName: selectedInventoryStrap?.vendorName ?? null,
+                        costPrice: toNullableNumber(selectedInventoryStrap?.costPrice) ?? toNullableNumber(formData.linkedStrapCostPrice),
+                        price: toNullableNumber(selectedInventoryStrap?.price),
+                        strapSpec: selectedInventoryStrap?.strapSpec
+                            ? {
+                                lugWidthMM: toNullableNumber(selectedInventoryStrap.strapSpec.lugWidthMM),
+                                buckleWidthMM: toNullableNumber(selectedInventoryStrap.strapSpec.buckleWidthMM),
+                                color: selectedInventoryStrap.strapSpec.color ?? null,
+                                material: selectedInventoryStrap.strapSpec.material ?? null,
+                                quickRelease: selectedInventoryStrap.strapSpec.quickRelease ?? null,
+                            }
+                            : null,
+                    }
+                    : null;
+
             const body = {
                 product: sanitizeDeep(productPart),
                 watchSpec: sanitizeDeep(watchSpecPart),
                 variant: sanitizeDeep(variantPart),
                 images: changed.images !== undefined ? formData.images ?? [] : undefined,
+                baseVariantCostPrice: baseVariantCostPrice ?? undefined,
+                strapAttachment,
             };
 
             const res = await fetch(`/api/admin/products/${id}`, {
@@ -630,9 +737,13 @@ export default function EditProductForm({
             }
 
             snapshotRef.current = formData;
+            notify.success({ title: 'Đã lưu', message: 'Cập nhật sản phẩm thành công' });
             router.push('/admin/products');
+            router.refresh();
         } catch (e: any) {
-            setErr(e?.message || 'Cập nhật sản phẩm thất bại');
+            const message = e?.message || 'Cập nhật sản phẩm thất bại';
+            setErr(message);
+            notify.error({ title: 'Lưu thất bại', message });
         } finally {
             setSaving(false);
         }
@@ -640,16 +751,11 @@ export default function EditProductForm({
 
     return (
         <form onSubmit={submit} className="space-y-8">
-            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                <span className="font-medium text-slate-700">Quy ước:</span>{' '}
-                <span className="text-rose-500">*</span> là các trường đang được dùng để kiểm tra readiness trước khi bulk post.
-            </div>
-
             <div className="grid grid-cols-1 gap-7 xl:grid-cols-12">
                 <div className="space-y-8 xl:col-span-8">
                     <Section
                         title="Chỉnh sửa sản phẩm"
-                        subtitle="Rà soát kỹ thông tin nền tảng của sản phẩm trước khi đưa vào workflow bulk post."
+                        subtitle="Cập nhật các thông tin nền tảng của sản phẩm."
                     >
                         <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
@@ -695,7 +801,7 @@ export default function EditProductForm({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
                             <SelectField
                                 label="Loại sản phẩm"
                                 name="type"
@@ -706,30 +812,12 @@ export default function EditProductForm({
                                 required={REQUIRED_PRODUCT_FIELDS.has('type')}
                             />
                             <SelectField
-                                label="Category"
-                                name="categoryId"
-                                value={formData.categoryId}
-                                onChange={handleChange as any}
-                                options={safeCategoryOptions}
-                                placeholder="-- Chọn category --"
-                                required={REQUIRED_PRODUCT_FIELDS.has('categoryId')}
-                            />
-                            <SelectField
                                 label="Trạng thái"
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange as any}
                                 options={safeProductStatusOptions}
                                 placeholder="-- Chọn trạng thái --"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
-                            <InputField
-                                label="SEO title"
-                                name="seoTitle"
-                                value={formData.seoTitle}
-                                onChange={handleChange as any}
                             />
                         </div>
 
@@ -746,7 +834,7 @@ export default function EditProductForm({
 
                     <Section
                         title="Watch spec"
-                        subtitle='Các trường có dấu * trong block này sẽ được dùng để kiểm tra đủ thông tin trước khi bulk post.'
+                        subtitle="Thông số kỹ thuật chính của sản phẩm."
                     >
                         <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-3">
                             <InputField
@@ -847,14 +935,7 @@ export default function EditProductForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
-                            <InputField
-                                label="Màu mặt số"
-                                name="dialColor"
-                                value={formData.dialColor}
-                                onChange={handleChange as any}
-                                required={requiredWatchFields.has('dialColor')}
-                            />
+                        <div className="grid grid-cols-1 gap-x-5 gap-y-5">
                             <SelectField
                                 label="Kính"
                                 name="glass"
@@ -924,49 +1005,21 @@ export default function EditProductForm({
                 </div>
 
                 <aside className="space-y-8 self-start xl:col-span-4">
-                    <Section
-                        title={`Bulk post readiness${bulkPostMissing.length ? '' : ' · Ready'}`}
-                        subtitle={
-                            bulkPostMissing.length
-                                ? 'Các mục dưới đây đang thiếu và sẽ chặn bulk post.'
-                                : 'Sản phẩm đã đủ các trường cốt lõi để đi tiếp workflow bulk post.'
-                        }
-                        compact
-                    >
-                        {bulkPostMissing.length ? (
-                            <div className="space-y-2">
-                                {bulkPostMissing.map((item) => (
-                                    <div
-                                        key={item}
-                                        className="border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-                                    >
-                                        {item}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
-                                Không còn trường bắt buộc nào bị thiếu.
-                            </div>
-                        )}
-                    </Section>
 
                     <Section
                         title="Product image *"
-                        subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện. Khuyến nghị tối thiểu 4 ảnh để đủ điều kiện bulk post."
+                        subtitle="Ảnh đầu tiên sẽ được dùng làm ảnh đại diện."
                         compact
                     >
-                        <div className="w-[170px] max-w-full">
-                            <div className="aspect-square overflow-hidden border border-dashed border-slate-200 bg-slate-50">
-                                <ImagePicker value={images} onChange={onImagesChange} />
-                            </div>
+                        <div className="max-w-full">
+                            <ImagePicker value={images} onChange={onImagesChange} />
                         </div>
                         <div className="text-sm text-slate-500">Hiện có {images.length}/4 ảnh.</div>
                     </Section>
 
                     <Section
                         title="Pricing"
-                        subtitle="Chỉ giữ ô giá bán chính để đồng bộ với workflow edit nhanh."
+                        subtitle="Hiển thị thêm giá vốn sau khi cộng dây để dễ cân đối giá bán."
                         compact
                     >
                         <InputField
@@ -977,11 +1030,53 @@ export default function EditProductForm({
                             type="number"
                             required
                         />
+
+                        <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+                            <div className="border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="text-slate-500">Giá vốn gốc</div>
+                                <div className="mt-1 font-medium text-slate-900">{formatMoney(baseVariantCostPrice)}</div>
+                            </div>
+                            <div className="border border-slate-200 bg-slate-50 px-3 py-3">
+                                <div className="text-slate-500">Chi phí dây cộng thêm</div>
+                                <div className="mt-1 font-medium text-slate-900">{formatMoney(strapAddedCost)}</div>
+                            </div>
+                            <div className="border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
+                                <div className="text-slate-500">Giá vốn sau khi ghép dây</div>
+                                <div className="mt-1 font-medium text-slate-900">{formatMoney(effectiveVariantCostPrice)}</div>
+                            </div>
+                            <div className="border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
+                                <div className="text-slate-500">Chênh lệch giá bán so với giá vốn</div>
+                                <div className={`mt-1 font-medium ${priceGapVsCost != null && priceGapVsCost < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                                    {priceGapVsCost == null
+                                        ? '—'
+                                        : `${priceGapVsCost >= 0 ? '+' : ''}${new Intl.NumberFormat('vi-VN').format(priceGapVsCost)}`}
+                                </div>
+                            </div>
+                        </div>
+                    </Section>
+
+                    <Section
+                        title="Category"
+                        subtitle="Dùng để phân nhóm đồng hồ khi đưa lên trang bán hàng. Có thể cấu hình sẵn tại đây rồi bổ sung option sau."
+                        compact
+                    >
+                        <SelectField
+                            label="Category"
+                            name="categoryId"
+                            value={formData.categoryId}
+                            onChange={handleChange as any}
+                            options={safeCategoryOptions}
+                            placeholder="-- Chọn category --"
+                            required={REQUIRED_PRODUCT_FIELDS.has('categoryId')}
+                        />
+                        <div className="text-sm leading-6 text-slate-500">
+                            Hiện có thể để block này như cấu hình nền. Khi cần phân chia nhóm bán hàng, chỉ cần thêm category mới vào danh mục là dùng lại được ngay.
+                        </div>
                     </Section>
 
                     <Section
                         title="Strap setup"
-                        subtitle="Xác định dây đi kèm sẵn theo đồng hồ hoặc chọn trực tiếp từ kho. Phần này ảnh hưởng trực tiếp đến readiness và workflow tồn/cost."
+                        subtitle="Xác định dây đi kèm sẵn theo đồng hồ hoặc chọn trực tiếp từ kho."
                         compact
                     >
                         <div className="space-y-3">
@@ -1058,7 +1153,7 @@ export default function EditProductForm({
                                         <div>Giá bán dây: {formatMoney(selectedInventoryStrap.price ?? null)}</div>
                                         <div>Chi phí dây cộng thêm: {formatMoney(selectedInventoryStrap.costPrice ?? null)}</div>
                                         <div className="text-xs leading-5 text-slate-500">
-                                            Lưu ý: UI đã tách workflow chọn dây trong kho. Để tự động lưu ràng buộc, cộng giá vốn và trừ tồn khi save/bulk post, backend cần thêm relation strap variant cho product/watch.
+                                            Khi lưu, hệ thống sẽ ghi nhận dây đã chọn vào sản phẩm, tự cộng giá vốn của dây và trừ 1 tồn kho ở đúng dây đang ghép. Nếu đổi sang dây khác hoặc bỏ dây kho, tồn của dây cũ sẽ được hoàn lại.
                                         </div>
                                     </div>
                                 ) : null}

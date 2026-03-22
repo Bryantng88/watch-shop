@@ -3,7 +3,6 @@ import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus } from "
 import * as prodRepo from "./product.repo";
 import { z } from "zod";
 import { computeEffectivePrice } from "../helpers/price";
-import { MIN_IMAGES, REQUIRED_PRODUCT_FIELDS, REQUIRED_VARIANT_FIELDS, getRequiredWatchSpecFields, hasValue } from "./rules";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
@@ -144,11 +143,10 @@ export async function getAdminProductList(
 
     const itemIds = (result.items ?? []).map((item: any) => item.id).filter(Boolean);
 
-    const openServices = itemIds.length
+    const latestServices = itemIds.length
         ? await prisma.serviceRequest.findMany({
             where: {
                 productId: { in: itemIds },
-                status: { in: [...OPEN_SERVICE_REQUEST_STATUSES] },
             },
             orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
             select: {
@@ -158,16 +156,26 @@ export async function getAdminProductList(
         })
         : [];
 
+    const latestServiceMap = new Map<string, string>();
     const openServiceMap = new Map<string, string>();
-    for (const row of openServices) {
-        if (!row.productId || openServiceMap.has(row.productId)) continue;
-        openServiceMap.set(row.productId, String(row.status));
+    for (const row of latestServices) {
+        if (!row.productId) continue;
+        if (!latestServiceMap.has(row.productId)) {
+            latestServiceMap.set(row.productId, String(row.status));
+        }
+        if (
+            !openServiceMap.has(row.productId) &&
+            OPEN_SERVICE_REQUEST_STATUSES.includes(row.status as any)
+        ) {
+            openServiceMap.set(row.productId, String(row.status));
+        }
     }
 
     const items = (result.items ?? []).map((item: any) => ({
         ...item,
         hasOpenService: openServiceMap.has(item.id),
         openServiceStatus: openServiceMap.get(item.id) ?? null,
+        latestServiceStatus: latestServiceMap.get(item.id) ?? null,
     }));
 
     return {
@@ -322,38 +330,8 @@ function hasPrice(p: { minPrice: unknown }) {
     return toNumberPrice(p.minPrice) > 0;
 }
 
-function hasEnoughImages(p: { imageCount?: number; primaryImageUrl: string | null }) {
-    if (typeof p.imageCount === "number") return p.imageCount >= MIN_IMAGES;
+function hasImage(p: { primaryImageUrl: string | null }) {
     return !!p.primaryImageUrl && p.primaryImageUrl.trim().length > 0;
-}
-
-function buildBulkPostMissingReasons(p: any) {
-    const reasons: string[] = [];
-
-    for (const field of REQUIRED_PRODUCT_FIELDS) {
-        if (!hasValue(p?.[field.key])) {
-            reasons.push(`MISSING_${field.key.toUpperCase()}`);
-        }
-    }
-
-    if (!hasEnoughImages(p)) {
-        reasons.push(`MISSING_IMAGES_MIN_${MIN_IMAGES}`);
-    }
-
-    if (!hasPrice(p)) {
-        reasons.push('MISSING_PRICE');
-    }
-
-    if (p?.type !== ProductType.WATCH_STRAP) {
-        const watchSpec = p?.watchSpecSnapshot ?? {};
-        for (const field of getRequiredWatchSpecFields(watchSpec)) {
-            if (!hasValue(watchSpec?.[field.key])) {
-                reasons.push(`MISSING_WATCHSPEC_${field.key.toUpperCase()}`);
-            }
-        }
-    }
-
-    return reasons;
 }
 
 export async function bulkPostProducts(productIds: string[]): Promise<BulkPostProductsResult> {
@@ -383,7 +361,8 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
             if (p.status !== ProductStatus.DRAFT) {
                 reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
             }
-            reasons.push(...buildBulkPostMissingReasons(p));
+            if (!hasPrice(p)) reasons.push("MISSING_PRICE");
+            if (!hasImage(p)) reasons.push("MISSING_IMAGE");
 
             if (reasons.length) {
                 failed.push({ id: p.id, title: p.title ?? null, reasons });

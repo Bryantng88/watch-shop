@@ -19,6 +19,7 @@ type MaintRow = {
 type SrMeta = {
   vendorId: string | null;
   vendorName: string | null;
+  status: string | null;
 };
 
 function fmt(d?: string | null) {
@@ -40,7 +41,7 @@ export default function MaintenanceDrawer({
   const [loading, setLoading] = useState(false);
 
   const [rows, setRows] = useState<MaintRow[]>([]);
-  const [srMeta, setSrMeta] = useState<SrMeta>({ vendorId: null, vendorName: null });
+  const [srMeta, setSrMeta] = useState<SrMeta>({ vendorId: null, vendorName: null, status: null });
 
   // maintenance NOTE / COST
   const [notes, setNotes] = useState("");
@@ -79,7 +80,8 @@ export default function MaintenanceDrawer({
 
       // 1) ưu tiên sr meta nếu có
       const srVendorId = m?.sr?.vendorId ?? null;
-      const srVendorName = m?.sr?.vendorName ?? null;
+      const srVendorName = m?.sr?.vendorNameSnap ?? m?.sr?.vendorName ?? null;
+      const srStatus = m?.sr?.status ?? null;
 
       // 2) fallback: lấy vendor từ log mới nhất (items[0] nếu API order desc)
       const latest = items?.[0];
@@ -89,7 +91,7 @@ export default function MaintenanceDrawer({
       const effectiveVendorId = srVendorId ?? fallbackVendorId ?? null;
       const effectiveVendorName = srVendorName ?? fallbackVendorName ?? null;
 
-      setSrMeta({ vendorId: effectiveVendorId, vendorName: effectiveVendorName });
+      setSrMeta({ vendorId: effectiveVendorId, vendorName: effectiveVendorName, status: srStatus });
 
       const v = await vRes.json();
       const vItems: VendorOpt[] = v.items ?? v ?? [];
@@ -202,6 +204,34 @@ export default function MaintenanceDrawer({
     loading ||
     (!pendingVendorId && !notes.trim() && !servicedAt && !totalCost && !vendorReason.trim());
 
+  const isDoneStatus = srMeta.status === 'COMPLETED' || srMeta.status === 'DELIVERED';
+  const canComplete = !loading && !isDoneStatus && srMeta.status !== 'CANCELED';
+
+  const submitComplete = async () => {
+    if (!serviceRequestId || !canComplete) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: notes.trim() || null }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+
+      setNotes('');
+      setServicedAt('');
+      setTotalCost('');
+      setPendingVendorId('');
+      setVendorReason('');
+
+      await fetchAll();
+      onChanged?.();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -218,6 +248,7 @@ export default function MaintenanceDrawer({
             <div>
               <div className="font-semibold text-lg">Maintenance</div>
               <div className="text-xs text-gray-500 font-mono">{serviceRequestId}</div>
+              <div className="mt-1 text-xs text-gray-500">Trạng thái: <span className="font-medium text-gray-700">{srMeta.status ?? '-'}</span></div>
             </div>
             <button className="px-2 py-1 rounded hover:bg-gray-100" onClick={onClose} type="button">
               ✕
@@ -335,6 +366,20 @@ export default function MaintenanceDrawer({
 
               <div className="text-xs text-gray-500">
                 Nếu nhập <b>Cost</b> → hệ thống tạo <b>Payment</b> và gắn vào maintenance log.
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded border bg-gray-50 px-3 py-2">
+                <div className="text-xs text-gray-600">
+                  Kết thúc service sẽ chuyển trạng thái sang <b>DONE</b> (COMPLETED) và tạo 1 log kết thúc.
+                </div>
+                <button
+                  className="h-9 px-3 rounded border bg-white disabled:opacity-50"
+                  disabled={!canComplete}
+                  onClick={submitComplete}
+                  type="button"
+                >
+                  {isDoneStatus ? 'Đã DONE' : 'Kết thúc / DONE'}
+                </button>
               </div>
             </div>
 

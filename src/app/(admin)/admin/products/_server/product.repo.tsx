@@ -12,7 +12,7 @@ import type {
     ProductCatalogKey,
 } from "../_helper/search-params";
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 const OPEN_SERVICE_REQUEST_STATUSES = [
@@ -31,6 +31,38 @@ type AdminProductListRepoInput = ProductListInput & {
     updatedTo?: Date;
     catalog?: ProductCatalogKey;
 };
+
+const STRAP_ATTACHMENT_PREFIX = '__STRAP_LINK__:';
+
+type StoredStrapAttachment = {
+    productId: string;
+    variantId: string;
+    title?: string | null;
+    vendorName?: string | null;
+    costPrice?: number | null;
+    price?: number | null;
+    strapSpec?: {
+        lugWidthMM?: number | null;
+        buckleWidthMM?: number | null;
+        color?: string | null;
+        material?: string | null;
+        quickRelease?: boolean | null;
+    } | null;
+    baseName?: string | null;
+};
+
+function parseStoredStrapAttachment(raw: unknown): StoredStrapAttachment | null {
+    if (typeof raw !== 'string' || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
+
+    try {
+        const parsed = JSON.parse(raw.slice(STRAP_ATTACHMENT_PREFIX.length));
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (!(parsed as any).variantId || !(parsed as any).productId) return null;
+        return parsed as StoredStrapAttachment;
+    } catch {
+        return null;
+    }
+}
 
 function startOfDay(date: Date) {
     const d = new Date(date);
@@ -94,6 +126,10 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
         and.push({ brandId: input.brandId });
     }
 
+    if (input?.categoryId) {
+        and.push({ categoryId: input.categoryId });
+    }
+
     if (input?.hasImages === "yes") {
         and.push({
             NOT: {
@@ -154,27 +190,37 @@ function buildWhereForView(
     }
 }
 
+
+type ReadBatchFactory<T = unknown> = () => Promise<T>;
+
+async function runReadBatch<T extends unknown[]>(factories: { [K in keyof T]: ReadBatchFactory<T[K]> }): Promise<T> {
+    return (await Promise.all(factories.map((factory) => factory()))) as T;
+}
+
 export async function listAdminProducts(
     tx: DB,
-    input?: ProductListInput & { page?: number; pageSize?: number; catalog?: "product" | "strap" }
+    input?: ProductListInput & { page?: number; pageSize?: number; catalog?: "product" | "strap"; includeCost?: boolean }
 ) {
-    const db = dbOrTx(tx);
+    const db = dbOrTx(tx) as any;
 
     const safeInput = {
         q: input?.q,
         type: input?.type,
         brandId: input?.brandId,
+        categoryId: (input as any)?.categoryId,
         hasImages: input?.hasImages,
         view: (input?.view ?? "all") as ProductViewKey,
         sort: (input?.sort ?? "updatedDesc") as ProductListSort,
         page: Math.max(1, Number(input?.page ?? 1)),
         pageSize: Math.max(1, Math.min(MAX_PAGE_SIZE, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE))),
         catalog: input?.catalog ?? "product",
+        includeCost: input?.includeCost !== false,
     };
 
+    const isStrapCatalog = safeInput.catalog === "strap";
     const baseWhere = buildWhereBase({
         ...safeInput,
-        type: safeInput.catalog === "strap" ? ("WATCH_STRAP" as any) : safeInput.type,
+        type: isStrapCatalog ? ("WATCH_STRAP" as any) : safeInput.type,
     } as any);
 
     const whereList = buildWhereForView(baseWhere, safeInput.view);
@@ -182,134 +228,288 @@ export async function listAdminProducts(
     const take = safeInput.pageSize;
     const orderBy = buildOrderBy(safeInput.sort);
 
-    const [totalAll, total, rows, cDraft, cPosted, cInService, cHold, cSold, brands] =
-        await Promise.all([
-            db.product.count({ where: baseWhere }),
-            db.product.count({ where: whereList }),
+    const variantSelect: any = {
+        id: true,
+        sku: true,
+        name: true,
+        stockQty: true,
+        availabilityStatus: true,
+        price: true,
+        salePrice: true,
+        costPrice: safeInput.includeCost,
+        ...(isStrapCatalog
+            ? {
+                strapSpec: {
+                    select: {
+                        lugWidthMM: true,
+                        buckleWidthMM: true,
+                        color: true,
+                        material: true,
+                        quickRelease: true,
+                    },
+                },
+            }
+            : {}),
+    };
+
+    const rowSelect: any = {
+        id: true,
+        title: true,
+        slug: true,
+        type: true,
+        status: true,
+        categoryId: true,
+        primaryImageUrl: true,
+        createdAt: true,
+        updatedAt: true,
+        brand: { select: { id: true, name: true } },
+        vendor: { select: { id: true, name: true } },
+        variants: {
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+            take: 1,
+            select: variantSelect,
+        },
+        _count: {
+            select: {
+                image: true as any,
+            },
+        },
+        ...(!isStrapCatalog
+            ? {
+                watchSpec: {
+                    select: {
+                        ref: true,
+                        model: true,
+                        year: true,
+                        caseType: true,
+                        movement: true,
+                        caseMaterial: true,
+                        goldKarat: true,
+                        goldColor: true,
+                        length: true,
+                        width: true,
+                        thickness: true,
+                        strap: true,
+                        glass: true,
+                    },
+                },
+            }
+            : {}),
+    };
+
+    const batchFactories: Array<ReadBatchFactory<any>> = [
+        () =>
+            db.product.groupBy({
+                by: ["status"],
+                where: baseWhere,
+                _count: { _all: true },
+            }),
+        () => db.product.count({ where: whereList }),
+        () =>
             db.product.findMany({
                 where: whereList,
                 orderBy,
                 skip,
                 take,
-                select: {
-                    id: true,
-                    title: true,
-                    slug: true,
-                    type: true,
-                    status: true,
-                    primaryImageUrl: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    brand: { select: { id: true, name: true } },
-                    vendor: { select: { id: true, name: true } },
-                    variants: {
-                        orderBy: { updatedAt: "desc" },
-                        take: 1,
-                        select: {
-                            id: true,
-                            sku: true,
-                            stockQty: true,
-                            availabilityStatus: true,
-                            price: true,
-                            salePrice: true,
-                            costPrice: true,
-                            acquisitionItem: {
-                                orderBy: { createdAt: "desc" },
-                                take: 1,
-                                select: {
-                                    unitCost: true,
-                                },
-                            },
-                            strapSpec: {
-                                select: {
-                                    lugWidthMM: true,
-                                    buckleWidthMM: true,
-                                    color: true,
-                                    material: true,
-                                    quickRelease: true,
-                                },
-                            },
-                        },
-                    },
-                    watchSpec: {
-                        select: {
-                            model: true,
-                            year: true,
-                            caseType: true,
-                            movement: true,
-                            length: true,
-                            width: true,
-                            thickness: true,
-                            dialColor: true,
-                            strap: true,
-                            glass: true,
-                            boxIncluded: true,
-                            bookletIncluded: true,
-                            cardIncluded: true,
-                        },
-                    },
-                    _count: {
-                        select: {
-                            variants: true,
-                            Reservation: true as any,
-                            ServiceRequest: true as any,
-                            orderItems: true,
-                            image: true as any,
-                        },
-                    },
-                },
+                select: rowSelect,
             }),
-            db.product.count({ where: buildWhereForView(baseWhere, "draft") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "posted") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "in_service") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "hold") }),
-            db.product.count({ where: buildWhereForView(baseWhere, "sold") }),
+    ];
+
+    if (!isStrapCatalog) {
+        batchFactories.push(() =>
             db.brand.findMany({
                 orderBy: { name: "asc" },
                 select: { id: true, name: true },
-            }),
-        ]);
+            })
+        );
+    }
 
-    const items = rows.map((p: any) => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        type: p.type,
-        status: p.status,
-        primaryImageUrl: p.primaryImageUrl,
-        minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
-        salePrice: p.variants?.[0]?.salePrice != null ? Number(p.variants[0].salePrice) : null,
-        stockQty: Number(p.variants?.[0]?.stockQty ?? 0),
-        purchasePrice:
-            p.variants?.[0]?.costPrice != null
-                ? Number(p.variants[0].costPrice)
-                : p.variants?.[0]?.acquisitionItem?.[0]?.unitCost != null
-                    ? Number(p.variants[0].acquisitionItem[0].unitCost)
-                    : null,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-        brand: p.brand?.name ?? null,
-        brandId: p.brand?.id ?? null,
-        vendorName: p.vendor?.name ?? null,
-        vendorId: p.vendor?.id ?? null,
-        strapSpec: p.variants?.[0]?.strapSpec ?? null,
-        variantSnapshot: p.variants?.[0]
-            ? {
-                sku: p.variants[0].sku ?? null,
-                stockQty: p.variants[0].stockQty ?? null,
-                availabilityStatus: p.variants[0].availabilityStatus ?? null,
-            }
-            : null,
-        watchSpecSnapshot: p.watchSpec ?? null,
-        variantsCount: p._count?.variants ?? 0,
-        imagesCount: p._count?.image ?? 0,
-        ordersCount: p._count?.orderItems ?? 0,
-        serviceRequests: p._count?.ServiceRequest ?? 0,
-        reservations: p._count?.Reservation ?? 0,
-    }));
+    const batchResults = await runReadBatch<any[]>(batchFactories as any);
+    const [statusGroups, total, rows, brands = []] = batchResults;
+
+    const groupedStatusCounts = new Map<string, number>();
+    for (const row of statusGroups ?? []) {
+        groupedStatusCounts.set(String(row.status), Number(row._count?._all ?? 0));
+    }
+
+    const openServiceStatusMap = new Map<string, string>();
+    if (!isStrapCatalog && (rows?.length ?? 0) > 0) {
+        const pageProductIds = (rows ?? []).map((row: any) => row.id).filter(Boolean);
+        const openServices = await db.serviceRequest.findMany({
+            where: {
+                productId: { in: pageProductIds },
+                status: { in: OPEN_SERVICE_REQUEST_STATUSES as any },
+            },
+            orderBy: [
+                { updatedAt: 'desc' },
+                { createdAt: 'desc' },
+            ],
+            select: {
+                productId: true,
+                status: true,
+            },
+        });
+
+        for (const row of openServices ?? []) {
+            if (!row?.productId || openServiceStatusMap.has(row.productId)) continue;
+            openServiceStatusMap.set(row.productId, String(row.status));
+        }
+    }
+
+    const totalAll = Array.from(groupedStatusCounts.values()).reduce((sum, count) => sum + count, 0);
+    const cDraft = groupedStatusCounts.get(ProductStatus.DRAFT) ?? 0;
+    const cPosted = groupedStatusCounts.get(ProductStatus.POSTED) ?? 0;
+    const cInService = groupedStatusCounts.get(ProductStatus.IN_SERVICE) ?? 0;
+    const cHold =
+        (groupedStatusCounts.get(ProductStatus.HOLD) ?? 0) +
+        (groupedStatusCounts.get(ProductStatus.CONSIGNED_FROM) ?? 0) +
+        (groupedStatusCounts.get(ProductStatus.CONSIGNED_TO) ?? 0);
+    const cSold = groupedStatusCounts.get(ProductStatus.SOLD) ?? 0;
+
+    const strapVariantIdsInPage =
+        isStrapCatalog
+            ? (rows ?? [])
+                .map((row: any) => row.variants?.[0]?.id)
+                .filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+            : [];
+
+    const strapAttachmentUsageMap = new Map<
+        string,
+        {
+            count: number;
+            products: Array<{ id: string; title: string | null; status: string | null }>;
+        }
+    >();
+
+    if (strapVariantIdsInPage.length) {
+        const attachedVariantIdSet = new Set(strapVariantIdsInPage);
+        const attachedRows = await db.productVariant.findMany({
+            where: {
+                AND: [
+                    { name: { startsWith: STRAP_ATTACHMENT_PREFIX } },
+                    {
+                        OR: strapVariantIdsInPage.map((variantId) => ({
+                            name: { contains: `"variantId":"${variantId}"` },
+                        })),
+                    },
+                    {
+                        product: {
+                            NOT: {
+                                type: ProductType.WATCH_STRAP,
+                            },
+                        },
+                    },
+                ],
+            },
+            select: {
+                name: true,
+                product: {
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                    },
+                },
+            },
+        });
+
+        for (const row of attachedRows) {
+            const attachment = parseStoredStrapAttachment(row.name);
+            if (!attachment?.variantId || !attachedVariantIdSet.has(attachment.variantId)) continue;
+
+            const current =
+                strapAttachmentUsageMap.get(attachment.variantId) ??
+                {
+                    count: 0,
+                    products: [],
+                };
+
+            current.count += 1;
+            current.products.push({
+                id: row.product?.id ?? "",
+                title: row.product?.title ?? null,
+                status: row.product?.status ?? null,
+            });
+            strapAttachmentUsageMap.set(attachment.variantId, current);
+        }
+    }
+
+    const items = (rows ?? []).map((p: any) => {
+        const latestVariant = p.variants?.[0] ?? null;
+        const attachedStrap = parseStoredStrapAttachment(latestVariant?.name ?? null);
+        const purchasePrice =
+            latestVariant?.costPrice != null ? Number(latestVariant.costPrice) : null;
+        const strapAddedCost = attachedStrap?.costPrice != null ? Number(attachedStrap.costPrice) : 0;
+        const basePurchasePrice =
+            purchasePrice != null ? Math.max(Number(purchasePrice) - Number(strapAddedCost || 0), 0) : null;
+
+        const strapUsage = latestVariant?.id ? strapAttachmentUsageMap.get(latestVariant.id) : undefined;
+        const attachedCount = Number(strapUsage?.count ?? 0);
+        const availableStockQty = Number(latestVariant?.stockQty ?? 0);
+        const totalSystemStockQty = availableStockQty + attachedCount;
+        const openServiceStatus = !isStrapCatalog ? openServiceStatusMap.get(p.id) ?? null : null;
+
+        return {
+            id: p.id,
+            title: p.title,
+            slug: p.slug,
+            type: p.type,
+            status: p.status,
+            categoryId: p.categoryId ?? null,
+            primaryImageUrl: p.primaryImageUrl,
+            minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
+            salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
+            variantId: latestVariant?.id ?? null,
+            ...(isStrapCatalog
+                ? {
+                    stockQty: availableStockQty,
+                    attachedCount,
+                    totalSystemStockQty,
+                    attachedProducts: strapUsage?.products ?? [],
+                    strapSpec: latestVariant?.strapSpec ?? null,
+                }
+                : {}),
+            purchasePrice,
+            basePurchasePrice,
+            strapAddedCost,
+            attachedStrap: attachedStrap
+                ? {
+                    productId: attachedStrap.productId,
+                    variantId: attachedStrap.variantId,
+                    title: attachedStrap.title ?? null,
+                    vendorName: attachedStrap.vendorName ?? null,
+                    costPrice: attachedStrap.costPrice != null ? Number(attachedStrap.costPrice) : null,
+                    price: attachedStrap.price != null ? Number(attachedStrap.price) : null,
+                    strapSpec: attachedStrap.strapSpec
+                        ? {
+                            lugWidthMM: attachedStrap.strapSpec.lugWidthMM != null ? Number(attachedStrap.strapSpec.lugWidthMM) : null,
+                            buckleWidthMM: attachedStrap.strapSpec.buckleWidthMM != null ? Number(attachedStrap.strapSpec.buckleWidthMM) : null,
+                            color: attachedStrap.strapSpec.color ?? null,
+                            material: attachedStrap.strapSpec.material ?? null,
+                            quickRelease: attachedStrap.strapSpec.quickRelease ?? null,
+                        }
+                        : null,
+                }
+                : null,
+            createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+            updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
+            brand: p.brand?.name ?? null,
+            brandId: p.brand?.id ?? null,
+            vendorName: p.vendor?.name ?? null,
+            vendorId: p.vendor?.id ?? null,
+            variantSnapshot: latestVariant
+                ? {
+                    price: latestVariant.price != null ? Number(latestVariant.price) : null,
+                }
+                : null,
+            watchSpecSnapshot: p.watchSpec ?? null,
+            imagesCount: p._count?.image ?? 0,
+            openServiceStatus,
+        };
+    });
 
     const productTypes =
-        safeInput.catalog === "strap"
+        isStrapCatalog
             ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
             : [
                 { label: "WATCH", value: "WATCH" },
@@ -529,6 +729,7 @@ export async function getAdminProductRow(tx: DB, id: string) {
         slug: p.slug,
         type: p.type,
         status: p.status,
+        categoryId: p.categoryId ?? null,
         primaryImageUrl: p.primaryImageUrl,
         minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
         salePrice: p.variants?.[0]?.salePrice != null ? Number(p.variants[0].salePrice) : null,
@@ -544,6 +745,109 @@ export async function getAdminProductRow(tx: DB, id: string) {
         vendorName: p.vendor?.name ?? null,
     };
 }
+
+export async function getAdminEditProductDetail(tx: DB, id: string) {
+    const db = dbOrTx(tx);
+
+    return db.product.findUnique({
+        where: { id },
+        include: {
+            brand: true,
+            vendor: true,
+            watchSpec: {
+                include: {
+                    complication: true,
+                    marketSegment: true,
+                },
+            },
+            image: {
+                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            },
+            variants: {
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'asc' }],
+                include: {
+                    strapSpec: true,
+                },
+            },
+        },
+    });
+}
+
+export async function listActiveProductCategories(tx: DB) {
+    const db = dbOrTx(tx);
+
+    return db.productCategory.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        select: {
+            id: true,
+            name: true,
+            scope: true,
+        },
+    });
+}
+
+export async function listAvailableStrapInventory(
+    tx: DB,
+    attachedStrapVariantId?: string | null
+) {
+    const db = dbOrTx(tx);
+    const keepVariantId = attachedStrapVariantId ? String(attachedStrapVariantId) : '';
+
+    return db.product.findMany({
+        where: {
+            type: ProductType.WATCH_STRAP,
+            variants: {
+                some: keepVariantId
+                    ? {
+                        OR: [{ stockQty: { gt: 0 } }, { id: keepVariantId }],
+                    }
+                    : {
+                        stockQty: { gt: 0 },
+                    },
+            },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { title: 'asc' }],
+        take: 200,
+        select: {
+            id: true,
+            title: true,
+            vendor: {
+                select: {
+                    name: true,
+                },
+            },
+            variants: {
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'asc' }],
+                where: keepVariantId
+                    ? {
+                        OR: [{ stockQty: { gt: 0 } }, { id: keepVariantId }],
+                    }
+                    : {
+                        stockQty: { gt: 0 },
+                    },
+                take: 5,
+                select: {
+                    id: true,
+                    stockQty: true,
+                    availabilityStatus: true,
+                    price: true,
+                    costPrice: true,
+                    strapSpec: {
+                        select: {
+                            lugWidthMM: true,
+                            buckleWidthMM: true,
+                            color: true,
+                            material: true,
+                            quickRelease: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+}
+
 
 export async function deleteProduct(tx: DB, id: string) {
     const db = dbOrTx(tx);
@@ -673,6 +977,7 @@ export async function getProductsForBulkPost(tx: DB, ids: string[]) {
         variantSnapshot: p.variants?.[0]
             ? {
                 sku: p.variants[0].sku ?? null,
+                price: p.variants[0].price != null ? Number(p.variants[0].price) : null,
                 stockQty: p.variants[0].stockQty ?? null,
                 availabilityStatus: p.variants[0].availabilityStatus ?? null,
             }
@@ -735,6 +1040,7 @@ export async function getLatestVariantForAdmin(tx: DB, productId: string) {
             id: true,
             productId: true,
             sku: true,
+            name: true,
             price: true,
             listPrice: true,
             discountType: true,
@@ -764,6 +1070,7 @@ export async function upsertPrimaryVariantForAdmin(
     patch: {
         id?: string;
         sku?: string | null;
+        name?: string | null;
         stockQty?: number | null;
         availabilityStatus?: AvailabilityStatus;
         price?: number | null;
@@ -789,6 +1096,7 @@ export async function upsertPrimaryVariantForAdmin(
     const data: any = {
         updatedAt: new Date(),
         ...(patch.sku !== undefined ? { sku: patch.sku || null } : {}),
+        ...(patch.name !== undefined ? { name: patch.name || null } : {}),
         ...(patch.stockQty !== undefined ? { stockQty: Number(patch.stockQty ?? 0) } : {}),
         ...(patch.availabilityStatus !== undefined ? { availabilityStatus: patch.availabilityStatus } : {}),
         ...(patch.price !== undefined ? { price: patch.price } : {}),
@@ -809,6 +1117,7 @@ export async function upsertPrimaryVariantForAdmin(
         data: {
             productId,
             sku: patch.sku ?? null,
+            name: patch.name ?? null,
             stockQty: Number(patch.stockQty ?? 0),
             availabilityStatus: patch.availabilityStatus ?? AvailabilityStatus.ACTIVE,
             price: patch.price ?? patch.listPrice ?? null,

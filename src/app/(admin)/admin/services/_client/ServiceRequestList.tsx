@@ -100,6 +100,16 @@ export default function ServiceRequestListClient(props: PageProps) {
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
 
+    const completeOne = async (id: string) => {
+        const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        router.refresh();
+    };
+
     useEffect(() => {
         setSelectedIds([]);
         setShowBulkBar(false);
@@ -395,6 +405,13 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                                 setLogSrId(row.id);
                                                                 setLogTitle(row.refNo || row.serviceName || row.id);
                                                                 setOpenLogs(true);
+                                                            },
+                                                        },
+                                                        {
+                                                            label: "Kết thúc / DONE",
+                                                            hidden: row.status === 'COMPLETED' || row.status === 'DELIVERED' || row.status === 'CANCELED',
+                                                            onClick: async () => {
+                                                                await completeOne(row.id);
                                                             },
                                                         },
                                                         {

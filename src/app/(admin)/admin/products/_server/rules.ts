@@ -19,7 +19,6 @@ export const BASE_REQUIRED_WATCHSPEC_FIELDS: { key: string; label: string }[] = 
     { key: 'movement', label: 'Bộ máy' },
     { key: 'width', label: 'Rộng' },
     { key: 'thickness', label: 'Độ dày' },
-    { key: 'dialColor', label: 'Màu mặt số' },
     { key: 'strap', label: 'Dây/Strap' },
     { key: 'glass', label: 'Kính' },
 ];

@@ -310,3 +310,33 @@ export async function findByIdForMaintenance(tx: DB, id: string) {
     },
   });
 }
+
+export async function completeServiceRequestOne(
+  tx: DB,
+  input: {
+    id: string;
+    completedAt?: Date | null;
+  }
+) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.update({
+    where: { id: input.id },
+    data: {
+      status: ServiceRequestStatus.COMPLETED,
+      updatedAt: input.completedAt ?? new Date(),
+    },
+    select: {
+      id: true,
+      status: true,
+      vendorId: true,
+      vendorNameSnap: true,
+      productId: true,
+      variantId: true,
+      brandSnapshot: true,
+      modelSnapshot: true,
+      refSnapshot: true,
+      serialSnapshot: true,
+    },
+  });
+}
