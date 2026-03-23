@@ -286,7 +286,15 @@ export default function AcquisitionListClient(props: PageProps) {
                             const data = await res.json().catch(() => null);
 
                             if (!res.ok || data?.ok === false) {
-                                alert(data?.error || "Có lỗi khi duyệt phiếu!");
+                                if (Array.isArray(data?.failed) && data.failed.length) {
+                                    alert(
+                                        data.failed
+                                            .map((x: any) => `${x.id}: ${x.error}`)
+                                            .join("\n")
+                                    );
+                                } else {
+                                    alert(data?.error || "Có lỗi khi duyệt phiếu!");
+                                }
                                 return;
                             }
 

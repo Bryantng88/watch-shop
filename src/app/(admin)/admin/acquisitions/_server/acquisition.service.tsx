@@ -218,96 +218,111 @@ function parseWatchFlagsFromDescription(description?: string | null) {
 
 // Chuyển phiếu sang POSTED
 export async function postAcquisition(acqId: string, vendorName: string) {
-    return prisma.$transaction(async (tx) => {
-        const acq = await repoAcq.getAcqtById(acqId, tx);
-        if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+    return prisma.$transaction(
+        async (tx) => {
+            const acq = await repoAcq.getAcqtById(acqId, tx);
+            if (!acq) throw new Error("Không tìm thấy phiếu nhập");
 
-        let vendorId = acq.vendorId ?? null;
+            let vendorId = acq.vendorId ?? null;
 
-        if (!vendorId && vendorName) {
-            const vendor = await tx.vendor.findFirst({
-                where: { name: vendorName },
-                select: { id: true },
-            });
-            vendorId = vendor?.id ?? null;
-        }
-
-        if (!vendorId) {
-            throw new Error("Không tìm thấy vendor để post phiếu");
-        }
-
-        const items = acq.acquisitionItem ?? [];
-
-        for (const item of items) {
-            if (item.productId) {
-                if (!item.variantId) {
-                    const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
-                        tx,
-                        item.productId
-                    );
-
-                    if (resolvedVariantId) {
-                        await tx.acquisitionItem.update({
-                            where: { id: item.id },
-                            data: { variantId: resolvedVariantId },
-                        });
-                    }
-                }
-
-                if ((item.productType ?? "WATCH") === "WATCH") {
-                    const watchFlags = parseWatchFlagsFromDescription(item.description);
-                    await tx.watchSpec.upsert({
-                        where: { productId: item.productId },
-                        update: {
-                            hasStrap: !!watchFlags.hasStrap,
-                            isServiced: !!watchFlags.isServiced,
-                            hasClasp: !!watchFlags.hasClasp,
-                            isSpa: !!watchFlags.isSpa,
-                        } as any,
-                        create: {
-                            productId: item.productId,
-                            hasStrap: !!watchFlags.hasStrap,
-                            isServiced: !!watchFlags.isServiced,
-                            hasClasp: !!watchFlags.hasClasp,
-                            isSpa: !!watchFlags.isSpa,
-                        } as any,
-                    });
-                }
-                continue;
+            if (!vendorId && vendorName) {
+                const vendor = await tx.vendor.findFirst({
+                    where: { name: vendorName },
+                    select: { id: true },
+                });
+                vendorId = vendor?.id ?? null;
             }
 
-            if (item.productType === "WATCH_STRAP") {
-                const strapSpec = parseStrapSpecFromDescription(item.description);
+            if (!vendorId) {
+                throw new Error("Không tìm thấy vendor để post phiếu");
+            }
+
+            const items = acq.acquisitionItem ?? [];
+
+            for (const item of items) {
+                if (item.productId) {
+                    if (!item.variantId) {
+                        const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
+                            tx,
+                            item.productId
+                        );
+
+                        if (resolvedVariantId) {
+                            await tx.acquisitionItem.update({
+                                where: { id: item.id },
+                                data: { variantId: resolvedVariantId },
+                            });
+                        }
+                    }
+                    continue;
+                }
+
+                if (item.productType === "WATCH_STRAP") {
+                    const strapSpec = parseStrapSpecFromDescription(item.description);
+
+                    const created = await tx.product.create({
+                        data: {
+                            title: item.productTitle,
+                            status: "DRAFT" as any,
+                            type: "WATCH_STRAP" as any,
+                            vendor: { connect: { id: vendorId } },
+                            variants: {
+                                create: [
+                                    {
+                                        stockQty: Number(item.quantity ?? 1),
+                                        price: new Prisma.Decimal(
+                                            strapSpec?.sellPrice != null
+                                                ? Number(strapSpec.sellPrice)
+                                                : Number(item.unitCost ?? 0)
+                                        ),
+                                        availabilityStatus: "HIDDEN" as any,
+                                        strapSpec: {
+                                            create: {
+                                                lugWidthMM: Number(strapSpec?.lugWidthMM ?? 20),
+                                                buckleWidthMM: Number(strapSpec?.buckleWidthMM ?? 18),
+                                                color: strapSpec?.color ?? "Black",
+                                                material: (strapSpec?.material as any) ?? "LEATHER",
+                                                quickRelease:
+                                                    strapSpec?.quickRelease == null
+                                                        ? true
+                                                        : Boolean(strapSpec.quickRelease),
+                                            },
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                        select: {
+                            id: true,
+                            variants: {
+                                select: { id: true },
+                                take: 1,
+                            },
+                        },
+                    });
+
+                    await tx.acquisitionItem.update({
+                        where: { id: item.id },
+                        data: {
+                            productId: created.id,
+                            variantId: created.variants?.[0]?.id ?? null,
+                        },
+                    });
+
+                    continue;
+                }
 
                 const created = await tx.product.create({
                     data: {
                         title: item.productTitle,
                         status: "DRAFT" as any,
-                        type: "WATCH_STRAP" as any,
+                        type: (item.productType ?? "WATCH") as any,
                         vendor: { connect: { id: vendorId } },
                         variants: {
                             create: [
                                 {
                                     stockQty: Number(item.quantity ?? 1),
-                                    price: new Prisma.Decimal(
-                                        strapSpec?.sellPrice != null
-                                            ? Number(strapSpec.sellPrice)
-                                            : Number(item.unitCost ?? 0)
-                                    ),
-                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                                     availabilityStatus: "HIDDEN" as any,
-                                    strapSpec: {
-                                        create: {
-                                            lugWidthMM: Number(strapSpec?.lugWidthMM ?? 20),
-                                            buckleWidthMM: Number(strapSpec?.buckleWidthMM ?? 18),
-                                            color: strapSpec?.color ?? "Black",
-                                            material: (strapSpec?.material as any) ?? "LEATHER",
-                                            quickRelease:
-                                                strapSpec?.quickRelease == null
-                                                    ? true
-                                                    : Boolean(strapSpec.quickRelease),
-                                        },
-                                    },
                                 },
                             ],
                         },
@@ -328,61 +343,16 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                         variantId: created.variants?.[0]?.id ?? null,
                     },
                 });
-
-                continue;
             }
 
-            const watchFlags = parseWatchFlagsFromDescription(item.description);
-
-            const created = await tx.product.create({
-                data: {
-                    title: item.productTitle,
-                    status: "DRAFT" as any,
-                    type: (item.productType ?? "WATCH") as any,
-                    vendor: { connect: { id: vendorId } },
-                    ...(item.productType === "WATCH"
-                        ? {
-                            watchSpec: {
-                                create: {
-                                    hasStrap: !!watchFlags.hasStrap,
-                                    isServiced: !!watchFlags.isServiced,
-                                    hasClasp: !!watchFlags.hasClasp,
-                                    isSpa: !!watchFlags.isSpa,
-                                } as any,
-                            },
-                        }
-                        : {}),
-                    variants: {
-                        create: [
-                            {
-                                stockQty: Number(item.quantity ?? 1),
-                                costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
-                                availabilityStatus: "HIDDEN" as any,
-                            },
-                        ],
-                    },
-                },
-                select: {
-                    id: true,
-                    variants: {
-                        select: { id: true },
-                        take: 1,
-                    },
-                },
-            });
-
-            await tx.acquisitionItem.update({
-                where: { id: item.id },
-                data: {
-                    productId: created.id,
-                    variantId: created.variants?.[0]?.id ?? null,
-                },
-            });
+            await createInvoiceFromAcquisition(tx, acqId);
+            return repoAcq.changeDraftToPost(tx, acqId);
+        },
+        {
+            maxWait: 10000,
+            timeout: 60000,
         }
-
-        await createInvoiceFromAcquisition(tx, acqId);
-        return repoAcq.changeDraftToPost(tx, acqId);
-    });
+    );
 }
 export async function bulkPostAcquisitions(acquisitionIds: string[]) {
     const posted: string[] = [];
