@@ -5,6 +5,7 @@ import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } fr
 import { CustomerArgsObjectSchema as CustomerArgsObjectSchema } from './CustomerArgs.schema';
 import { OrderItemArgsObjectSchema as OrderItemArgsObjectSchema } from './OrderItemArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
+import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { ServiceCatalogArgsObjectSchema as ServiceCatalogArgsObjectSchema } from './ServiceCatalogArgs.schema';
@@ -34,11 +35,14 @@ const makeSchema = () => z.object({
   scope: z.boolean().optional(),
   vendorId: z.boolean().optional(),
   vendorNameSnap: z.boolean().optional(),
+  technicianId: z.boolean().optional(),
+  technicianNameSnap: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
   Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),

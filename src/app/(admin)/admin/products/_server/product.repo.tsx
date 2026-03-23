@@ -10,7 +10,7 @@ import type {
     ProductListInput,
     ProductListSort,
     ProductCatalogKey,
-} from "../_helper/search-params";
+} from "../helpers/search-params";
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -130,6 +130,10 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
         and.push({ categoryId: input.categoryId });
     }
 
+    if ((input as any)?.vendorId) {
+        and.push({ vendorId: (input as any).vendorId });
+    }
+
     if (input?.hasImages === "yes") {
         and.push({
             NOT: {
@@ -207,6 +211,7 @@ export async function listAdminProducts(
         q: input?.q,
         type: input?.type,
         brandId: input?.brandId,
+        vendorId: (input as any)?.vendorId,
         categoryId: (input as any)?.categoryId,
         hasImages: input?.hasImages,
         view: (input?.view ?? "all") as ProductViewKey,
@@ -237,6 +242,19 @@ export async function listAdminProducts(
         price: true,
         salePrice: true,
         costPrice: safeInput.includeCost,
+        acquisitionItem: {
+            orderBy: [{ createdAt: "desc" }],
+            take: 1,
+            select: {
+                unitCost: true,
+                acquisition: {
+                    select: {
+                        id: true,
+                        refNo: true,
+                    },
+                },
+            },
+        },
         ...(isStrapCatalog
             ? {
                 strapSpec: {
@@ -251,7 +269,6 @@ export async function listAdminProducts(
             }
             : {}),
     };
-
     const rowSelect: any = {
         id: true,
         title: true,
@@ -291,10 +308,6 @@ export async function listAdminProducts(
                         thickness: true,
                         strap: true,
                         glass: true,
-                        hasStrap: true,
-                        isServiced: true,
-                        hasClasp: true,
-                        isSpa: true,
                     },
                 },
             }
@@ -440,9 +453,16 @@ export async function listAdminProducts(
 
     const items = (rows ?? []).map((p: any) => {
         const latestVariant = p.variants?.[0] ?? null;
+        const latestAcqItem = latestVariant?.acquisitionItem?.[0] ?? null;
         const attachedStrap = parseStoredStrapAttachment(latestVariant?.name ?? null);
+
         const purchasePrice =
-            latestVariant?.costPrice != null ? Number(latestVariant.costPrice) : null;
+            latestVariant?.costPrice != null
+                ? Number(latestVariant.costPrice)
+                : latestAcqItem?.unitCost != null
+                    ? Number(latestAcqItem.unitCost)
+                    : null;
+
         const strapAddedCost = attachedStrap?.costPrice != null ? Number(attachedStrap.costPrice) : 0;
         const basePurchasePrice =
             purchasePrice != null ? Math.max(Number(purchasePrice) - Number(strapAddedCost || 0), 0) : null;
@@ -464,6 +484,13 @@ export async function listAdminProducts(
             minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
             salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
             variantId: latestVariant?.id ?? null,
+            purchasePrice,
+            basePurchasePrice,
+            strapAddedCost,
+
+            acquisitionId: latestAcqItem?.acquisition?.id ?? null,
+            acquisitionRefNo: latestAcqItem?.acquisition?.refNo ?? null,
+
             ...(isStrapCatalog
                 ? {
                     stockQty: availableStockQty,
@@ -473,9 +500,7 @@ export async function listAdminProducts(
                     strapSpec: latestVariant?.strapSpec ?? null,
                 }
                 : {}),
-            purchasePrice,
-            basePurchasePrice,
-            strapAddedCost,
+
             attachedStrap: attachedStrap
                 ? {
                     productId: attachedStrap.productId,
@@ -486,8 +511,14 @@ export async function listAdminProducts(
                     price: attachedStrap.price != null ? Number(attachedStrap.price) : null,
                     strapSpec: attachedStrap.strapSpec
                         ? {
-                            lugWidthMM: attachedStrap.strapSpec.lugWidthMM != null ? Number(attachedStrap.strapSpec.lugWidthMM) : null,
-                            buckleWidthMM: attachedStrap.strapSpec.buckleWidthMM != null ? Number(attachedStrap.strapSpec.buckleWidthMM) : null,
+                            lugWidthMM:
+                                attachedStrap.strapSpec.lugWidthMM != null
+                                    ? Number(attachedStrap.strapSpec.lugWidthMM)
+                                    : null,
+                            buckleWidthMM:
+                                attachedStrap.strapSpec.buckleWidthMM != null
+                                    ? Number(attachedStrap.strapSpec.buckleWidthMM)
+                                    : null,
                             color: attachedStrap.strapSpec.color ?? null,
                             material: attachedStrap.strapSpec.material ?? null,
                             quickRelease: attachedStrap.strapSpec.quickRelease ?? null,
@@ -495,6 +526,7 @@ export async function listAdminProducts(
                         : null,
                 }
                 : null,
+
             createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
             updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
             brand: p.brand?.name ?? null,
@@ -507,19 +539,10 @@ export async function listAdminProducts(
                 }
                 : null,
             watchSpecSnapshot: p.watchSpec ?? null,
-            watchFlags: !isStrapCatalog
-                ? {
-                    hasStrap: !!p.watchSpec?.hasStrap,
-                    isServiced: !!p.watchSpec?.isServiced,
-                    hasClasp: !!p.watchSpec?.hasClasp,
-                    isSpa: !!p.watchSpec?.isSpa,
-                }
-                : null,
             imagesCount: p._count?.image ?? 0,
             openServiceStatus,
         };
     });
-
     const productTypes =
         isStrapCatalog
             ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
@@ -961,10 +984,6 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
                 boxIncluded: true,
                 bookletIncluded: true,
                 cardIncluded: true,
-                hasStrap: true,
-                isServiced: true,
-                hasClasp: true,
-                isSpa: true,
             },
         },
     },
@@ -1207,10 +1226,6 @@ export async function upsertWatchSpecForAdmin(
         ...(raw.boxIncluded !== undefined ? { boxIncluded: !!raw.boxIncluded } : {}),
         ...(raw.bookletIncluded !== undefined ? { bookletIncluded: !!raw.bookletIncluded } : {}),
         ...(raw.cardIncluded !== undefined ? { cardIncluded: !!raw.cardIncluded } : {}),
-        ...(raw.hasStrap !== undefined ? { hasStrap: !!raw.hasStrap } : {}),
-        ...(raw.isServiced !== undefined ? { isServiced: !!raw.isServiced } : {}),
-        ...(raw.hasClasp !== undefined ? { hasClasp: !!raw.hasClasp } : {}),
-        ...(raw.isSpa !== undefined ? { isSpa: !!raw.isSpa } : {}),
     };
 
     const hasSpecFields = Object.keys(specData).length > 0;

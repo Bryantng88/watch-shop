@@ -29,6 +29,8 @@ const makeSchema = () => z.object({
   scope: ServiceScopeSchema.optional().nullable(),
   vendorId: z.string().optional().nullable(),
   vendorNameSnap: z.string().optional().nullable(),
+  technicianId: z.string().optional().nullable(),
+  technicianNameSnap: z.string().optional().nullable(),
   maintenance: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedCreateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutInvoiceInput>;

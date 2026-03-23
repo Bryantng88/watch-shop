@@ -4,7 +4,9 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema'
+import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema';
+import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -16,7 +18,9 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional()
+  customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutRolesInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutRolesInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutRolesInput>;
 export const UserUpdateWithoutRolesInputObjectZodSchema = makeSchema();

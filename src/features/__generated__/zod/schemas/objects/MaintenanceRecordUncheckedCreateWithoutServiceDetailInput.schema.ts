@@ -33,6 +33,8 @@ const makeSchema = () => z.object({
   paymentId: z.string().optional().nullable(),
   paidAmount: z.number().optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
+  technicianId: z.string().optional().nullable(),
+  technicianNameSnap: z.string().optional().nullable(),
   parts: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordUncheckedCreateWithoutServiceDetailInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUncheckedCreateWithoutServiceDetailInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUncheckedCreateWithoutServiceDetailInput>;

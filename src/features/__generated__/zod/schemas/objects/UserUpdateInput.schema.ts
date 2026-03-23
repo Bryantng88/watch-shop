@@ -5,6 +5,8 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema';
+import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
 import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -18,6 +20,8 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateInputObjectSchema: z.ZodType<Prisma.UserUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateInput>;

@@ -7,6 +7,7 @@ import { InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema as InvoiceCre
 import { MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutServiceRequestInput.schema';
 import { OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema as OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema } from './OrderItemCreateNestedOneWithoutServiceRequestInput.schema';
 import { ProductCreateNestedOneWithoutServiceRequestInputObjectSchema as ProductCreateNestedOneWithoutServiceRequestInputObjectSchema } from './ProductCreateNestedOneWithoutServiceRequestInput.schema';
+import { UserCreateNestedOneWithoutServiceRequestInputObjectSchema as UserCreateNestedOneWithoutServiceRequestInputObjectSchema } from './UserCreateNestedOneWithoutServiceRequestInput.schema';
 import { ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema as ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema } from './ProductVariantCreateNestedOneWithoutServiceRequestInput.schema';
 import { VendorCreateNestedOneWithoutServiceRequestInputObjectSchema as VendorCreateNestedOneWithoutServiceRequestInputObjectSchema } from './VendorCreateNestedOneWithoutServiceRequestInput.schema';
 import { ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema as ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutServiceRequestInput.schema'
@@ -29,10 +30,12 @@ const makeSchema = () => z.object({
   refNo: z.string().optional().nullable(),
   scope: ServiceScopeSchema.optional().nullable(),
   vendorNameSnap: z.string().optional().nullable(),
+  technicianNameSnap: z.string().optional().nullable(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
+  User: z.lazy(() => UserCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   Vendor: z.lazy(() => VendorCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema).optional()

@@ -4,6 +4,7 @@ import { MaintenancePartFindManySchema as MaintenancePartFindManySchema } from '
 import { PaymentArgsObjectSchema as PaymentArgsObjectSchema } from './PaymentArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
+import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
 import { ServiceCatalogFindManySchema as ServiceCatalogFindManySchema } from '../findManyServiceCatalog.schema';
@@ -14,6 +15,7 @@ const makeSchema = () => z.object({
   Payment: z.union([z.boolean(), z.lazy(() => PaymentArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
+  User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   serviceDetail: z.union([z.boolean(), z.lazy(() => ServiceCatalogFindManySchema)]).optional(),

@@ -1,21 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { postAcquisition } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    let body: any = {};
-
+export async function POST(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        body = await req.json();
-    } catch { }
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ error: "Thiếu id phiếu nhập" }, { status: 400 });
+        }
 
-    try {
-        const data = await postAcquisition(id, body?.vendor ?? body?.vendorName ?? "");
+        const data = await postAcquisition(id, "");
         return NextResponse.json({ ok: true, data });
-    } catch (error: any) {
+    } catch (e: any) {
         return NextResponse.json(
-            { error: error?.message || "Không thể duyệt phiếu nhập" },
-            { status: 400 }
+            { error: e?.message || "Không thể duyệt phiếu" },
+            { status: 500 }
         );
     }
 }

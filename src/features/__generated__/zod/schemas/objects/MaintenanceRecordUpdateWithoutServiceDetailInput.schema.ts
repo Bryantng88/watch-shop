@@ -14,6 +14,7 @@ import { MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema as Mainte
 import { PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './PaymentUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordsNestedInput.schema';
 import { ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceNestedInput.schema';
+import { UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './UserUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { VendorUpdateOneWithoutServicesNestedInputObjectSchema as VendorUpdateOneWithoutServicesNestedInputObjectSchema } from './VendorUpdateOneWithoutServicesNestedInput.schema'
 
@@ -41,10 +42,12 @@ const makeSchema = () => z.object({
   prevVendorName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paidAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   parts: z.lazy(() => MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema).optional(),
+  User: z.lazy(() => UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutServicesNestedInputObjectSchema).optional()
 }).strict();

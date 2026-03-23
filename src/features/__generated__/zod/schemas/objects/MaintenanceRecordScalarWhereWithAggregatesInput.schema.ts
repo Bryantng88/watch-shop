@@ -42,7 +42,9 @@ const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   prevVendorName: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   paymentId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   paidAmount: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
-  paidAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
+  paidAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  technicianId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  technicianNameSnap: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput> = maintenancerecordscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput>;
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectZodSchema = maintenancerecordscalarwherewithaggregatesinputSchema;

@@ -34,7 +34,8 @@ const makeSchema = () => z.object({
   prevVendorId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   prevVendorName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paidAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const MaintenanceRecordUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUpdateManyMutationInput>;
 export const MaintenanceRecordUpdateManyMutationInputObjectZodSchema = makeSchema();

@@ -32,10 +32,13 @@ export const MaintenanceRecordInputSchema = z.object({
     paymentId: z.string().optional().nullable(),
     paidAmount: z.number().optional().nullable(),
     paidAt: z.date().optional().nullable(),
+    technicianId: z.string().optional().nullable(),
+    technicianNameSnap: z.string().optional().nullable(),
     parts: z.array(z.unknown()),
     Payment: z.unknown().optional().nullable(),
     product: z.unknown().optional().nullable(),
     serviceRequest: z.unknown().optional().nullable(),
+    User: z.unknown().optional().nullable(),
     variant: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
     serviceDetail: z.array(z.unknown())

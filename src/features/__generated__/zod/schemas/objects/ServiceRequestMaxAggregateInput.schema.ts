@@ -25,7 +25,9 @@ const makeSchema = () => z.object({
   refNo: z.literal(true).optional(),
   scope: z.literal(true).optional(),
   vendorId: z.literal(true).optional(),
-  vendorNameSnap: z.literal(true).optional()
+  vendorNameSnap: z.literal(true).optional(),
+  technicianId: z.literal(true).optional(),
+  technicianNameSnap: z.literal(true).optional()
 }).strict();
 export const ServiceRequestMaxAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestMaxAggregateInputType>;
 export const ServiceRequestMaxAggregateInputObjectZodSchema = makeSchema();

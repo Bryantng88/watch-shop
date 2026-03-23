@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ActionMenu from "../components/ActionMenu";
+import AcqItemsPopover from "../components/ItemsPopover";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 
@@ -277,33 +278,18 @@ export default function AcquisitionListClient(props: PageProps) {
                     <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={async () => {
+                            const payload = displayItems
+                                .filter((x) => selectedIds.includes(x.id))
+                                .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
+
                             const res = await fetch("/api/admin/acquisitions/bulk-post", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ acquisitionIds: selectedIds }),
+                                body: JSON.stringify({ items: payload }),
                             });
 
-                            const data = await res.json().catch(() => null);
-
-                            if (!res.ok || data?.ok === false) {
-                                if (Array.isArray(data?.failed) && data.failed.length) {
-                                    alert(
-                                        data.failed
-                                            .map((x: any) => `${x.id}: ${x.error}`)
-                                            .join("\n")
-                                    );
-                                } else {
-                                    alert(data?.error || "Có lỗi khi duyệt phiếu!");
-                                }
-                                return;
-                            }
-
-                            if (Array.isArray(data?.failed) && data.failed.length > 0) {
-                                alert(
-                                    "Một số phiếu duyệt lỗi:\n" +
-                                    data.failed.map((x: any) => `- ${x.id}: ${x.error}`).join("\n")
-                                );
-                                router.refresh();
+                            if (!res.ok) {
+                                alert("Có lỗi khi duyệt phiếu!");
                                 return;
                             }
 
@@ -410,8 +396,14 @@ export default function AcquisitionListClient(props: PageProps) {
                                                 <div className="font-semibold text-base">
                                                     {fmtMoney(Number(row.cost || 0), row.currency)}
                                                 </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Items: {row.itemCount}
+                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                                    <span>Items:</span>
+                                                    <AcqItemsPopover
+                                                        acqId={row.id}
+                                                        count={row.itemCount}
+                                                        currency={row.currency}
+                                                        status={row.status}
+                                                    />
                                                 </div>
                                             </td>
 

@@ -1,6 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { CustomerCreateNestedOneWithoutUserInputObjectSchema as CustomerCreateNestedOneWithoutUserInputObjectSchema } from './CustomerCreateNestedOneWithoutUserInput.schema'
+import { CustomerCreateNestedOneWithoutUserInputObjectSchema as CustomerCreateNestedOneWithoutUserInputObjectSchema } from './CustomerCreateNestedOneWithoutUserInput.schema';
+import { MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutUserInput.schema';
+import { ServiceRequestCreateNestedManyWithoutUserInputObjectSchema as ServiceRequestCreateNestedManyWithoutUserInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutUserInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,7 +14,9 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   roleId: z.string().optional().nullable(),
-  customer: z.lazy(() => CustomerCreateNestedOneWithoutUserInputObjectSchema).optional()
+  customer: z.lazy(() => CustomerCreateNestedOneWithoutUserInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutUserInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutRolesInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutRolesInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutRolesInput>;
 export const UserCreateWithoutRolesInputObjectZodSchema = makeSchema();

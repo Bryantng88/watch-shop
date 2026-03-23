@@ -6,6 +6,7 @@ import { MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema as Mainte
 import { PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './PaymentCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema as ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema } from './ProductCreateNestedOneWithoutMaintenanceRecordsInput.schema';
 import { ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema as ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutMaintenanceInput.schema';
+import { UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './UserCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ProductVariantCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInput.schema'
 
@@ -33,10 +34,12 @@ const makeSchema = () => z.object({
   prevVendorName: z.string().optional().nullable(),
   paidAmount: z.number().optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
+  technicianNameSnap: z.string().optional().nullable(),
   parts: z.lazy(() => MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema).optional(),
+  User: z.lazy(() => UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   serviceDetail: z.lazy(() => ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema).optional()
 }).strict();

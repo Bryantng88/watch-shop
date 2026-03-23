@@ -13,6 +13,7 @@ import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumM
 import { MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutRecordNestedInput.schema';
 import { PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './PaymentUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceNestedInput.schema';
+import { UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './UserUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { VendorUpdateOneWithoutServicesNestedInputObjectSchema as VendorUpdateOneWithoutServicesNestedInputObjectSchema } from './VendorUpdateOneWithoutServicesNestedInput.schema';
 import { ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInput.schema'
@@ -41,9 +42,11 @@ const makeSchema = () => z.object({
   prevVendorName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paidAmount: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   paidAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   parts: z.lazy(() => MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema).optional(),
+  User: z.lazy(() => UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorUpdateOneWithoutServicesNestedInputObjectSchema).optional(),
   serviceDetail: z.lazy(() => ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()

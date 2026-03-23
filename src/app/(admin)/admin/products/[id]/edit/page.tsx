@@ -1,85 +1,63 @@
-import ProductListClient from "./_client/ListProducts";
-import { getAdminProductList } from "./_server/product.service";
+import { notFound } from "next/navigation";
 
-import { parseProductListSearchParams } from "./helpers/search-params";
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
-import { PERMISSIONS } from "@/constants/permissions";
+import EditProductForm from "../../_client/EditProductForm";
+import { detail } from "../../_server/product.service";
+import * as prodRepo from "../../_server/product.repo";
+import { getOptions } from "../../_components/options";
 
-type SearchParams = { [key: string]: string | string[] | undefined };
+import { prisma } from "@/server/db/client";
+import { listBrands } from "@/features/catalog/server/brands.repo";
+import { listVendor } from "@/features/vendors/server/vendor.repo";
 
+export const metadata = { title: "Sửa sản phẩm · Admin" };
 
-function hasRole(user: any, roleName: string) {
-    const roles = user?.roles ?? [];
-    return roles.some((r: any) => {
-        if (typeof r === "string") return r === roleName;
-        if (typeof r?.name === "string") return r.name === roleName;
-        if (typeof r?.code === "string") return r.code === roleName;
-        return false;
-    });
-}
-
-function hasPermission(user: any, permission: string) {
-    const permissions = user?.permissions ?? [];
-    return permissions.some((p: any) => {
-        if (typeof p === "string") return p === permission;
-        if (typeof p?.name === "string") return p.name === permission;
-        if (typeof p?.code === "string") return p.code === permission;
-        if (typeof p?.key === "string") return p.key === permission;
-        return false;
-    });
-}
-
-export default async function ProductListPage({
-    searchParams,
-}: {
-    searchParams: SearchParams;
-}) {
-    const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
-            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
-        )
+function serialize(obj: any) {
+    return JSON.parse(
+        JSON.stringify(obj, (_key, value) => {
+            if (value instanceof Date) return value.toISOString();
+            if (typeof value === "object" && value?._isDecimal) return Number(value);
+            return value;
+        })
     );
+}
 
-    const input = parseProductListSearchParams(sp);
+export default async function EditProductPage({ params }: { params: { id: string } }) {
+    const product = await detail(params.id);
+    if (!product) notFound();
 
-    const [user, productList] = await Promise.all([
-        getCurrentUser(),
-        getAdminProductList(input),
+    const [brands, vendors, opts, categoryOptions, strapInventoryOptions] = await Promise.all([
+        listBrands(),
+        listVendor(),
+        getOptions(),
+        prodRepo.listActiveProductCategories(prisma),
+        prodRepo.listAvailableStrapInventory(prisma),
     ]);
 
-    const isAdmin = hasRole(user, "ADMIN");
-
-    const canViewCost =
-        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
-
-    const canEditPrice =
-        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_UPDATE);
-
-    const {
-        items,
-        total,
-        counts,
-        page,
-        pageSize,
-        brands,
-        productTypes,
-    } = productList;
-
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
     return (
-        <ProductListClient
-            items={items}
-            total={total}
-            counts={counts}
-            page={page}
-            pageSize={pageSize}
-            totalPages={totalPages}
-            rawSearchParams={searchParams}
-            brands={brands}
-            productTypes={productTypes}
-            canViewCost={canViewCost}
-            canEditPrice={canEditPrice}
-        />
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-semibold">Chỉnh sửa sản phẩm</h1>
+            </div>
+
+            <div className="rounded-lg border bg-white p-6 shadow-sm">
+                <EditProductForm
+                    initial={serialize(product)}
+                    brands={serialize(brands)}
+                    vendors={serialize(vendors)}
+                    productStatusOptions={serialize(opts.productStatus)}
+                    typeOptions={serialize(opts.type)}
+                    caseOptions={serialize(opts.case)}
+                    movementOptions={serialize(opts.movement)}
+                    caseMaterialOptions={serialize(opts.caseMaterial)}
+                    genderOptions={serialize(opts.gender)}
+                    strapOptions={serialize(opts.strap)}
+                    glassOptions={serialize(opts.glass)}
+                    goldColorOptions={serialize(opts.goldColor)}
+                    complicationOptions={serialize(opts.complication)}
+                    categoryOptions={serialize(categoryOptions)}
+                    strapInventoryOptions={serialize(strapInventoryOptions)}
+                />
+            </div>
+        </div>
     );
 }

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
             const item = await serviceRequest.createFromProduct({
                 productId,
                 customerId: body.customerId ?? null,
-                scope: (body.scope ?? "INTERNAL") as ServiceScope,
+                scope: (body.scope ?? ServiceScope.WITH_PURCHASE) as ServiceScope,
                 serviceCatalogId,
                 notes: s?.notes ?? null,
             });
@@ -32,15 +32,9 @@ export async function POST(req: Request) {
             created.push(item);
         }
 
-        return NextResponse.json({
-            ok: true,
-            items: created,
-        });
+        return NextResponse.json({ ok: true, items: created });
     } catch (error: any) {
         console.error("from-product route error:", error);
-        return NextResponse.json(
-            { error: error?.message || "Create service request failed" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error?.message || "Create service request failed" }, { status: 500 });
     }
 }

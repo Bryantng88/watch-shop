@@ -15,40 +15,47 @@ function normalizeVendorItems(payload: unknown): VendorLite[] {
 export default function BulkAssignVendorModal({
     open,
     onClose,
-    selectedCount,
-    selectedIds,
+    serviceRequestIds,
+    onAssigned,
 }: {
     open: boolean;
     onClose: () => void;
-    selectedCount: number;
-    selectedIds: string[];
+    serviceRequestIds?: string[];
+    onAssigned?: () => void;
 }) {
     const [loading, setLoading] = useState(false);
     const [vendors, setVendors] = useState<VendorLite[]>([]);
     const [vendorId, setVendorId] = useState<string>("");
     const [loaded, setLoaded] = useState(false);
 
+    const selectedIds = serviceRequestIds ?? [];
+    const selectedCount = selectedIds.length;
+
     useEffect(() => {
         if (!open || loaded) return;
 
         (async () => {
-            const res = await fetch("/api/admin/vendors/dropdown", { cache: "no-store" });
-            const data = await res.json();
-            const items = normalizeVendorItems(data);
-            setVendors(items);
-            setVendorId(items?.[0]?.id ?? "");
-            setLoaded(true);
+            try {
+                const res = await fetch("/api/admin/vendors/dropdown", { cache: "no-store" });
+                const data = await res.json();
+                const items = normalizeVendorItems(data);
+                setVendors(items);
+                setVendorId(items?.[0]?.id ?? "");
+                setLoaded(true);
+            } catch (err) {
+                console.error("load vendors failed", err);
+            }
         })();
     }, [open, loaded]);
 
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
-            <div className="bg-white rounded-lg w-[520px] p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <div className="w-[520px] space-y-4 rounded-lg bg-white p-5">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">Bulk assign vendor</h3>
-                    <button className="text-sm px-2 py-1 rounded hover:bg-gray-100" onClick={onClose}>
+                    <h3 className="text-lg font-semibold">Chuyển vendor</h3>
+                    <button className="rounded px-2 py-1 text-sm hover:bg-gray-100" onClick={onClose} type="button">
                         ✕
                     </button>
                 </div>
@@ -76,19 +83,17 @@ export default function BulkAssignVendorModal({
                         )}
                     </select>
 
-                    <div className="text-xs text-gray-500">
-                        Tip: bạn cũng có thể “gỡ vendor” bằng cách chọn trống (nếu bạn muốn, mình thêm option “— Unassign —”).
-                    </div>
+                    <div className="text-xs text-gray-500">Sau khi thợ kiểm tra, chỉ chuyển vendor cho các case cần outsource.</div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                    <button className="px-3 py-2 rounded border" onClick={onClose} type="button">
+                    <button className="rounded border px-3 py-2" onClick={onClose} type="button">
                         Hủy
                     </button>
 
                     <button
-                        className="px-3 py-2 rounded bg-black text-white disabled:opacity-50"
-                        disabled={!vendorId || loading || selectedIds.length === 0}
+                        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+                        disabled={!vendorId || loading || selectedCount === 0}
                         onClick={async () => {
                             setLoading(true);
                             try {
@@ -99,18 +104,18 @@ export default function BulkAssignVendorModal({
                                 });
 
                                 const data = await res.json();
-                                if (!res.ok) throw new Error(data?.error ?? "Bulk assign failed");
+                                if (!res.ok) throw new Error(data?.error ?? "Bulk assign vendor failed");
 
-                                location.reload();
+                                onAssigned?.();
                             } catch (e: any) {
-                                alert(e?.message ?? "Bulk assign failed");
+                                alert(e?.message ?? "Bulk assign vendor failed");
                             } finally {
                                 setLoading(false);
                             }
                         }}
                         type="button"
                     >
-                        {loading ? "Đang cập nhật..." : "Assign vendor"}
+                        {loading ? "Đang cập nhật..." : "Chuyển vendor"}
                     </button>
                 </div>
             </div>

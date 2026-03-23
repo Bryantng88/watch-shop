@@ -1,12 +1,7 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { MaintenanceEventType, ServiceRequestStatus } from "@prisma/client";
-import { prisma, DB, dbOrTx } from "@/server/db/client";
+import { DB, dbOrTx } from "@/server/db/client";
 
-//export type DB = PrismaClient | Prisma.TransactionClient;
-
-/** =========================
- *  READ: panel data (SR + logs)
- * ========================= */
 export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: string) {
     const db = dbOrTx(tx);
 
@@ -20,17 +15,14 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
             notes: true,
             createdAt: true,
             updatedAt: true,
-
+            technicianId: true,
+            technicianNameSnap: true,
             vendorId: true,
             vendorNameSnap: true,
-
             productId: true,
             product: { select: { id: true, title: true } },
-
-            // nếu bạn có relation Vendor
+            technician: { select: { id: true, name: true, email: true } },
             Vendor: { select: { id: true, name: true } },
-
-            // count logs
             _count: { select: { maintenance: true } },
         },
     });
@@ -43,19 +35,17 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
         select: {
             id: true,
             eventType: true,
-
+            technicianId: true,
+            technicianName: true,
             vendorId: true,
             vendorName: true,
             prevVendorId: true,
             prevVendorName: true,
-
             notes: true,
             totalCost: true,
             currency: true,
-
             servicedAt: true,
             createdAt: true,
-
             paymentId: true,
             paidAmount: true,
             paidAt: true,
@@ -71,32 +61,22 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
     };
 }
 
-/** =========================
- *  CREATE: add maintenance log
- *  (optionally attach payment fields if you already create payment elsewhere)
- * ========================= */
 export type CreateMaintenanceLogInput = {
     serviceRequestId: string;
-
     eventType: MaintenanceEventType;
-
+    technicianId?: string | null;
+    technicianName?: string | null;
     vendorId?: string | null;
     vendorName?: string | null;
-
     prevVendorId?: string | null;
     prevVendorName?: string | null;
-
     notes?: string | null;
     servicedAt?: Date | null;
-
     totalCost?: Prisma.Decimal | number | string | null;
-    currency?: string; // default "VND"
-
+    currency?: string;
     paymentId?: string | null;
     paidAmount?: Prisma.Decimal | number | string | null;
     paidAt?: Date | null;
-
-    // snapshot cho product/variant nếu bạn muốn
     productId?: string | null;
     variantId?: string | null;
     brandSnapshot?: string | null;
@@ -111,28 +91,22 @@ export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
     return db.maintenanceRecord.create({
         data: {
             serviceRequestId: input.serviceRequestId,
-
             eventType: input.eventType,
-
+            technicianId: input.technicianId ?? null,
+            technicianName: input.technicianName ?? null,
             vendorId: input.vendorId ?? null,
             vendorName: input.vendorName ?? null,
-
             prevVendorId: input.prevVendorId ?? null,
             prevVendorName: input.prevVendorName ?? null,
-
             notes: input.notes ?? null,
             servicedAt: input.servicedAt ?? null,
-
             totalCost: (input.totalCost as any) ?? null,
             currency: input.currency ?? "VND",
-
             paymentId: input.paymentId ?? null,
             paidAmount: (input.paidAmount as any) ?? null,
             paidAt: input.paidAt ?? null,
-
             productId: input.productId ?? null,
             variantId: input.variantId ?? null,
-
             brandSnapshot: input.brandSnapshot ?? null,
             modelSnapshot: input.modelSnapshot ?? null,
             refSnapshot: input.refSnapshot ?? null,
@@ -141,11 +115,6 @@ export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
     });
 }
 
-/** =========================
- *  WRITE: assign/change vendor for ONE SR
- *  - update SR vendor + status IN_PROGRESS + updatedAt
- *  - create maintenance log (ASSIGN_VENDOR / CHANGE_VENDOR)
- * ========================= */
 export async function assignVendorOne(
     tx: DB,
     args: {
@@ -163,9 +132,10 @@ export async function assignVendorOne(
         select: {
             id: true,
             status: true,
+            technicianId: true,
+            technicianNameSnap: true,
             vendorId: true,
             vendorNameSnap: true,
-
             productId: true,
             variantId: true,
             brandSnapshot: true,
@@ -181,7 +151,6 @@ export async function assignVendorOne(
     const prevVendorName = sr.vendorNameSnap ?? null;
     const isChange = !!prevVendorId && prevVendorId !== args.vendorId;
 
-    // 1) update SR (không set undefined)
     await db.serviceRequest.update({
         where: { id: sr.id },
         data: {
@@ -192,28 +161,19 @@ export async function assignVendorOne(
         },
     });
 
-    // 2) create maintenance log (1 log, notes gộp)
-    const base = isChange
-        ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}`
-        : `Assign vendor: ${args.vendorName}`;
-
-    const mergedNotes =
-        args.reason && String(args.reason).trim()
-            ? `${base}\n${String(args.reason).trim()}`
-            : base;
+    const base = isChange ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}` : `Assign vendor: ${args.vendorName}`;
+    const mergedNotes = args.reason && String(args.reason).trim() ? `${base}\n${String(args.reason).trim()}` : base;
 
     await createLog(db, {
         serviceRequestId: sr.id,
         eventType: isChange ? MaintenanceEventType.CHANGE_VENDOR : MaintenanceEventType.ASSIGN_VENDOR,
-
+        technicianId: sr.technicianId ?? null,
+        technicianName: sr.technicianNameSnap ?? null,
         vendorId: args.vendorId,
         vendorName: args.vendorName,
-
         prevVendorId,
         prevVendorName,
-
         notes: mergedNotes,
-
         productId: sr.productId ?? null,
         variantId: sr.variantId ?? null,
         brandSnapshot: sr.brandSnapshot ?? null,
@@ -224,20 +184,15 @@ export async function assignVendorOne(
 
     return { ok: true };
 }
-/** =========================
- *  WRITE: bulk assign vendor
- *  - updateMany SR
- *  - createMany maintenance logs (one per SR)
- * ========================= */
+
 export async function bulkAssignVendor(
     tx: DB,
     args: {
         ids: string[];
         vendorId: string;
         vendorName: string;
-
-        onlyFromDraft?: boolean; // default false
-        setInProgress?: boolean; // default true
+        onlyFromDraft?: boolean;
+        setInProgress?: boolean;
     }
 ) {
     const db = dbOrTx(tx);
@@ -245,7 +200,6 @@ export async function bulkAssignVendor(
     const ids = Array.from(new Set(args.ids.map((x) => String(x).trim()).filter(Boolean)));
     if (!ids.length) return { updatedCount: 0, createdLogs: 0 };
 
-    // load SRs to build logs with prevVendor + snapshots
     const rows = await db.serviceRequest.findMany({
         where: {
             id: { in: ids },
@@ -254,9 +208,10 @@ export async function bulkAssignVendor(
         select: {
             id: true,
             status: true,
+            technicianId: true,
+            technicianNameSnap: true,
             vendorId: true,
             vendorNameSnap: true,
-
             productId: true,
             variantId: true,
             brandSnapshot: true,
@@ -268,7 +223,6 @@ export async function bulkAssignVendor(
 
     if (!rows.length) return { updatedCount: 0, createdLogs: 0 };
 
-    // 1) updateMany SR
     const updated = await db.serviceRequest.updateMany({
         where: { id: { in: rows.map((r) => r.id) } },
         data: {
@@ -279,9 +233,7 @@ export async function bulkAssignVendor(
         },
     });
 
-    // 2) createMany logs
     const now = new Date();
-
     const createData: Prisma.MaintenanceRecordCreateManyInput[] = rows.map((r) => {
         const prevVendorId = r.vendorId ?? null;
         const prevVendorName = r.vendorNameSnap ?? null;
@@ -290,19 +242,14 @@ export async function bulkAssignVendor(
         return {
             serviceRequestId: r.id,
             eventType: isChange ? MaintenanceEventType.CHANGE_VENDOR : MaintenanceEventType.ASSIGN_VENDOR,
-
+            technicianId: r.technicianId ?? null,
+            technicianName: r.technicianNameSnap ?? null,
             vendorId: args.vendorId,
             vendorName: args.vendorName,
-
             prevVendorId,
             prevVendorName,
-
-            notes: isChange
-                ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}`
-                : `Assign vendor: ${args.vendorName}`,
-
+            notes: isChange ? `Change vendor: ${prevVendorName ?? "-"} → ${args.vendorName}` : `Assign vendor: ${args.vendorName}`,
             createdAt: now,
-
             productId: r.productId ?? null,
             variantId: r.variantId ?? null,
             brandSnapshot: r.brandSnapshot ?? null,
@@ -312,10 +259,6 @@ export async function bulkAssignVendor(
         };
     });
 
-    const created = await db.maintenanceRecord.createMany({
-        data: createData,
-        skipDuplicates: false,
-    });
-
+    const created = await db.maintenanceRecord.createMany({ data: createData, skipDuplicates: false });
     return { updatedCount: updated.count, createdLogs: created.count };
 }

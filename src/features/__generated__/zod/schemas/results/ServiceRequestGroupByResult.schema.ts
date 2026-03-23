@@ -20,6 +20,8 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
   refNo: z.string(),
   vendorId: z.string(),
   vendorNameSnap: z.string(),
+  technicianId: z.string(),
+  technicianNameSnap: z.string(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -44,11 +46,14 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     scope: z.number(),
     vendorId: z.number(),
     vendorNameSnap: z.number(),
+    technicianId: z.number(),
+    technicianNameSnap: z.number(),
     Invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),
     orderItem: z.number(),
     product: z.number(),
+    User: z.number(),
     variant: z.number(),
     Vendor: z.number(),
     ServiceCatalog: z.number()
@@ -72,7 +77,9 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -93,6 +100,8 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional()
 }));

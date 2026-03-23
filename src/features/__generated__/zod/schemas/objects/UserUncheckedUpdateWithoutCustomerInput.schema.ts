@@ -4,6 +4,8 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInput.schema';
+import { ServiceRequestUncheckedUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutUserNestedInput.schema';
 import { RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema as RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUncheckedUpdateManyWithoutUsersNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -16,6 +18,8 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   roles: z.lazy(() => RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema).optional()
 }).strict();
 export const UserUncheckedUpdateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUncheckedUpdateWithoutCustomerInput>;

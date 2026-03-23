@@ -4,6 +4,8 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
 import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -16,6 +18,8 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutCustomerInput>;

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import GenericActionMenu from "../../__components/GenericActionMenu";
-import BulkAssignVendorModal from "./BulkAssignVendorModal";
+import BulkAssignTechnicianModal from "./BulkAssignTechnicianModal";
 import MaintenanceDrawer from "./MaintenanceDrawer";
 import MaintenanceLogModal from "./MaintenaceLogModel";
 import DotLabel from "../../__components/DotLabel";
@@ -23,6 +23,7 @@ type ServiceReqItem = {
     serviceName: string | null;
     productTitle: string | null;
     vendorName: string | null;
+    technicianName: string | null;
     maintenanceCount: number;
 };
 
@@ -55,13 +56,16 @@ function fmtDT(s?: string | null) {
 
 function scopeTone(scope?: string | null): "blue" | "orange" | "green" {
     const s = (scope || "").toUpperCase();
-    if (s === "INTERNAL") return "blue";
-    if (s === "PRODUCT_ITEM") return "green";
-    return "orange";
+    if (s === "WITH_PURCHASE" || s === "INTERNAL") return "blue";
+    if (s === "CUSTOMER_OWNED") return "orange";
+    return "green";
 }
 
 function formatScope(scope?: string | null) {
-    return (scope || "-").replaceAll("_", " ").toLowerCase();
+    const s = (scope || "-").toUpperCase();
+    if (s === "WITH_PURCHASE") return "hàng shop";
+    if (s === "CUSTOMER_OWNED") return "hàng khách";
+    return s.replaceAll("_", " ").toLowerCase();
 }
 
 export default function ServiceRequestListClient(props: PageProps) {
@@ -93,7 +97,7 @@ export default function ServiceRequestListClient(props: PageProps) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
 
-    const [openBulkAssignVendor, setOpenBulkAssignVendor] = useState(false);
+    const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
     const [openMaint, setOpenMaint] = useState(false);
     const [maintSrId, setMaintSrId] = useState<string | null>(null);
     const [openLogs, setOpenLogs] = useState(false);
@@ -102,8 +106,8 @@ export default function ServiceRequestListClient(props: PageProps) {
 
     const completeOne = async (id: string) => {
         const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({}),
         });
         if (!res.ok) throw new Error(await res.text());
@@ -120,12 +124,9 @@ export default function ServiceRequestListClient(props: PageProps) {
     }, [selectedIds.length]);
 
     const displayItems = items;
-
     const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
-    const allChecked =
-        pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
-    const someChecked =
-        pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
+    const allChecked = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+    const someChecked = pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     const counts: Counts = useMemo(() => {
         if (props.counts?.all != null) {
@@ -185,7 +186,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                 <h1 className="text-2xl font-semibold">Service Requests</h1>
                 <button
                     type="button"
-                    className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
+                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
                     onClick={() => router.push("/admin/orders")}
                 >
                     ← Orders
@@ -211,22 +212,22 @@ export default function ServiceRequestListClient(props: PageProps) {
                     applyFilters({ q: formQ, sort: formSort });
                 }}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
+                        <div className="mb-1 text-xs text-gray-500">Tìm kiếm</div>
                         <input
                             value={formQ}
                             onChange={(e) => setFormQ(e.target.value)}
-                            placeholder="refNo / order / service / vendor / notes..."
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            placeholder="refNo / order / service / thợ / vendor / notes..."
+                            className="w-full rounded-lg border px-3 py-2 text-sm"
                         />
                     </div>
                     <div>
-                        <div className="text-xs text-gray-500 mb-1">Sắp xếp</div>
+                        <div className="mb-1 text-xs text-gray-500">Sắp xếp</div>
                         <select
                             value={formSort}
                             onChange={(e) => setFormSort(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            className="w-full rounded-lg border px-3 py-2 text-sm"
                         >
                             <option value="updatedDesc">Cập nhật ↓</option>
                             <option value="updatedAsc">Cập nhật ↑</option>
@@ -237,14 +238,10 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                    <button type="submit" className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
                         Lọc
                     </button>
-                    <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
-                    >
+                    <button type="button" onClick={clearFilters} className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
                         Clear
                     </button>
                     <div className="ml-auto text-sm text-gray-600">
@@ -254,19 +251,17 @@ export default function ServiceRequestListClient(props: PageProps) {
             </form>
 
             {showBulkBar && (
-                <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
-                    <span className="font-medium text-blue-700">
-                        {selectedIds.length} service request đã chọn
-                    </span>
+                <div className="flex items-center gap-4 rounded border bg-blue-50 p-3">
+                    <span className="font-medium text-blue-700">{selectedIds.length} service request đã chọn</span>
                     <button
                         type="button"
-                        className="px-3 py-1 border rounded text-sm"
-                        onClick={() => setOpenBulkAssignVendor(true)}
+                        className="rounded border px-3 py-1 text-sm"
+                        onClick={() => setOpenBulkAssignTechnician(true)}
                     >
-                        Gán vendor
+                        Gán thợ
                     </button>
                     <button
-                        className="px-3 py-1 border rounded text-sm"
+                        className="rounded border px-3 py-1 text-sm"
                         onClick={() => {
                             setSelectedIds([]);
                             setShowBulkBar(false);
@@ -278,7 +273,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </div>
             )}
 
-            <div className="border rounded-xl overflow-hidden">
+            <div className="overflow-hidden rounded-xl border">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
@@ -292,20 +287,16 @@ export default function ServiceRequestListClient(props: PageProps) {
                                         }}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                setSelectedIds((prev) =>
-                                                    Array.from(new Set([...prev, ...pageIds]))
-                                                );
+                                                setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
                                             } else {
-                                                setSelectedIds((prev) =>
-                                                    prev.filter((id) => !pageIds.includes(id))
-                                                );
+                                                setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
                                             }
                                         }}
                                     />
                                 </th>
                                 <th className="px-3 py-3">RefNo</th>
                                 <th className="px-3 py-3">Service</th>
-                                <th className="px-3 py-3">Scope / Vendor</th>
+                                <th className="px-3 py-3">Nguồn / xử lý</th>
                                 <th className="px-3 py-3">Status</th>
                                 <th className="px-3 py-3">Ngày tạo</th>
                                 <th className="px-3 py-3">Link</th>
@@ -323,65 +314,55 @@ export default function ServiceRequestListClient(props: PageProps) {
                             ) : (
                                 displayItems.map((row) => {
                                     const checked = selectedIds.includes(row.id);
-
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="px-3 py-4 align-middle">
+                                            <td className="align-middle px-3 py-4">
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
-                                                            setSelectedIds((prev) =>
-                                                                Array.from(new Set([...prev, row.id]))
-                                                            );
+                                                            setSelectedIds((prev) => Array.from(new Set([...prev, row.id])));
                                                         } else {
-                                                            setSelectedIds((prev) =>
-                                                                prev.filter((id) => id !== row.id)
-                                                            );
+                                                            setSelectedIds((prev) => prev.filter((id) => id !== row.id));
                                                         }
                                                     }}
                                                 />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
-                                                <div className="font-medium text-sm">{row.refNo || "-"}</div>
-                                                <div className="text-xs text-gray-500 mt-1">ID: {row.id}</div>
+                                            <td className="align-top px-3 py-4">
+                                                <div className="text-sm font-medium">{row.refNo || "-"}</div>
+                                                <div className="mt-1 text-xs text-gray-500">ID: {row.id}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="align-top px-3 py-4">
                                                 <div className="font-medium">{row.serviceName || "-"}</div>
-                                                <div className="mt-1 text-[11px] text-gray-400 uppercase tracking-wide">
-                                                    product · {row.productTitle || "-"}
-                                                </div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Note: {row.customerItemNote || "-"}
-                                                </div>
+                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">product · {row.productTitle || "-"}</div>
+                                                <div className="mt-1 text-xs text-gray-500">Note: {row.customerItemNote || "-"}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="align-top px-3 py-4">
                                                 <DotLabel label={formatScope(row.scope)} tone={scopeTone(row.scope)} />
-                                                <div className="text-sm mt-2">{row.vendorName || "-"}</div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Maintenance: {row.maintenanceCount ?? 0}
+                                                <div className="mt-2 text-sm">
+                                                    <div>Thợ: <span className="font-medium">{row.technicianName || "Chưa gán"}</span></div>
+                                                    <div className="mt-1">Vendor: <span className="font-medium">{row.vendorName || "-"}</span></div>
                                                 </div>
+                                                <div className="mt-1 text-xs text-gray-500">Maintenance: {row.maintenanceCount ?? 0}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-middle">
+                                            <td className="align-middle px-3 py-4">
                                                 <StatusBadge status={row.status} />
                                             </td>
 
-                                            <td className="px-3 py-4 align-top">
+                                            <td className="align-top px-3 py-4">
                                                 <div className="text-sm">{fmtDT(row.createdAt)}</div>
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Updated: {fmtDT(row.updatedAt)}
-                                                </div>
+                                                <div className="mt-1 text-xs text-gray-500">Updated: {fmtDT(row.updatedAt)}</div>
                                             </td>
 
-                                            <td className="px-3 py-4 align-middle">
+                                            <td className="align-middle px-3 py-4">
                                                 {row.orderRefNo ? (
                                                     <div className="text-sm">
-                                                        <span className="text-blue-600 font-medium">Order</span>{" "}
+                                                        <span className="font-medium text-blue-600">Order</span>{" "}
                                                         <span className="text-gray-600">{row.orderRefNo}</span>
                                                     </div>
                                                 ) : (
@@ -389,7 +370,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 )}
                                             </td>
 
-                                            <td className="px-3 py-4 align-middle text-right">
+                                            <td className="px-3 py-4 text-right align-middle">
                                                 <GenericActionMenu
                                                     id={row.id}
                                                     maintenance={{
@@ -409,7 +390,8 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         },
                                                         {
                                                             label: "Kết thúc / DONE",
-                                                            hidden: row.status === 'COMPLETED' || row.status === 'DELIVERED' || row.status === 'CANCELED',
+                                                            hidden:
+                                                                row.status === "COMPLETED" || row.status === "DELIVERED" || row.status === "CANCELED",
                                                             onClick: async () => {
                                                                 await completeOne(row.id);
                                                             },
@@ -439,7 +421,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        className="rounded-lg border px-3 py-2 disabled:opacity-50"
                         disabled={props.page <= 1}
                         onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
@@ -447,7 +429,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                     </button>
                     <button
                         type="button"
-                        className="px-3 py-2 border rounded-lg disabled:opacity-50"
+                        className="rounded-lg border px-3 py-2 disabled:opacity-50"
                         disabled={props.page >= props.totalPages}
                         onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
@@ -456,12 +438,12 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </div>
             </div>
 
-            <BulkAssignVendorModal
-                open={openBulkAssignVendor}
-                onClose={() => setOpenBulkAssignVendor(false)}
+            <BulkAssignTechnicianModal
+                open={openBulkAssignTechnician}
+                onClose={() => setOpenBulkAssignTechnician(false)}
                 serviceRequestIds={selectedIds}
                 onAssigned={() => {
-                    setOpenBulkAssignVendor(false);
+                    setOpenBulkAssignTechnician(false);
                     setSelectedIds([]);
                     setShowBulkBar(false);
                     router.refresh();

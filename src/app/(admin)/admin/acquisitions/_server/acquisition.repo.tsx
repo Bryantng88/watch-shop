@@ -121,6 +121,13 @@ export async function getAcqtById(id: string, tx?: DB) {
         },
     });
 }
+export async function findAcqItems(tx: DB, acqId: string) {
+    const db = dbOrTx(tx);
+    return db.acquisitionItem.findMany({
+        where: { acquisitionId: acqId },
+    });
+}
+
 
 export async function createAcqItem(
     tx: DB,
@@ -148,12 +155,6 @@ export async function createAcqItem(
                 watchFlags: item.watchFlags,
             }),
         },
-    });
-}
-export async function findAcqItems(tx: DB, acqId: string) {
-    const db = dbOrTx(tx);
-    return db.acquisitionItem.findMany({
-        where: { acquisitionId: acqId },
     });
 }
 
@@ -184,6 +185,7 @@ export async function updateAcqItem(tx: DB, it: any) {
         },
     });
 }
+
 export async function updateAcqTotal(tx: DB, acqId: string, total: number) {
     const db = dbOrTx(tx);
     return db.acquisition.update({

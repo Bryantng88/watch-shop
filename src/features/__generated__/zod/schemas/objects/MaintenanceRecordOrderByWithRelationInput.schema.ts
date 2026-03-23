@@ -6,6 +6,7 @@ import { MaintenancePartOrderByRelationAggregateInputObjectSchema as Maintenance
 import { PaymentOrderByWithRelationInputObjectSchema as PaymentOrderByWithRelationInputObjectSchema } from './PaymentOrderByWithRelationInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrderByWithRelationInputObjectSchema } from './ServiceRequestOrderByWithRelationInput.schema';
+import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
 import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrderByWithRelationInputObjectSchema } from './ProductVariantOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { ServiceCatalogOrderByRelationAggregateInputObjectSchema as ServiceCatalogOrderByRelationAggregateInputObjectSchema } from './ServiceCatalogOrderByRelationAggregateInput.schema'
@@ -39,10 +40,13 @@ const makeSchema = () => z.object({
   paymentId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paidAmount: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paidAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicianId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicianNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   parts: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
+  User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   serviceDetail: z.lazy(() => ServiceCatalogOrderByRelationAggregateInputObjectSchema).optional()

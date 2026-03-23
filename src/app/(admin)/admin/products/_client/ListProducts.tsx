@@ -51,12 +51,6 @@ type ProductRow = ProductListItem & {
         material?: string | null;
         quickRelease?: boolean | null;
     } | null;
-    watchFlags?: {
-        hasStrap?: boolean | null;
-        isServiced?: boolean | null;
-        hasClasp?: boolean | null;
-        isSpa?: boolean | null;
-    } | null;
     isVariantInfoComplete?: boolean;
     isWatchSpecComplete?: boolean;
     isInfoComplete?: boolean;
@@ -65,6 +59,8 @@ type ProductRow = ProductListItem & {
     hasOpenService?: boolean;
     openServiceStatus?: string | null;
     latestServiceStatus?: string | null;
+    acquisitionId?: string | null;
+    acquisitionRefNo?: string | null;
 };
 
 type PageProps = {
@@ -76,6 +72,7 @@ type PageProps = {
     totalPages: number;
     rawSearchParams: Record<string, string | string[] | undefined>;
     brands: BrandLite[];
+    vendors: Array<{ id: string; name: string }>;
     categories?: Array<{ id: string; name: string; code: string; scope: string }>;
     productTypes: Array<{ label: string; value: string }>;
     canViewCost: boolean;
@@ -119,37 +116,40 @@ function getQuickFixHints(p: ProductRow) {
 }
 
 function getServiceLabel(p: ProductRow) {
-    if (p.hasOpenService || p.openServiceStatus) {
-        return {
-            label: `Đang service${p.openServiceStatus ? ` (${p.openServiceStatus})` : ""}`,
-            tone: "blue" as const,
-        };
-    }
+    const current = p.openServiceStatus ?? p.latestServiceStatus ?? null;
 
-    if (p.latestServiceStatus === "COMPLETED" || p.latestServiceStatus === "DELIVERED") {
-        return {
-            label: "Đã service xong",
-            tone: "green" as const,
-        };
-    }
+    switch (current) {
+        case "DRAFT":
+            return {
+                label: "Cần service",
+                tone: "orange" as const,
+            };
 
-    if (p.latestServiceStatus === "CANCELED") {
-        return {
-            label: "Service đã hủy",
-            tone: "gray" as const,
-        };
-    }
+        case "DIAGNOSING":
+        case "WAIT_APPROVAL":
+        case "IN_PROGRESS":
+            return {
+                label: "Đang service",
+                tone: "blue" as const,
+            };
 
-    if (p.latestServiceStatus) {
-        return {
-            label: `Service gần nhất (${p.latestServiceStatus})`,
-            tone: "blue" as const,
-        };
-    }
+        case "COMPLETED":
+        case "DELIVERED":
+            return {
+                label: "Đã service",
+                tone: "green" as const,
+            };
 
-    return null;
+        case "CANCELED":
+            return {
+                label: "Đã hủy service",
+                tone: "gray" as const,
+            };
+
+        default:
+            return null;
+    }
 }
-
 function StrapSpecText({ p }: { p: ProductRow }) {
     const s = p.strapSpec;
     if (!s) return <span>-</span>;
@@ -159,18 +159,6 @@ function StrapSpecText({ p }: { p: ProductRow }) {
             {s.material || "-"} / {s.lugWidthMM || "-"} - {s.buckleWidthMM || "-"} / {s.color || "-"} /{" "}
             {s.quickRelease ? "QR" : "No QR"}
         </span>
-    );
-}
-
-function WatchFlagsText({ p }: { p: ProductRow }) {
-    const f = p.watchFlags;
-    if (!f) return null;
-
-    return (
-        <div className="text-[11px] text-slate-500">
-            Dây: {f.hasStrap ? "Có" : "Không"} · Khóa: {f.hasClasp ? "Có" : "Không"} · Service:{" "}
-            {f.isServiced ? "Đã" : "Chưa"} · Spa: {f.isSpa ? "Đã" : "Chưa"}
-        </div>
     );
 }
 
@@ -362,7 +350,7 @@ function ReadinessDetailModal({
                         </div>
                     ) : (
                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
-                            Sản phẩm đã đủ thông tin cơ bản để post.
+                            Sản phẩm đã sẵn sàng public.
                         </div>
                     )}
 
@@ -418,11 +406,11 @@ export default function AdminProductListPageClient(props: PageProps) {
     useEffect(() => setRows(props.items ?? []), [props.items]);
 
     const currentView: ViewKey = useMemo(() => {
-        const v = (sp.get("view") || "all").toLowerCase();
+        const v = (sp.get("view") || "draft").toLowerCase();
         if (v === "draft" || v === "posted" || v === "in_service" || v === "hold" || v === "sold") {
             return v as ViewKey;
         }
-        return "all";
+        return "draft";
     }, [sp]);
 
     const currentCatalog: CatalogKey = useMemo(() => {
@@ -434,7 +422,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     function setView(view: string) {
         const next = new URLSearchParams(sp.toString());
-        if (view === "all") next.delete("view");
+        if (view === "draft") next.delete("view");
         else next.set("view", view);
         next.set("page", "1");
         router.push(`${pathname}?${next.toString()}`);
@@ -452,6 +440,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     const q = sp.get("q") ?? "";
     const type = sp.get("type") ?? "";
     const brandId = sp.get("brandId") ?? "";
+    const vendorId = sp.get("vendorId") ?? "";
     const hasImages = sp.get("hasImages") ?? "";
     const sort = sp.get("sort") ?? "updatedDesc";
 
@@ -477,7 +466,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         setShowBulkConfirm(false);
         setShowBulkSaleModal(false);
         setBulkSaleValue("");
-    }, [currentCatalog, currentView, q, type, brandId, hasImages, sort, props.page]);
+    }, [currentCatalog, currentView, q, type, brandId, vendorId, hasImages, sort, props.page]);
 
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);
@@ -517,12 +506,14 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [formQ, setFormQ] = useState(q);
     const [formType, setFormType] = useState(type);
     const [formBrandId, setFormBrandId] = useState(brandId);
+    const [formVendorId, setFormVendorId] = useState(vendorId);
     const [formHasImages, setFormHasImages] = useState(hasImages);
     const [formSort, setFormSort] = useState(sort);
 
     useEffect(() => setFormQ(q), [q]);
     useEffect(() => setFormType(type), [type]);
     useEffect(() => setFormBrandId(brandId), [brandId]);
+    useEffect(() => setFormVendorId(vendorId), [vendorId]);
     useEffect(() => setFormHasImages(hasImages), [hasImages]);
     useEffect(() => setFormSort(sort), [sort]);
 
@@ -535,6 +526,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         q: string;
         type: string;
         brandId: string;
+        vendorId: string;
         hasImages: string;
         sort: string;
     }) {
@@ -549,6 +541,7 @@ export default function AdminProductListPageClient(props: PageProps) {
             next.delete("brandId");
         }
 
+        setParam(next, "vendorId", form.vendorId || null);
         setParam(next, "hasImages", form.hasImages || null);
         setParam(next, "sort", form.sort || "updatedDesc");
         next.set("page", "1");
@@ -560,6 +553,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         next.delete("q");
         next.delete("type");
         next.delete("brandId");
+        next.delete("vendorId");
         next.delete("hasImages");
         next.delete("sort");
         next.set("page", "1");
@@ -680,13 +674,13 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     const segmentTabs = isStrapCatalog
         ? [
-            { key: "all", label: "Tất cả", count: counts.all },
             { key: "draft", label: "Chờ duyệt", count: counts.draft },
+            { key: "all", label: "Tất cả", count: counts.all },
             { key: "posted", label: "Đã post", count: counts.posted },
         ]
         : [
-            { key: "all", label: "Tất cả", count: counts.all },
             { key: "draft", label: "Chờ duyệt", count: counts.draft },
+            { key: "all", label: "Tất cả", count: counts.all },
             { key: "posted", label: "Đã post", count: counts.posted },
             { key: "in_service", label: "Chờ service", count: counts.in_service },
             { key: "hold", label: "Ký gửi / Giữ hàng", count: counts.hold },
@@ -744,12 +738,13 @@ export default function AdminProductListPageClient(props: PageProps) {
                         q: formQ,
                         type: formType,
                         brandId: formBrandId,
+                        vendorId: formVendorId,
                         hasImages: formHasImages,
                         sort: formSort,
                     });
                 }}
             >
-                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-3" : "lg:grid-cols-5"}`}>
+                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-4" : "lg:grid-cols-6"}`}>
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
                         <input
@@ -795,6 +790,22 @@ export default function AdminProductListPageClient(props: PageProps) {
                             </div>
                         </>
                     )}
+
+                    <div>
+                        <div className="text-xs text-gray-500 mb-1">Vendor</div>
+                        <select
+                            value={formVendorId}
+                            onChange={(e) => setFormVendorId(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="">(All)</option>
+                            {props.vendors.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                    {v.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Image</div>
@@ -1003,6 +1014,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3 text-right">Giá nhập</th>
                                     <th className="px-3 py-3 text-right">Giá bán</th>
                                     <th className="px-3 py-3">Vendor</th>
+
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3 text-right">Hành động</th>
                                 </tr>
@@ -1018,7 +1030,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                 ) : (
                                     rows.map((p) => (
                                         <tr key={p.id} className="border-t [&>td]:align-middle">
-                                            <td className="px-4 py-5">
+                                            <td className="px-4 py-5 w-[76px] min-w-[76px]">
                                                 <InlineImagePicker
                                                     imageUrl={p.primaryImageUrl ?? null}
                                                     onPick={(fileKey) => updateProductImage(p.id, fileKey)}
@@ -1097,6 +1109,8 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên</th>
                                     <th className="px-3 py-3">Vendor</th>
+                                    <th className="px-3 py-3 whitespace-nowrap">Service</th>
+                                    <th className="px-3 py-3 whitespace-nowrap">Phiếu nhập</th>
                                     <th className="px-3 py-3 text-right">Giá bán</th>
                                     <th className="px-3 py-3 text-right">Sale</th>
                                     {props.canViewCost && <th className="px-3 py-3 text-right">Giá mua</th>}
@@ -1154,8 +1168,6 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
 
-                                                        {p.type !== "WATCH_STRAP" ? <WatchFlagsText p={p} /> : null}
-
                                                         <div className="flex flex-col items-start gap-1 pt-1">
                                                             {hasMissingReadinessInfo(p) ? (
                                                                 <button
@@ -1166,33 +1178,49 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                                     }}
                                                                     className="rounded-full text-left"
                                                                 >
-                                                                    <DotLabel label="Chưa đủ thông tin" tone="orange" />
+                                                                    <DotLabel label="Chưa sẵn sàng public" tone="orange" />
                                                                 </button>
                                                             ) : (
-                                                                <DotLabel label="Đã đủ thông tin" tone="green" />
+                                                                <DotLabel label="Sẵn sàng public" tone="green" />
                                                             )}
 
-                                                            {(() => {
-                                                                const serviceLabel = getServiceLabel(p);
-                                                                return serviceLabel ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            openServiceHistory(p);
-                                                                        }}
-                                                                        className="rounded-full text-left"
-                                                                    >
-                                                                        <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
-                                                                    </button>
-                                                                ) : null;
-                                                            })()}
                                                         </div>
                                                     </div>
                                                 </td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap">{p.vendorName || "-"}</td>
+                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                    {(() => {
+                                                        const serviceLabel = getServiceLabel(p);
+                                                        return serviceLabel ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openServiceHistory(p);
+                                                                }}
+                                                                className="rounded-full text-left"
+                                                            >
+                                                                <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        );
+                                                    })()}
+                                                </td>
 
+                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                    {p.acquisitionId && p.acquisitionRefNo ? (
+                                                        <Link
+                                                            href={`/admin/acquisitions/${p.acquisitionId}/edit`}
+                                                            className="text-blue-600 hover:underline"
+                                                        >
+                                                            {p.acquisitionRefNo}
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="text-gray-400">-</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-3 py-5 text-right">
                                                     {props.canEditPrice ? (
                                                         <InlineMoneyEditor

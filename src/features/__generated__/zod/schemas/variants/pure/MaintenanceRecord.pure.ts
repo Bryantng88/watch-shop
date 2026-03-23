@@ -32,10 +32,13 @@ export const MaintenanceRecordModelSchema = z.object({
     paymentId: z.string().nullable(),
     paidAmount: z.number().nullable(),
     paidAt: z.date().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable(),
     parts: z.array(z.unknown()),
     Payment: z.unknown().nullable(),
     product: z.unknown().nullable(),
     serviceRequest: z.unknown().nullable(),
+    User: z.unknown().nullable(),
     variant: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
     serviceDetail: z.array(z.unknown())

@@ -100,10 +100,16 @@ export default function AcqItemsPopover({
     };
 
     async function handleSave() {
-        const res = await fetch(`/api/admin/acquisitions/${acqId}/update-items`, {
+        const payload = editItems.map((it) => ({
+            ...it,
+            title: String(it?.title ?? ""),
+            unitPrice: Number(it?.unitCost ?? it?.unitPrice ?? 0),
+        }));
+
+        const res = await fetch(`/api/admin/acquisitions/${acqId}/update-item`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ items: editItems }),
+            body: JSON.stringify({ items: payload }),
         });
 
         if (!res.ok) {
@@ -145,18 +151,27 @@ export default function AcqItemsPopover({
                         className="rounded-lg border bg-white shadow-xl"
                     >
                         {/* HEADER */}
-                        <div className="flex items-center justify-between p-2 text-xs text-gray-600 border-b">
+                        <div className="flex items-center justify-between gap-3 p-2 text-xs text-gray-600 border-b">
                             <span>Dòng sản phẩm</span>
 
-                            {isDraft && (
-                                <button
-                                    type="button"
-                                    onClick={handleAddRow}
+                            <div className="flex items-center gap-3">
+                                <a
+                                    href={`/admin/acquisitions/${acqId}/edit`}
                                     className="text-blue-600 hover:underline font-medium"
                                 >
-                                    + Thêm dòng
-                                </button>
-                            )}
+                                    Mở phiếu
+                                </a>
+
+                                {isDraft && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAddRow}
+                                        className="text-blue-600 hover:underline font-medium"
+                                    >
+                                        + Thêm dòng
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* BODY */}

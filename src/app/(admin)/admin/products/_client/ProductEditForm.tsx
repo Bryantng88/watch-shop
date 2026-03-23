@@ -449,7 +449,7 @@ export default function EditProductForm({
                     </div>
 
                     <div className="rounded-md border border-gray-200 bg-white p-5 shadow space-y-5">
-                        <SectionTitle title="Watch spec" subtitle="Bổ sung các thông số đang được dùng cho nhãn \" Chưa đủ thông tin\" và publish readiness." />
+                        <SectionTitle title="Watch spec" subtitle="Bổ sung các thông số đang được dùng cho nhãn \" Chưa sẵn sàng public\" và publish readiness." />
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <InputField label="Reference" name="ref" value={formData.ref} onChange={handleChange as any} />

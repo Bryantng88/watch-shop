@@ -30,7 +30,9 @@ const makeSchema = () => z.object({
   prevVendorName: z.literal(true).optional(),
   paymentId: z.literal(true).optional(),
   paidAmount: z.literal(true).optional(),
-  paidAt: z.literal(true).optional()
+  paidAt: z.literal(true).optional(),
+  technicianId: z.literal(true).optional(),
+  technicianNameSnap: z.literal(true).optional()
 }).strict();
 export const MaintenanceRecordMinAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordMinAggregateInputType>;
 export const MaintenanceRecordMinAggregateInputObjectZodSchema = makeSchema();

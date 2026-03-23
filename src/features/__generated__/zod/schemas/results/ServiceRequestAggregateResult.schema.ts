@@ -23,11 +23,14 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     scope: z.number(),
     vendorId: z.number(),
     vendorNameSnap: z.number(),
+    technicianId: z.number(),
+    technicianNameSnap: z.number(),
     Invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),
     orderItem: z.number(),
     product: z.number(),
+    User: z.number(),
     variant: z.number(),
     Vendor: z.number(),
     ServiceCatalog: z.number()
@@ -51,7 +54,9 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -72,5 +77,7 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     servicecatalogid: z.string().nullable(),
     refNo: z.string().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional()});

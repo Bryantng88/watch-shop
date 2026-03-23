@@ -14,17 +14,22 @@ function serialize(obj: any) {
     );
 }
 
-export default async function ServiceRequestListPage({
-    searchParams,
-}: {
-    searchParams: SearchParams;
-}) {
-    const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
-            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
-        )
-    );
+function toURLSearchParams(searchParams: SearchParams) {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(searchParams)) {
+        if (Array.isArray(v)) {
+            for (const x of v) {
+                if (x != null && x !== "") sp.append(k, String(x));
+            }
+        } else if (v != null && v !== "") {
+            sp.append(k, String(v));
+        }
+    }
+    return sp;
+}
 
+export default async function ServiceRequestListPage({ searchParams }: { searchParams: SearchParams }) {
+    const sp = toURLSearchParams(searchParams);
     const input = parseServiceRequestSearchParams(sp);
     const { items, total, counts, page, pageSize } = await getAdminServiceRequestList(input);
 

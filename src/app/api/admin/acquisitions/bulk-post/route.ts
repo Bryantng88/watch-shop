@@ -9,7 +9,11 @@ export async function POST(req: NextRequest) {
             ? body.acquisitionIds.filter(
                 (x: unknown): x is string => typeof x === "string" && x.trim().length > 0
             )
-            : [];
+            : Array.isArray(body?.items)
+                ? body.items
+                    .map((item: any) => item?.id)
+                    .filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0)
+                : [];
 
         if (!acquisitionIds.length) {
             return NextResponse.json(

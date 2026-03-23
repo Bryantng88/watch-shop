@@ -28,10 +28,13 @@ export const MaintenanceRecordFindUniqueResultSchema = z.nullable(z.object({
   paymentId: z.string().optional(),
   paidAmount: z.number().optional(),
   paidAt: z.date().optional(),
+  technicianId: z.string().optional(),
+  technicianNameSnap: z.string().optional(),
   parts: z.array(z.unknown()),
   Payment: z.unknown().optional(),
   product: z.unknown().optional(),
   serviceRequest: z.unknown().optional(),
+  User: z.unknown().optional(),
   variant: z.unknown().optional(),
   vendor: z.unknown().optional(),
   serviceDetail: z.array(z.unknown())

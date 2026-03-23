@@ -34,6 +34,8 @@ const makeSchema = () => z.object({
   paymentId: z.string().optional().nullable(),
   paidAmount: z.number().optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
+  technicianId: z.string().optional().nullable(),
+  technicianNameSnap: z.string().optional().nullable(),
   parts: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema)
 }).strict();

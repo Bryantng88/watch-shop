@@ -5,10 +5,11 @@ import * as dto from "./acquisition.dto";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import * as repoAcq from "./acquisition.repo";
 //mport { CreateAcqWithItemInput } from "./acquisition.dto";
-import { AcquisitionStatus, AcquisitionType, ProductType, Prisma } from "@prisma/client";
+import { AcquisitionStatus, AcquisitionType, ProductType, Prisma, ServiceDetail, ServiceRequestStatus, ServiceScope } from "@prisma/client";
 import { createInvoiceFromAcquisition } from "../../invoices/_servers/invoices.repo";
 import { ItemInput } from "./acquisition.dto";
 import { getStrapSpecFromDescription, getWatchFlagsFromDescription } from "./item-metadata";
+import { createFromProductTx } from "../../services/_server/service_request.service";
 
 type AcqViewKey = "all" | "draft" | "posted" | "canceled";
 
@@ -216,113 +217,190 @@ function parseWatchFlagsFromDescription(description?: string | null) {
     return getWatchFlagsFromDescription(description);
 }
 
+const OPEN_INTERNAL_SERVICE_STATUSES = [
+    ServiceRequestStatus.DRAFT,
+    ServiceRequestStatus.DIAGNOSING,
+    ServiceRequestStatus.WAIT_APPROVAL,
+    ServiceRequestStatus.IN_PROGRESS,
+] as const;
+
+async function getAutoInternalServiceCatalogs(tx: DB) {
+    const rows = await tx.serviceCatalog.findMany({
+        where: {
+            isActive: true,
+            detail: { in: [ServiceDetail.BASIC, ServiceDetail.SPA] as any },
+        },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+            id: true,
+            detail: true,
+            code: true,
+            name: true,
+        },
+    });
+
+    const basic = rows.find((row: any) => row.detail === ServiceDetail.BASIC) ?? null;
+    const spa = rows.find((row: any) => row.detail === ServiceDetail.SPA) ?? null;
+
+    return {
+        basicId: basic?.id ?? null,
+        spaId: spa?.id ?? null,
+    };
+}
+
+async function ensureInternalServiceRequestsForWatchTx(
+    tx: DB,
+    catalogs: { basicId: string | null; spaId: string | null },
+    input: {
+        productId: string;
+        flags: { isServiced?: boolean; isSpa?: boolean };
+        acquisitionLabel: string;
+        productTitle?: string | null;
+    }
+) {
+    const needsBasic = !input.flags?.isServiced;
+    const needsSpa = !input.flags?.isSpa;
+
+    if (!needsBasic && !needsSpa) return;
+
+    const tasks = [
+        needsBasic && catalogs.basicId
+            ? {
+                serviceCatalogId: catalogs.basicId,
+                note: `Tự động tạo từ phiếu nhập ${input.acquisitionLabel}${input.productTitle ? ` · ${input.productTitle}` : ""} · Chưa service`,
+            }
+            : null,
+        needsSpa && catalogs.spaId
+            ? {
+                serviceCatalogId: catalogs.spaId,
+                note: `Tự động tạo từ phiếu nhập ${input.acquisitionLabel}${input.productTitle ? ` · ${input.productTitle}` : ""} · Chưa spa`,
+            }
+            : null,
+    ].filter(Boolean) as Array<{ serviceCatalogId: string; note: string }>;
+
+    for (const task of tasks) {
+        const existing = await tx.serviceRequest.findFirst({
+            where: {
+                productId: input.productId,
+                servicecatalogid: task.serviceCatalogId,
+                scope: ServiceScope.INTERNAL,
+                status: { in: OPEN_INTERNAL_SERVICE_STATUSES as any },
+            },
+            select: { id: true },
+        });
+
+        if (existing) continue;
+
+        await createFromProductTx(tx as any, {
+            productId: input.productId,
+            serviceCatalogId: task.serviceCatalogId,
+            scope: ServiceScope.INTERNAL,
+            notes: task.note,
+        });
+    }
+}
+
 // Chuyển phiếu sang POSTED
 export async function postAcquisition(acqId: string, vendorName: string) {
-    return prisma.$transaction(
-        async (tx) => {
-            const acq = await repoAcq.getAcqtById(acqId, tx);
-            if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+    return prisma.$transaction(async (tx) => {
+        const acq = await repoAcq.getAcqtById(acqId, tx);
+        if (!acq) throw new Error("Không tìm thấy phiếu nhập");
 
-            let vendorId = acq.vendorId ?? null;
+        let vendorId = acq.vendorId ?? null;
 
-            if (!vendorId && vendorName) {
-                const vendor = await tx.vendor.findFirst({
-                    where: { name: vendorName },
-                    select: { id: true },
-                });
-                vendorId = vendor?.id ?? null;
-            }
+        if (!vendorId && vendorName) {
+            const vendor = await tx.vendor.findFirst({
+                where: { name: vendorName },
+                select: { id: true },
+            });
+            vendorId = vendor?.id ?? null;
+        }
 
-            if (!vendorId) {
-                throw new Error("Không tìm thấy vendor để post phiếu");
-            }
+        if (!vendorId) {
+            throw new Error("Không tìm thấy vendor để post phiếu");
+        }
 
-            const items = acq.acquisitionItem ?? [];
+        const items = acq.acquisitionItem ?? [];
+        const acquisitionLabel = acq.refNo || acq.id;
+        const autoInternalCatalogs = await getAutoInternalServiceCatalogs(tx);
 
-            for (const item of items) {
-                if (item.productId) {
-                    if (!item.variantId) {
-                        const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
-                            tx,
-                            item.productId
-                        );
+        for (const item of items) {
+            if (item.productId) {
+                if (!item.variantId) {
+                    const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
+                        tx,
+                        item.productId
+                    );
 
-                        if (resolvedVariantId) {
-                            await tx.acquisitionItem.update({
-                                where: { id: item.id },
-                                data: { variantId: resolvedVariantId },
-                            });
-                        }
+                    if (resolvedVariantId) {
+                        await tx.acquisitionItem.update({
+                            where: { id: item.id },
+                            data: { variantId: resolvedVariantId },
+                        });
                     }
-                    continue;
                 }
 
-                if (item.productType === "WATCH_STRAP") {
-                    const strapSpec = parseStrapSpecFromDescription(item.description);
-
-                    const created = await tx.product.create({
-                        data: {
-                            title: item.productTitle,
-                            status: "DRAFT" as any,
-                            type: "WATCH_STRAP" as any,
-                            vendor: { connect: { id: vendorId } },
-                            variants: {
-                                create: [
-                                    {
-                                        stockQty: Number(item.quantity ?? 1),
-                                        price: new Prisma.Decimal(
-                                            strapSpec?.sellPrice != null
-                                                ? Number(strapSpec.sellPrice)
-                                                : Number(item.unitCost ?? 0)
-                                        ),
-                                        availabilityStatus: "HIDDEN" as any,
-                                        strapSpec: {
-                                            create: {
-                                                lugWidthMM: Number(strapSpec?.lugWidthMM ?? 20),
-                                                buckleWidthMM: Number(strapSpec?.buckleWidthMM ?? 18),
-                                                color: strapSpec?.color ?? "Black",
-                                                material: (strapSpec?.material as any) ?? "LEATHER",
-                                                quickRelease:
-                                                    strapSpec?.quickRelease == null
-                                                        ? true
-                                                        : Boolean(strapSpec.quickRelease),
-                                            },
-                                        },
-                                    },
-                                ],
-                            },
-                        },
-                        select: {
-                            id: true,
-                            variants: {
-                                select: { id: true },
-                                take: 1,
-                            },
-                        },
+                if ((item.productType ?? "WATCH") === "WATCH") {
+                    const watchFlags = parseWatchFlagsFromDescription(item.description);
+                    await tx.watchSpec.upsert({
+                        where: { productId: item.productId },
+                        update: {
+                            hasStrap: !!watchFlags.hasStrap,
+                            isServiced: !!watchFlags.isServiced,
+                            hasClasp: !!watchFlags.hasClasp,
+                            isSpa: !!watchFlags.isSpa,
+                        } as any,
+                        create: {
+                            productId: item.productId,
+                            hasStrap: !!watchFlags.hasStrap,
+                            isServiced: !!watchFlags.isServiced,
+                            hasClasp: !!watchFlags.hasClasp,
+                            isSpa: !!watchFlags.isSpa,
+                        } as any,
                     });
 
-                    await tx.acquisitionItem.update({
-                        where: { id: item.id },
-                        data: {
-                            productId: created.id,
-                            variantId: created.variants?.[0]?.id ?? null,
-                        },
+                    await ensureInternalServiceRequestsForWatchTx(tx, autoInternalCatalogs, {
+                        productId: item.productId,
+                        flags: watchFlags,
+                        acquisitionLabel,
+                        productTitle: item.productTitle,
                     });
-
-                    continue;
                 }
+                continue;
+            }
+
+            if (item.productType === "WATCH_STRAP") {
+                const strapSpec = parseStrapSpecFromDescription(item.description);
 
                 const created = await tx.product.create({
                     data: {
                         title: item.productTitle,
                         status: "DRAFT" as any,
-                        type: (item.productType ?? "WATCH") as any,
+                        type: "WATCH_STRAP" as any,
                         vendor: { connect: { id: vendorId } },
                         variants: {
                             create: [
                                 {
                                     stockQty: Number(item.quantity ?? 1),
+                                    price: new Prisma.Decimal(
+                                        strapSpec?.sellPrice != null
+                                            ? Number(strapSpec.sellPrice)
+                                            : Number(item.unitCost ?? 0)
+                                    ),
+                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                                     availabilityStatus: "HIDDEN" as any,
+                                    strapSpec: {
+                                        create: {
+                                            lugWidthMM: Number(strapSpec?.lugWidthMM ?? 20),
+                                            buckleWidthMM: Number(strapSpec?.buckleWidthMM ?? 18),
+                                            color: strapSpec?.color ?? "Black",
+                                            material: (strapSpec?.material as any) ?? "LEATHER",
+                                            quickRelease:
+                                                strapSpec?.quickRelease == null
+                                                    ? true
+                                                    : Boolean(strapSpec.quickRelease),
+                                        },
+                                    },
                                 },
                             ],
                         },
@@ -343,47 +421,87 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                         variantId: created.variants?.[0]?.id ?? null,
                     },
                 });
-            }
 
-            await createInvoiceFromAcquisition(tx, acqId);
-            return repoAcq.changeDraftToPost(tx, acqId);
-        },
-        {
-            maxWait: 10000,
-            timeout: 60000,
-        }
-    );
-}
-export async function bulkPostAcquisitions(acquisitionIds: string[]) {
-    const posted: string[] = [];
-    const failed: { id: string; error: string }[] = [];
-
-    for (const acqId of acquisitionIds) {
-        try {
-            const acq = await repoAcq.getAcqtById(acqId);
-
-            if (!acq) {
-                failed.push({ id: acqId, error: "Không tìm thấy phiếu nhập" });
                 continue;
             }
 
-            if (acq.accquisitionStt !== "DRAFT") {
-                failed.push({ id: acqId, error: "Chỉ phiếu DRAFT mới được duyệt" });
-                continue;
-            }
+            const watchFlags = parseWatchFlagsFromDescription(item.description);
 
-            await postAcquisition(acqId, "");
-            posted.push(acqId);
-        } catch (e) {
-            failed.push({
-                id: acqId,
-                error: e instanceof Error ? e.message : "Bulk post failed",
+            const created = await tx.product.create({
+                data: {
+                    title: item.productTitle,
+                    status: "DRAFT" as any,
+                    type: (item.productType ?? "WATCH") as any,
+                    vendor: { connect: { id: vendorId } },
+                    ...(item.productType === "WATCH"
+                        ? {
+                            watchSpec: {
+                                create: {
+                                    hasStrap: !!watchFlags.hasStrap,
+                                    isServiced: !!watchFlags.isServiced,
+                                    hasClasp: !!watchFlags.hasClasp,
+                                    isSpa: !!watchFlags.isSpa,
+                                } as any,
+                            },
+                        }
+                        : {}),
+                    variants: {
+                        create: [
+                            {
+                                stockQty: Number(item.quantity ?? 1),
+                                costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
+                                availabilityStatus: "HIDDEN" as any,
+                            },
+                        ],
+                    },
+                },
+                select: {
+                    id: true,
+                    variants: {
+                        select: { id: true },
+                        take: 1,
+                    },
+                },
             });
+
+            await tx.acquisitionItem.update({
+                where: { id: item.id },
+                data: {
+                    productId: created.id,
+                    variantId: created.variants?.[0]?.id ?? null,
+                },
+            });
+
+            if ((item.productType ?? "WATCH") === "WATCH") {
+                await ensureInternalServiceRequestsForWatchTx(tx, autoInternalCatalogs, {
+                    productId: created.id,
+                    flags: watchFlags,
+                    acquisitionLabel,
+                    productTitle: item.productTitle,
+                });
+            }
+        }
+
+        await createInvoiceFromAcquisition(tx, acqId);
+        return repoAcq.changeDraftToPost(tx, acqId);
+    }, {
+        maxWait: 10000,
+        timeout: 60000,
+    });
+}
+export async function postMultipleAcquisitions(items: { id: string; vendor: string }[]) {
+    const results = [];
+    for (const acq of items) {
+        try {
+            await postAcquisition(acq.id, acq.vendor);
+            results.push({ id: acq.id, ok: true });
+        } catch (e) {
+            results.push({ id: acq.id, ok: false, error: (e as Error).message });
         }
     }
-
-    return { posted, failed };
+    return results;
 }
+
 export async function updateAcquisitionWithItems(
     id: string,
     input: {

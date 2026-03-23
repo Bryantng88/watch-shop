@@ -5,6 +5,7 @@ import { ROLE_PERMISSIONS } from '@/server/auth/rolePermissions';
 import { getCurrentUser } from '@/server/auth/getCurrentUser';
 import { redirect } from "next/navigation";
 import { AppToastProvider } from '@/components/feedback/AppToastProvider';
+import { getSideMenuNotificationCounts } from './_server/sidebar-notifications';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const user = await getCurrentUser();
@@ -21,6 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const permissions = user.roles.flatMap(
         (r) => ROLE_PERMISSIONS[r] ?? []
     );
+    const notificationCounts = await getSideMenuNotificationCounts();
 
 
     // app/(admin)/admin/layout.tsx
@@ -28,12 +30,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="flex h-screen overflow-hidden">
             {/* Sidebar */}
             <div className="hidden lg:block w-52 shrink-0 bg-[#11191f]">
-                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} />
+                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} notifications={notificationCounts} />
             </div>
 
             {/* Sidebar mobile */}
             <div className="lg:hidden">
-                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} />
+                <AdminSidebar user={{ permissions: Array.from(new Set(permissions)) }} notifications={notificationCounts} variant="mobile" />
             </div>
 
             {/* Main */}

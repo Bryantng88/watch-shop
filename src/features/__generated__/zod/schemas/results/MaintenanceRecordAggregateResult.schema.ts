@@ -28,10 +28,13 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     paymentId: z.number(),
     paidAmount: z.number(),
     paidAt: z.number(),
+    technicianId: z.number(),
+    technicianNameSnap: z.number(),
     parts: z.number(),
     Payment: z.number(),
     product: z.number(),
     serviceRequest: z.number(),
+    User: z.number(),
     variant: z.number(),
     vendor: z.number(),
     serviceDetail: z.number()
@@ -70,7 +73,9 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     prevVendorName: z.string().nullable(),
     paymentId: z.string().nullable(),
     paidAmount: z.number().nullable(),
-    paidAt: z.date().nullable()
+    paidAt: z.date().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -96,5 +101,7 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     prevVendorName: z.string().nullable(),
     paymentId: z.string().nullable(),
     paidAmount: z.number().nullable(),
-    paidAt: z.date().nullable()
+    paidAt: z.date().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable()
   }).nullable().optional()});

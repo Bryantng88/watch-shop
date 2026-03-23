@@ -1,5 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
+import { MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutUserInput.schema';
+import { ServiceRequestCreateNestedManyWithoutUserInputObjectSchema as ServiceRequestCreateNestedManyWithoutUserInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutUserInput.schema';
 import { RoleCreateNestedManyWithoutUsersInputObjectSchema as RoleCreateNestedManyWithoutUsersInputObjectSchema } from './RoleCreateNestedManyWithoutUsersInput.schema'
 
 const makeSchema = () => z.object({
@@ -12,6 +14,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   roleId: z.string().optional().nullable(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutUserInputObjectSchema).optional(),
   roles: z.lazy(() => RoleCreateNestedManyWithoutUsersInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutCustomerInput>;

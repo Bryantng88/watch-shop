@@ -1,13 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { ProductType } from "@prisma/client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type WatchFlags = {
     hasStrap: boolean;
     isServiced: boolean;
     hasClasp: boolean;
     isSpa: boolean;
+};
+
+type StrapSpec = {
+    material: string;
+    lugWidthMM: number;
+    buckleWidthMM: number;
+    color: string;
+    quickRelease: boolean;
+    sellPrice: number;
 };
 
 type Line = {
@@ -17,21 +28,36 @@ type Line = {
     unitCost: number;
     productType: string;
     watchFlags?: WatchFlags;
+    strapSpec?: StrapSpec;
 };
 
 type Props = {
     acquisition: {
         id: string;
+        refNo?: string;
         vendorId: string;
         acquiredAt: string;
         notes: string;
         currency: string;
         type: string;
+        status?: string;
     };
     items: Line[];
     vendors: { id: string; name: string }[];
     productTypes: string[];
+    readOnly?: boolean;
 };
+
+const CURRENCIES = ["VND", "USD", "EUR"] as const;
+const ACQ_TYPES = ["PURCHASE", "BUY_BACK", "TRADE_IN", "CONSIGNMENT"] as const;
+const STRAP_MATERIALS = [
+    { value: "LEATHER", label: "Da" },
+    { value: "BRACELET", label: "Kim loại" },
+    { value: "RUBBER", label: "Cao su" },
+    { value: "NATO", label: "NATO" },
+    { value: "CANVASS", label: "Canvas" },
+    { value: "SPECIAL", label: "Khác" },
+] as const;
 
 function uid() {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -47,6 +73,17 @@ function defaultWatchFlags(): WatchFlags {
     };
 }
 
+function defaultStrapSpec(): StrapSpec {
+    return {
+        material: "LEATHER",
+        lugWidthMM: 20,
+        buckleWidthMM: 18,
+        color: "",
+        quickRelease: true,
+        sellPrice: 0,
+    };
+}
+
 function normalizeWatchFlags(flags?: Partial<WatchFlags> | null): WatchFlags {
     return {
         hasStrap: !!flags?.hasStrap,
@@ -56,32 +93,68 @@ function normalizeWatchFlags(flags?: Partial<WatchFlags> | null): WatchFlags {
     };
 }
 
+function normalizeStrapSpec(spec?: Partial<StrapSpec> | null): StrapSpec {
+    return {
+        material: spec?.material || "LEATHER",
+        lugWidthMM: Number(spec?.lugWidthMM ?? 20),
+        buckleWidthMM: Number(spec?.buckleWidthMM ?? 18),
+        color: spec?.color || "",
+        quickRelease: spec?.quickRelease == null ? true : Boolean(spec.quickRelease),
+        sellPrice: Number(spec?.sellPrice ?? 0),
+    };
+}
+
+function newLine(productType = ProductType.WATCH): Line {
+    return {
+        id: `tmp-${uid()}`,
+        title: "",
+        quantity: 1,
+        unitCost: 0,
+        productType,
+        watchFlags: productType === ProductType.WATCH ? defaultWatchFlags() : undefined,
+        strapSpec: productType === ProductType.WATCH_STRAP ? defaultStrapSpec() : undefined,
+    };
+}
+
 function FlagCheckbox({
     checked,
     label,
+    disabled,
     onChange,
 }: {
     checked: boolean;
     label: string;
+    disabled?: boolean;
     onChange: (checked: boolean) => void;
 }) {
     return (
-        <label className="inline-flex items-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm text-slate-700">
-            <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
             {label}
         </label>
     );
 }
 
-export default function EditAcqForm({ acquisition, items: initialItems, vendors, productTypes }: Props) {
+export default function EditAcqForm({
+    acquisition,
+    items: initialItems,
+    vendors,
+    productTypes,
+    readOnly = false,
+}: Props) {
+    const router = useRouter();
+
     const [formData, setFormData] = useState({ ...acquisition });
     const [lines, setLines] = useState<Line[]>(
         (initialItems ?? []).map((item) => ({
             ...item,
-            id: item.id || `tmp-${uid()}`,
             watchFlags:
                 item.productType === ProductType.WATCH
                     ? normalizeWatchFlags(item.watchFlags)
+                    : undefined,
+            strapSpec:
+                item.productType === ProductType.WATCH_STRAP
+                    ? normalizeStrapSpec(item.strapSpec)
                     : undefined,
         }))
     );
@@ -98,13 +171,19 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
         setLines((prev) =>
             prev.map((line) => {
                 if (line.id !== id) return line;
+
                 const nextType = (patch.productType ?? line.productType) as string;
+
                 return {
                     ...line,
                     ...patch,
                     watchFlags:
                         nextType === ProductType.WATCH
                             ? normalizeWatchFlags(patch.watchFlags ?? line.watchFlags)
+                            : undefined,
+                    strapSpec:
+                        nextType === ProductType.WATCH_STRAP
+                            ? normalizeStrapSpec(patch.strapSpec ?? line.strapSpec)
                             : undefined,
                 };
             })
@@ -124,18 +203,24 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
         );
     }
 
+    function setStrapField<K extends keyof StrapSpec>(id: string, key: K, value: StrapSpec[K]) {
+        setLines((prev) =>
+            prev.map((line) =>
+                line.id === id
+                    ? {
+                        ...line,
+                        strapSpec: normalizeStrapSpec({ ...(line.strapSpec ?? defaultStrapSpec()), [key]: value }),
+                    }
+                    : line
+            )
+        );
+    }
+
     function addLine() {
-        setLines((prev) => [
-            ...prev,
-            {
-                id: `tmp-${uid()}`,
-                title: "",
-                quantity: 1,
-                unitCost: 0,
-                productType: productTypes?.[0] ?? ProductType.WATCH,
-                watchFlags: (productTypes?.[0] ?? ProductType.WATCH) === ProductType.WATCH ? defaultWatchFlags() : undefined,
-            },
-        ]);
+        const defaultType = productTypes.includes(ProductType.WATCH)
+            ? ProductType.WATCH
+            : productTypes[0] || ProductType.WATCH;
+        setLines((prev) => [...prev, newLine(defaultType as ProductType)]);
     }
 
     function removeLine(id: string) {
@@ -144,6 +229,8 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (readOnly) return;
+
         setErr(null);
         setOkMsg(null);
 
@@ -162,6 +249,11 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                 ...(line.productType === ProductType.WATCH
                     ? { watchFlags: normalizeWatchFlags(line.watchFlags) }
                     : {}),
+                ...(line.productType === ProductType.WATCH_STRAP
+                    ? {
+                        strapSpec: normalizeStrapSpec(line.strapSpec),
+                    }
+                    : {}),
             }))
             .filter((line) => line.title && line.quantity > 0);
 
@@ -176,17 +268,20 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    ...formData,
+                    vendorId: formData.vendorId,
+                    acquiredAt: formData.acquiredAt,
+                    currency: formData.currency,
+                    type: formData.type,
+                    notes: formData.notes,
                     items,
                 }),
             });
 
             const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.error || "Cập nhật phiếu nhập thất bại");
-            }
+            if (!res.ok) throw new Error(data?.error || "Cập nhật phiếu nhập thất bại");
 
-            setOkMsg("Đã cập nhật phiếu nhập.");
+            setOkMsg("Đã lưu toàn bộ thay đổi của phiếu nhập.");
+            router.refresh();
         } catch (error: any) {
             setErr(error?.message || "Lỗi cập nhật phiếu nhập");
         } finally {
@@ -195,14 +290,42 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-5">
+        <form onSubmit={onSubmit} className="space-y-6 pb-10">
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div>
+                    <div className="text-sm text-slate-500">Phiếu nhập</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <h2 className="text-xl font-semibold text-slate-900">
+                            {formData.refNo || acquisition.id}
+                        </h2>
+                        {formData.status ? (
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                {formData.status}
+                            </span>
+                        ) : null}
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Link href="/admin/acquisitions" className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
+                        ← Danh sách
+                    </Link>
+                </div>
+            </div>
+
+            {readOnly ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Phiếu này không còn chỉnh sửa được vì đã duyệt hoặc đã hủy. Bạn vẫn có thể xem đầy đủ thông tin tại đây.
+                </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
                 <label className="space-y-1 text-sm">
                     <div className="font-medium text-slate-700">Vendor</div>
                     <select
                         value={formData.vendorId}
+                        disabled={readOnly}
                         onChange={(e) => setFormData((prev) => ({ ...prev, vendorId: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
                     >
                         <option value="">-- Chọn vendor --</option>
                         {vendors.map((vendor) => (
@@ -218,73 +341,105 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                     <input
                         type="datetime-local"
                         value={formData.acquiredAt?.slice(0, 16) || ""}
+                        disabled={readOnly}
                         onChange={(e) => setFormData((prev) => ({ ...prev, acquiredAt: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
                     />
                 </label>
 
                 <label className="space-y-1 text-sm">
                     <div className="font-medium text-slate-700">Loại phiếu</div>
-                    <input
-                        type="text"
+                    <select
                         value={formData.type}
+                        disabled={readOnly}
                         onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                    />
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
+                    >
+                        {ACQ_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                                {type}
+                            </option>
+                        ))}
+                        {!ACQ_TYPES.includes(formData.type as any) ? (
+                            <option value={formData.type}>{formData.type}</option>
+                        ) : null}
+                    </select>
                 </label>
 
                 <label className="space-y-1 text-sm">
                     <div className="font-medium text-slate-700">Tiền tệ</div>
-                    <input
-                        type="text"
+                    <select
                         value={formData.currency}
+                        disabled={readOnly}
                         onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                    />
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
+                    >
+                        {CURRENCIES.map((currency) => (
+                            <option key={currency} value={currency}>
+                                {currency}
+                            </option>
+                        ))}
+                        {!CURRENCIES.includes(formData.currency as any) ? (
+                            <option value={formData.currency}>{formData.currency}</option>
+                        ) : null}
+                    </select>
                 </label>
 
-                <label className="space-y-1 text-sm xl:col-span-1 md:col-span-2">
+                <label className="space-y-1 text-sm md:col-span-2 xl:col-span-1">
                     <div className="font-medium text-slate-700">Ghi chú</div>
                     <input
                         type="text"
                         value={formData.notes || ""}
+                        disabled={readOnly}
                         onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100"
                     />
                 </label>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-semibold text-slate-900">Dòng sản phẩm</h3>
-                        <p className="text-sm text-slate-500">Đồng hồ có thể khai báo sẵn thông tin cơ bản để đẩy sang màn hình sản phẩm.</p>
+                        <p className="text-sm text-slate-500">
+                            Chỉnh nhanh toàn bộ item của phiếu ngay tại đây. Metadata đồng hồ và dây nằm ở từng block bên dưới.
+                        </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={addLine}
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
-                    >
-                        + Thêm dòng
-                    </button>
+                    {!readOnly ? (
+                        <button
+                            type="button"
+                            onClick={addLine}
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
+                        >
+                            + Thêm dòng
+                        </button>
+                    ) : null}
                 </div>
 
                 <div className="space-y-4">
                     {lines.map((line, idx) => {
                         const money = (Number(line.quantity) || 0) * (Number(line.unitCost) || 0);
                         const isWatch = line.productType === ProductType.WATCH;
+                        const isStrap = line.productType === ProductType.WATCH_STRAP;
 
                         return (
-                            <div key={line.id} className="rounded-xl border border-slate-200 p-4">
+                            <div key={line.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
                                 <div className="mb-3 flex items-center justify-between gap-3">
-                                    <div className="text-sm font-semibold text-slate-700">Dòng #{idx + 1}</div>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeLine(line.id)}
-                                        className="text-sm font-medium text-rose-600 hover:underline"
-                                    >
-                                        Xóa
-                                    </button>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="text-sm font-semibold text-slate-700">Dòng #{idx + 1}</div>
+                                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600 border border-slate-200">
+                                            {line.productType}
+                                        </span>
+                                    </div>
+                                    {!readOnly ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeLine(line.id)}
+                                            className="text-sm font-medium text-rose-600 hover:underline"
+                                        >
+                                            Xóa dòng
+                                        </button>
+                                    ) : null}
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
@@ -294,8 +449,9 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                                             <input
                                                 type="text"
                                                 value={line.title}
+                                                disabled={readOnly}
                                                 onChange={(e) => setLine(line.id, { title: e.target.value })}
-                                                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
                                                 placeholder="Ví dụ: Rolex Datejust 16234"
                                             />
                                         </label>
@@ -306,8 +462,9 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                                             <div className="font-medium text-slate-700">Loại sản phẩm</div>
                                             <select
                                                 value={line.productType}
+                                                disabled={readOnly}
                                                 onChange={(e) => setLine(line.id, { productType: e.target.value })}
-                                                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
                                             >
                                                 {productTypes.map((type) => (
                                                     <option key={type} value={type}>
@@ -325,8 +482,9 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                                                 type="number"
                                                 min={1}
                                                 value={line.quantity}
+                                                disabled={readOnly}
                                                 onChange={(e) => setLine(line.id, { quantity: Number(e.target.value) })}
-                                                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
                                             />
                                         </label>
                                     </div>
@@ -339,21 +497,122 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
                                                 min={0}
                                                 step="0.01"
                                                 value={line.unitCost}
+                                                disabled={readOnly}
                                                 onChange={(e) => setLine(line.id, { unitCost: Number(e.target.value) })}
-                                                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
                                             />
                                         </label>
                                     </div>
                                 </div>
 
                                 {isWatch ? (
-                                    <div className="mt-4 space-y-2 rounded-lg bg-slate-50 p-3">
-                                        <div className="text-sm font-medium text-slate-700">Thông tin cơ bản đồng hồ</div>
+                                    <div className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                                        <div className="text-sm font-medium text-slate-700">Thông tin tiếp nhận đồng hồ</div>
                                         <div className="flex flex-wrap gap-2">
-                                            <FlagCheckbox checked={!!line.watchFlags?.hasStrap} label="Có dây?" onChange={(v) => setWatchFlag(line.id, "hasStrap", v)} />
-                                            <FlagCheckbox checked={!!line.watchFlags?.isServiced} label="Đã service?" onChange={(v) => setWatchFlag(line.id, "isServiced", v)} />
-                                            <FlagCheckbox checked={!!line.watchFlags?.hasClasp} label="Có khóa?" onChange={(v) => setWatchFlag(line.id, "hasClasp", v)} />
-                                            <FlagCheckbox checked={!!line.watchFlags?.isSpa} label="Đã spa?" onChange={(v) => setWatchFlag(line.id, "isSpa", v)} />
+                                            <FlagCheckbox
+                                                checked={!!line.watchFlags?.hasStrap}
+                                                label="Có dây"
+                                                disabled={readOnly}
+                                                onChange={(v) => setWatchFlag(line.id, "hasStrap", v)}
+                                            />
+                                            <FlagCheckbox
+                                                checked={!!line.watchFlags?.hasClasp}
+                                                label="Có khóa"
+                                                disabled={readOnly}
+                                                onChange={(v) => setWatchFlag(line.id, "hasClasp", v)}
+                                            />
+                                            <FlagCheckbox
+                                                checked={!!line.watchFlags?.isServiced}
+                                                label="Đã service"
+                                                disabled={readOnly}
+                                                onChange={(v) => setWatchFlag(line.id, "isServiced", v)}
+                                            />
+                                            <FlagCheckbox
+                                                checked={!!line.watchFlags?.isSpa}
+                                                label="Đã spa"
+                                                disabled={readOnly}
+                                                onChange={(v) => setWatchFlag(line.id, "isSpa", v)}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {isStrap ? (
+                                    <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+                                        <div className="mb-3 text-sm font-medium text-slate-700">Thông tin dây</div>
+                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+                                            <label className="space-y-1 text-sm xl:col-span-2">
+                                                <div className="font-medium text-slate-700">Chất liệu</div>
+                                                <select
+                                                    value={line.strapSpec?.material ?? "LEATHER"}
+                                                    disabled={readOnly}
+                                                    onChange={(e) => setStrapField(line.id, "material", e.target.value)}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
+                                                >
+                                                    {STRAP_MATERIALS.map((m) => (
+                                                        <option key={m.value} value={m.value}>
+                                                            {m.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+
+                                            <label className="space-y-1 text-sm">
+                                                <div className="font-medium text-slate-700">Đầu dây</div>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    value={Number(line.strapSpec?.lugWidthMM ?? 20)}
+                                                    disabled={readOnly}
+                                                    onChange={(e) => setStrapField(line.id, "lugWidthMM", Number(e.target.value))}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
+                                                />
+                                            </label>
+
+                                            <label className="space-y-1 text-sm">
+                                                <div className="font-medium text-slate-700">Đuôi dây</div>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    value={Number(line.strapSpec?.buckleWidthMM ?? 18)}
+                                                    disabled={readOnly}
+                                                    onChange={(e) => setStrapField(line.id, "buckleWidthMM", Number(e.target.value))}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
+                                                />
+                                            </label>
+
+                                            <label className="space-y-1 text-sm xl:col-span-1">
+                                                <div className="font-medium text-slate-700">Màu sắc</div>
+                                                <input
+                                                    type="text"
+                                                    value={line.strapSpec?.color ?? ""}
+                                                    disabled={readOnly}
+                                                    onChange={(e) => setStrapField(line.id, "color", e.target.value)}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
+                                                />
+                                            </label>
+
+                                            <label className="space-y-1 text-sm xl:col-span-1">
+                                                <div className="font-medium text-slate-700">Giá bán dự kiến</div>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    step="0.01"
+                                                    value={Number(line.strapSpec?.sellPrice ?? 0)}
+                                                    disabled={readOnly}
+                                                    onChange={(e) => setStrapField(line.id, "sellPrice", Number(e.target.value))}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
+                                                />
+                                            </label>
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <FlagCheckbox
+                                                checked={!!line.strapSpec?.quickRelease}
+                                                label="Quick release"
+                                                disabled={readOnly}
+                                                onChange={(v) => setStrapField(line.id, "quickRelease", v)}
+                                            />
                                         </div>
                                     </div>
                                 ) : null}
@@ -374,15 +633,17 @@ export default function EditAcqForm({ acquisition, items: initialItems, vendors,
             {err ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div> : null}
             {okMsg ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMsg}</div> : null}
 
-            <div className="flex justify-end">
-                <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                >
-                    {saving ? "Đang lưu..." : "Lưu phiếu nhập"}
-                </button>
-            </div>
+            {!readOnly ? (
+                <div className="flex justify-end">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                        {saving ? "Đang lưu..." : "Lưu toàn bộ phiếu nhập"}
+                    </button>
+                </div>
+            ) : null}
         </form>
     );
 }

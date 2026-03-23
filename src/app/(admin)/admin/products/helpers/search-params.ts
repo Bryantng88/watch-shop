@@ -20,6 +20,7 @@ export type ProductListInput = {
     q?: string;
     type?: string;
     brandId?: string;
+    vendorId?: string;
     categoryId?: string;
     hasImages?: string;
     view?: ProductViewKey;
@@ -45,7 +46,8 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
     const brandId = toStr(sp.get("brandId"));
     const categoryId = toStr(sp.get("categoryId"));
     const hasImages = toStr(sp.get("hasImages"));
-    const view = (toStr(sp.get("view")) || "all") as ProductViewKey;
+    const vendorId = toStr(sp.get("vendorId"));
+    const view = (toStr(sp.get("view")) || "draft") as ProductViewKey;
     const sort = (toStr(sp.get("sort")) as ProductListSort) || "updatedDesc";
     const page = toInt(sp.get("page"), 1);
     const pageSize = toInt(sp.get("pageSize"), 20);
@@ -55,6 +57,7 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
         q: q || undefined,
         type: type || undefined,
         brandId: brandId || undefined,
+        vendorId: vendorId || undefined,
         categoryId: categoryId || undefined,
         hasImages: hasImages || undefined,
         view,

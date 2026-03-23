@@ -1,24 +1,24 @@
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, PrismaClient } from "@prisma/client";
-import { ServiceRequestStatus } from "@prisma/client";
+import { Prisma, PrismaClient, ServiceRequestStatus } from "@prisma/client";
+
 type Tx = Prisma.TransactionClient | typeof prisma;
+
 export type ServiceRequestListRow = {
   id: string;
   refNo: string | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
-  scope: string;
-  productTitle: string;
-  // hiển thị "Dịch vụ"
+  scope: string | null;
+  productTitle: string | null;
   serviceCatalog: { id: string; code: string | null; name: string } | null;
-  vendorName: string;
+  vendorName: string | null;
+  technicianName: string | null;
   maintenanceCount: number;
-  // hiển thị "Order", "Scope", notes đồ khách mang tới...
   orderItem: {
     id: string;
     title: string;
-    serviceScope: any | null; // ServiceScope enum
+    serviceScope: any | null;
     customerItemNote: string | null;
     order: { id: string; refNo: string | null } | null;
   } | null;
@@ -26,16 +26,12 @@ export type ServiceRequestListRow = {
 
 export async function listServiceCatalogRepo(
   tx: DB,
-  opts?: {
-    isActive?: boolean;
-  }
+  opts?: { isActive?: boolean }
 ) {
-  const db = dbOrTx(tx)
+  const db = dbOrTx(tx);
   return db.serviceCatalog.findMany({
     where: {
-      ...(opts?.isActive !== undefined
-        ? { isActive: opts.isActive }
-        : {}),
+      ...(opts?.isActive !== undefined ? { isActive: opts.isActive } : {}),
     },
     orderBy: { name: "asc" },
     select: {
@@ -43,15 +39,13 @@ export async function listServiceCatalogRepo(
       code: true,
       name: true,
       description: true,
-      detail: true,          // enum ServiceDetail
+      detail: true,
       defaultPrice: true,
       durationMin: true,
       isActive: true,
     },
   });
 }
-
-
 
 export function createServiceRequest(
   tx: DB,
@@ -62,21 +56,17 @@ export function createServiceRequest(
     unitPrice: number;
   }
 ) {
-  const db = dbOrTx(tx)
+  const db = dbOrTx(tx);
   return db.serviceRequest.create({
     data: {
       orderItemId: data.orderItemId,
-      //title: data.title,
-      //quantity: data.quantity,
-      //unitPrice: data.unitPrice,
-      status: "DRAFT",
+      status: ServiceRequestStatus.DRAFT,
     },
   });
 }
 
-
 export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyInput[]) {
-  const db = dbOrTx(tx)
+  const db = dbOrTx(tx);
   return db.serviceRequest.createMany({ data });
 }
 
@@ -103,13 +93,13 @@ export async function getServiceRequestList(
         updatedAt: true,
         scope: true,
         vendorNameSnap: true,
+        technicianNameSnap: true,
         product: {
           select: {
             id: true,
             title: true,
-          }
+          },
         },
-        // ✅ Dịch vụ
         ServiceCatalog: {
           select: {
             id: true,
@@ -117,8 +107,7 @@ export async function getServiceRequestList(
             name: true,
           },
         },
-        _count: { select: { maintenance: true } }, // ✅
-        // ✅ Link về Order + Scope
+        _count: { select: { maintenance: true } },
         orderItem: {
           select: {
             id: true,
@@ -143,9 +132,10 @@ export async function getServiceRequestList(
     refNo: r.refNo ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
-    vendorName: r.vendorNameSnap,
-    scope: r.scope,
-    productTitle: r.product?.title,
+    vendorName: r.vendorNameSnap ?? null,
+    technicianName: r.technicianNameSnap ?? null,
+    scope: r.scope ?? null,
+    productTitle: r.product?.title ?? null,
     status: r.status,
     serviceCatalog: r.ServiceCatalog
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
@@ -166,8 +156,6 @@ export async function getServiceRequestList(
 
   return { rows: mapped, total };
 }
-
-
 
 export async function getOptions(
   prisma: PrismaClient,
@@ -233,13 +221,31 @@ export async function findProductForService(tx: DB, productId: string) {
 }
 
 export type VendorLite = { id: string; name: string };
+export type TechnicianLite = { id: string; name: string | null; email: string };
 
 export async function findVendorsLite(tx: DB) {
   const db = dbOrTx(tx);
   return db.vendor.findMany({
-    //where: { isActive: true }, // nếu schema bạn có
     select: { id: true, name: true },
     orderBy: { updatedAt: "desc" },
+  });
+}
+
+export async function findTechniciansLite(tx: DB): Promise<TechnicianLite[]> {
+  const db = dbOrTx(tx);
+  return db.user.findMany({
+    where: {
+      isActive: true,
+      roles: {
+        none: { name: { equals: "CUSTOMER", mode: "insensitive" } },
+      },
+    },
+    orderBy: [{ name: "asc" }, { email: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
   });
 }
 
@@ -249,9 +255,9 @@ export async function bulkAssignVendor(
     ids: string[];
     vendorId: string;
     vendorNameSnap: string;
-    onlyFromDraft?: boolean; // default true
+    onlyFromDraft?: boolean;
   }
-): Promise<number> {   // ✅ QUAN TRỌNG: khai báo return type
+): Promise<number> {
   const db = dbOrTx(tx);
 
   const where: Prisma.ServiceRequestWhereInput = {
@@ -269,9 +275,65 @@ export async function bulkAssignVendor(
     },
   });
 
-  return updated.count; // ✅ number
+  return updated.count;
 }
 
+export async function bulkAssignTechnician(
+  tx: DB,
+  input: {
+    ids: string[];
+    technicianId: string;
+    technicianNameSnap: string;
+  }
+): Promise<number> {
+  const db = dbOrTx(tx);
+  const ids = Array.from(new Set((input.ids ?? []).map(String).map((x) => x.trim()).filter(Boolean)));
+  if (!ids.length) return 0;
+
+  const updated = await db.serviceRequest.updateMany({
+    where: { id: { in: ids } },
+    data: {
+      technicianId: input.technicianId,
+      technicianNameSnap: input.technicianNameSnap,
+      updatedAt: new Date(),
+    },
+  });
+
+  return updated.count;
+}
+
+export async function assignTechnicianOne(
+  tx: DB,
+  input: {
+    id: string;
+    technicianId: string;
+    technicianNameSnap: string;
+  }
+) {
+  const db = dbOrTx(tx);
+  return db.serviceRequest.update({
+    where: { id: input.id },
+    data: {
+      technicianId: input.technicianId,
+      technicianNameSnap: input.technicianNameSnap,
+      updatedAt: new Date(),
+    },
+    select: {
+      id: true,
+      status: true,
+      vendorId: true,
+      vendorNameSnap: true,
+      technicianId: true,
+      technicianNameSnap: true,
+      productId: true,
+      variantId: true,
+      brandSnapshot: true,
+      modelSnapshot: true,
+      refSnapshot: true,
+      serialSnapshot: true,
+    },
+  });
+}
 
 export async function listAssignedAfterBulk(
   tx: DB,
@@ -292,7 +354,6 @@ export async function listAssignedAfterBulk(
   });
 }
 
-
 export async function findByIdForMaintenance(tx: DB, id: string) {
   const db = dbOrTx(tx);
   return db.serviceRequest.findUnique({
@@ -301,12 +362,12 @@ export async function findByIdForMaintenance(tx: DB, id: string) {
       id: true,
       type: true,
       billable: true,
-
       productId: true,
       variantId: true,
-
       vendorId: true,
       vendorNameSnap: true,
+      technicianId: true,
+      technicianNameSnap: true,
     },
   });
 }
@@ -331,6 +392,8 @@ export async function completeServiceRequestOne(
       status: true,
       vendorId: true,
       vendorNameSnap: true,
+      technicianId: true,
+      technicianNameSnap: true,
       productId: true,
       variantId: true,
       brandSnapshot: true,

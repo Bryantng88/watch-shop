@@ -4,6 +4,7 @@ import { getAdminProductList } from "./_server/product.service";
 import { parseProductListSearchParams } from "./helpers/search-params";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { PERMISSIONS } from "@/constants/permissions";
+import { listVendor } from "@/features/vendors/server/vendor.repo";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -43,11 +44,16 @@ export default async function ProductListPage({
 }: {
     searchParams: SearchParams;
 }) {
-    const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
-            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
-        )
-    );
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(searchParams)) {
+        if (Array.isArray(v)) {
+            for (const x of v) {
+                if (x != null && x !== "") sp.append(k, String(x));
+            }
+        } else if (v != null && v !== "") {
+            sp.append(k, String(v));
+        }
+    }
 
     const input = parseProductListSearchParams(sp);
     const user = await getCurrentUser();
@@ -60,6 +66,11 @@ export default async function ProductListPage({
     const canEditPrice =
         isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_UPDATE);
 
+    const [result, vendors] = await Promise.all([
+        getAdminProductList(input, { canViewCost }),
+        listVendor(),
+    ]);
+
     const {
         items,
         total,
@@ -68,7 +79,7 @@ export default async function ProductListPage({
         pageSize,
         brands,
         productTypes,
-    } = await getAdminProductList(input);
+    } = result;
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -82,6 +93,7 @@ export default async function ProductListPage({
             totalPages={totalPages}
             rawSearchParams={searchParams}
             brands={serialize(brands)}
+            vendors={serialize(vendors)}
             productTypes={serialize(productTypes)}
             canViewCost={canViewCost}
             canEditPrice={canEditPrice}

@@ -37,6 +37,8 @@ const makeSchema = () => z.object({
   paymentId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paidAmount: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paidAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicianId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicianNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => MaintenanceRecordCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => MaintenanceRecordAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => MaintenanceRecordMaxOrderByAggregateInputObjectSchema).optional(),

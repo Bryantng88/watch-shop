@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { cancelAcquisition } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
 
-export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-
+export async function POST(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ error: "Thiếu id phiếu nhập" }, { status: 400 });
+        }
+
         const data = await cancelAcquisition(id);
         return NextResponse.json({ ok: true, data });
-    } catch (error: any) {
+    } catch (e: any) {
         return NextResponse.json(
-            { error: error?.message || "Không thể hủy phiếu nhập" },
-            { status: 400 }
+            { error: e?.message || "Không thể hủy phiếu" },
+            { status: 500 }
         );
     }
 }

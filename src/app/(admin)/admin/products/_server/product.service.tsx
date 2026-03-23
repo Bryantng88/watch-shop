@@ -44,7 +44,7 @@ function normalizeView(v: unknown) {
     ) {
         return raw;
     }
-    return "all";
+    return "draft";
 }
 
 function normalizeCatalog(v: unknown): "product" | "strap" {
@@ -63,6 +63,7 @@ const AdminListQuerySchema = z.object({
     brandIds: z.array(z.string()).optional(),
     categoryIds: z.array(z.string()).optional(),
     hasImages: z.enum(["yes", "no"]).optional(),
+    vendorId: z.string().optional(),
     updatedFrom: z.date().optional(),
     updatedTo: z.date().optional(),
 });
@@ -73,6 +74,46 @@ const OPEN_SERVICE_REQUEST_STATUSES = [
     ServiceRequestStatus.WAIT_APPROVAL,
     ServiceRequestStatus.IN_PROGRESS,
 ] as const;
+
+function hasValue(v: unknown) {
+    return !(v == null || v === "");
+}
+
+function computeMissingVariantFields(item: any): string[] {
+    const missing: string[] = [];
+
+    if (!item?.variantId) {
+        missing.push("variant");
+    }
+
+    if (item?.type === ProductType.WATCH_STRAP) {
+        const s = item?.strapSpec ?? null;
+        if (!s) return ["strap spec"];
+        if (!hasValue(s.material)) missing.push("chất liệu dây");
+        if (!hasValue(s.color)) missing.push("màu dây");
+        if (!hasValue(s.lugWidthMM)) missing.push("lug width");
+        if (!hasValue(s.buckleWidthMM)) missing.push("buckle width");
+    }
+
+    return Array.from(new Set(missing));
+}
+
+function computeMissingWatchSpecFields(item: any): string[] {
+    if (item?.type === ProductType.WATCH_STRAP) return [];
+    if (item?.type && item.type !== ProductType.WATCH) return [];
+
+    const ws = item?.watchSpecSnapshot ?? null;
+    if (!ws) return ["watch spec"];
+
+    const missing: string[] = [];
+    if (!hasValue(ws.caseType)) missing.push("kiểu vỏ");
+    if (!hasValue(ws.movement)) missing.push("bộ máy");
+    if (!hasValue(ws.caseMaterial)) missing.push("chất liệu vỏ");
+    if (!hasValue(ws.strap)) missing.push("loại dây");
+    if (!hasValue(ws.glass)) missing.push("kính");
+
+    return Array.from(new Set(missing));
+}
 
 export async function createProductDraft(title: string) {
     return prisma.$transaction(async (tx) => {
@@ -87,7 +128,9 @@ export async function createProductDraft(title: string) {
 }
 
 export async function detail(id: string) {
-    return prodRepo.getAdminEditProductDetail(prisma, id);
+    return prisma.product.findUnique({
+        where: { id },
+    });
 }
 
 export async function getAdminProductList(
@@ -103,6 +146,7 @@ export async function getAdminProductList(
         brandIds: arrayify(raw.brandIds ?? raw.brandId),
         categoryIds: arrayify(raw.categoryIds ?? raw.categoryId),
         hasImages: asString(raw.hasImages),
+        vendorId: asString(raw.vendorId),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
@@ -118,6 +162,7 @@ export async function getAdminProductList(
             brandIds: undefined,
             categoryIds: undefined,
             hasImages: undefined,
+            vendorId: undefined,
             updatedFrom: undefined,
             updatedTo: undefined,
         };
@@ -134,6 +179,7 @@ export async function getAdminProductList(
         type: parsed.type?.[0],
         brandId: parsed.brandIds?.[0],
         categoryId: parsed.categoryIds?.[0],
+        vendorId: parsed.vendorId,
         hasImages: parsed.hasImages,
         catalog,
         includeCost: !!opts?.canViewCost,
@@ -169,12 +215,24 @@ export async function getAdminProductList(
         }
     }
 
-    const items = (result.items ?? []).map((item: any) => ({
-        ...item,
-        hasOpenService: openServiceMap.has(item.id),
-        openServiceStatus: openServiceMap.get(item.id) ?? null,
-        latestServiceStatus: latestServiceMap.get(item.id) ?? null,
-    }));
+    const items = (result.items ?? []).map((item: any) => {
+        const missingVariantFields = computeMissingVariantFields(item);
+        const missingWatchSpecFields = computeMissingWatchSpecFields(item);
+        const isVariantInfoComplete = missingVariantFields.length === 0;
+        const isWatchSpecComplete = missingWatchSpecFields.length === 0;
+
+        return {
+            ...item,
+            hasOpenService: openServiceMap.has(item.id),
+            openServiceStatus: openServiceMap.get(item.id) ?? null,
+            latestServiceStatus: latestServiceMap.get(item.id) ?? null,
+            missingVariantFields,
+            missingWatchSpecFields,
+            isVariantInfoComplete,
+            isWatchSpecComplete,
+            isInfoComplete: isVariantInfoComplete && isWatchSpecComplete,
+        };
+    });
 
     return {
         ...result,

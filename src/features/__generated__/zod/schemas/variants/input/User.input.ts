@@ -12,6 +12,8 @@ export const UserInputSchema = z.object({
     updatedAt: z.date(),
     roleId: z.string().optional().nullable(),
     customer: z.unknown().optional().nullable(),
+    MaintenanceRecord: z.array(z.unknown()),
+    ServiceRequest: z.array(z.unknown()),
     roles: z.array(z.unknown())
 }).strict();
 

@@ -20,6 +20,8 @@ export const UserGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     roleId: z.number(),
     customer: z.number(),
+    MaintenanceRecord: z.number(),
+    ServiceRequest: z.number(),
     roles: z.number()
   }).optional(),
   _min: z.object({

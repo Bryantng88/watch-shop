@@ -16,6 +16,7 @@ import { MaintenanceRecordUpdateManyWithoutServiceRequestNestedInputObjectSchema
 import { CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema as CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './CustomerUpdateOneWithoutServiceRequestNestedInput.schema';
 import { OrderItemUpdateOneWithoutServiceRequestNestedInputObjectSchema as OrderItemUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './OrderItemUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema as ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ProductUpdateOneWithoutServiceRequestNestedInput.schema';
+import { UserUpdateOneWithoutServiceRequestNestedInputObjectSchema as UserUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './UserUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema as ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutServiceRequestNestedInput.schema'
 
@@ -37,11 +38,13 @@ const makeSchema = () => z.object({
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   scope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   vendorNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
+  User: z.lazy(() => UserUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
