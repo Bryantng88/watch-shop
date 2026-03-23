@@ -277,18 +277,25 @@ export default function AcquisitionListClient(props: PageProps) {
                     <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={async () => {
-                            const payload = displayItems
-                                .filter((x) => selectedIds.includes(x.id))
-                                .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
-
                             const res = await fetch("/api/admin/acquisitions/bulk-post", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ items: payload }),
+                                body: JSON.stringify({ acquisitionIds: selectedIds }),
                             });
 
-                            if (!res.ok) {
-                                alert("Có lỗi khi duyệt phiếu!");
+                            const data = await res.json().catch(() => null);
+
+                            if (!res.ok || data?.ok === false) {
+                                alert(data?.error || "Có lỗi khi duyệt phiếu!");
+                                return;
+                            }
+
+                            if (Array.isArray(data?.failed) && data.failed.length > 0) {
+                                alert(
+                                    "Một số phiếu duyệt lỗi:\n" +
+                                    data.failed.map((x: any) => `- ${x.id}: ${x.error}`).join("\n")
+                                );
+                                router.refresh();
                                 return;
                             }
 

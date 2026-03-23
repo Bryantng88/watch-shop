@@ -75,6 +75,10 @@ const PatchBodySchema = z.object({
             boxIncluded: z.boolean().optional(),
             bookletIncluded: z.boolean().optional(),
             cardIncluded: z.boolean().optional(),
+            hasStrap: z.boolean().optional(),
+            isServiced: z.boolean().optional(),
+            hasClasp: z.boolean().optional(),
+            isSpa: z.boolean().optional(),
             complicationIds: z.array(z.string()).optional(),
         })
         .partial()

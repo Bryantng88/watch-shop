@@ -175,6 +175,10 @@ model WatchSpec {
   updatedAt       DateTime        @updatedAt
   sizeCategory    String?
   ref             String?
+  hasStrap        Boolean         @default(false)
+  isServiced      Boolean         @default(false)
+  hasClasp        Boolean         @default(false)
+  isSpa           Boolean         @default(false)
   product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   complication    Complication[]  @relation("ComplicationToWatchSpec")
   marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")

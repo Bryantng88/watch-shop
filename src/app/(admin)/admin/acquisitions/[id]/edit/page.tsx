@@ -7,6 +7,7 @@ import EditAcqForm from "../../_client/EditAcqForm";
 
 import * as service from "../../_server/acquisition.service"
 import { ProductType } from "@prisma/client";
+import { getWatchFlagsFromDescription } from "../../_server/item-metadata";
 
 export default async function EditAcquisitionPage({ params }: { params: { id: string } }) {
     // 1. Lấy dữ liệu phiếu nhập và item
@@ -29,10 +30,11 @@ export default async function EditAcquisitionPage({ params }: { params: { id: st
     // 4. Tách items cho đúng dạng props
     const items = acquisitionData.acquisitionItem.map(item => ({
         id: item.id,
-        title: item.product?.title ?? "", // fallback ""
+        title: item.productTitle ?? item.product?.title ?? "",
         quantity: Number(item.quantity) || 0,
         unitCost: Number(item.unitCost) || 0,
-        productType: item.product?.type ?? "WATCH", // fallback type mặc định
+        productType: item.productType ?? item.product?.type ?? "WATCH",
+        watchFlags: getWatchFlagsFromDescription(item.description),
     }));
     return (
         <div className="max-w-2xl mx-auto pt-6">

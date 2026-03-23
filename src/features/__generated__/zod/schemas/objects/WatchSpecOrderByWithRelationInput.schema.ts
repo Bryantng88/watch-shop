@@ -33,6 +33,10 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   sizeCategory: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   ref: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  hasStrap: SortOrderSchema.optional(),
+  isServiced: SortOrderSchema.optional(),
+  hasClasp: SortOrderSchema.optional(),
+  isSpa: SortOrderSchema.optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   complication: z.lazy(() => ComplicationOrderByRelationAggregateInputObjectSchema).optional(),
   marketSegment: z.lazy(() => MarketSegmentOrderByRelationAggregateInputObjectSchema).optional()

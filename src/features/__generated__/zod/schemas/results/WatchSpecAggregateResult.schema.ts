@@ -26,6 +26,10 @@ export const WatchSpecAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     sizeCategory: z.number(),
     ref: z.number(),
+    hasStrap: z.number(),
+    isServiced: z.number(),
+    hasClasp: z.number(),
+    isSpa: z.number(),
     product: z.number(),
     complication: z.number(),
     marketSegment: z.number()

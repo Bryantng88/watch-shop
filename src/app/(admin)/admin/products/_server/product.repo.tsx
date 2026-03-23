@@ -291,6 +291,10 @@ export async function listAdminProducts(
                         thickness: true,
                         strap: true,
                         glass: true,
+                        hasStrap: true,
+                        isServiced: true,
+                        hasClasp: true,
+                        isSpa: true,
                     },
                 },
             }
@@ -503,6 +507,14 @@ export async function listAdminProducts(
                 }
                 : null,
             watchSpecSnapshot: p.watchSpec ?? null,
+            watchFlags: !isStrapCatalog
+                ? {
+                    hasStrap: !!p.watchSpec?.hasStrap,
+                    isServiced: !!p.watchSpec?.isServiced,
+                    hasClasp: !!p.watchSpec?.hasClasp,
+                    isSpa: !!p.watchSpec?.isSpa,
+                }
+                : null,
             imagesCount: p._count?.image ?? 0,
             openServiceStatus,
         };
@@ -949,6 +961,10 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
                 boxIncluded: true,
                 bookletIncluded: true,
                 cardIncluded: true,
+                hasStrap: true,
+                isServiced: true,
+                hasClasp: true,
+                isSpa: true,
             },
         },
     },
@@ -1191,6 +1207,10 @@ export async function upsertWatchSpecForAdmin(
         ...(raw.boxIncluded !== undefined ? { boxIncluded: !!raw.boxIncluded } : {}),
         ...(raw.bookletIncluded !== undefined ? { bookletIncluded: !!raw.bookletIncluded } : {}),
         ...(raw.cardIncluded !== undefined ? { cardIncluded: !!raw.cardIncluded } : {}),
+        ...(raw.hasStrap !== undefined ? { hasStrap: !!raw.hasStrap } : {}),
+        ...(raw.isServiced !== undefined ? { isServiced: !!raw.isServiced } : {}),
+        ...(raw.hasClasp !== undefined ? { hasClasp: !!raw.hasClasp } : {}),
+        ...(raw.isSpa !== undefined ? { isSpa: !!raw.isSpa } : {}),
     };
 
     const hasSpecFields = Object.keys(specData).length > 0;

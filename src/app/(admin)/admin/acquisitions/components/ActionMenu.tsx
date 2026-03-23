@@ -86,9 +86,9 @@ function getActions(entityTypeRaw: EntityType, entityId: string, status: string)
                 cancelUrl: `/api/admin/acquisitions/${entityId}/cancel`,
                 viewUrl: getAdminDetailUrl(entityTypeRaw, entityId),
 
-                canPost: status !== "POSTED" && status !== "CANCELLED",
-                canEdit: status !== "POSTED" && status !== "CANCELLED",
-                canCancel: status !== "CANCELLED",
+                canPost: status !== "POSTED" && status !== "CANCELLED" && status !== "CANCELED",
+                canEdit: status !== "POSTED" && status !== "CANCELLED" && status !== "CANCELED",
+                canCancel: status !== "CANCELLED" && status !== "CANCELED",
             };
 
         case "order":

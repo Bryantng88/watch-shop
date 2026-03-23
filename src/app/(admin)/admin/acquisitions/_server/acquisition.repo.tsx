@@ -3,6 +3,7 @@ import { genRefNo } from "../../__components/AutoGenRef";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
 import type { AcquisitionItemInput, ItemInput } from "./acquisition.dto";
+import { stringifyAcquisitionItemMeta } from "./item-metadata";
 
 export async function createDraft(
     tx: DB,
@@ -142,7 +143,10 @@ export async function createAcqItem(
             productType: item.productType ?? ProductType.WATCH,
             productId,
             variantId,
-            description: item.strapSpec ? JSON.stringify(item.strapSpec) : null,
+            description: stringifyAcquisitionItemMeta({
+                strapSpec: item.strapSpec,
+                watchFlags: item.watchFlags,
+            }),
         },
     });
 }
@@ -166,11 +170,17 @@ export async function updateAcqItem(tx: DB, it: any) {
         data: {
             productTitle: it.title,
             quantity: it.quantity,
-            unitCost: it.unitPrice,
+            unitCost: it.unitCost ?? it.unitPrice ?? 0,
             productType: it.productType ?? undefined,
             productId,
             variantId,
-            description: it.strapSpec ? JSON.stringify(it.strapSpec) : undefined,
+            description:
+                it.strapSpec || it.watchFlags
+                    ? stringifyAcquisitionItemMeta({
+                        strapSpec: it.strapSpec,
+                        watchFlags: it.watchFlags,
+                    })
+                    : undefined,
         },
     });
 }

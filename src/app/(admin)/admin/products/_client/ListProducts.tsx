@@ -51,6 +51,12 @@ type ProductRow = ProductListItem & {
         material?: string | null;
         quickRelease?: boolean | null;
     } | null;
+    watchFlags?: {
+        hasStrap?: boolean | null;
+        isServiced?: boolean | null;
+        hasClasp?: boolean | null;
+        isSpa?: boolean | null;
+    } | null;
     isVariantInfoComplete?: boolean;
     isWatchSpecComplete?: boolean;
     isInfoComplete?: boolean;
@@ -153,6 +159,18 @@ function StrapSpecText({ p }: { p: ProductRow }) {
             {s.material || "-"} / {s.lugWidthMM || "-"} - {s.buckleWidthMM || "-"} / {s.color || "-"} /{" "}
             {s.quickRelease ? "QR" : "No QR"}
         </span>
+    );
+}
+
+function WatchFlagsText({ p }: { p: ProductRow }) {
+    const f = p.watchFlags;
+    if (!f) return null;
+
+    return (
+        <div className="text-[11px] text-slate-500">
+            Dây: {f.hasStrap ? "Có" : "Không"} · Khóa: {f.hasClasp ? "Có" : "Không"} · Service:{" "}
+            {f.isServiced ? "Đã" : "Chưa"} · Spa: {f.isSpa ? "Đã" : "Chưa"}
+        </div>
     );
 }
 
@@ -1135,6 +1153,8 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                         <div className="text-[11px] text-gray-400 uppercase tracking-wide">
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
+
+                                                        {p.type !== "WATCH_STRAP" ? <WatchFlagsText p={p} /> : null}
 
                                                         <div className="flex flex-col items-start gap-1 pt-1">
                                                             {hasMissingReadinessInfo(p) ? (

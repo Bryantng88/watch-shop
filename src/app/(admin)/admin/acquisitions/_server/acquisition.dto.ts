@@ -53,6 +53,13 @@ export type StrapSpecInput = {
     sellPrice?: number;
 };
 
+export type WatchFlagsInput = {
+    hasStrap?: boolean;
+    isServiced?: boolean;
+    hasClasp?: boolean;
+    isSpa?: boolean;
+};
+
 export type CreateAcquisitionInput = {
     vendorId: string;
     currency?: string;
@@ -67,6 +74,7 @@ export type CreateAcquisitionInput = {
         productId?: string | null;
         variantId?: string | null;
         strapSpec?: StrapSpecInput;
+        watchFlags?: WatchFlagsInput;
     }[];
     quickVendorName: string;
 };
@@ -98,6 +106,14 @@ export const ItemDTO = z.object({
             color: z.string().optional(),
             quickRelease: z.boolean().optional(),
             sellPrice: z.number().optional(),
+        })
+        .optional(),
+    watchFlags: z
+        .object({
+            hasStrap: z.boolean().optional(),
+            isServiced: z.boolean().optional(),
+            hasClasp: z.boolean().optional(),
+            isSpa: z.boolean().optional(),
         })
         .optional(),
 });

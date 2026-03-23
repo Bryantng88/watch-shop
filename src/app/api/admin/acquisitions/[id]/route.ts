@@ -2,7 +2,7 @@ import * as service from "@/app/(admin)/admin/acquisitions/_server/acquisition.s
 import { NextResponse, NextRequest } from "next/server";
 
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     let body;
     try {
         body = await req.json();
@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     // Lấy id đúng từ params
-    const { id } = params;
+    const { id } = await params;
 
     // Gọi service với id đã lấy, và return về dạng Response
     try {

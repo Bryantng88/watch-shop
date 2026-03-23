@@ -56,6 +56,10 @@ const watchspecwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   sizeCategory: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   ref: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  hasStrap: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isServiced: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  hasClasp: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isSpa: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   complication: z.lazy(() => ComplicationListRelationFilterObjectSchema).optional(),
   marketSegment: z.lazy(() => MarketSegmentListRelationFilterObjectSchema).optional()

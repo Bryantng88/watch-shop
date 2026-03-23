@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAcquisitionDetail, createAcquisitionWithItem } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import { getWatchFlagsFromDescription } from "@/app/(admin)/admin/acquisitions/_server/item-metadata";
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
     const { id } = await ctx.params
@@ -12,7 +13,8 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
             title: i.productTitle,
             quantity: i.quantity ?? 1,
             unitCost: Number(i.unitCost ?? 0),
-            productType: i.productType
+            productType: i.productType,
+            watchFlags: getWatchFlagsFromDescription(i.description),
         })),
     });
 }

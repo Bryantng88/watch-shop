@@ -87,9 +87,7 @@ export async function createProductDraft(title: string) {
 }
 
 export async function detail(id: string) {
-    return prisma.product.findUnique({
-        where: { id },
-    });
+    return prodRepo.getAdminEditProductDetail(prisma, id);
 }
 
 export async function getAdminProductList(

@@ -86,6 +86,10 @@ const WATCHSPEC_KEYS = [
     'boxIncluded',
     'bookletIncluded',
     'cardIncluded',
+    'hasStrap',
+    'isServiced',
+    'hasClasp',
+    'isSpa',
 ] as const;
 
 const VARIANT_KEYS = ['variantPrice'] as const;
@@ -682,6 +686,10 @@ export default function EditProductForm({
                     boxIncluded: watchSpecRaw.boxIncluded,
                     bookletIncluded: watchSpecRaw.bookletIncluded,
                     cardIncluded: watchSpecRaw.cardIncluded,
+                    hasStrap: watchSpecRaw.hasStrap,
+                    isServiced: watchSpecRaw.isServiced,
+                    hasClasp: watchSpecRaw.hasClasp,
+                    isSpa: watchSpecRaw.isSpa,
                     complicationIds: formData.complicationIds ?? [],
                 }
                 : !isEqualShallow(snapshotRef.current.complicationIds, formData.complicationIds)
@@ -999,6 +1007,42 @@ export default function EditProductForm({
                                     onChange={handleChange as any}
                                 />
                                 Kèm thẻ
+                            </label>
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    name="hasStrap"
+                                    checked={!!formData.hasStrap}
+                                    onChange={handleChange as any}
+                                />
+                                Có dây
+                            </label>
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    name="isServiced"
+                                    checked={!!formData.isServiced}
+                                    onChange={handleChange as any}
+                                />
+                                Đã service
+                            </label>
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    name="hasClasp"
+                                    checked={!!formData.hasClasp}
+                                    onChange={handleChange as any}
+                                />
+                                Có khóa
+                            </label>
+                            <label className="flex items-center gap-3 border border-slate-200 px-3 py-3 text-sm text-slate-700 md:col-span-3 xl:col-span-1">
+                                <input
+                                    type="checkbox"
+                                    name="isSpa"
+                                    checked={!!formData.isSpa}
+                                    onChange={handleChange as any}
+                                />
+                                Đã spa
                             </label>
                         </div>
                     </Section>

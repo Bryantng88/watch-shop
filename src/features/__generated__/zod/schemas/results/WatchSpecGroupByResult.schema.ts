@@ -18,6 +18,10 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
   updatedAt: z.date(),
   sizeCategory: z.string(),
   ref: z.string(),
+  hasStrap: z.boolean(),
+  isServiced: z.boolean(),
+  hasClasp: z.boolean(),
+  isSpa: z.boolean(),
   _count: z.object({
     productId: z.number(),
     model: z.number(),
@@ -45,6 +49,10 @@ export const WatchSpecGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     sizeCategory: z.number(),
     ref: z.number(),
+    hasStrap: z.number(),
+    isServiced: z.number(),
+    hasClasp: z.number(),
+    isSpa: z.number(),
     product: z.number(),
     complication: z.number(),
     marketSegment: z.number()
