@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 type Role = {
     id: string;
     name: string;
+    description?: string | null;
     permissions: string[];
 };
 
@@ -102,7 +104,10 @@ export default function UserCreateForm({ roles }: { roles: Role[] }) {
                 <h2 className="font-medium">Phân quyền</h2>
 
                 <div>
-                    <label className="text-xs text-gray-600">Role</label>
+                    <div className="flex items-center justify-between">
+                        <label className="text-xs text-gray-600">Role</label>
+                        <Link href="/admin/users/roles" className="text-xs text-blue-600 hover:underline">Quản lý role</Link>
+                    </div>
                     <select
                         className="mt-1 h-9 rounded border px-2 w-64"
                         value={roleId}
@@ -113,6 +118,10 @@ export default function UserCreateForm({ roles }: { roles: Role[] }) {
                         ))}
                     </select>
                 </div>
+
+                {currentRole?.description ? (
+                    <p className="text-sm text-gray-600">{currentRole.description}</p>
+                ) : null}
 
                 {/* Permission preview */}
                 <div>

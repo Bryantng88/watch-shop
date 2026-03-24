@@ -64,12 +64,21 @@ export default function UserListPageClient({
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Quản lý người dùng</h1>
 
-                <Link
-                    href="/admin/users/new"
-                    className="rounded-md bg-black text-white text-sm px-3 py-2 hover:bg-neutral-800"
-                >
-                    + Tạo người dùng
-                </Link>
+                <div className="flex gap-2">
+                    <Link
+                        href="/admin/users/roles"
+                        className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
+                    >
+                        Quản lý role
+                    </Link>
+
+                    <Link
+                        href="/admin/users/new"
+                        className="rounded-md bg-black text-white text-sm px-3 py-2 hover:bg-neutral-800"
+                    >
+                        + Tạo người dùng
+                    </Link>
+                </div>
             </div>
 
             {/* FILTER */}

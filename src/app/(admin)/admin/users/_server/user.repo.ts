@@ -1,12 +1,6 @@
 import { prisma, DB } from "@/server/db/client";
 
-
-export async function getUserListRepo(
-    params: {
-        skip: number;
-        take: number;
-    }
-) {
+export async function getUserListRepo(params: { skip: number; take: number }) {
     const [items, total] = await Promise.all([
         prisma.user.findMany({
             skip: params.skip,
@@ -32,7 +26,6 @@ export async function getUserListRepo(
     return { items, total };
 }
 
-
 export async function listUsersRepo(db: DB) {
     return db.user.findMany({
         orderBy: { createdAt: "desc" },
@@ -46,23 +39,19 @@ export async function listUsersRepo(db: DB) {
     });
 }
 
-
-
-export async function createUserRepo(
-    data: {
-        email: string;
-        name?: string;
-        passwordHash: string;
-        roleId: string;   // 👈 đổi ở đây
-    }
-) {
+export async function createUserRepo(data: {
+    email: string;
+    name?: string;
+    passwordHash: string;
+    roleId: string;
+}) {
     return prisma.user.create({
         data: {
             email: data.email,
             name: data.name,
             passwordHash: data.passwordHash,
             roles: {
-                connect: { id: data.roleId }, // 👈 chuẩn
+                connect: { id: data.roleId },
             },
         },
         select: {
@@ -113,6 +102,17 @@ export async function getAllRolesRepo(): Promise<RoleWithPermissions[]> {
                 },
                 orderBy: { code: "asc" },
             },
+        },
+    });
+}
+
+export async function getAllPermissionsRepo() {
+    return prisma.permission.findMany({
+        orderBy: { code: "asc" },
+        select: {
+            id: true,
+            code: true,
+            description: true,
         },
     });
 }
