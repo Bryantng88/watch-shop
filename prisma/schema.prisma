@@ -351,6 +351,7 @@ model ServiceRequest {
   @@index([orderItemId], map: "idx_service_request_order_item_id")
   @@index([vendorId], map: "idx_service_request_vendor_id")
   @@index([technicianId])
+  @@index([technicianId], map: "idx_service_request_technician_id")
 }
 
 model MaintenanceRecord {
@@ -400,6 +401,7 @@ model MaintenanceRecord {
   @@index([eventType], map: "idx_maintenance_record_event_type")
   @@index([paymentId], map: "idx_maintenance_record_payment_id")
   @@index([technicianId])
+  @@index([technicianId], map: "idx_maintenance_record_technician_id")
 }
 
 model MaintenancePart {

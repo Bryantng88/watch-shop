@@ -1,7 +1,6 @@
-import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, PrismaClient, ServiceRequestStatus } from "@prisma/client";
 
-type Tx = Prisma.TransactionClient | typeof prisma;
+import { prisma, DB, dbOrTx } from "@/server/db/client";
+import { Prisma, ServiceRequestStatus } from "@prisma/client";
 
 export type ServiceRequestListRow = {
   id: string;
@@ -17,58 +16,12 @@ export type ServiceRequestListRow = {
   maintenanceCount: number;
   orderItem: {
     id: string;
-    title: string;
-    serviceScope: any | null;
+    title: string | null;
+    serviceScope: string | null;
     customerItemNote: string | null;
     order: { id: string; refNo: string | null } | null;
   } | null;
 };
-
-export async function listServiceCatalogRepo(
-  tx: DB,
-  opts?: { isActive?: boolean }
-) {
-  const db = dbOrTx(tx);
-  return db.serviceCatalog.findMany({
-    where: {
-      ...(opts?.isActive !== undefined ? { isActive: opts.isActive } : {}),
-    },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      description: true,
-      detail: true,
-      defaultPrice: true,
-      durationMin: true,
-      isActive: true,
-    },
-  });
-}
-
-export function createServiceRequest(
-  tx: DB,
-  data: {
-    orderItemId: string;
-    title: string;
-    quantity: number;
-    unitPrice: number;
-  }
-) {
-  const db = dbOrTx(tx);
-  return db.serviceRequest.create({
-    data: {
-      orderItemId: data.orderItemId,
-      status: ServiceRequestStatus.DRAFT,
-    },
-  });
-}
-
-export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyInput[]) {
-  const db = dbOrTx(tx);
-  return db.serviceRequest.createMany({ data });
-}
 
 export async function getServiceRequestList(
   where: Prisma.ServiceRequestWhereInput,
@@ -78,7 +31,6 @@ export async function getServiceRequestList(
   tx: DB
 ) {
   const db = dbOrTx(tx);
-
   const [rows, total] = await Promise.all([
     db.serviceRequest.findMany({
       where,
@@ -94,19 +46,8 @@ export async function getServiceRequestList(
         scope: true,
         vendorNameSnap: true,
         technicianNameSnap: true,
-        product: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        ServiceCatalog: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-          },
-        },
+        product: { select: { id: true, title: true } },
+        ServiceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenance: true } },
         orderItem: {
           select: {
@@ -114,12 +55,7 @@ export async function getServiceRequestList(
             title: true,
             serviceScope: true,
             customerItemNote: true,
-            order: {
-              select: {
-                id: true,
-                refNo: true,
-              },
-            },
+            order: { select: { id: true, refNo: true } },
           },
         },
       },
@@ -132,67 +68,42 @@ export async function getServiceRequestList(
     refNo: r.refNo ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
-    vendorName: r.vendorNameSnap ?? null,
-    technicianName: r.technicianNameSnap ?? null,
     scope: r.scope ?? null,
     productTitle: r.product?.title ?? null,
     status: r.status,
-    serviceCatalog: r.ServiceCatalog
-      ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
-      : null,
+    vendorName: r.vendorNameSnap ?? null,
+    technicianName: r.technicianNameSnap ?? null,
+    serviceCatalog: r.ServiceCatalog ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name } : null,
     maintenanceCount: r._count.maintenance,
-    orderItem: r.orderItem
-      ? {
-        id: r.orderItem.id,
-        title: r.orderItem.title,
-        serviceScope: (r.orderItem as any).serviceScope ?? null,
-        customerItemNote: (r.orderItem as any).customerItemNote ?? null,
-        order: r.orderItem.order
-          ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null }
-          : null,
-      }
-      : null,
+    orderItem: r.orderItem ? {
+      id: r.orderItem.id,
+      title: r.orderItem.title ?? null,
+      serviceScope: (r.orderItem as any).serviceScope ?? null,
+      customerItemNote: (r.orderItem as any).customerItemNote ?? null,
+      order: r.orderItem.order ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null } : null,
+    } : null,
   }));
 
   return { rows: mapped, total };
 }
 
-export async function getOptions(
-  prisma: PrismaClient,
-  opts?: { isActive?: boolean }
-) {
-  const where: Prisma.ServiceCatalogWhereInput =
-    typeof opts?.isActive === "boolean" ? { isActive: opts.isActive } : {};
-
-  const rows = await prisma.serviceCatalog.findMany({
-    where,
-    orderBy: [{ name: "asc" }],
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      defaultPrice: true,
-    },
-  });
-
-  return rows;
-}
-
-export async function createOne(
-  tx: DB,
-  data: Prisma.ServiceRequestUncheckedCreateInput
-) {
-  const db = dbOrTx(tx);
-  return db.serviceRequest.create({ data });
-}
-
-export async function findServiceCatalogLite(tx: DB) {
+export async function getOptions(tx: DB, opts?: { isActive?: boolean }) {
   const db = dbOrTx(tx);
   return db.serviceCatalog.findMany({
-    where: { isActive: true },
-    select: { id: true, code: true, name: true },
-    orderBy: { updatedAt: "desc" },
+    where: typeof opts?.isActive === 'boolean' ? { isActive: opts.isActive } : {},
+    orderBy: [{ name: 'asc' }],
+    select: { id: true, code: true, name: true, defaultPrice: true },
   });
+}
+
+export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyInput[]) {
+  const db = dbOrTx(tx);
+  return db.serviceRequest.createMany({ data });
+}
+
+export async function createOne(tx: DB, data: Prisma.ServiceRequestCreateInput) {
+  const db = dbOrTx(tx);
+  return db.serviceRequest.create({ data });
 }
 
 export async function findProductForService(tx: DB, productId: string) {
@@ -202,17 +113,11 @@ export async function findProductForService(tx: DB, productId: string) {
     select: {
       id: true,
       title: true,
-      brand: {
-        select: { name: true },
-      },
-      watchSpec: {
-        select: {
-          model: true,
-          ref: true,
-        },
-      },
+      status: true,
+      brand: { select: { name: true } },
+      watchSpec: { select: { model: true, ref: true } },
       variants: {
-        orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
+        orderBy: [{ stockQty: 'desc' }, { createdAt: 'asc' }],
         select: { id: true },
         take: 1,
       },
@@ -220,167 +125,43 @@ export async function findProductForService(tx: DB, productId: string) {
   });
 }
 
-export type VendorLite = { id: string; name: string };
-export type TechnicianLite = { id: string; name: string | null; email: string };
+export async function findDefaultTechnician(tx: DB) {
+  const db = dbOrTx(tx);
+  return db.user.findFirst({
+    where: {
+      isActive: true,
+      roles: { some: { name: 'TECHNICIAN' } },
+    },
+    orderBy: [{ createdAt: 'asc' }],
+    select: { id: true, name: true, email: true },
+  });
+}
+
+export async function listServiceCatalogRepo(tx: DB, opts?: { isActive?: boolean }) {
+  const db = dbOrTx(tx);
+  return db.serviceCatalog.findMany({
+    where: typeof opts?.isActive === 'boolean' ? { isActive: opts.isActive } : {},
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      detail: true,
+      defaultPrice: true,
+      durationMin: true,
+      isActive: true,
+    },
+  });
+}
 
 export async function findVendorsLite(tx: DB) {
   const db = dbOrTx(tx);
-  return db.vendor.findMany({
-    select: { id: true, name: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  return db.vendor.findMany({ select: { id: true, name: true }, orderBy: { updatedAt: 'desc' } });
 }
 
-export async function findTechniciansLite(tx: DB): Promise<TechnicianLite[]> {
+export async function completeServiceRequestOne(tx: DB, input: { id: string; completedAt?: Date | null }) {
   const db = dbOrTx(tx);
-  return db.user.findMany({
-    where: {
-      isActive: true,
-      roles: {
-        none: { name: { equals: "CUSTOMER", mode: "insensitive" } },
-      },
-    },
-    orderBy: [{ name: "asc" }, { email: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-  });
-}
-
-export async function bulkAssignVendor(
-  tx: DB,
-  input: {
-    ids: string[];
-    vendorId: string;
-    vendorNameSnap: string;
-    onlyFromDraft?: boolean;
-  }
-): Promise<number> {
-  const db = dbOrTx(tx);
-
-  const where: Prisma.ServiceRequestWhereInput = {
-    id: { in: input.ids },
-    ...(input.onlyFromDraft !== false ? { status: ServiceRequestStatus.DRAFT } : {}),
-  };
-
-  const updated = await db.serviceRequest.updateMany({
-    where,
-    data: {
-      vendorId: input.vendorId,
-      vendorNameSnap: input.vendorNameSnap,
-      status: ServiceRequestStatus.IN_PROGRESS,
-      updatedAt: new Date(),
-    },
-  });
-
-  return updated.count;
-}
-
-export async function bulkAssignTechnician(
-  tx: DB,
-  input: {
-    ids: string[];
-    technicianId: string;
-    technicianNameSnap: string;
-  }
-): Promise<number> {
-  const db = dbOrTx(tx);
-  const ids = Array.from(new Set((input.ids ?? []).map(String).map((x) => x.trim()).filter(Boolean)));
-  if (!ids.length) return 0;
-
-  const updated = await db.serviceRequest.updateMany({
-    where: { id: { in: ids } },
-    data: {
-      technicianId: input.technicianId,
-      technicianNameSnap: input.technicianNameSnap,
-      updatedAt: new Date(),
-    },
-  });
-
-  return updated.count;
-}
-
-export async function assignTechnicianOne(
-  tx: DB,
-  input: {
-    id: string;
-    technicianId: string;
-    technicianNameSnap: string;
-  }
-) {
-  const db = dbOrTx(tx);
-  return db.serviceRequest.update({
-    where: { id: input.id },
-    data: {
-      technicianId: input.technicianId,
-      technicianNameSnap: input.technicianNameSnap,
-      updatedAt: new Date(),
-    },
-    select: {
-      id: true,
-      status: true,
-      vendorId: true,
-      vendorNameSnap: true,
-      technicianId: true,
-      technicianNameSnap: true,
-      productId: true,
-      variantId: true,
-      brandSnapshot: true,
-      modelSnapshot: true,
-      refSnapshot: true,
-      serialSnapshot: true,
-    },
-  });
-}
-
-export async function listAssignedAfterBulk(
-  tx: DB,
-  input: { ids: string[]; onlyFromDraft?: boolean }
-) {
-  const db = dbOrTx(tx);
-
-  return db.serviceRequest.findMany({
-    where: {
-      id: { in: input.ids },
-      ...(input.onlyFromDraft !== false ? { status: ServiceRequestStatus.IN_PROGRESS } : {}),
-    },
-    select: {
-      id: true,
-      productId: true,
-      variantId: true,
-    },
-  });
-}
-
-export async function findByIdForMaintenance(tx: DB, id: string) {
-  const db = dbOrTx(tx);
-  return db.serviceRequest.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      type: true,
-      billable: true,
-      productId: true,
-      variantId: true,
-      vendorId: true,
-      vendorNameSnap: true,
-      technicianId: true,
-      technicianNameSnap: true,
-    },
-  });
-}
-
-export async function completeServiceRequestOne(
-  tx: DB,
-  input: {
-    id: string;
-    completedAt?: Date | null;
-  }
-) {
-  const db = dbOrTx(tx);
-
   return db.serviceRequest.update({
     where: { id: input.id },
     data: {

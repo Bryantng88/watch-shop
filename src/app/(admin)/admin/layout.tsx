@@ -1,9 +1,9 @@
-// app/(admin)/admin/layout.tsx
-import AdminTopbar from './_client/AdminTopBar';
-import AdminSidebar from './_client/AdmidSideBar';
-import { getCurrentUser } from '@/server/auth/getCurrentUser';
+import AdminTopbar from "./_client/AdminTopBar";
+import AdminSidebar from "./_client/AdmidSideBar";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
-import { AppToastProvider } from '@/components/feedback/AppToastProvider';
+import { AppToastProvider } from "@/components/feedback/AppToastProvider";
+import { getSideMenuNotificationCounts } from "./_server/sidebar-notifications";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const user = await getCurrentUser();
@@ -19,14 +19,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect("/403");
     }
 
+    const notificationCounts = await getSideMenuNotificationCounts();
+
     return (
         <div className="flex h-screen overflow-hidden">
             <div className="hidden lg:block w-52 shrink-0 bg-[#11191f]">
-                <AdminSidebar user={{ permissions }} />
+                <AdminSidebar
+                    user={{ permissions }}
+                    notifications={notificationCounts}
+                />
             </div>
 
             <div className="lg:hidden">
-                <AdminSidebar user={{ permissions }} />
+                <AdminSidebar
+                    user={{ permissions }}
+                    notifications={notificationCounts}
+                    variant="mobile"
+                />
             </div>
 
             <div className="flex-1 min-w-0 flex flex-col">
