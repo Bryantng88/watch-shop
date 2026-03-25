@@ -536,6 +536,8 @@ export async function listAdminProducts(
             variantSnapshot: latestVariant
                 ? {
                     price: latestVariant.price != null ? Number(latestVariant.price) : null,
+                    availabilityStatus: latestVariant.availabilityStatus ?? null,
+                    stockQty: latestVariant.stockQty != null ? Number(latestVariant.stockQty) : 0,
                 }
                 : null,
             watchSpecSnapshot: p.watchSpec ?? null,

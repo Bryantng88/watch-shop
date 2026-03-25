@@ -3,6 +3,7 @@ import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus } from "
 import * as prodRepo from "./product.repo";
 import { z } from "zod";
 import { computeEffectivePrice } from "../helpers/price";
+import { MIN_IMAGES, getRequiredWatchSpecFields, hasValue as hasRuleValue } from "./rules";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
@@ -75,7 +76,7 @@ const OPEN_SERVICE_REQUEST_STATUSES = [
     ServiceRequestStatus.IN_PROGRESS,
 ] as const;
 
-function hasValue(v: unknown) {
+function hasShallowValue(v: unknown) {
     return !(v == null || v === "");
 }
 
@@ -89,10 +90,10 @@ function computeMissingVariantFields(item: any): string[] {
     if (item?.type === ProductType.WATCH_STRAP) {
         const s = item?.strapSpec ?? null;
         if (!s) return ["strap spec"];
-        if (!hasValue(s.material)) missing.push("chất liệu dây");
-        if (!hasValue(s.color)) missing.push("màu dây");
-        if (!hasValue(s.lugWidthMM)) missing.push("lug width");
-        if (!hasValue(s.buckleWidthMM)) missing.push("buckle width");
+        if (!hasShallowValue(s.material)) missing.push("chất liệu dây");
+        if (!hasShallowValue(s.color)) missing.push("màu dây");
+        if (!hasShallowValue(s.lugWidthMM)) missing.push("lug width");
+        if (!hasShallowValue(s.buckleWidthMM)) missing.push("buckle width");
     }
 
     return Array.from(new Set(missing));
@@ -106,13 +107,63 @@ function computeMissingWatchSpecFields(item: any): string[] {
     if (!ws) return ["watch spec"];
 
     const missing: string[] = [];
-    if (!hasValue(ws.caseType)) missing.push("kiểu vỏ");
-    if (!hasValue(ws.movement)) missing.push("bộ máy");
-    if (!hasValue(ws.caseMaterial)) missing.push("chất liệu vỏ");
-    if (!hasValue(ws.strap)) missing.push("loại dây");
-    if (!hasValue(ws.glass)) missing.push("kính");
+    if (!hasShallowValue(ws.caseType)) missing.push("kiểu vỏ");
+    if (!hasShallowValue(ws.movement)) missing.push("bộ máy");
+    if (!hasShallowValue(ws.caseMaterial)) missing.push("chất liệu vỏ");
+    if (!hasShallowValue(ws.strap)) missing.push("loại dây");
+    if (!hasShallowValue(ws.glass)) missing.push("kính");
 
     return Array.from(new Set(missing));
+}
+
+function computePublishReadiness(item: any) {
+    if (item?.type === ProductType.WATCH_STRAP) {
+        const price = Number(item?.variantSnapshot?.price ?? item?.minPrice ?? 0);
+        const hasSellableVariant = Number.isFinite(price) && price > 0;
+        const missing = [
+            Number(item?.imagesCount ?? 0) >= 1 ? null : "images",
+            item?.brandId ? null : "brandId",
+            hasSellableVariant ? null : "variant",
+        ].filter(Boolean) as string[];
+
+        return {
+            isReadyToPublish: missing.length === 0,
+            publishMissing: missing,
+        };
+    }
+
+    const imageCount = Number(item?.imagesCount ?? 0);
+    const variantPrice = Number(item?.variantSnapshot?.price ?? item?.minPrice ?? 0);
+    const variantAvailability = String(item?.variantSnapshot?.availabilityStatus ?? "").toUpperCase();
+    const variantStockQty = Number(item?.variantSnapshot?.stockQty ?? 0);
+    const hasSellableVariant =
+        Number.isFinite(variantPrice) &&
+        variantPrice > 0 &&
+        (variantAvailability === "ACTIVE" || variantStockQty > 0);
+
+    const missing: string[] = [];
+
+    if (imageCount < MIN_IMAGES) missing.push("images");
+    if (!item?.brandId) missing.push("brandId");
+    if (!hasSellableVariant) missing.push("variant");
+
+    const ws = item?.watchSpecSnapshot ?? null;
+    if (!ws) {
+        missing.push("watchSpec");
+    } else {
+        const missingSpecFields = getRequiredWatchSpecFields(ws)
+            .filter((field) => !hasRuleValue((ws as any)?.[field.key]))
+            .map((field) => field.label);
+
+        if (missingSpecFields.length) {
+            missing.push(...missingSpecFields);
+        }
+    }
+
+    return {
+        isReadyToPublish: missing.length === 0,
+        publishMissing: Array.from(new Set(missing)),
+    };
 }
 
 export async function createProductDraft(title: string) {
@@ -130,6 +181,30 @@ export async function createProductDraft(title: string) {
 export async function detail(id: string) {
     return prisma.product.findUnique({
         where: { id },
+        include: {
+            brand: true,
+            vendor: true,
+            watchSpec: {
+                include: {
+                    complication: true,
+                },
+            },
+            image: {
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            },
+            variants: {
+                orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                include: {
+                    acquisitionItem: {
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        select: {
+                            unitCost: true,
+                        },
+                    },
+                },
+            },
+        },
     });
 }
 
@@ -220,6 +295,7 @@ export async function getAdminProductList(
         const missingWatchSpecFields = computeMissingWatchSpecFields(item);
         const isVariantInfoComplete = missingVariantFields.length === 0;
         const isWatchSpecComplete = missingWatchSpecFields.length === 0;
+        const publishReadiness = computePublishReadiness(item);
 
         return {
             ...item,
@@ -231,6 +307,8 @@ export async function getAdminProductList(
             isVariantInfoComplete,
             isWatchSpecComplete,
             isInfoComplete: isVariantInfoComplete && isWatchSpecComplete,
+            isReadyToPublish: publishReadiness.isReadyToPublish,
+            publishMissing: publishReadiness.publishMissing,
         };
     });
 

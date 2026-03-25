@@ -45,6 +45,7 @@ export default async function EditProductPage({ params }: { params: { id: string
                     brands={serialize(brands)}
                     vendors={serialize(vendors)}
                     productStatusOptions={serialize(opts.productStatus)}
+                    availabilityStatusOptions={serialize(opts.availabilityStatus)}
                     typeOptions={serialize(opts.type)}
                     caseOptions={serialize(opts.case)}
                     movementOptions={serialize(opts.movement)}

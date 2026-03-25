@@ -1,6 +1,6 @@
 
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, ServiceRequestStatus, ProductStatus } from "@prisma/client";
+import { Prisma, ServiceRequestStatus, ProductStatus, ServiceScope, ServiceType } from "@prisma/client";
 
 export type ServiceRequestListRow = {
   id: string;
@@ -147,9 +147,17 @@ export async function findDefaultTechnician(tx: DB) {
 export async function createTechnicalCheckRequest(
   tx: DB,
   input: {
+    refNo?: string | null;
     productId: string;
     variantId?: string | null;
     notes?: string | null;
+    billable?: boolean;
+    type?: ServiceType;
+    scope?: ServiceScope | null;
+    status?: ServiceRequestStatus;
+    brandSnapshot?: string | null;
+    modelSnapshot?: string | null;
+    refSnapshot?: string | null;
     technicianId?: string | null;
     technicianNameSnap?: string | null;
   }
@@ -158,11 +166,17 @@ export async function createTechnicalCheckRequest(
 
   return db.serviceRequest.create({
     data: {
+      refNo: input.refNo ?? null,
+      type: input.type ?? ServiceType.PAID,
+      billable: input.billable ?? false,
       productId: input.productId,
       variantId: input.variantId ?? null,
-      scope: "WITH_PURCHASE" as any,
-      status: "DRAFT" as any,
+      scope: input.scope ?? ServiceScope.WITH_PURCHASE,
+      status: input.status ?? ServiceRequestStatus.DRAFT,
       notes: input.notes ?? null,
+      brandSnapshot: input.brandSnapshot ?? null,
+      modelSnapshot: input.modelSnapshot ?? null,
+      refSnapshot: input.refSnapshot ?? null,
       technicianId: input.technicianId ?? null,
       technicianNameSnap: input.technicianNameSnap ?? null,
     },

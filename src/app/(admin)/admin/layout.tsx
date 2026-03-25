@@ -13,9 +13,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     }
 
     const permissions = Array.from(new Set(user.permissions ?? []));
-    const canEnterAdmin = user.roles.includes("ADMIN") || permissions.length > 0;
 
-    if (!canEnterAdmin) {
+    // Có ít nhất 1 quyền thì cho vào admin
+    if (permissions.length === 0) {
         redirect("/403");
     }
 

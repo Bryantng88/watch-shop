@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 type VendorOpt = { id: string; name: string };
-type TechnicianOpt = { id: string; name: string; email?: string };
 
 type MaintRow = {
   id: string;
@@ -19,8 +18,6 @@ type MaintRow = {
 };
 
 type SrMeta = {
-  technicianId: string | null;
-  technicianName: string | null;
   vendorId: string | null;
   vendorName: string | null;
   status: string | null;
@@ -29,6 +26,11 @@ type SrMeta = {
 function fmt(d?: string | null) {
   if (!d) return "-";
   return new Date(d).toLocaleString("vi-VN");
+}
+
+function fmtMoney(value?: number | null) {
+  if (value == null) return "-";
+  return `${new Intl.NumberFormat("vi-VN").format(Number(value))} VND`;
 }
 
 export default function MaintenanceDrawer({
@@ -45,25 +47,16 @@ export default function MaintenanceDrawer({
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<MaintRow[]>([]);
   const [srMeta, setSrMeta] = useState<SrMeta>({
-    technicianId: null,
-    technicianName: null,
     vendorId: null,
     vendorName: null,
     status: null,
   });
 
-  const [notes, setNotes] = useState("");
-  const [servicedAt, setServicedAt] = useState<string>("");
-  const [totalCost, setTotalCost] = useState<string>("");
-
   const [vendors, setVendors] = useState<VendorOpt[]>([]);
   const [vendorId, setVendorId] = useState<string>("");
-  const [pendingVendorId, setPendingVendorId] = useState<string>("");
-  const [vendorReason, setVendorReason] = useState<string>("");
-
-  const [technicians, setTechnicians] = useState<TechnicianOpt[]>([]);
-  const [technicianId, setTechnicianId] = useState<string>("");
-  const [techNote, setTechNote] = useState<string>("");
+  const [vendorNotes, setVendorNotes] = useState<string>("");
+  const [vendorServicedAt, setVendorServicedAt] = useState<string>("");
+  const [vendorTotalCost, setVendorTotalCost] = useState<string>("");
 
   const canFetch = open && !!serviceRequestId;
 
@@ -71,10 +64,9 @@ export default function MaintenanceDrawer({
     if (!serviceRequestId) return;
     setLoading(true);
     try {
-      const [mRes, vRes, tRes] = await Promise.all([
+      const [mRes, vRes] = await Promise.all([
         fetch(`/api/admin/service-requests/${serviceRequestId}/maintenance`, { cache: "no-store" }),
         fetch(`/api/admin/vendors/dropdown`, { cache: "no-store" }),
-        fetch(`/api/admin/users/technicians`, { cache: "no-store" }),
       ]);
 
       const m = await mRes.json();
@@ -83,8 +75,6 @@ export default function MaintenanceDrawer({
 
       const sr = m?.sr ?? null;
       setSrMeta({
-        technicianId: sr?.technicianId ?? null,
-        technicianName: sr?.technicianNameSnap ?? sr?.technician?.name ?? null,
         vendorId: sr?.vendorId ?? null,
         vendorName: sr?.vendorNameSnap ?? sr?.Vendor?.name ?? null,
         status: sr?.status ?? null,
@@ -94,14 +84,6 @@ export default function MaintenanceDrawer({
       const vItems: VendorOpt[] = Array.isArray(vJson?.items) ? vJson.items : Array.isArray(vJson) ? vJson : [];
       setVendors(vItems);
       setVendorId(sr?.vendorId ?? vItems?.[0]?.id ?? "");
-      setPendingVendorId("");
-      setVendorReason("");
-
-      const tJson = await tRes.json();
-      const tItems: TechnicianOpt[] = Array.isArray(tJson?.items) ? tJson.items : [];
-      setTechnicians(tItems);
-      setTechnicianId(sr?.technicianId ?? tItems?.[0]?.id ?? "");
-      setTechNote("");
     } finally {
       setLoading(false);
     }
@@ -114,18 +96,15 @@ export default function MaintenanceDrawer({
 
   useEffect(() => {
     if (!open) return;
-    setNotes("");
-    setServicedAt("");
-    setTotalCost("");
-    setPendingVendorId("");
-    setVendorReason("");
-    setTechNote("");
+    setVendorNotes("");
+    setVendorServicedAt("");
+    setVendorTotalCost("");
   }, [open, serviceRequestId]);
 
-  const currentTechnicianLabel = useMemo(() => srMeta.technicianName ?? "Chưa gán", [srMeta.technicianName]);
   const currentVendorLabel = useMemo(() => srMeta.vendorName ?? "Chưa chuyển vendor", [srMeta.vendorName]);
-
-  const saveDisabled = loading || (!notes.trim() && !servicedAt && !totalCost);
+  const vendorChanged = !!vendorId && vendorId !== (srMeta.vendorId ?? "");
+  const hasVendorPayload = !!vendorNotes.trim() || !!vendorServicedAt || !!vendorTotalCost;
+  const saveVendorDisabled = loading || !vendorId || (!vendorChanged && !hasVendorPayload);
   const canComplete = !loading && srMeta.status !== "COMPLETED" && srMeta.status !== "DELIVERED" && srMeta.status !== "CANCELED";
 
   if (!open) return null;
@@ -138,152 +117,103 @@ export default function MaintenanceDrawer({
           <div>
             <div className="text-lg font-semibold">Maintenance</div>
             <div className="font-mono text-xs text-gray-500">{serviceRequestId}</div>
-            <div className="mt-1 text-xs text-gray-500">Trạng thái: <span className="font-medium text-gray-700">{srMeta.status ?? "-"}</span></div>
+            <div className="mt-1 text-xs text-gray-500">
+              Trạng thái: <span className="font-medium text-gray-700">{srMeta.status ?? "-"}</span>
+            </div>
           </div>
-          <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={onClose} type="button">✕</button>
+          <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={onClose} type="button">
+            ✕
+          </button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-auto p-4">
           <section className="space-y-3 rounded border p-3">
-            <div className="text-sm font-semibold">Thợ tiếp nhận</div>
-            <div className="text-sm text-gray-600">Hiện tại: <span className="font-medium text-gray-900">{currentTechnicianLabel}</span></div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
-              <div>
-                <label className="text-xs text-gray-500">Gán / đổi thợ</label>
-                <select className="mt-1 h-10 w-full rounded border px-3 text-sm" value={technicianId} onChange={(e) => setTechnicianId(e.target.value)}>
-                  <option value="">-- Chọn thợ --</option>
-                  {technicians.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}{t.email ? ` • ${t.email}` : ""}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="button"
-                disabled={!technicianId || technicianId === (srMeta.technicianId ?? "") || loading}
-                className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50"
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/assign-technician`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ technicianId, note: techNote.trim() || null }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data?.error || "Assign technician failed");
-                    await fetchAll();
-                    onChanged?.();
-                  } catch (err: any) {
-                    alert(err?.message || "Assign technician failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Gán thợ
-              </button>
-            </div>
-            <textarea
-              className="min-h-[72px] w-full rounded border px-3 py-2 text-sm"
-              placeholder="Ghi chú giao việc cho thợ (tuỳ chọn)"
-              value={techNote}
-              onChange={(e) => setTechNote(e.target.value)}
-            />
-          </section>
-
-          <section className="space-y-3 rounded border p-3">
             <div className="text-sm font-semibold">Vendor ngoài</div>
-            <div className="text-sm text-gray-600">Hiện tại: <span className="font-medium text-gray-900">{currentVendorLabel}</span></div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
+            <div className="text-sm text-gray-600">
+              Hiện tại: <span className="font-medium text-gray-900">{currentVendorLabel}</span>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">Chuyển / cập nhật vendor</label>
+              <select
+                className="mt-1 h-10 w-full rounded border px-3 text-sm"
+                value={vendorId}
+                onChange={(e) => setVendorId(e.target.value)}
+              >
+                <option value="">-- Chọn vendor --</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <label className="text-xs text-gray-500">Chuyển vendor</label>
-                <select className="mt-1 h-10 w-full rounded border px-3 text-sm" value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
-                  <option value="">-- Chọn vendor --</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
+                <label className="text-xs text-gray-500">Ngày xử lý</label>
+                <input
+                  type="datetime-local"
+                  className="mt-1 h-10 w-full rounded border px-3 text-sm"
+                  value={vendorServicedAt}
+                  onChange={(e) => setVendorServicedAt(e.target.value)}
+                />
               </div>
+              <div>
+                <label className="text-xs text-gray-500">Chi phí vendor</label>
+                <input
+                  type="number"
+                  className="mt-1 h-10 w-full rounded border px-3 text-sm"
+                  value={vendorTotalCost}
+                  onChange={(e) => setVendorTotalCost(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500">Nội dung / ghi chú vendor</label>
+              <textarea
+                className="mt-1 min-h-[96px] w-full rounded border px-3 py-2 text-sm"
+                placeholder="Mô tả công việc, phát sinh, ghi chú từ vendor..."
+                value={vendorNotes}
+                onChange={(e) => setVendorNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 type="button"
-                disabled={!vendorId || vendorId === (srMeta.vendorId ?? "") || loading}
-                className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50"
+                disabled={saveVendorDisabled}
+                className="rounded border px-3 py-2 text-sm disabled:opacity-50"
                 onClick={async () => {
                   try {
                     setLoading(true);
                     const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/assign-vendor`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ vendorId, reason: vendorReason.trim() || null }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data?.error || "Assign vendor failed");
-                    await fetchAll();
-                    onChanged?.();
-                  } catch (err: any) {
-                    alert(err?.message || "Assign vendor failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Chuyển vendor
-              </button>
-            </div>
-            <textarea
-              className="min-h-[72px] w-full rounded border px-3 py-2 text-sm"
-              placeholder="Lý do cần outsource / ghi chú cho vendor"
-              value={vendorReason}
-              onChange={(e) => setVendorReason(e.target.value)}
-            />
-          </section>
-
-          <section className="space-y-3 rounded border p-3">
-            <div className="text-sm font-semibold">Cập nhật maintenance log</div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div>
-                <label className="text-xs text-gray-500">Serviced at</label>
-                <input type="datetime-local" className="mt-1 h-10 w-full rounded border px-3 text-sm" value={servicedAt} onChange={(e) => setServicedAt(e.target.value)} />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Chi phí</label>
-                <input type="number" className="mt-1 h-10 w-full rounded border px-3 text-sm" value={totalCost} onChange={(e) => setTotalCost(e.target.value)} placeholder="0" />
-              </div>
-            </div>
-            <textarea className="min-h-[96px] w-full rounded border px-3 py-2 text-sm" placeholder="Note / cập nhật xử lý nội bộ" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                disabled={saveDisabled}
-                className="rounded border px-3 py-2 text-sm disabled:opacity-50"
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/maintenance`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        vendorId: srMeta.vendorId,
-                        notes: notes.trim() || null,
-                        servicedAt: servicedAt ? new Date(servicedAt).toISOString() : null,
-                        totalCost: totalCost ? Number(totalCost) : null,
+                        vendorId,
+                        notes: vendorNotes.trim() || null,
+                        servicedAt: vendorServicedAt ? new Date(vendorServicedAt).toISOString() : null,
+                        totalCost: vendorTotalCost ? Number(vendorTotalCost) : null,
                       }),
                     });
                     const data = await res.json();
-                    if (!res.ok) throw new Error(data?.error || "Create maintenance log failed");
-                    setNotes("");
-                    setServicedAt("");
-                    setTotalCost("");
+                    if (!res.ok) throw new Error(data?.error || "Update vendor failed");
+                    setVendorNotes("");
+                    setVendorServicedAt("");
+                    setVendorTotalCost("");
                     await fetchAll();
                     onChanged?.();
                   } catch (err: any) {
-                    alert(err?.message || "Create maintenance log failed");
+                    alert(err?.message || "Update vendor failed");
                   } finally {
                     setLoading(false);
                   }
                 }}
               >
-                Lưu log
+                Lưu cập nhật vendor
               </button>
               <button
                 type="button"
@@ -295,13 +225,13 @@ export default function MaintenanceDrawer({
                     const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/complete`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ note: notes.trim() || null }),
+                      body: JSON.stringify({ note: vendorNotes.trim() || null }),
                     });
                     const data = await res.json();
                     if (!res.ok) throw new Error(data?.error || "Complete service failed");
-                    setNotes("");
-                    setServicedAt("");
-                    setTotalCost("");
+                    setVendorNotes("");
+                    setVendorServicedAt("");
+                    setVendorTotalCost("");
                     await fetchAll();
                     onChanged?.();
                   } catch (err: any) {
@@ -332,7 +262,9 @@ export default function MaintenanceDrawer({
                       Thợ: {row.technicianName || "-"} • Vendor: {row.vendorName || "-"}
                     </div>
                     <div className="mt-2 whitespace-pre-wrap text-gray-700">{row.notes || "-"}</div>
-                    <div className="mt-2 text-xs text-gray-500">Serviced at: {fmt(row.servicedAt)} • Chi phí: {row.totalCost != null ? new Intl.NumberFormat("vi-VN").format(Number(row.totalCost)) + " VND" : "-"}</div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Ngày xử lý: {fmt(row.servicedAt)} • Chi phí: {fmtMoney(row.totalCost)}
+                    </div>
                   </div>
                 ))}
               </div>

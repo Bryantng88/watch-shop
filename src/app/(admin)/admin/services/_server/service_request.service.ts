@@ -1,321 +1,304 @@
+"use server";
 
-import { PrismaClient, Prisma, ProductStatus, ServiceRequestStatus, ServiceScope, ServiceType } from "@prisma/client";
-import * as serviceRequestRepo from "./service_request.repo";
-import * as maintRepo from "./maintenance.repo";
-import { genRefNo } from "../../__components/AutoGenRef";
-import type { ServiceRequestSearchInput, ServiceRequestListSort, ServiceRequestViewKey } from "../_helper/SearchParams";
+import { prisma } from "@/server/db/client";
+import * as maintenanceRepo from "./maintenance.repo";
+import { MaintenanceEventType, Prisma } from "@prisma/client";
+import { createPayment } from "../../payments/_server/payment.repo";
 
-const prisma = new PrismaClient();
-const OPEN_SERVICE_STATUSES = [ServiceRequestStatus.DRAFT, ServiceRequestStatus.DIAGNOSING, ServiceRequestStatus.WAIT_APPROVAL, ServiceRequestStatus.IN_PROGRESS];
-
-export type ServiceRequestListItem = {
-    id: string;
-    refNo: string | null;
-    status: string;
-    createdAt: Date;
-    updatedAt: Date;
-    serviceName: string | null;
-    serviceCode: string | null;
-    orderId: string | null;
-    orderRefNo: string | null;
-    scope: string | null;
-    customerItemNote: string | null;
-    vendorName: string | null;
-    technicianName: string | null;
-    maintenanceCount: number;
-    productTitle: string | null;
+type CreateMaintenanceLogInput = {
+    serviceRequestId: string;
+    vendorId?: string | null;
+    notes?: string | null;
+    servicedAt?: Date | null;
+    totalCost?: number | null;
+    currency?: string | null;
+    paymentMethod?: string | null;
+    paymentStatus?: string | null;
+    paymentType?: string | null;
+    paymentPurpose?: string | null;
 };
 
-function buildOrderBy(sort?: ServiceRequestListSort): Prisma.ServiceRequestOrderByWithRelationInput {
-    switch (sort) {
-        case 'createdAsc': return { createdAt: 'asc' };
-        case 'createdDesc': return { createdAt: 'desc' };
-        case 'updatedAsc': return { updatedAt: 'asc' };
-        case 'updatedDesc':
-        default: return { updatedAt: 'desc' };
-    }
-}
-function viewToStatusWhere(view?: ServiceRequestViewKey): Prisma.ServiceRequestWhereInput | undefined {
-    switch (view) {
-        case 'draft': return { status: ServiceRequestStatus.DRAFT };
-        case 'in_progress': return { status: { in: [ServiceRequestStatus.DIAGNOSING, ServiceRequestStatus.WAIT_APPROVAL, ServiceRequestStatus.IN_PROGRESS] } };
-        case 'done': return { status: { in: [ServiceRequestStatus.COMPLETED, ServiceRequestStatus.DELIVERED] } };
-        case 'canceled': return { status: ServiceRequestStatus.CANCELED };
-        default: return undefined;
-    }
-}
-function combineWhere(a?: Prisma.ServiceRequestWhereInput, b?: Prisma.ServiceRequestWhereInput): Prisma.ServiceRequestWhereInput {
-    if (a && b) return { AND: [a, b] };
-    return a ?? b ?? {};
-}
-async function resolveDefaultTechnicianTx(tx: Prisma.TransactionClient) {
-    return serviceRequestRepo.findDefaultTechnician(tx);
-}
-async function markProductInServiceIfNeeded(tx: Prisma.TransactionClient, productId?: string | null) {
-    if (!productId) return;
-    const product = await tx.product.findUnique({ where: { id: productId }, select: { id: true, status: true } });
-    if (!product) return;
-    if ([ProductStatus.POSTED, ProductStatus.AVAILABLE].includes(product.status as any)) {
-        await tx.product.update({ where: { id: product.id }, data: { status: ProductStatus.IN_SERVICE } });
-    }
-}
-async function restoreProductStatusIfDone(tx: Prisma.TransactionClient, productId?: string | null) {
-    if (!productId) return;
-    const openCount = await tx.serviceRequest.count({ where: { productId, status: { in: OPEN_SERVICE_STATUSES } } });
-    if (openCount > 0) return;
-    const product = await tx.product.findUnique({ where: { id: productId }, select: { id: true, status: true } });
-    if (!product) return;
-    if (product.status === ProductStatus.IN_SERVICE) {
-        await tx.product.update({ where: { id: product.id }, data: { status: ProductStatus.POSTED } });
-    }
+type AssignVendorInput = {
+    serviceRequestId: string;
+    vendorId: string;
+    reason?: string | null;
+    notes?: string | null;
+    servicedAt?: Date | null;
+    totalCost?: number | null;
+    currency?: string | null;
+    paymentMethod?: string | null;
+    paymentStatus?: string | null;
+    paymentType?: string | null;
+    paymentPurpose?: string | null;
+    setInProgress?: boolean;
+};
+
+function serialize(obj: any) {
+    return JSON.parse(
+        JSON.stringify(obj, (_k, v) => {
+            if (v instanceof Date) return v.toISOString();
+            if (typeof v === "object" && v?._isDecimal) return Number(v);
+            return v;
+        }),
+    );
 }
 
-export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
-    const { page, pageSize, q, sort, view } = input;
-    const baseWhere: Prisma.ServiceRequestWhereInput = q?.trim() ? {
-        OR: [
-            { id: { contains: q, mode: 'insensitive' } },
-            { refNo: { contains: q, mode: 'insensitive' } },
-            { notes: { contains: q, mode: 'insensitive' } },
-            { vendorNameSnap: { contains: q, mode: 'insensitive' } },
-            { technicianNameSnap: { contains: q, mode: 'insensitive' } },
-            { product: { is: { title: { contains: q, mode: 'insensitive' } } } },
-            { ServiceCatalog: { is: { name: { contains: q, mode: 'insensitive' } } } },
-            { orderItem: { is: { order: { is: { refNo: { contains: q, mode: 'insensitive' } } } } } },
-        ],
-    } : {};
-    const where = combineWhere(baseWhere, viewToStatusWhere(view));
-    const skip = (page - 1) * pageSize;
-    const { rows, total } = await serviceRequestRepo.getServiceRequestList(where, buildOrderBy(sort), skip, pageSize, prisma);
-    const [cAll, cDraft, cInProgress, cDone, cCanceled] = await Promise.all([
-        prisma.serviceRequest.count({ where: baseWhere }),
-        prisma.serviceRequest.count({ where: combineWhere(baseWhere, viewToStatusWhere('draft')) }),
-        prisma.serviceRequest.count({ where: combineWhere(baseWhere, viewToStatusWhere('in_progress')) }),
-        prisma.serviceRequest.count({ where: combineWhere(baseWhere, viewToStatusWhere('done')) }),
-        prisma.serviceRequest.count({ where: combineWhere(baseWhere, viewToStatusWhere('canceled')) }),
-    ]);
-    const items: ServiceRequestListItem[] = rows.map((r) => ({
-        id: r.id,
-        refNo: r.refNo ?? null,
-        status: r.status,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
-        serviceName: r.serviceCatalog?.name ?? 'Kiểm tra kỹ thuật',
-        serviceCode: r.serviceCatalog?.code ?? null,
-        orderId: r.orderItem?.order?.id ?? null,
-        orderRefNo: r.orderItem?.order?.refNo ?? null,
-        scope: r.scope ?? null,
-        vendorName: r.vendorName ?? null,
-        technicianName: r.technicianName ?? null,
-        customerItemNote: r.orderItem?.customerItemNote ?? null,
-        maintenanceCount: r.maintenanceCount ?? 0,
-        productTitle: r.productTitle ?? null,
-    }));
-    return { items, total, page, pageSize, counts: { all: cAll, draft: cDraft, in_progress: cInProgress, done: cDone, canceled: cCanceled } };
+function mergeVendorNotes(...parts: Array<string | null | undefined>) {
+    return parts
+        .map((part) => (typeof part === "string" ? part.trim() : ""))
+        .filter(Boolean)
+        .join("\n");
 }
 
-export type ServiceCatalogOption = { id: string; code: string | null; name: string; defaultPrice: number | null; };
-export async function getServiceCatalogOptions() {
-    const rows = await serviceRequestRepo.getOptions(prisma, { isActive: true });
-    return rows.map((r) => ({ id: r.id, code: r.code ?? null, name: r.name, defaultPrice: r.defaultPrice != null ? Number(r.defaultPrice) : null }));
-}
+async function createServicePayment(tx: Prisma.TransactionClient, args: {
+    amount: number;
+    currency: string;
+    serviceRequestId: string;
+    vendorId: string | null;
+    note: string | null;
+    paymentMethod?: string | null;
+    paymentStatus?: string | null;
+    paymentType?: string | null;
+    paymentPurpose?: string | null;
+}) {
+    const amountDec = new Prisma.Decimal(String(args.amount));
+    const createdPayment = await createPayment(tx, {
+        amount: amountDec,
+        currency: args.currency,
+        service_request_id: args.serviceRequestId,
+        vendor_id: args.vendorId,
+        note: args.note,
+        method: (args.paymentMethod ?? "CASH") as any,
+        status: (args.paymentStatus ?? "UNPAID") as any,
+        direction: "OUT" as any,
+        type: (args.paymentType ?? "SERVICE") as any,
+        purpose: (args.paymentPurpose ?? "MAINTENANCE_COST") as any,
+    });
 
-type OrderForPost = any;
-function pickSnapFromLinkedProductItem(linked: any) {
-    const product = linked?.Product ?? null;
-    const variant = linked?.variant ?? null;
     return {
-        productId: linked?.productId ?? null,
-        variantId: linked?.variantId ?? null,
-        brandSnapshot: product?.brandName ?? product?.brand ?? null,
-        modelSnapshot: product?.modelName ?? product?.title ?? linked?.title ?? null,
-        refSnapshot: product?.refNo ?? product?.ref ?? null,
-        serialSnapshot: variant?.serial ?? variant?.serialNo ?? null,
+        paymentId: createdPayment.id,
+        paidAmount: amountDec,
+        paidAt: new Date(),
     };
 }
-export async function createServiceRequestsFromOrderTx(tx: Prisma.TransactionClient, order: OrderForPost) {
-    const tech = await resolveDefaultTechnicianTx(tx);
-    const serviceItems = (order.items ?? []).filter((i: any) => i.kind === 'SERVICE');
-    if (!serviceItems.length) return { created: 0 };
-    const rows: Prisma.ServiceRequestCreateManyInput[] = serviceItems.map((it: any) => {
-        const linked = (order.items ?? []).find((x: any) => x.id === it.linkedOrderItemId) ?? null;
-        const snap = pickSnapFromLinkedProductItem(linked);
-        const servicecatalogid = it.serviceCatalogId ?? it.servicecatalogid ?? null;
-        if (!servicecatalogid) throw new Error(`OrderItem SERVICE thiếu serviceCatalogId (item=${it.id})`);
-        return {
-            refNo: null,
-            type: ServiceType.PAID,
-            scope: (it.serviceScope ?? ServiceScope.CUSTOMER_OWNED) as any,
-            status: ServiceRequestStatus.DRAFT,
-            billable: true,
-            orderItemId: it.id,
-            customerId: order.customerId ?? null,
-            productId: snap.productId,
-            variantId: snap.variantId,
-            brandSnapshot: snap.brandSnapshot,
-            modelSnapshot: snap.modelSnapshot,
-            refSnapshot: snap.refSnapshot,
-            serialSnapshot: snap.serialSnapshot,
-            notes: it.customerItemNote ?? it.notes ?? null,
-            warrantyUntil: null,
-            warrantyPolicy: null,
-            servicecatalogid,
-            technicianId: tech?.id ?? null,
-            technicianNameSnap: tech?.name ?? tech?.email ?? null,
-        } as any;
-    });
-    await serviceRequestRepo.createMany(tx, rows);
-    return { created: rows.length };
-}
 
-export type CreateServiceRequestFromProductInput = {
-    productId: string;
-    serviceCatalogId?: string | null;
-    scope: ServiceScope;
-    notes?: string | null;
-    customerId?: string | null;
-};
-export async function createFromProduct(input: CreateServiceRequestFromProductInput) {
-    return prisma.$transaction((tx) => createFromProductTx(tx, input));
-}
-export async function createFromProductTx(tx: Prisma.TransactionClient, input: CreateServiceRequestFromProductInput) {
-    const product = await serviceRequestRepo.findProductForService(tx, input.productId);
-    if (!product) throw new Error('Product not found');
-    const variantId = product.variants?.[0]?.id ?? null;
-    const tech = await resolveDefaultTechnicianTx(tx);
-    const refNo = await genRefNo(tx, { model: tx.serviceRequest, prefix: 'SR', field: 'refNo', padding: 6 });
-    const created = await serviceRequestRepo.createOne(tx, {
-        refNo,
-        type: ServiceType.PAID,
-        billable: false,
-        status: ServiceRequestStatus.DRAFT,
-        product: { connect: { id: input.productId } },
-        ...(variantId ? { variant: { connect: { id: variantId } } } : {}),
-        ...(input.serviceCatalogId ? { ServiceCatalog: { connect: { id: input.serviceCatalogId } } } : {}),
-        scope: input.scope,
-        ...(input.customerId ? { customer: { connect: { id: input.customerId } } } : {}),
-        notes: input.notes ?? null,
-        brandSnapshot: product.brand?.name ?? null,
-        modelSnapshot: product.watchSpec?.model ?? product.title ?? null,
-        refSnapshot: product.watchSpec?.ref ?? null,
-        technician: tech?.id ? { connect: { id: tech.id } } : undefined,
-        technicianNameSnap: tech?.name ?? tech?.email ?? null,
-    } as any);
-    await markProductInServiceIfNeeded(tx, input.productId);
-    return created;
-}
-
-export async function createTechnicalCheckFromAcquisitionTx(
-    tx: DB,
-    input: {
-        productId: string;
-        variantId?: string | null;
-        notes?: string | null;
-    }
+async function createVendorMaintenanceLog(
+    tx: Prisma.TransactionClient,
+    args: {
+        serviceRequestId: string;
+        vendorId: string | null;
+        vendorName: string | null;
+        technicianId: string | null;
+        technicianNameSnap: string | null;
+        productId: string | null;
+        variantId: string | null;
+        brandSnapshot: string | null;
+        modelSnapshot: string | null;
+        refSnapshot: string | null;
+        serialSnapshot: string | null;
+        notes: string | null;
+        servicedAt: Date | null;
+        totalCost: number | null;
+        currency: string;
+        paymentMethod?: string | null;
+        paymentStatus?: string | null;
+        paymentType?: string | null;
+        paymentPurpose?: string | null;
+    },
 ) {
-    const technician = await serviceReqRepo.findDefaultTechnician(tx);
+    let paymentId: string | null = null;
+    let paidAmount: Prisma.Decimal | null = null;
+    let paidAt: Date | null = null;
 
-    const request = await serviceReqRepo.createTechnicalCheckRequest(tx, {
-        productId: input.productId,
-        variantId: input.variantId ?? null,
-        notes: input.notes ?? null,
-        technicianId: technician?.id ?? null,
-        technicianNameSnap: technician?.name?.trim() || technician?.email || null,
-    });
-
-    await serviceReqRepo.markProductInService(tx, input.productId);
-
-    return request;
-}
-
-export async function finalizeTechnicalRequestTx(
-    tx: DB,
-    input: {
-        productId: string;
-    }
-) {
-    const openCount = await serviceReqRepo.countOpenTechnicalRequests(tx, input.productId);
-
-    if (openCount === 0) {
-        await serviceReqRepo.markProductPosted(tx, input.productId);
-    }
-}
-
-export async function bulkAssignVendorAndCreateMaintenance(input: { ids: string[]; vendorId: string | null; reason?: string | null }) {
-    const ids = Array.from(new Set((input.ids ?? []).map((x) => String(x).trim()).filter(Boolean)));
-    if (!ids.length) throw new Error('Missing ids');
-    const vendorId = String(input.vendorId || '').trim();
-    if (!vendorId) throw new Error('Missing vendorId');
-    return prisma.$transaction(async (tx) => {
-        const vendor = await tx.vendor.findUnique({ where: { id: vendorId }, select: { id: true, name: true } });
-        if (!vendor) throw new Error('Vendor not found');
-        return maintRepo.bulkAssignVendor(tx, { ids, vendorId: vendor.id, vendorName: vendor.name, onlyFromDraft: false, setInProgress: true });
-    });
-}
-
-export async function postServiceRequests(ids: string[]) {
-    const cleanIds = Array.from(new Set((ids ?? []).map((x) => String(x).trim()).filter(Boolean)));
-    if (!cleanIds.length) return { updated: 0 };
-    const result = await prisma.serviceRequest.updateMany({
-        where: { id: { in: cleanIds }, status: ServiceRequestStatus.DRAFT },
-        data: { status: ServiceRequestStatus.IN_PROGRESS, updatedAt: new Date() },
-    });
-    return { updated: result.count };
-}
-
-export async function completeServiceRequest(input: { serviceRequestId: string; note?: string | null; }) {
-    const serviceRequestId = String(input.serviceRequestId || '').trim();
-    if (!serviceRequestId) throw new Error('Missing serviceRequestId');
-    return prisma.$transaction(async (tx) => {
-        const existing = await tx.serviceRequest.findUnique({ where: { id: serviceRequestId }, select: { id: true, status: true, vendorId: true, vendorNameSnap: true, technicianId: true, technicianNameSnap: true, productId: true, variantId: true, brandSnapshot: true, modelSnapshot: true, refSnapshot: true, serialSnapshot: true } });
-        if (!existing) throw new Error('Service request not found');
-        if (existing.status === ServiceRequestStatus.CANCELED) throw new Error('Service request đã bị hủy, không thể kết thúc');
-        if ([ServiceRequestStatus.COMPLETED, ServiceRequestStatus.DELIVERED].includes(existing.status as any)) return { ok: true, skipped: true, status: existing.status };
-        const completedAt = new Date();
-        const updated = await serviceRequestRepo.completeServiceRequestOne(tx, { id: serviceRequestId, completedAt });
-        await maintRepo.createLog(tx, {
-            serviceRequestId: updated.id,
-            eventType: 'NOTE' as any,
-            vendorId: updated.vendorId ?? null,
-            vendorName: updated.vendorNameSnap ?? null,
-            technicianId: updated.technicianId ?? null,
-            technicianNameSnap: updated.technicianNameSnap ?? null,
-            notes: input.note && String(input.note).trim() ? `Kết thúc service
-${String(input.note).trim()}` : 'Kết thúc service',
-            servicedAt: completedAt,
-            productId: updated.productId ?? null,
-            variantId: updated.variantId ?? null,
-            brandSnapshot: updated.brandSnapshot ?? null,
-            modelSnapshot: updated.modelSnapshot ?? null,
-            refSnapshot: updated.refSnapshot ?? null,
-            serialSnapshot: updated.serialSnapshot ?? null,
+    if (args.totalCost != null) {
+        const payment = await createServicePayment(tx, {
+            amount: args.totalCost,
+            currency: args.currency,
+            serviceRequestId: args.serviceRequestId,
+            vendorId: args.vendorId,
+            note: args.notes,
+            paymentMethod: args.paymentMethod,
+            paymentStatus: args.paymentStatus,
+            paymentType: args.paymentType,
+            paymentPurpose: args.paymentPurpose,
         });
-        await restoreProductStatusIfDone(tx, updated.productId ?? null);
-        return { ok: true, skipped: false, status: updated.status };
+
+        paymentId = payment.paymentId;
+        paidAmount = payment.paidAmount;
+        paidAt = payment.paidAt;
+    }
+
+    return maintenanceRepo.createLog(tx, {
+        serviceRequestId: args.serviceRequestId,
+        eventType: args.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE,
+        vendorId: args.vendorId,
+        vendorName: args.vendorName,
+        technicianId: args.technicianId,
+        technicianNameSnap: args.technicianNameSnap,
+        notes: args.notes,
+        servicedAt: args.servicedAt,
+        totalCost: args.totalCost == null ? null : new Prisma.Decimal(String(args.totalCost)),
+        currency: args.currency,
+        paymentId,
+        paidAmount,
+        paidAt,
+        productId: args.productId,
+        variantId: args.variantId,
+        brandSnapshot: args.brandSnapshot,
+        modelSnapshot: args.modelSnapshot,
+        refSnapshot: args.refSnapshot,
+        serialSnapshot: args.serialSnapshot,
     });
 }
 
-export async function getTechnicianOptions() {
-    const rows = await prisma.user.findMany({
-        where: {
-            roles: {
-                some: {
-                    name: "TECHNICIAN",
-                },
-            },
-            isActive: true,
-        },
-        orderBy: [{ name: "asc" }, { email: "asc" }],
-        select: {
-            id: true,
-            name: true,
-            email: true,
-        },
-    });
+export async function getMaintenancePanelByServiceRequest(serviceRequestId: string) {
+    const id = String(serviceRequestId || "").trim();
+    if (!id) throw new Error("Missing serviceRequestId");
+    return serialize(await maintenanceRepo.getPanelByServiceRequestId(prisma, id));
+}
 
-    return rows.map((u) => ({
-        id: u.id,
-        name: (u.name || "").trim() || u.email,
-        email: u.email,
-    }));
+export async function getMaintenanceLogsByServiceRequest(serviceRequestId: string) {
+    const id = String(serviceRequestId || "").trim();
+    if (!id) throw new Error("Missing serviceRequestId");
+    const panel = await maintenanceRepo.getPanelByServiceRequestId(prisma, id);
+    return serialize(panel?.logs ?? []);
+}
+
+export async function createMaintenanceLogForServiceRequest(input: CreateMaintenanceLogInput) {
+    const serviceRequestId = String(input.serviceRequestId || "").trim();
+    if (!serviceRequestId) throw new Error("Missing serviceRequestId");
+
+    return prisma.$transaction(async (tx) => {
+        const sr = await tx.serviceRequest.findUnique({
+            where: { id: serviceRequestId },
+            select: {
+                id: true,
+                vendorId: true,
+                vendorNameSnap: true,
+                technicianId: true,
+                technicianNameSnap: true,
+                productId: true,
+                variantId: true,
+                brandSnapshot: true,
+                modelSnapshot: true,
+                refSnapshot: true,
+                serialSnapshot: true,
+            },
+        });
+
+        if (!sr) throw new Error("Service request not found");
+
+        const vendorId = (input.vendorId ?? sr.vendorId ?? null) as string | null;
+        let vendorName: string | null = sr.vendorNameSnap ?? null;
+        if (vendorId) {
+            const v = await tx.vendor.findUnique({ where: { id: vendorId }, select: { name: true } });
+            vendorName = v?.name ?? vendorName;
+        }
+
+        const created = await createVendorMaintenanceLog(tx, {
+            serviceRequestId: sr.id,
+            vendorId,
+            vendorName,
+            technicianId: sr.technicianId ?? null,
+            technicianNameSnap: sr.technicianNameSnap ?? null,
+            notes: input.notes ?? null,
+            servicedAt: input.servicedAt ?? null,
+            totalCost: input.totalCost ?? null,
+            currency: input.currency ?? "VND",
+            paymentMethod: input.paymentMethod ?? null,
+            paymentStatus: input.paymentStatus ?? null,
+            paymentType: input.paymentType ?? null,
+            paymentPurpose: input.paymentPurpose ?? null,
+            productId: sr.productId ?? null,
+            variantId: sr.variantId ?? null,
+            brandSnapshot: sr.brandSnapshot ?? null,
+            modelSnapshot: sr.modelSnapshot ?? null,
+            refSnapshot: sr.refSnapshot ?? null,
+            serialSnapshot: sr.serialSnapshot ?? null,
+        });
+
+        return serialize(created);
+    });
+}
+
+export async function assignVendorForServiceRequest(input: AssignVendorInput) {
+    const serviceRequestId = String(input.serviceRequestId || "").trim();
+    const vendorId = String(input.vendorId || "").trim();
+    if (!serviceRequestId) throw new Error("Missing serviceRequestId");
+    if (!vendorId) throw new Error("Missing vendorId");
+
+    return prisma.$transaction(async (tx) => {
+        const sr = await tx.serviceRequest.findUnique({
+            where: { id: serviceRequestId },
+            select: {
+                id: true,
+                vendorId: true,
+                vendorNameSnap: true,
+                technicianId: true,
+                technicianNameSnap: true,
+                productId: true,
+                variantId: true,
+                brandSnapshot: true,
+                modelSnapshot: true,
+                refSnapshot: true,
+                serialSnapshot: true,
+            },
+        });
+
+        if (!sr) throw new Error("Service request not found");
+
+        const vendor = await tx.vendor.findUnique({ where: { id: vendorId }, select: { id: true, name: true } });
+        if (!vendor) throw new Error("Vendor not found");
+
+        const vendorChanged = sr.vendorId !== vendor.id;
+        if (vendorChanged) {
+            await maintenanceRepo.assignVendorOne(tx, {
+                serviceRequestId,
+                vendorId: vendor.id,
+                vendorName: vendor.name,
+                reason: null,
+                setInProgress: input.setInProgress !== false,
+            });
+        }
+
+        const mergedNotes = mergeVendorNotes(input.reason, input.notes);
+        const shouldCreateVendorLog = Boolean(mergedNotes) || !!input.servicedAt || input.totalCost != null;
+
+        let createdLog: unknown = null;
+        if (shouldCreateVendorLog) {
+            createdLog = await createVendorMaintenanceLog(tx, {
+                serviceRequestId: sr.id,
+                vendorId: vendor.id,
+                vendorName: vendor.name,
+                technicianId: sr.technicianId ?? null,
+                technicianNameSnap: sr.technicianNameSnap ?? null,
+                notes: mergedNotes || null,
+                servicedAt: input.servicedAt ?? null,
+                totalCost: input.totalCost ?? null,
+                currency: input.currency ?? "VND",
+                paymentMethod: input.paymentMethod ?? null,
+                paymentStatus: input.paymentStatus ?? null,
+                paymentType: input.paymentType ?? null,
+                paymentPurpose: input.paymentPurpose ?? null,
+                productId: sr.productId ?? null,
+                variantId: sr.variantId ?? null,
+                brandSnapshot: sr.brandSnapshot ?? null,
+                modelSnapshot: sr.modelSnapshot ?? null,
+                refSnapshot: sr.refSnapshot ?? null,
+                serialSnapshot: sr.serialSnapshot ?? null,
+            });
+        }
+
+        if (!vendorChanged && !createdLog) {
+            return serialize({ ok: true, skipped: true, reason: "SAME_VENDOR" });
+        }
+
+        return serialize({
+            ok: true,
+            skipped: false,
+            vendorChanged,
+            logged: Boolean(createdLog),
+            log: createdLog,
+        });
+    });
 }

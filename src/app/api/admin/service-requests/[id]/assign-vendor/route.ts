@@ -9,6 +9,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         const body = await req.json().catch(() => ({}));
         const vendorId = String(body?.vendorId || "").trim();
         const reason = body?.reason ? String(body.reason).trim() : null;
+        const notes = body?.notes ? String(body.notes).trim() : null;
 
         if (!vendorId) return NextResponse.json({ error: "Missing vendorId" }, { status: 400 });
 
@@ -16,6 +17,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             serviceRequestId,
             vendorId,
             reason,
+            notes,
+            servicedAt: body?.servicedAt ? new Date(body.servicedAt) : null,
+            totalCost: body?.totalCost ?? null,
+            currency: body?.currency ?? null,
+            paymentMethod: body?.paymentMethod ?? null,
+            paymentStatus: body?.paymentStatus ?? null,
+            paymentType: body?.paymentType ?? null,
+            paymentPurpose: body?.paymentPurpose ?? null,
             setInProgress: true,
         });
 

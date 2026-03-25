@@ -36,6 +36,12 @@ type ProductRow = ProductListItem & {
     serviceRequests?: number;
     reservations?: number;
     primaryImageUrl?: string | null;
+    brandId?: string | null;
+    variantSnapshot?: {
+        price?: number | null;
+        availabilityStatus?: string | null;
+        stockQty?: number | null;
+    } | null;
     updatedAt?: string | null;
     createdAt?: string | null;
     status?: string | null;
@@ -61,6 +67,8 @@ type ProductRow = ProductListItem & {
     latestServiceStatus?: string | null;
     acquisitionId?: string | null;
     acquisitionRefNo?: string | null;
+    isReadyToPublish?: boolean;
+    publishMissing?: string[];
 };
 
 type PageProps = {
@@ -97,22 +105,49 @@ function hasValidPrice(p: ProductRow) {
 }
 
 function hasValidImage(p: ProductRow) {
+    const count = Number(p.imagesCount ?? 0);
+    if (Number.isFinite(count) && count > 0) return true;
+
     const img = p.primaryImageUrl;
     return typeof img === "string" && img.trim().length > 0;
 }
 
 function hasMissingReadinessInfo(p: ProductRow) {
+    if (typeof p.isReadyToPublish === "boolean") return !p.isReadyToPublish;
     return !hasValidImage(p) || !hasValidPrice(p) || !p.isInfoComplete;
 }
 
 function getQuickFixHints(p: ProductRow) {
     const hints: string[] = [];
+    const missing = new Set(p.publishMissing ?? []);
 
-    if (!hasValidImage(p)) hints.push("Thêm ảnh ngay ở ô ảnh bên trái của dòng sản phẩm.");
-    if (!hasValidPrice(p)) hints.push("Có thể chỉnh nhanh giá ngay tại cột Giá bán.");
-    if (!p.isInfoComplete) hints.push("Các trường variant/spec cần bổ sung ở trang chỉnh sửa sản phẩm.");
+    if (missing.has("images") || (!p.publishMissing && !hasValidImage(p))) {
+        hints.push("Bổ sung đủ ảnh sản phẩm ở cột ảnh bên trái hoặc trong trang edit.");
+    }
+    if (missing.has("brandId")) {
+        hints.push("Chọn thương hiệu trong trang chỉnh sửa sản phẩm.");
+    }
+    if (missing.has("variant") || (!p.publishMissing && !hasValidPrice(p))) {
+        hints.push("Cập nhật giá bán, trạng thái kho hoặc tồn kho của variant.");
+    }
+    if ((p.publishMissing ?? []).some((field) => !["images", "brandId", "variant"].includes(field)) || !p.isInfoComplete) {
+        hints.push("Bổ sung đầy đủ watch spec / variant trong trang chỉnh sửa sản phẩm.");
+    }
 
-    return hints;
+    return Array.from(new Set(hints));
+}
+
+function isPublishMissing(product: ProductRow, key: string) {
+    return (product.publishMissing ?? []).includes(key);
+}
+
+function getPublishImageRequirement(product: ProductRow) {
+    return product.type === "WATCH_STRAP" ? 1 : 4;
+}
+
+function getDetailedPublishMissing(product: ProductRow) {
+    const known = new Set(["images", "brandId", "variant", "watchSpec"]);
+    return (product.publishMissing ?? []).filter((item) => !known.has(item));
 }
 
 function getServiceLabel(p: ProductRow) {
@@ -283,6 +318,7 @@ function ReadinessDetailModal({
 
     const missingVariantFields = Array.from(new Set(product.missingVariantFields ?? []));
     const missingWatchSpecFields = Array.from(new Set(product.missingWatchSpecFields ?? []));
+    const detailedPublishMissing = Array.from(new Set(getDetailedPublishMissing(product)));
     const quickFixHints = getQuickFixHints(product);
 
     return (
@@ -306,16 +342,20 @@ function ReadinessDetailModal({
                 <div className="space-y-4 px-5 py-4 text-sm">
                     <div className="flex flex-wrap gap-2">
                         <DotLabel
-                            label={hasValidImage(product) ? "Đã có ảnh" : "Thiếu ảnh"}
-                            tone={hasValidImage(product) ? "green" : "orange"}
+                            label={isPublishMissing(product, "images") ? `Thiếu ảnh (cần ${getPublishImageRequirement(product)})` : "Ảnh đạt yêu cầu"}
+                            tone={isPublishMissing(product, "images") ? "orange" : "green"}
                         />
                         <DotLabel
-                            label={hasValidPrice(product) ? "Đã có giá" : "Thiếu giá"}
-                            tone={hasValidPrice(product) ? "green" : "orange"}
+                            label={isPublishMissing(product, "brandId") ? "Thiếu thương hiệu" : "Đã có thương hiệu"}
+                            tone={isPublishMissing(product, "brandId") ? "orange" : "green"}
                         />
                         <DotLabel
-                            label={product.isInfoComplete ? "Đủ variant/spec" : "Thiếu variant/spec"}
-                            tone={product.isInfoComplete ? "green" : "orange"}
+                            label={isPublishMissing(product, "variant") ? "Variant chưa đạt" : "Variant đạt"}
+                            tone={isPublishMissing(product, "variant") ? "orange" : "green"}
+                        />
+                        <DotLabel
+                            label={((product.publishMissing ?? []).some((item) => !["images", "brandId", "variant"].includes(item)) || !product.isInfoComplete) ? "Thiếu spec" : "Spec đạt"}
+                            tone={((product.publishMissing ?? []).some((item) => !["images", "brandId", "variant"].includes(item)) || !product.isInfoComplete) ? "orange" : "green"}
                         />
                         {(() => {
                             const serviceLabel = getServiceLabel(product);
@@ -330,8 +370,11 @@ function ReadinessDetailModal({
                             <div className="font-medium text-orange-900">Các mục còn thiếu</div>
 
                             <div className="mt-3 space-y-3 text-orange-900">
-                                {!hasValidImage(product) ? <div>• Chưa có ảnh hiển thị</div> : null}
-                                {!hasValidPrice(product) ? <div>• Chưa có giá bán hợp lệ</div> : null}
+                                {isPublishMissing(product, "images") ? (
+                                    <div>• Chưa đủ ảnh hiển thị ({Number(product.imagesCount ?? 0)}/{getPublishImageRequirement(product)})</div>
+                                ) : null}
+                                {isPublishMissing(product, "brandId") ? <div>• Chưa chọn thương hiệu</div> : null}
+                                {isPublishMissing(product, "variant") ? <div>• Variant chưa đủ điều kiện bán (cần có giá và trạng thái phù hợp)</div> : null}
 
                                 {!!missingVariantFields.length && (
                                     <div>
@@ -340,10 +383,12 @@ function ReadinessDetailModal({
                                     </div>
                                 )}
 
-                                {!!missingWatchSpecFields.length && (
+                                {(isPublishMissing(product, "watchSpec") || !!missingWatchSpecFields.length || !!detailedPublishMissing.length) && (
                                     <div>
                                         <div className="font-medium">Watch spec còn thiếu</div>
-                                        <div className="mt-1 text-sm">{missingWatchSpecFields.join(", ")}</div>
+                                        <div className="mt-1 text-sm">
+                                            {[...missingWatchSpecFields, ...detailedPublishMissing].filter(Boolean).join(", ") || "Thiếu watch spec"}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1181,7 +1226,16 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                                     <DotLabel label="Chưa sẵn sàng public" tone="orange" />
                                                                 </button>
                                                             ) : (
-                                                                <DotLabel label="Sẵn sàng public" tone="green" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openReadinessDetail(p);
+                                                                    }}
+                                                                    className="rounded-full text-left"
+                                                                >
+                                                                    <DotLabel label="Sẵn sàng public" tone="green" />
+                                                                </button>
                                                             )}
 
                                                         </div>
