@@ -205,26 +205,40 @@ export async function createFromProductTx(tx: Prisma.TransactionClient, input: C
     return created;
 }
 
-export async function createTechnicalCheckFromAcquisitionTx(tx: Prisma.TransactionClient, input: { productId: string; variantId?: string | null; notes?: string | null; }) {
-    const product = await serviceRequestRepo.findProductForService(tx, input.productId);
-    if (!product) throw new Error('Product not found');
-    const tech = await resolveDefaultTechnicianTx(tx);
-    const refNo = await genRefNo(tx, { model: tx.serviceRequest, prefix: 'SR', field: 'refNo', padding: 6 });
-    return serviceRequestRepo.createOne(tx, {
-        refNo,
-        type: ServiceType.PAID,
-        billable: false,
-        status: ServiceRequestStatus.DRAFT,
-        product: { connect: { id: input.productId } },
-        ...(input.variantId ? { variant: { connect: { id: input.variantId } } } : {}),
-        scope: ServiceScope.WITH_PURCHASE,
-        notes: input.notes ?? 'Kiểm tra kỹ thuật từ phiếu nhập',
-        brandSnapshot: product.brand?.name ?? null,
-        modelSnapshot: product.watchSpec?.model ?? product.title ?? null,
-        refSnapshot: product.watchSpec?.ref ?? null,
-        technician: tech?.id ? { connect: { id: tech.id } } : undefined,
-        technicianNameSnap: tech?.name ?? tech?.email ?? null,
-    } as any);
+export async function createTechnicalCheckFromAcquisitionTx(
+    tx: DB,
+    input: {
+        productId: string;
+        variantId?: string | null;
+        notes?: string | null;
+    }
+) {
+    const technician = await serviceReqRepo.findDefaultTechnician(tx);
+
+    const request = await serviceReqRepo.createTechnicalCheckRequest(tx, {
+        productId: input.productId,
+        variantId: input.variantId ?? null,
+        notes: input.notes ?? null,
+        technicianId: technician?.id ?? null,
+        technicianNameSnap: technician?.name?.trim() || technician?.email || null,
+    });
+
+    await serviceReqRepo.markProductInService(tx, input.productId);
+
+    return request;
+}
+
+export async function finalizeTechnicalRequestTx(
+    tx: DB,
+    input: {
+        productId: string;
+    }
+) {
+    const openCount = await serviceReqRepo.countOpenTechnicalRequests(tx, input.productId);
+
+    if (openCount === 0) {
+        await serviceReqRepo.markProductPosted(tx, input.productId);
+    }
 }
 
 export async function bulkAssignVendorAndCreateMaintenance(input: { ids: string[]; vendorId: string | null; reason?: string | null }) {
@@ -279,4 +293,29 @@ ${String(input.note).trim()}` : 'Kết thúc service',
         await restoreProductStatusIfDone(tx, updated.productId ?? null);
         return { ok: true, skipped: false, status: updated.status };
     });
+}
+
+export async function getTechnicianOptions() {
+    const rows = await prisma.user.findMany({
+        where: {
+            roles: {
+                some: {
+                    name: "TECHNICIAN",
+                },
+            },
+            isActive: true,
+        },
+        orderBy: [{ name: "asc" }, { email: "asc" }],
+        select: {
+            id: true,
+            name: true,
+            email: true,
+        },
+    });
+
+    return rows.map((u) => ({
+        id: u.id,
+        name: (u.name || "").trim() || u.email,
+        email: u.email,
+    }));
 }

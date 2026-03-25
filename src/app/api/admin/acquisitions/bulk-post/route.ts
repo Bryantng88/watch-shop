@@ -7,12 +7,16 @@ export async function POST(req: NextRequest) {
 
         const acquisitionIds = Array.isArray(body?.acquisitionIds)
             ? body.acquisitionIds.filter(
-                (x: unknown): x is string => typeof x === "string" && x.trim().length > 0
+                (x: unknown): x is string =>
+                    typeof x === "string" && x.trim().length > 0
             )
             : Array.isArray(body?.items)
                 ? body.items
                     .map((item: any) => item?.id)
-                    .filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0)
+                    .filter(
+                        (x: unknown): x is string =>
+                            typeof x === "string" && x.trim().length > 0
+                    )
                 : [];
 
         if (!acquisitionIds.length) {
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const result = await service.bulkPostAcquisitions(acquisitionIds);
+        const result = await service.postMultipleAcquisitions(acquisitionIds);
 
         if (result.failed.length > 0) {
             return NextResponse.json(

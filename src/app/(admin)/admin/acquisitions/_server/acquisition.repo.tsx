@@ -2,7 +2,7 @@ import { Prisma, AcquisitionType, Acquisition, ProductType } from "@prisma/clien
 import { genRefNo } from "../../__components/AutoGenRef";
 import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
-import type { AcquisitionItemInput, ItemInput } from "./acquisition.dto";
+//import type { AcquisitionItemInput, ItemInput } from "./acquisition.dto";
 import { stringifyAcquisitionItemMeta } from "./item-metadata";
 
 export async function createDraft(

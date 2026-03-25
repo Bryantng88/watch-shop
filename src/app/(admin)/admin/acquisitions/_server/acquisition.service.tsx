@@ -378,14 +378,26 @@ export async function postAcquisition(acqId: string, vendorName: string) {
             const needsTechnicalCheck = !watchFlags || !watchFlags.isServiced || !watchFlags.isSpa;
             if (needsTechnicalCheck) {
                 const reasons: string[] = [];
-                if (!watchFlags) reasons.push('Chưa có metadata tiếp nhận');
-                if (watchFlags && !watchFlags.isServiced) reasons.push('Cần kiểm tra service');
-                if (watchFlags && !watchFlags.isSpa) reasons.push('Cần kiểm tra spa');
-                await createTechnicalCheckFromAcquisitionTx(tx, {
-                    productId: created.id,
-                    variantId: created.variants?.[0]?.id ?? null,
-                    notes: `Tạo từ phiếu nhập ${acq.refNo ?? acq.id}: ${reasons.join('; ') || 'Kiểm tra kỹ thuật tổng quát'}`,
-                });
+                if (!watchFlags) reasons.push("Chưa có metadata tiếp nhận");
+                if (watchFlags && !watchFlags.isServiced) reasons.push("Cần kiểm tra service");
+                if (watchFlags && !watchFlags.isSpa) reasons.push("Cần kiểm tra spa");
+
+                try {
+                    await createTechnicalCheckFromAcquisitionTx(tx, {
+                        productId: created.id,
+                        variantId: created.variants?.[0]?.id ?? null,
+                        notes: `Tạo từ phiếu nhập ${acq.refNo ?? acq.id}: ${reasons.join("; ") || "Kiểm tra kỹ thuật tổng quát"}`,
+                    });
+                } catch (e) {
+                    console.error("CREATE_TECH_CHECK_FAILED", {
+                        acqId,
+                        itemId: item.id,
+                        productId: created.id,
+                        reasons,
+                        error: e,
+                    });
+                    throw e;
+                }
             }
         }
 
@@ -393,27 +405,52 @@ export async function postAcquisition(acqId: string, vendorName: string) {
         return repoAcq.changeDraftToPost(tx, acqId);
     });
 }
-export async function postMultipleAcquisitions(items: { id: string; vendor: string }[]) {
-    const results = [];
-    for (const acq of items) {
+export async function postMultipleAcquisitions(acquisitionIds: string[]) {
+    const posted: string[] = [];
+    const failed: { id: string; error: string }[] = [];
+
+    for (const acqId of acquisitionIds) {
         try {
-            await postAcquisition(acq.id, acq.vendor);
-            results.push({ id: acq.id, ok: true });
+            const acq = await repoAcq.getAcqtById(acqId);
+
+            if (!acq) {
+                failed.push({ id: acqId, error: "Không tìm thấy phiếu nhập" });
+                continue;
+            }
+
+            if (acq.accquisitionStt !== "DRAFT") {
+                failed.push({
+                    id: acqId,
+                    error: "Chỉ phiếu DRAFT mới được duyệt",
+                });
+                continue;
+            }
+
+            await postAcquisition(acqId, "");
+            posted.push(acqId);
         } catch (e) {
-            results.push({ id: acq.id, ok: false, error: (e as Error).message });
+            failed.push({
+                id: acqId,
+                error: e instanceof Error ? e.message : "Bulk post failed",
+            });
         }
     }
-    return results;
-}
 
+    return { posted, failed };
+}
 // Hủy phiếu
 export async function cancelAcquisition(id: string) {
-    const acq = await repoAcq.acqGetById(id);
+    const acq = await repoAcq.getAcqtById(id);
     if (!acq) throw new Error("Không tìm thấy phiếu nhập");
-    if (acq.acquisitionStt === "POSTED") throw new Error("Không thể huỷ phiếu đã đăng");
-    return repoAcq.acqUpdate(id, { acquisitionStt: "CANCELED" });
-}
+    if (acq.accquisitionStt === "POSTED") {
+        throw new Error("Không thể hủy phiếu đã đăng");
+    }
 
+    return prisma.acquisition.update({
+        where: { id },
+        data: { accquisitionStt: "CANCELED" as any },
+    });
+}
 //Update acquisition item
 export async function updateAcqItem(tx: DB, it: any) {
     return tx.acquisitionItem.update({

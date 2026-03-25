@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTechnicianOptions } from "@/app/(admin)/admin/services/_server/service_request.service";
 
+
 export async function GET() {
     try {
         const items = await getTechnicianOptions();

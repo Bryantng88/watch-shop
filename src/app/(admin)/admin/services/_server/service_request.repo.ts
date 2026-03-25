@@ -1,6 +1,6 @@
 
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, ServiceRequestStatus } from "@prisma/client";
+import { Prisma, ServiceRequestStatus, ProductStatus } from "@prisma/client";
 
 export type ServiceRequestListRow = {
   id: string;
@@ -127,16 +127,82 @@ export async function findProductForService(tx: DB, productId: string) {
 
 export async function findDefaultTechnician(tx: DB) {
   const db = dbOrTx(tx);
+
   return db.user.findFirst({
     where: {
       isActive: true,
-      roles: { some: { name: 'TECHNICIAN' } },
+      roles: {
+        some: { name: "TECHNICIAN" },
+      },
     },
-    orderBy: [{ createdAt: 'asc' }],
-    select: { id: true, name: true, email: true },
+    orderBy: [{ name: "asc" }, { email: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
   });
 }
 
+export async function createTechnicalCheckRequest(
+  tx: DB,
+  input: {
+    productId: string;
+    variantId?: string | null;
+    notes?: string | null;
+    technicianId?: string | null;
+    technicianNameSnap?: string | null;
+  }
+) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.create({
+    data: {
+      productId: input.productId,
+      variantId: input.variantId ?? null,
+      scope: "WITH_PURCHASE" as any,
+      status: "DRAFT" as any,
+      notes: input.notes ?? null,
+      technicianId: input.technicianId ?? null,
+      technicianNameSnap: input.technicianNameSnap ?? null,
+    },
+  });
+}
+
+export async function markProductInService(tx: DB, productId: string) {
+  const db = dbOrTx(tx);
+
+  return db.product.update({
+    where: { id: productId },
+    data: {
+      status: ProductStatus.IN_SERVICE,
+    },
+  });
+}
+
+export async function countOpenTechnicalRequests(tx: DB, productId: string) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.count({
+    where: {
+      productId,
+      status: {
+        in: ["DRAFT", "IN_PROGRESS"] as any,
+      },
+    },
+  });
+}
+
+export async function markProductPosted(tx: DB, productId: string) {
+  const db = dbOrTx(tx);
+
+  return db.product.update({
+    where: { id: productId },
+    data: {
+      status: ProductStatus.POSTED,
+    },
+  });
+}
 export async function listServiceCatalogRepo(tx: DB, opts?: { isActive?: boolean }) {
   const db = dbOrTx(tx);
   return db.serviceCatalog.findMany({
