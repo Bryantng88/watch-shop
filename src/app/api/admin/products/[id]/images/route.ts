@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
-import { PUBLIC_BASE } from "@/server/s3";
 import { ImageRole } from "@prisma/client";
+import { toStoredProductImageKey } from "@/server/lib/product-image-storage";
 
 type Body = { files: { key: string; alt?: string }[] };
 
@@ -13,7 +13,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         return NextResponse.json({ error: "No files" }, { status: 400 });
     }
 
-    const data = body.files.map((f, i) => ({
+    const normalizedFiles = body.files
+        .map((f) => ({ ...f, key: toStoredProductImageKey(f.key) }))
+        .filter((f) => !!f.key);
+
+    if (!normalizedFiles.length) {
+        return NextResponse.json({ error: "No valid files" }, { status: 400 });
+    }
+
+    const data = normalizedFiles.map((f, i) => ({
         productId,
         fileKey: f.key,             // key trong bucket
         alt: f.alt ?? null,
@@ -21,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         sortOrder: i,
     }));
 
-    const primaryUrl = body.files[0].key;
+    const primaryUrl = normalizedFiles[0].key;
 
     await prisma.$transaction(async (tx) => {
         await tx.productImage.createMany({ data });

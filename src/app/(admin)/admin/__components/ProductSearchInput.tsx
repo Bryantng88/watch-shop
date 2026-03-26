@@ -67,7 +67,7 @@ export default function ProductSearchInput({
                             }}
                         >
                             <Image
-                                src={`/api/media/sign?key=${encodeURIComponent(p.primaryImageUrl)}`}
+                                src={`/api/media/sign?key=${encodeURIComponent(p.primaryImageUrl)}&purpose=inline`}
                                 width={40}
                                 height={40}
                                 alt={p.title}

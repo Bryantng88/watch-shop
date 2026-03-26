@@ -5,6 +5,7 @@ import * as adminProductService from "@/app/(admin)/admin/products/_server/produ
 import * as prodRepo from "@/app/(admin)/admin/products/_server/product.repo";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
+import { archiveProductImagesForSold, toStoredProductImageKey } from "@/server/lib/product-image-storage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -285,6 +286,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         const { id } = await ctx.params;
         const body = await req.json();
         const patch = PatchBodySchema.parse(body);
+        const current = await prisma.product.findUnique({ where: { id }, select: { status: true } });
+        const nextStatus = patch.product?.status;
+        const shouldArchiveAfterSave = nextStatus === "SOLD" && current?.status !== "SOLD";
+
+        const normalizedImages = patch.images?.map((img) => ({
+            ...img,
+            fileKey: toStoredProductImageKey(img.fileKey),
+        }));
 
         const updated = await prisma.$transaction(async (tx) => {
             if (hasKeys(patch.product)) {
@@ -295,7 +304,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
                 if (product.description !== undefined) data.description = product.description || null;
                 if (product.status !== undefined) data.status = product.status as any;
                 if (product.type !== undefined) data.type = product.type as any;
-                if (product.primaryImageUrl !== undefined) data.primaryImageUrl = product.primaryImageUrl || null;
+                if (product.primaryImageUrl !== undefined) {
+                    data.primaryImageUrl = product.primaryImageUrl
+                        ? toStoredProductImageKey(product.primaryImageUrl)
+                        : null;
+                }
                 if (product.seoDescription !== undefined) data.seoDescription = product.seoDescription || null;
                 if (product.tag !== undefined) data.tag = product.tag || null;
                 if (product.brandId !== undefined) {
@@ -315,8 +328,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
                 }
             }
 
-            if (patch.images !== undefined) {
-                await prodRepo.replaceProductImages(tx, id, patch.images);
+            if (normalizedImages !== undefined) {
+                await prodRepo.replaceProductImages(tx, id, normalizedImages);
             }
 
             if (hasKeys(patch.watchSpec)) {
@@ -349,7 +362,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
             return { success: true };
         });
 
-        return NextResponse.json(updated, { status: 200 });
+        let imageArchive: any = null;
+        let imageArchiveError: string | null = null;
+
+        if (shouldArchiveAfterSave) {
+            try {
+                imageArchive = await archiveProductImagesForSold(id);
+            } catch (archiveErr: any) {
+                console.error("archiveProductImagesForSold failed:", archiveErr);
+                imageArchiveError = archiveErr?.message ?? "Archive ảnh thất bại";
+            }
+        }
+
+        return NextResponse.json({ ...updated, imageArchive, imageArchiveError }, { status: 200 });
     } catch (err: any) {
         console.error("PATCH /api/admin/products/:id failed:", err);
         const message = err?.issues ? JSON.stringify(err.issues) : err?.message ?? "Unexpected error";

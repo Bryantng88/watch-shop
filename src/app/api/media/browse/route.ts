@@ -1,66 +1,107 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ListObjectsV2Command, GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { s3, S3_BUCKET } from "@/server/s3";
+import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
-const PUBLIC_BASE =
-    process.env.S3_PUBLIC_BASE // ví dụ: https://longnd.myqnapcloud.com:8010/watch-shop
-    ?? `${process.env.S3_ENDPOINT}/${S3_BUCKET}`; // fallback
+import { s3, S3_BUCKET } from "@/server/s3";
 
 const IMG_EXT = /\.(jpe?g|png|webp|gif|avif)$/i;
-// Chỉ cho phép duyệt trong thư mục gốc nhất định để tránh lộ dữ liệu khác
-const ALLOWED_ROOT = process.env.S3_BROWSE_ROOT ?? ""; // ví dụ "products/"
+
+function normalizePrefix(value: string | null | undefined) {
+    return String(value ?? "").trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function withTrailingSlash(value: string) {
+    const v = normalizePrefix(value);
+    return v ? `${v}/` : "";
+}
+
+function getProfileRoot(profile: string) {
+    switch (profile) {
+        case "inline":
+            return normalizePrefix(process.env.PRODUCT_INLINE_PREFIX);
+        case "edit":
+            return normalizePrefix(process.env.PRODUCT_EDIT_PREFIX);
+        case "sold":
+            return normalizePrefix(process.env.PRODUCT_SOLD_PREFIX);
+        default:
+            return "";
+    }
+}
+
+function clampPrefix(requestedPrefix: string, profileRoot: string, allowedRoot: string) {
+    const requested = normalizePrefix(requestedPrefix);
+    const profile = normalizePrefix(profileRoot);
+    const allowed = normalizePrefix(allowedRoot);
+
+    if (profile) {
+        if (!requested) return profile;
+        if (requested === profile || requested.startsWith(withTrailingSlash(profile))) return requested;
+        return profile;
+    }
+
+    if (allowed) {
+        if (!requested) return allowed;
+        if (requested === allowed || requested.startsWith(withTrailingSlash(allowed))) return requested;
+        return allowed;
+    }
+
+    return requested;
+}
+
 export async function GET(req: NextRequest) {
     try {
         const url = new URL(req.url);
-        let prefix = (url.searchParams.get("prefix") ?? "").replace(/^\/+/, "");
+        const profile = String(url.searchParams.get("profile") ?? "").trim().toLowerCase();
+        const requestedPrefix = url.searchParams.get("prefix") ?? "";
         const token = url.searchParams.get("token") ?? undefined;
 
-        // chặn “traversal”: chỉ cho phép trong ALLOWED_ROOT
-        if (ALLOWED_ROOT && !prefix.startsWith(ALLOWED_ROOT)) {
-            prefix = ALLOWED_ROOT;
-        }
+        const allowedRoot = normalizePrefix(process.env.S3_BROWSE_ROOT);
+        const profileRoot = getProfileRoot(profile);
+        const prefix = clampPrefix(requestedPrefix, profileRoot, allowedRoot);
 
-        const out = await s3.send(new ListObjectsV2Command({
-            Bucket: S3_BUCKET,
-            Prefix: prefix || undefined,
-            Delimiter: "/",
-            ContinuationToken: token,
-            MaxKeys: 100,
-        }));
+        const out = await s3.send(
+            new ListObjectsV2Command({
+                Bucket: S3_BUCKET,
+                Prefix: prefix ? withTrailingSlash(prefix) : undefined,
+                Delimiter: "/",
+                ContinuationToken: token,
+                MaxKeys: 100,
+            })
+        );
 
         const folders = (out.CommonPrefixes ?? [])
-            .map(p => p.Prefix!)
-            .filter(p => !p.includes(".@__thumb") && !p.startsWith("._"))
-            .map(prefix => ({ prefix }));
+            .map((p) => p.Prefix || "")
+            .filter((p) => p)
+            .filter((p) => !p.includes(".@__thumb") && !p.startsWith("._"))
+            .map((p) => ({ prefix: p.replace(/\/+$/, "") }));
 
-        // lọc key ảnh và sinh presigned url (hết hạn sau 10 phút)
         const keys = (out.Contents ?? [])
-            .map(o => o.Key!)
-            .filter(k => k && k !== prefix && !k.endsWith("/"))
-            .filter(k => !k.includes(".@__thumb") && !k.startsWith("._"))
-            .filter(k => IMG_EXT.test(k));
+            .map((o) => o.Key || "")
+            .filter((k) => k)
+            .filter((k) => !k.endsWith("/"))
+            .filter((k) => !k.includes(".@__thumb") && !k.startsWith("._"))
+            .filter((k) => IMG_EXT.test(k));
 
         const files = await Promise.all(
             keys.map(async (key) => {
-                const url = await getSignedUrl(
+                const signed = await getSignedUrl(
                     s3,
                     new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }),
-                    { expiresIn: 600 } // 10 phút
+                    { expiresIn: 600 }
                 );
-                return { key, url };
+                return { key, url: signed };
             })
         );
 
         return NextResponse.json(
             {
+                profile,
+                rootPrefix: profileRoot || allowedRoot || "",
                 prefix,
                 folders,
                 files,
                 nextToken: out.IsTruncated ? out.NextContinuationToken : null,
             },
             {
-                // cho phép cache phía browser 1 phút để giảm tải
                 headers: {
                     "Cache-Control": "private, max-age=60",
                 },
@@ -71,4 +112,3 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Browse failed" }, { status: 500 });
     }
 }
-
