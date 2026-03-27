@@ -11,6 +11,7 @@ import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 import ServiceHistoryModal from "./ServiceHistoryModal";
+import { useNotify } from "@/components/feedback/AppToastProvider";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 type CatalogKey = "product" | "strap";
@@ -444,6 +445,7 @@ function ReadinessDetailModal({
 
 export default function AdminProductListPageClient(props: PageProps) {
     const router = useRouter();
+    const notify = useNotify();
     const pathname = usePathname();
     const sp = useSearchParams();
 
@@ -500,6 +502,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [openReadinessModal, setOpenReadinessModal] = useState(false);
 
     const [serviceHistoryProduct, setServiceHistoryProduct] = useState<ProductRow | null>(null);
+    const [imageUpdatingIds, setImageUpdatingIds] = useState<string[]>([]);
     const [serviceHistoryOpen, setServiceHistoryOpen] = useState(false);
 
     const [openService, setOpenService] = useState(false);
@@ -637,6 +640,15 @@ export default function AdminProductListPageClient(props: PageProps) {
     }
 
     async function updateProductImage(productId: string, fileKey: string) {
+        if (imageUpdatingIds.includes(productId)) return;
+
+        setImageUpdatingIds((prev) => (prev.includes(productId) ? prev : [...prev, productId]));
+        notify.info({
+            title: "Đang cập nhật ảnh đại diện",
+            message: "Ảnh đang được đồng bộ trên NAS/S3. Có thể mất vài giây.",
+            duration: 2600,
+        });
+
         try {
             const res = await fetch(`/api/admin/products/${productId}/images`, {
                 method: "POST",
@@ -644,20 +656,50 @@ export default function AdminProductListPageClient(props: PageProps) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
+                    mode: "primary-inline",
                     files: [{ key: fileKey }],
                 }),
             });
 
+            const data = await res.json().catch(() => null);
             if (!res.ok) {
-                const msg = await res.text().catch(() => "");
-                alert(msg || "Cập nhật ảnh thất bại");
-                return;
+                throw new Error(data?.error || data?.message || "Cập nhật ảnh thất bại");
             }
 
-            router.refresh();
-        } catch (error) {
+            const nextImageKey = String(data?.primaryImageUrl || fileKey || "").trim();
+
+            setRows((prev) =>
+                prev.map((row) =>
+                    row.id === productId
+                        ? {
+                            ...row,
+                            primaryImageUrl: nextImageKey || row.primaryImageUrl || null,
+                            imagesCount: Math.max(Number(row.imagesCount ?? 0), 1),
+                            updatedAt: new Date().toISOString(),
+                        }
+                        : row
+                )
+            );
+
+            notify.success({
+                title: "Cập nhật ảnh thành công",
+                message:
+                    data?.message ||
+                    "Ảnh đại diện đã được lưu. Nếu NAS/S3 còn đồng bộ, ảnh mới có thể xuất hiện sau vài giây.",
+                duration: 3600,
+            });
+
+            window.setTimeout(() => {
+                router.refresh();
+            }, 1200);
+        } catch (error: any) {
             console.error(error);
-            alert("Cập nhật ảnh thất bại");
+            notify.error({
+                title: "Cập nhật ảnh thất bại",
+                message: error?.message || "Không thể cập nhật ảnh đại diện.",
+            });
+        } finally {
+            setImageUpdatingIds((prev) => prev.filter((id) => id !== productId));
         }
     }
 
@@ -1078,6 +1120,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                             <td className="px-4 py-5 w-[76px] min-w-[76px]">
                                                 <InlineImagePicker
                                                     imageUrl={p.primaryImageUrl ?? null}
+                                                    busy={imageUpdatingIds.includes(p.id)}
                                                     onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                 />
                                             </td>
@@ -1200,6 +1243,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     <div className="scale-110 origin-left">
                                                         <InlineImagePicker
                                                             imageUrl={p.primaryImageUrl ?? null}
+                                                            busy={imageUpdatingIds.includes(p.id)}
                                                             onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                         />
                                                     </div>

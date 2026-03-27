@@ -8,9 +8,13 @@ import { s3, S3_BUCKET } from "@/server/s3";
 
 export type MediaPurpose = "inline" | "edit" | "sold";
 
-const INLINE_PREFIX = trimSlashes(process.env.PRODUCT_INLINE_PREFIX || "products/inline/active");
-const EDIT_PREFIX = trimSlashes(process.env.PRODUCT_EDIT_PREFIX || "products/edit/active");
-const SOLD_PREFIX = trimSlashes(process.env.PRODUCT_SOLD_PREFIX || "products/sold");
+const INLINE_PREFIX = trimSlashes(process.env.PRODUCT_INLINE_PREFIX || "product/inline/active");
+const INLINE_CHOSEN_PREFIX = trimSlashes(
+    process.env.PRODUCT_INLINE_CHOSEN_PREFIX ||
+    (INLINE_PREFIX.endsWith("/active") ? `${INLINE_PREFIX.slice(0, -7)}/chosen` : "product/inline/chosen")
+);
+const EDIT_PREFIX = trimSlashes(process.env.PRODUCT_EDIT_PREFIX || "product/edit/active");
+const SOLD_PREFIX = trimSlashes(process.env.PRODUCT_SOLD_PREFIX || "product/sold");
 const DELETE_SOURCE_ON_ARCHIVE = String(process.env.PRODUCT_IMAGE_ARCHIVE_DELETE_SOURCE || "false").toLowerCase() === "true";
 
 function trimSlashes(value: string) {
@@ -48,6 +52,7 @@ function currentYearMonth(date = new Date()) {
 
 function ensureRelativeForArchive(key: string) {
     if (startsWithPrefix(key, EDIT_PREFIX)) return relativeToPrefix(key, EDIT_PREFIX);
+    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return relativeToPrefix(key, INLINE_CHOSEN_PREFIX);
     if (startsWithPrefix(key, INLINE_PREFIX)) return relativeToPrefix(key, INLINE_PREFIX);
     if (startsWithPrefix(key, SOLD_PREFIX)) return relativeToPrefix(key, SOLD_PREFIX);
     return key;
@@ -56,6 +61,7 @@ function ensureRelativeForArchive(key: string) {
 export function getProductImageRoots() {
     return {
         inline: INLINE_PREFIX,
+        inlineChosen: INLINE_CHOSEN_PREFIX,
         edit: EDIT_PREFIX,
         sold: SOLD_PREFIX,
     } as const;
@@ -82,6 +88,7 @@ export function toStoredProductImageKey(inputKey?: string | null) {
     const key = normalizeKey(inputKey);
     if (!key) return "";
     if (startsWithPrefix(key, SOLD_PREFIX)) return key;
+    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return key;
     if (startsWithPrefix(key, INLINE_PREFIX)) {
         return joinKey(EDIT_PREFIX, relativeToPrefix(key, INLINE_PREFIX));
     }
@@ -92,6 +99,7 @@ export function toInlinePreviewKey(inputKey?: string | null) {
     const key = normalizeKey(inputKey);
     if (!key) return "";
     if (startsWithPrefix(key, SOLD_PREFIX)) return key;
+    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return key;
     if (startsWithPrefix(key, EDIT_PREFIX)) {
         return joinKey(INLINE_PREFIX, relativeToPrefix(key, EDIT_PREFIX));
     }
@@ -133,6 +141,67 @@ async function copyObject(fromKey: string, toKey: string) {
 async function deleteObject(key: string) {
     if (!key) return;
     await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+}
+
+
+function extnameForKey(key: string) {
+    const match = String(key || "").match(/\.[a-zA-Z0-9]+$/);
+    return match?.[0]?.toLowerCase() || ".webp";
+}
+
+export function buildChosenInlineKey(productId: string, sourceKey: string) {
+    const ext = extnameForKey(sourceKey);
+    return joinKey(INLINE_CHOSEN_PREFIX, `${productId}${ext}`);
+}
+
+export async function moveInlineImageToChosen(params: {
+    productId: string;
+    sourceKey: string;
+    currentKey?: string | null;
+    deleteSource?: boolean;
+}) {
+    const sourceKey = normalizeKey(params.sourceKey);
+    if (!sourceKey) throw new Error("Thiếu source key");
+    if (!startsWithPrefix(sourceKey, INLINE_PREFIX)) {
+        throw new Error("Ảnh được chọn phải nằm trong thư mục inline/active");
+    }
+
+    const targetKey = buildChosenInlineKey(params.productId, sourceKey);
+    const previousKey = normalizeKey(params.currentKey);
+    const deleteSource = params.deleteSource ?? true;
+    const replacedPreviousChosen = !!(previousKey && previousKey !== targetKey && startsWithPrefix(previousKey, INLINE_CHOSEN_PREFIX));
+
+    if (sourceKey !== targetKey) {
+        await copyObject(sourceKey, targetKey);
+    }
+
+    return {
+        sourceKey,
+        targetKey,
+        previousKey: previousKey || null,
+        deleteSource,
+        replacedPreviousChosen,
+    };
+}
+
+export async function cleanupAfterInlineChosenMove(params: {
+    sourceKey: string;
+    targetKey: string;
+    previousKey?: string | null;
+    deleteSource?: boolean;
+}) {
+    const sourceKey = normalizeKey(params.sourceKey);
+    const targetKey = normalizeKey(params.targetKey);
+    const previousKey = normalizeKey(params.previousKey);
+    const deleteSource = params.deleteSource ?? true;
+
+    if (deleteSource && sourceKey && sourceKey !== targetKey) {
+        await deleteObject(sourceKey).catch(() => undefined);
+    }
+
+    if (previousKey && previousKey !== targetKey && startsWithPrefix(previousKey, INLINE_CHOSEN_PREFIX)) {
+        await deleteObject(previousKey).catch(() => undefined);
+    }
 }
 
 export async function archiveProductImagesForSold(

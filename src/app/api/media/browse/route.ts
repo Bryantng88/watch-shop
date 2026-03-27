@@ -17,11 +17,11 @@ function withTrailingSlash(value: string) {
 function getProfileRoot(profile: string) {
     switch (profile) {
         case "inline":
-            return normalizePrefix(process.env.PRODUCT_INLINE_PREFIX);
+            return normalizePrefix(process.env.PRODUCT_INLINE_PREFIX || "product/inline/active");
         case "edit":
-            return normalizePrefix(process.env.PRODUCT_EDIT_PREFIX);
+            return normalizePrefix(process.env.PRODUCT_EDIT_PREFIX || "product/edit/active");
         case "sold":
-            return normalizePrefix(process.env.PRODUCT_SOLD_PREFIX);
+            return normalizePrefix(process.env.PRODUCT_SOLD_PREFIX || "product/sold");
         default:
             return "";
     }
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
         const requestedPrefix = url.searchParams.get("prefix") ?? "";
         const token = url.searchParams.get("token") ?? undefined;
 
-        const allowedRoot = normalizePrefix(process.env.S3_BROWSE_ROOT);
+        const allowedRoot = normalizePrefix(process.env.S3_BROWSE_ROOT || "product");
         const profileRoot = getProfileRoot(profile);
         const prefix = clampPrefix(requestedPrefix, profileRoot, allowedRoot);
 

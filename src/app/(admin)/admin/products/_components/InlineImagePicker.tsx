@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 
 type Props = {
     imageUrl: string | null; // fileKey
-    onPick: (fileKey: string) => void;
+    onPick: (fileKey: string) => Promise<void> | void;
+    busy?: boolean;
 };
 
 type BrowseItem = { key: string; url: string };
@@ -188,7 +189,7 @@ function PickerModal({
     );
 }
 
-export default function InlineImagePicker({ imageUrl, onPick }: Props) {
+export default function InlineImagePicker({ imageUrl, onPick, busy = false }: Props) {
     const [open, setOpen] = useState(false);
 
     const initialPrefix = useMemo(() => extractParentPrefix(imageUrl), [imageUrl]);
@@ -202,18 +203,28 @@ export default function InlineImagePicker({ imageUrl, onPick }: Props) {
         <>
             <button
                 type="button"
-                onClick={() => setOpen(true)}
+                onClick={() => {
+                    if (!busy) setOpen(true);
+                }}
+                disabled={busy}
                 className={[
                     "relative flex h-14 w-14 min-h-[56px] min-w-[56px] max-h-[56px] max-w-[56px]",
                     "shrink-0 items-center justify-center overflow-hidden rounded-md",
                     previewSrc ? "bg-transparent" : "bg-gray-100 hover:bg-gray-200",
+                    busy ? "cursor-wait opacity-80" : "",
                 ].join(" ")}
+                title={busy ? "Đang cập nhật ảnh..." : "Chọn ảnh"}
             >
                 {previewSrc ? (
                     <img src={previewSrc} alt="Product" className="block h-full w-full object-cover" />
                 ) : (
                     <span className="text-sm text-gray-400">+</span>
                 )}
+                {busy ? (
+                    <span className="absolute inset-0 flex items-center justify-center bg-white/65">
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
+                    </span>
+                ) : null}
             </button>
             <PickerModal
                 open={open}
