@@ -13,7 +13,9 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { TagSchema } from '../enums/Tag.schema';
 import { EnumTagFieldUpdateOperationsInputObjectSchema as EnumTagFieldUpdateOperationsInputObjectSchema } from './EnumTagFieldUpdateOperationsInput.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
-import { EnumProductStatusFieldUpdateOperationsInputObjectSchema as EnumProductStatusFieldUpdateOperationsInputObjectSchema } from './EnumProductStatusFieldUpdateOperationsInput.schema'
+import { EnumProductStatusFieldUpdateOperationsInputObjectSchema as EnumProductStatusFieldUpdateOperationsInputObjectSchema } from './EnumProductStatusFieldUpdateOperationsInput.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema';
+import { NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema as NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema } from './NullableEnumContentStatusFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,7 +34,8 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   tag: z.union([TagSchema, z.lazy(() => EnumTagFieldUpdateOperationsInputObjectSchema)]).optional(),
   status: z.union([ProductStatusSchema, z.lazy(() => EnumProductStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
-  categoryId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  categoryId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  contentStatus: z.union([ContentStatusSchema, z.lazy(() => NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const ProductUncheckedUpdateManyWithoutVendorInputObjectSchema: z.ZodType<Prisma.ProductUncheckedUpdateManyWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductUncheckedUpdateManyWithoutVendorInput>;
 export const ProductUncheckedUpdateManyWithoutVendorInputObjectZodSchema = makeSchema();

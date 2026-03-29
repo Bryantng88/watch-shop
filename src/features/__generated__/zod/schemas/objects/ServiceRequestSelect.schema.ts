@@ -37,6 +37,8 @@ const makeSchema = () => z.object({
   vendorNameSnap: z.boolean().optional(),
   technicianId: z.boolean().optional(),
   technicianNameSnap: z.boolean().optional(),
+  skuSnapshot: z.boolean().optional(),
+  primaryImageUrlSnapshot: z.boolean().optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),

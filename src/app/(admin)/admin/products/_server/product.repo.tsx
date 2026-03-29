@@ -4,7 +4,9 @@ import {
     Prisma,
     AvailabilityStatus,
     ProductStatus,
+    ContentStatus,
     ServiceRequestStatus,
+    ImageRole
 } from "@prisma/client";
 import type {
     ProductListInput,
@@ -32,7 +34,7 @@ type AdminProductListRepoInput = ProductListInput & {
     catalog?: ProductCatalogKey;
 };
 
-const STRAP_ATTACHMENT_PREFIX = '__STRAP_LINK__:';
+const STRAP_ATTACHMENT_PREFIX = "__STRAP_LINK__:";
 
 type StoredStrapAttachment = {
     productId: string;
@@ -52,11 +54,11 @@ type StoredStrapAttachment = {
 };
 
 function parseStoredStrapAttachment(raw: unknown): StoredStrapAttachment | null {
-    if (typeof raw !== 'string' || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
+    if (typeof raw !== "string" || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
 
     try {
         const parsed = JSON.parse(raw.slice(STRAP_ATTACHMENT_PREFIX.length));
-        if (!parsed || typeof parsed !== 'object') return null;
+        if (!parsed || typeof parsed !== "object") return null;
         if (!(parsed as any).variantId || !(parsed as any).productId) return null;
         return parsed as StoredStrapAttachment;
     } catch {
@@ -166,9 +168,9 @@ function buildWhereForView(
 ): Prisma.ProductWhereInput {
     switch (view) {
         case "draft":
-            return { AND: [whereBase, { status: ProductStatus.DRAFT }] };
+            return { AND: [whereBase, { contentStatus: ContentStatus.DRAFT }] };
         case "posted":
-            return { AND: [whereBase, { status: ProductStatus.POSTED }] };
+            return { AND: [whereBase, { contentStatus: ContentStatus.PUBLISHED }] };
         case "in_service":
             return { AND: [whereBase, { status: ProductStatus.IN_SERVICE }] };
         case "hold":
@@ -194,16 +196,22 @@ function buildWhereForView(
     }
 }
 
-
 type ReadBatchFactory<T = unknown> = () => Promise<T>;
 
-async function runReadBatch<T extends unknown[]>(factories: { [K in keyof T]: ReadBatchFactory<T[K]> }): Promise<T> {
+async function runReadBatch<T extends unknown[]>(
+    factories: { [K in keyof T]: ReadBatchFactory<T[K]> }
+): Promise<T> {
     return (await Promise.all(factories.map((factory) => factory()))) as T;
 }
 
 export async function listAdminProducts(
     tx: DB,
-    input?: ProductListInput & { page?: number; pageSize?: number; catalog?: "product" | "strap"; includeCost?: boolean }
+    input?: ProductListInput & {
+        page?: number;
+        pageSize?: number;
+        catalog?: "product" | "strap";
+        includeCost?: boolean;
+    }
 ) {
     const db = dbOrTx(tx) as any;
 
@@ -269,12 +277,14 @@ export async function listAdminProducts(
             }
             : {}),
     };
+
     const rowSelect: any = {
         id: true,
         title: true,
         slug: true,
         type: true,
         status: true,
+        contentStatus: true,
         categoryId: true,
         primaryImageUrl: true,
         createdAt: true,
@@ -288,8 +298,14 @@ export async function listAdminProducts(
         },
         _count: {
             select: {
-                image: true as any,
+                image: { where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } } } as any,
             },
+        },
+        image: {
+            where: { role: ImageRole.COVER },
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+            take: 1,
+            select: { fileKey: true },
         },
         ...(!isStrapCatalog
             ? {
@@ -317,9 +333,38 @@ export async function listAdminProducts(
     const batchFactories: Array<ReadBatchFactory<any>> = [
         () =>
             db.product.groupBy({
-                by: ["status"],
+                by: ["contentStatus"],
                 where: baseWhere,
                 _count: { _all: true },
+            }),
+        () =>
+            db.product.count({
+                where: {
+                    AND: [baseWhere, { status: ProductStatus.IN_SERVICE }],
+                },
+            }),
+        () =>
+            db.product.count({
+                where: {
+                    AND: [
+                        baseWhere,
+                        {
+                            status: {
+                                in: [
+                                    ProductStatus.HOLD,
+                                    ProductStatus.CONSIGNED_FROM,
+                                    ProductStatus.CONSIGNED_TO,
+                                ],
+                            },
+                        },
+                    ],
+                },
+            }),
+        () =>
+            db.product.count({
+                where: {
+                    AND: [baseWhere, { status: ProductStatus.SOLD }],
+                },
             }),
         () => db.product.count({ where: whereList }),
         () =>
@@ -342,25 +387,31 @@ export async function listAdminProducts(
     }
 
     const batchResults = await runReadBatch<any[]>(batchFactories as any);
-    const [statusGroups, total, rows, brands = []] = batchResults;
+    const [
+        contentStatusGroups,
+        cInService,
+        cHold,
+        cSold,
+        total,
+        rows,
+        brands = [],
+    ] = batchResults;
 
-    const groupedStatusCounts = new Map<string, number>();
-    for (const row of statusGroups ?? []) {
-        groupedStatusCounts.set(String(row.status), Number(row._count?._all ?? 0));
+    const groupedContentStatusCounts = new Map<string, number>();
+    for (const row of contentStatusGroups ?? []) {
+        groupedContentStatusCounts.set(String(row.contentStatus), Number(row._count?._all ?? 0));
     }
 
     const openServiceStatusMap = new Map<string, string>();
     if (!isStrapCatalog && (rows?.length ?? 0) > 0) {
         const pageProductIds = (rows ?? []).map((row: any) => row.id).filter(Boolean);
+
         const openServices = await db.serviceRequest.findMany({
             where: {
                 productId: { in: pageProductIds },
                 status: { in: OPEN_SERVICE_REQUEST_STATUSES as any },
             },
-            orderBy: [
-                { updatedAt: 'desc' },
-                { createdAt: 'desc' },
-            ],
+            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
             select: {
                 productId: true,
                 status: true,
@@ -373,22 +424,18 @@ export async function listAdminProducts(
         }
     }
 
-    const totalAll = Array.from(groupedStatusCounts.values()).reduce((sum, count) => sum + count, 0);
-    const cDraft = groupedStatusCounts.get(ProductStatus.DRAFT) ?? 0;
-    const cPosted = groupedStatusCounts.get(ProductStatus.POSTED) ?? 0;
-    const cInService = groupedStatusCounts.get(ProductStatus.IN_SERVICE) ?? 0;
-    const cHold =
-        (groupedStatusCounts.get(ProductStatus.HOLD) ?? 0) +
-        (groupedStatusCounts.get(ProductStatus.CONSIGNED_FROM) ?? 0) +
-        (groupedStatusCounts.get(ProductStatus.CONSIGNED_TO) ?? 0);
-    const cSold = groupedStatusCounts.get(ProductStatus.SOLD) ?? 0;
+    const totalAll = Array.from(groupedContentStatusCounts.values()).reduce(
+        (sum, count) => sum + count,
+        0
+    );
+    const cDraft = groupedContentStatusCounts.get(ContentStatus.DRAFT) ?? 0;
+    const cPosted = groupedContentStatusCounts.get(ContentStatus.PUBLISHED) ?? 0;
 
-    const strapVariantIdsInPage =
-        isStrapCatalog
-            ? (rows ?? [])
-                .map((row: any) => row.variants?.[0]?.id)
-                .filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
-            : [];
+    const strapVariantIdsInPage = isStrapCatalog
+        ? (rows ?? [])
+            .map((row: any) => row.variants?.[0]?.id)
+            .filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+        : [];
 
     const strapAttachmentUsageMap = new Map<
         string,
@@ -425,6 +472,7 @@ export async function listAdminProducts(
                         id: true,
                         title: true,
                         status: true,
+                        contentStatus: true,
                     },
                 },
             },
@@ -435,8 +483,7 @@ export async function listAdminProducts(
             if (!attachment?.variantId || !attachedVariantIdSet.has(attachment.variantId)) continue;
 
             const current =
-                strapAttachmentUsageMap.get(attachment.variantId) ??
-                {
+                strapAttachmentUsageMap.get(attachment.variantId) ?? {
                     count: 0,
                     products: [],
                 };
@@ -447,6 +494,7 @@ export async function listAdminProducts(
                 title: row.product?.title ?? null,
                 status: row.product?.status ?? null,
             });
+
             strapAttachmentUsageMap.set(attachment.variantId, current);
         }
     }
@@ -478,9 +526,15 @@ export async function listAdminProducts(
             title: p.title,
             slug: p.slug,
             type: p.type,
+
+            // service/inventory status
             status: p.status,
+
+            // publish/content status
+            contentStatus: p.contentStatus,
+
             categoryId: p.categoryId ?? null,
-            primaryImageUrl: p.primaryImageUrl,
+            primaryImageUrl: p.image?.[0]?.fileKey ?? p.primaryImageUrl,
             minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
             salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
             variantId: latestVariant?.id ?? null,
@@ -507,7 +561,8 @@ export async function listAdminProducts(
                     variantId: attachedStrap.variantId,
                     title: attachedStrap.title ?? null,
                     vendorName: attachedStrap.vendorName ?? null,
-                    costPrice: attachedStrap.costPrice != null ? Number(attachedStrap.costPrice) : null,
+                    costPrice:
+                        attachedStrap.costPrice != null ? Number(attachedStrap.costPrice) : null,
                     price: attachedStrap.price != null ? Number(attachedStrap.price) : null,
                     strapSpec: attachedStrap.strapSpec
                         ? {
@@ -538,6 +593,7 @@ export async function listAdminProducts(
                     price: latestVariant.price != null ? Number(latestVariant.price) : null,
                     availabilityStatus: latestVariant.availabilityStatus ?? null,
                     stockQty: latestVariant.stockQty != null ? Number(latestVariant.stockQty) : 0,
+                    sku: latestVariant.sku ?? null,
                 }
                 : null,
             watchSpecSnapshot: p.watchSpec ?? null,
@@ -545,14 +601,14 @@ export async function listAdminProducts(
             openServiceStatus,
         };
     });
-    const productTypes =
-        isStrapCatalog
-            ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
-            : [
-                { label: "WATCH", value: "WATCH" },
-                { label: "ACCESSORY", value: "ACCESSORY" },
-                { label: "OTHER", value: "OTHER" },
-            ];
+
+    const productTypes = isStrapCatalog
+        ? [{ label: "WATCH_STRAP", value: "WATCH_STRAP" }]
+        : [
+            { label: "WATCH", value: "WATCH" },
+            { label: "ACCESSORY", value: "ACCESSORY" },
+            { label: "OTHER", value: "OTHER" },
+        ];
 
     return {
         items,
@@ -583,7 +639,8 @@ export async function createProductDraft(
         data: {
             title,
             vendorId: vendorId ?? undefined,
-            status: ProductStatus.DRAFT,
+            status: ProductStatus.AVAILABLE,
+            contentStatus: ContentStatus.DRAFT,
             type,
             variants: {
                 create: [
@@ -603,7 +660,8 @@ export async function searchProductsRepo(tx: DB, q: string) {
     const product = await db.product.findMany({
         where: {
             OR: [{ title: { contains: q, mode: "insensitive" } }],
-            status: ProductStatus.DRAFT,
+            status: ProductStatus.AVAILABLE,
+            contentStatus: ContentStatus.DRAFT,
             variants: {
                 some: {
                     availabilityStatus: AvailabilityStatus.ACTIVE,
@@ -665,6 +723,7 @@ export async function updateProduct(
             image: true,
             primaryImageUrl: true,
             status: true,
+            contentStatus: true,
             priceVisibility: true,
             variants: {
                 select: {
@@ -734,6 +793,8 @@ export async function getAdminProductRow(tx: DB, id: string) {
             slug: true,
             type: true,
             status: true,
+            contentStatus: true,
+            categoryId: true,
             primaryImageUrl: true,
             createdAt: true,
             updatedAt: true,
@@ -766,6 +827,7 @@ export async function getAdminProductRow(tx: DB, id: string) {
         slug: p.slug,
         type: p.type,
         status: p.status,
+        contentStatus: p.contentStatus,
         categoryId: p.categoryId ?? null,
         primaryImageUrl: p.primaryImageUrl,
         minPrice: p.variants?.[0]?.price != null ? Number(p.variants[0].price) : null,
@@ -779,7 +841,9 @@ export async function getAdminProductRow(tx: DB, id: string) {
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         brand: p.brand?.name ?? null,
+        brandId: p.brand?.id ?? null,
         vendorName: p.vendor?.name ?? null,
+        vendorId: p.vendor?.id ?? null,
     };
 }
 
@@ -798,10 +862,10 @@ export async function getAdminEditProductDetail(tx: DB, id: string) {
                 },
             },
             image: {
-                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             },
             variants: {
-                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'asc' }],
+                orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
                 include: {
                     strapSpec: true,
                 },
@@ -815,7 +879,7 @@ export async function listActiveProductCategories(tx: DB) {
 
     return db.productCategory.findMany({
         where: { isActive: true },
-        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: {
             id: true,
             name: true,
@@ -829,7 +893,7 @@ export async function listAvailableStrapInventory(
     attachedStrapVariantId?: string | null
 ) {
     const db = dbOrTx(tx);
-    const keepVariantId = attachedStrapVariantId ? String(attachedStrapVariantId) : '';
+    const keepVariantId = attachedStrapVariantId ? String(attachedStrapVariantId) : "";
 
     return db.product.findMany({
         where: {
@@ -844,7 +908,7 @@ export async function listAvailableStrapInventory(
                     },
             },
         },
-        orderBy: [{ updatedAt: 'desc' }, { title: 'asc' }],
+        orderBy: [{ updatedAt: "desc" }, { title: "asc" }],
         take: 200,
         select: {
             id: true,
@@ -855,7 +919,7 @@ export async function listAvailableStrapInventory(
                 },
             },
             variants: {
-                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'asc' }],
+                orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
                 where: keepVariantId
                     ? {
                         OR: [{ stockQty: { gt: 0 } }, { id: keepVariantId }],
@@ -884,7 +948,6 @@ export async function listAvailableStrapInventory(
         },
     });
 }
-
 
 export async function deleteProduct(tx: DB, id: string) {
     const db = dbOrTx(tx);
@@ -950,11 +1013,13 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         id: true,
         title: true,
         status: true,
+        contentStatus: true,
         type: true,
         brandId: true,
         categoryId: true,
         primaryImageUrl: true,
         image: {
+            where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } },
             select: { id: true },
         },
         variants: {
@@ -1005,6 +1070,7 @@ export async function getProductsForBulkPost(tx: DB, ids: string[]) {
         id: p.id,
         title: p.title,
         status: p.status,
+        contentStatus: p.contentStatus,
         type: p.type,
         brandId: p.brandId ?? null,
         categoryId: p.categoryId ?? null,
@@ -1026,7 +1092,9 @@ export async function getProductsForBulkPost(tx: DB, ids: string[]) {
 export async function getOpenServiceProducts(tx: DB, productIds: string[]) {
     const db = dbOrTx(tx);
 
-    if (!productIds.length) return [] as Array<{ productId: string; status: ServiceRequestStatus }>;
+    if (!productIds.length) {
+        return [] as Array<{ productId: string; status: ServiceRequestStatus }>;
+    }
 
     return db.serviceRequest.findMany({
         where: {
@@ -1046,7 +1114,8 @@ export async function listDraftProductIdsForAutoBulkPost(tx: DB) {
 
     const rows = await db.product.findMany({
         where: {
-            status: ProductStatus.DRAFT,
+            status: ProductStatus.AVAILABLE,
+            contentStatus: ContentStatus.DRAFT,
             NOT: {
                 type: ProductType.WATCH_STRAP,
             },
@@ -1062,8 +1131,8 @@ export async function markPostedMany(tx: DB, ids: string[]) {
     const db = dbOrTx(tx);
 
     return db.product.updateMany({
-        where: { id: { in: ids }, status: ProductStatus.DRAFT },
-        data: { status: ProductStatus.POSTED, updatedAt: new Date() },
+        where: { id: { in: ids }, contentStatus: ContentStatus.DRAFT },
+        data: { contentStatus: ContentStatus.PUBLISHED, updatedAt: new Date() },
     });
 }
 
@@ -1176,22 +1245,31 @@ export async function replaceProductImages(
     images: Array<{ fileKey: string; alt?: string | null; sortOrder?: number | null }>
 ) {
     const db = dbOrTx(tx);
-    await db.productImage.deleteMany({ where: { productId } });
 
-    if (images.length) {
+    await db.productImage.deleteMany({
+        where: {
+            productId,
+            role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] },
+        },
+    });
+
+    const normalized = images.filter((img) => !!String(img.fileKey ?? "").trim()).slice(0, 4);
+
+    if (normalized.length) {
         await db.productImage.createMany({
-            data: images.map((img, index) => ({
+            data: normalized.map((img, index) => ({
                 productId,
                 fileKey: img.fileKey,
                 alt: img.alt ?? null,
                 sortOrder: img.sortOrder ?? index,
+                role: index === 0 ? ImageRole.PRIMARY : ImageRole.GALLERY,
             })),
         });
     }
 
     return db.product.update({
         where: { id: productId },
-        data: { primaryImageUrl: images[0]?.fileKey ?? null },
+        data: { primaryImageUrl: normalized[0]?.fileKey ?? null },
         select: { id: true, primaryImageUrl: true },
     });
 }
@@ -1270,6 +1348,7 @@ export async function upsertWatchSpecForAdmin(
 
 export async function getProductServiceHistory(tx: DB, productId: string) {
     const db = dbOrTx(tx);
+
     const rows = await db.serviceRequest.findMany({
         where: { productId },
         orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -1282,6 +1361,8 @@ export async function getProductServiceHistory(tx: DB, productId: string) {
             createdAt: true,
             updatedAt: true,
             vendorNameSnap: true,
+            skuSnapshot: true,
+            primaryImageUrlSnapshot: true,
             ServiceCatalog: {
                 select: { id: true, code: true, name: true },
             },
@@ -1315,11 +1396,17 @@ export async function getProductServiceHistory(tx: DB, productId: string) {
         status: row.status ?? null,
         scope: row.scope ?? null,
         notes: row.notes ?? null,
+        skuSnapshot: row.skuSnapshot ?? null,
+        primaryImageUrlSnapshot: row.primaryImageUrlSnapshot ?? null,
         createdAt: row.createdAt?.toISOString?.() ?? null,
         updatedAt: row.updatedAt?.toISOString?.() ?? null,
         vendorName: row.vendorNameSnap ?? null,
         serviceCatalog: row.ServiceCatalog
-            ? { id: row.ServiceCatalog.id, code: row.ServiceCatalog.code ?? null, name: row.ServiceCatalog.name }
+            ? {
+                id: row.ServiceCatalog.id,
+                code: row.ServiceCatalog.code ?? null,
+                name: row.ServiceCatalog.name,
+            }
             : null,
         order: row.orderItem?.order
             ? { id: row.orderItem.order.id, refNo: row.orderItem.order.refNo ?? null }

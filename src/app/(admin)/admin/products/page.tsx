@@ -42,10 +42,12 @@ function hasPermission(user: any, permission: string) {
 export default async function ProductListPage({
     searchParams,
 }: {
-    searchParams: SearchParams;
+    searchParams: Promise<SearchParams>;
 }) {
+    const resolvedSearchParams = await searchParams;
+
     const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries(searchParams)) {
+    for (const [k, v] of Object.entries(resolvedSearchParams)) {
         if (Array.isArray(v)) {
             for (const x of v) {
                 if (x != null && x !== "") sp.append(k, String(x));
@@ -91,7 +93,7 @@ export default async function ProductListPage({
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
             brands={serialize(brands)}
             vendors={serialize(vendors)}
             productTypes={serialize(productTypes)}

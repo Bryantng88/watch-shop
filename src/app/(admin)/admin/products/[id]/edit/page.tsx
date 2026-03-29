@@ -21,8 +21,9 @@ function serialize(obj: any) {
     );
 }
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
-    const product = await detail(params.id);
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const product = await detail(id);
     if (!product) notFound();
 
     const [brands, vendors, opts, categoryOptions, strapInventoryOptions] = await Promise.all([

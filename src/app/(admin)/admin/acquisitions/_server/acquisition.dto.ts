@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AcquisitionType, ProductType } from "@prisma/client";
+import type { QuickWatchSpec } from "../_shared/quick-watch-rule";
 
 export const adminAcqSort = z.enum([
     "updatedDesc",
@@ -75,10 +76,10 @@ export type CreateAcquisitionInput = {
         variantId?: string | null;
         strapSpec?: StrapSpecInput;
         watchFlags?: WatchFlagsInput;
+        quickSpec?: QuickWatchSpec | null;
     }[];
     quickVendorName: string;
 };
-
 
 export type CreateAcqDTO = {
     vendorId: string;
@@ -114,6 +115,33 @@ export const ItemDTO = z.object({
             isServiced: z.boolean().optional(),
             hasClasp: z.boolean().optional(),
             isSpa: z.boolean().optional(),
+        })
+        .optional(),
+    quickSpec: z
+        .object({
+            sourceText: z.string().optional(),
+            normalizedText: z.string().optional(),
+            brand: z.string().nullable().optional(),
+            brandLabel: z.string().nullable().optional(),
+            movement: z.string().nullable().optional(),
+            movementLabel: z.string().nullable().optional(),
+            caseShape: z.string().nullable().optional(),
+            caseShapeLabel: z.string().nullable().optional(),
+            dialColor: z.string().nullable().optional(),
+            dialColorLabel: z.string().nullable().optional(),
+            strapType: z.string().nullable().optional(),
+            strapTypeLabel: z.string().nullable().optional(),
+            boxIncluded: z.boolean().nullable().optional(),
+            bookletIncluded: z.boolean().nullable().optional(),
+            cardIncluded: z.boolean().nullable().optional(),
+            fullSetStatus: z.string().nullable().optional(),
+            fullSetStatusLabel: z.string().nullable().optional(),
+            caseMaterial: z.string().nullable().optional(),
+            caseMaterialLabel: z.string().nullable().optional(),
+            styleCategory: z.string().nullable().optional(),
+            styleCategoryLabel: z.string().nullable().optional(),
+            hourMarkerStyle: z.string().nullable().optional(),
+            hourMarkerStyleLabel: z.string().nullable().optional(),
         })
         .optional(),
 });

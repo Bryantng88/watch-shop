@@ -1,24 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Picked = { key: string; url?: string };
 
 type BrowseResponse = {
+    profile?: string;
+    rootPrefix?: string | null;
     prefix: string;
-    root?: string;
-    folders?: { prefix: string }[];
-    files?: { key: string; url: string }[];
+    folders: { prefix: string }[];
+    files: { key: string; url: string }[];
     error?: string;
 };
 
 const imageSrc = (item: Picked) =>
     item.url?.trim() ? item.url : `/api/media/sign?key=${encodeURIComponent(item.key)}`;
 
-function parentPrefix(prefix: string) {
-    const cleaned = String(prefix || "").replace(/\/+$/, "");
-    if (!cleaned.includes("/")) return "";
-    return cleaned.split("/").slice(0, -1).join("/");
+function extractParentPrefix(items: Picked[]) {
+    const firstKey = String(items?.[0]?.key ?? "").trim().replace(/^\/+/, "");
+    if (!firstKey || !firstKey.includes("/")) return "";
+    return firstKey.split("/").slice(0, -1).join("/");
 }
 
 export default function ImagePicker({
@@ -29,38 +30,53 @@ export default function ImagePicker({
     onChange: (v: Picked[]) => void;
 }) {
     const [prefix, setPrefix] = useState("");
-    const [root, setRoot] = useState("");
     const [folders, setFolders] = useState<{ prefix: string }[]>([]);
     const [files, setFiles] = useState<Picked[]>([]);
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const initialPrefix = useMemo(() => extractParentPrefix(value), [value]);
 
-    async function load(nextPrefix = "") {
-        const qs = new URLSearchParams({ profile: "edit" });
-        if (nextPrefix) qs.set("prefix", nextPrefix);
-        const res = await fetch(`/api/media/browse?${qs.toString()}`, { cache: "no-store" });
-        const json: BrowseResponse = await res.json();
-        if (!res.ok) throw new Error(json.error || "Không thể tải thư mục ảnh edit");
-        setPrefix(json.prefix || "");
-        setRoot(json.root || "");
-        setFolders(json.folders || []);
-        setFiles(
-            (json.files || [])
-                .filter((f) => /\.(jpe?g|png|webp|gif|avif)$/i.test(f.key))
-                .map((f) => ({ key: f.key, url: f.url }))
-        );
+    async function load(p = "") {
+        setLoading(true);
+        setError(null);
+        try {
+            const qs = new URLSearchParams();
+            qs.set("profile", "edit");
+            if (p) qs.set("prefix", p);
+            const res = await fetch(`/api/media/browse?${qs.toString()}`, { cache: "no-store" });
+            const json: BrowseResponse = await res.json();
+            if (!res.ok) throw new Error(json?.error || "Không thể tải ảnh");
+            setPrefix(json.prefix || "");
+            setFolders(json.folders || []);
+            setFiles(
+                (json.files || [])
+                    .filter((f) => /\.(jpe?g|png|webp|gif|avif)$/i.test(f.key))
+                    .map((f) => ({ key: f.key, url: f.url }))
+            );
+        } catch (err: any) {
+            console.error("browse media failed", err);
+            setError(err?.message || "Không thể tải ảnh");
+            setFolders([]);
+            setFiles([]);
+        } finally {
+            setLoading(false);
+        }
     }
 
     useEffect(() => {
-        if (!open) return;
-        load().catch((err) => console.error(err));
-    }, [open]);
+        if (open) load(initialPrefix);
+    }, [open, initialPrefix]);
 
-    const toggle = (it: Picked) =>
-        onChange(
-            value.find((x) => x.key === it.key)
-                ? value.filter((x) => x.key !== it.key)
-                : [...value, it]
-        );
+    const toggle = (it: Picked) => {
+        const existed = value.find((x) => x.key === it.key);
+        if (existed) {
+            onChange(value.filter((x) => x.key !== it.key));
+            return;
+        }
+        if (value.length >= 4) return;
+        onChange([...value, it]);
+    };
 
     return (
         <div className="space-y-4">
@@ -97,19 +113,15 @@ export default function ImagePicker({
                     <span className="font-medium text-gray-800">Drop your image here,</span>{" "}
                     or <span className="text-blue-600 hover:underline font-medium">browse</span>
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Supports: JPG, JPEG2000, PNG</p>
+                <p className="text-xs text-gray-400 mt-1">Chọn tối đa 4 ảnh từ thư mục products/edit/... Ảnh đầu tiên sẽ là ảnh đại diện trên web.</p>
 
                 {value.length > 0 && (
                     <div className="mt-4 w-full space-y-3">
                         <div className="overflow-hidden rounded-xl border border-blue-200 bg-white shadow-sm">
-                            <img
-                                src={imageSrc(value[0])}
-                                alt="Selected product"
-                                className="h-36 w-full object-cover"
-                            />
+                            <img src={imageSrc(value[0])} alt="Selected product" className="h-36 w-full object-cover" />
                         </div>
                         <p className="text-xs text-blue-600 font-medium">
-                            {value.length} image{value.length > 1 ? "s" : ""} selected
+                            {value.length}/4 ảnh đã chọn
                         </p>
                     </div>
                 )}
@@ -123,11 +135,7 @@ export default function ImagePicker({
                             className="relative rounded-xl border overflow-hidden bg-gray-100 group"
                             title={v.key}
                         >
-                            <img
-                                src={imageSrc(v)}
-                                alt=""
-                                className="h-24 w-full object-cover group-hover:opacity-90"
-                            />
+                            <img src={imageSrc(v)} alt="" className="h-24 w-full object-cover group-hover:opacity-90" />
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -147,7 +155,7 @@ export default function ImagePicker({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="bg-white rounded-xl shadow-xl w-[900px] max-h-[80vh] overflow-auto p-4 space-y-4">
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-gray-600 font-mono truncate">/{prefix || root}</div>
+                            <div className="text-sm text-gray-600 font-mono truncate">/{prefix || "products/edit/active"}</div>
                             <button
                                 type="button"
                                 className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
@@ -157,48 +165,50 @@ export default function ImagePicker({
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                className="rounded border px-2 py-1 text-sm hover:bg-gray-50 disabled:opacity-50"
-                                disabled={!prefix || prefix === root}
-                                onClick={() => load(prefix && prefix !== root ? parentPrefix(prefix) : root).catch((err) => console.error(err))}
-                            >
-                                Up
-                            </button>
-                            <div className="text-xs text-gray-500 truncate">/{prefix || root}</div>
-                        </div>
+                        {loading ? (
+                            <div className="py-10 text-center text-sm text-gray-500">Đang tải ảnh...</div>
+                        ) : error ? (
+                            <div className="py-10 text-center text-sm text-red-500">{error}</div>
+                        ) : (
+                            <>
+                                <div className="flex flex-wrap gap-2">
+                                    {folders.map((f) => (
+                                        <button
+                                            key={f.prefix}
+                                            type="button"
+                                            className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
+                                            onClick={() => load(f.prefix)}
+                                        >
+                                            {f.prefix.split("/").filter(Boolean).slice(-1)[0] || "/"}
+                                        </button>
+                                    ))}
+                                </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {folders.map((f) => (
-                                <button
-                                    key={f.prefix}
-                                    type="button"
-                                    className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
-                                    onClick={() => load(f.prefix).catch((err) => console.error(err))}
-                                >
-                                    {f.prefix.replace(/\/+$/, "").split("/").pop() || "/"}
-                                </button>
-                            ))}
-                        </div>
+                                <div className="text-xs text-gray-500">Chọn tối đa 4 ảnh. Ảnh được chọn đầu tiên sẽ là ảnh đại diện trên web.</div>
 
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
-                            {files.map((f) => {
-                                const picked = value.some((x) => x.key === f.key);
-                                return (
-                                    <button
-                                        key={f.key}
-                                        type="button"
-                                        onClick={() => toggle(f)}
-                                        className={`relative overflow-hidden rounded-lg border transition ${picked ? "ring-2 ring-blue-500 border-blue-400" : "hover:shadow-sm"
-                                            }`}
-                                    >
-                                        <img src={imageSrc(f)} alt="" className="h-28 w-full object-cover" />
-                                        {picked && <div className="absolute inset-0 bg-blue-500/20" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-3">
+                                    {files.map((f) => {
+                                        const picked = value.some((x) => x.key === f.key);
+                                        return (
+                                            <button
+                                                key={f.key}
+                                                type="button"
+                                                onClick={() => toggle(f)}
+                                                className={`relative overflow-hidden rounded-lg border transition ${picked ? "ring-2 ring-blue-500 border-blue-400" : "hover:shadow-sm"
+                                                    }`}
+                                            >
+                                                <img src={imageSrc(f)} alt="" className="h-28 w-full object-cover" />
+                                                {picked && <div className="absolute inset-0 bg-blue-500/20" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {!files.length && !folders.length && (
+                                    <div className="py-10 text-center text-sm text-gray-500">Không có ảnh nào</div>
+                                )}
+                            </>
+                        )}
 
                         <div className="flex justify-end">
                             <button

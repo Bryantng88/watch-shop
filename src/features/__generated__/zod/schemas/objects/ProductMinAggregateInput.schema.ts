@@ -20,7 +20,8 @@ const makeSchema = () => z.object({
   updatedAt: z.literal(true).optional(),
   tag: z.literal(true).optional(),
   status: z.literal(true).optional(),
-  categoryId: z.literal(true).optional()
+  categoryId: z.literal(true).optional(),
+  contentStatus: z.literal(true).optional()
 }).strict();
 export const ProductMinAggregateInputObjectSchema: z.ZodType<Prisma.ProductMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductMinAggregateInputType>;
 export const ProductMinAggregateInputObjectZodSchema = makeSchema();

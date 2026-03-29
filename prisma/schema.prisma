@@ -87,8 +87,9 @@ model Product {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   tag                Tag                 @default(PRE_OWNED)
-  status             ProductStatus       @default(DRAFT)
+  status             ProductStatus       @default(AVAILABLE)
   categoryId         String?
+  contentStatus      ContentStatus       @default(DRAFT)
   AcquisitionItem    AcquisitionItem[]
   InvoiceItem        InvoiceItem[]
   maintenanceRecords MaintenanceRecord[]
@@ -308,40 +309,42 @@ model ServiceCatalog {
 }
 
 model ServiceRequest {
-  id                 String               @id @default(cuid())
-  type               ServiceType          @default(PAID)
-  billable           Boolean              @default(true)
-  orderItemId        String?
-  customerId         String?
-  productId          String?
-  variantId          String?
-  brandSnapshot      String?
-  modelSnapshot      String?
-  refSnapshot        String?
-  serialSnapshot     String?
-  appointmentAt      DateTime?
-  status             ServiceRequestStatus @default(DRAFT)
-  notes              String?
-  warrantyUntil      DateTime?
-  warrantyPolicy     String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  servicecatalogid   String?
-  refNo              String?
-  scope              ServiceScope?
-  vendorId           String?
-  vendorNameSnap     String?
-  technicianId       String?
-  technicianNameSnap String?
-  Invoice            Invoice[]
-  maintenance        MaintenanceRecord[]
-  customer           Customer?            @relation(fields: [customerId], references: [id])
-  orderItem          OrderItem?           @relation(fields: [orderItemId], references: [id])
-  product            Product?             @relation(fields: [productId], references: [id])
-  User               User?                @relation(fields: [technicianId], references: [id])
-  variant            ProductVariant?      @relation(fields: [variantId], references: [id])
-  Vendor             Vendor?              @relation(fields: [vendorId], references: [id])
-  ServiceCatalog     ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
+  id                      String               @id @default(cuid())
+  type                    ServiceType          @default(PAID)
+  billable                Boolean              @default(true)
+  orderItemId             String?
+  customerId              String?
+  productId               String?
+  variantId               String?
+  brandSnapshot           String?
+  modelSnapshot           String?
+  refSnapshot             String?
+  serialSnapshot          String?
+  appointmentAt           DateTime?
+  status                  ServiceRequestStatus @default(DRAFT)
+  notes                   String?
+  warrantyUntil           DateTime?
+  warrantyPolicy          String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  servicecatalogid        String?
+  refNo                   String?
+  scope                   ServiceScope?
+  vendorId                String?
+  vendorNameSnap          String?
+  technicianId            String?
+  technicianNameSnap      String?
+  skuSnapshot             String?
+  primaryImageUrlSnapshot String?
+  Invoice                 Invoice[]
+  maintenance             MaintenanceRecord[]
+  customer                Customer?            @relation(fields: [customerId], references: [id])
+  orderItem               OrderItem?           @relation(fields: [orderItemId], references: [id])
+  product                 Product?             @relation(fields: [productId], references: [id])
+  User                    User?                @relation(fields: [technicianId], references: [id])
+  variant                 ProductVariant?      @relation(fields: [variantId], references: [id])
+  Vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
+  ServiceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
 
   @@index([customerId])
   @@index([productId])
@@ -1019,10 +1022,8 @@ enum servicerequeststatus_new {
 }
 
 enum ProductStatus {
-  DRAFT
-  POSTED
-  IN_SERVICE
   AVAILABLE
+  IN_SERVICE
   CONSIGNED_FROM
   CONSIGNED_TO
   HOLD

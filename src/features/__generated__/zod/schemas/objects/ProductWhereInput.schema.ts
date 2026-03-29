@@ -14,6 +14,8 @@ import { EnumTagFilterObjectSchema as EnumTagFilterObjectSchema } from './EnumTa
 import { TagSchema } from '../enums/Tag.schema';
 import { EnumProductStatusFilterObjectSchema as EnumProductStatusFilterObjectSchema } from './EnumProductStatusFilter.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { EnumContentStatusNullableFilterObjectSchema as EnumContentStatusNullableFilterObjectSchema } from './EnumContentStatusNullableFilter.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
@@ -53,6 +55,7 @@ const productwhereinputSchema = z.object({
   tag: z.union([z.lazy(() => EnumTagFilterObjectSchema), TagSchema]).optional(),
   status: z.union([z.lazy(() => EnumProductStatusFilterObjectSchema), ProductStatusSchema]).optional(),
   categoryId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  contentStatus: z.union([z.lazy(() => EnumContentStatusNullableFilterObjectSchema), ContentStatusSchema]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),

@@ -1,24 +1,48 @@
 "use client";
 
-import { toast } from "sonner";
+import { TOAST_DISMISS_EVENT, TOAST_PUSH_EVENT, type NotifyInput } from "@/components/feedback/AppToastProvider";
+
+type NotifyKind = "success" | "error" | "info" | "warning";
+
+function dispatchToast(kind: NotifyKind, input: NotifyInput) {
+    if (typeof window === "undefined") {
+        return null;
+    }
+
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    window.dispatchEvent(
+        new CustomEvent(TOAST_PUSH_EVENT, {
+            detail: { kind, input, id },
+        })
+    );
+
+    return id;
+}
 
 export const notify = {
-    success(message: string) {
-        toast.success(message);
+    success(input: NotifyInput) {
+        return dispatchToast("success", input);
     },
-    error(message: string) {
-        toast.error(message);
+    error(input: NotifyInput) {
+        return dispatchToast("error", input);
     },
-    info(message: string) {
-        toast.info(message);
+    info(input: NotifyInput) {
+        return dispatchToast("info", input);
     },
-    warning(message: string) {
-        toast.warning(message);
+    warning(input: NotifyInput) {
+        return dispatchToast("warning", input);
     },
-    loading(message: string) {
-        return toast.loading(message);
+    loading(input: NotifyInput) {
+        return dispatchToast("info", input);
     },
     dismiss(id?: string | number) {
-        toast.dismiss(id);
+        if (typeof window === "undefined" || id == null) return;
+
+        window.dispatchEvent(
+            new CustomEvent(TOAST_DISMISS_EVENT, {
+                detail: { id: String(id) },
+            })
+        );
     },
 };

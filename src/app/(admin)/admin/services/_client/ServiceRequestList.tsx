@@ -336,9 +336,22 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="align-top px-3 py-4">
-                                                <div className="font-medium">{row.serviceName || "-"}</div>
-                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">product · {row.productTitle || "-"}</div>
-                                                <div className="mt-1 text-xs text-gray-500">Note: {row.customerItemNote || "-"}</div>
+                                                <div className="flex items-start gap-3">
+                                                    <div className="h-14 w-14 overflow-hidden rounded border bg-gray-50">
+                                                        {row.primaryImageUrlSnapshot ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={row.primaryImageUrlSnapshot} alt={row.productTitle || row.serviceName || "product"} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">No image</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">{row.serviceName || "-"}</div>
+                                                        <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">product · {row.productTitle || "-"}</div>
+                                                        <div className="mt-1 text-xs text-gray-500">SKU: {row.skuSnapshot || "-"}</div>
+                                                        <div className="mt-1 text-xs text-gray-500">Note: {row.customerItemNote || "-"}</div>
+                                                    </div>
+                                                </div>
                                             </td>
 
                                             <td className="align-top px-3 py-4">

@@ -209,7 +209,7 @@ function normalizeInitial(initial: any) {
         variantPrice: firstVariant?.price != null ? Number(firstVariant.price) : '',
         variantCostPrice: currentVariantCost ?? '',
         baseVariantCostPrice: baseVariantCostPrice ?? '',
-        primaryImageUrl: initial?.primaryImageUrl ?? images?.[0]?.fileKey ?? '',
+        primaryImageUrl: initial?.primaryImageUrl ?? '',
         tag: initial?.tag ?? '',
         strapMode: storedStrapAttachment?.variantId ? 'INVENTORY' : 'INCLUDED',
         linkedStrapProductId: storedStrapAttachment?.productId ?? '',
@@ -568,15 +568,15 @@ export default function EditProductForm({
 
     const onImagesChange = (next: Picked[]) => {
         setErr(null);
-        setImages(next);
+        const limited = next.slice(0, 4);
+        setImages(limited);
         setFormData((prev) => ({
             ...prev,
-            images: next.map((p, i) => ({
+            images: limited.map((p, i) => ({
                 fileKey: p.key,
                 alt: null,
                 sortOrder: i,
             })),
-            primaryImageUrl: next[0]?.key ?? '',
         }));
     };
 

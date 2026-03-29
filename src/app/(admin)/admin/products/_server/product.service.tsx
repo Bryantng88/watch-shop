@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus } from "@prisma/client";
+import { ProductStatus, ProductType, DiscountType, ServiceRequestStatus, ContentStatus } from "@prisma/client";
 import * as prodRepo from "./product.repo";
 import { z } from "zod";
 import { computeEffectivePrice } from "../helpers/price";
@@ -190,6 +190,7 @@ export async function detail(id: string) {
                 },
             },
             image: {
+                where: { role: { in: ["PRIMARY", "GALLERY"] } },
                 orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             },
             variants: {
@@ -492,8 +493,8 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
         for (const p of rows as Array<any>) {
             const reasons: string[] = [];
 
-            if (p.status !== ProductStatus.DRAFT) {
-                reasons.push(`STATUS_NOT_ALLOWED:${p.status}`);
+            if (p.contentStatus !== ContentStatus.DRAFT) {
+                reasons.push(`STATUS_NOT_ALLOWED:${p.contentStatus}`);
             }
             if (!hasPrice(p)) reasons.push("MISSING_PRICE");
             if (!hasImage(p)) reasons.push("MISSING_IMAGE");

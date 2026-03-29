@@ -1,296 +1,302 @@
-import {
-    CopyObjectCommand,
-    DeleteObjectCommand,
-    HeadObjectCommand,
-} from "@aws-sdk/client-s3";
+
+import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { ImageRole } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { s3, S3_BUCKET } from "@/server/s3";
 
-export type MediaPurpose = "inline" | "edit" | "sold";
+export type MediaProfile = "inline" | "edit" | "sold";
 
-const INLINE_PREFIX = trimSlashes(process.env.PRODUCT_INLINE_PREFIX || "product/inline/active");
-const INLINE_CHOSEN_PREFIX = trimSlashes(
-    process.env.PRODUCT_INLINE_CHOSEN_PREFIX ||
-    (INLINE_PREFIX.endsWith("/active") ? `${INLINE_PREFIX.slice(0, -7)}/chosen` : "product/inline/chosen")
+type ArchiveProductImagesForSoldOptions = {
+    deleteSource?: boolean;
+};
+
+function trimSlashes(input: string) {
+    return String(input ?? "").replace(/^\/+|\/+$/g, "").trim();
+}
+
+function getBooleanEnv(value: string | undefined, fallback = false) {
+    if (value == null) return fallback;
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return fallback;
+    return ["1", "true", "yes", "y", "on"].includes(normalized);
+}
+
+function getFileExtension(key: string) {
+    const normalized = normalizeKey(key);
+    const extMatch = normalized.match(/\.[A-Za-z0-9]+$/);
+    return extMatch?.[0]?.toLowerCase() || ".webp";
+}
+
+function encodeCopySource(key: string) {
+    return `${S3_BUCKET}/${normalizeKey(key)
+        .split("/")
+        .map((part) => encodeURIComponent(part))
+        .join("/")}`;
+}
+
+function buildSoldObjectKey(productId: string, sourceKey: string, index: number, role?: string | null, now = new Date()) {
+    const year = String(now.getFullYear());
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const ext = getFileExtension(sourceKey);
+    const rolePart = String(role ?? "image")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "image";
+
+    return `${PRODUCT_SOLD_PREFIX}/${year}/${month}/${productId}-${String(index).padStart(2, "0")}-${rolePart}${ext}`;
+}
+
+export function normalizeKey(input: string | null | undefined) {
+    return String(input ?? "").replace(/^\/+/, "").trim();
+}
+
+export function normalizePrefix(input: string | null | undefined, fallback: string) {
+    const trimmed = trimSlashes(input);
+    return trimmed || trimSlashes(fallback);
+}
+
+export const PRODUCT_INLINE_PREFIX = normalizePrefix(
+    process.env.PRODUCT_INLINE_PREFIX,
+    "products/inline/active"
 );
-const EDIT_PREFIX = trimSlashes(process.env.PRODUCT_EDIT_PREFIX || "product/edit/active");
-const SOLD_PREFIX = trimSlashes(process.env.PRODUCT_SOLD_PREFIX || "product/sold");
-const DELETE_SOURCE_ON_ARCHIVE = String(process.env.PRODUCT_IMAGE_ARCHIVE_DELETE_SOURCE || "false").toLowerCase() === "true";
 
-function trimSlashes(value: string) {
-    return String(value || "").replace(/^\/+|\/+$/g, "");
-}
+export const PRODUCT_INLINE_CHOSEN_PREFIX = normalizePrefix(
+    process.env.PRODUCT_INLINE_CHOSEN_PREFIX,
+    PRODUCT_INLINE_PREFIX.replace(/\/active$/i, "/chosen")
+);
 
-function stripLeadingSlashes(value: string) {
-    return String(value || "").replace(/^\/+/, "");
-}
+export const PRODUCT_EDIT_PREFIX = normalizePrefix(
+    process.env.PRODUCT_EDIT_PREFIX,
+    "products/edit/active"
+);
 
-function normalizeKey(key?: string | null) {
-    return stripLeadingSlashes(String(key || "")).replace(/\/+/g, "/");
-}
+export const PRODUCT_SOLD_PREFIX = normalizePrefix(
+    process.env.PRODUCT_SOLD_PREFIX,
+    "products/sold"
+);
 
-function startsWithPrefix(key: string, prefix: string) {
-    return key === prefix || key.startsWith(`${prefix}/`);
-}
+export const S3_BROWSE_ROOT = normalizePrefix(
+    process.env.S3_BROWSE_ROOT,
+    "products"
+);
 
-function relativeToPrefix(key: string, prefix: string) {
-    if (!startsWithPrefix(key, prefix)) return key;
-    return key.slice(prefix.length).replace(/^\/+/, "");
-}
-
-function joinKey(prefix: string, relative: string) {
-    const cleanRelative = trimSlashes(relative);
-    return cleanRelative ? `${trimSlashes(prefix)}/${cleanRelative}` : trimSlashes(prefix);
-}
-
-function currentYearMonth(date = new Date()) {
-    return {
-        year: String(date.getFullYear()),
-        month: String(date.getMonth() + 1).padStart(2, "0"),
-    };
-}
-
-function ensureRelativeForArchive(key: string) {
-    if (startsWithPrefix(key, EDIT_PREFIX)) return relativeToPrefix(key, EDIT_PREFIX);
-    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return relativeToPrefix(key, INLINE_CHOSEN_PREFIX);
-    if (startsWithPrefix(key, INLINE_PREFIX)) return relativeToPrefix(key, INLINE_PREFIX);
-    if (startsWithPrefix(key, SOLD_PREFIX)) return relativeToPrefix(key, SOLD_PREFIX);
-    return key;
-}
-
-export function getProductImageRoots() {
-    return {
-        inline: INLINE_PREFIX,
-        inlineChosen: INLINE_CHOSEN_PREFIX,
-        edit: EDIT_PREFIX,
-        sold: SOLD_PREFIX,
-    } as const;
-}
-
-export function getBrowsePrefixForPurpose(purpose?: string | null, requestedPrefix?: string | null) {
-    const resolvedPurpose = resolvePurpose(purpose);
-    const roots = getProductImageRoots();
-    const root = roots[resolvedPurpose];
-    const cleanRequested = trimSlashes(String(requestedPrefix || ""));
-
-    if (!cleanRequested) return root;
-    if (!startsWithPrefix(cleanRequested, root)) return root;
-    return cleanRequested;
-}
-
-export function resolvePurpose(purpose?: string | null): MediaPurpose {
-    const raw = String(purpose || "edit").toLowerCase();
-    if (raw === "inline" || raw === "sold") return raw;
-    return "edit";
-}
-
-export function toStoredProductImageKey(inputKey?: string | null) {
-    const key = normalizeKey(inputKey);
-    if (!key) return "";
-    if (startsWithPrefix(key, SOLD_PREFIX)) return key;
-    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return key;
-    if (startsWithPrefix(key, INLINE_PREFIX)) {
-        return joinKey(EDIT_PREFIX, relativeToPrefix(key, INLINE_PREFIX));
+export function getProfileRoot(profile: MediaProfile) {
+    switch (profile) {
+        case "inline":
+            return PRODUCT_INLINE_PREFIX;
+        case "edit":
+            return PRODUCT_EDIT_PREFIX;
+        case "sold":
+            return PRODUCT_SOLD_PREFIX;
+        default:
+            return S3_BROWSE_ROOT;
     }
-    return key;
 }
 
-export function toInlinePreviewKey(inputKey?: string | null) {
-    const key = normalizeKey(inputKey);
-    if (!key) return "";
-    if (startsWithPrefix(key, SOLD_PREFIX)) return key;
-    if (startsWithPrefix(key, INLINE_CHOSEN_PREFIX)) return key;
-    if (startsWithPrefix(key, EDIT_PREFIX)) {
-        return joinKey(INLINE_PREFIX, relativeToPrefix(key, EDIT_PREFIX));
+export function isWithinPrefix(key: string, prefix: string) {
+    const normalizedKey = normalizeKey(key);
+    const normalizedPrefix = trimSlashes(prefix);
+    if (!normalizedKey || !normalizedPrefix) return false;
+    return normalizedKey === normalizedPrefix || normalizedKey.startsWith(`${normalizedPrefix}/`);
+}
+
+export function sanitizeBrowsePrefix(requestedPrefix: string | null | undefined, profile: MediaProfile) {
+    const root = getProfileRoot(profile);
+    const requested = normalizeKey(requestedPrefix);
+    if (!requested) return root;
+    return isWithinPrefix(requested, root) ? requested : root;
+}
+
+function getFileNameFromKey(key: string) {
+    const normalized = normalizeKey(key);
+    const parts = normalized.split("/").filter(Boolean);
+    return parts[parts.length - 1] || "";
+}
+
+export function buildInlineChosenKey(productId: string, sourceKey: string) {
+    const normalizedSource = normalizeKey(sourceKey);
+    const fileName = getFileNameFromKey(normalizedSource);
+    const fallbackExtMatch = normalizedSource.match(/\.[A-Za-z0-9]+$/);
+    const fallbackExt = fallbackExtMatch?.[0]?.toLowerCase() || ".webp";
+    const storedName = fileName || `${productId}${fallbackExt}`;
+    return `${PRODUCT_INLINE_CHOSEN_PREFIX}/${productId}__${storedName}`;
+}
+
+export function buildInlineActiveKeyFromChosen(chosenKey: string) {
+    const normalized = normalizeKey(chosenKey);
+    const fileName = getFileNameFromKey(normalized);
+    const delimiterIndex = fileName.indexOf("__");
+    const restoredFileName = delimiterIndex >= 0 ? fileName.slice(delimiterIndex + 2) : fileName;
+    return `${PRODUCT_INLINE_PREFIX}/${restoredFileName || fileName}`;
+}
+
+export async function moveMediaObject(sourceKey: string, destinationKey: string) {
+    const fromKey = normalizeKey(sourceKey);
+    const toKey = normalizeKey(destinationKey);
+
+    if (!fromKey || !toKey || fromKey === toKey) {
+        return { ok: true, fromKey, toKey, skipped: true };
     }
-    return key;
-}
 
-export function resolveKeyForPurpose(inputKey?: string | null, purpose?: string | null) {
-    const resolved = resolvePurpose(purpose);
-    if (resolved === "inline") return toInlinePreviewKey(inputKey);
-    return normalizeKey(inputKey);
-}
-
-export function toSoldArchiveKey(inputKey: string, at = new Date()) {
-    const key = normalizeKey(inputKey);
-    if (!key) return "";
-    if (startsWithPrefix(key, SOLD_PREFIX)) return key;
-    const { year, month } = currentYearMonth(at);
-    return joinKey(`${SOLD_PREFIX}/${year}/${month}`, ensureRelativeForArchive(key));
-}
-
-async function copyObject(fromKey: string, toKey: string) {
-    if (!fromKey || !toKey || fromKey === toKey) return;
-
-    const head = await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: fromKey }));
     await s3.send(
         new CopyObjectCommand({
             Bucket: S3_BUCKET,
-            CopySource: `${S3_BUCKET}/${fromKey}`,
+            CopySource: encodeCopySource(fromKey),
             Key: toKey,
-            MetadataDirective: "REPLACE",
-            ContentType: head.ContentType,
-            CacheControl: head.CacheControl || "public, max-age=31536000, immutable",
-            Metadata: head.Metadata,
         })
     );
-    await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: toKey }));
+
+    await s3.send(
+        new DeleteObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: fromKey,
+        })
+    );
+
+    return { ok: true, fromKey, toKey, skipped: false };
 }
 
-async function deleteObject(key: string) {
-    if (!key) return;
-    await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }));
-}
-
-
-function extnameForKey(key: string) {
-    const match = String(key || "").match(/\.[a-zA-Z0-9]+$/);
-    return match?.[0]?.toLowerCase() || ".webp";
-}
-
-export function buildChosenInlineKey(productId: string, sourceKey: string) {
-    const ext = extnameForKey(sourceKey);
-    return joinKey(INLINE_CHOSEN_PREFIX, `${productId}${ext}`);
-}
-
-export async function moveInlineImageToChosen(params: {
-    productId: string;
-    sourceKey: string;
-    currentKey?: string | null;
-    deleteSource?: boolean;
-}) {
-    const sourceKey = normalizeKey(params.sourceKey);
-    if (!sourceKey) throw new Error("Thiếu source key");
-    if (!startsWithPrefix(sourceKey, INLINE_PREFIX)) {
-        throw new Error("Ảnh được chọn phải nằm trong thư mục inline/active");
-    }
-
-    const targetKey = buildChosenInlineKey(params.productId, sourceKey);
-    const previousKey = normalizeKey(params.currentKey);
-    const deleteSource = params.deleteSource ?? true;
-    const replacedPreviousChosen = !!(previousKey && previousKey !== targetKey && startsWithPrefix(previousKey, INLINE_CHOSEN_PREFIX));
-
-    if (sourceKey !== targetKey) {
-        await copyObject(sourceKey, targetKey);
-    }
-
-    return {
-        sourceKey,
-        targetKey,
-        previousKey: previousKey || null,
-        deleteSource,
-        replacedPreviousChosen,
-    };
-}
-
-export async function cleanupAfterInlineChosenMove(params: {
-    sourceKey: string;
-    targetKey: string;
-    previousKey?: string | null;
-    deleteSource?: boolean;
-}) {
-    const sourceKey = normalizeKey(params.sourceKey);
-    const targetKey = normalizeKey(params.targetKey);
-    const previousKey = normalizeKey(params.previousKey);
-    const deleteSource = params.deleteSource ?? true;
-
-    if (deleteSource && sourceKey && sourceKey !== targetKey) {
-        await deleteObject(sourceKey).catch(() => undefined);
-    }
-
-    if (previousKey && previousKey !== targetKey && startsWithPrefix(previousKey, INLINE_CHOSEN_PREFIX)) {
-        await deleteObject(previousKey).catch(() => undefined);
-    }
+export function toStoredProductImageKey(input: string | null | undefined) {
+    return normalizeKey(input);
 }
 
 export async function archiveProductImagesForSold(
     productId: string,
-    opts?: { deleteSource?: boolean; archivedAt?: Date }
+    options: ArchiveProductImagesForSoldOptions = {}
 ) {
-    const archivedAt = opts?.archivedAt || new Date();
-    const deleteSource = opts?.deleteSource ?? DELETE_SOURCE_ON_ARCHIVE;
-
     const product = await prisma.product.findUnique({
         where: { id: productId },
         select: {
             id: true,
-            status: true,
             primaryImageUrl: true,
-            images: {
-                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            image: {
                 select: {
                     id: true,
                     fileKey: true,
+                    role: true,
+                    sortOrder: true,
+                    createdAt: true,
                 },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             },
         },
     });
 
-    if (!product?.id) {
-        throw new Error("Không tìm thấy sản phẩm để archive ảnh.");
+    if (!product) {
+        throw new Error("Product not found");
     }
 
-    const rows = (product.images || []).filter((img) => !!img.fileKey);
-    if (!rows.length) {
-        return {
-            ok: true,
-            productId,
-            moved: 0,
-            deleted: 0,
-            primaryImageUrl: product.primaryImageUrl,
-            files: [],
-        };
+    const deleteSource = options.deleteSource ?? getBooleanEnv(process.env.PRODUCT_IMAGE_ARCHIVE_DELETE_SOURCE, false);
+
+    const targets = [
+        ...(product.primaryImageUrl
+            ? [
+                {
+                    kind: "primaryImageUrl" as const,
+                    sourceKey: normalizeKey(product.primaryImageUrl),
+                    role: ImageRole.PRIMARY,
+                    order: -1,
+                },
+            ]
+            : []),
+        ...product.image
+            .map((img) => ({
+                kind: "productImage" as const,
+                id: img.id,
+                sourceKey: normalizeKey(img.fileKey),
+                role: img.role,
+                order: img.sortOrder ?? 0,
+            }))
+            .filter((img) => !!img.sourceKey),
+    ];
+
+    const uniqueTargets: Array<{ sourceKey: string; role: string; order: number }> = [];
+    const seen = new Set<string>();
+
+    for (const target of targets) {
+        if (!target.sourceKey || seen.has(target.sourceKey)) continue;
+        seen.add(target.sourceKey);
+        uniqueTargets.push({
+            sourceKey: target.sourceKey,
+            role: String(target.role ?? ImageRole.GALLERY),
+            order: target.order,
+        });
     }
 
-    const planned = rows.map((img) => {
-        const sourceKey = toStoredProductImageKey(img.fileKey);
-        const soldKey = toSoldArchiveKey(sourceKey, archivedAt);
-        return {
-            id: img.id,
-            sourceKey,
-            soldKey,
-        };
-    });
+    const now = new Date();
+    const keyMap = new Map<string, string>();
+    const copied: Array<{ from: string; to: string; role: string }> = [];
+    const skipped: string[] = [];
+    let soldIndex = 1;
 
-    for (const file of planned) {
-        if (file.sourceKey !== file.soldKey) {
-            await copyObject(file.sourceKey, file.soldKey);
+    for (const target of uniqueTargets) {
+        if (isWithinPrefix(target.sourceKey, PRODUCT_SOLD_PREFIX)) {
+            keyMap.set(target.sourceKey, target.sourceKey);
+            skipped.push(target.sourceKey);
+            continue;
         }
+
+        const destinationKey = buildSoldObjectKey(productId, target.sourceKey, soldIndex, target.role, now);
+        soldIndex += 1;
+
+        await s3.send(
+            new CopyObjectCommand({
+                Bucket: S3_BUCKET,
+                CopySource: encodeCopySource(target.sourceKey),
+                Key: destinationKey,
+            })
+        );
+
+        if (deleteSource && destinationKey !== target.sourceKey) {
+            await s3.send(
+                new DeleteObjectCommand({
+                    Bucket: S3_BUCKET,
+                    Key: target.sourceKey,
+                })
+            );
+        }
+
+        keyMap.set(target.sourceKey, destinationKey);
+        copied.push({
+            from: target.sourceKey,
+            to: destinationKey,
+            role: target.role,
+        });
     }
 
-    const currentPrimary = toStoredProductImageKey(product.primaryImageUrl);
-    const primaryMatch = planned.find((file) => file.sourceKey === currentPrimary);
-    const nextPrimary = primaryMatch?.soldKey || planned[0]?.soldKey || null;
+    const currentPrimaryImageUrl = normalizeKey(product.primaryImageUrl);
+    const nextPrimaryImageUrl = currentPrimaryImageUrl
+        ? keyMap.get(currentPrimaryImageUrl) ?? currentPrimaryImageUrl
+        : null;
 
     await prisma.$transaction(async (tx) => {
-        for (const file of planned) {
-            await tx.productImage.update({
-                where: { id: file.id },
-                data: { fileKey: file.soldKey },
+        if (product.primaryImageUrl !== undefined && nextPrimaryImageUrl !== currentPrimaryImageUrl) {
+            await tx.product.update({
+                where: { id: productId },
+                data: { primaryImageUrl: nextPrimaryImageUrl },
             });
         }
 
-        await tx.product.update({
-            where: { id: productId },
-            data: { primaryImageUrl: nextPrimary },
-        });
-    });
+        for (const img of product.image) {
+            const sourceKey = normalizeKey(img.fileKey);
+            const nextKey = keyMap.get(sourceKey) ?? sourceKey;
+            if (!nextKey || nextKey === sourceKey) continue;
 
-    if (deleteSource) {
-        for (const file of planned) {
-            if (file.sourceKey !== file.soldKey) {
-                await deleteObject(file.sourceKey);
-            }
+            await tx.productImage.update({
+                where: { id: img.id },
+                data: { fileKey: nextKey },
+            });
         }
-    }
+    });
 
     return {
         ok: true,
         productId,
-        moved: planned.filter((file) => file.sourceKey !== file.soldKey).length,
-        deleted: deleteSource ? planned.filter((file) => file.sourceKey !== file.soldKey).length : 0,
-        primaryImageUrl: nextPrimary,
-        files: planned,
+        deleteSource,
+        copiedCount: copied.length,
+        skippedCount: skipped.length,
+        primaryImageUrl: nextPrimaryImageUrl,
+        copied,
+        skipped,
     };
 }

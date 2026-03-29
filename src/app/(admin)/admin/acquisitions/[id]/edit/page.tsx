@@ -41,7 +41,7 @@ function parseItemMeta(description?: string | null): {
 
         const obj = parsed as Record<string, any>;
 
-        if (obj.watchFlags || obj.strapSpec || obj.kind) {
+        if (obj.watchFlags || obj.strapSpec || obj.quickSpec || obj.kind) {
             return {
                 watchFlags: obj.watchFlags
                     ? {

@@ -11,7 +11,6 @@ import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 import ServiceHistoryModal from "./ServiceHistoryModal";
-import { useNotify } from "@/components/feedback/AppToastProvider";
 
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 type CatalogKey = "product" | "strap";
@@ -46,6 +45,7 @@ type ProductRow = ProductListItem & {
     updatedAt?: string | null;
     createdAt?: string | null;
     status?: string | null;
+    contentStatus?: string | null;
     title?: string | null;
     minPrice?: number | null;
     purchasePrice?: number | null;
@@ -149,6 +149,14 @@ function getPublishImageRequirement(product: ProductRow) {
 function getDetailedPublishMissing(product: ProductRow) {
     const known = new Set(["images", "brandId", "variant", "watchSpec"]);
     return (product.publishMissing ?? []).filter((item) => !known.has(item));
+}
+
+
+function getContentStatusBadgeValue(p: ProductRow) {
+    const current = String(p.contentStatus ?? '').toUpperCase();
+    if (current === 'PUBLISHED') return 'POSTED';
+    if (current === 'ARCHIVED') return 'ARCHIVED';
+    return 'DRAFT';
 }
 
 function getServiceLabel(p: ProductRow) {
@@ -445,7 +453,6 @@ function ReadinessDetailModal({
 
 export default function AdminProductListPageClient(props: PageProps) {
     const router = useRouter();
-    const notify = useNotify();
     const pathname = usePathname();
     const sp = useSearchParams();
 
@@ -502,7 +509,6 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [openReadinessModal, setOpenReadinessModal] = useState(false);
 
     const [serviceHistoryProduct, setServiceHistoryProduct] = useState<ProductRow | null>(null);
-    const [imageUpdatingIds, setImageUpdatingIds] = useState<string[]>([]);
     const [serviceHistoryOpen, setServiceHistoryOpen] = useState(false);
 
     const [openService, setOpenService] = useState(false);
@@ -640,15 +646,6 @@ export default function AdminProductListPageClient(props: PageProps) {
     }
 
     async function updateProductImage(productId: string, fileKey: string) {
-        if (imageUpdatingIds.includes(productId)) return;
-
-        setImageUpdatingIds((prev) => (prev.includes(productId) ? prev : [...prev, productId]));
-        notify.info({
-            title: "Đang cập nhật ảnh đại diện",
-            message: "Ảnh đang được đồng bộ trên NAS/S3. Có thể mất vài giây.",
-            duration: 2600,
-        });
-
         try {
             const res = await fetch(`/api/admin/products/${productId}/images`, {
                 method: "POST",
@@ -656,50 +653,23 @@ export default function AdminProductListPageClient(props: PageProps) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    mode: "primary-inline",
                     files: [{ key: fileKey }],
                 }),
             });
 
-            const data = await res.json().catch(() => null);
             if (!res.ok) {
-                throw new Error(data?.error || data?.message || "Cập nhật ảnh thất bại");
+                const msg = await res.text().catch(() => "");
+                alert(msg || "Cập nhật ảnh thất bại");
+                return;
             }
 
-            const nextImageKey = String(data?.primaryImageUrl || fileKey || "").trim();
-
-            setRows((prev) =>
-                prev.map((row) =>
-                    row.id === productId
-                        ? {
-                            ...row,
-                            primaryImageUrl: nextImageKey || row.primaryImageUrl || null,
-                            imagesCount: Math.max(Number(row.imagesCount ?? 0), 1),
-                            updatedAt: new Date().toISOString(),
-                        }
-                        : row
-                )
-            );
-
-            notify.success({
-                title: "Cập nhật ảnh thành công",
-                message:
-                    data?.message ||
-                    "Ảnh đại diện đã được lưu. Nếu NAS/S3 còn đồng bộ, ảnh mới có thể xuất hiện sau vài giây.",
-                duration: 3600,
-            });
-
-            window.setTimeout(() => {
-                router.refresh();
-            }, 1200);
-        } catch (error: any) {
+            const data = await res.json().catch(() => ({} as any));
+            const nextCover = data?.coverImageUrl || fileKey;
+            setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, primaryImageUrl: nextCover } : row)));
+            router.refresh();
+        } catch (error) {
             console.error(error);
-            notify.error({
-                title: "Cập nhật ảnh thất bại",
-                message: error?.message || "Không thể cập nhật ảnh đại diện.",
-            });
-        } finally {
-            setImageUpdatingIds((prev) => prev.filter((id) => id !== productId));
+            alert("Cập nhật ảnh thất bại");
         }
     }
 
@@ -1120,7 +1090,6 @@ export default function AdminProductListPageClient(props: PageProps) {
                                             <td className="px-4 py-5 w-[76px] min-w-[76px]">
                                                 <InlineImagePicker
                                                     imageUrl={p.primaryImageUrl ?? null}
-                                                    busy={imageUpdatingIds.includes(p.id)}
                                                     onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                 />
                                             </td>
@@ -1243,7 +1212,6 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     <div className="scale-110 origin-left">
                                                         <InlineImagePicker
                                                             imageUrl={p.primaryImageUrl ?? null}
-                                                            busy={imageUpdatingIds.includes(p.id)}
                                                             onPick={(fileKey) => updateProductImage(p.id, fileKey)}
                                                         />
                                                     </div>
@@ -1288,23 +1256,16 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                                 <td className="px-3 py-5 whitespace-nowrap">{p.vendorName || "-"}</td>
                                                 <td className="px-3 py-5 whitespace-nowrap">
-                                                    {(() => {
-                                                        const serviceLabel = getServiceLabel(p);
-                                                        return serviceLabel ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openServiceHistory(p);
-                                                                }}
-                                                                className="rounded-full text-left"
-                                                            >
-                                                                <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-gray-400">-</span>
-                                                        );
-                                                    })()}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openServiceHistory(p);
+                                                        }}
+                                                        className="rounded-full text-left"
+                                                    >
+                                                        <StatusBadge status={p.status || "-"} />
+                                                    </button>
                                                 </td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap">
@@ -1356,7 +1317,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 )}
 
                                                 <td className="px-3 py-5 whitespace-nowrap">
-                                                    <StatusBadge status={p.status} />
+                                                    <StatusBadge status={getContentStatusBadgeValue(p)} />
                                                 </td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap">

@@ -1,114 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { s3, S3_BUCKET } from "@/server/s3";
+import {
+    type MediaProfile,
+    getProfileRoot,
+    normalizeKey,
+    sanitizeBrowsePrefix,
+} from "@/server/lib/product-image-storage";
 
-const IMG_EXT = /\.(jpe?g|png|webp|gif|avif)$/i;
+export const dynamic = "force-dynamic";
 
-function normalizePrefix(value: string | null | undefined) {
-    return String(value ?? "").trim().replace(/^\/+/, "").replace(/\/+$/, "");
+const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+
+function getProfile(value: string | null): MediaProfile {
+    if (value === "edit" || value === "sold") return value;
+    return "inline";
 }
 
-function withTrailingSlash(value: string) {
-    const v = normalizePrefix(value);
-    return v ? `${v}/` : "";
+function nameFromKey(key: string) {
+    const normalized = normalizeKey(key);
+    const parts = normalized.split("/");
+    return parts[parts.length - 1] || "";
 }
 
-function getProfileRoot(profile: string) {
-    switch (profile) {
-        case "inline":
-            return normalizePrefix(process.env.PRODUCT_INLINE_PREFIX || "product/inline/active");
-        case "edit":
-            return normalizePrefix(process.env.PRODUCT_EDIT_PREFIX || "product/edit/active");
-        case "sold":
-            return normalizePrefix(process.env.PRODUCT_SOLD_PREFIX || "product/sold");
-        default:
-            return "";
-    }
-}
-
-function clampPrefix(requestedPrefix: string, profileRoot: string, allowedRoot: string) {
-    const requested = normalizePrefix(requestedPrefix);
-    const profile = normalizePrefix(profileRoot);
-    const allowed = normalizePrefix(allowedRoot);
-
-    if (profile) {
-        if (!requested) return profile;
-        if (requested === profile || requested.startsWith(withTrailingSlash(profile))) return requested;
-        return profile;
-    }
-
-    if (allowed) {
-        if (!requested) return allowed;
-        if (requested === allowed || requested.startsWith(withTrailingSlash(allowed))) return requested;
-        return allowed;
-    }
-
-    return requested;
+function shouldHideName(name: string) {
+    return !name || name.startsWith("@") || name.startsWith(".") || name === "Thumbs.db";
 }
 
 export async function GET(req: NextRequest) {
+    const profile = getProfile(req.nextUrl.searchParams.get("profile"));
+    const root = getProfileRoot(profile);
+    const prefix = sanitizeBrowsePrefix(req.nextUrl.searchParams.get("prefix"), profile);
+
     try {
-        const url = new URL(req.url);
-        const profile = String(url.searchParams.get("profile") ?? "").trim().toLowerCase();
-        const requestedPrefix = url.searchParams.get("prefix") ?? "";
-        const token = url.searchParams.get("token") ?? undefined;
-
-        const allowedRoot = normalizePrefix(process.env.S3_BROWSE_ROOT || "product");
-        const profileRoot = getProfileRoot(profile);
-        const prefix = clampPrefix(requestedPrefix, profileRoot, allowedRoot);
-
-        const out = await s3.send(
+        const result = await s3.send(
             new ListObjectsV2Command({
                 Bucket: S3_BUCKET,
-                Prefix: prefix ? withTrailingSlash(prefix) : undefined,
+                Prefix: prefix ? `${prefix}/` : undefined,
                 Delimiter: "/",
-                ContinuationToken: token,
-                MaxKeys: 100,
+                MaxKeys: 1000,
             })
         );
 
-        const folders = (out.CommonPrefixes ?? [])
-            .map((p) => p.Prefix || "")
-            .filter((p) => p)
-            .filter((p) => !p.includes(".@__thumb") && !p.startsWith("._"))
-            .map((p) => ({ prefix: p.replace(/\/+$/, "") }));
+        const folders = (result.CommonPrefixes || [])
+            .map((item) => normalizeKey(item.Prefix))
+            .filter(Boolean)
+            .filter((item) => item !== prefix)
+            .filter((item) => !shouldHideName(nameFromKey(item)))
+            .map((item) => ({ prefix: item }))
+            .sort((a, b) => a.prefix.localeCompare(b.prefix));
 
-        const keys = (out.Contents ?? [])
-            .map((o) => o.Key || "")
-            .filter((k) => k)
-            .filter((k) => !k.endsWith("/"))
-            .filter((k) => !k.includes(".@__thumb") && !k.startsWith("._"))
-            .filter((k) => IMG_EXT.test(k));
-
-        const files = await Promise.all(
-            keys.map(async (key) => {
-                const signed = await getSignedUrl(
-                    s3,
-                    new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }),
-                    { expiresIn: 600 }
-                );
-                return { key, url: signed };
+        const dedup = new Set<string>();
+        const files = (result.Contents || [])
+            .map((item) => ({
+                key: normalizeKey(item.Key),
+                lastModified: item.LastModified?.getTime() ?? 0,
+            }))
+            .filter((item) => item.key && item.key !== prefix && item.key !== `${prefix}/`)
+            .filter((item) => !shouldHideName(nameFromKey(item.key)))
+            .filter((item) => IMAGE_EXT_RE.test(item.key))
+            .filter((item) => {
+                if (dedup.has(item.key)) return false;
+                dedup.add(item.key);
+                return true;
             })
-        );
+            .sort((a, b) => b.lastModified - a.lastModified)
+            .map((item) => ({
+                key: item.key,
+                url: `/api/media/sign?key=${encodeURIComponent(item.key)}`,
+            }));
 
+        return NextResponse.json({
+            profile,
+            root,
+            prefix,
+            folders,
+            files,
+        });
+    } catch (error: any) {
+        console.error("media-browse error", { profile, root, prefix, error });
         return NextResponse.json(
-            {
-                profile,
-                rootPrefix: profileRoot || allowedRoot || "",
-                prefix,
-                folders,
-                files,
-                nextToken: out.IsTruncated ? out.NextContinuationToken : null,
-            },
-            {
-                headers: {
-                    "Cache-Control": "private, max-age=60",
-                },
-            }
+            { error: error?.message || "Không thể duyệt thư mục ảnh" },
+            { status: 500 }
         );
-    } catch (err) {
-        console.error("image-browsing", err);
-        return NextResponse.json({ error: "Browse failed" }, { status: 500 });
     }
 }

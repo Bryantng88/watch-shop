@@ -24,6 +24,8 @@ export type ServiceRequestListItem = {
     technicianName: string | null;
     maintenanceCount: number;
     productTitle: string | null;
+    skuSnapshot: string | null;
+    primaryImageUrlSnapshot: string | null;
 };
 
 function buildOrderBy(sort?: ServiceRequestListSort): Prisma.ServiceRequestOrderByWithRelationInput {
@@ -55,7 +57,7 @@ async function markProductInServiceIfNeeded(tx: Prisma.TransactionClient, produc
     if (!productId) return;
     const product = await tx.product.findUnique({ where: { id: productId }, select: { id: true, status: true } });
     if (!product) return;
-    if ([ProductStatus.POSTED, ProductStatus.AVAILABLE].includes(product.status as any)) {
+    if ([ProductStatus.AVAILABLE].includes(product.status as any)) {
         await tx.product.update({ where: { id: product.id }, data: { status: ProductStatus.IN_SERVICE } });
     }
 }
@@ -66,7 +68,7 @@ async function restoreProductStatusIfDone(tx: Prisma.TransactionClient, productI
     const product = await tx.product.findUnique({ where: { id: productId }, select: { id: true, status: true } });
     if (!product) return;
     if (product.status === ProductStatus.IN_SERVICE) {
-        await tx.product.update({ where: { id: product.id }, data: { status: ProductStatus.POSTED } });
+        await tx.product.update({ where: { id: product.id }, data: { status: ProductStatus.AVAILABLE } });
     }
 }
 
@@ -110,6 +112,8 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         customerItemNote: r.orderItem?.customerItemNote ?? null,
         maintenanceCount: r.maintenanceCount ?? 0,
         productTitle: r.productTitle ?? null,
+        skuSnapshot: r.skuSnapshot ?? null,
+        primaryImageUrlSnapshot: r.primaryImageUrlSnapshot ?? null,
     }));
     return { items, total, page, pageSize, counts: { all: cAll, draft: cDraft, in_progress: cInProgress, done: cDone, canceled: cCanceled } };
 }
@@ -200,6 +204,8 @@ export async function createFromProductTx(tx: Prisma.TransactionClient, input: C
         refSnapshot: product.watchSpec?.ref ?? null,
         technician: tech?.id ? { connect: { id: tech.id } } : undefined,
         technicianNameSnap: tech?.name ?? tech?.email ?? null,
+        skuSnapshot: product.variants?.[0]?.sku ?? null,
+        primaryImageUrlSnapshot: product.primaryImageUrl ?? null,
     } as any);
     await markProductInServiceIfNeeded(tx, input.productId);
     return created;
@@ -211,6 +217,8 @@ export async function createTechnicalCheckFromAcquisitionTx(
         productId: string;
         variantId?: string | null;
         notes?: string | null;
+        skuSnapshot?: string | null;
+        primaryImageUrlSnapshot?: string | null;
     }
 ) {
     const technician = await serviceRequestRepo.findDefaultTechnician(tx);
@@ -221,6 +229,8 @@ export async function createTechnicalCheckFromAcquisitionTx(
         notes: input.notes ?? null,
         technicianId: technician?.id ?? null,
         technicianNameSnap: technician?.name?.trim() || technician?.email || null,
+        skuSnapshot: input.skuSnapshot ?? null,
+        primaryImageUrlSnapshot: input.primaryImageUrlSnapshot ?? null,
     });
 
     await serviceRequestRepo.markProductInService(tx, input.productId);

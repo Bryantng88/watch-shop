@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
 type ToastKind = "success" | "error" | "info" | "warning";
 
@@ -12,7 +19,7 @@ type ToastItem = {
     duration: number;
 };
 
-type NotifyInput = string | { title?: string; message: string; duration?: number };
+export type NotifyInput = string | { title?: string; message: string; duration?: number };
 
 type NotifyApi = {
     success: (input: NotifyInput) => void;
@@ -22,14 +29,22 @@ type NotifyApi = {
     dismiss: (id: string) => void;
 };
 
-const ToastContext = createContext<NotifyApi | null>(null);
+type ToastBusPayload = {
+    kind: ToastKind;
+    input: NotifyInput;
+};
 
+const TOAST_PUSH_EVENT = "app:toast:push";
+const TOAST_DISMISS_EVENT = "app:toast:dismiss";
 const DEFAULT_DURATION = 3200;
+
+const ToastContext = createContext<NotifyApi | null>(null);
 
 function normalizeInput(input: NotifyInput) {
     if (typeof input === "string") {
         return { message: input, duration: DEFAULT_DURATION };
     }
+
     return {
         title: input.title,
         message: input.message,
@@ -84,9 +99,7 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: (id: string) =
                 <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${styles.dot}`} />
 
                 <div className="min-w-0 flex-1">
-                    {item.title ? (
-                        <div className={`text-sm font-semibold ${styles.title}`}>{item.title}</div>
-                    ) : null}
+                    {item.title ? <div className={`text-sm font-semibold ${styles.title}`}>{item.title}</div> : null}
                     <div className={`text-sm leading-5 ${styles.text}`}>{item.message}</div>
                 </div>
 
@@ -127,16 +140,50 @@ export function AppToastProvider({ children }: { children: React.ReactNode }) {
             window.setTimeout(() => {
                 dismiss(id);
             }, item.duration);
+
+            return id;
         },
         [dismiss]
     );
 
+    useEffect(() => {
+        const onPush = (event: Event) => {
+            const customEvent = event as CustomEvent<ToastBusPayload>;
+            const detail = customEvent.detail;
+            if (!detail) return;
+            push(detail.kind, detail.input);
+        };
+
+        const onDismiss = (event: Event) => {
+            const customEvent = event as CustomEvent<{ id?: string }>;
+            const id = customEvent.detail?.id;
+            if (!id) return;
+            dismiss(id);
+        };
+
+        window.addEventListener(TOAST_PUSH_EVENT, onPush as EventListener);
+        window.addEventListener(TOAST_DISMISS_EVENT, onDismiss as EventListener);
+
+        return () => {
+            window.removeEventListener(TOAST_PUSH_EVENT, onPush as EventListener);
+            window.removeEventListener(TOAST_DISMISS_EVENT, onDismiss as EventListener);
+        };
+    }, [dismiss, push]);
+
     const value = useMemo<NotifyApi>(
         () => ({
-            success: (input) => push("success", input),
-            error: (input) => push("error", input),
-            info: (input) => push("info", input),
-            warning: (input) => push("warning", input),
+            success: (input) => {
+                push("success", input);
+            },
+            error: (input) => {
+                push("error", input);
+            },
+            info: (input) => {
+                push("info", input);
+            },
+            warning: (input) => {
+                push("warning", input);
+            },
             dismiss,
         }),
         [dismiss, push]
@@ -162,3 +209,5 @@ export function useNotify() {
     }
     return context;
 }
+
+export { TOAST_PUSH_EVENT, TOAST_DISMISS_EVENT };

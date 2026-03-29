@@ -5,7 +5,7 @@ import * as adminProductService from "@/app/(admin)/admin/products/_server/produ
 import * as prodRepo from "@/app/(admin)/admin/products/_server/product.repo";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import { archiveProductImagesForSold, toStoredProductImageKey } from "@/server/lib/product-image-storage";
+import { archiveProductImagesForSold, normalizeKey } from "@/server/lib/product-image-storage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -292,7 +292,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
         const normalizedImages = patch.images?.map((img) => ({
             ...img,
-            fileKey: toStoredProductImageKey(img.fileKey),
+            fileKey: normalizeKey(img.fileKey),
         }));
 
         const updated = await prisma.$transaction(async (tx) => {
@@ -306,7 +306,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
                 if (product.type !== undefined) data.type = product.type as any;
                 if (product.primaryImageUrl !== undefined) {
                     data.primaryImageUrl = product.primaryImageUrl
-                        ? toStoredProductImageKey(product.primaryImageUrl)
+                        ? normalizeKey(product.primaryImageUrl)
                         : null;
                 }
                 if (product.seoDescription !== undefined) data.seoDescription = product.seoDescription || null;

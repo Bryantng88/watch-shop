@@ -1,3 +1,5 @@
+import type { QuickWatchSpec } from "../_shared/quick-watch-rule";
+
 export type WatchFlagsInput = {
     hasStrap?: boolean;
     isServiced?: boolean;
@@ -18,10 +20,47 @@ export type AcquisitionItemMeta = {
     kind?: "watch" | "strap";
     watchFlags?: WatchFlagsInput;
     strapSpec?: StrapSpecInput;
+    quickSpec?: QuickWatchSpec;
 };
 
 const normalizeBool = (value: unknown, fallback = false) =>
     value == null ? fallback : Boolean(value);
+
+function normalizeNullableBool(value: unknown): boolean | null {
+    return value == null ? null : Boolean(value);
+}
+
+function normalizeQuickSpec(value: unknown): QuickWatchSpec | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const obj = value as Record<string, any>;
+
+    return {
+        sourceText: obj.sourceText != null ? String(obj.sourceText) : undefined,
+        normalizedText: obj.normalizedText != null ? String(obj.normalizedText) : "",
+        brand: obj.brand != null ? String(obj.brand) : null,
+        brandLabel: obj.brandLabel != null ? String(obj.brandLabel) : null,
+        movement: obj.movement != null ? String(obj.movement) : null,
+        movementLabel: obj.movementLabel != null ? String(obj.movementLabel) : null,
+        caseShape: obj.caseShape != null ? String(obj.caseShape) : null,
+        caseShapeLabel: obj.caseShapeLabel != null ? String(obj.caseShapeLabel) : null,
+        dialColor: obj.dialColor != null ? String(obj.dialColor) : null,
+        dialColorLabel: obj.dialColorLabel != null ? String(obj.dialColorLabel) : null,
+        strapType: obj.strapType != null ? String(obj.strapType) : null,
+        strapTypeLabel: obj.strapTypeLabel != null ? String(obj.strapTypeLabel) : null,
+        boxIncluded: normalizeNullableBool(obj.boxIncluded),
+        bookletIncluded: normalizeNullableBool(obj.bookletIncluded),
+        cardIncluded: normalizeNullableBool(obj.cardIncluded),
+        fullSetStatus: obj.fullSetStatus != null ? String(obj.fullSetStatus) : null,
+        fullSetStatusLabel: obj.fullSetStatusLabel != null ? String(obj.fullSetStatusLabel) : null,
+        caseMaterial: obj.caseMaterial != null ? String(obj.caseMaterial) : null,
+        caseMaterialLabel: obj.caseMaterialLabel != null ? String(obj.caseMaterialLabel) : null,
+        styleCategory: obj.styleCategory != null ? String(obj.styleCategory) : null,
+        styleCategoryLabel: obj.styleCategoryLabel != null ? String(obj.styleCategoryLabel) : null,
+        hourMarkerStyle: obj.hourMarkerStyle != null ? String(obj.hourMarkerStyle) : null,
+        hourMarkerStyleLabel: obj.hourMarkerStyleLabel != null ? String(obj.hourMarkerStyleLabel) : null,
+
+    };
+}
 
 export function getDefaultWatchFlags(): Required<WatchFlagsInput> {
     return {
@@ -41,7 +80,7 @@ export function parseAcquisitionItemMeta(description?: string | null): Acquisiti
 
         const obj = parsed as Record<string, any>;
 
-        if (obj.watchFlags || obj.strapSpec || obj.kind) {
+        if (obj.watchFlags || obj.strapSpec || obj.kind || obj.quickSpec) {
             return {
                 kind: obj.kind === "strap" ? "strap" : obj.kind === "watch" ? "watch" : undefined,
                 watchFlags: obj.watchFlags
@@ -62,6 +101,7 @@ export function parseAcquisitionItemMeta(description?: string | null): Acquisiti
                         sellPrice: obj.strapSpec.sellPrice != null ? Number(obj.strapSpec.sellPrice) : undefined,
                     }
                     : undefined,
+                quickSpec: normalizeQuickSpec(obj.quickSpec),
             };
         }
 
@@ -107,9 +147,15 @@ export function getStrapSpecFromDescription(description?: string | null): StrapS
     return parseAcquisitionItemMeta(description).strapSpec ?? null;
 }
 
+export function getQuickSpecFromDescription(description?: string | null): QuickWatchSpec | null {
+    return parseAcquisitionItemMeta(description).quickSpec ?? null;
+}
+
 export function stringifyAcquisitionItemMeta(input: {
     watchFlags?: WatchFlagsInput | null;
     strapSpec?: StrapSpecInput | null;
+    quickSpec?: QuickWatchSpec | null;
+
 }) {
     const watchFlags = input.watchFlags
         ? {
@@ -131,11 +177,40 @@ export function stringifyAcquisitionItemMeta(input: {
         }
         : undefined;
 
-    if (!watchFlags && !strapSpec) return null;
+    const quickSpec = input.quickSpec
+        ? {
+            sourceText: input.quickSpec.sourceText,
+            normalizedText: input.quickSpec.normalizedText,
+            brand: input.quickSpec.brand ?? null,
+            brandLabel: input.quickSpec.brandLabel ?? null,
+            movement: input.quickSpec.movement ?? null,
+            movementLabel: input.quickSpec.movementLabel ?? null,
+            caseShape: input.quickSpec.caseShape ?? null,
+            caseShapeLabel: input.quickSpec.caseShapeLabel ?? null,
+            dialColor: input.quickSpec.dialColor ?? null,
+            dialColorLabel: input.quickSpec.dialColorLabel ?? null,
+            strapType: input.quickSpec.strapType ?? null,
+            strapTypeLabel: input.quickSpec.strapTypeLabel ?? null,
+            boxIncluded: input.quickSpec.boxIncluded ?? null,
+            bookletIncluded: input.quickSpec.bookletIncluded ?? null,
+            cardIncluded: input.quickSpec.cardIncluded ?? null,
+            fullSetStatus: input.quickSpec.fullSetStatus ?? null,
+            fullSetStatusLabel: input.quickSpec.fullSetStatusLabel ?? null,
+            caseMaterial: input.quickSpec.caseMaterial ?? null,
+            caseMaterialLabel: input.quickSpec.caseMaterialLabel ?? null,
+            styleCategory: input.quickSpec.styleCategory ?? null,
+            styleCategoryLabel: input.quickSpec.styleCategoryLabel ?? null,
+            hourMarkerStyle: input.quickSpec.hourMarkerStyle ?? null,
+            hourMarkerStyleLabel: input.quickSpec.hourMarkerStyleLabel ?? null,
+        }
+        : undefined;
+
+    if (!watchFlags && !strapSpec && !quickSpec) return null;
 
     return JSON.stringify({
         kind: strapSpec ? "strap" : "watch",
         ...(watchFlags ? { watchFlags } : {}),
         ...(strapSpec ? { strapSpec } : {}),
+        ...(quickSpec ? { quickSpec } : {}),
     });
 }

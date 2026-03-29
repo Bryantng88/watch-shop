@@ -10,6 +10,8 @@ export type ServiceRequestListRow = {
   updatedAt: Date;
   scope: string | null;
   productTitle: string | null;
+  skuSnapshot: string | null;
+  primaryImageUrlSnapshot: string | null;
   serviceCatalog: { id: string; code: string | null; name: string } | null;
   vendorName: string | null;
   technicianName: string | null;
@@ -46,7 +48,9 @@ export async function getServiceRequestList(
         scope: true,
         vendorNameSnap: true,
         technicianNameSnap: true,
-        product: { select: { id: true, title: true } },
+        skuSnapshot: true,
+        primaryImageUrlSnapshot: true,
+        product: { select: { id: true, title: true, primaryImageUrl: true } },
         ServiceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenance: true } },
         orderItem: {
@@ -70,6 +74,8 @@ export async function getServiceRequestList(
     updatedAt: r.updatedAt,
     scope: r.scope ?? null,
     productTitle: r.product?.title ?? null,
+    skuSnapshot: r.skuSnapshot ?? null,
+    primaryImageUrlSnapshot: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
     status: r.status,
     vendorName: r.vendorNameSnap ?? null,
     technicianName: r.technicianNameSnap ?? null,
@@ -116,9 +122,10 @@ export async function findProductForService(tx: DB, productId: string) {
       status: true,
       brand: { select: { name: true } },
       watchSpec: { select: { model: true, ref: true } },
+      primaryImageUrl: true,
       variants: {
         orderBy: [{ stockQty: 'desc' }, { createdAt: 'asc' }],
-        select: { id: true },
+        select: { id: true, sku: true },
         take: 1,
       },
     },
@@ -160,6 +167,8 @@ export async function createTechnicalCheckRequest(
     refSnapshot?: string | null;
     technicianId?: string | null;
     technicianNameSnap?: string | null;
+    skuSnapshot?: string | null;
+    primaryImageUrlSnapshot?: string | null;
   }
 ) {
   const db = dbOrTx(tx);
@@ -179,6 +188,8 @@ export async function createTechnicalCheckRequest(
       refSnapshot: input.refSnapshot ?? null,
       technicianId: input.technicianId ?? null,
       technicianNameSnap: input.technicianNameSnap ?? null,
+      skuSnapshot: input.skuSnapshot ?? null,
+      primaryImageUrlSnapshot: input.primaryImageUrlSnapshot ?? null,
     },
   });
 }
@@ -213,7 +224,7 @@ export async function markProductPosted(tx: DB, productId: string) {
   return db.product.update({
     where: { id: productId },
     data: {
-      status: ProductStatus.POSTED,
+      status: ProductStatus.AVAILABLE,
     },
   });
 }

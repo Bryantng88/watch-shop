@@ -4,6 +4,12 @@ import Link from "next/link";
 import { ProductType } from "@prisma/client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+    applyQuickWatchSpecToFlags,
+    getQuickWatchSpecChips,
+    parseQuickWatchSpec,
+    type QuickWatchSpec,
+} from "../_shared/quick-watch-rule";
 
 type WatchFlags = {
     hasStrap: boolean;
@@ -29,6 +35,7 @@ type Line = {
     productType: string;
     watchFlags?: WatchFlags;
     strapSpec?: StrapSpec;
+    quickSpec?: QuickWatchSpec | null;
 };
 
 type Props = {
@@ -66,10 +73,10 @@ function uid() {
 
 function defaultWatchFlags(): WatchFlags {
     return {
-        hasStrap: false,
-        isServiced: false,
+        hasStrap: true,
+        isServiced: true,
         hasClasp: false,
-        isSpa: false,
+        isSpa: true,
     };
 }
 
@@ -104,15 +111,26 @@ function normalizeStrapSpec(spec?: Partial<StrapSpec> | null): StrapSpec {
     };
 }
 
+function buildWatchLineState(title = "", currentFlags?: WatchFlags) {
+    const quickSpec = parseQuickWatchSpec(title);
+    return {
+        quickSpec,
+        watchFlags: applyQuickWatchSpecToFlags(quickSpec, currentFlags ?? defaultWatchFlags()),
+    };
+}
+
 function newLine(productType = ProductType.WATCH): Line {
+    const watchState = buildWatchLineState("");
+
     return {
         id: `tmp-${uid()}`,
         title: "",
         quantity: 1,
         unitCost: 0,
         productType,
-        watchFlags: productType === ProductType.WATCH ? defaultWatchFlags() : undefined,
+        watchFlags: productType === ProductType.WATCH ? watchState.watchFlags : undefined,
         strapSpec: productType === ProductType.WATCH_STRAP ? defaultStrapSpec() : undefined,
+        quickSpec: productType === ProductType.WATCH ? watchState.quickSpec : undefined,
     };
 }
 
@@ -135,6 +153,31 @@ function FlagCheckbox({
     );
 }
 
+
+function QuickRuleChips({ spec }: { spec?: QuickWatchSpec | null }) {
+    const chips = getQuickWatchSpecChips(spec);
+    if (!chips.length) {
+        return (
+            <p className="mt-2 text-xs text-slate-500">
+                Gợi ý: <span className="font-medium">seiko tự động tròn mặt đen dây thép</span>
+            </p>
+        );
+    }
+
+    return (
+        <div className="mt-2 flex flex-wrap gap-2">
+            {chips.map((chip) => (
+                <span
+                    key={chip}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+                >
+                    {chip}
+                </span>
+            ))}
+        </div>
+    );
+}
+
 export default function EditAcqForm({
     acquisition,
     items: initialItems,
@@ -146,17 +189,22 @@ export default function EditAcqForm({
 
     const [formData, setFormData] = useState({ ...acquisition });
     const [lines, setLines] = useState<Line[]>(
-        (initialItems ?? []).map((item) => ({
-            ...item,
-            watchFlags:
-                item.productType === ProductType.WATCH
-                    ? normalizeWatchFlags(item.watchFlags)
-                    : undefined,
-            strapSpec:
-                item.productType === ProductType.WATCH_STRAP
-                    ? normalizeStrapSpec(item.strapSpec)
-                    : undefined,
-        }))
+        (initialItems ?? []).map((item) => {
+            const isWatch = item.productType === ProductType.WATCH;
+            const watchState = isWatch
+                ? buildWatchLineState(item.title, normalizeWatchFlags(item.watchFlags))
+                : null;
+
+            return {
+                ...item,
+                watchFlags: isWatch ? watchState?.watchFlags : undefined,
+                quickSpec: isWatch ? watchState?.quickSpec : undefined,
+                strapSpec:
+                    item.productType === ProductType.WATCH_STRAP
+                        ? normalizeStrapSpec(item.strapSpec)
+                        : undefined,
+            };
+        })
     );
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
@@ -173,18 +221,36 @@ export default function EditAcqForm({
                 if (line.id !== id) return line;
 
                 const nextType = (patch.productType ?? line.productType) as string;
+                const nextTitle = patch.title ?? line.title;
+                const watchState =
+                    nextType === ProductType.WATCH
+                        ? buildWatchLineState(nextTitle, normalizeWatchFlags(patch.watchFlags ?? line.watchFlags))
+                        : null;
 
                 return {
                     ...line,
                     ...patch,
-                    watchFlags:
-                        nextType === ProductType.WATCH
-                            ? normalizeWatchFlags(patch.watchFlags ?? line.watchFlags)
-                            : undefined,
+                    watchFlags: nextType === ProductType.WATCH ? watchState?.watchFlags : undefined,
+                    quickSpec: nextType === ProductType.WATCH ? watchState?.quickSpec : undefined,
                     strapSpec:
                         nextType === ProductType.WATCH_STRAP
                             ? normalizeStrapSpec(patch.strapSpec ?? line.strapSpec)
                             : undefined,
+                };
+            })
+        );
+    }
+
+    function setWatchTitle(id: string, title: string) {
+        setLines((prev) =>
+            prev.map((line) => {
+                if (line.id !== id) return line;
+                const watchState = buildWatchLineState(title, normalizeWatchFlags(line.watchFlags));
+                return {
+                    ...line,
+                    title,
+                    watchFlags: watchState.watchFlags,
+                    quickSpec: watchState.quickSpec,
                 };
             })
         );
@@ -240,21 +306,28 @@ export default function EditAcqForm({
         }
 
         const items = lines
-            .map((line) => ({
-                id: line.id,
-                title: line.title?.trim(),
-                quantity: Number(line.quantity) || 0,
-                unitCost: Number(line.unitCost) || 0,
-                productType: line.productType,
-                ...(line.productType === ProductType.WATCH
-                    ? { watchFlags: normalizeWatchFlags(line.watchFlags) }
-                    : {}),
-                ...(line.productType === ProductType.WATCH_STRAP
-                    ? {
-                        strapSpec: normalizeStrapSpec(line.strapSpec),
-                    }
-                    : {}),
-            }))
+            .map((line) => {
+                const quickSpec = line.productType === ProductType.WATCH ? parseQuickWatchSpec(line.title?.trim()) : null;
+
+                return {
+                    id: line.id,
+                    title: line.title?.trim(),
+                    quantity: Number(line.quantity) || 0,
+                    unitCost: Number(line.unitCost) || 0,
+                    productType: line.productType,
+                    ...(line.productType === ProductType.WATCH
+                        ? {
+                            watchFlags: applyQuickWatchSpecToFlags(quickSpec, normalizeWatchFlags(line.watchFlags)),
+                            quickSpec,
+                        }
+                        : {}),
+                    ...(line.productType === ProductType.WATCH_STRAP
+                        ? {
+                            strapSpec: normalizeStrapSpec(line.strapSpec),
+                        }
+                        : {}),
+                };
+            })
             .filter((line) => line.title && line.quantity > 0);
 
         if (!items.length) {
@@ -445,15 +518,20 @@ export default function EditAcqForm({
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
                                     <div className="md:col-span-5">
                                         <label className="space-y-1 text-sm">
-                                            <div className="font-medium text-slate-700">Tên sản phẩm</div>
+                                            <div className="font-medium text-slate-700">Mô tả nhanh / tên sản phẩm</div>
                                             <input
                                                 type="text"
                                                 value={line.title}
                                                 disabled={readOnly}
-                                                onChange={(e) => setLine(line.id, { title: e.target.value })}
+                                                onChange={(e) =>
+                                                    isWatch
+                                                        ? setWatchTitle(line.id, e.target.value)
+                                                        : setLine(line.id, { title: e.target.value })
+                                                }
                                                 className="w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-white"
-                                                placeholder="Ví dụ: Rolex Datejust 16234"
+                                                placeholder={isWatch ? "VD: seiko tự động tròn mặt đen dây thép" : "Tên sản phẩm"}
                                             />
+                                            {isWatch ? <QuickRuleChips spec={line.quickSpec} /> : null}
                                         </label>
                                     </div>
 
@@ -507,20 +585,8 @@ export default function EditAcqForm({
 
                                 {isWatch ? (
                                     <div className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-                                        <div className="text-sm font-medium text-slate-700">Thông tin tiếp nhận đồng hồ</div>
+                                        <div className="text-sm font-medium text-slate-700">Trạng thái tiếp nhận đồng hồ</div>
                                         <div className="flex flex-wrap gap-2">
-                                            <FlagCheckbox
-                                                checked={!!line.watchFlags?.hasStrap}
-                                                label="Có dây"
-                                                disabled={readOnly}
-                                                onChange={(v) => setWatchFlag(line.id, "hasStrap", v)}
-                                            />
-                                            <FlagCheckbox
-                                                checked={!!line.watchFlags?.hasClasp}
-                                                label="Có khóa"
-                                                disabled={readOnly}
-                                                onChange={(v) => setWatchFlag(line.id, "hasClasp", v)}
-                                            />
                                             <FlagCheckbox
                                                 checked={!!line.watchFlags?.isServiced}
                                                 label="Đã service"
