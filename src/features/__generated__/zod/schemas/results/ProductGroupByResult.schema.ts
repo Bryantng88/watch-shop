@@ -33,7 +33,6 @@ export const ProductGroupByResultSchema = z.array(z.object({
     tag: z.number(),
     status: z.number(),
     categoryId: z.number(),
-    contentStatus: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),

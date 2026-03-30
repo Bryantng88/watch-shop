@@ -52,8 +52,6 @@ const PatchBodySchema = z.object({
             description: z.string().nullish().optional(),
             primaryImageUrl: z.string().nullish().optional(),
             seoDescription: z.string().nullish().optional(),
-            postContent: z.string().nullish().optional(),
-            aiPromptUsed: z.string().nullish().optional(),
             tag: z.string().nullish().optional(),
         })
         .partial()
@@ -312,8 +310,6 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
                         : null;
                 }
                 if (product.seoDescription !== undefined) data.seoDescription = product.seoDescription || null;
-                if (product.postContent !== undefined) data.postContent = product.postContent || null;
-                if (product.aiPromptUsed !== undefined) data.aiPromptUsed = product.aiPromptUsed || null;
                 if (product.tag !== undefined) data.tag = product.tag || null;
                 if (product.brandId !== undefined) {
                     data.brand = product.brandId ? { connect: { id: product.brandId } } : { disconnect: true };

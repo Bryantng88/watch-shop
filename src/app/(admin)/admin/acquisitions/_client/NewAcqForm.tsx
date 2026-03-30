@@ -15,9 +15,8 @@ type Props = { vendors: Vendor[] };
 
 type WatchFlags = {
     hasStrap: boolean;
-    isServiced: boolean;
+    needService: boolean;
     hasClasp: boolean;
-    needsService: boolean;
 };
 
 type WatchLine = {
@@ -62,6 +61,27 @@ const STRAP_MATERIALS: Array<{ value: StrapMaterial; label: string }> = [
     { value: "SPECIAL", label: "Khác" },
 ];
 
+const QUICK_GUIDE_GROUPS = [
+    {
+        title: "Cơ bản",
+        items: [
+            { label: "Brand", hints: ["seiko", "citizen", "omega", "longines"] },
+            { label: "Máy", hints: ["tự động", "automatic", "pin", "quartz", "kinetic"] },
+            { label: "Dáng", hints: ["tròn", "vuông", "tank", "chữ nhật"] },
+            { label: "Mặt", hints: ["mặt đen", "mặt trắng", "bạc", "xanh", "champagne"] },
+            { label: "Dây", hints: ["dây thép", "dây da", "cao su", "nato"] },
+        ],
+    },
+    {
+        title: "Nâng cao",
+        items: [
+            { label: "Fullset", hints: ["fullset", "có hộp", "có sổ", "có thẻ", "no box"] },
+            { label: "Vỏ", hints: ["vỏ thép", "titanium", "vàng", "demi"] },
+            { label: "Danh mục", hints: ["dress", "tool", "diver", "chronograph", "tank"] },
+        ],
+    },
+];
+
 function uid() {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
     return Math.random().toString(36).slice(2, 10);
@@ -70,9 +90,8 @@ function uid() {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: true,
-        isServiced: false,
+        needService: true,
         hasClasp: false,
-        needsService: true,
     };
 }
 
@@ -81,13 +100,19 @@ function buildWatchLineState(
     currentFlags?: WatchFlags
 ): Pick<WatchLine, "title" | "quickSpec" | "watchFlags"> {
     const quickSpec = parseQuickWatchSpec(title);
+
+    const isBracelet = quickSpec?.strapType === "STEEL";
+
     return {
         title,
         quickSpec,
-        watchFlags: applyQuickWatchSpecToFlags(quickSpec, currentFlags ?? defaultWatchFlags()),
+        watchFlags: {
+            hasStrap: isBracelet ? true : (currentFlags?.hasStrap ?? true),
+            hasClasp: isBracelet ? true : (currentFlags?.hasClasp ?? false),
+            needService: currentFlags?.needService ?? true,
+        },
     };
 }
-
 function newWatchLine(): WatchLine {
     const base = buildWatchLineState("");
     return {
@@ -171,6 +196,45 @@ function SectionCard({
         </div>
     );
 }
+
+function GuideContent() {
+    return (
+        <div className="space-y-4">
+            {QUICK_GUIDE_GROUPS.map((group) => (
+                <div
+                    key={group.title}
+                    className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"
+                >
+                    <div className="mb-3 text-sm font-semibold text-slate-800">{group.title}</div>
+
+                    <div className="space-y-3">
+                        {group.items.map((item) => (
+                            <div key={item.label}>
+                                <div className="mb-1 text-sm font-medium text-slate-700">{item.label}</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {item.hints.map((hint) => (
+                                        <span
+                                            key={hint}
+                                            className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600"
+                                        >
+                                            {hint}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <div className="font-medium">Ví dụ</div>
+                <div className="mt-1 leading-6">Seiko tự động mặt trắng dây thép có hộp sổ thẻ</div>
+            </div>
+        </div>
+    );
+}
+
 
 export default function NewAcqForm({ vendors }: Props) {
     const [formData, setFormData] = useState({
@@ -324,7 +388,7 @@ export default function NewAcqForm({ vendors }: Props) {
 
     return (
         <form id="acq-form" onSubmit={onSubmit} className="w-full min-w-0 pb-24">
-            <div className="mx-auto w-full max-w-7xl space-y-6 px-4 md:px-6">
+            <div className="mx-auto w-full max-w-4xl space-y-6">
                 <div className="flex items-center justify-between gap-4">
                     <h1 className="text-xl font-semibold">Tạo phiếu nhập (DRAFT)</h1>
                     <Link
@@ -335,393 +399,398 @@ export default function NewAcqForm({ vendors }: Props) {
                     </Link>
                 </div>
 
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                        <SectionCard title="Vendor">
-                            {!showQuickVendor ? (
-                                <>
-                                    <select
-                                        name="vendorId"
-                                        className="mb-3 w-full rounded-md border border-slate-300 px-3 py-2"
-                                        value={formData.vendorId}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="">-- Chọn vendor --</option>
-                                        {vendors.map((vendor) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                <div className="grid grid-cols-1 gap-8 min-[1800px]:grid-cols-[minmax(0,1fr)_360px]">
+                    <div className="min-w-0 space-y-6">
+                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                            <SectionCard title="Vendor">
+                                {!showQuickVendor ? (
+                                    <>
+                                        <select
+                                            name="vendorId"
+                                            className="mb-3 w-full rounded-md border border-slate-300 px-3 py-2"
+                                            value={formData.vendorId}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">-- Chọn vendor --</option>
+                                            {vendors.map((vendor) => (
+                                                <option key={vendor.id} value={vendor.id}>
+                                                    {vendor.name}
+                                                </option>
+                                            ))}
+                                        </select>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowQuickVendor(true)}
-                                        className="w-full rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-neutral-800"
-                                    >
-                                        + Thêm nhanh vendor mới
-                                    </button>
-                                </>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowQuickVendor(true)}
+                                            className="w-full rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-neutral-800"
+                                        >
+                                            + Thêm nhanh vendor mới
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                        <label className="mb-1 block text-xs font-medium text-slate-600">
+                                            Tên vendor mới
+                                        </label>
+                                        <input
+                                            name="quickVendorName"
+                                            className="w-full rounded-md border border-slate-300 px-3 py-2"
+                                            value={formData.quickVendorName}
+                                            onChange={handleChange}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowQuickVendor(false)}
+                                            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-white"
+                                        >
+                                            Huỷ thêm mới
+                                        </button>
+                                    </div>
+                                )}
+
+                                <label className="mt-4 block text-sm font-medium text-slate-700">Ghi chú</label>
+                                <textarea
+                                    name="notes"
+                                    value={formData.notes}
+                                    onChange={handleChange}
+                                    className="mt-1 min-h-[100px] w-full rounded-md border border-slate-300 px-3 py-2"
+                                />
+                            </SectionCard>
+
+                            <SectionCard title="Thông tin phiếu">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">Ngày nhập</label>
+                                        <input
+                                            name="acquiredAt"
+                                            type="datetime-local"
+                                            value={formData.acquiredAt}
+                                            onChange={handleChange}
+                                            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">Tiền tệ</label>
+                                        <select
+                                            name="currency"
+                                            value={formData.currency}
+                                            onChange={handleChange}
+                                            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                                        >
+                                            {CURRENCIES.map((currency) => (
+                                                <option key={currency}>{currency}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">Loại phiếu</label>
+                                        <select
+                                            name="type"
+                                            value={formData.type}
+                                            onChange={handleChange}
+                                            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                                        >
+                                            {TYPES.map((type) => (
+                                                <option key={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </SectionCard>
+                        </div>
+
+
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h3 className="font-semibold text-slate-900">Nhập đồng hồ</h3>
+                                    <p className="text-sm text-slate-500">
+                                        Rule sẽ tự nhận diện brand, máy, dáng mặt, màu mặt, loại dây, fullset, chất liệu vỏ và danh mục từ ô mô tả nhanh.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setWatchLines((prev) => [...prev, newWatchLine()])}
+                                    className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+                                >
+                                    + Thêm đồng hồ
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {watchLines.map((line) => {
+                                    const rowTotal = Number(line.quantity || 0) * Number(line.unitCost || 0);
+
+                                    return (
+                                        <div key={line.id} className="rounded-xl border border-slate-200 p-4">
+                                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                                                <div className="xl:col-span-7">
+                                                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                                                        Mô tả nhanh / tên đồng hồ
+                                                    </label>
+                                                    <input
+                                                        className="w-full rounded-md border border-slate-300 px-3 py-2"
+                                                        value={line.title}
+                                                        placeholder="VD: seiko tự động tròn mặt đen dây thép"
+                                                        onChange={(e) => setWatchTitle(line.id, e.target.value)}
+                                                    />
+                                                    <QuickRuleChips spec={line.quickSpec} />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="mb-1 block text-sm font-medium text-slate-700">SL</label>
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                        value={line.quantity}
+                                                        onChange={(e) =>
+                                                            setWatchLine(line.id, "quantity", Number(e.target.value || 1))
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div className="xl:col-span-2">
+                                                    <label className="mb-1 block text-sm font-medium text-slate-700">Giá nhập</label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                        value={line.unitCost}
+                                                        onChange={(e) =>
+                                                            setWatchLine(line.id, "unitCost", Number(e.target.value || 0))
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div className="xl:col-span-1 flex items-end justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setWatchLines((prev) =>
+                                                                prev.length === 1
+                                                                    ? prev
+                                                                    : prev.filter((item) => item.id !== line.id)
+                                                            )
+                                                        }
+                                                        className="rounded-md border border-slate-300 px-2.5 py-2 text-xs hover:bg-slate-50"
+                                                    >
+                                                        Xoá
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <FlagCheckbox
+                                                        checked={line.watchFlags.needService}
+                                                        label="Service"
+                                                        onChange={(v) => setWatchFlag(line.id, "needService", v)}
+                                                    />
+                                                </div>
+
+                                                <div className="text-sm font-semibold text-slate-800">
+                                                    Thành tiền: {new Intl.NumberFormat("vi-VN").format(rowTotal)} {formData.currency}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h3 className="font-semibold text-slate-900">Nhập dây</h3>
+                                    <p className="text-sm text-slate-500">
+                                        Dây nhập đầy đủ spec để tạo StrapVariantSpec khi duyệt phiếu.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setStrapLines((prev) => [...prev, newStrapLine()])}
+                                    className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+                                >
+                                    + Thêm dây
+                                </button>
+                            </div>
+
+                            {strapLines.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                                    Chưa có dòng dây nào.
+                                </div>
                             ) : (
-                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                                        Tên vendor mới
-                                    </label>
-                                    <input
-                                        name="quickVendorName"
-                                        className="w-full rounded-md border border-slate-300 px-3 py-2"
-                                        value={formData.quickVendorName}
-                                        onChange={handleChange}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowQuickVendor(false)}
-                                        className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-white"
-                                    >
-                                        Huỷ thêm mới
-                                    </button>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="px-3 py-3 text-left">Tên dây</th>
+                                                <th className="px-3 py-3 text-left">Chất liệu</th>
+                                                <th className="px-3 py-3 text-right">Đầu dây</th>
+                                                <th className="px-3 py-3 text-right">Đầu khóa</th>
+                                                <th className="px-3 py-3 text-left">Màu</th>
+                                                <th className="px-3 py-3 text-center">QR</th>
+                                                <th className="px-3 py-3 text-right">SL</th>
+                                                <th className="px-3 py-3 text-right">Giá nhập</th>
+                                                <th className="px-3 py-3 text-right">Giá bán</th>
+                                                <th className="px-3 py-3 text-right">Thành tiền</th>
+                                                <th className="px-3 py-3"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {strapLines.map((line) => {
+                                                const rowTotal = Number(line.quantity || 0) * Number(line.unitCost || 0);
+
+                                                return (
+                                                    <tr key={line.id} className="border-t border-slate-200">
+                                                        <td className="px-3 py-3">
+                                                            <input
+                                                                className="w-56 rounded-md border border-slate-300 px-3 py-2"
+                                                                value={line.title}
+                                                                onChange={(e) => setStrapLine(line.id, "title", e.target.value)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3">
+                                                            <select
+                                                                className="w-36 rounded-md border border-slate-300 px-3 py-2"
+                                                                value={line.material}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "material", e.target.value as StrapMaterial)
+                                                                }
+                                                            >
+                                                                {STRAP_MATERIALS.map((material) => (
+                                                                    <option key={material.value} value={material.value}>
+                                                                        {material.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                                value={line.lugWidthMM}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "lugWidthMM", Number(e.target.value || 0))
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                                value={line.buckleWidthMM}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "buckleWidthMM", Number(e.target.value || 0))
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3">
+                                                            <input
+                                                                className="w-28 rounded-md border border-slate-300 px-3 py-2"
+                                                                value={line.color}
+                                                                onChange={(e) => setStrapLine(line.id, "color", e.target.value)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={line.quickRelease}
+                                                                onChange={(e) => setStrapLine(line.id, "quickRelease", e.target.checked)}
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                                value={line.quantity}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "quantity", Number(e.target.value || 1))
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                className="w-32 rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                                value={line.unitCost}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "unitCost", Number(e.target.value || 0))
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                className="w-32 rounded-md border border-slate-300 px-3 py-2 text-right"
+                                                                value={line.sellPrice}
+                                                                onChange={(e) =>
+                                                                    setStrapLine(line.id, "sellPrice", Number(e.target.value || 0))
+                                                                }
+                                                            />
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right font-medium">
+                                                            {new Intl.NumberFormat("vi-VN").format(rowTotal)} {formData.currency}
+                                                        </td>
+                                                        <td className="px-3 py-3 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setStrapLines((prev) =>
+                                                                        prev.filter((item) => item.id !== line.id)
+                                                                    )
+                                                                }
+                                                                className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
+                                                            >
+                                                                Xoá
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
+                        </section>
 
-                            <label className="mt-4 block text-sm font-medium text-slate-700">Ghi chú</label>
-                            <textarea
-                                name="notes"
-                                value={formData.notes}
-                                onChange={handleChange}
-                                className="mt-1 min-h-[100px] w-full rounded-md border border-slate-300 px-3 py-2"
-                            />
-                        </SectionCard>
-
-                        <SectionCard title="Thông tin phiếu">
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Ngày nhập</label>
-                                    <input
-                                        name="acquiredAt"
-                                        type="datetime-local"
-                                        value={formData.acquiredAt}
-                                        onChange={handleChange}
-                                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Tiền tệ</label>
-                                    <select
-                                        name="currency"
-                                        value={formData.currency}
-                                        onChange={handleChange}
-                                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                                    >
-                                        {CURRENCIES.map((currency) => (
-                                            <option key={currency}>{currency}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Loại phiếu</label>
-                                    <select
-                                        name="type"
-                                        value={formData.type}
-                                        onChange={handleChange}
-                                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                                    >
-                                        {TYPES.map((type) => (
-                                            <option key={type}>{type}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium text-slate-700">Tổng giá trị phiếu</span>
+                                <span className="text-lg font-semibold text-slate-900">
+                                    {new Intl.NumberFormat("vi-VN").format(total)} {formData.currency}
+                                </span>
                             </div>
-                        </SectionCard>
+                        </div>
+
+                        {err ? (
+                            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {err}
+                            </div>
+                        ) : null}
+
+                        {okMsg ? (
+                            <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                                {okMsg}
+                            </div>
+                        ) : null}
                     </div>
 
-                    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <h3 className="font-semibold text-slate-900">Nhập đồng hồ</h3>
-                                <p className="text-sm text-slate-500">
-                                    Rule sẽ tự nhận diện brand, máy, dáng mặt, màu mặt, loại dây, fullset, chất liệu vỏ và danh mục từ ô mô tả nhanh.
-                                </p>
-                            </div>
 
-                            <button
-                                type="button"
-                                onClick={() => setWatchLines((prev) => [...prev, newWatchLine()])}
-                                className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
-                            >
-                                + Thêm đồng hồ
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {watchLines.map((line) => {
-                                const rowTotal = Number(line.quantity || 0) * Number(line.unitCost || 0);
-
-                                return (
-                                    <div key={line.id} className="rounded-xl border border-slate-200 p-4">
-                                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-                                            <div className="xl:col-span-7">
-                                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                                    Mô tả nhanh / tên đồng hồ
-                                                </label>
-                                                <input
-                                                    className="w-full rounded-md border border-slate-300 px-3 py-2"
-                                                    value={line.title}
-                                                    placeholder="VD: seiko tự động tròn mặt đen dây thép"
-                                                    onChange={(e) => setWatchTitle(line.id, e.target.value)}
-                                                />
-                                                <QuickRuleChips spec={line.quickSpec} />
-                                            </div>
-
-                                            <div className="xl:col-span-2">
-                                                <label className="mb-1 block text-sm font-medium text-slate-700">SL</label>
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                    value={line.quantity}
-                                                    onChange={(e) =>
-                                                        setWatchLine(line.id, "quantity", Number(e.target.value || 1))
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="xl:col-span-2">
-                                                <label className="mb-1 block text-sm font-medium text-slate-700">Giá nhập</label>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                    value={line.unitCost}
-                                                    onChange={(e) =>
-                                                        setWatchLine(line.id, "unitCost", Number(e.target.value || 0))
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div className="xl:col-span-1 flex items-end justify-end">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setWatchLines((prev) =>
-                                                            prev.length === 1
-                                                                ? prev
-                                                                : prev.filter((item) => item.id !== line.id)
-                                                        )
-                                                    }
-                                                    className="rounded-md border border-slate-300 px-2.5 py-2 text-xs hover:bg-slate-50"
-                                                >
-                                                    Xoá
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                            <div className="flex flex-wrap gap-2">
-                                                <FlagCheckbox
-                                                    checked={line.watchFlags.needsService}
-                                                    label="Service"
-                                                    onChange={(v) => setWatchFlag(line.id, "needsService", v)}
-                                                />
-                                            </div>
-
-                                            <div className="text-sm font-semibold text-slate-800">
-                                                Thành tiền: {new Intl.NumberFormat("vi-VN").format(rowTotal)} {formData.currency}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-
-                    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <h3 className="font-semibold text-slate-900">Nhập dây</h3>
-                                <p className="text-sm text-slate-500">
-                                    Dây nhập đầy đủ spec để tạo StrapVariantSpec khi duyệt phiếu.
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => setStrapLines((prev) => [...prev, newStrapLine()])}
-                                className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
-                            >
-                                + Thêm dây
-                            </button>
-                        </div>
-
-                        {strapLines.length === 0 ? (
-                            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                                Chưa có dòng dây nào.
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="px-3 py-3 text-left">Tên dây</th>
-                                            <th className="px-3 py-3 text-left">Chất liệu</th>
-                                            <th className="px-3 py-3 text-right">Đầu dây</th>
-                                            <th className="px-3 py-3 text-right">Đầu khóa</th>
-                                            <th className="px-3 py-3 text-left">Màu</th>
-                                            <th className="px-3 py-3 text-center">QR</th>
-                                            <th className="px-3 py-3 text-right">SL</th>
-                                            <th className="px-3 py-3 text-right">Giá nhập</th>
-                                            <th className="px-3 py-3 text-right">Giá bán</th>
-                                            <th className="px-3 py-3 text-right">Thành tiền</th>
-                                            <th className="px-3 py-3"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {strapLines.map((line) => {
-                                            const rowTotal = Number(line.quantity || 0) * Number(line.unitCost || 0);
-
-                                            return (
-                                                <tr key={line.id} className="border-t border-slate-200">
-                                                    <td className="px-3 py-3">
-                                                        <input
-                                                            className="w-56 rounded-md border border-slate-300 px-3 py-2"
-                                                            value={line.title}
-                                                            onChange={(e) => setStrapLine(line.id, "title", e.target.value)}
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3">
-                                                        <select
-                                                            className="w-36 rounded-md border border-slate-300 px-3 py-2"
-                                                            value={line.material}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "material", e.target.value as StrapMaterial)
-                                                            }
-                                                        >
-                                                            {STRAP_MATERIALS.map((material) => (
-                                                                <option key={material.value} value={material.value}>
-                                                                    {material.label}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                            value={line.lugWidthMM}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "lugWidthMM", Number(e.target.value || 0))
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                            value={line.buckleWidthMM}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "buckleWidthMM", Number(e.target.value || 0))
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3">
-                                                        <input
-                                                            className="w-28 rounded-md border border-slate-300 px-3 py-2"
-                                                            value={line.color}
-                                                            onChange={(e) => setStrapLine(line.id, "color", e.target.value)}
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={line.quickRelease}
-                                                            onChange={(e) => setStrapLine(line.id, "quickRelease", e.target.checked)}
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            className="w-24 rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                            value={line.quantity}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "quantity", Number(e.target.value || 1))
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            className="w-32 rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                            value={line.unitCost}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "unitCost", Number(e.target.value || 0))
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            className="w-32 rounded-md border border-slate-300 px-3 py-2 text-right"
-                                                            value={line.sellPrice}
-                                                            onChange={(e) =>
-                                                                setStrapLine(line.id, "sellPrice", Number(e.target.value || 0))
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right font-medium">
-                                                        {new Intl.NumberFormat("vi-VN").format(rowTotal)} {formData.currency}
-                                                    </td>
-                                                    <td className="px-3 py-3 text-right">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setStrapLines((prev) =>
-                                                                    prev.filter((item) => item.id !== line.id)
-                                                                )
-                                                            }
-                                                            className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
-                                                        >
-                                                            Xoá
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </section>
-
-                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-700">Tổng giá trị phiếu</span>
-                            <span className="text-lg font-semibold text-slate-900">
-                                {new Intl.NumberFormat("vi-VN").format(total)} {formData.currency}
-                            </span>
-                        </div>
-                    </div>
-
-                    {err ? (
-                        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            {err}
-                        </div>
-                    ) : null}
-
-                    {okMsg ? (
-                        <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                            {okMsg}
-                        </div>
-                    ) : null}
                 </div>
 
                 <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-6">
-                    <div className="mx-auto flex w-full max-w-7xl items-center justify-end gap-3">
+                    <div className="mx-auto flex w-full max-w-[1400px] items-center justify-end gap-3">
                         {showAfterCreate ? (
                             <button
                                 type="button"

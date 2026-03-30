@@ -30,8 +30,6 @@ export const ServiceRequestResultSchema = z.object({
     vendorNameSnap: z.string().nullable(),
     technicianId: z.string().nullable(),
     technicianNameSnap: z.string().nullable(),
-    skuSnapshot: z.string().nullable(),
-    primaryImageUrlSnapshot: z.string().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().nullable(),

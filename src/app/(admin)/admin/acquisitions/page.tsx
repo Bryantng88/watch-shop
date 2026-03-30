@@ -1,7 +1,7 @@
 import { getAdminAcquisitionList } from "./_server/acquisition.service";
 import AcquisitionListClient from "./_client/ListAcq";
 
-type SearchParams = { [key: string]: string | string[] | undefined };
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 function serialize(obj: any) {
     return JSON.parse(
@@ -18,8 +18,10 @@ export default async function AcquisitionListPage({
 }: {
     searchParams: SearchParams;
 }) {
+    const resolvedSearchParams = await searchParams;
+
     const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
+        Object.entries(resolvedSearchParams).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
         )
     );
@@ -38,7 +40,7 @@ export default async function AcquisitionListPage({
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={searchParams}
+            rawSearchParams={resolvedSearchParams}
         />
     );
 }

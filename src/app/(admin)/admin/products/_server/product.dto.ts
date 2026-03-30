@@ -4,7 +4,6 @@ import {
     Prisma,
     AvailabilityStatus,
     ProductStatus,
-    ContentStatus,
     ServiceRequestStatus,
 } from "@prisma/client";
 import type {
@@ -163,9 +162,9 @@ function buildWhereForView(
 ): Prisma.ProductWhereInput {
     switch (view) {
         case "draft":
-            return { AND: [whereBase, { contentStatus: ContentStatus.DRAFT }] };
+            return { AND: [whereBase, { status: ProductStatus.DRAFT }] };
         case "posted":
-            return { AND: [whereBase, { contentStatus: ContentStatus.PUBLISHED }] };
+            return { AND: [whereBase, { status: ProductStatus.POSTED }] };
         case "in_service":
             return { AND: [whereBase, { status: ProductStatus.IN_SERVICE }] };
         case "hold":
@@ -259,7 +258,6 @@ export async function listAdminProducts(
         slug: true,
         type: true,
         status: true,
-        contentStatus: true,
         categoryId: true,
         primaryImageUrl: true,
         createdAt: true,
@@ -302,7 +300,7 @@ export async function listAdminProducts(
     const batchFactories: Array<ReadBatchFactory<any>> = [
         () =>
             db.product.groupBy({
-                by: ["contentStatus"],
+                by: ["status"],
                 where: baseWhere,
                 _count: { _all: true },
             }),
@@ -331,7 +329,7 @@ export async function listAdminProducts(
 
     const groupedStatusCounts = new Map<string, number>();
     for (const row of statusGroups ?? []) {
-        groupedStatusCounts.set(String(row.contentStatus), Number(row._count?._all ?? 0));
+        groupedStatusCounts.set(String(row.status), Number(row._count?._all ?? 0));
     }
 
     const openServiceStatusMap = new Map<string, string>();
@@ -349,7 +347,6 @@ export async function listAdminProducts(
             select: {
                 productId: true,
                 status: true,
-                contentStatus: true,
             },
         });
 
@@ -360,8 +357,8 @@ export async function listAdminProducts(
     }
 
     const totalAll = Array.from(groupedStatusCounts.values()).reduce((sum, count) => sum + count, 0);
-    const cDraft = groupedStatusCounts.get(ContentStatus.DRAFT) ?? 0;
-    const cPosted = groupedStatusCounts.get(ContentStatus.PUBLISHED) ?? 0;
+    const cDraft = groupedStatusCounts.get(ProductStatus.DRAFT) ?? 0;
+    const cPosted = groupedStatusCounts.get(ProductStatus.POSTED) ?? 0;
     const cInService = groupedStatusCounts.get(ProductStatus.IN_SERVICE) ?? 0;
     const cHold =
         (groupedStatusCounts.get(ProductStatus.HOLD) ?? 0) +
@@ -411,7 +408,6 @@ export async function listAdminProducts(
                         id: true,
                         title: true,
                         status: true,
-                        contentStatus: true,
                     },
                 },
             },
@@ -550,8 +546,7 @@ export async function createProductDraft(
         data: {
             title,
             vendorId: vendorId ?? undefined,
-            status: ProductStatus.AVAILABLE,
-            contentStatus: ContentStatus.DRAFT,
+            status: ProductStatus.DRAFT,
             type,
             variants: {
                 create: [
@@ -571,8 +566,7 @@ export async function searchProductsRepo(tx: DB, q: string) {
     const product = await db.product.findMany({
         where: {
             OR: [{ title: { contains: q, mode: "insensitive" } }],
-            status: ProductStatus.AVAILABLE,
-            contentStatus: ContentStatus.DRAFT,
+            status: ProductStatus.DRAFT,
             variants: {
                 some: {
                     availabilityStatus: AvailabilityStatus.ACTIVE,
@@ -634,7 +628,6 @@ export async function updateProduct(
             image: true,
             primaryImageUrl: true,
             status: true,
-            contentStatus: true,
             priceVisibility: true,
             variants: {
                 select: {
@@ -704,7 +697,6 @@ export async function getAdminProductRow(tx: DB, id: string) {
             slug: true,
             type: true,
             status: true,
-            contentStatus: true,
             primaryImageUrl: true,
             createdAt: true,
             updatedAt: true,
@@ -921,7 +913,6 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         id: true,
         title: true,
         status: true,
-        contentStatus: true,
         type: true,
         brandId: true,
         categoryId: true,
@@ -1008,7 +999,6 @@ export async function getOpenServiceProducts(tx: DB, productIds: string[]) {
         select: {
             productId: true,
             status: true,
-            contentStatus: true,
         },
         distinct: ["productId"],
     });
@@ -1019,8 +1009,7 @@ export async function listDraftProductIdsForAutoBulkPost(tx: DB) {
 
     const rows = await db.product.findMany({
         where: {
-            status: ProductStatus.AVAILABLE,
-            contentStatus: ContentStatus.DRAFT,
+            status: ProductStatus.DRAFT,
             NOT: {
                 type: ProductType.WATCH_STRAP,
             },
@@ -1036,8 +1025,8 @@ export async function markPostedMany(tx: DB, ids: string[]) {
     const db = dbOrTx(tx);
 
     return db.product.updateMany({
-        where: { id: { in: ids }, contentStatus: ContentStatus.DRAFT },
-        data: { contentStatus: ContentStatus.PUBLISHED, updatedAt: new Date() },
+        where: { id: { in: ids }, status: ProductStatus.DRAFT },
+        data: { status: ProductStatus.POSTED, updatedAt: new Date() },
     });
 }
 
@@ -1251,7 +1240,6 @@ export async function getProductServiceHistory(tx: DB, productId: string) {
             id: true,
             refNo: true,
             status: true,
-            contentStatus: true,
             scope: true,
             notes: true,
             createdAt: true,

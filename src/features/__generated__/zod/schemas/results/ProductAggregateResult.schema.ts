@@ -18,7 +18,6 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     tag: z.number(),
     status: z.number(),
     categoryId: z.number(),
-    contentStatus: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),

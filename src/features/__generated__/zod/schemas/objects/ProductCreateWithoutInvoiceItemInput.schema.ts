@@ -4,7 +4,6 @@ import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { TagSchema } from '../enums/Tag.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
-import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema as AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
 import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemCreateNestedManyWithoutProductInput.schema';
@@ -33,7 +32,6 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
-  contentStatus: ContentStatusSchema.optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema).optional(),

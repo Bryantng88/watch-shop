@@ -18,7 +18,6 @@ export const ProductUpdateResultSchema = z.nullable(z.object({
   tag: z.unknown(),
   status: z.unknown(),
   categoryId: z.string().optional(),
-  contentStatus: z.unknown().optional(),
   AcquisitionItem: z.array(z.unknown()),
   InvoiceItem: z.array(z.unknown()),
   maintenanceRecords: z.array(z.unknown()),

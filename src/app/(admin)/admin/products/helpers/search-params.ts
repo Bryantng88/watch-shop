@@ -21,6 +21,7 @@ export type ProductListInput = {
     type?: string;
     brandId?: string;
     vendorId?: string;
+    sku?: string;
     categoryId?: string;
     hasImages?: string;
     view?: ProductViewKey;
@@ -47,6 +48,7 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
     const categoryId = toStr(sp.get("categoryId"));
     const hasImages = toStr(sp.get("hasImages"));
     const vendorId = toStr(sp.get("vendorId"));
+    const sku = toStr(sp.get("sku"));
     const view = (toStr(sp.get("view")) || "draft") as ProductViewKey;
     const sort = (toStr(sp.get("sort")) as ProductListSort) || "updatedDesc";
     const page = toInt(sp.get("page"), 1);
@@ -58,6 +60,7 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
         type: type || undefined,
         brandId: brandId || undefined,
         vendorId: vendorId || undefined,
+        sku: sku || undefined,
         categoryId: categoryId || undefined,
         hasImages: hasImages || undefined,
         view,

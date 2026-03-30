@@ -33,7 +33,6 @@ const makeSchema = () => z.object({
   tag: z.boolean().optional(),
   status: z.boolean().optional(),
   categoryId: z.boolean().optional(),
-  contentStatus: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
   maintenanceRecords: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),

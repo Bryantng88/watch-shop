@@ -49,10 +49,6 @@ type ProductRow = ProductListItem & {
     title?: string | null;
     minPrice?: number | null;
     purchasePrice?: number | null;
-    basePurchasePrice?: number | null;
-    strapAddedCost?: number | null;
-    serviceAddedCost?: number | null;
-    extraCost?: number | null;
     salePrice?: number | null;
     stockQty?: number | null;
     strapSpec?: {
@@ -218,7 +214,7 @@ function InlineMoneyEditor({
     onSaved,
 }: {
     productId: string;
-    field: "minPrice" | "salePrice" | "baseVariantCostPrice";
+    field: "minPrice" | "salePrice";
     value: number | null | undefined;
     label: string;
     onSaved: (v: number | null) => void;
@@ -496,6 +492,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     }
 
     const q = sp.get("q") ?? "";
+    const sku = sp.get("sku") ?? "";
     const type = sp.get("type") ?? "";
     const brandId = sp.get("brandId") ?? "";
     const vendorId = sp.get("vendorId") ?? "";
@@ -524,7 +521,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         setShowBulkConfirm(false);
         setShowBulkSaleModal(false);
         setBulkSaleValue("");
-    }, [currentCatalog, currentView, q, type, brandId, vendorId, hasImages, sort, props.page]);
+    }, [currentCatalog, currentView, q, sku, type, brandId, vendorId, hasImages, sort, props.page]);
 
     useEffect(() => {
         setShowBulkBar(selectedIds.length > 0);
@@ -562,6 +559,7 @@ export default function AdminProductListPageClient(props: PageProps) {
         selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     const [formQ, setFormQ] = useState(q);
+    const [formSku, setFormSku] = useState(sku);
     const [formType, setFormType] = useState(type);
     const [formBrandId, setFormBrandId] = useState(brandId);
     const [formVendorId, setFormVendorId] = useState(vendorId);
@@ -569,6 +567,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [formSort, setFormSort] = useState(sort);
 
     useEffect(() => setFormQ(q), [q]);
+    useEffect(() => setFormSku(sku), [sku]);
     useEffect(() => setFormType(type), [type]);
     useEffect(() => setFormBrandId(brandId), [brandId]);
     useEffect(() => setFormVendorId(vendorId), [vendorId]);
@@ -582,6 +581,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
     function applyFilters(form: {
         q: string;
+        sku: string;
         type: string;
         brandId: string;
         vendorId: string;
@@ -590,6 +590,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     }) {
         const next = new URLSearchParams(sp.toString());
         setParam(next, "q", form.q.trim() || null);
+        setParam(next, "sku", form.sku.trim() || null);
 
         if (!isStrapCatalog) {
             setParam(next, "type", form.type || null);
@@ -609,6 +610,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     function clearFilters() {
         const next = new URLSearchParams(sp.toString());
         next.delete("q");
+        next.delete("sku");
         next.delete("type");
         next.delete("brandId");
         next.delete("vendorId");
@@ -797,6 +799,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                     e.preventDefault();
                     applyFilters({
                         q: formQ,
+                        sku: formSku,
                         type: formType,
                         brandId: formBrandId,
                         vendorId: formVendorId,
@@ -805,16 +808,28 @@ export default function AdminProductListPageClient(props: PageProps) {
                     });
                 }}
             >
-                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-4" : "lg:grid-cols-6"}`}>
+                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-5" : "lg:grid-cols-7"}`}>
                     <div>
                         <div className="text-xs text-gray-500 mb-1">Tìm kiếm</div>
                         <input
                             value={formQ}
                             onChange={(e) => setFormQ(e.target.value)}
-                            placeholder={isStrapCatalog ? "Tên dây / chất liệu..." : "Tên / mã / brand..."}
+                            placeholder={isStrapCatalog ? "Tên dây / chất liệu..." : "Tên / brand..."}
                             className="w-full border rounded-lg px-3 py-2 text-sm"
                         />
                     </div>
+
+                    {!isStrapCatalog && (
+                        <div>
+                            <div className="text-xs text-gray-500 mb-1">SKU</div>
+                            <input
+                                value={formSku}
+                                onChange={(e) => setFormSku(e.target.value)}
+                                placeholder="SKU..."
+                                className="w-full border rounded-lg px-3 py-2 text-sm"
+                            />
+                        </div>
+                    )}
 
                     {!isStrapCatalog && (
                         <>
@@ -1169,13 +1184,14 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên</th>
+                                    <th className="px-3 py-3">SKU</th>
                                     <th className="px-3 py-3">Vendor</th>
                                     <th className="px-3 py-3 whitespace-nowrap">Service</th>
                                     <th className="px-3 py-3 whitespace-nowrap">Phiếu nhập</th>
                                     <th className="px-3 py-3 text-right">Giá bán</th>
                                     <th className="px-3 py-3 text-right">Sale</th>
                                     {props.canViewCost && <th className="px-3 py-3 text-right">Giá mua</th>}
-                                    <th className="px-3 py-3">Trạng thái</th>
+                                    <th className="px-3 py-3">Bài đăng</th>
                                     <th className="px-3 py-3">Cập nhật</th>
                                     <th className="px-3 py-3">Tạo lúc</th>
                                     <th className="px-3 py-3 text-right">Hành động</th>
@@ -1186,7 +1202,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                 {rows.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={props.canViewCost ? 11 : 10}
+                                            colSpan={props.canViewCost ? 12 : 11}
                                             className="px-3 py-10 text-center text-gray-500"
                                         >
                                             Không có dữ liệu trong tab này
@@ -1229,34 +1245,11 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
 
-                                                        <div className="flex flex-col items-start gap-1 pt-1">
-                                                            {hasMissingReadinessInfo(p) ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openReadinessDetail(p);
-                                                                    }}
-                                                                    className="rounded-full text-left"
-                                                                >
-                                                                    <DotLabel label="Chưa sẵn sàng public" tone="orange" />
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openReadinessDetail(p);
-                                                                    }}
-                                                                    className="rounded-full text-left"
-                                                                >
-                                                                    <DotLabel label="Sẵn sàng public" tone="green" />
-                                                                </button>
-                                                            )}
 
-                                                        </div>
                                                     </div>
                                                 </td>
+
+                                                <td className="px-3 py-5 whitespace-nowrap text-sm font-mono">{p.variantSnapshot?.sku || "-"}</td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap">{p.vendorName || "-"}</td>
                                                 <td className="px-3 py-5 whitespace-nowrap">
@@ -1294,7 +1287,10 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             onSaved={(v) => patchLocalPrice(p.id, v)}
                                                         />
                                                     ) : (
-                                                        <div className="font-semibold text-base">{fmtMoney(p.minPrice)}</div>
+
+                                                        <div className="text-base font-semibold text-gray-1000">
+                                                            {fmtMoney(p.minPrice)}
+                                                        </div>
                                                     )}
                                                 </td>
 
@@ -1316,35 +1312,33 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                                 {props.canViewCost && (
                                                     <td className="px-3 py-5 text-right">
-                                                        {props.canEditPrice ? (
-                                                            <InlineMoneyEditor
-                                                                productId={p.id}
-                                                                field="baseVariantCostPrice"
-                                                                value={p.basePurchasePrice ?? p.purchasePrice}
-                                                                label="Giá mua"
-                                                                onSaved={(v) => {
-                                                                    setLocalRows((prev) => prev.map((row) => row.id === p.id ? { ...row, basePurchasePrice: v, purchasePrice: v } : row));
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div className="text-sm font-medium">{fmtMoney(p.basePurchasePrice ?? p.purchasePrice)}</div>
-                                                        )}
-                                                        {!!Number((p as any).extraCost ?? 0) && (
-                                                            <button
-                                                                type="button"
-                                                                className="mt-1 block w-full text-right text-xs text-amber-700 hover:underline"
-                                                                title={`Dây: ${fmtMoney((p as any).strapAddedCost ?? null)} • Service: ${fmtMoney((p as any).serviceAddedCost ?? null)}`}
-                                                            >
-                                                                (+{fmtMoney((p as any).extraCost ?? null)})
-                                                            </button>
-                                                        )}
+                                                        <div className="text-sm">{fmtMoney(p.purchasePrice)}</div>
                                                     </td>
                                                 )}
 
                                                 <td className="px-3 py-5 whitespace-nowrap">
-                                                    <StatusBadge status={getContentStatusBadgeValue(p)} />
-                                                </td>
+                                                    <div className="flex flex-col justify-center">
+                                                        {/* Row chính: badge ngang hàng với giá */}
+                                                        <div className="flex items-center h-[20px]">
+                                                            <StatusBadge status={getContentStatusBadgeValue(p)} />
+                                                        </div>
 
+                                                        {/* Row phụ: dot label */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openReadinessDetail(p);
+                                                            }}
+                                                            className="mt-1"
+                                                        >
+                                                            <DotLabel
+                                                                label={hasMissingReadinessInfo(p) ? "Missing Info" : "Ready to post"}
+                                                                tone={hasMissingReadinessInfo(p) ? "orange" : "green"}
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </td>
                                                 <td className="px-3 py-5 whitespace-nowrap">
                                                     <div className="text-sm leading-5">{fmtDT(p.updatedAt)}</div>
                                                 </td>

@@ -13,9 +13,9 @@ import {
 
 type WatchFlags = {
     hasStrap: boolean;
-    isServiced: boolean;
+    needService: boolean;
     hasClasp: boolean;
-    needsService: boolean;
+
 };
 
 type StrapSpec = {
@@ -74,9 +74,9 @@ function uid() {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: true,
-        isServiced: false,
+        isServiced: true,
         hasClasp: false,
-        needsService: true,
+        isSpa: true,
     };
 }
 
@@ -94,9 +94,8 @@ function defaultStrapSpec(): StrapSpec {
 function normalizeWatchFlags(flags?: Partial<WatchFlags> | null): WatchFlags {
     return {
         hasStrap: !!flags?.hasStrap,
-        isServiced: !!flags?.isServiced,
+        needService: !!flags?.needService,
         hasClasp: !!flags?.hasClasp,
-        needsService: flags?.needsService == null ? true : !!flags?.needsService,
     };
 }
 
@@ -588,11 +587,11 @@ export default function EditAcqForm({
                                         <div className="text-sm font-medium text-slate-700">Trạng thái tiếp nhận đồng hồ</div>
                                         <div className="flex flex-wrap gap-2">
                                             <FlagCheckbox
-                                                checked={!!line.watchFlags?.needsService}
+                                                checked={!!line.watchFlags?.needService}
                                                 label="Service"
-                                                disabled={readOnly}
-                                                onChange={(v) => setWatchFlag(line.id, "needsService", v)}
+                                                onChange={(v) => setWatchFlag(line.id, "needService", v)}
                                             />
+
                                         </div>
                                     </div>
                                 ) : null}

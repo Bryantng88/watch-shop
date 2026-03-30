@@ -5,7 +5,7 @@ import {
     OrderStatus,
     OrderVerificationStatus,
     PaymentStatus,
-    ContentStatus,
+    ProductStatus,
     ServiceRequestStatus,
 } from "@prisma/client";
 import { prisma } from "@/server/db/client";
@@ -23,7 +23,7 @@ export type SideMenuNotificationCounts = {
 export async function getSideMenuNotificationCounts(): Promise<SideMenuNotificationCounts> {
     const [products, acquisitions, ordersWebPending, ordersNeedAction, services, shipments, invoices, payments] =
         await Promise.all([
-            prisma.product.count({ where: { contentStatus: ContentStatus.DRAFT } }),
+            prisma.product.count({ where: { status: ProductStatus.DRAFT } }),
             prisma.acquisition.count({ where: { accquisitionStt: AcquisitionStatus.DRAFT } }),
             prisma.order.count({
                 where: {

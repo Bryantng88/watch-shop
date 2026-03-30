@@ -9,12 +9,10 @@ import { AcquisitionType, ProductType } from "@prisma/client";
 import * as repoProd from "../../products/_server/product.repo";
 import * as repoVendor from "../../vendors/_server/vendor.repo";
 import { convertOffsetToTimes } from "framer-motion";
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductStatus, ContentStatus } from "@prisma/client";
 import { createInvoiceFromAcquisition } from "../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "../../services/_server/service_request.service";
 import { ItemInput } from "./acquisition.dto";
-import { parseAcquisitionItemMeta } from "./item-metadata";
-import { mapQuickSpecToWatchSpecInput } from "../_shared/quick-watch-rule";
 
 type AcqViewKey = "all" | "draft" | "posted" | "canceled";
 
@@ -234,71 +232,125 @@ function parseStrapSpecFromDescription(description?: string | null) {
 
 function parseWatchFlagsFromDescription(description?: string | null) {
     if (!description) return null;
+
     try {
         const parsed = JSON.parse(description);
         const candidate = parsed?.watchFlags ?? parsed;
-        if (!candidate || typeof candidate !== 'object') return null;
+        if (!candidate || typeof candidate !== "object") return null;
+
         return {
-            hasStrap: Boolean(candidate.hasStrap ?? false),
-            hasClasp: Boolean(candidate.hasClasp ?? false),
-            isServiced: Boolean(candidate.isServiced ?? false),
-            needsService: candidate.needsService == null ? true : Boolean(candidate.needsService),
+            hasStrap: Boolean((candidate as any).hasStrap ?? false),
+            hasClasp: Boolean((candidate as any).hasClasp ?? false),
+            needsService: Boolean((candidate as any).needsService ?? false),
         };
     } catch {
         return null;
     }
 }
-
 // Chuyển phiếu sang POSTED
-export async function postAcquisition(acqId: string, vendorName: string) {
-    return prisma.$transaction(async (tx) => {
-        const acq = await repoAcq.getAcqtById(acqId, tx);
-        if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+export async function postAcquisition(acqId: string, vendorName?: string | null) {
+    // Phase 1: đọc và chuẩn bị ngoài transaction
+    const acq = await repoAcq.getAcqtById(acqId);
+    if (!acq) throw new Error("Không tìm thấy phiếu nhập");
 
-        let vendorId = acq.vendorId ?? null;
+    let vendorId = acq.vendorId ?? null;
 
-        if (!vendorId && vendorName) {
-            const vendor = await tx.vendor.findFirst({
-                where: { name: vendorName },
-                select: { id: true },
-            });
-            vendorId = vendor?.id ?? null;
-        }
+    if (!vendorId && vendorName) {
+        const vendor = await prisma.vendor.findFirst({
+            where: { name: vendorName },
+            select: { id: true },
+        });
+        vendorId = vendor?.id ?? null;
+    }
 
-        if (!vendorId) {
-            throw new Error("Không tìm thấy vendor để post phiếu");
-        }
+    if (!vendorId) {
+        throw new Error("Không tìm thấy vendor để post phiếu");
+    }
 
-        const items = acq.acquisitionItem ?? [];
+    const items = acq.acquisitionItem ?? [];
 
-        for (const item of items) {
-            if (item.productId) {
-                if (!item.variantId) {
-                    const resolvedVariantId = await repoAcq.resolveVariantIdForProduct(
-                        tx,
-                        item.productId
-                    );
+    const preparedItems = items.map((item) => {
+        const strapSpec =
+            item.productType === "WATCH_STRAP"
+                ? parseStrapSpecFromDescription(item.description)
+                : null;
 
-                    if (resolvedVariantId) {
-                        await tx.acquisitionItem.update({
-                            where: { id: item.id },
-                            data: { variantId: resolvedVariantId },
-                        });
+        const watchFlags =
+            item.productType !== "WATCH_STRAP"
+                ? parseWatchFlagsFromDescription(item.description)
+                : null;
+
+        return {
+            item,
+            strapSpec,
+            watchFlags,
+            shouldCreateServiceRequest: Boolean(watchFlags?.needService ?? watchFlags?.needsService),
+        };
+    });
+
+    const existingProductItems = preparedItems.filter((x) => !!x.item.productId);
+    const newStrapItems = preparedItems.filter(
+        (x) => !x.item.productId && x.item.productType === "WATCH_STRAP"
+    );
+    const newWatchItems = preparedItems.filter(
+        (x) => !x.item.productId && x.item.productType !== "WATCH_STRAP"
+    );
+
+    // Phase 2: transaction chỉ để ghi DB
+    return prisma.$transaction(
+        async (tx) => {
+            // 1) backfill variantId cho item đã có productId nhưng chưa có variantId
+            if (existingProductItems.length > 0) {
+                const productIds = Array.from(
+                    new Set(
+                        existingProductItems
+                            .map((x) => x.item.productId)
+                            .filter((v): v is string => !!v)
+                    )
+                );
+
+                const latestVariants = await tx.productVariant.findMany({
+                    where: {
+                        productId: { in: productIds },
+                    },
+                    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                    select: {
+                        id: true,
+                        productId: true,
+                    },
+                });
+
+                const variantMap = new Map<string, string>();
+                for (const row of latestVariants) {
+                    if (!variantMap.has(row.productId)) {
+                        variantMap.set(row.productId, row.id);
                     }
                 }
-                continue;
+
+                for (const row of existingProductItems) {
+                    if (row.item.variantId || !row.item.productId) continue;
+
+                    const resolvedVariantId = variantMap.get(row.item.productId);
+                    if (!resolvedVariantId) continue;
+
+                    await tx.acquisitionItem.update({
+                        where: { id: row.item.id },
+                        data: { variantId: resolvedVariantId },
+                    });
+                }
             }
 
-            if (item.productType === "WATCH_STRAP") {
-                const strapSpec = parseStrapSpecFromDescription(item.description);
+            // 2) create strap products
+            for (const row of newStrapItems) {
+                const { item, strapSpec } = row;
 
                 const created = await tx.product.create({
                     data: {
                         title: item.productTitle,
-                        status: "AVAILABLE" as any,
-                        contentStatus: "DRAFT" as any,
+                        status: ProductStatus.AVAILABLE,
+                        contentStatus: ContentStatus.DRAFT,
                         type: "WATCH_STRAP" as any,
-                        vendor: { connect: { id: vendorId } },
+                        vendor: { connect: { id: vendorId! } },
                         variants: {
                             create: [
                                 {
@@ -308,6 +360,7 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                                             ? Number(strapSpec.sellPrice)
                                             : Number(item.unitCost ?? 0)
                                     ),
+                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                                     availabilityStatus: "HIDDEN" as any,
                                     strapSpec: {
                                         create: {
@@ -341,89 +394,64 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                         variantId: created.variants?.[0]?.id ?? null,
                     },
                 });
-
-                continue;
             }
 
-            const quickSpec = parseAcquisitionItemMeta(item.description).quickSpec;
-            const watchFlags = parseWatchFlagsFromDescription(item.description);
-            const watchSpecInput = mapQuickSpecToWatchSpecInput(quickSpec);
+            // 3) create watch / normal products
+            for (const row of newWatchItems) {
+                const { item, shouldCreateServiceRequest } = row;
 
-            const created = await tx.product.create({
-                data: {
-                    title: item.productTitle,
-                    status: "AVAILABLE" as any,
-                    contentStatus: "DRAFT" as any,
-                    type: (item.productType ?? "WATCH") as any,
-                    vendor: { connect: { id: vendorId } },
-                    ...(item.productType === "WATCH" ? {
-                        watchSpec: {
-                            create: {
-                                ...watchSpecInput,
-                                hasStrap: Boolean(watchFlags?.hasStrap ?? false),
-                                hasClasp: Boolean(watchFlags?.hasClasp ?? false),
-                                isServiced: Boolean(watchFlags?.isServiced ?? false),
-                            },
+                const created = await tx.product.create({
+                    data: {
+                        title: item.productTitle,
+                        status: ProductStatus.AVAILABLE,
+                        contentStatus: ContentStatus.DRAFT,
+                        type: (item.productType ?? "WATCH") as any,
+                        vendor: { connect: { id: vendorId! } },
+                        variants: {
+                            create: [
+                                {
+                                    stockQty: Number(item.quantity ?? 1),
+                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
+                                    availabilityStatus: "HIDDEN" as any,
+                                },
+                            ],
                         },
-                    } : {}),
-                    variants: {
-                        create: [
-                            {
-                                stockQty: Number(item.quantity ?? 1),
-                                availabilityStatus: "HIDDEN" as any,
-                                costPrice: item.unitCost ?? undefined,
-                            },
-                        ],
                     },
-                },
-                select: {
-                    id: true,
-                    primaryImageUrl: true,
-                    variants: {
-                        select: { id: true, sku: true },
-                        take: 1,
+                    select: {
+                        id: true,
+                        variants: {
+                            select: { id: true },
+                            take: 1,
+                        },
                     },
-                },
-            });
+                });
 
-            await tx.acquisitionItem.update({
-                where: { id: item.id },
-                data: {
-                    productId: created.id,
-                    variantId: created.variants?.[0]?.id ?? null,
-                },
-            });
+                await tx.acquisitionItem.update({
+                    where: { id: item.id },
+                    data: {
+                        productId: created.id,
+                        variantId: created.variants?.[0]?.id ?? null,
+                    },
+                });
 
-            const needsTechnicalCheck = !watchFlags || !!watchFlags.needsService;
-            if (needsTechnicalCheck) {
-                const reasons: string[] = [];
-                if (!watchFlags) reasons.push("Chưa có metadata tiếp nhận");
-                if (watchFlags?.needsService) reasons.push("Tạo từ intake có tick service");
-
-                try {
+                if (shouldCreateServiceRequest) {
                     await createTechnicalCheckFromAcquisitionTx(tx, {
                         productId: created.id,
                         variantId: created.variants?.[0]?.id ?? null,
-                        notes: `Tạo từ phiếu nhập ${acq.refNo ?? acq.id}: ${reasons.join("; ") || "Kiểm tra kỹ thuật tổng quát"}`,
-                        skuSnapshot: created.variants?.[0]?.sku ?? null,
-                        primaryImageUrlSnapshot: created.primaryImageUrl ?? null,
+                        notes: `Tạo từ phiếu nhập ${acq.refNo ?? acq.id}: Kiểm tra kỹ thuật tổng quát`,
                     });
-                } catch (e) {
-                    console.error("CREATE_TECH_CHECK_FAILED", {
-                        acqId,
-                        itemId: item.id,
-                        productId: created.id,
-                        reasons,
-                        error: e,
-                    });
-                    throw e;
                 }
             }
-        }
 
-        await createInvoiceFromAcquisition(tx, acqId);
-        return repoAcq.changeDraftToPost(tx, acqId);
-    });
+            // 4) invoice + đổi trạng thái phiếu
+            await createInvoiceFromAcquisition(tx, acqId);
+            return repoAcq.changeDraftToPost(tx, acqId);
+        },
+        {
+            maxWait: 10_000,
+            timeout: 60_000,
+        }
+    );
 }
 export async function postMultipleAcquisitions(acquisitionIds: string[]) {
     const posted: string[] = [];

@@ -34,7 +34,6 @@ const makeSchema = () => z.object({
   tag: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
   categoryId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  contentStatus: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),

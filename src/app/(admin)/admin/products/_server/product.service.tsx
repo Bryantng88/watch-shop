@@ -65,6 +65,7 @@ const AdminListQuerySchema = z.object({
     categoryIds: z.array(z.string()).optional(),
     hasImages: z.enum(["yes", "no"]).optional(),
     vendorId: z.string().optional(),
+    sku: z.string().optional(),
     updatedFrom: z.date().optional(),
     updatedTo: z.date().optional(),
 });
@@ -223,6 +224,7 @@ export async function getAdminProductList(
         categoryIds: arrayify(raw.categoryIds ?? raw.categoryId),
         hasImages: asString(raw.hasImages),
         vendorId: asString(raw.vendorId),
+        sku: asString(raw.sku),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
     });
@@ -239,6 +241,7 @@ export async function getAdminProductList(
             categoryIds: undefined,
             hasImages: undefined,
             vendorId: undefined,
+            sku: undefined,
             updatedFrom: undefined,
             updatedTo: undefined,
         };
@@ -256,6 +259,7 @@ export async function getAdminProductList(
         brandId: parsed.brandIds?.[0],
         categoryId: parsed.categoryIds?.[0],
         vendorId: parsed.vendorId,
+        sku: parsed.sku,
         hasImages: parsed.hasImages,
         catalog,
         includeCost: !!opts?.canViewCost,

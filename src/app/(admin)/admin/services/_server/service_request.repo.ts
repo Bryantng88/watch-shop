@@ -10,13 +10,10 @@ export type ServiceRequestListRow = {
   updatedAt: Date;
   scope: string | null;
   productTitle: string | null;
-  skuSnapshot: string | null;
-  primaryImageUrlSnapshot: string | null;
   serviceCatalog: { id: string; code: string | null; name: string } | null;
   vendorName: string | null;
   technicianName: string | null;
   maintenanceCount: number;
-  maintenanceCostTotal: number | null;
   orderItem: {
     id: string;
     title: string | null;
@@ -49,9 +46,7 @@ export async function getServiceRequestList(
         scope: true,
         vendorNameSnap: true,
         technicianNameSnap: true,
-        skuSnapshot: true,
-        primaryImageUrlSnapshot: true,
-        product: { select: { id: true, title: true, primaryImageUrl: true } },
+        product: { select: { id: true, title: true } },
         ServiceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenance: true } },
         orderItem: {
@@ -68,16 +63,6 @@ export async function getServiceRequestList(
     db.serviceRequest.count({ where }),
   ]);
 
-  const maintenanceTotals = rows.length
-    ? await db.maintenanceRecord.groupBy({
-      by: ["serviceRequestId"],
-      where: { serviceRequestId: { in: rows.map((r: any) => r.id) } },
-      _sum: { totalCost: true },
-    })
-    : [];
-
-  const maintenanceCostMap = new Map((maintenanceTotals ?? []).map((x: any) => [String(x.serviceRequestId), x._sum?.totalCost != null ? Number(x._sum.totalCost) : null]));
-
   const mapped: ServiceRequestListRow[] = rows.map((r) => ({
     id: r.id,
     refNo: r.refNo ?? null,
@@ -85,14 +70,11 @@ export async function getServiceRequestList(
     updatedAt: r.updatedAt,
     scope: r.scope ?? null,
     productTitle: r.product?.title ?? null,
-    skuSnapshot: r.skuSnapshot ?? null,
-    primaryImageUrlSnapshot: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
     status: r.status,
     vendorName: r.vendorNameSnap ?? null,
     technicianName: r.technicianNameSnap ?? null,
     serviceCatalog: r.ServiceCatalog ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name } : null,
     maintenanceCount: r._count.maintenance,
-    maintenanceCostTotal: (() => { const found = (maintenanceTotals ?? []).find((x: any) => x.serviceRequestId === r.id); return found?._sum?.totalCost != null ? Number(found._sum.totalCost) : null; })(),
     orderItem: r.orderItem ? {
       id: r.orderItem.id,
       title: r.orderItem.title ?? null,
@@ -118,6 +100,7 @@ export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyIn
   const db = dbOrTx(tx);
   return db.serviceRequest.createMany({ data });
 }
+
 export async function createOne(tx: DB, data: Prisma.ServiceRequestCreateInput) {
   const db = dbOrTx(tx);
   return db.serviceRequest.create({ data });
@@ -133,10 +116,9 @@ export async function findProductForService(tx: DB, productId: string) {
       status: true,
       brand: { select: { name: true } },
       watchSpec: { select: { model: true, ref: true } },
-      primaryImageUrl: true,
       variants: {
         orderBy: [{ stockQty: 'desc' }, { createdAt: 'asc' }],
-        select: { id: true, sku: true },
+        select: { id: true },
         take: 1,
       },
     },
@@ -178,8 +160,6 @@ export async function createTechnicalCheckRequest(
     refSnapshot?: string | null;
     technicianId?: string | null;
     technicianNameSnap?: string | null;
-    skuSnapshot?: string | null;
-    primaryImageUrlSnapshot?: string | null;
   }
 ) {
   const db = dbOrTx(tx);
@@ -199,8 +179,6 @@ export async function createTechnicalCheckRequest(
       refSnapshot: input.refSnapshot ?? null,
       technicianId: input.technicianId ?? null,
       technicianNameSnap: input.technicianNameSnap ?? null,
-      skuSnapshot: input.skuSnapshot ?? null,
-      primaryImageUrlSnapshot: input.primaryImageUrlSnapshot ?? null,
     },
   });
 }
@@ -235,7 +213,7 @@ export async function markProductPosted(tx: DB, productId: string) {
   return db.product.update({
     where: { id: productId },
     data: {
-      status: ProductStatus.AVAILABLE,
+      status: ProductStatus.POSTED,
     },
   });
 }

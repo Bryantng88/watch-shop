@@ -38,8 +38,6 @@ const makeSchema = () => z.object({
   vendorNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   technicianId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   technicianNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  skuSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  primaryImageUrlSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),

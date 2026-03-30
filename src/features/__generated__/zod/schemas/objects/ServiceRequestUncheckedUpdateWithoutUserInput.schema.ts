@@ -39,8 +39,6 @@ const makeSchema = () => z.object({
   vendorId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   vendorNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  skuSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  primaryImageUrlSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   Invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();

@@ -14,8 +14,6 @@ import { TagSchema } from '../enums/Tag.schema';
 import { EnumTagFieldUpdateOperationsInputObjectSchema as EnumTagFieldUpdateOperationsInputObjectSchema } from './EnumTagFieldUpdateOperationsInput.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumProductStatusFieldUpdateOperationsInputObjectSchema as EnumProductStatusFieldUpdateOperationsInputObjectSchema } from './EnumProductStatusFieldUpdateOperationsInput.schema';
-import { ContentStatusSchema } from '../enums/ContentStatus.schema';
-import { NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema as NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema } from './NullableEnumContentStatusFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './InvoiceItemUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutProductNestedInput.schema';
@@ -44,7 +42,6 @@ const makeSchema = () => z.object({
   tag: z.union([TagSchema, z.lazy(() => EnumTagFieldUpdateOperationsInputObjectSchema)]).optional(),
   status: z.union([ProductStatusSchema, z.lazy(() => EnumProductStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   categoryId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  contentStatus: z.union([ContentStatusSchema, z.lazy(() => NullableEnumContentStatusFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),

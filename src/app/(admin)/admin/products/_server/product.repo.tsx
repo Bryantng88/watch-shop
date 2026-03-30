@@ -98,6 +98,7 @@ function buildOrderBy(sort?: ProductListSort): Prisma.ProductOrderByWithRelation
 
 function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereInput {
     const q = (input?.q || "").trim();
+    const sku = String((input as any)?.sku || "").trim();
     const and: Prisma.ProductWhereInput[] = [];
 
     if (input?.catalog === "strap") {
@@ -116,7 +117,18 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
                 { title: { contains: q, mode: "insensitive" } },
                 { slug: { contains: q, mode: "insensitive" } },
                 { brand: { name: { contains: q, mode: "insensitive" } } },
+                { variants: { some: { sku: { contains: q, mode: "insensitive" } } } },
             ],
+        });
+    }
+
+    if (sku) {
+        and.push({
+            variants: {
+                some: {
+                    sku: { contains: sku, mode: "insensitive" },
+                },
+            },
         });
     }
 
@@ -445,8 +457,6 @@ export async function listAdminProducts(
         }
     >();
 
-    const serviceCostMap = new Map<string, number>();
-
     if (strapVariantIdsInPage.length) {
         const attachedVariantIdSet = new Set(strapVariantIdsInPage);
         const attachedRows = await db.productVariant.findMany({
@@ -501,21 +511,6 @@ export async function listAdminProducts(
         }
     }
 
-    if (!isStrapCatalog && (rows?.length ?? 0) > 0) {
-        const totals = await db.maintenanceRecord.groupBy({
-            by: ["productId"],
-            where: {
-                productId: { in: (rows ?? []).map((row: any) => row.id).filter(Boolean) },
-                totalCost: { not: null },
-            },
-            _sum: { totalCost: true },
-        });
-        for (const row of totals ?? []) {
-            if (!row?.productId) continue;
-            serviceCostMap.set(String(row.productId), Number(row._sum?.totalCost ?? 0));
-        }
-    }
-
     const items = (rows ?? []).map((p: any) => {
         const latestVariant = p.variants?.[0] ?? null;
         const latestAcqItem = latestVariant?.acquisitionItem?.[0] ?? null;
@@ -537,9 +532,6 @@ export async function listAdminProducts(
         const availableStockQty = Number(latestVariant?.stockQty ?? 0);
         const totalSystemStockQty = availableStockQty + attachedCount;
         const openServiceStatus = !isStrapCatalog ? openServiceStatusMap.get(p.id) ?? null : null;
-        const serviceAddedCost = !isStrapCatalog ? Number(serviceCostMap.get(p.id) ?? 0) : 0;
-        const extraCost = Number(strapAddedCost || 0) + Number(serviceAddedCost || 0);
-        const displayPurchasePrice = basePurchasePrice ?? purchasePrice;
 
         return {
             id: p.id,
@@ -558,11 +550,9 @@ export async function listAdminProducts(
             minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
             salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
             variantId: latestVariant?.id ?? null,
-            purchasePrice: displayPurchasePrice,
+            purchasePrice,
             basePurchasePrice,
             strapAddedCost,
-            serviceAddedCost,
-            extraCost,
 
             acquisitionId: latestAcqItem?.acquisition?.id ?? null,
             acquisitionRefNo: latestAcqItem?.acquisition?.refNo ?? null,

@@ -6,9 +6,9 @@ import { getVendorList } from "../../../vendors/_server/vendor.service";
 
 type WatchFlags = {
     hasStrap: boolean;
-    isServiced: boolean;
+    needService: boolean;
     hasClasp: boolean;
-    needsService: boolean;
+
 };
 
 type StrapSpec = {
@@ -23,9 +23,9 @@ type StrapSpec = {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: false,
-        isServiced: false,
+        needService: false,
         hasClasp: false,
-        needsService: true,
+
     };
 }
 
@@ -41,14 +41,13 @@ function parseItemMeta(description?: string | null): {
 
         const obj = parsed as Record<string, any>;
 
-        if (obj.watchFlags || obj.strapSpec || obj.quickSpec || obj.kind) {
+        if (obj.watchFlags || obj.strapSpec || obj.kind) {
             return {
                 watchFlags: obj.watchFlags
                     ? {
                         hasStrap: Boolean(obj.watchFlags.hasStrap),
-                        isServiced: Boolean(obj.watchFlags.isServiced),
+                        needService: Boolean(obj.watchFlags.needService),
                         hasClasp: Boolean(obj.watchFlags.hasClasp),
-                        needsService: obj.watchFlags.needsService == null ? true : Boolean(obj.watchFlags.needsService),
                     }
                     : undefined,
                 strapSpec: obj.strapSpec

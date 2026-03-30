@@ -31,8 +31,6 @@ const makeSchema = () => z.object({
   scope: ServiceScopeSchema.optional().nullable(),
   vendorNameSnap: z.string().optional().nullable(),
   technicianNameSnap: z.string().optional().nullable(),
-  skuSnapshot: z.string().optional().nullable(),
-  primaryImageUrlSnapshot: z.string().optional().nullable(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),

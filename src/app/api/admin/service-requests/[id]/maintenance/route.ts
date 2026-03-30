@@ -37,8 +37,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             paymentStatus: body.paymentStatus ?? null,
             paymentType: body.paymentType ?? null,
             paymentPurpose: body.paymentPurpose ?? null,
-            serviceCatalogId: body.serviceCatalogId ?? null,
-            source: body.source ?? null,
         });
 
         return NextResponse.json({ item: created });

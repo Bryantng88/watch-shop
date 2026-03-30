@@ -25,8 +25,6 @@ export const ServiceRequestDeleteResultSchema = z.nullable(z.object({
   vendorNameSnap: z.string().optional(),
   technicianId: z.string().optional(),
   technicianNameSnap: z.string().optional(),
-  skuSnapshot: z.string().optional(),
-  primaryImageUrlSnapshot: z.string().optional(),
   Invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),

@@ -17,8 +17,6 @@ type CreateMaintenanceLogInput = {
   paymentStatus?: string | null;
   paymentType?: string | null;
   paymentPurpose?: string | null;
-  serviceCatalogId?: string | null;
-  source?: string | null;
 };
 
 type AssignVendorInput = { serviceRequestId: string; vendorId: string; reason?: string | null; setInProgress?: boolean; };
@@ -38,17 +36,6 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
       vendorName = v?.name ?? vendorName;
     }
     const currency = input.currency ?? 'VND';
-    if (input.serviceCatalogId || input.source) {
-      await tx.serviceRequest.update({
-        where: { id: sr.id },
-        data: {
-          ...(input.serviceCatalogId !== undefined ? { servicecatalogid: input.serviceCatalogId || null } : {}),
-          ...(input.source === "EXTERNAL" ? {} : { vendorId: null, vendorNameSnap: null }),
-          status: ('IN_PROGRESS' as any),
-          updatedAt: new Date(),
-        },
-      });
-    }
     let paymentId: string | null = null; let paidAmount: Prisma.Decimal | null = null; let paidAt: Date | null = null;
     if (input.totalCost != null) {
       const amountDec = new Prisma.Decimal(String(input.totalCost));

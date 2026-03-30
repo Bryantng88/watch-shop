@@ -1,8 +1,0 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/db/client";
-import { z } from "zod";
-
-const Schema = z.object({ id: z.string().optional(), code: z.string().min(1), name: z.string().min(1), categoryKey: z.string().optional().default("OTHER"), vendorPrice: z.number().nullable().optional(), customerPrice: z.number().nullable().optional(), internalCost: z.number().nullable().optional(), note: z.string().nullable().optional(), isActive: z.boolean().optional().default(true)});
-export async function GET(){ const items=await prisma.serviceCatalog.findMany({orderBy:[{name:'asc'}]}); return NextResponse.json({items}); }
-export async function POST(req: NextRequest){ const body=Schema.parse(await req.json()); const item=await prisma.serviceCatalog.create({data:{ code: body.code, name: body.name, categoryKey: body.categoryKey, vendorPrice: body.vendorPrice as any, customerPrice: body.customerPrice as any, internalCost: body.internalCost as any, note: body.note ?? null, isActive: body.isActive, defaultPrice: body.customerPrice as any }}); return NextResponse.json({item}); }
-export async function PATCH(req: NextRequest){ const body=Schema.extend({id:z.string().min(1)}).parse(await req.json()); const item=await prisma.serviceCatalog.update({where:{id:body.id},data:{ code: body.code, name: body.name, categoryKey: body.categoryKey, vendorPrice: body.vendorPrice as any, customerPrice: body.customerPrice as any, internalCost: body.internalCost as any, note: body.note ?? null, isActive: body.isActive, defaultPrice: body.customerPrice as any }}); return NextResponse.json({item}); }

@@ -54,6 +54,22 @@ function fmtMoney(n?: number | null, cur = "VND") {
     return `${new Intl.NumberFormat("vi-VN").format(Number(n))} ${cur}`;
 }
 
+function getBulkPostErrorMessage(data: any) {
+    if (!data) return "Có lỗi khi duyệt phiếu!";
+
+    if (Array.isArray(data?.failed) && data.failed.length > 0) {
+        return data.failed
+            .map((item: any) => {
+                const id = item?.id || "unknown";
+                const error = item?.error || "Lỗi không xác định";
+                return `${id}: ${error}`;
+            })
+            .join("\n");
+    }
+
+    return data?.error || "Có lỗi khi duyệt phiếu!";
+}
+
 export default function AcquisitionListClient(props: PageProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -278,24 +294,43 @@ export default function AcquisitionListClient(props: PageProps) {
                     <button
                         className="px-3 py-1 border rounded text-sm"
                         onClick={async () => {
-                            const payload = displayItems
-                                .filter((x) => selectedIds.includes(x.id))
-                                .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
+                            try {
+                                const payload = displayItems
+                                    .filter((x) => selectedIds.includes(x.id))
+                                    .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
 
-                            const res = await fetch("/api/admin/acquisitions/bulk-post", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ items: payload }),
-                            });
+                                const res = await fetch("/api/admin/acquisitions/bulk-post", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ items: payload }),
+                                });
 
-                            if (!res.ok) {
-                                alert("Có lỗi khi duyệt phiếu!");
-                                return;
+                                const data = await res.json().catch(() => null);
+
+                                if (!res.ok) {
+                                    alert(getBulkPostErrorMessage(data));
+                                    return;
+                                }
+
+                                const postedCount = Number(data?.posted?.length ?? 0);
+                                const failedCount = Number(data?.failed?.length ?? 0);
+
+                                if (failedCount > 0) {
+                                    alert(
+                                        `Đã duyệt ${postedCount} phiếu, có ${failedCount} phiếu lỗi:
+
+${getBulkPostErrorMessage(data)}`
+                                    );
+                                } else {
+                                    alert(`Đã duyệt thành công ${postedCount} phiếu`);
+                                }
+
+                                setSelectedIds([]);
+                                setShowBulkBar(false);
+                                router.refresh();
+                            } catch (error: any) {
+                                alert(error?.message || "Có lỗi khi duyệt phiếu!");
                             }
-
-                            setSelectedIds([]);
-                            setShowBulkBar(false);
-                            router.refresh();
                         }}
                         type="button"
                     >
