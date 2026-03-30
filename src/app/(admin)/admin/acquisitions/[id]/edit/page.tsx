@@ -8,7 +8,7 @@ type WatchFlags = {
     hasStrap: boolean;
     isServiced: boolean;
     hasClasp: boolean;
-    isSpa: boolean;
+    needsService: boolean;
 };
 
 type StrapSpec = {
@@ -25,7 +25,7 @@ function defaultWatchFlags(): WatchFlags {
         hasStrap: false,
         isServiced: false,
         hasClasp: false,
-        isSpa: false,
+        needsService: true,
     };
 }
 
@@ -48,7 +48,7 @@ function parseItemMeta(description?: string | null): {
                         hasStrap: Boolean(obj.watchFlags.hasStrap),
                         isServiced: Boolean(obj.watchFlags.isServiced),
                         hasClasp: Boolean(obj.watchFlags.hasClasp),
-                        isSpa: Boolean(obj.watchFlags.isSpa),
+                        needsService: obj.watchFlags.needsService == null ? true : Boolean(obj.watchFlags.needsService),
                     }
                     : undefined,
                 strapSpec: obj.strapSpec

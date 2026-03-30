@@ -4,7 +4,7 @@ export type WatchFlagsInput = {
     hasStrap?: boolean;
     isServiced?: boolean;
     hasClasp?: boolean;
-    isSpa?: boolean;
+    needsService?: boolean;
 };
 
 export type StrapSpecInput = {
@@ -67,7 +67,7 @@ export function getDefaultWatchFlags(): Required<WatchFlagsInput> {
         hasStrap: false,
         isServiced: false,
         hasClasp: false,
-        isSpa: false,
+        needsService: true,
     };
 }
 
@@ -88,7 +88,7 @@ export function parseAcquisitionItemMeta(description?: string | null): Acquisiti
                         hasStrap: normalizeBool(obj.watchFlags.hasStrap),
                         isServiced: normalizeBool(obj.watchFlags.isServiced),
                         hasClasp: normalizeBool(obj.watchFlags.hasClasp),
-                        isSpa: normalizeBool(obj.watchFlags.isSpa),
+                        needsService: normalizeBool(obj.watchFlags.needsService, true),
                     }
                     : undefined,
                 strapSpec: obj.strapSpec
@@ -139,7 +139,7 @@ export function getWatchFlagsFromDescription(description?: string | null): Requi
         hasStrap: normalizeBool(flags?.hasStrap),
         isServiced: normalizeBool(flags?.isServiced),
         hasClasp: normalizeBool(flags?.hasClasp),
-        isSpa: normalizeBool(flags?.isSpa),
+        needsService: normalizeBool(flags?.needsService, true),
     };
 }
 
@@ -162,7 +162,7 @@ export function stringifyAcquisitionItemMeta(input: {
             hasStrap: normalizeBool(input.watchFlags.hasStrap),
             isServiced: normalizeBool(input.watchFlags.isServiced),
             hasClasp: normalizeBool(input.watchFlags.hasClasp),
-            isSpa: normalizeBool(input.watchFlags.isSpa),
+            needsService: normalizeBool(input.watchFlags.needsService, true),
         }
         : undefined;
 

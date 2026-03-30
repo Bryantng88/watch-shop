@@ -13,6 +13,8 @@ import { Prisma } from "@prisma/client";
 import { createInvoiceFromAcquisition } from "../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "../../services/_server/service_request.service";
 import { ItemInput } from "./acquisition.dto";
+import { parseAcquisitionItemMeta } from "./item-metadata";
+import { mapQuickSpecToWatchSpecInput } from "../_shared/quick-watch-rule";
 
 type AcqViewKey = "all" | "draft" | "posted" | "canceled";
 
@@ -240,7 +242,7 @@ function parseWatchFlagsFromDescription(description?: string | null) {
             hasStrap: Boolean(candidate.hasStrap ?? false),
             hasClasp: Boolean(candidate.hasClasp ?? false),
             isServiced: Boolean(candidate.isServiced ?? false),
-            isSpa: Boolean(candidate.isSpa ?? false),
+            needsService: candidate.needsService == null ? true : Boolean(candidate.needsService),
         };
     } catch {
         return null;
@@ -343,6 +345,10 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                 continue;
             }
 
+            const quickSpec = parseAcquisitionItemMeta(item.description).quickSpec;
+            const watchFlags = parseWatchFlagsFromDescription(item.description);
+            const watchSpecInput = mapQuickSpecToWatchSpecInput(quickSpec);
+
             const created = await tx.product.create({
                 data: {
                     title: item.productTitle,
@@ -350,11 +356,22 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                     contentStatus: "DRAFT" as any,
                     type: (item.productType ?? "WATCH") as any,
                     vendor: { connect: { id: vendorId } },
+                    ...(item.productType === "WATCH" ? {
+                        watchSpec: {
+                            create: {
+                                ...watchSpecInput,
+                                hasStrap: Boolean(watchFlags?.hasStrap ?? false),
+                                hasClasp: Boolean(watchFlags?.hasClasp ?? false),
+                                isServiced: Boolean(watchFlags?.isServiced ?? false),
+                            },
+                        },
+                    } : {}),
                     variants: {
                         create: [
                             {
                                 stockQty: Number(item.quantity ?? 1),
                                 availabilityStatus: "HIDDEN" as any,
+                                costPrice: item.unitCost ?? undefined,
                             },
                         ],
                     },
@@ -377,13 +394,11 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                 },
             });
 
-            const watchFlags = parseWatchFlagsFromDescription(item.description);
-            const needsTechnicalCheck = !watchFlags || !watchFlags.isServiced || !watchFlags.isSpa;
+            const needsTechnicalCheck = !watchFlags || !!watchFlags.needsService;
             if (needsTechnicalCheck) {
                 const reasons: string[] = [];
                 if (!watchFlags) reasons.push("Chưa có metadata tiếp nhận");
-                if (watchFlags && !watchFlags.isServiced) reasons.push("Cần kiểm tra service");
-                if (watchFlags && !watchFlags.isSpa) reasons.push("Cần kiểm tra spa");
+                if (watchFlags?.needsService) reasons.push("Tạo từ intake có tick service");
 
                 try {
                     await createTechnicalCheckFromAcquisitionTx(tx, {

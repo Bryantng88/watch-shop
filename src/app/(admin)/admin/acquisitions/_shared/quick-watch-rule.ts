@@ -369,7 +369,7 @@ export function getQuickWatchSpecChips(spec?: QuickWatchSpec | null) {
         accessoryChip,
     ].filter(Boolean) as string[];
 }
-export function applyQuickWatchSpecToFlags<T extends { hasStrap?: boolean; isServiced?: boolean; hasClasp?: boolean; isSpa?: boolean }>(
+export function applyQuickWatchSpecToFlags<T extends { hasStrap?: boolean; isServiced?: boolean; hasClasp?: boolean; needsService?: boolean }>(
     spec: QuickWatchSpec | null | undefined,
     current?: T | null
 ) {
@@ -382,8 +382,56 @@ export function applyQuickWatchSpecToFlags<T extends { hasStrap?: boolean; isSer
 
     return {
         hasStrap,
-        isServiced: current?.isServiced ?? true,
+        isServiced: current?.isServiced ?? false,
         hasClasp: current?.hasClasp ?? false,
-        isSpa: current?.isSpa ?? true,
+        needsService: current?.needsService ?? true,
+    };
+}
+export function mapQuickSpecToWatchSpecInput(spec?: QuickWatchSpec | null) {
+    if (!spec) return {};
+
+    const movementMap: Record<string, string> = {
+        AUTOMATIC: "AUTOMATIC",
+        QUARTZ: "QUARTZ",
+        MANUAL: "MANUAL",
+        SOLAR: "SOLAR",
+        KINETIC: "KINETIC",
+        ECO_DRIVE: "SOLAR",
+    };
+
+    const caseTypeMap: Record<string, string> = {
+        ROUND: "ROUND",
+        SQUARE: "SQUARE",
+        TANK: "TANK",
+        TONNEAU: "TONNEAU",
+    };
+
+    const strapMap: Record<string, string> = {
+        STEEL: "BRACELET",
+        LEATHER: "LEATHER",
+        RUBBER: "RUBBER",
+        NATO: "NATO",
+        CANVAS: "CANVASS",
+        NONE: undefined as any,
+    };
+
+    const allowedCaseMaterials = new Set([
+        "STAINLESS_STEEL",
+        "GOLD",
+        "TWO_TONE",
+        "TITANIUM",
+        "SILVER",
+        "OTHER",
+    ]);
+
+    return {
+        movement: spec.movement ? (movementMap[spec.movement] ?? undefined) : undefined,
+        caseType: spec.caseShape ? (caseTypeMap[spec.caseShape] ?? undefined) : undefined,
+        dialColor: spec.dialColorLabel ?? undefined,
+        strap: spec.strapType ? (strapMap[spec.strapType] ?? undefined) : undefined,
+        boxIncluded: spec.boxIncluded ?? undefined,
+        bookletIncluded: spec.bookletIncluded ?? undefined,
+        cardIncluded: spec.cardIncluded ?? undefined,
+        caseMaterial: spec.caseMaterial && allowedCaseMaterials.has(spec.caseMaterial) ? spec.caseMaterial : undefined,
     };
 }

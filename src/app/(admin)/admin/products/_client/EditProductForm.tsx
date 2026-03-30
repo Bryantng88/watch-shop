@@ -64,6 +64,8 @@ const PRODUCT_KEYS = [
     'categoryId',
     'primaryImageUrl',
     'seoDescription',
+    'postContent',
+    'aiPromptUsed',
     'tag',
 ] as const;
 
@@ -415,6 +417,8 @@ export default function EditProductForm({
         }))
     );
     const [saving, setSaving] = useState(false);
+    const [generatingAi, setGeneratingAi] = useState(false);
+    const [aiPromptInput, setAiPromptInput] = useState<string>(initial?.aiPromptUsed ?? '');
     const [err, setErr] = useState<string | null>(null);
 
     const safeProductStatusOptions = useMemo(
@@ -518,6 +522,47 @@ export default function EditProductForm({
         }
         return Number(baseVariantCostPrice) + Number(strapAddedCost ?? 0);
     }, [baseVariantCostPrice, formData.strapMode, strapAddedCost]);
+
+
+    const generateAiContent = async () => {
+        setErr(null);
+        setGeneratingAi(true);
+        try {
+            const res = await fetch(`/api/admin/products/${id}/generate-post-content`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: aiPromptInput?.trim() || undefined,
+                }),
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || 'Tạo nội dung AI thất bại');
+            }
+
+            setFormData((prev) => ({
+                ...prev,
+                postContent: data?.content ?? '',
+                aiPromptUsed: data?.promptUsed ?? aiPromptInput ?? '',
+            }));
+
+            if (typeof data?.promptUsed === 'string') {
+                setAiPromptInput(data.promptUsed);
+            }
+
+            notify.success({
+                title: 'Đã tạo nội dung',
+                message: 'Bạn có thể chỉnh sửa nội dung trước khi lưu.',
+            });
+        } catch (e: any) {
+            const message = e?.message || 'Tạo nội dung AI thất bại';
+            setErr(message);
+            notify.error({ title: 'AI thất bại', message });
+        } finally {
+            setGeneratingAi(false);
+        }
+    };
 
     const priceGapVsCost = useMemo(() => {
         const sellPrice = toNullableNumber(formData.variantPrice);
@@ -725,7 +770,11 @@ export default function EditProductForm({
                     : null;
 
             const body = {
-                product: sanitizeDeep(productPart),
+                product: sanitizeDeep({
+                    ...productPart,
+                    postContent: formData.postContent ?? '',
+                    aiPromptUsed: formData.aiPromptUsed ?? aiPromptInput ?? '',
+                }),
                 watchSpec: sanitizeDeep(watchSpecPart),
                 variant: sanitizeDeep(variantPart),
                 images: changed.images !== undefined ? formData.images ?? [] : undefined,
@@ -837,6 +886,46 @@ export default function EditProductForm({
                                 onChange={handleChange}
                                 className="block min-h-[140px] w-full rounded-none border border-slate-200 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
                             />
+                        </div>
+
+
+                        <div className="space-y-4 rounded-none border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <FieldLabel label="Nội dung post bài" />
+                                    <p className="text-sm text-slate-500">
+                                        AI sẽ dùng ảnh và thông tin sản phẩm để gợi ý nội dung. Bạn vẫn có thể sửa rồi lưu lại.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={generateAiContent}
+                                    disabled={generatingAi}
+                                    className="inline-flex items-center justify-center rounded-none border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {generatingAi ? 'Đang tạo...' : 'Tạo nội dung AI'}
+                                </button>
+                            </div>
+
+                            <div>
+                                <FieldLabel label="Prompt AI" />
+                                <textarea
+                                    value={aiPromptInput}
+                                    onChange={(e) => setAiPromptInput(e.target.value)}
+                                    placeholder="Ví dụ: Viết theo giọng bán hàng vintage, ngắn gọn, không phóng đại, nhấn mạnh form vỏ và tình trạng mặt số."
+                                    className="block min-h-[96px] w-full rounded-none border border-slate-200 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <textarea
+                                    name="postContent"
+                                    value={formData.postContent ?? ''}
+                                    onChange={handleChange}
+                                    placeholder="Nội dung post bài sẽ hiện ở đây sau khi AI phản hồi."
+                                    className="block min-h-[220px] w-full rounded-none border border-slate-200 bg-white px-3 py-3 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
+                                />
+                            </div>
                         </div>
                     </Section>
 

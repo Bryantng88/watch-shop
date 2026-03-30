@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 type VendorOpt = { id: string; name: string };
+type ServiceCatalogOpt = { id: string; code?: string | null; name: string; vendorPrice?: number | null; customerPrice?: number | null; internalCost?: number | null; defaultPrice?: number | null };
 
 type MaintRow = {
   id: string;
@@ -53,6 +54,9 @@ export default function MaintenanceDrawer({
   });
 
   const [vendors, setVendors] = useState<VendorOpt[]>([]);
+  const [catalogs, setCatalogs] = useState<ServiceCatalogOpt[]>([]);
+  const [source, setSource] = useState<"INTERNAL"|"EXTERNAL">("INTERNAL");
+  const [serviceCatalogId, setServiceCatalogId] = useState<string>("");
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorNotes, setVendorNotes] = useState<string>("");
   const [vendorServicedAt, setVendorServicedAt] = useState<string>("");
@@ -64,9 +68,10 @@ export default function MaintenanceDrawer({
     if (!serviceRequestId) return;
     setLoading(true);
     try {
-      const [mRes, vRes] = await Promise.all([
+      const [mRes, vRes, cRes] = await Promise.all([
         fetch(`/api/admin/service-requests/${serviceRequestId}/maintenance`, { cache: "no-store" }),
         fetch(`/api/admin/vendors/dropdown`, { cache: "no-store" }),
+        fetch(`/api/admin/service-catalog`, { cache: "no-store" }),
       ]);
 
       const m = await mRes.json();
@@ -84,6 +89,10 @@ export default function MaintenanceDrawer({
       const vItems: VendorOpt[] = Array.isArray(vJson?.items) ? vJson.items : Array.isArray(vJson) ? vJson : [];
       setVendors(vItems);
       setVendorId(sr?.vendorId ?? vItems?.[0]?.id ?? "");
+      const cJson = await cRes.json();
+      const cItems: ServiceCatalogOpt[] = Array.isArray(cJson?.items) ? cJson.items : [];
+      setCatalogs(cItems);
+      setServiceCatalogId(sr?.servicecatalogid ?? cItems?.[0]?.id ?? "");
     } finally {
       setLoading(false);
     }
@@ -97,14 +106,14 @@ export default function MaintenanceDrawer({
   useEffect(() => {
     if (!open) return;
     setVendorNotes("");
-    setVendorServicedAt("");
+    setVendorServicedAt(new Date().toISOString().slice(0,16));
     setVendorTotalCost("");
   }, [open, serviceRequestId]);
 
   const currentVendorLabel = useMemo(() => srMeta.vendorName ?? "Chưa chuyển vendor", [srMeta.vendorName]);
   const vendorChanged = !!vendorId && vendorId !== (srMeta.vendorId ?? "");
   const hasVendorPayload = !!vendorNotes.trim() || !!vendorServicedAt || !!vendorTotalCost;
-  const saveVendorDisabled = loading || !vendorId || (!vendorChanged && !hasVendorPayload);
+  const saveVendorDisabled = loading || (source === "EXTERNAL" && !vendorId) || (!vendorChanged && !hasVendorPayload && !serviceCatalogId);
   const canComplete = !loading && srMeta.status !== "COMPLETED" && srMeta.status !== "DELIVERED" && srMeta.status !== "CANCELED";
 
   if (!open) return null;
@@ -128,6 +137,33 @@ export default function MaintenanceDrawer({
 
         <div className="flex-1 space-y-4 overflow-auto p-4">
           <section className="space-y-3 rounded border p-3">
+            <div className="text-sm font-semibold">Phương án xử lý</div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                <input type="radio" checked={source === "INTERNAL"} onChange={() => setSource("INTERNAL")} /> Nội bộ
+              </label>
+              <label className="flex items-center gap-2 rounded border px-3 py-2 text-sm">
+                <input type="radio" checked={source === "EXTERNAL"} onChange={() => setSource("EXTERNAL")} /> Vendor ngoài
+              </label>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Hạng mục service</label>
+              <select className="mt-1 h-10 w-full rounded border px-3 text-sm" value={serviceCatalogId} onChange={(e) => {
+                const nextId = e.target.value;
+                setServiceCatalogId(nextId);
+                const picked = catalogs.find((x) => x.id === nextId);
+                if (picked && !vendorTotalCost) {
+                  const preset = source === "EXTERNAL" ? (picked.vendorPrice ?? picked.defaultPrice ?? null) : (picked.internalCost ?? 0);
+                  if (preset != null) setVendorTotalCost(String(preset));
+                }
+              }}>
+                <option value="">-- Chọn hạng mục --</option>
+                {catalogs.map((c) => <option key={c.id} value={c.id}>{c.code ? `${c.code} · ` : ""}{c.name}</option>)}
+              </select>
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded border p-3">
             <div className="text-sm font-semibold">Vendor ngoài</div>
             <div className="text-sm text-gray-600">
               Hiện tại: <span className="font-medium text-gray-900">{currentVendorLabel}</span>
@@ -136,8 +172,9 @@ export default function MaintenanceDrawer({
             <div>
               <label className="text-xs text-gray-500">Chuyển / cập nhật vendor</label>
               <select
-                className="mt-1 h-10 w-full rounded border px-3 text-sm"
+                className="mt-1 h-10 w-full rounded border px-3 text-sm disabled:bg-gray-100"
                 value={vendorId}
+                disabled={source !== "EXTERNAL"}
                 onChange={(e) => setVendorId(e.target.value)}
               >
                 <option value="">-- Chọn vendor --</option>
@@ -193,7 +230,9 @@ export default function MaintenanceDrawer({
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        vendorId,
+                        source,
+                        serviceCatalogId: serviceCatalogId || null,
+                        vendorId: source === "EXTERNAL" ? vendorId : null,
                         notes: vendorNotes.trim() || null,
                         servicedAt: vendorServicedAt ? new Date(vendorServicedAt).toISOString() : null,
                         totalCost: vendorTotalCost ? Number(vendorTotalCost) : null,

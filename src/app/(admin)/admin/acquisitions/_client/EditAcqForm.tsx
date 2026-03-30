@@ -15,7 +15,7 @@ type WatchFlags = {
     hasStrap: boolean;
     isServiced: boolean;
     hasClasp: boolean;
-    isSpa: boolean;
+    needsService: boolean;
 };
 
 type StrapSpec = {
@@ -74,9 +74,9 @@ function uid() {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: true,
-        isServiced: true,
+        isServiced: false,
         hasClasp: false,
-        isSpa: true,
+        needsService: true,
     };
 }
 
@@ -96,7 +96,7 @@ function normalizeWatchFlags(flags?: Partial<WatchFlags> | null): WatchFlags {
         hasStrap: !!flags?.hasStrap,
         isServiced: !!flags?.isServiced,
         hasClasp: !!flags?.hasClasp,
-        isSpa: !!flags?.isSpa,
+        needsService: flags?.needsService == null ? true : !!flags?.needsService,
     };
 }
 
@@ -588,16 +588,10 @@ export default function EditAcqForm({
                                         <div className="text-sm font-medium text-slate-700">Trạng thái tiếp nhận đồng hồ</div>
                                         <div className="flex flex-wrap gap-2">
                                             <FlagCheckbox
-                                                checked={!!line.watchFlags?.isServiced}
-                                                label="Đã service"
+                                                checked={!!line.watchFlags?.needsService}
+                                                label="Service"
                                                 disabled={readOnly}
-                                                onChange={(v) => setWatchFlag(line.id, "isServiced", v)}
-                                            />
-                                            <FlagCheckbox
-                                                checked={!!line.watchFlags?.isSpa}
-                                                label="Đã spa"
-                                                disabled={readOnly}
-                                                onChange={(v) => setWatchFlag(line.id, "isSpa", v)}
+                                                onChange={(v) => setWatchFlag(line.id, "needsService", v)}
                                             />
                                         </div>
                                     </div>

@@ -16,6 +16,7 @@ export type ServiceRequestListRow = {
   vendorName: string | null;
   technicianName: string | null;
   maintenanceCount: number;
+  maintenanceCostTotal: number | null;
   orderItem: {
     id: string;
     title: string | null;
@@ -67,6 +68,16 @@ export async function getServiceRequestList(
     db.serviceRequest.count({ where }),
   ]);
 
+  const maintenanceTotals = rows.length
+    ? await db.maintenanceRecord.groupBy({
+      by: ["serviceRequestId"],
+      where: { serviceRequestId: { in: rows.map((r: any) => r.id) } },
+      _sum: { totalCost: true },
+    })
+    : [];
+
+  const maintenanceCostMap = new Map((maintenanceTotals ?? []).map((x: any) => [String(x.serviceRequestId), x._sum?.totalCost != null ? Number(x._sum.totalCost) : null]));
+
   const mapped: ServiceRequestListRow[] = rows.map((r) => ({
     id: r.id,
     refNo: r.refNo ?? null,
@@ -81,6 +92,7 @@ export async function getServiceRequestList(
     technicianName: r.technicianNameSnap ?? null,
     serviceCatalog: r.ServiceCatalog ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name } : null,
     maintenanceCount: r._count.maintenance,
+    maintenanceCostTotal: (() => { const found = (maintenanceTotals ?? []).find((x: any) => x.serviceRequestId === r.id); return found?._sum?.totalCost != null ? Number(found._sum.totalCost) : null; })(),
     orderItem: r.orderItem ? {
       id: r.orderItem.id,
       title: r.orderItem.title ?? null,
@@ -106,7 +118,6 @@ export async function createMany(tx: DB, data: Prisma.ServiceRequestCreateManyIn
   const db = dbOrTx(tx);
   return db.serviceRequest.createMany({ data });
 }
-
 export async function createOne(tx: DB, data: Prisma.ServiceRequestCreateInput) {
   const db = dbOrTx(tx);
   return db.serviceRequest.create({ data });

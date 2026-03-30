@@ -17,7 +17,7 @@ type WatchFlags = {
     hasStrap: boolean;
     isServiced: boolean;
     hasClasp: boolean;
-    isSpa: boolean;
+    needsService: boolean;
 };
 
 type WatchLine = {
@@ -70,9 +70,9 @@ function uid() {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: true,
-        isServiced: true,
+        isServiced: false,
         hasClasp: false,
-        isSpa: true,
+        needsService: true,
     };
 }
 
@@ -520,14 +520,9 @@ export default function NewAcqForm({ vendors }: Props) {
                                         <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                             <div className="flex flex-wrap gap-2">
                                                 <FlagCheckbox
-                                                    checked={line.watchFlags.isServiced}
-                                                    label="Đã service?"
-                                                    onChange={(v) => setWatchFlag(line.id, "isServiced", v)}
-                                                />
-                                                <FlagCheckbox
-                                                    checked={line.watchFlags.isSpa}
-                                                    label="Đã spa?"
-                                                    onChange={(v) => setWatchFlag(line.id, "isSpa", v)}
+                                                    checked={line.watchFlags.needsService}
+                                                    label="Service"
+                                                    onChange={(v) => setWatchFlag(line.id, "needsService", v)}
                                                 />
                                             </div>
 

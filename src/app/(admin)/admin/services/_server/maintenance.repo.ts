@@ -17,6 +17,7 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
             updatedAt: true,
             vendorId: true,
             vendorNameSnap: true,
+            servicecatalogid: true,
             technicianId: true,
             technicianNameSnap: true,
             productId: true,

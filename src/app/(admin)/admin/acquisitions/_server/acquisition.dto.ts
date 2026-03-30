@@ -58,7 +58,7 @@ export type WatchFlagsInput = {
     hasStrap?: boolean;
     isServiced?: boolean;
     hasClasp?: boolean;
-    isSpa?: boolean;
+    needsService?: boolean;
 };
 
 export type CreateAcquisitionInput = {
@@ -114,7 +114,7 @@ export const ItemDTO = z.object({
             hasStrap: z.boolean().optional(),
             isServiced: z.boolean().optional(),
             hasClasp: z.boolean().optional(),
-            isSpa: z.boolean().optional(),
+            needsService: z.boolean().optional(),
         })
         .optional(),
     quickSpec: z

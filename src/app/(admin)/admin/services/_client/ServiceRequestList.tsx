@@ -25,6 +25,9 @@ type ServiceReqItem = {
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
+    maintenanceCostTotal?: number | null;
+    primaryImageUrlSnapshot?: string | null;
+    skuSnapshot?: string | null;
 };
 
 type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
@@ -46,6 +49,17 @@ type PageProps = {
     rawSearchParams: Record<string, string | string[] | undefined>;
     counts?: Partial<Counts>;
 };
+
+function resolveServiceImage(src?: string | null) {
+    if (!src) return null;
+    if (/^https?:\/\//i.test(src) || src.startsWith("data:")) return src;
+    return `/api/media/sign?key=${encodeURIComponent(src)}`;
+}
+
+function fmtMoney(value?: number | null) {
+    if (value == null) return "-";
+    return `${new Intl.NumberFormat("vi-VN").format(Number(value))} VND`;
+}
 
 function fmtDT(s?: string | null) {
     if (!s) return "-";
@@ -297,6 +311,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                 <th className="px-3 py-3">RefNo</th>
                                 <th className="px-3 py-3">Service</th>
                                 <th className="px-3 py-3">Nguồn / xử lý</th>
+                                <th className="px-3 py-3 text-right">Chi phí</th>
                                 <th className="px-3 py-3">Status</th>
                                 <th className="px-3 py-3">Ngày tạo</th>
                                 <th className="px-3 py-3">Link</th>
@@ -307,7 +322,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                         <tbody>
                             {displayItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-3 py-10 text-center text-gray-500">
+                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
                                         Không có dữ liệu trong tab này
                                     </td>
                                 </tr>
@@ -338,9 +353,9 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             <td className="align-top px-3 py-4">
                                                 <div className="flex items-start gap-3">
                                                     <div className="h-14 w-14 overflow-hidden rounded border bg-gray-50">
-                                                        {row.primaryImageUrlSnapshot ? (
+                                                        {resolveServiceImage(row.primaryImageUrlSnapshot) ? (
                                                             // eslint-disable-next-line @next/next/no-img-element
-                                                            <img src={row.primaryImageUrlSnapshot} alt={row.productTitle || row.serviceName || "product"} className="h-full w-full object-cover" />
+                                                            <img src={resolveServiceImage(row.primaryImageUrlSnapshot) || undefined} alt={row.productTitle || row.serviceName || "product"} className="h-full w-full object-cover" />
                                                         ) : (
                                                             <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">No image</div>
                                                         )}
@@ -358,9 +373,12 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 <DotLabel label={formatScope(row.scope)} tone={scopeTone(row.scope)} />
                                                 <div className="mt-2 text-sm">
                                                     <div>Thợ: <span className="font-medium">{row.technicianName || "Chưa gán"}</span></div>
-                                                    <div className="mt-1">Vendor: <span className="font-medium">{row.vendorName || "-"}</span></div>
                                                 </div>
                                                 <div className="mt-1 text-xs text-gray-500">Maintenance: {row.maintenanceCount ?? 0}</div>
+                                            </td>
+
+                                            <td className="align-middle px-3 py-4 text-right">
+                                                <div className="font-medium">{fmtMoney((row as any).maintenanceCostTotal ?? null)}</div>
                                             </td>
 
                                             <td className="align-middle px-3 py-4">

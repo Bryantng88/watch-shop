@@ -49,6 +49,10 @@ type ProductRow = ProductListItem & {
     title?: string | null;
     minPrice?: number | null;
     purchasePrice?: number | null;
+    basePurchasePrice?: number | null;
+    strapAddedCost?: number | null;
+    serviceAddedCost?: number | null;
+    extraCost?: number | null;
     salePrice?: number | null;
     stockQty?: number | null;
     strapSpec?: {
@@ -214,7 +218,7 @@ function InlineMoneyEditor({
     onSaved,
 }: {
     productId: string;
-    field: "minPrice" | "salePrice";
+    field: "minPrice" | "salePrice" | "baseVariantCostPrice";
     value: number | null | undefined;
     label: string;
     onSaved: (v: number | null) => void;
@@ -1312,7 +1316,28 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                                 {props.canViewCost && (
                                                     <td className="px-3 py-5 text-right">
-                                                        <div className="text-sm">{fmtMoney(p.purchasePrice)}</div>
+                                                        {props.canEditPrice ? (
+                                                            <InlineMoneyEditor
+                                                                productId={p.id}
+                                                                field="baseVariantCostPrice"
+                                                                value={p.basePurchasePrice ?? p.purchasePrice}
+                                                                label="Giá mua"
+                                                                onSaved={(v) => {
+                                                                    setLocalRows((prev) => prev.map((row) => row.id === p.id ? { ...row, basePurchasePrice: v, purchasePrice: v } : row));
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="text-sm font-medium">{fmtMoney(p.basePurchasePrice ?? p.purchasePrice)}</div>
+                                                        )}
+                                                        {!!Number((p as any).extraCost ?? 0) && (
+                                                            <button
+                                                                type="button"
+                                                                className="mt-1 block w-full text-right text-xs text-amber-700 hover:underline"
+                                                                title={`Dây: ${fmtMoney((p as any).strapAddedCost ?? null)} • Service: ${fmtMoney((p as any).serviceAddedCost ?? null)}`}
+                                                            >
+                                                                (+{fmtMoney((p as any).extraCost ?? null)})
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 )}
 

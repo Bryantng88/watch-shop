@@ -90,6 +90,9 @@ model Product {
   status             ProductStatus       @default(AVAILABLE)
   categoryId         String?
   contentStatus      ContentStatus       @default(DRAFT)
+  postContent        String?
+  aiPromptUsed       String?
+  aiGeneratedAt      DateTime?
   AcquisitionItem    AcquisitionItem[]
   InvoiceItem        InvoiceItem[]
   maintenanceRecords MaintenanceRecord[]
@@ -179,7 +182,6 @@ model WatchSpec {
   hasStrap        Boolean         @default(false)
   isServiced      Boolean         @default(false)
   hasClasp        Boolean         @default(false)
-  isSpa           Boolean         @default(false)
   product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   complication    Complication[]  @relation("ComplicationToWatchSpec")
   marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
@@ -301,6 +303,12 @@ model ServiceCatalog {
   updatedAt           DateTime           @updatedAt
   maintenanceRecordId String?
   detail              ServiceDetail
+  vendorPrice         Decimal?           @db.Decimal(12, 2)
+  customerPrice       Decimal?           @db.Decimal(12, 2)
+  internalCost        Decimal?           @db.Decimal(12, 2)
+  note                String?
+  categoryKey         String?
+  sortOrder           Int                @default(0)
   OrderItem           OrderItem[]
   maintenanceRecord   MaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id])
   ServiceRequest      ServiceRequest[]

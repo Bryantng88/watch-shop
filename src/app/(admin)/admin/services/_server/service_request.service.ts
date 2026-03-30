@@ -23,6 +23,7 @@ export type ServiceRequestListItem = {
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
+    maintenanceCostTotal: number | null;
     productTitle: string | null;
     skuSnapshot: string | null;
     primaryImageUrlSnapshot: string | null;
@@ -111,6 +112,7 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         technicianName: r.technicianName ?? null,
         customerItemNote: r.orderItem?.customerItemNote ?? null,
         maintenanceCount: r.maintenanceCount ?? 0,
+        maintenanceCostTotal: (r as any).maintenanceCostTotal ?? null,
         productTitle: r.productTitle ?? null,
         skuSnapshot: r.skuSnapshot ?? null,
         primaryImageUrlSnapshot: r.primaryImageUrlSnapshot ?? null,
