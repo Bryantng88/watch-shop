@@ -14,9 +14,16 @@ export const ServiceCatalogModelSchema = z.object({
     updatedAt: z.date(),
     maintenanceRecordId: z.string().nullable(),
     detail: ServiceDetailSchema,
+    vendorPrice: z.number().nullable(),
+    customerPrice: z.number().nullable(),
+    internalCost: z.number().nullable(),
+    note: z.string().nullable(),
+    categoryKey: z.string().nullable(),
+    sortOrder: z.number().int(),
     OrderItem: z.array(z.unknown()),
     maintenanceRecord: z.unknown().nullable(),
-    ServiceRequest: z.array(z.unknown())
+    ServiceRequest: z.array(z.unknown()),
+    TechnicalIssue: z.array(z.unknown())
 }).strict();
 
 export type ServiceCatalogPureType = z.infer<typeof ServiceCatalogModelSchema>;

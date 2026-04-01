@@ -1,4 +1,3 @@
-
 "use server";
 
 import { prisma } from "@/server/db/client";
@@ -10,6 +9,9 @@ type CreateMaintenanceLogInput = {
   serviceRequestId: string;
   vendorId?: string | null;
   notes?: string | null;
+  diagnosis?: string | null;
+  workSummary?: string | null;
+  processingMode?: string | null;
   servicedAt?: Date | null;
   totalCost?: number | null;
   currency?: string | null;
@@ -17,6 +19,8 @@ type CreateMaintenanceLogInput = {
   paymentStatus?: string | null;
   paymentType?: string | null;
   paymentPurpose?: string | null;
+  serviceCatalogId?: string | null;
+  imageFileKey?: string | null;
 };
 
 type AssignVendorInput = { serviceRequestId: string; vendorId: string; reason?: string | null; setInProgress?: boolean; };
@@ -29,20 +33,27 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
   return prisma.$transaction(async (tx) => {
     const sr = await tx.serviceRequest.findUnique({ where: { id: serviceRequestId }, select: { id: true, vendorId: true, vendorNameSnap: true, technicianId: true, technicianNameSnap: true, productId: true, variantId: true, brandSnapshot: true, modelSnapshot: true, refSnapshot: true, serialSnapshot: true } });
     if (!sr) throw new Error('Service request not found');
-    const vendorId = (input.vendorId ?? sr.vendorId ?? null) as string | null;
-    let vendorName: string | null = sr.vendorNameSnap ?? null;
+    const useExternal = (input.processingMode ?? 'INTERNAL') === 'EXTERNAL';
+    const vendorId = useExternal ? (input.vendorId ?? sr.vendorId ?? null) as string | null : null;
+    let vendorName: string | null = useExternal ? (sr.vendorNameSnap ?? null) : null;
     if (vendorId) {
       const v = await tx.vendor.findUnique({ where: { id: vendorId }, select: { name: true } });
       vendorName = v?.name ?? vendorName;
     }
     const currency = input.currency ?? 'VND';
     let paymentId: string | null = null; let paidAmount: Prisma.Decimal | null = null; let paidAt: Date | null = null;
-    if (input.totalCost != null) {
+    if (input.totalCost != null && Number(input.totalCost) > 0) {
       const amountDec = new Prisma.Decimal(String(input.totalCost));
       const createdPayment = await createPayment(tx, { amount: amountDec, currency, service_request_id: sr.id, vendor_id: vendorId, note: input.notes ?? null, method: (input.paymentMethod ?? 'CASH') as any, status: (input.paymentStatus ?? 'UNPAID') as any, direction: ('OUT' as any), type: (input.paymentType ?? 'SERVICE') as any, purpose: (input.paymentPurpose ?? 'MAINTENANCE_COST') as any });
       paymentId = createdPayment.id; paidAmount = amountDec; paidAt = new Date();
     }
-    const created = await maintenanceRepo.createLog(tx, { serviceRequestId: sr.id, eventType: input.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE, vendorId, vendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: input.notes ?? null, servicedAt: input.servicedAt ?? null, totalCost: input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)), currency, paymentId, paidAmount, paidAt, productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null });
+    const created = await maintenanceRepo.createLog(tx, { serviceRequestId: sr.id, eventType: input.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE, vendorId, vendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: input.notes ?? null, diagnosis: input.diagnosis ?? null, workSummary: input.workSummary ?? null, processingMode: input.processingMode ?? 'INTERNAL', servicedAt: input.servicedAt ?? new Date(), totalCost: input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)), currency, paymentId, paidAmount, paidAt, productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null, serviceCatalogId: input.serviceCatalogId ?? null, imageFileKey: input.imageFileKey ?? null });
+    if (useExternal && vendorId) {
+      const v = await tx.vendor.findUnique({ where: { id: vendorId }, select: { id: true, name: true } });
+      if (v) {
+        await tx.serviceRequest.update({ where: { id: sr.id }, data: { vendorId: v.id, vendorNameSnap: v.name } });
+      }
+    }
     return serialize(created);
   });
 }

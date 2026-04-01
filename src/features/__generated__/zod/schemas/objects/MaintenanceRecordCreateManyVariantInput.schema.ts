@@ -32,7 +32,12 @@ const makeSchema = () => z.object({
   paidAmount: z.number().optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
   technicianId: z.string().optional().nullable(),
-  technicianNameSnap: z.string().optional().nullable()
+  technicianNameSnap: z.string().optional().nullable(),
+  diagnosis: z.string().optional().nullable(),
+  workSummary: z.string().optional().nullable(),
+  serviceCatalogId: z.string().optional().nullable(),
+  processingMode: z.string().optional().nullable(),
+  imageFileKey: z.string().optional().nullable()
 }).strict();
 export const MaintenanceRecordCreateManyVariantInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyVariantInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyVariantInput>;
 export const MaintenanceRecordCreateManyVariantInputObjectZodSchema = makeSchema();

@@ -25,6 +25,8 @@ export const ServiceRequestUpsertResultSchema = z.object({
   vendorNameSnap: z.string().optional(),
   technicianId: z.string().optional(),
   technicianNameSnap: z.string().optional(),
+  skuSnapshot: z.string().optional(),
+  primaryImageUrlSnapshot: z.string().optional(),
   Invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),
@@ -33,5 +35,6 @@ export const ServiceRequestUpsertResultSchema = z.object({
   User: z.unknown().optional(),
   variant: z.unknown().optional(),
   Vendor: z.unknown().optional(),
-  ServiceCatalog: z.unknown().optional()
+  ServiceCatalog: z.unknown().optional(),
+  TechnicalAssessment: z.unknown().optional()
 });

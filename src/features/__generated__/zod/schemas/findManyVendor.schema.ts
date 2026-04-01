@@ -28,6 +28,7 @@ export const VendorFindManySelectSchema: z.ZodType<Prisma.VendorSelect> = z.obje
     services: z.boolean().optional(),
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalAssessment: z.boolean().optional(),
     Bank: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.VendorSelect>;
@@ -51,6 +52,7 @@ export const VendorFindManySelectZodSchema = z.object({
     services: z.boolean().optional(),
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalAssessment: z.boolean().optional(),
     Bank: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

@@ -4,6 +4,7 @@ import { ProductTypeSchema } from '../../enums/ProductType.schema';
 import { PriceVisibilitySchema } from '../../enums/PriceVisibility.schema';
 import { TagSchema } from '../../enums/Tag.schema';
 import { ProductStatusSchema } from '../../enums/ProductStatus.schema';
+import { ContentStatusSchema } from '../../enums/ContentStatus.schema';
 // prettier-ignore
 export const ProductInputSchema = z.object({
     id: z.string(),
@@ -24,6 +25,10 @@ export const ProductInputSchema = z.object({
     tag: TagSchema,
     status: ProductStatusSchema,
     categoryId: z.string().optional().nullable(),
+    contentStatus: ContentStatusSchema,
+    postContent: z.string().optional().nullable(),
+    aiPromptUsed: z.string().optional().nullable(),
+    aiGeneratedAt: z.date().optional().nullable(),
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),

@@ -29,7 +29,6 @@ export const WatchSpecCreateResultSchema = z.object({
   hasStrap: z.boolean(),
   isServiced: z.boolean(),
   hasClasp: z.boolean(),
-  isSpa: z.boolean(),
   product: z.unknown(),
   complication: z.array(z.unknown()),
   marketSegment: z.array(z.unknown())

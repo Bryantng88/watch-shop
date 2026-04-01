@@ -1,4 +1,3 @@
-
 import type { Prisma } from '@prisma/client';
 import { MaintenanceEventType, ServiceRequestStatus } from '@prisma/client';
 import { DB, dbOrTx } from '@/server/db/client';
@@ -20,7 +19,20 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
             technicianId: true,
             technicianNameSnap: true,
             productId: true,
-            product: { select: { id: true, title: true } },
+            skuSnapshot: true,
+            primaryImageUrlSnapshot: true,
+            product: {
+                select: {
+                    id: true,
+                    title: true,
+                    primaryImageUrl: true,
+                    image: {
+                        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+                        select: { fileKey: true, role: true },
+                        take: 8,
+                    },
+                },
+            },
             Vendor: { select: { id: true, name: true } },
             technician: { select: { id: true, name: true, email: true } },
             _count: { select: { maintenance: true } },
@@ -47,9 +59,29 @@ export async function getPanelByServiceRequestId(tx: DB, serviceRequestId: strin
             paymentId: true,
             paidAmount: true,
             paidAt: true,
+            diagnosis: true,
+            workSummary: true,
+            processingMode: true,
+            imageFileKey: true,
+            serviceCatalogId: true,
+            ServiceCatalog: { select: { id: true, code: true, name: true } },
         },
     });
-    return { sr: { ...sr, maintenanceCount: sr._count.maintenance }, logs };
+    const serviceCatalogs = await db.serviceCatalog.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        select: { id: true, code: true, name: true, vendorPrice: true, customerPrice: true, internalCost: true, note: true },
+    });
+    return {
+        sr: {
+            ...sr,
+            maintenanceCount: sr._count.maintenance,
+            productImages: sr.product?.image ?? [],
+            effectivePrimaryImage: sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
+        },
+        logs,
+        serviceCatalogs,
+    };
 }
 
 export type CreateMaintenanceLogInput = {
@@ -62,6 +94,9 @@ export type CreateMaintenanceLogInput = {
     technicianId?: string | null;
     technicianNameSnap?: string | null;
     notes?: string | null;
+    diagnosis?: string | null;
+    workSummary?: string | null;
+    processingMode?: string | null;
     servicedAt?: Date | null;
     totalCost?: Prisma.Decimal | number | string | null;
     currency?: string;
@@ -74,6 +109,8 @@ export type CreateMaintenanceLogInput = {
     modelSnapshot?: string | null;
     refSnapshot?: string | null;
     serialSnapshot?: string | null;
+    serviceCatalogId?: string | null;
+    imageFileKey?: string | null;
 };
 
 export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
@@ -89,6 +126,9 @@ export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
             technicianId: input.technicianId ?? null,
             technicianNameSnap: input.technicianNameSnap ?? null,
             notes: input.notes ?? null,
+            diagnosis: input.diagnosis ?? null,
+            workSummary: input.workSummary ?? null,
+            processingMode: input.processingMode ?? 'INTERNAL',
             servicedAt: input.servicedAt ?? null,
             totalCost: (input.totalCost as any) ?? null,
             currency: input.currency ?? 'VND',
@@ -101,6 +141,8 @@ export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
             modelSnapshot: input.modelSnapshot ?? null,
             refSnapshot: input.refSnapshot ?? null,
             serialSnapshot: input.serialSnapshot ?? null,
+            serviceCatalogId: input.serviceCatalogId ?? null,
+            imageFileKey: input.imageFileKey ?? null,
         },
     });
 }
@@ -116,7 +158,7 @@ export async function assignVendorOne(tx: DB, args: { serviceRequestId: string; 
     const base = isChange ? `Change vendor: ${prevVendorName ?? '-'} → ${args.vendorName}` : `Assign vendor: ${args.vendorName}`;
     const mergedNotes = args.reason && String(args.reason).trim() ? `${base}
 ${String(args.reason).trim()}` : base;
-    await createLog(db, { serviceRequestId: sr.id, eventType: isChange ? MaintenanceEventType.CHANGE_VENDOR : MaintenanceEventType.ASSIGN_VENDOR, vendorId: args.vendorId, vendorName: args.vendorName, prevVendorId, prevVendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: mergedNotes, productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null });
+    await createLog(db, { serviceRequestId: sr.id, eventType: isChange ? MaintenanceEventType.CHANGE_VENDOR : MaintenanceEventType.ASSIGN_VENDOR, vendorId: args.vendorId, vendorName: args.vendorName, prevVendorId, prevVendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: mergedNotes, processingMode: 'EXTERNAL', productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null });
     return { ok: true };
 }
 
@@ -142,6 +184,7 @@ export async function bulkAssignVendor(tx: DB, args: { ids: string[]; vendorId: 
         technicianNameSnap: r.technicianNameSnap ?? null,
         notes: (!!r.vendorId && r.vendorId !== args.vendorId) ? `Change vendor: ${r.vendorNameSnap ?? '-'} → ${args.vendorName}` : `Assign vendor: ${args.vendorName}`,
         createdAt: now,
+        processingMode: 'EXTERNAL',
         productId: r.productId ?? null,
         variantId: r.variantId ?? null,
         brandSnapshot: r.brandSnapshot ?? null,

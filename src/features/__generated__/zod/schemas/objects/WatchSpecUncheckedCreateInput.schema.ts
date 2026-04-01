@@ -41,7 +41,6 @@ const makeSchema = () => z.object({
   hasStrap: z.boolean().optional(),
   isServiced: z.boolean().optional(),
   hasClasp: z.boolean().optional(),
-  isSpa: z.boolean().optional(),
   complication: z.lazy(() => ComplicationUncheckedCreateNestedManyWithoutWatchSpecsInputObjectSchema),
   marketSegment: z.lazy(() => MarketSegmentUncheckedCreateNestedManyWithoutWatchSpecsInputObjectSchema)
 }).strict();

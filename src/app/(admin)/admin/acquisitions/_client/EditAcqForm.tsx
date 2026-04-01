@@ -693,7 +693,27 @@ export default function EditAcqForm({
             {okMsg ? <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMsg}</div> : null}
 
             {!readOnly ? (
-                <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setLines((prev) => [...prev, newLine(ProductType.WATCH)])}
+                            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                        >
+                            + Thêm đồng hồ
+                        </button>
+
+                        {productTypes.includes(ProductType.WATCH_STRAP) ? (
+                            <button
+                                type="button"
+                                onClick={() => setLines((prev) => [...prev, newLine(ProductType.WATCH_STRAP)])}
+                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                            >
+                                + Thêm dây
+                            </button>
+                        ) : null}
+                    </div>
+
                     <button
                         type="submit"
                         disabled={saving}

@@ -1,6 +1,12 @@
-
 import { prisma, DB, dbOrTx } from "@/server/db/client";
-import { Prisma, ServiceRequestStatus, ProductStatus, ServiceScope, ServiceType } from "@prisma/client";
+import {
+  Prisma,
+  ServiceRequestStatus,
+  ProductStatus,
+  ServiceScope,
+  ServiceType,
+  ContentStatus,
+} from "@prisma/client";
 
 export type ServiceRequestListRow = {
   id: string;
@@ -10,6 +16,8 @@ export type ServiceRequestListRow = {
   updatedAt: Date;
   scope: string | null;
   productTitle: string | null;
+  primaryImageUrl: string | null;
+  skuSnapshot: string | null;
   serviceCatalog: { id: string; code: string | null; name: string } | null;
   vendorName: string | null;
   technicianName: string | null;
@@ -31,6 +39,7 @@ export async function getServiceRequestList(
   tx: DB
 ) {
   const db = dbOrTx(tx);
+
   const [rows, total] = await Promise.all([
     db.serviceRequest.findMany({
       where,
@@ -46,7 +55,15 @@ export async function getServiceRequestList(
         scope: true,
         vendorNameSnap: true,
         technicianNameSnap: true,
-        product: { select: { id: true, title: true } },
+        skuSnapshot: true,
+        primaryImageUrlSnapshot: true,
+        product: {
+          select: {
+            id: true,
+            title: true,
+            primaryImageUrl: true,
+          },
+        },
         ServiceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenance: true } },
         orderItem: {
@@ -70,18 +87,26 @@ export async function getServiceRequestList(
     updatedAt: r.updatedAt,
     scope: r.scope ?? null,
     productTitle: r.product?.title ?? null,
+    primaryImageUrl: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
+    skuSnapshot: r.skuSnapshot ?? null,
     status: r.status,
     vendorName: r.vendorNameSnap ?? null,
     technicianName: r.technicianNameSnap ?? null,
-    serviceCatalog: r.ServiceCatalog ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name } : null,
+    serviceCatalog: r.ServiceCatalog
+      ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
+      : null,
     maintenanceCount: r._count.maintenance,
-    orderItem: r.orderItem ? {
-      id: r.orderItem.id,
-      title: r.orderItem.title ?? null,
-      serviceScope: (r.orderItem as any).serviceScope ?? null,
-      customerItemNote: (r.orderItem as any).customerItemNote ?? null,
-      order: r.orderItem.order ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null } : null,
-    } : null,
+    orderItem: r.orderItem
+      ? {
+        id: r.orderItem.id,
+        title: r.orderItem.title ?? null,
+        serviceScope: (r.orderItem as any).serviceScope ?? null,
+        customerItemNote: (r.orderItem as any).customerItemNote ?? null,
+        order: r.orderItem.order
+          ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null }
+          : null,
+      }
+      : null,
   }));
 
   return { rows: mapped, total };
@@ -90,8 +115,8 @@ export async function getServiceRequestList(
 export async function getOptions(tx: DB, opts?: { isActive?: boolean }) {
   const db = dbOrTx(tx);
   return db.serviceCatalog.findMany({
-    where: typeof opts?.isActive === 'boolean' ? { isActive: opts.isActive } : {},
-    orderBy: [{ name: 'asc' }],
+    where: typeof opts?.isActive === "boolean" ? { isActive: opts.isActive } : {},
+    orderBy: [{ name: "asc" }],
     select: { id: true, code: true, name: true, defaultPrice: true },
   });
 }
@@ -114,11 +139,13 @@ export async function findProductForService(tx: DB, productId: string) {
       id: true,
       title: true,
       status: true,
+      contentStatus: true,
+      primaryImageUrl: true,
       brand: { select: { name: true } },
       watchSpec: { select: { model: true, ref: true } },
       variants: {
-        orderBy: [{ stockQty: 'desc' }, { createdAt: 'asc' }],
-        select: { id: true },
+        orderBy: [{ stockQty: "desc" }, { createdAt: "asc" }],
+        select: { id: true, sku: true },
         take: 1,
       },
     },
@@ -150,6 +177,8 @@ export async function createTechnicalCheckRequest(
     refNo?: string | null;
     productId: string;
     variantId?: string | null;
+    skuSnapshot?: string | null;
+    primaryImageUrlSnapshot?: string | null;
     notes?: string | null;
     billable?: boolean;
     type?: ServiceType;
@@ -171,6 +200,8 @@ export async function createTechnicalCheckRequest(
       billable: input.billable ?? false,
       productId: input.productId,
       variantId: input.variantId ?? null,
+      skuSnapshot: input.skuSnapshot ?? null,
+      primaryImageUrlSnapshot: input.primaryImageUrlSnapshot ?? null,
       scope: input.scope ?? ServiceScope.WITH_PURCHASE,
       status: input.status ?? ServiceRequestStatus.DRAFT,
       notes: input.notes ?? null,
@@ -179,18 +210,15 @@ export async function createTechnicalCheckRequest(
       refSnapshot: input.refSnapshot ?? null,
       technicianId: input.technicianId ?? null,
       technicianNameSnap: input.technicianNameSnap ?? null,
-    },
+    } as any,
   });
 }
 
 export async function markProductInService(tx: DB, productId: string) {
   const db = dbOrTx(tx);
-
   return db.product.update({
     where: { id: productId },
-    data: {
-      status: ProductStatus.IN_SERVICE,
-    },
+    data: { status: ProductStatus.IN_SERVICE },
   });
 }
 
@@ -201,7 +229,12 @@ export async function countOpenTechnicalRequests(tx: DB, productId: string) {
     where: {
       productId,
       status: {
-        in: ["DRAFT", "IN_PROGRESS"] as any,
+        in: [
+          ServiceRequestStatus.DRAFT,
+          ServiceRequestStatus.DIAGNOSING,
+          ServiceRequestStatus.WAIT_APPROVAL,
+          ServiceRequestStatus.IN_PROGRESS,
+        ],
       },
     },
   });
@@ -213,15 +246,17 @@ export async function markProductPosted(tx: DB, productId: string) {
   return db.product.update({
     where: { id: productId },
     data: {
-      status: ProductStatus.POSTED,
+      status: ProductStatus.AVAILABLE,
+      contentStatus: ContentStatus.PUBLISHED,
     },
   });
 }
+
 export async function listServiceCatalogRepo(tx: DB, opts?: { isActive?: boolean }) {
   const db = dbOrTx(tx);
   return db.serviceCatalog.findMany({
-    where: typeof opts?.isActive === 'boolean' ? { isActive: opts.isActive } : {},
-    orderBy: { name: 'asc' },
+    where: typeof opts?.isActive === "boolean" ? { isActive: opts.isActive } : {},
+    orderBy: { name: "asc" },
     select: {
       id: true,
       code: true,
@@ -237,10 +272,16 @@ export async function listServiceCatalogRepo(tx: DB, opts?: { isActive?: boolean
 
 export async function findVendorsLite(tx: DB) {
   const db = dbOrTx(tx);
-  return db.vendor.findMany({ select: { id: true, name: true }, orderBy: { updatedAt: 'desc' } });
+  return db.vendor.findMany({
+    select: { id: true, name: true },
+    orderBy: { updatedAt: "desc" },
+  });
 }
 
-export async function completeServiceRequestOne(tx: DB, input: { id: string; completedAt?: Date | null }) {
+export async function completeServiceRequestOne(
+  tx: DB,
+  input: { id: string; completedAt?: Date | null }
+) {
   const db = dbOrTx(tx);
   return db.serviceRequest.update({
     where: { id: input.id },

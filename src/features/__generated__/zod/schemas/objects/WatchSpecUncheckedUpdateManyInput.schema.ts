@@ -52,8 +52,7 @@ const makeSchema = () => z.object({
   ref: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   hasStrap: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   isServiced: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  isSpa: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const WatchSpecUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedUpdateManyInput>;
 export const WatchSpecUncheckedUpdateManyInputObjectZodSchema = makeSchema();

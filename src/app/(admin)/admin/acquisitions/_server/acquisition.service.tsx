@@ -241,15 +241,20 @@ function parseWatchFlagsFromDescription(description?: string | null) {
         return {
             hasStrap: Boolean((candidate as any).hasStrap ?? false),
             hasClasp: Boolean((candidate as any).hasClasp ?? false),
-            needsService: Boolean((candidate as any).needsService ?? false),
+            needService: Boolean(
+                (candidate as any).needService ??
+                (candidate as any).needsService ??
+                (candidate as any).service ??
+                (candidate as any).isServiced ??
+                false
+            ),
         };
     } catch {
         return null;
     }
 }
 // Chuyển phiếu sang POSTED
-export async function postAcquisition(acqId: string, vendorName?: string | null) {
-    // Phase 1: đọc và chuẩn bị ngoài transaction
+export async function postAcquisition(acqId: string, vendorName: string) {
     const acq = await repoAcq.getAcqtById(acqId);
     if (!acq) throw new Error("Không tìm thấy phiếu nhập");
 
@@ -269,26 +274,19 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
 
     const items = acq.acquisitionItem ?? [];
 
-    const preparedItems = items.map((item) => {
-        const strapSpec =
+    const preparedItems = items.map((item) => ({
+        item,
+        strapSpec:
             item.productType === "WATCH_STRAP"
                 ? parseStrapSpecFromDescription(item.description)
-                : null;
-
-        const watchFlags =
+                : null,
+        watchFlags:
             item.productType !== "WATCH_STRAP"
                 ? parseWatchFlagsFromDescription(item.description)
-                : null;
+                : null,
+    }));
 
-        return {
-            item,
-            strapSpec,
-            watchFlags,
-            shouldCreateServiceRequest: Boolean(watchFlags?.needService ?? watchFlags?.needsService),
-        };
-    });
-
-    const existingProductItems = preparedItems.filter((x) => !!x.item.productId);
+    const existingItems = preparedItems.filter((x) => !!x.item.productId);
     const newStrapItems = preparedItems.filter(
         (x) => !x.item.productId && x.item.productType === "WATCH_STRAP"
     );
@@ -296,51 +294,49 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
         (x) => !x.item.productId && x.item.productType !== "WATCH_STRAP"
     );
 
-    // Phase 2: transaction chỉ để ghi DB
-    return prisma.$transaction(
+    const result = await prisma.$transaction(
         async (tx) => {
-            // 1) backfill variantId cho item đã có productId nhưng chưa có variantId
-            if (existingProductItems.length > 0) {
+            // backfill variant cho item đã có product
+            if (existingItems.length > 0) {
                 const productIds = Array.from(
                     new Set(
-                        existingProductItems
+                        existingItems
                             .map((x) => x.item.productId)
                             .filter((v): v is string => !!v)
                     )
                 );
 
-                const latestVariants = await tx.productVariant.findMany({
-                    where: {
-                        productId: { in: productIds },
-                    },
-                    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
-                    select: {
-                        id: true,
-                        productId: true,
-                    },
-                });
-
-                const variantMap = new Map<string, string>();
-                for (const row of latestVariants) {
-                    if (!variantMap.has(row.productId)) {
-                        variantMap.set(row.productId, row.id);
-                    }
-                }
-
-                for (const row of existingProductItems) {
-                    if (row.item.variantId || !row.item.productId) continue;
-
-                    const resolvedVariantId = variantMap.get(row.item.productId);
-                    if (!resolvedVariantId) continue;
-
-                    await tx.acquisitionItem.update({
-                        where: { id: row.item.id },
-                        data: { variantId: resolvedVariantId },
+                if (productIds.length) {
+                    const variants = await tx.productVariant.findMany({
+                        where: { productId: { in: productIds } },
+                        orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                        select: {
+                            id: true,
+                            productId: true,
+                        },
                     });
+
+                    const variantMap = new Map<string, string>();
+                    for (const row of variants) {
+                        if (!variantMap.has(row.productId)) {
+                            variantMap.set(row.productId, row.id);
+                        }
+                    }
+
+                    for (const row of existingItems) {
+                        if (row.item.variantId || !row.item.productId) continue;
+                        const resolvedVariantId = variantMap.get(row.item.productId);
+                        if (!resolvedVariantId) continue;
+
+                        await tx.acquisitionItem.update({
+                            where: { id: row.item.id },
+                            data: { variantId: resolvedVariantId },
+                        });
+                    }
                 }
             }
 
-            // 2) create strap products
+            // tạo strap products
             for (const row of newStrapItems) {
                 const { item, strapSpec } = row;
 
@@ -355,12 +351,12 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
                             create: [
                                 {
                                     stockQty: Number(item.quantity ?? 1),
+                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                                     price: new Prisma.Decimal(
                                         strapSpec?.sellPrice != null
                                             ? Number(strapSpec.sellPrice)
                                             : Number(item.unitCost ?? 0)
                                     ),
-                                    costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                                     availabilityStatus: "HIDDEN" as any,
                                     strapSpec: {
                                         create: {
@@ -396,9 +392,9 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
                 });
             }
 
-            // 3) create watch / normal products
+            // tạo watch products
             for (const row of newWatchItems) {
-                const { item, shouldCreateServiceRequest } = row;
+                const { item, watchFlags } = row;
 
                 const created = await tx.product.create({
                     data: {
@@ -419,8 +415,9 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
                     },
                     select: {
                         id: true,
+                        primaryImageUrl: true,
                         variants: {
-                            select: { id: true },
+                            select: { id: true, sku: true },
                             take: 1,
                         },
                     },
@@ -434,25 +431,44 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
                     },
                 });
 
+                const shouldCreateServiceRequest = Boolean(
+                    watchFlags?.needService ?? watchFlags?.needsService
+                );
+
                 if (shouldCreateServiceRequest) {
-                    await createTechnicalCheckFromAcquisitionTx(tx, {
+                    await createTechnicalCheckFromAcquisitionTx(tx as any, {
                         productId: created.id,
                         variantId: created.variants?.[0]?.id ?? null,
+                        skuSnapshot: created.variants?.[0]?.sku ?? null,
+                        primaryImageUrlSnapshot: created.primaryImageUrl ?? null,
                         notes: `Tạo từ phiếu nhập ${acq.refNo ?? acq.id}: Kiểm tra kỹ thuật tổng quát`,
                     });
                 }
             }
 
-            // 4) invoice + đổi trạng thái phiếu
-            await createInvoiceFromAcquisition(tx, acqId);
-            return repoAcq.changeDraftToPost(tx, acqId);
+            const posted = await repoAcq.changeDraftToPost(tx, acqId);
+            return posted;
         },
         {
-            maxWait: 10_000,
-            timeout: 60_000,
+            maxWait: 10000,
+            timeout: 60000,
         }
     );
+
+    // tạo invoice sau transaction chính để tránh timeout
+    await prisma.$transaction(
+        async (tx) => {
+            await createInvoiceFromAcquisition(tx as any, acqId);
+        },
+        {
+            maxWait: 10000,
+            timeout: 30000,
+        }
+    );
+
+    return result;
 }
+
 export async function postMultipleAcquisitions(acquisitionIds: string[]) {
     const posted: string[] = [];
     const failed: { id: string; error: string }[] = [];

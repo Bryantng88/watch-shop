@@ -12,9 +12,16 @@ export const ServiceCatalogFindManyResultSchema = z.object({
   updatedAt: z.date(),
   maintenanceRecordId: z.string().optional(),
   detail: z.unknown(),
+  vendorPrice: z.number().optional(),
+  customerPrice: z.number().optional(),
+  internalCost: z.number().optional(),
+  note: z.string().optional(),
+  categoryKey: z.string().optional(),
+  sortOrder: z.number().int(),
   OrderItem: z.array(z.unknown()),
   maintenanceRecord: z.unknown().optional(),
-  ServiceRequest: z.array(z.unknown())
+  ServiceRequest: z.array(z.unknown()),
+  TechnicalIssue: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

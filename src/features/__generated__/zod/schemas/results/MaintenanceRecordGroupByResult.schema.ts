@@ -28,6 +28,11 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
   paidAt: z.date(),
   technicianId: z.string(),
   technicianNameSnap: z.string(),
+  diagnosis: z.string(),
+  workSummary: z.string(),
+  serviceCatalogId: z.string(),
+  processingMode: z.string(),
+  imageFileKey: z.string(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -59,6 +64,11 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     paidAt: z.number(),
     technicianId: z.number(),
     technicianNameSnap: z.number(),
+    diagnosis: z.number(),
+    workSummary: z.number(),
+    serviceCatalogId: z.number(),
+    processingMode: z.number(),
+    imageFileKey: z.number(),
     parts: z.number(),
     Payment: z.number(),
     product: z.number(),
@@ -104,7 +114,12 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     paidAmount: z.number().nullable(),
     paidAt: z.date().nullable(),
     technicianId: z.string().nullable(),
-    technicianNameSnap: z.string().nullable()
+    technicianNameSnap: z.string().nullable(),
+    diagnosis: z.string().nullable(),
+    workSummary: z.string().nullable(),
+    serviceCatalogId: z.string().nullable(),
+    processingMode: z.string().nullable(),
+    imageFileKey: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -132,6 +147,11 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     paidAmount: z.number().nullable(),
     paidAt: z.date().nullable(),
     technicianId: z.string().nullable(),
-    technicianNameSnap: z.string().nullable()
+    technicianNameSnap: z.string().nullable(),
+    diagnosis: z.string().nullable(),
+    workSummary: z.string().nullable(),
+    serviceCatalogId: z.string().nullable(),
+    processingMode: z.string().nullable(),
+    imageFileKey: z.string().nullable()
   }).nullable().optional()
 }));

@@ -21,6 +21,7 @@ export const VendorModelSchema = z.object({
     services: z.array(z.unknown()),
     Product: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
+    TechnicalAssessment: z.array(z.unknown()),
     Bank: z.unknown().nullable()
 }).strict();
 

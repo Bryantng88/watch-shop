@@ -32,7 +32,6 @@ const makeSchema = () => z.object({
   hasStrap: z.literal(true).optional(),
   isServiced: z.literal(true).optional(),
   hasClasp: z.literal(true).optional(),
-  isSpa: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const WatchSpecCountAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCountAggregateInputType>;

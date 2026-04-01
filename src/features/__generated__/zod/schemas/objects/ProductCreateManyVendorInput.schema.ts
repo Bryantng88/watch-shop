@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { PriceVisibilitySchema } from '../enums/PriceVisibility.schema';
 import { TagSchema } from '../enums/Tag.schema';
-import { ProductStatusSchema } from '../enums/ProductStatus.schema'
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,7 +23,11 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
-  categoryId: z.string().optional().nullable()
+  categoryId: z.string().optional().nullable(),
+  contentStatus: ContentStatusSchema.optional(),
+  postContent: z.string().optional().nullable(),
+  aiPromptUsed: z.string().optional().nullable(),
+  aiGeneratedAt: z.coerce.date().optional().nullable()
 }).strict();
 export const ProductCreateManyVendorInputObjectSchema: z.ZodType<Prisma.ProductCreateManyVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateManyVendorInput>;
 export const ProductCreateManyVendorInputObjectZodSchema = makeSchema();

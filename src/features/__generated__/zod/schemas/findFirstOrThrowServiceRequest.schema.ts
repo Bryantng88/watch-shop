@@ -35,6 +35,8 @@ export const ServiceRequestFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Servic
     vendorNameSnap: z.boolean().optional(),
     technicianId: z.boolean().optional(),
     technicianNameSnap: z.boolean().optional(),
+    skuSnapshot: z.boolean().optional(),
+    primaryImageUrlSnapshot: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     maintenance: z.boolean().optional(),
     customer: z.boolean().optional(),
@@ -44,6 +46,7 @@ export const ServiceRequestFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Servic
     variant: z.boolean().optional(),
     Vendor: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
+    TechnicalAssessment: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;
 
@@ -73,6 +76,8 @@ export const ServiceRequestFindFirstOrThrowSelectZodSchema = z.object({
     vendorNameSnap: z.boolean().optional(),
     technicianId: z.boolean().optional(),
     technicianNameSnap: z.boolean().optional(),
+    skuSnapshot: z.boolean().optional(),
+    primaryImageUrlSnapshot: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     maintenance: z.boolean().optional(),
     customer: z.boolean().optional(),
@@ -82,6 +87,7 @@ export const ServiceRequestFindFirstOrThrowSelectZodSchema = z.object({
     variant: z.boolean().optional(),
     Vendor: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
+    TechnicalAssessment: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

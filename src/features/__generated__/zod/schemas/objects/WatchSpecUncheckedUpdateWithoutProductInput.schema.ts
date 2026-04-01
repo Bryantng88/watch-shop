@@ -53,7 +53,6 @@ const makeSchema = () => z.object({
   hasStrap: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   isServiced: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  isSpa: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   complication: z.lazy(() => ComplicationUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional(),
   marketSegment: z.lazy(() => MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
 }).strict();

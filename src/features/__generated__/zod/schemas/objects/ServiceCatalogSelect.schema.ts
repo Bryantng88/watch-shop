@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { OrderItemFindManySchema as OrderItemFindManySchema } from '../findManyOrderItem.schema';
 import { MaintenanceRecordArgsObjectSchema as MaintenanceRecordArgsObjectSchema } from './MaintenanceRecordArgs.schema';
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
+import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
 import { ServiceCatalogCountOutputTypeArgsObjectSchema as ServiceCatalogCountOutputTypeArgsObjectSchema } from './ServiceCatalogCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -17,9 +18,16 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   maintenanceRecordId: z.boolean().optional(),
   detail: z.boolean().optional(),
+  vendorPrice: z.boolean().optional(),
+  customerPrice: z.boolean().optional(),
+  internalCost: z.boolean().optional(),
+  note: z.boolean().optional(),
+  categoryKey: z.boolean().optional(),
+  sortOrder: z.boolean().optional(),
   OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
   maintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordArgsObjectSchema)]).optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
+  TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceCatalogCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceCatalogSelectObjectSchema: z.ZodType<Prisma.ServiceCatalogSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;

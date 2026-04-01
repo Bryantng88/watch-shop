@@ -31,6 +31,7 @@ export const VendorGroupByResultSchema = z.array(z.object({
     services: z.number(),
     Product: z.number(),
     ServiceRequest: z.number(),
+    TechnicalAssessment: z.number(),
     Bank: z.number()
   }).optional(),
   _min: z.object({

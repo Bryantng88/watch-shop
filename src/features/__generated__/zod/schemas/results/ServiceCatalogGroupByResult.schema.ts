@@ -10,6 +10,12 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   maintenanceRecordId: z.string(),
+  vendorPrice: z.number(),
+  customerPrice: z.number(),
+  internalCost: z.number(),
+  note: z.string(),
+  categoryKey: z.string(),
+  sortOrder: z.number().int(),
   _count: z.object({
     id: z.number(),
     code: z.number(),
@@ -22,17 +28,32 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     maintenanceRecordId: z.number(),
     detail: z.number(),
+    vendorPrice: z.number(),
+    customerPrice: z.number(),
+    internalCost: z.number(),
+    note: z.number(),
+    categoryKey: z.number(),
+    sortOrder: z.number(),
     OrderItem: z.number(),
     maintenanceRecord: z.number(),
-    ServiceRequest: z.number()
+    ServiceRequest: z.number(),
+    TechnicalIssue: z.number()
   }).optional(),
   _sum: z.object({
     defaultPrice: z.number().nullable(),
-    durationMin: z.number().nullable()
+    durationMin: z.number().nullable(),
+    vendorPrice: z.number().nullable(),
+    customerPrice: z.number().nullable(),
+    internalCost: z.number().nullable(),
+    sortOrder: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     defaultPrice: z.number().nullable(),
-    durationMin: z.number().nullable()
+    durationMin: z.number().nullable(),
+    vendorPrice: z.number().nullable(),
+    customerPrice: z.number().nullable(),
+    internalCost: z.number().nullable(),
+    sortOrder: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -43,7 +64,13 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
     durationMin: z.number().int().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    maintenanceRecordId: z.string().nullable()
+    maintenanceRecordId: z.string().nullable(),
+    vendorPrice: z.number().nullable(),
+    customerPrice: z.number().nullable(),
+    internalCost: z.number().nullable(),
+    note: z.string().nullable(),
+    categoryKey: z.string().nullable(),
+    sortOrder: z.number().int().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -54,6 +81,12 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
     durationMin: z.number().int().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    maintenanceRecordId: z.string().nullable()
+    maintenanceRecordId: z.string().nullable(),
+    vendorPrice: z.number().nullable(),
+    customerPrice: z.number().nullable(),
+    internalCost: z.number().nullable(),
+    note: z.string().nullable(),
+    categoryKey: z.string().nullable(),
+    sortOrder: z.number().int().nullable()
   }).nullable().optional()
 }));

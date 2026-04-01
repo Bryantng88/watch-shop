@@ -50,6 +50,7 @@ const NAV: NavItem[] = [
     { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags, permission: PERMISSIONS.ACQUISITION_VIEW, notificationKey: "acquisitions" },
     { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList, permission: PERMISSIONS.ORDER_VIEW, notificationKey: "orders" },
     { href: "/admin/services", label: "Service", icon: Settings, permission: PERMISSIONS.SERVICE_VIEW, notificationKey: "services" },
+    { href: "/admin/services/catalogs", label: "Danh mục service", icon: Settings, permission: PERMISSIONS.SERVICE_VIEW },
     { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW, notificationKey: "shipments" },
     { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
     { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW, notificationKey: "invoices" },

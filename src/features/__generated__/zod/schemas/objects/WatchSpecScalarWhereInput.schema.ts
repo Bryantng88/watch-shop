@@ -54,8 +54,7 @@ const watchspecscalarwhereinputSchema = z.object({
   ref: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   hasStrap: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   isServiced: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  hasClasp: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  isSpa: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
+  hasClasp: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const WatchSpecScalarWhereInputObjectSchema: z.ZodType<Prisma.WatchSpecScalarWhereInput> = watchspecscalarwhereinputSchema as unknown as z.ZodType<Prisma.WatchSpecScalarWhereInput>;
 export const WatchSpecScalarWhereInputObjectZodSchema = watchspecscalarwhereinputSchema;

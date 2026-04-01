@@ -36,6 +36,11 @@ const makeSchema = () => z.object({
   paidAt: z.coerce.date().optional().nullable(),
   technicianId: z.string().optional().nullable(),
   technicianNameSnap: z.string().optional().nullable(),
+  diagnosis: z.string().optional().nullable(),
+  workSummary: z.string().optional().nullable(),
+  serviceCatalogId: z.string().optional().nullable(),
+  processingMode: z.string().optional().nullable(),
+  imageFileKey: z.string().optional().nullable(),
   parts: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema),
   serviceDetail: z.lazy(() => ServiceCatalogUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema)
 }).strict();

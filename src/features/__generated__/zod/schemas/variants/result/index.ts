@@ -32,3 +32,6 @@ export { PaymentResultSchema } from './Payment.result';
 export { BankResultSchema } from './Bank.result';
 export { ShipmentResultSchema } from './Shipment.result';
 export { ProductCategoryResultSchema } from './ProductCategory.result';
+export { SupplyCatalogResultSchema } from './SupplyCatalog.result';
+export { TechnicalAssessmentResultSchema } from './TechnicalAssessment.result';
+export { TechnicalIssueResultSchema } from './TechnicalIssue.result';

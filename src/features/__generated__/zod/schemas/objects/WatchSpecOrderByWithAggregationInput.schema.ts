@@ -38,7 +38,6 @@ const makeSchema = () => z.object({
   hasStrap: SortOrderSchema.optional(),
   isServiced: SortOrderSchema.optional(),
   hasClasp: SortOrderSchema.optional(),
-  isSpa: SortOrderSchema.optional(),
   _count: z.lazy(() => WatchSpecCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => WatchSpecAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => WatchSpecMaxOrderByAggregateInputObjectSchema).optional(),

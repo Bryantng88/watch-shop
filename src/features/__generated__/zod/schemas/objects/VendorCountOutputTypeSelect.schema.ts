@@ -7,7 +7,8 @@ const makeSchema = () => z.object({
   invoice: z.boolean().optional(),
   services: z.boolean().optional(),
   Product: z.boolean().optional(),
-  ServiceRequest: z.boolean().optional()
+  ServiceRequest: z.boolean().optional(),
+  TechnicalAssessment: z.boolean().optional()
 }).strict();
 export const VendorCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.VendorCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.VendorCountOutputTypeSelect>;
 export const VendorCountOutputTypeSelectObjectZodSchema = makeSchema();

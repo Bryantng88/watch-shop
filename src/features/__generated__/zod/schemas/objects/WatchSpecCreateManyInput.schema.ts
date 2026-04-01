@@ -39,8 +39,7 @@ const makeSchema = () => z.object({
   ref: z.string().optional().nullable(),
   hasStrap: z.boolean().optional(),
   isServiced: z.boolean().optional(),
-  hasClasp: z.boolean().optional(),
-  isSpa: z.boolean().optional()
+  hasClasp: z.boolean().optional()
 }).strict();
 export const WatchSpecCreateManyInputObjectSchema: z.ZodType<Prisma.WatchSpecCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCreateManyInput>;
 export const WatchSpecCreateManyInputObjectZodSchema = makeSchema();

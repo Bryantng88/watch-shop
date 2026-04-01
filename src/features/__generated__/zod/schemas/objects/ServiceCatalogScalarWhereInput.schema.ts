@@ -7,7 +7,8 @@ import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from '
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumServiceDetailFilterObjectSchema as EnumServiceDetailFilterObjectSchema } from './EnumServiceDetailFilter.schema';
-import { ServiceDetailSchema } from '../enums/ServiceDetail.schema'
+import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
+import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema'
 
 const servicecatalogscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceCatalogScalarWhereInputObjectSchema), z.lazy(() => ServiceCatalogScalarWhereInputObjectSchema).array()]).optional(),
@@ -23,7 +24,13 @@ const servicecatalogscalarwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   maintenanceRecordId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  detail: z.union([z.lazy(() => EnumServiceDetailFilterObjectSchema), ServiceDetailSchema]).optional()
+  detail: z.union([z.lazy(() => EnumServiceDetailFilterObjectSchema), ServiceDetailSchema]).optional(),
+  vendorPrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  customerPrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  internalCost: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
+  note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  categoryKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional()
 }).strict();
 export const ServiceCatalogScalarWhereInputObjectSchema: z.ZodType<Prisma.ServiceCatalogScalarWhereInput> = servicecatalogscalarwhereinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogScalarWhereInput>;
 export const ServiceCatalogScalarWhereInputObjectZodSchema = servicecatalogscalarwhereinputSchema;

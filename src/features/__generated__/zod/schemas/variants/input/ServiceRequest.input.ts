@@ -30,6 +30,8 @@ export const ServiceRequestInputSchema = z.object({
     vendorNameSnap: z.string().optional().nullable(),
     technicianId: z.string().optional().nullable(),
     technicianNameSnap: z.string().optional().nullable(),
+    skuSnapshot: z.string().optional().nullable(),
+    primaryImageUrlSnapshot: z.string().optional().nullable(),
     Invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
@@ -38,7 +40,8 @@ export const ServiceRequestInputSchema = z.object({
     User: z.unknown().optional().nullable(),
     variant: z.unknown().optional().nullable(),
     Vendor: z.unknown().optional().nullable(),
-    ServiceCatalog: z.unknown().optional().nullable()
+    ServiceCatalog: z.unknown().optional().nullable(),
+    TechnicalAssessment: z.unknown().optional().nullable()
 }).strict();
 
 export type ServiceRequestInputType = z.infer<typeof ServiceRequestInputSchema>;

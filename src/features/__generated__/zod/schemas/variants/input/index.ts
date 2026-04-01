@@ -32,3 +32,6 @@ export { PaymentInputSchema } from './Payment.input';
 export { BankInputSchema } from './Bank.input';
 export { ShipmentInputSchema } from './Shipment.input';
 export { ProductCategoryInputSchema } from './ProductCategory.input';
+export { SupplyCatalogInputSchema } from './SupplyCatalog.input';
+export { TechnicalAssessmentInputSchema } from './TechnicalAssessment.input';
+export { TechnicalIssueInputSchema } from './TechnicalIssue.input';

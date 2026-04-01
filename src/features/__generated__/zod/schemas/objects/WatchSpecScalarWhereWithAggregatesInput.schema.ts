@@ -54,8 +54,7 @@ const watchspecscalarwherewithaggregatesinputSchema = z.object({
   ref: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   hasStrap: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   isServiced: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
-  hasClasp: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
-  isSpa: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
+  hasClasp: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const WatchSpecScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.WatchSpecScalarWhereWithAggregatesInput> = watchspecscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.WatchSpecScalarWhereWithAggregatesInput>;
 export const WatchSpecScalarWhereWithAggregatesInputObjectZodSchema = watchspecscalarwherewithaggregatesinputSchema;

@@ -13,7 +13,9 @@ import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilte
 import { EnumTagWithAggregatesFilterObjectSchema as EnumTagWithAggregatesFilterObjectSchema } from './EnumTagWithAggregatesFilter.schema';
 import { TagSchema } from '../enums/Tag.schema';
 import { EnumProductStatusWithAggregatesFilterObjectSchema as EnumProductStatusWithAggregatesFilterObjectSchema } from './EnumProductStatusWithAggregatesFilter.schema';
-import { ProductStatusSchema } from '../enums/ProductStatus.schema'
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { EnumContentStatusWithAggregatesFilterObjectSchema as EnumContentStatusWithAggregatesFilterObjectSchema } from './EnumContentStatusWithAggregatesFilter.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema'
 
 const productscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ProductScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -36,7 +38,11 @@ const productscalarwherewithaggregatesinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   tag: z.union([z.lazy(() => EnumTagWithAggregatesFilterObjectSchema), TagSchema]).optional(),
   status: z.union([z.lazy(() => EnumProductStatusWithAggregatesFilterObjectSchema), ProductStatusSchema]).optional(),
-  categoryId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  categoryId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  contentStatus: z.union([z.lazy(() => EnumContentStatusWithAggregatesFilterObjectSchema), ContentStatusSchema]).optional(),
+  postContent: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  aiPromptUsed: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  aiGeneratedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const ProductScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput> = productscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductScalarWhereWithAggregatesInput>;
 export const ProductScalarWhereWithAggregatesInputObjectZodSchema = productscalarwherewithaggregatesinputSchema;

@@ -30,6 +30,11 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     paidAt: z.number(),
     technicianId: z.number(),
     technicianNameSnap: z.number(),
+    diagnosis: z.number(),
+    workSummary: z.number(),
+    serviceCatalogId: z.number(),
+    processingMode: z.number(),
+    imageFileKey: z.number(),
     parts: z.number(),
     Payment: z.number(),
     product: z.number(),
@@ -75,7 +80,12 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     paidAmount: z.number().nullable(),
     paidAt: z.date().nullable(),
     technicianId: z.string().nullable(),
-    technicianNameSnap: z.string().nullable()
+    technicianNameSnap: z.string().nullable(),
+    diagnosis: z.string().nullable(),
+    workSummary: z.string().nullable(),
+    serviceCatalogId: z.string().nullable(),
+    processingMode: z.string().nullable(),
+    imageFileKey: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -103,5 +113,10 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     paidAmount: z.number().nullable(),
     paidAt: z.date().nullable(),
     technicianId: z.string().nullable(),
-    technicianNameSnap: z.string().nullable()
+    technicianNameSnap: z.string().nullable(),
+    diagnosis: z.string().nullable(),
+    workSummary: z.string().nullable(),
+    serviceCatalogId: z.string().nullable(),
+    processingMode: z.string().nullable(),
+    imageFileKey: z.string().nullable()
   }).nullable().optional()});

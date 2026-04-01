@@ -21,9 +21,16 @@ export const ServiceCatalogFindFirstSelectSchema: z.ZodType<Prisma.ServiceCatalo
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
     detail: z.boolean().optional(),
+    vendorPrice: z.boolean().optional(),
+    customerPrice: z.boolean().optional(),
+    internalCost: z.boolean().optional(),
+    note: z.boolean().optional(),
+    categoryKey: z.boolean().optional(),
+    sortOrder: z.boolean().optional(),
     OrderItem: z.boolean().optional(),
     maintenanceRecord: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 
@@ -39,9 +46,16 @@ export const ServiceCatalogFindFirstSelectZodSchema = z.object({
     updatedAt: z.boolean().optional(),
     maintenanceRecordId: z.boolean().optional(),
     detail: z.boolean().optional(),
+    vendorPrice: z.boolean().optional(),
+    customerPrice: z.boolean().optional(),
+    internalCost: z.boolean().optional(),
+    note: z.boolean().optional(),
+    categoryKey: z.boolean().optional(),
+    sortOrder: z.boolean().optional(),
     OrderItem: z.boolean().optional(),
     maintenanceRecord: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

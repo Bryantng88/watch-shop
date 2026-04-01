@@ -19,6 +19,7 @@ export const VendorFindManyResultSchema = z.object({
   services: z.array(z.unknown()),
   Product: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
+  TechnicalAssessment: z.array(z.unknown()),
   Bank: z.unknown().optional()
 })),
   pagination: z.object({

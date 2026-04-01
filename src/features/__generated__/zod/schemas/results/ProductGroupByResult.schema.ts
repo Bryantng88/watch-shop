@@ -14,6 +14,9 @@ export const ProductGroupByResultSchema = z.array(z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   categoryId: z.string(),
+  postContent: z.string(),
+  aiPromptUsed: z.string(),
+  aiGeneratedAt: z.date(),
   _count: z.object({
     id: z.number(),
     slug: z.number(),
@@ -33,6 +36,10 @@ export const ProductGroupByResultSchema = z.array(z.object({
     tag: z.number(),
     status: z.number(),
     categoryId: z.number(),
+    contentStatus: z.number(),
+    postContent: z.number(),
+    aiPromptUsed: z.number(),
+    aiGeneratedAt: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
@@ -65,7 +72,10 @@ export const ProductGroupByResultSchema = z.array(z.object({
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    categoryId: z.string().nullable()
+    categoryId: z.string().nullable(),
+    postContent: z.string().nullable(),
+    aiPromptUsed: z.string().nullable(),
+    aiGeneratedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -80,6 +90,9 @@ export const ProductGroupByResultSchema = z.array(z.object({
     vendorId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
-    categoryId: z.string().nullable()
+    categoryId: z.string().nullable(),
+    postContent: z.string().nullable(),
+    aiPromptUsed: z.string().nullable(),
+    aiGeneratedAt: z.date().nullable()
   }).nullable().optional()
 }));

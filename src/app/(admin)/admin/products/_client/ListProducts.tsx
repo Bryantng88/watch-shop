@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import CreateServiceRequestModal from "./CreateServiceRequestModal";
 import type { BrandLite, ProductListItem } from "@/features/products/types";
 import DotLabel from "../../__components/DotLabel";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
@@ -152,6 +151,48 @@ function getDetailedPublishMissing(product: ProductRow) {
 }
 
 
+function getProductInventoryStatusText(status?: string | null) {
+    switch (String(status || "").toUpperCase()) {
+        case "AVAILABLE":
+            return "Có sẵn";
+        case "HOLD":
+            return "Giữ hàng";
+        case "SOLD":
+            return "Đã bán";
+        case "IN_SERVICE":
+            return "Đang service";
+        case "CONSIGNED_TO":
+            return "Gửi đối tác";
+        case "CONSIGNED_FROM":
+            return "Ký gửi";
+        case "DRAFT":
+            return "Nháp";
+        default:
+            return status || "-";
+    }
+}
+
+function InventoryStatusPill({ status }: { status?: string | null }) {
+    const s = String(status || "").toUpperCase();
+
+    const map: Record<string, string> = {
+        AVAILABLE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        IN_SERVICE: "bg-amber-50 text-amber-700 border-amber-200",
+        HOLD: "bg-slate-100 text-slate-700 border-slate-200",
+        SOLD: "bg-rose-50 text-rose-700 border-rose-200",
+        CONSIGNED_TO: "bg-blue-50 text-blue-700 border-blue-200",
+        CONSIGNED_FROM: "bg-violet-50 text-violet-700 border-violet-200",
+    };
+
+    return (
+        <span
+            className={`inline-flex min-w-[84px] items-center justify-center rounded-full border px-2.5 py-1 text-xs font-semibold ${map[s] ?? "bg-gray-50 text-gray-700 border-gray-200"}`}
+        >
+            {getProductInventoryStatusText(status)}
+        </span>
+    );
+}
+
 function getContentStatusBadgeValue(p: ProductRow) {
     const current = String(p.contentStatus ?? '').toUpperCase();
     if (current === 'PUBLISHED') return 'POSTED';
@@ -222,7 +263,6 @@ function InlineMoneyEditor({
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value == null ? "" : String(value));
     const [saving, setSaving] = useState(false);
-
     useEffect(() => {
         setDraft(value == null ? "" : String(value));
     }, [value]);
@@ -455,6 +495,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
+    const [bulkServiceLoading, setBulkServiceLoading] = useState(false);
 
     const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
     useEffect(() => setRows(props.items ?? []), [props.items]);
@@ -512,8 +553,7 @@ export default function AdminProductListPageClient(props: PageProps) {
     const [serviceHistoryProduct, setServiceHistoryProduct] = useState<ProductRow | null>(null);
     const [serviceHistoryOpen, setServiceHistoryOpen] = useState(false);
 
-    const [openService, setOpenService] = useState(false);
-    const [serviceProductId, setServiceProductId] = useState<string | null>(null);
+
 
     useEffect(() => {
         setSelectedIds([]);
@@ -734,7 +774,36 @@ export default function AdminProductListPageClient(props: PageProps) {
             setBulkSaleSaving(false);
         }
     }
+    async function createTechnicalServiceRequests(productIds: string[]) {
+        const ids = Array.from(new Set((productIds ?? []).filter(Boolean)));
+        if (!ids.length) return;
 
+        try {
+            setBulkServiceLoading(true);
+
+            const res = await fetch("/api/admin/service-requests/from-product", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productIds: ids,
+                    scope: "WITH_PURCHASE",
+                }),
+            });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok || data?.ok === false) {
+                throw new Error(data?.error || data?.message || "Tạo service request thất bại");
+            }
+
+            alert(data?.message || `Đã tạo ${data?.count ?? ids.length} service request`);
+            router.refresh();
+        } catch (error: any) {
+            alert(error?.message || "Tạo service request thất bại");
+        } finally {
+            setBulkServiceLoading(false);
+        }
+    }
     const segmentTabs = isStrapCatalog
         ? [
             { key: "draft", label: "Chờ duyệt", count: counts.draft },
@@ -966,6 +1035,14 @@ export default function AdminProductListPageClient(props: PageProps) {
                     >
                         Bỏ chọn
                     </button>
+                    <button
+                        type="button"
+                        className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+                        disabled={!selectedIds.length || bulkServiceLoading}
+                        onClick={() => createTechnicalServiceRequests(selectedIds)}
+                    >
+                        {bulkServiceLoading ? "Đang tạo..." : "Bulk request service"}
+                    </button>
                 </div>
             )}
 
@@ -1186,7 +1263,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <th className="px-3 py-3">Tên</th>
                                     <th className="px-3 py-3">SKU</th>
                                     <th className="px-3 py-3">Vendor</th>
-                                    <th className="px-3 py-3 whitespace-nowrap">Service</th>
+                                    <th className="px-3 py-3 whitespace-nowrap">Trạng thái</th>
                                     <th className="px-3 py-3 whitespace-nowrap">Phiếu nhập</th>
                                     <th className="px-3 py-3 text-right">Giá bán</th>
                                     <th className="px-3 py-3 text-right">Sale</th>
@@ -1245,23 +1322,49 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
 
+                                                        <div className="flex flex-col items-start gap-1 pt-1">
+                                                            {hasMissingReadinessInfo(p) ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openReadinessDetail(p);
+                                                                    }}
+                                                                    className="rounded-full text-left"
+                                                                >
+                                                                    <DotLabel label="Chưa sẵn sàng public" tone="orange" />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openReadinessDetail(p);
+                                                                    }}
+                                                                    className="rounded-full text-left"
+                                                                >
+                                                                    <DotLabel label="Sẵn sàng public" tone="green" />
+                                                                </button>
+                                                            )}
 
+                                                        </div>
                                                     </div>
                                                 </td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap text-sm font-mono">{p.variantSnapshot?.sku || "-"}</td>
 
                                                 <td className="px-3 py-5 whitespace-nowrap">{p.vendorName || "-"}</td>
-                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                <td className="px-3 py-5 whitespace-nowrap align-middle">
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             openServiceHistory(p);
                                                         }}
-                                                        className="rounded-full text-left"
+                                                        className="text-left"
+                                                        title="Mở lịch sử service"
                                                     >
-                                                        <StatusBadge status={p.status || "-"} />
+                                                        <InventoryStatusPill status={p.status} />
                                                     </button>
                                                 </td>
 
@@ -1277,7 +1380,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                         <span className="text-gray-400">-</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-5 text-right">
+                                                <td className="px-3 py-5 text-right whitespace-nowrap align-middle">
                                                     {props.canEditPrice ? (
                                                         <InlineMoneyEditor
                                                             productId={p.id}
@@ -1287,10 +1390,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             onSaved={(v) => patchLocalPrice(p.id, v)}
                                                         />
                                                     ) : (
-
-                                                        <div className="text-base font-semibold text-gray-1000">
-                                                            {fmtMoney(p.minPrice)}
-                                                        </div>
+                                                        <div className="text-[17px] font-semibold leading-none text-gray-950 tabular-nums">{fmtMoney(p.minPrice)}</div>
                                                     )}
                                                 </td>
 
@@ -1316,21 +1416,19 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     </td>
                                                 )}
 
-                                                <td className="px-3 py-5 whitespace-nowrap">
+                                                <td className="px-3 py-5 whitespace-nowrap align-middle">
                                                     <div className="flex flex-col justify-center">
-                                                        {/* Row chính: badge ngang hàng với giá */}
                                                         <div className="flex items-center h-[20px]">
                                                             <StatusBadge status={getContentStatusBadgeValue(p)} />
                                                         </div>
 
-                                                        {/* Row phụ: dot label */}
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 openReadinessDetail(p);
                                                             }}
-                                                            className="mt-1"
+                                                            className="mt-1 text-left"
                                                         >
                                                             <DotLabel
                                                                 label={hasMissingReadinessInfo(p) ? "Missing Info" : "Ready to post"}
@@ -1339,6 +1437,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                         </button>
                                                     </div>
                                                 </td>
+
                                                 <td className="px-3 py-5 whitespace-nowrap">
                                                     <div className="text-sm leading-5">{fmtDT(p.updatedAt)}</div>
                                                 </td>
@@ -1352,8 +1451,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                         onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
                                                         onDelete={() => handleDelete(p.id)}
                                                         onService={() => {
-                                                            setServiceProductId(p.id);
-                                                            setOpenService(true);
+                                                            createTechnicalServiceRequests([p.id]);
                                                         }}
                                                     />
                                                 </td>
@@ -1418,14 +1516,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                 } : null}
             />
 
-            <CreateServiceRequestModal
-                open={openService}
-                onClose={() => {
-                    setOpenService(false);
-                    setServiceProductId(null);
-                }}
-                productId={serviceProductId ?? ""}
-            />
+
         </div>
     );
 }

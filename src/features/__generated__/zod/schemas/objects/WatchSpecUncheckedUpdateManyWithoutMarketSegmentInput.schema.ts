@@ -52,8 +52,7 @@ const makeSchema = () => z.object({
   ref: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   hasStrap: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   isServiced: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  isSpa: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
+  hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const WatchSpecUncheckedUpdateManyWithoutMarketSegmentInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedUpdateManyWithoutMarketSegmentInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedUpdateManyWithoutMarketSegmentInput>;
 export const WatchSpecUncheckedUpdateManyWithoutMarketSegmentInputObjectZodSchema = makeSchema();

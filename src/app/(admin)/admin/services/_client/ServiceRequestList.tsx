@@ -7,7 +7,7 @@ import BulkAssignTechnicianModal from "./BulkAssignTechnicianModal";
 import MaintenanceDrawer from "./MaintenanceDrawer";
 import MaintenanceLogModal from "./MaintenaceLogModel";
 import DotLabel from "../../__components/DotLabel";
-
+import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
 import StatusBadge from "@/components/badges/StatusBadge";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 
@@ -22,6 +22,8 @@ type ServiceReqItem = {
     orderRefNo: string | null;
     serviceName: string | null;
     productTitle: string | null;
+    primaryImageUrl: string | null;
+    skuSnapshot: string | null;
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
@@ -103,7 +105,7 @@ export default function ServiceRequestListClient(props: PageProps) {
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
-
+    const [technicalAssessmentId, setTechnicalAssessmentId] = useState<string | null>(null);
     const completeOne = async (id: string) => {
         const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
             method: "POST",
@@ -295,6 +297,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                     />
                                 </th>
                                 <th className="px-3 py-3">RefNo</th>
+                                <th className="px-3 py-3">Ảnh</th>
                                 <th className="px-3 py-3">Service</th>
                                 <th className="px-3 py-3">Nguồn / xử lý</th>
                                 <th className="px-3 py-3">Status</th>
@@ -307,7 +310,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                         <tbody>
                             {displayItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-3 py-10 text-center text-gray-500">
+                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
                                         Không có dữ liệu trong tab này
                                     </td>
                                 </tr>
@@ -336,8 +339,23 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="align-top px-3 py-4">
+                                                {row.primaryImageUrl ? (
+                                                    <img
+                                                        src={`/api/media/sign?key=${encodeURIComponent(row.primaryImageUrl)}`}
+                                                        alt={row.productTitle || "service-product"}
+                                                        className="h-14 w-14 rounded-lg border object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-14 w-14 items-center justify-center rounded-lg border text-xs text-gray-400">
+                                                        No image
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            <td className="align-top px-3 py-4">
                                                 <div className="font-medium">{row.serviceName || "-"}</div>
                                                 <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">product · {row.productTitle || "-"}</div>
+                                                <div className="mt-1 text-xs text-gray-500">SKU: {row.skuSnapshot || "-"}</div>
                                                 <div className="mt-1 text-xs text-gray-500">Note: {row.customerItemNote || "-"}</div>
                                             </td>
 
@@ -402,6 +420,11 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                                 await navigator.clipboard?.writeText(row.id);
                                                             },
                                                         },
+                                                        {
+                                                            label: "Đánh giá kỹ thuật",
+
+                                                            onClick: () => setTechnicalAssessmentId(row.id)
+                                                        }
                                                     ]}
                                                 />
                                             </td>
@@ -464,6 +487,14 @@ export default function ServiceRequestListClient(props: PageProps) {
                 onClose={() => setOpenLogs(false)}
                 serviceRequestId={logSrId}
                 title={logTitle}
+            />
+            <TechnicalAssessmentModal
+                open={!!technicalAssessmentId}
+                serviceRequestId={technicalAssessmentId}
+                onClose={() => setTechnicalAssessmentId(null)}
+                onSaved={() => {
+                    router.refresh();
+                }}
             />
         </div>
     );

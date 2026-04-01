@@ -33,7 +33,12 @@ const makeSchema = () => z.object({
   paidAmount: z.number().optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
   technicianId: z.string().optional().nullable(),
-  technicianNameSnap: z.string().optional().nullable()
+  technicianNameSnap: z.string().optional().nullable(),
+  diagnosis: z.string().optional().nullable(),
+  workSummary: z.string().optional().nullable(),
+  serviceCatalogId: z.string().optional().nullable(),
+  processingMode: z.string().optional().nullable(),
+  imageFileKey: z.string().optional().nullable()
 }).strict();
 export const MaintenanceRecordCreateManyInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyInput>;
 export const MaintenanceRecordCreateManyInputObjectZodSchema = makeSchema();

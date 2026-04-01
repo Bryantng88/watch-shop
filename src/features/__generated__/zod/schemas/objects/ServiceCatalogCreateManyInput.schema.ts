@@ -13,7 +13,13 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   maintenanceRecordId: z.string().optional().nullable(),
-  detail: ServiceDetailSchema
+  detail: ServiceDetailSchema,
+  vendorPrice: z.number().optional().nullable(),
+  customerPrice: z.number().optional().nullable(),
+  internalCost: z.number().optional().nullable(),
+  note: z.string().optional().nullable(),
+  categoryKey: z.string().optional().nullable(),
+  sortOrder: z.number().int().optional()
 }).strict();
 export const ServiceCatalogCreateManyInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCreateManyInput>;
 export const ServiceCatalogCreateManyInputObjectZodSchema = makeSchema();

@@ -31,8 +31,7 @@ const makeSchema = () => z.object({
   ref: SortOrderSchema.optional(),
   hasStrap: SortOrderSchema.optional(),
   isServiced: SortOrderSchema.optional(),
-  hasClasp: SortOrderSchema.optional(),
-  isSpa: SortOrderSchema.optional()
+  hasClasp: SortOrderSchema.optional()
 }).strict();
 export const WatchSpecCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCountOrderByAggregateInput>;
 export const WatchSpecCountOrderByAggregateInputObjectZodSchema = makeSchema();

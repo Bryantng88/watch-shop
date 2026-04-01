@@ -13,7 +13,13 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   maintenanceRecordId: z.literal(true).optional(),
-  detail: z.literal(true).optional()
+  detail: z.literal(true).optional(),
+  vendorPrice: z.literal(true).optional(),
+  customerPrice: z.literal(true).optional(),
+  internalCost: z.literal(true).optional(),
+  note: z.literal(true).optional(),
+  categoryKey: z.literal(true).optional(),
+  sortOrder: z.literal(true).optional()
 }).strict();
 export const ServiceCatalogMaxAggregateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogMaxAggregateInputType>;
 export const ServiceCatalogMaxAggregateInputObjectZodSchema = makeSchema();

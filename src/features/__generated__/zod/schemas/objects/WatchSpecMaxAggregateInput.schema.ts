@@ -30,8 +30,7 @@ const makeSchema = () => z.object({
   ref: z.literal(true).optional(),
   hasStrap: z.literal(true).optional(),
   isServiced: z.literal(true).optional(),
-  hasClasp: z.literal(true).optional(),
-  isSpa: z.literal(true).optional()
+  hasClasp: z.literal(true).optional()
 }).strict();
 export const WatchSpecMaxAggregateInputObjectSchema: z.ZodType<Prisma.WatchSpecMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecMaxAggregateInputType>;
 export const WatchSpecMaxAggregateInputObjectZodSchema = makeSchema();
