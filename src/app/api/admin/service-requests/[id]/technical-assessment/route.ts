@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-
-import * as technicalService from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
-
+import * as technicalService from "@/app/(admin)/admin/services/_server/technical_assessment.serivce"
 
 export async function GET(
     _req: Request,
@@ -49,8 +47,6 @@ export async function POST(
             postRate: body.postRate ?? null,
             postAmplitude: body.postAmplitude ?? null,
             postBeatError: body.postBeatError ?? null,
-            actionMode: body.actionMode ?? "NONE",
-            vendorId: body.actionMode === "VENDOR" ? body.vendorId ?? null : null,
             diagnosis: body.diagnosis ?? null,
             conclusion: body.conclusion ?? null,
             imageFileKey: body.imageFileKey ?? null,

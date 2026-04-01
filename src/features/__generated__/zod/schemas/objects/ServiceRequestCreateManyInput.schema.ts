@@ -31,7 +31,8 @@ const makeSchema = () => z.object({
   technicianId: z.string().optional().nullable(),
   technicianNameSnap: z.string().optional().nullable(),
   skuSnapshot: z.string().optional().nullable(),
-  primaryImageUrlSnapshot: z.string().optional().nullable()
+  primaryImageUrlSnapshot: z.string().optional().nullable(),
+  dummy_technical_rel: z.string().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyInput>;
 export const ServiceRequestCreateManyInputObjectZodSchema = makeSchema();

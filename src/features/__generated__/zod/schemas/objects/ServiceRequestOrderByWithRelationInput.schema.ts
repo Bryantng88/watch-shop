@@ -41,16 +41,17 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   skuSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   primaryImageUrlSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
+  dummy_technical_rel: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
+  user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
-  Vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentOrderByWithRelationInputObjectSchema).optional()
+  vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ServiceRequestOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestOrderByWithRelationInput>;
 export const ServiceRequestOrderByWithRelationInputObjectZodSchema = makeSchema();

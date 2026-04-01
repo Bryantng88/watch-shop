@@ -345,16 +345,17 @@ model ServiceRequest {
   technicianNameSnap      String?
   skuSnapshot             String?
   primaryImageUrlSnapshot String?
-  Invoice                 Invoice[]
+  dummy_technical_rel     String?
+  invoice                 Invoice[]
   maintenance             MaintenanceRecord[]
   customer                Customer?            @relation(fields: [customerId], references: [id])
   orderItem               OrderItem?           @relation(fields: [orderItemId], references: [id])
   product                 Product?             @relation(fields: [productId], references: [id])
-  User                    User?                @relation(fields: [technicianId], references: [id])
+  user                    User?                @relation(fields: [technicianId], references: [id])
   variant                 ProductVariant?      @relation(fields: [variantId], references: [id])
-  Vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
-  ServiceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
-  TechnicalAssessment     TechnicalAssessment?
+  vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
+  serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
+  technicalAssessment     TechnicalAssessment?
 
   @@index([customerId])
   @@index([productId])
@@ -454,6 +455,7 @@ model Vendor {
   Product             Product[]
   ServiceRequest      ServiceRequest[]
   TechnicalAssessment TechnicalAssessment[]
+  TechnicalIssue      TechnicalIssue[]
   Bank                Bank?                 @relation(fields: [bankName], references: [bankName], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([name, role])
@@ -769,9 +771,12 @@ model TechnicalIssue {
   sortOrder           Int                 @default(0)
   createdAt           DateTime            @default(now()) @db.Timestamp(6)
   updatedAt           DateTime            @default(now()) @db.Timestamp(6)
+  vendorId            String?
+  vendorNameSnap      String?
   TechnicalAssessment TechnicalAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   ServiceCatalog      ServiceCatalog?     @relation(fields: [serviceCatalogId], references: [id])
   SupplyCatalog       SupplyCatalog?      @relation(fields: [supplyCatalogId], references: [id])
+  Vendor              Vendor?             @relation(fields: [vendorId], references: [id])
 
   @@index([assessmentId])
 }

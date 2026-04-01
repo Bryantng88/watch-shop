@@ -12,7 +12,10 @@ export const TechnicalIssueFindUniqueResultSchema = z.nullable(z.object({
   sortOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  vendorId: z.string().optional(),
+  vendorNameSnap: z.string().optional(),
   TechnicalAssessment: z.unknown(),
   ServiceCatalog: z.unknown().optional(),
-  SupplyCatalog: z.unknown().optional()
+  SupplyCatalog: z.unknown().optional(),
+  Vendor: z.unknown().optional()
 }));

@@ -22,6 +22,7 @@ export const VendorInputSchema = z.object({
     Product: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
     TechnicalAssessment: z.array(z.unknown()),
+    TechnicalIssue: z.array(z.unknown()),
     Bank: z.unknown().optional().nullable()
 }).strict();
 

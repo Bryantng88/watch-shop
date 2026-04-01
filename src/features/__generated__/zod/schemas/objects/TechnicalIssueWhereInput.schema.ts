@@ -14,7 +14,9 @@ import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereIn
 import { ServiceCatalogNullableScalarRelationFilterObjectSchema as ServiceCatalogNullableScalarRelationFilterObjectSchema } from './ServiceCatalogNullableScalarRelationFilter.schema';
 import { ServiceCatalogWhereInputObjectSchema as ServiceCatalogWhereInputObjectSchema } from './ServiceCatalogWhereInput.schema';
 import { SupplyCatalogNullableScalarRelationFilterObjectSchema as SupplyCatalogNullableScalarRelationFilterObjectSchema } from './SupplyCatalogNullableScalarRelationFilter.schema';
-import { SupplyCatalogWhereInputObjectSchema as SupplyCatalogWhereInputObjectSchema } from './SupplyCatalogWhereInput.schema'
+import { SupplyCatalogWhereInputObjectSchema as SupplyCatalogWhereInputObjectSchema } from './SupplyCatalogWhereInput.schema';
+import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
+import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema'
 
 const technicalissuewhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalIssueWhereInputObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema).array()]).optional(),
@@ -32,9 +34,12 @@ const technicalissuewhereinputSchema = z.object({
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  vendorNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   TechnicalAssessment: z.union([z.lazy(() => TechnicalAssessmentScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
-  SupplyCatalog: z.union([z.lazy(() => SupplyCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => SupplyCatalogWhereInputObjectSchema)]).optional()
+  SupplyCatalog: z.union([z.lazy(() => SupplyCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => SupplyCatalogWhereInputObjectSchema)]).optional(),
+  Vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional()
 }).strict();
 export const TechnicalIssueWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueWhereInput> = technicalissuewhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueWhereInput>;
 export const TechnicalIssueWhereInputObjectZodSchema = technicalissuewhereinputSchema;

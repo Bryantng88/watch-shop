@@ -21,6 +21,8 @@ const makeSchema = () => z.object({
   sortOrder: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  vendorId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  vendorNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TechnicalIssueCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => TechnicalIssueAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TechnicalIssueMaxOrderByAggregateInputObjectSchema).optional(),

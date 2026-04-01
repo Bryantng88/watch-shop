@@ -22,9 +22,12 @@ export const TechnicalIssueFindManySelectSchema: z.ZodType<Prisma.TechnicalIssue
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
-    SupplyCatalog: z.boolean().optional()
+    SupplyCatalog: z.boolean().optional(),
+    Vendor: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 
 export const TechnicalIssueFindManySelectZodSchema = z.object({
@@ -40,9 +43,12 @@ export const TechnicalIssueFindManySelectZodSchema = z.object({
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
-    SupplyCatalog: z.boolean().optional()
+    SupplyCatalog: z.boolean().optional(),
+    Vendor: z.boolean().optional()
   }).strict();
 
 export const TechnicalIssueFindManySchema: z.ZodType<Prisma.TechnicalIssueFindManyArgs> = z.object({ select: TechnicalIssueFindManySelectSchema.optional(), include: TechnicalIssueIncludeObjectSchema.optional(), orderBy: z.union([TechnicalIssueOrderByWithRelationInputObjectSchema, TechnicalIssueOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalIssueWhereInputObjectSchema.optional(), cursor: TechnicalIssueWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TechnicalIssueScalarFieldEnumSchema, TechnicalIssueScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueFindManyArgs>;

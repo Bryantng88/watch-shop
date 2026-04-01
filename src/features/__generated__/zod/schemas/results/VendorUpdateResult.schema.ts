@@ -19,5 +19,6 @@ export const VendorUpdateResultSchema = z.nullable(z.object({
   Product: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
   TechnicalAssessment: z.array(z.unknown()),
+  TechnicalIssue: z.array(z.unknown()),
   Bank: z.unknown().optional()
 }));

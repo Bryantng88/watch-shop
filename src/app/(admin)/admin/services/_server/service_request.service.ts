@@ -156,7 +156,7 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
                 { technicianNameSnap: { contains: q, mode: "insensitive" } },
                 { skuSnapshot: { contains: q, mode: "insensitive" } as any },
                 { product: { is: { title: { contains: q, mode: "insensitive" } } } },
-                { ServiceCatalog: { is: { name: { contains: q, mode: "insensitive" } } } },
+                { serviceCatalog: { is: { name: { contains: q, mode: "insensitive" } } } },
                 {
                     orderItem: {
                         is: {

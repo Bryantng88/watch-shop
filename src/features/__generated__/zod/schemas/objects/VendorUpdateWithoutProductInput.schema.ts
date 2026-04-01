@@ -11,6 +11,7 @@ import { InvoiceUpdateManyWithoutVendorNestedInputObjectSchema as InvoiceUpdateM
 import { MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutVendorNestedInput.schema';
 import { ServiceRequestUpdateManyWithoutVendorNestedInputObjectSchema as ServiceRequestUpdateManyWithoutVendorNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutVendorNestedInput.schema';
 import { TechnicalAssessmentUpdateManyWithoutVendorNestedInputObjectSchema as TechnicalAssessmentUpdateManyWithoutVendorNestedInputObjectSchema } from './TechnicalAssessmentUpdateManyWithoutVendorNestedInput.schema';
+import { TechnicalIssueUpdateManyWithoutVendorNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutVendorNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutVendorNestedInput.schema';
 import { BankUpdateOneWithoutVendorNestedInputObjectSchema as BankUpdateOneWithoutVendorNestedInputObjectSchema } from './BankUpdateOneWithoutVendorNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -31,6 +32,7 @@ const makeSchema = () => z.object({
   services: z.lazy(() => MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
   TechnicalAssessment: z.lazy(() => TechnicalAssessmentUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
   Bank: z.lazy(() => BankUpdateOneWithoutVendorNestedInputObjectSchema).optional()
 }).strict();
 export const VendorUpdateWithoutProductInputObjectSchema: z.ZodType<Prisma.VendorUpdateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUpdateWithoutProductInput>;

@@ -10,11 +10,16 @@ export async function getPanel(serviceRequestId: string) {
             status: true,
             scope: true,
             notes: true,
-            productId: true,
-            skuSnapshot: true,
             primaryImageUrlSnapshot: true,
             technicianId: true,
             technicianNameSnap: true,
+            skuSnapshot: true,
+            productId: true,
+            variantId: true,
+            brandSnapshot: true,
+            modelSnapshot: true,
+            refSnapshot: true,
+            serialSnapshot: true,
             product: {
                 select: {
                     id: true,
@@ -32,12 +37,50 @@ export async function getPanel(serviceRequestId: string) {
                         select: { fileKey: true, role: true },
                         take: 8,
                     },
+                    variants: {
+                        orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                        select: {
+                            id: true,
+                            costPrice: true,
+                        },
+                        take: 1,
+                    },
                 },
             },
-            TechnicalAssessment: {
-                include: {
-                    TechnicalIssue: {
+            technicalAssessment: {
+                select: {
+                    id: true,
+                    movementKind: true,
+                    runningOk: true,
+                    batteryWeak: true,
+                    batteryIssueBattery: true,
+                    batteryIssueIC: true,
+                    batteryIssueCoil: true,
+                    preRate: true,
+                    preAmplitude: true,
+                    preBeatError: true,
+                    postRate: true,
+                    postAmplitude: true,
+                    postBeatError: true,
+                    diagnosis: true,
+                    conclusion: true,
+                    imageFileKey: true,
+                    status: true,
+                    issues: {
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                        select: {
+                            id: true,
+                            area: true,
+                            issueType: true,
+                            actionMode: true,
+                            vendorId: true,
+                            vendorNameSnap: true,
+                            serviceCatalogId: true,
+                            supplyCatalogId: true,
+                            note: true,
+                            estimatedCost: true,
+                            sortOrder: true,
+                        },
                     },
                 },
             },
@@ -75,10 +118,7 @@ export async function getPanel(serviceRequestId: string) {
         }),
         prisma.vendor.findMany({
             orderBy: { name: "asc" },
-            select: {
-                id: true,
-                name: true,
-            },
+            select: { id: true, name: true },
         }),
     ]);
 
@@ -90,6 +130,12 @@ export async function getPanel(serviceRequestId: string) {
             scope: sr.scope ?? null,
             notes: sr.notes ?? null,
             skuSnapshot: sr.skuSnapshot ?? null,
+            productId: sr.productId ?? null,
+            variantId: sr.variantId ?? null,
+            brandSnapshot: sr.brandSnapshot ?? null,
+            modelSnapshot: sr.modelSnapshot ?? null,
+            refSnapshot: sr.refSnapshot ?? null,
+            serialSnapshot: sr.serialSnapshot ?? null,
             productTitle: sr.product?.title ?? null,
             movement: sr.product?.watchSpec?.movement ?? null,
             model: sr.product?.watchSpec?.model ?? null,
@@ -97,40 +143,44 @@ export async function getPanel(serviceRequestId: string) {
             primaryImageUrl:
                 sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
             productImages: sr.product?.image ?? [],
+            primaryVariantId: sr.product?.variants?.[0]?.id ?? sr.variantId ?? null,
+            currentVariantCost:
+                sr.product?.variants?.[0]?.costPrice != null
+                    ? Number(sr.product.variants[0].costPrice)
+                    : null,
         },
-        assessment: sr.TechnicalAssessment
+        assessment: sr.technicalAssessment
             ? {
-                id: sr.TechnicalAssessment.id,
-                movementKind: sr.TechnicalAssessment.movementKind,
-                runningOk: sr.TechnicalAssessment.runningOk,
-                batteryWeak: sr.TechnicalAssessment.batteryWeak,
-                batteryIssueBattery: sr.TechnicalAssessment.batteryIssueBattery,
-                batteryIssueIC: sr.TechnicalAssessment.batteryIssueIC,
-                batteryIssueCoil: sr.TechnicalAssessment.batteryIssueCoil,
-                preRate: sr.TechnicalAssessment.preRate,
-                preAmplitude: sr.TechnicalAssessment.preAmplitude,
+                id: sr.technicalAssessment.id,
+                movementKind: sr.technicalAssessment.movementKind,
+                runningOk: sr.technicalAssessment.runningOk,
+                batteryWeak: sr.technicalAssessment.batteryWeak,
+                batteryIssueBattery: sr.technicalAssessment.batteryIssueBattery,
+                batteryIssueIC: sr.technicalAssessment.batteryIssueIC,
+                batteryIssueCoil: sr.technicalAssessment.batteryIssueCoil,
+                preRate: sr.technicalAssessment.preRate,
+                preAmplitude: sr.technicalAssessment.preAmplitude,
                 preBeatError:
-                    sr.TechnicalAssessment.preBeatError != null
-                        ? Number(sr.TechnicalAssessment.preBeatError)
+                    sr.technicalAssessment.preBeatError != null
+                        ? Number(sr.technicalAssessment.preBeatError)
                         : null,
-                postRate: sr.TechnicalAssessment.postRate,
-                postAmplitude: sr.TechnicalAssessment.postAmplitude,
+                postRate: sr.technicalAssessment.postRate,
+                postAmplitude: sr.technicalAssessment.postAmplitude,
                 postBeatError:
-                    sr.TechnicalAssessment.postBeatError != null
-                        ? Number(sr.TechnicalAssessment.postBeatError)
+                    sr.technicalAssessment.postBeatError != null
+                        ? Number(sr.technicalAssessment.postBeatError)
                         : null,
-                actionMode: sr.TechnicalAssessment.actionMode,
-                vendorId: sr.TechnicalAssessment.vendorId ?? null,
-                vendorNameSnap: sr.TechnicalAssessment.vendorNameSnap ?? null,
-                diagnosis: sr.TechnicalAssessment.diagnosis ?? "",
-                conclusion: sr.TechnicalAssessment.conclusion ?? "",
-                imageFileKey: sr.TechnicalAssessment.imageFileKey ?? null,
-                status: sr.TechnicalAssessment.status,
-                issues: sr.TechnicalAssessment.TechnicalIssue.map((x) => ({
+                diagnosis: sr.technicalAssessment.diagnosis ?? "",
+                conclusion: sr.technicalAssessment.conclusion ?? "",
+                imageFileKey: sr.technicalAssessment.imageFileKey ?? null,
+                status: sr.technicalAssessment.status,
+                issues: sr.technicalAssessment.issues.map((x) => ({
                     id: x.id,
                     area: x.area ?? "",
                     issueType: x.issueType,
                     actionMode: x.actionMode,
+                    vendorId: x.vendorId ?? "",
+                    vendorNameSnap: x.vendorNameSnap ?? "",
                     serviceCatalogId: x.serviceCatalogId ?? "",
                     supplyCatalogId: x.supplyCatalogId ?? "",
                     note: x.note ?? "",
@@ -170,9 +220,6 @@ export async function upsertAssessment(
         postRate?: number | null;
         postAmplitude?: number | null;
         postBeatError?: number | null;
-        actionMode: "NONE" | "INTERNAL" | "VENDOR";
-        vendorId?: string | null;
-        vendorNameSnap?: string | null;
         diagnosis?: string | null;
         conclusion?: string | null;
         imageFileKey?: string | null;
@@ -182,6 +229,8 @@ export async function upsertAssessment(
             area?: string | null;
             issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
             actionMode: "NONE" | "INTERNAL" | "VENDOR";
+            vendorId?: string | null;
+            vendorNameSnap?: string | null;
             serviceCatalogId?: string | null;
             supplyCatalogId?: string | null;
             note?: string | null;
@@ -190,9 +239,10 @@ export async function upsertAssessment(
         }>;
     }
 ) {
-    const assessment = await tx.TechnicalAssessment.upsert({
+    const assessment = await tx.technicalAssessment.upsert({
         where: { serviceRequestId: input.serviceRequestId },
         create: {
+            id: crypto.randomUUID(),
             serviceRequestId: input.serviceRequestId,
             movementKind: input.movementKind,
             runningOk: input.runningOk ?? null,
@@ -206,9 +256,6 @@ export async function upsertAssessment(
             postRate: input.postRate ?? null,
             postAmplitude: input.postAmplitude ?? null,
             postBeatError: input.postBeatError as any,
-            actionMode: input.actionMode as any,
-            vendorId: input.vendorId ?? null,
-            vendorNameSnap: input.vendorNameSnap ?? null,
             diagnosis: input.diagnosis ?? null,
             conclusion: input.conclusion ?? null,
             imageFileKey: input.imageFileKey ?? null,
@@ -228,9 +275,6 @@ export async function upsertAssessment(
             postRate: input.postRate ?? null,
             postAmplitude: input.postAmplitude ?? null,
             postBeatError: input.postBeatError as any,
-            actionMode: input.actionMode as any,
-            vendorId: input.vendorId ?? null,
-            vendorNameSnap: input.vendorNameSnap ?? null,
             diagnosis: input.diagnosis ?? null,
             conclusion: input.conclusion ?? null,
             imageFileKey: input.imageFileKey ?? null,
@@ -247,10 +291,13 @@ export async function upsertAssessment(
     if (input.issues.length) {
         await tx.technicalIssue.createMany({
             data: input.issues.map((x, idx) => ({
+                id: crypto.randomUUID(),
                 assessmentId: assessment.id,
                 area: x.area ?? null,
                 issueType: x.issueType as any,
                 actionMode: x.actionMode as any,
+                vendorId: x.vendorId || null,
+                vendorNameSnap: x.vendorNameSnap || null,
                 serviceCatalogId: x.serviceCatalogId || null,
                 supplyCatalogId: x.supplyCatalogId || null,
                 note: x.note ?? null,

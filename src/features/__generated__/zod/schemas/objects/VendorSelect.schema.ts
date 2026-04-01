@@ -6,6 +6,7 @@ import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } fr
 import { ProductFindManySchema as ProductFindManySchema } from '../findManyProduct.schema';
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
 import { TechnicalAssessmentFindManySchema as TechnicalAssessmentFindManySchema } from '../findManyTechnicalAssessment.schema';
+import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
 import { BankArgsObjectSchema as BankArgsObjectSchema } from './BankArgs.schema';
 import { VendorCountOutputTypeArgsObjectSchema as VendorCountOutputTypeArgsObjectSchema } from './VendorCountOutputTypeArgs.schema'
 
@@ -29,6 +30,7 @@ const makeSchema = () => z.object({
   Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   TechnicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentFindManySchema)]).optional(),
+  TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
   Bank: z.union([z.boolean(), z.lazy(() => BankArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => VendorCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

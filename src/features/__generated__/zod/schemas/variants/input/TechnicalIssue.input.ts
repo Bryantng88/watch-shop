@@ -16,9 +16,12 @@ export const TechnicalIssueInputSchema = z.object({
     sortOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    vendorId: z.string().optional().nullable(),
+    vendorNameSnap: z.string().optional().nullable(),
     TechnicalAssessment: z.unknown(),
     ServiceCatalog: z.unknown().optional().nullable(),
-    SupplyCatalog: z.unknown().optional().nullable()
+    SupplyCatalog: z.unknown().optional().nullable(),
+    Vendor: z.unknown().optional().nullable()
 }).strict();
 
 export type TechnicalIssueInputType = z.infer<typeof TechnicalIssueInputSchema>;

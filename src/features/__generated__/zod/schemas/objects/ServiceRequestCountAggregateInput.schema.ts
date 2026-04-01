@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.literal(true).optional(),
   skuSnapshot: z.literal(true).optional(),
   primaryImageUrlSnapshot: z.literal(true).optional(),
+  dummy_technical_rel: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ServiceRequestCountAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountAggregateInputType>;

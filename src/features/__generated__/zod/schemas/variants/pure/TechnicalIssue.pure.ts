@@ -16,9 +16,12 @@ export const TechnicalIssueModelSchema = z.object({
     sortOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    vendorId: z.string().nullable(),
+    vendorNameSnap: z.string().nullable(),
     TechnicalAssessment: z.unknown(),
     ServiceCatalog: z.unknown().nullable(),
-    SupplyCatalog: z.unknown().nullable()
+    SupplyCatalog: z.unknown().nullable(),
+    Vendor: z.unknown().nullable()
 }).strict();
 
 export type TechnicalIssuePureType = z.infer<typeof TechnicalIssueModelSchema>;

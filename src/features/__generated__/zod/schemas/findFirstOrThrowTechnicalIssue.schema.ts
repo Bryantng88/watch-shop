@@ -22,9 +22,12 @@ export const TechnicalIssueFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Techni
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
-    SupplyCatalog: z.boolean().optional()
+    SupplyCatalog: z.boolean().optional(),
+    Vendor: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 
 export const TechnicalIssueFindFirstOrThrowSelectZodSchema = z.object({
@@ -40,9 +43,12 @@ export const TechnicalIssueFindFirstOrThrowSelectZodSchema = z.object({
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    vendorId: z.boolean().optional(),
+    vendorNameSnap: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
-    SupplyCatalog: z.boolean().optional()
+    SupplyCatalog: z.boolean().optional(),
+    Vendor: z.boolean().optional()
   }).strict();
 
 export const TechnicalIssueFindFirstOrThrowSchema: z.ZodType<Prisma.TechnicalIssueFindFirstOrThrowArgs> = z.object({ select: TechnicalIssueFindFirstOrThrowSelectSchema.optional(), include: TechnicalIssueIncludeObjectSchema.optional(), orderBy: z.union([TechnicalIssueOrderByWithRelationInputObjectSchema, TechnicalIssueOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalIssueWhereInputObjectSchema.optional(), cursor: TechnicalIssueWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TechnicalIssueScalarFieldEnumSchema, TechnicalIssueScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueFindFirstOrThrowArgs>;

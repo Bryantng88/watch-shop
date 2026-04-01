@@ -34,6 +34,7 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   skuSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   primaryImageUrlSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  dummy_technical_rel: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ServiceRequestCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ServiceRequestMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => ServiceRequestMinOrderByAggregateInputObjectSchema).optional()

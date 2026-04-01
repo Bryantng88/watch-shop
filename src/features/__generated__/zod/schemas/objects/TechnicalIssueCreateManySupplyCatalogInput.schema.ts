@@ -14,7 +14,9 @@ const makeSchema = () => z.object({
   estimatedCost: z.number().optional().nullable(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  vendorId: z.string().optional().nullable(),
+  vendorNameSnap: z.string().optional().nullable()
 }).strict();
 export const TechnicalIssueCreateManySupplyCatalogInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCreateManySupplyCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCreateManySupplyCatalogInput>;
 export const TechnicalIssueCreateManySupplyCatalogInputObjectZodSchema = makeSchema();

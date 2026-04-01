@@ -27,14 +27,15 @@ export const ServiceRequestFindUniqueResultSchema = z.nullable(z.object({
   technicianNameSnap: z.string().optional(),
   skuSnapshot: z.string().optional(),
   primaryImageUrlSnapshot: z.string().optional(),
-  Invoice: z.array(z.unknown()),
+  dummy_technical_rel: z.string().optional(),
+  invoice: z.array(z.unknown()),
   maintenance: z.array(z.unknown()),
   customer: z.unknown().optional(),
   orderItem: z.unknown().optional(),
   product: z.unknown().optional(),
-  User: z.unknown().optional(),
+  user: z.unknown().optional(),
   variant: z.unknown().optional(),
-  Vendor: z.unknown().optional(),
-  ServiceCatalog: z.unknown().optional(),
-  TechnicalAssessment: z.unknown().optional()
+  vendor: z.unknown().optional(),
+  serviceCatalog: z.unknown().optional(),
+  technicalAssessment: z.unknown().optional()
 }));

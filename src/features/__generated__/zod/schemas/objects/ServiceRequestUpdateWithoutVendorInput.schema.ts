@@ -42,15 +42,16 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   skuSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   primaryImageUrlSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  Invoice: z.lazy(() => InvoiceUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
+  dummy_technical_rel: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  invoice: z.lazy(() => InvoiceUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
-  User: z.lazy(() => UserUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
+  serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUpdateWithoutVendorInputObjectSchema: z.ZodType<Prisma.ServiceRequestUpdateWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUpdateWithoutVendorInput>;
 export const ServiceRequestUpdateWithoutVendorInputObjectZodSchema = makeSchema();

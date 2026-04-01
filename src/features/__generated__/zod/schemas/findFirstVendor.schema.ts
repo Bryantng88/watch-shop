@@ -29,6 +29,7 @@ export const VendorFindFirstSelectSchema: z.ZodType<Prisma.VendorSelect> = z.obj
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     Bank: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.VendorSelect>;
@@ -53,6 +54,7 @@ export const VendorFindFirstSelectZodSchema = z.object({
     Product: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     Bank: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

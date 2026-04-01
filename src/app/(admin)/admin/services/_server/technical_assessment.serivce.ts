@@ -1,5 +1,7 @@
+import crypto from "node:crypto";
 import prisma from "@/server/db/client";
 import * as repo from "./technical.assessment.repo"
+
 import { MaintenanceEventType, Prisma } from "@prisma/client";
 
 function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNKNOWN" {
@@ -31,91 +33,11 @@ function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNK
     return "UNKNOWN";
 }
 
-function buildInternalTaskNote(input: {
-    diagnosis?: string | null;
-    conclusion?: string | null;
-    issues: Array<{
-        area?: string | null;
-        issueType: string;
-        serviceCatalogId?: string | null;
-        supplyCatalogId?: string | null;
-        note?: string | null;
-    }>;
-    serviceCatalogMap: Map<string, { name: string }>;
-    supplyCatalogMap: Map<string, { name: string }>;
-}) {
-    const lines: string[] = ["[AUTO_TECH_INTERNAL]"];
-
-    if (input.diagnosis) {
-        lines.push(`Chẩn đoán: ${input.diagnosis}`);
-    }
-
-    if (input.conclusion) {
-        lines.push(`Kết luận: ${input.conclusion}`);
-    }
-
-    if (input.issues.length) {
-        lines.push("Hạng mục nội bộ:");
-        input.issues.forEach((x, idx) => {
-            const sv = x.serviceCatalogId ? input.serviceCatalogMap.get(x.serviceCatalogId)?.name : null;
-            const sp = x.supplyCatalogId ? input.supplyCatalogMap.get(x.supplyCatalogId)?.name : null;
-
-            lines.push(
-                `${idx + 1}. ${x.issueType}` +
-                (x.area ? ` | ${x.area}` : "") +
-                (sv ? ` | ${sv}` : "") +
-                (sp ? ` | VT: ${sp}` : "") +
-                (x.note ? ` | ${x.note}` : "")
-            );
-        });
-    }
-
-    return lines.join("\n");
+function marker(serviceRequestId: string) {
+    return `[AUTO_TECH_ASSESSMENT:${serviceRequestId}]`;
 }
 
-function buildVendorTaskNote(input: {
-    diagnosis?: string | null;
-    conclusion?: string | null;
-    issues: Array<{
-        area?: string | null;
-        issueType: string;
-        serviceCatalogId?: string | null;
-        supplyCatalogId?: string | null;
-        note?: string | null;
-    }>;
-    serviceCatalogMap: Map<string, { name: string }>;
-    supplyCatalogMap: Map<string, { name: string }>;
-}) {
-    const lines: string[] = ["[AUTO_TECH_VENDOR]"];
-
-    if (input.diagnosis) {
-        lines.push(`Chẩn đoán: ${input.diagnosis}`);
-    }
-
-    if (input.conclusion) {
-        lines.push(`Kết luận: ${input.conclusion}`);
-    }
-
-    if (input.issues.length) {
-        lines.push("Hạng mục chuyển vendor:");
-        input.issues.forEach((x, idx) => {
-            const sv = x.serviceCatalogId ? input.serviceCatalogMap.get(x.serviceCatalogId)?.name : null;
-            const sp = x.supplyCatalogId ? input.supplyCatalogMap.get(x.supplyCatalogId)?.name : null;
-
-            lines.push(
-                `${idx + 1}. ${x.issueType}` +
-                (x.area ? ` | ${x.area}` : "") +
-                (sv ? ` | ${sv}` : "") +
-                (sp ? ` | VT: ${sp}` : "") +
-                (x.note ? ` | ${x.note}` : "")
-            );
-        });
-    }
-
-    return lines.join("\n");
-}
-
-async function syncAutoMaintenanceArtifacts(
+async function syncAutoLogsAndCost(
     tx: Prisma.TransactionClient,
     input: {
         serviceRequestId: string;
@@ -127,97 +49,132 @@ async function syncAutoMaintenanceArtifacts(
         serialSnapshot?: string | null;
         technicianId?: string | null;
         technicianNameSnap?: string | null;
-        vendorId?: string | null;
-        vendorNameSnap?: string | null;
-        diagnosis?: string | null;
-        conclusion?: string | null;
         issues: Array<{
             area?: string | null;
             issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
             actionMode: "NONE" | "INTERNAL" | "VENDOR";
+            vendorId?: string | null;
+            vendorNameSnap?: string | null;
             serviceCatalogId?: string | null;
             supplyCatalogId?: string | null;
             note?: string | null;
             estimatedCost?: number | null;
             sortOrder?: number | null;
         }>;
+        diagnosis?: string | null;
+        conclusion?: string | null;
     }
 ) {
-    const internalIssues = input.issues.filter((x) => x.actionMode === "INTERNAL");
-    const vendorIssues = input.issues.filter((x) => x.actionMode === "VENDOR");
+    const mark = marker(input.serviceRequestId);
 
-    const serviceCatalogIds = Array.from(
+    const oldAutoLogs = await tx.maintenanceRecord.findMany({
+        where: {
+            serviceRequestId: input.serviceRequestId,
+            notes: { startsWith: mark },
+        },
+        select: {
+            id: true,
+            totalCost: true,
+        },
+    });
+
+    const oldAutoTotal = oldAutoLogs.reduce(
+        (sum, x) => sum + Number(x.totalCost ?? 0),
+        0
+    );
+
+    if (oldAutoLogs.length) {
+        await tx.maintenanceRecord.deleteMany({
+            where: { id: { in: oldAutoLogs.map((x) => x.id) } },
+        });
+    }
+
+    const vendorIds = Array.from(
         new Set(
             input.issues
-                .map((x) => x.serviceCatalogId)
+                .map((x) => x.vendorId)
                 .filter((x): x is string => !!x)
         )
     );
 
-    const supplyCatalogIds = Array.from(
-        new Set(
-            input.issues
-                .map((x) => x.supplyCatalogId)
-                .filter((x): x is string => !!x)
-        )
-    );
-
-    const [serviceCatalogs, supplyCatalogs] = await Promise.all([
-        serviceCatalogIds.length
-            ? tx.serviceCatalog.findMany({
-                where: { id: { in: serviceCatalogIds } },
+    const [serviceCatalogs, supplyCatalogs, vendors] = await Promise.all([
+        tx.serviceCatalog.findMany({
+            where: {
+                id: {
+                    in: Array.from(
+                        new Set(
+                            input.issues
+                                .map((x) => x.serviceCatalogId)
+                                .filter((x): x is string => !!x)
+                        )
+                    ),
+                },
+            },
+            select: { id: true, name: true },
+        }),
+        tx.supplyCatalog.findMany({
+            where: {
+                id: {
+                    in: Array.from(
+                        new Set(
+                            input.issues
+                                .map((x) => x.supplyCatalogId)
+                                .filter((x): x is string => !!x)
+                        )
+                    ),
+                },
+            },
+            select: { id: true, name: true, defaultCost: true },
+        }),
+        vendorIds.length
+            ? tx.vendor.findMany({
+                where: { id: { in: vendorIds } },
                 select: { id: true, name: true },
-            })
-            : Promise.resolve([]),
-        supplyCatalogIds.length
-            ? tx.supplyCatalog.findMany({
-                where: { id: { in: supplyCatalogIds } },
-                select: { id: true, name: true, defaultCost: true },
             })
             : Promise.resolve([]),
     ]);
 
-    const serviceCatalogMap = new Map(serviceCatalogs.map((x) => [x.id, { name: x.name }]));
-    const supplyCatalogMap = new Map(
+    const serviceMap = new Map(serviceCatalogs.map((x) => [x.id, x]));
+    const supplyMap = new Map(
         supplyCatalogs.map((x) => [
             x.id,
-            {
-                name: x.name,
-                defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
-            },
+            { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null },
         ])
     );
+    const vendorMap = new Map(vendors.map((x) => [x.id, x]));
 
-    // xóa các artifact auto cũ trước khi tạo lại
-    const autoRecords = await tx.maintenanceRecord.findMany({
-        where: {
-            serviceRequestId: input.serviceRequestId,
-            OR: [
-                { notes: { startsWith: "[AUTO_TECH_INTERNAL]" } },
-                { notes: { startsWith: "[AUTO_TECH_VENDOR]" } },
-            ],
-        },
-        select: { id: true },
-    });
+    let newAutoTotal = 0;
 
-    if (autoRecords.length) {
-        await tx.maintenanceRecord.deleteMany({
-            where: {
-                id: { in: autoRecords.map((x) => x.id) },
-            },
-        });
-    }
+    for (const [idx, issue] of input.issues.entries()) {
+        const serviceName = issue.serviceCatalogId
+            ? serviceMap.get(issue.serviceCatalogId)?.name
+            : null;
+        const supplyName = issue.supplyCatalogId
+            ? supplyMap.get(issue.supplyCatalogId)?.name
+            : null;
+        const vendorName =
+            issue.vendorId ? vendorMap.get(issue.vendorId)?.name ?? null : null;
 
-    // internal task
-    let internalRecordId: string | null = null;
+        const cost = Number(issue.estimatedCost ?? 0);
+        if (cost > 0) newAutoTotal += cost;
 
-    if (internalIssues.length) {
-        const internalTotal = internalIssues.reduce(
-            (sum, x) => sum + Number(x.estimatedCost ?? 0),
-            0
-        );
+        const lines = [
+            `${mark} #${idx + 1}`,
+            issue.area ? `Khu vực: ${issue.area}` : null,
+            `Loại xử lý: ${issue.issueType}`,
+            serviceName ? `Hạng mục kỹ thuật: ${serviceName}` : null,
+            supplyName ? `Vật tư: ${supplyName}` : null,
+            issue.actionMode === "VENDOR"
+                ? `Thực hiện: Vendor${vendorName ? ` (${vendorName})` : ""}`
+                : issue.actionMode === "INTERNAL"
+                    ? "Thực hiện: Nội bộ"
+                    : "Thực hiện: Chưa rõ",
+            input.diagnosis ? `Chẩn đoán: ${input.diagnosis}` : null,
+            input.conclusion ? `Kết luận: ${input.conclusion}` : null,
+            issue.note ? `Ghi chú: ${issue.note}` : null,
+        ].filter(Boolean);
 
-        const internalRecord = await tx.maintenanceRecord.create({
+        const createdLog = await tx.maintenanceRecord.create({
             data: {
                 serviceRequestId: input.serviceRequestId,
                 productId: input.productId ?? null,
@@ -228,124 +185,65 @@ async function syncAutoMaintenanceArtifacts(
                 serialSnapshot: input.serialSnapshot ?? null,
                 technicianId: input.technicianId ?? null,
                 technicianNameSnap: input.technicianNameSnap ?? null,
-                eventType: MaintenanceEventType.NOTE,
-                notes: buildInternalTaskNote({
-                    diagnosis: input.diagnosis,
-                    conclusion: input.conclusion,
-                    issues: internalIssues,
-                    serviceCatalogMap,
-                    supplyCatalogMap,
-                }),
-                totalCost: internalTotal ? new Prisma.Decimal(String(internalTotal)) : null,
+                vendorId: issue.actionMode === "VENDOR" ? issue.vendorId ?? null : null,
+                vendorName:
+                    issue.actionMode === "VENDOR"
+                        ? vendorName ?? issue.vendorNameSnap ?? null
+                        : null,
+                eventType:
+                    issue.actionMode === "VENDOR"
+                        ? MaintenanceEventType.ASSIGN_VENDOR
+                        : MaintenanceEventType.NOTE,
+                notes: lines.join("\n"),
+                totalCost: cost > 0 ? new Prisma.Decimal(String(cost)) : null,
                 currency: "VND",
                 servicedAt: new Date(),
             },
             select: { id: true },
         });
 
-        internalRecordId = internalRecord.id;
-
-        const internalParts = internalIssues
-            .filter((x) => x.supplyCatalogId)
-            .map((x) => {
-                const supply = x.supplyCatalogId ? supplyCatalogMap.get(x.supplyCatalogId) : null;
-                return {
-                    recordId: internalRecord.id,
-                    variantId: null,
-                    name: supply?.name || x.supplyCatalogId || "Vật tư",
-                    quantity: 1,
-                    unitCost: x.estimatedCost != null
-                        ? new Prisma.Decimal(String(x.estimatedCost))
-                        : supply?.defaultCost != null
-                            ? new Prisma.Decimal(String(supply.defaultCost))
-                            : null,
-                    notes: x.note ?? null,
-                };
-            });
-
-        if (internalParts.length) {
-            await tx.maintenancePart.createMany({
-                data: internalParts,
-            });
-        }
-    }
-
-    // vendor task
-    if (vendorIssues.length) {
-        const vendorTotal = vendorIssues.reduce(
-            (sum, x) => sum + Number(x.estimatedCost ?? 0),
-            0
-        );
-
-        const vendorRecord = await tx.maintenanceRecord.create({
-            data: {
-                serviceRequestId: input.serviceRequestId,
-                productId: input.productId ?? null,
-                variantId: input.variantId ?? null,
-                brandSnapshot: input.brandSnapshot ?? null,
-                modelSnapshot: input.modelSnapshot ?? null,
-                refSnapshot: input.refSnapshot ?? null,
-                serialSnapshot: input.serialSnapshot ?? null,
-                technicianId: input.technicianId ?? null,
-                technicianNameSnap: input.technicianNameSnap ?? null,
-                vendorId: input.vendorId ?? null,
-                vendorName: input.vendorNameSnap ?? null,
-                eventType: MaintenanceEventType.ASSIGN_VENDOR,
-                notes: buildVendorTaskNote({
-                    diagnosis: input.diagnosis,
-                    conclusion: input.conclusion,
-                    issues: vendorIssues,
-                    serviceCatalogMap,
-                    supplyCatalogMap,
-                }),
-                totalCost: vendorTotal ? new Prisma.Decimal(String(vendorTotal)) : null,
-                currency: "VND",
-                servicedAt: new Date(),
-            },
-            select: { id: true },
-        });
-
-        const vendorParts = vendorIssues
-            .filter((x) => x.supplyCatalogId)
-            .map((x) => {
-                const supply = x.supplyCatalogId ? supplyCatalogMap.get(x.supplyCatalogId) : null;
-                return {
-                    recordId: vendorRecord.id,
-                    variantId: null,
-                    name: supply?.name || x.supplyCatalogId || "Vật tư",
-                    quantity: 1,
-                    unitCost: x.estimatedCost != null
-                        ? new Prisma.Decimal(String(x.estimatedCost))
-                        : supply?.defaultCost != null
-                            ? new Prisma.Decimal(String(supply.defaultCost))
-                            : null,
-                    notes: x.note ?? null,
-                };
-            });
-
-        if (vendorParts.length) {
-            await tx.maintenancePart.createMany({
-                data: vendorParts,
-            });
-        }
-
-        // sync vendor snapshot vào service request
-        if (input.vendorId) {
-            await tx.serviceRequest.update({
-                where: { id: input.serviceRequestId },
+        if (issue.supplyCatalogId) {
+            const supply = supplyMap.get(issue.supplyCatalogId);
+            await tx.maintenancePart.create({
                 data: {
-                    vendorId: input.vendorId,
-                    vendorNameSnap: input.vendorNameSnap ?? null,
+                    recordId: createdLog.id,
+                    variantId: null,
+                    name: supply?.name || "Vật tư",
+                    quantity: 1,
+                    unitCost:
+                        cost > 0
+                            ? new Prisma.Decimal(String(cost))
+                            : supply?.defaultCost != null
+                                ? new Prisma.Decimal(String(supply.defaultCost))
+                                : null,
+                    notes: issue.note ?? null,
+                } as any,
+            });
+        }
+    }
+
+    if (input.variantId) {
+        const currentVariant = await tx.productVariant.findUnique({
+            where: { id: input.variantId },
+            select: { id: true, costPrice: true },
+        });
+
+        if (currentVariant) {
+            const currentCost = Number(currentVariant.costPrice ?? 0);
+            const nextCost = Math.max(0, currentCost - oldAutoTotal + newAutoTotal);
+
+            await tx.productVariant.update({
+                where: { id: currentVariant.id },
+                data: {
+                    costPrice: new Prisma.Decimal(String(nextCost)),
                 },
             });
         }
     }
 
     return {
-        internalTaskCreated: !!internalRecordId,
-        vendorTaskCreated: vendorIssues.length > 0,
-        internalIssueCount: internalIssues.length,
-        vendorIssueCount: vendorIssues.length,
+        oldAutoTotal,
+        newAutoTotal,
     };
 }
 
@@ -369,9 +267,6 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
                 postRate: null,
                 postAmplitude: null,
                 postBeatError: null,
-                actionMode: "NONE",
-                vendorId: null,
-                vendorNameSnap: null,
                 diagnosis: "",
                 conclusion: "",
                 imageFileKey:
@@ -401,8 +296,6 @@ export async function saveTechnicalAssessment(input: {
     postRate?: number | null;
     postAmplitude?: number | null;
     postBeatError?: number | null;
-    actionMode?: "NONE" | "INTERNAL" | "VENDOR";
-    vendorId?: string | null;
     diagnosis?: string | null;
     conclusion?: string | null;
     imageFileKey?: string | null;
@@ -410,6 +303,7 @@ export async function saveTechnicalAssessment(input: {
         area?: string | null;
         issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
         actionMode: "NONE" | "INTERNAL" | "VENDOR";
+        vendorId?: string | null;
         serviceCatalogId?: string | null;
         supplyCatalogId?: string | null;
         note?: string | null;
@@ -425,8 +319,6 @@ export async function saveTechnicalAssessment(input: {
             where: { id: serviceRequestId },
             select: {
                 id: true,
-                vendorId: true,
-                vendorNameSnap: true,
                 technicianId: true,
                 technicianNameSnap: true,
                 productId: true,
@@ -440,15 +332,24 @@ export async function saveTechnicalAssessment(input: {
 
         if (!sr) throw new Error("Service request not found");
 
-        let vendorNameSnap: string | null = null;
+        const normalizedIssues = Array.isArray(input.issues) ? input.issues : [];
 
-        if (input.actionMode === "VENDOR" && input.vendorId) {
-            const vendor = await tx.vendor.findUnique({
-                where: { id: input.vendorId },
+        const vendorIds = Array.from(
+            new Set(
+                normalizedIssues
+                    .map((x) => x.vendorId)
+                    .filter((x): x is string => !!x)
+            )
+        );
+
+        const vendors = vendorIds.length
+            ? await tx.vendor.findMany({
+                where: { id: { in: vendorIds } },
                 select: { id: true, name: true },
-            });
-            vendorNameSnap = vendor?.name ?? null;
-        }
+            })
+            : [];
+
+        const vendorMap = new Map(vendors.map((x) => [x.id, x.name]));
 
         const assessment = await repo.upsertAssessment(tx, {
             serviceRequestId,
@@ -464,18 +365,18 @@ export async function saveTechnicalAssessment(input: {
             postRate: input.postRate ?? null,
             postAmplitude: input.postAmplitude ?? null,
             postBeatError: input.postBeatError ?? null,
-            actionMode: (input.actionMode ?? "NONE") as any,
-            vendorId: input.actionMode === "VENDOR" ? input.vendorId ?? null : null,
-            vendorNameSnap,
             diagnosis: input.diagnosis ?? null,
             conclusion: input.conclusion ?? null,
             imageFileKey: input.imageFileKey ?? null,
             evaluatedById: sr.technicianId ?? null,
             evaluatedByNameSnap: sr.technicianNameSnap ?? null,
-            issues: input.issues ?? [],
+            issues: normalizedIssues.map((x) => ({
+                ...x,
+                vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
+            })),
         });
 
-        const autoArtifacts = await syncAutoMaintenanceArtifacts(tx, {
+        const autoArtifacts = await syncAutoLogsAndCost(tx, {
             serviceRequestId,
             productId: sr.productId ?? null,
             variantId: sr.variantId ?? null,
@@ -485,11 +386,12 @@ export async function saveTechnicalAssessment(input: {
             serialSnapshot: sr.serialSnapshot ?? null,
             technicianId: sr.technicianId ?? null,
             technicianNameSnap: sr.technicianNameSnap ?? null,
-            vendorId: input.actionMode === "VENDOR" ? input.vendorId ?? null : null,
-            vendorNameSnap,
             diagnosis: input.diagnosis ?? null,
             conclusion: input.conclusion ?? null,
-            issues: input.issues ?? [],
+            issues: normalizedIssues.map((x) => ({
+                ...x,
+                vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
+            })),
         });
 
         return {

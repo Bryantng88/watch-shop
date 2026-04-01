@@ -42,9 +42,10 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   skuSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   primaryImageUrlSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  Invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
+  dummy_technical_rel: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutServiceReqNestedInputObjectSchema).optional(),
   maintenance: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutUserInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutUserInput>;
 export const ServiceRequestUncheckedUpdateWithoutUserInputObjectZodSchema = makeSchema();

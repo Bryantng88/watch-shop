@@ -2,7 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TechnicalAssessmentArgsObjectSchema as TechnicalAssessmentArgsObjectSchema } from './TechnicalAssessmentArgs.schema';
 import { ServiceCatalogArgsObjectSchema as ServiceCatalogArgsObjectSchema } from './ServiceCatalogArgs.schema';
-import { SupplyCatalogArgsObjectSchema as SupplyCatalogArgsObjectSchema } from './SupplyCatalogArgs.schema'
+import { SupplyCatalogArgsObjectSchema as SupplyCatalogArgsObjectSchema } from './SupplyCatalogArgs.schema';
+import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema'
 
 const makeSchema = () => z.object({
   id: z.boolean().optional(),
@@ -17,9 +18,12 @@ const makeSchema = () => z.object({
   sortOrder: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  vendorId: z.boolean().optional(),
+  vendorNameSnap: z.boolean().optional(),
   TechnicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentArgsObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
-  SupplyCatalog: z.union([z.boolean(), z.lazy(() => SupplyCatalogArgsObjectSchema)]).optional()
+  SupplyCatalog: z.union([z.boolean(), z.lazy(() => SupplyCatalogArgsObjectSchema)]).optional(),
+  Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional()
 }).strict();
 export const TechnicalIssueSelectObjectSchema: z.ZodType<Prisma.TechnicalIssueSelect> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 export const TechnicalIssueSelectObjectZodSchema = makeSchema();

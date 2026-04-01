@@ -25,7 +25,9 @@ const technicalissuescalarwhereinputSchema = z.object({
   estimatedCost: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  vendorNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const TechnicalIssueScalarWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueScalarWhereInput> = technicalissuescalarwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueScalarWhereInput>;
 export const TechnicalIssueScalarWhereInputObjectZodSchema = technicalissuescalarwhereinputSchema;

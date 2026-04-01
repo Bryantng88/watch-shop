@@ -92,7 +92,7 @@ export async function getServiceRequestList(
     status: r.status,
     vendorName: r.vendorNameSnap ?? null,
     technicianName: r.technicianNameSnap ?? null,
-    serviceCatalog: r.ServiceCatalog
+    serviceCatalog: r.servicecatalogid
       ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
       : null,
     maintenanceCount: r._count.maintenance,

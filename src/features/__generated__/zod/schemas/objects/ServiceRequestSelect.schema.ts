@@ -40,16 +40,17 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.boolean().optional(),
   skuSnapshot: z.boolean().optional(),
   primaryImageUrlSnapshot: z.boolean().optional(),
-  Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
+  dummy_technical_rel: z.boolean().optional(),
+  invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
   orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
-  User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
-  Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
-  ServiceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
-  TechnicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentArgsObjectSchema)]).optional(),
+  vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  serviceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
+  technicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceRequestCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceRequestSelectObjectSchema: z.ZodType<Prisma.ServiceRequestSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;

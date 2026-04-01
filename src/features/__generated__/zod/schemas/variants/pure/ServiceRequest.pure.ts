@@ -32,16 +32,17 @@ export const ServiceRequestModelSchema = z.object({
     technicianNameSnap: z.string().nullable(),
     skuSnapshot: z.string().nullable(),
     primaryImageUrlSnapshot: z.string().nullable(),
-    Invoice: z.array(z.unknown()),
+    dummy_technical_rel: z.string().nullable(),
+    invoice: z.array(z.unknown()),
     maintenance: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     orderItem: z.unknown().nullable(),
     product: z.unknown().nullable(),
-    User: z.unknown().nullable(),
+    user: z.unknown().nullable(),
     variant: z.unknown().nullable(),
-    Vendor: z.unknown().nullable(),
-    ServiceCatalog: z.unknown().nullable(),
-    TechnicalAssessment: z.unknown().nullable()
+    vendor: z.unknown().nullable(),
+    serviceCatalog: z.unknown().nullable(),
+    technicalAssessment: z.unknown().nullable()
 }).strict();
 
 export type ServiceRequestPureType = z.infer<typeof ServiceRequestModelSchema>;
