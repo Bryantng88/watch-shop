@@ -64,7 +64,7 @@ export async function getServiceRequestList(
             primaryImageUrl: true,
           },
         },
-        ServiceCatalog: { select: { id: true, code: true, name: true } },
+        serviceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenance: true } },
         orderItem: {
           select: {
@@ -92,8 +92,8 @@ export async function getServiceRequestList(
     status: r.status,
     vendorName: r.vendorNameSnap ?? null,
     technicianName: r.technicianNameSnap ?? null,
-    serviceCatalog: r.servicecatalogid
-      ? { id: r.ServiceCatalog.id, code: r.ServiceCatalog.code ?? null, name: r.ServiceCatalog.name }
+    serviceCatalog: r.serviceCatalog
+      ? { id: r.serviceCatalog.id, code: r.serviceCatalog.code ?? null, name: r.serviceCatalog.name }
       : null,
     maintenanceCount: r._count.maintenance,
     orderItem: r.orderItem

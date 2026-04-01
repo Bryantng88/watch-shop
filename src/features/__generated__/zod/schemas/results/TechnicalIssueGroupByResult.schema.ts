@@ -12,6 +12,7 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
   updatedAt: z.date(),
   vendorId: z.string(),
   vendorNameSnap: z.string(),
+  mechanicalPartCatalogId: z.string(),
   _count: z.object({
     id: z.number(),
     assessmentId: z.number(),
@@ -27,7 +28,9 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     vendorId: z.number(),
     vendorNameSnap: z.number(),
+    mechanicalPartCatalogId: z.number(),
     TechnicalAssessment: z.number(),
+    MechanicalPartCatalog: z.number(),
     ServiceCatalog: z.number(),
     SupplyCatalog: z.number(),
     Vendor: z.number()
@@ -52,7 +55,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    mechanicalPartCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -66,6 +70,7 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    mechanicalPartCatalogId: z.string().nullable()
   }).nullable().optional()
 }));

@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
 import prisma from "@/server/db/client";
-import * as repo from "./technical.assessment.repo"
+import * as repo from "./technical.assessment.repo";
 
-import { MaintenanceEventType, Prisma } from "@prisma/client";
+import {
+    MaintenanceEventType,
+    Prisma,
+    ServiceRequestStatus,
+    TechnicalAssessmentStatus,
+} from "@prisma/client";
 
 function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNKNOWN" {
     const text = String(raw || "").toUpperCase();
@@ -24,7 +29,6 @@ function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNK
         text.includes("AUTO") ||
         text.includes("MANUAL") ||
         text.includes("CÓT") ||
-        text.includes("CO") ||
         text.includes("MECHANICAL")
     ) {
         return "MECHANICAL";
@@ -35,6 +39,15 @@ function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNK
 
 function marker(serviceRequestId: string) {
     return `[AUTO_TECH_ASSESSMENT:${serviceRequestId}]`;
+}
+
+function makeStatusChangeNote(nextStatus: ServiceRequestStatus, conclusion?: string | null) {
+    return [
+        `[AUTO_TECH_STATUS] ${nextStatus}`,
+        conclusion ? `Kết luận: ${conclusion}` : null,
+    ]
+        .filter(Boolean)
+        .join("\n");
 }
 
 async function syncAutoLogsAndCost(
@@ -57,11 +70,11 @@ async function syncAutoLogsAndCost(
             vendorNameSnap?: string | null;
             serviceCatalogId?: string | null;
             supplyCatalogId?: string | null;
+            mechanicalPartCatalogId?: string | null;
             note?: string | null;
             estimatedCost?: number | null;
             sortOrder?: number | null;
         }>;
-        diagnosis?: string | null;
         conclusion?: string | null;
     }
 ) {
@@ -72,16 +85,10 @@ async function syncAutoLogsAndCost(
             serviceRequestId: input.serviceRequestId,
             notes: { startsWith: mark },
         },
-        select: {
-            id: true,
-            totalCost: true,
-        },
+        select: { id: true, totalCost: true },
     });
 
-    const oldAutoTotal = oldAutoLogs.reduce(
-        (sum, x) => sum + Number(x.totalCost ?? 0),
-        0
-    );
+    const oldAutoTotal = oldAutoLogs.reduce((sum, x) => sum + Number(x.totalCost ?? 0), 0);
 
     if (oldAutoLogs.length) {
         await tx.maintenanceRecord.deleteMany({
@@ -89,25 +96,13 @@ async function syncAutoLogsAndCost(
         });
     }
 
-    const vendorIds = Array.from(
-        new Set(
-            input.issues
-                .map((x) => x.vendorId)
-                .filter((x): x is string => !!x)
-        )
-    );
+    const vendorIds = Array.from(new Set(input.issues.map((x) => x.vendorId).filter((x): x is string => !!x)));
 
-    const [serviceCatalogs, supplyCatalogs, vendors] = await Promise.all([
+    const [serviceCatalogs, supplyCatalogs, mechanicalPartCatalogs, vendors] = await Promise.all([
         tx.serviceCatalog.findMany({
             where: {
                 id: {
-                    in: Array.from(
-                        new Set(
-                            input.issues
-                                .map((x) => x.serviceCatalogId)
-                                .filter((x): x is string => !!x)
-                        )
-                    ),
+                    in: Array.from(new Set(input.issues.map((x) => x.serviceCatalogId).filter((x): x is string => !!x))),
                 },
             },
             select: { id: true, name: true },
@@ -115,12 +110,16 @@ async function syncAutoLogsAndCost(
         tx.supplyCatalog.findMany({
             where: {
                 id: {
+                    in: Array.from(new Set(input.issues.map((x) => x.supplyCatalogId).filter((x): x is string => !!x))),
+                },
+            },
+            select: { id: true, name: true, defaultCost: true },
+        }),
+        tx.mechanicalPartCatalog.findMany({
+            where: {
+                id: {
                     in: Array.from(
-                        new Set(
-                            input.issues
-                                .map((x) => x.supplyCatalogId)
-                                .filter((x): x is string => !!x)
-                        )
+                        new Set(input.issues.map((x) => x.mechanicalPartCatalogId).filter((x): x is string => !!x))
                     ),
                 },
             },
@@ -136,40 +135,36 @@ async function syncAutoLogsAndCost(
 
     const serviceMap = new Map(serviceCatalogs.map((x) => [x.id, x]));
     const supplyMap = new Map(
-        supplyCatalogs.map((x) => [
-            x.id,
-            { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null },
-        ])
+        supplyCatalogs.map((x) => [x.id, { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null }])
+    );
+    const partMap = new Map(
+        mechanicalPartCatalogs.map((x) => [x.id, { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null }])
     );
     const vendorMap = new Map(vendors.map((x) => [x.id, x]));
 
     let newAutoTotal = 0;
 
     for (const [idx, issue] of input.issues.entries()) {
-        const serviceName = issue.serviceCatalogId
-            ? serviceMap.get(issue.serviceCatalogId)?.name
-            : null;
-        const supplyName = issue.supplyCatalogId
-            ? supplyMap.get(issue.supplyCatalogId)?.name
-            : null;
-        const vendorName =
-            issue.vendorId ? vendorMap.get(issue.vendorId)?.name ?? null : null;
+        const serviceName = issue.serviceCatalogId ? serviceMap.get(issue.serviceCatalogId)?.name : null;
+        const supplyName = issue.supplyCatalogId ? supplyMap.get(issue.supplyCatalogId)?.name : null;
+        const partName = issue.mechanicalPartCatalogId ? partMap.get(issue.mechanicalPartCatalogId)?.name : null;
+        const vendorName = issue.vendorId ? vendorMap.get(issue.vendorId)?.name ?? null : null;
 
         const cost = Number(issue.estimatedCost ?? 0);
         if (cost > 0) newAutoTotal += cost;
 
         const lines = [
             `${mark} #${idx + 1}`,
-            issue.area ? `Khu vực: ${issue.area}` : null,
+            issue.area ? `Hạng mục: ${issue.area}` : null,
             `Loại xử lý: ${issue.issueType}`,
             serviceName ? `Hạng mục kỹ thuật: ${serviceName}` : null,
             supplyName ? `Vật tư: ${supplyName}` : null,
+            partName ? `Linh kiện máy cơ: ${partName}` : null,
             issue.actionMode === "VENDOR"
                 ? `Thực hiện: Vendor${vendorName ? ` (${vendorName})` : ""}`
                 : issue.actionMode === "INTERNAL"
                     ? "Thực hiện: Nội bộ"
                     : "Thực hiện: Chưa rõ",
-            input.diagnosis ? `Chẩn đoán: ${input.diagnosis}` : null,
             input.conclusion ? `Kết luận: ${input.conclusion}` : null,
             issue.note ? `Ghi chú: ${issue.note}` : null,
         ].filter(Boolean);
@@ -186,10 +181,7 @@ async function syncAutoLogsAndCost(
                 technicianId: input.technicianId ?? null,
                 technicianNameSnap: input.technicianNameSnap ?? null,
                 vendorId: issue.actionMode === "VENDOR" ? issue.vendorId ?? null : null,
-                vendorName:
-                    issue.actionMode === "VENDOR"
-                        ? vendorName ?? issue.vendorNameSnap ?? null
-                        : null,
+                vendorName: issue.actionMode === "VENDOR" ? vendorName ?? issue.vendorNameSnap ?? null : null,
                 eventType:
                     issue.actionMode === "VENDOR"
                         ? MaintenanceEventType.ASSIGN_VENDOR
@@ -202,20 +194,24 @@ async function syncAutoLogsAndCost(
             select: { id: true },
         });
 
-        if (issue.supplyCatalogId) {
-            const supply = supplyMap.get(issue.supplyCatalogId);
+        if (issue.supplyCatalogId || issue.mechanicalPartCatalogId) {
+            const supply = issue.supplyCatalogId ? supplyMap.get(issue.supplyCatalogId) : null;
+            const part = issue.mechanicalPartCatalogId ? partMap.get(issue.mechanicalPartCatalogId) : null;
+
             await tx.maintenancePart.create({
                 data: {
                     recordId: createdLog.id,
                     variantId: null,
-                    name: supply?.name || "Vật tư",
+                    name: supply?.name || part?.name || "Vật tư / linh kiện",
                     quantity: 1,
                     unitCost:
                         cost > 0
                             ? new Prisma.Decimal(String(cost))
                             : supply?.defaultCost != null
                                 ? new Prisma.Decimal(String(supply.defaultCost))
-                                : null,
+                                : part?.defaultCost != null
+                                    ? new Prisma.Decimal(String(part.defaultCost))
+                                    : null,
                     notes: issue.note ?? null,
                 } as any,
             });
@@ -234,17 +230,12 @@ async function syncAutoLogsAndCost(
 
             await tx.productVariant.update({
                 where: { id: currentVariant.id },
-                data: {
-                    costPrice: new Prisma.Decimal(String(nextCost)),
-                },
+                data: { costPrice: new Prisma.Decimal(String(nextCost)) },
             });
         }
     }
 
-    return {
-        oldAutoTotal,
-        newAutoTotal,
-    };
+    return { oldAutoTotal, newAutoTotal };
 }
 
 export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
@@ -256,18 +247,16 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
             ...panel,
             assessment: {
                 movementKind: inferMovementKind(panel.serviceRequest.movement),
-                runningOk: null,
-                batteryWeak: false,
-                batteryIssueBattery: false,
-                batteryIssueIC: false,
-                batteryIssueCoil: false,
+                movementStatus: "GOOD",
+                caseStatus: "GOOD",
+                crystalStatus: "GOOD",
+                crownStatus: "GOOD",
                 preRate: null,
                 preAmplitude: null,
                 preBeatError: null,
                 postRate: null,
                 postAmplitude: null,
                 postBeatError: null,
-                diagnosis: "",
                 conclusion: "",
                 imageFileKey:
                     panel.serviceRequest.primaryImageUrl ??
@@ -285,18 +274,16 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
 export async function saveTechnicalAssessment(input: {
     serviceRequestId: string;
     movementKind?: "BATTERY" | "MECHANICAL" | "UNKNOWN";
-    runningOk?: boolean | null;
-    batteryWeak?: boolean | null;
-    batteryIssueBattery?: boolean;
-    batteryIssueIC?: boolean;
-    batteryIssueCoil?: boolean;
+    movementStatus: "GOOD" | "ISSUE";
+    caseStatus: "GOOD" | "ISSUE";
+    crystalStatus: "GOOD" | "ISSUE";
+    crownStatus: "GOOD" | "ISSUE";
     preRate?: number | null;
     preAmplitude?: number | null;
     preBeatError?: number | null;
     postRate?: number | null;
     postAmplitude?: number | null;
     postBeatError?: number | null;
-    diagnosis?: string | null;
     conclusion?: string | null;
     imageFileKey?: string | null;
     issues?: Array<{
@@ -306,6 +293,7 @@ export async function saveTechnicalAssessment(input: {
         vendorId?: string | null;
         serviceCatalogId?: string | null;
         supplyCatalogId?: string | null;
+        mechanicalPartCatalogId?: string | null;
         note?: string | null;
         estimatedCost?: number | null;
         sortOrder?: number | null;
@@ -319,6 +307,7 @@ export async function saveTechnicalAssessment(input: {
             where: { id: serviceRequestId },
             select: {
                 id: true,
+                status: true,
                 technicianId: true,
                 technicianNameSnap: true,
                 productId: true,
@@ -332,48 +321,83 @@ export async function saveTechnicalAssessment(input: {
 
         if (!sr) throw new Error("Service request not found");
 
-        const normalizedIssues = Array.isArray(input.issues) ? input.issues : [];
+        const movementKind = input.movementKind ?? "UNKNOWN";
 
-        const vendorIds = Array.from(
-            new Set(
-                normalizedIssues
-                    .map((x) => x.vendorId)
-                    .filter((x): x is string => !!x)
-            )
-        );
+        const normalizedIssues = Array.isArray(input.issues)
+            ? input.issues.map((x, idx) => ({
+                area: x.area ?? null,
+                issueType: x.issueType,
+                actionMode: x.actionMode ?? "NONE",
+                vendorId: x.vendorId ?? null,
+                vendorNameSnap: null,
+                serviceCatalogId: x.serviceCatalogId ?? null,
+                supplyCatalogId: x.supplyCatalogId ?? null,
+                mechanicalPartCatalogId: x.mechanicalPartCatalogId ?? null,
+                note: x.note ?? null,
+                estimatedCost: x.estimatedCost ?? null,
+                sortOrder: x.sortOrder ?? idx,
+            }))
+            : [];
 
+        const vendorIds = Array.from(new Set(normalizedIssues.map((x) => x.vendorId).filter((x): x is string => !!x)));
         const vendors = vendorIds.length
             ? await tx.vendor.findMany({
                 where: { id: { in: vendorIds } },
                 select: { id: true, name: true },
             })
             : [];
-
         const vendorMap = new Map(vendors.map((x) => [x.id, x.name]));
+
+        const issuesWithVendorSnap = normalizedIssues.map((x) => ({
+            ...x,
+            vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
+        }));
+
+        const hasAnyIssue =
+            input.movementStatus === "ISSUE" ||
+            input.caseStatus === "ISSUE" ||
+            input.crystalStatus === "ISSUE" ||
+            input.crownStatus === "ISSUE" ||
+            issuesWithVendorSnap.length > 0;
+
+        const nextServiceStatus = hasAnyIssue
+            ? ServiceRequestStatus.IN_PROGRESS
+            : ServiceRequestStatus.COMPLETED;
+
+        const nextAssessmentStatus = TechnicalAssessmentStatus.COMPLETED;
+
+        const topLevelActionMode: "NONE" | "INTERNAL" | "VENDOR" =
+            issuesWithVendorSnap.some((x) => x.actionMode === "VENDOR")
+                ? "VENDOR"
+                : issuesWithVendorSnap.some((x) => x.actionMode === "INTERNAL")
+                    ? "INTERNAL"
+                    : "NONE";
+
+        const firstVendor = issuesWithVendorSnap.find((x) => x.vendorId)?.vendorId ?? null;
+        const firstVendorName = firstVendor ? vendorMap.get(firstVendor) ?? null : null;
 
         const assessment = await repo.upsertAssessment(tx, {
             serviceRequestId,
-            movementKind: (input.movementKind ?? "UNKNOWN") as any,
-            runningOk: input.runningOk ?? null,
-            batteryWeak: input.batteryWeak ?? null,
-            batteryIssueBattery: !!input.batteryIssueBattery,
-            batteryIssueIC: !!input.batteryIssueIC,
-            batteryIssueCoil: !!input.batteryIssueCoil,
+            movementKind,
+            movementStatus: input.movementStatus,
+            caseStatus: input.caseStatus,
+            crystalStatus: input.crystalStatus,
+            crownStatus: input.crownStatus,
             preRate: input.preRate ?? null,
             preAmplitude: input.preAmplitude ?? null,
             preBeatError: input.preBeatError ?? null,
             postRate: input.postRate ?? null,
             postAmplitude: input.postAmplitude ?? null,
             postBeatError: input.postBeatError ?? null,
-            diagnosis: input.diagnosis ?? null,
+            actionMode: topLevelActionMode,
+            vendorId: firstVendor,
+            vendorNameSnap: firstVendorName,
             conclusion: input.conclusion ?? null,
             imageFileKey: input.imageFileKey ?? null,
+            status: nextAssessmentStatus,
             evaluatedById: sr.technicianId ?? null,
             evaluatedByNameSnap: sr.technicianNameSnap ?? null,
-            issues: normalizedIssues.map((x) => ({
-                ...x,
-                vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
-            })),
+            issues: issuesWithVendorSnap,
         });
 
         const autoArtifacts = await syncAutoLogsAndCost(tx, {
@@ -386,17 +410,47 @@ export async function saveTechnicalAssessment(input: {
             serialSnapshot: sr.serialSnapshot ?? null,
             technicianId: sr.technicianId ?? null,
             technicianNameSnap: sr.technicianNameSnap ?? null,
-            diagnosis: input.diagnosis ?? null,
             conclusion: input.conclusion ?? null,
-            issues: normalizedIssues.map((x) => ({
-                ...x,
-                vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
-            })),
+            issues: issuesWithVendorSnap,
         });
+
+        if (nextServiceStatus !== sr.status) {
+            await tx.serviceRequest.update({
+                where: { id: serviceRequestId },
+                data: {
+                    status: nextServiceStatus,
+                    vendorId: firstVendor,
+                    vendorNameSnap: firstVendorName,
+                    updatedAt: new Date(),
+                },
+            });
+
+            await tx.maintenanceRecord.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    serviceRequestId,
+                    productId: sr.productId ?? null,
+                    variantId: sr.variantId ?? null,
+                    brandSnapshot: sr.brandSnapshot ?? null,
+                    modelSnapshot: sr.modelSnapshot ?? null,
+                    refSnapshot: sr.refSnapshot ?? null,
+                    serialSnapshot: sr.serialSnapshot ?? null,
+                    technicianId: sr.technicianId ?? null,
+                    technicianNameSnap: sr.technicianNameSnap ?? null,
+                    vendorId: firstVendor,
+                    vendorName: firstVendorName,
+                    eventType: MaintenanceEventType.NOTE,
+                    notes: makeStatusChangeNote(nextServiceStatus, input.conclusion ?? null),
+                    currency: "VND",
+                    servicedAt: new Date(),
+                },
+            });
+        }
 
         return {
             assessment,
             autoArtifacts,
+            serviceRequestStatus: nextServiceStatus,
         };
     });
 }

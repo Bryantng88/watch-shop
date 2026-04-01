@@ -16,7 +16,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   vendorId: z.string().optional().nullable(),
-  vendorNameSnap: z.string().optional().nullable()
+  vendorNameSnap: z.string().optional().nullable(),
+  mechanicalPartCatalogId: z.string().optional().nullable()
 }).strict();
 export const TechnicalIssueUncheckedCreateWithoutServiceCatalogInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutServiceCatalogInput>;
 export const TechnicalIssueUncheckedCreateWithoutServiceCatalogInputObjectZodSchema = makeSchema();

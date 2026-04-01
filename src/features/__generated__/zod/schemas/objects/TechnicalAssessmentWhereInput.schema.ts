@@ -3,8 +3,6 @@ import type { Prisma } from '@prisma/client';
 import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFilter.schema';
 import { EnumTechnicalMovementKindFilterObjectSchema as EnumTechnicalMovementKindFilterObjectSchema } from './EnumTechnicalMovementKindFilter.schema';
 import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.schema';
-import { BoolNullableFilterObjectSchema as BoolNullableFilterObjectSchema } from './BoolNullableFilter.schema';
-import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema } from './DecimalNullableFilter.schema';
 import { EnumTechnicalActionModeFilterObjectSchema as EnumTechnicalActionModeFilterObjectSchema } from './EnumTechnicalActionModeFilter.schema';
@@ -13,6 +11,8 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { EnumTechnicalAssessmentStatusFilterObjectSchema as EnumTechnicalAssessmentStatusFilterObjectSchema } from './EnumTechnicalAssessmentStatusFilter.schema';
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { EnumTechnicalSectionStatusFilterObjectSchema as EnumTechnicalSectionStatusFilterObjectSchema } from './EnumTechnicalSectionStatusFilter.schema';
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
 import { ServiceRequestScalarRelationFilterObjectSchema as ServiceRequestScalarRelationFilterObjectSchema } from './ServiceRequestScalarRelationFilter.schema';
 import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './ServiceRequestWhereInput.schema';
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
@@ -26,11 +26,6 @@ const technicalassessmentwhereinputSchema = z.object({
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   serviceRequestId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   movementKind: z.union([z.lazy(() => EnumTechnicalMovementKindFilterObjectSchema), TechnicalMovementKindSchema]).optional(),
-  runningOk: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
-  batteryWeak: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
-  batteryIssueBattery: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  batteryIssueIC: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  batteryIssueCoil: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   preRate: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
   preAmplitude: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
   preBeatError: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
@@ -40,7 +35,6 @@ const technicalassessmentwhereinputSchema = z.object({
   actionMode: z.union([z.lazy(() => EnumTechnicalActionModeFilterObjectSchema), TechnicalActionModeSchema]).optional(),
   vendorId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   vendorNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  diagnosis: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   conclusion: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   imageFileKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   status: z.union([z.lazy(() => EnumTechnicalAssessmentStatusFilterObjectSchema), TechnicalAssessmentStatusSchema]).optional(),
@@ -48,6 +42,10 @@ const technicalassessmentwhereinputSchema = z.object({
   evaluatedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  movementStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  caseStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  crystalStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   ServiceRequest: z.union([z.lazy(() => ServiceRequestScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
   Vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()

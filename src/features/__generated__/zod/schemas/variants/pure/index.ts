@@ -35,3 +35,4 @@ export { ProductCategoryModelSchema } from './ProductCategory.pure';
 export { SupplyCatalogModelSchema } from './SupplyCatalog.pure';
 export { TechnicalAssessmentModelSchema } from './TechnicalAssessment.pure';
 export { TechnicalIssueModelSchema } from './TechnicalIssue.pure';
+export { MechanicalPartCatalogModelSchema } from './MechanicalPartCatalog.pure';

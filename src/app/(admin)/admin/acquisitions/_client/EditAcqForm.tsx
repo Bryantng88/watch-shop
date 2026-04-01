@@ -74,9 +74,8 @@ function uid() {
 function defaultWatchFlags(): WatchFlags {
     return {
         hasStrap: true,
-        isServiced: true,
+        needService: false,
         hasClasp: false,
-        isSpa: true,
     };
 }
 

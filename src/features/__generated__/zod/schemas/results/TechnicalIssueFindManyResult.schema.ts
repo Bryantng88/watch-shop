@@ -15,7 +15,9 @@ export const TechnicalIssueFindManyResultSchema = z.object({
   updatedAt: z.date(),
   vendorId: z.string().optional(),
   vendorNameSnap: z.string().optional(),
+  mechanicalPartCatalogId: z.string().optional(),
   TechnicalAssessment: z.unknown(),
+  MechanicalPartCatalog: z.unknown().optional(),
   ServiceCatalog: z.unknown().optional(),
   SupplyCatalog: z.unknown().optional(),
   Vendor: z.unknown().optional()

@@ -35,3 +35,4 @@ export { ProductCategoryInputSchema } from './ProductCategory.input';
 export { SupplyCatalogInputSchema } from './SupplyCatalog.input';
 export { TechnicalAssessmentInputSchema } from './TechnicalAssessment.input';
 export { TechnicalIssueInputSchema } from './TechnicalIssue.input';
+export { MechanicalPartCatalogInputSchema } from './MechanicalPartCatalog.input';

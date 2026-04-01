@@ -24,7 +24,9 @@ export const TechnicalIssueFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Techni
     updatedAt: z.boolean().optional(),
     vendorId: z.boolean().optional(),
     vendorNameSnap: z.boolean().optional(),
+    mechanicalPartCatalogId: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
+    MechanicalPartCatalog: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
     SupplyCatalog: z.boolean().optional(),
     Vendor: z.boolean().optional()
@@ -45,7 +47,9 @@ export const TechnicalIssueFindFirstOrThrowSelectZodSchema = z.object({
     updatedAt: z.boolean().optional(),
     vendorId: z.boolean().optional(),
     vendorNameSnap: z.boolean().optional(),
+    mechanicalPartCatalogId: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
+    MechanicalPartCatalog: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
     SupplyCatalog: z.boolean().optional(),
     Vendor: z.boolean().optional()

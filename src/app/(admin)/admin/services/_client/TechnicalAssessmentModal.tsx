@@ -1,100 +1,498 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import InlineImagePicker from "../../products/_components/InlineImagePicker";
+import * as React from "react";
+import {
+    Wrench,
+    ShieldCheck,
+    CircleCheck,
+    AlertTriangle,
+    Plus,
+    Trash2,
+    Camera,
+    ChevronDown,
+    ScanSearch,
+} from "lucide-react";
 
-type IssueRow = {
+type MachineType = "MECHANICAL" | "QUARTZ";
+type HealthStatus = "GOOD" | "ISSUE";
+type ExecutionType = "INHOUSE" | "VENDOR";
+type MovementAction =
+    | "SERVICE"
+    | "REPLACE_PART"
+    | "REGULATE"
+    | "WATERPROOF"
+    | "REPLACE_MOVEMENT"
+    | "BATTERY_CHANGE";
+
+type FunctionalStatus = "GOOD" | "ISSUE";
+
+type AppearanceIssueCode =
+    | "CASE_LIGHT_SCRATCH"
+    | "CASE_HEAVY_SCRATCH"
+    | "CASE_DENT"
+    | "CASE_PLATING_WORN"
+    | "CASE_OVERPOLISHED"
+    | "GLASS_LIGHT_SCRATCH"
+    | "GLASS_HEAVY_SCRATCH"
+    | "GLASS_CLOUDY"
+    | "GLASS_CRACKED"
+    | "DIAL_SPOTS"
+    | "DIAL_FADING"
+    | "DIAL_STAIN"
+    | "DIAL_MARKER_DAMAGE";
+
+type MovementLine = {
     id: string;
-    area: string;
-    issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
-    actionMode: "NONE" | "INTERNAL" | "VENDOR";
-    vendorId: string;
-    serviceCatalogId: string;
-    supplyCatalogId: string;
-    note: string;
-    estimatedCost: string;
-    sortOrder: number;
+    action?: MovementAction;
+    execution?: ExecutionType;
+    vendorId?: string;
+    partId?: string;
+    cost?: string;
+    note?: string;
 };
 
-type PanelData = {
-    serviceRequest: {
-        id: string;
-        refNo: string | null;
-        status: string;
-        scope: string | null;
-        notes: string | null;
-        skuSnapshot: string | null;
-        productTitle: string | null;
-        movement: string | null;
-        model: string | null;
-        ref: string | null;
-        primaryImageUrl: string | null;
-        productImages: Array<{ fileKey: string; role?: string | null }>;
-    };
-    assessment: {
-        movementKind: "UNKNOWN" | "BATTERY" | "MECHANICAL";
-        runningOk: boolean | null;
-        batteryWeak: boolean;
-        batteryIssueBattery: boolean;
-        batteryIssueIC: boolean;
-        batteryIssueCoil: boolean;
-        preRate: number | null;
-        preAmplitude: number | null;
-        preBeatError: number | null;
-        postRate: number | null;
-        postAmplitude: number | null;
-        postBeatError: number | null;
-        diagnosis: string;
-        conclusion: string;
-        imageFileKey: string | null;
-        status: string;
-        issues: Array<{
-            id?: string;
-            area?: string | null;
-            issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
-            actionMode: "NONE" | "INTERNAL" | "VENDOR";
-            vendorId?: string | null;
-            serviceCatalogId?: string | null;
-            supplyCatalogId?: string | null;
-            note?: string | null;
-            estimatedCost?: number | null;
-            sortOrder?: number | null;
-        }>;
-    };
-    serviceCatalogs: Array<{
-        id: string;
-        code: string | null;
-        name: string;
-        vendorPrice: number | null;
-        customerPrice: number | null;
-        internalCost: number | null;
-        note: string | null;
-    }>;
-    supplyCatalogs: Array<{
-        id: string;
-        code: string;
-        name: string;
-        category: string;
-        unit: string | null;
-        defaultCost: number | null;
-        note: string | null;
-    }>;
-    vendors: Array<{ id: string; name: string }>;
+type AppearanceBlockValue = {
+    issues: AppearanceIssueCode[];
+    manualDeduction: string;
+    note?: string;
 };
 
-function emptyIssue(): IssueRow {
-    return {
-        id: Math.random().toString(36).slice(2),
-        area: "",
-        issueType: "CHECK",
-        actionMode: "INTERNAL",
-        vendorId: "",
-        serviceCatalogId: "",
-        supplyCatalogId: "",
-        note: "",
-        estimatedCost: "",
-        sortOrder: 0,
+type TechnicalAssessmentModalProps = {
+    open: boolean;
+    serviceRequestId: string | null;
+    onClose: () => void;
+    onSaved: () => void;
+    productName?: string;
+    productSku?: string | null;
+    productImage?: string | null;
+    movementSpecLabel?: string | null;
+};
+
+const vendors = [
+    { id: "v1", name: "Vendor A" },
+    { id: "v2", name: "Vendor B" },
+    { id: "v3", name: "Vendor C" },
+];
+
+const parts = [
+    { id: "p1", name: "Pin" },
+    { id: "p2", name: "Dây tóc" },
+    { id: "p3", name: "Núm" },
+    { id: "p4", name: "Kính" },
+    { id: "p5", name: "Bánh xe cân bằng" },
+];
+
+const CASE_ISSUES: { code: AppearanceIssueCode; label: string; deduction: number }[] = [
+    { code: "CASE_LIGHT_SCRATCH", label: "Trầy nhẹ", deduction: 5 },
+    { code: "CASE_HEAVY_SCRATCH", label: "Trầy nhiều", deduction: 12 },
+    { code: "CASE_DENT", label: "Cấn móp", deduction: 15 },
+    { code: "CASE_PLATING_WORN", label: "Mòn mạ", deduction: 18 },
+    { code: "CASE_OVERPOLISHED", label: "Bóng lại nhiều / mất nét", deduction: 10 },
+];
+
+const GLASS_ISSUES: { code: AppearanceIssueCode; label: string; deduction: number }[] = [
+    { code: "GLASS_LIGHT_SCRATCH", label: "Xước nhẹ", deduction: 4 },
+    { code: "GLASS_HEAVY_SCRATCH", label: "Xước nhiều", deduction: 10 },
+    { code: "GLASS_CLOUDY", label: "Mờ / ố", deduction: 12 },
+    { code: "GLASS_CRACKED", label: "Nứt / vỡ", deduction: 25 },
+];
+
+const DIAL_ISSUES: { code: AppearanceIssueCode; label: string; deduction: number }[] = [
+    { code: "DIAL_SPOTS", label: "Đốm nhẹ", deduction: 8 },
+    { code: "DIAL_FADING", label: "Xuống màu", deduction: 10 },
+    { code: "DIAL_STAIN", label: "Ố / bẩn / mốc", deduction: 16 },
+    { code: "DIAL_MARKER_DAMAGE", label: "Lỗi cọc / số / kim", deduction: 20 },
+];
+
+function cx(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
+}
+
+function formatCurrency(value: number) {
+    return new Intl.NumberFormat("vi-VN").format(value) + "đ";
+}
+
+function parseMoney(value?: string) {
+    if (!value) return 0;
+    const numeric = Number(value.toString().replace(/[^\d]/g, ""));
+    return Number.isNaN(numeric) ? 0 : numeric;
+}
+
+function parseNumber(value?: string) {
+    if (!value) return 0;
+    const numeric = Number(value.toString().replace(/[^\d.-]/g, ""));
+    return Number.isNaN(numeric) ? 0 : numeric;
+}
+
+function makeId() {
+    return typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+}
+
+function Pill({
+    children,
+    tone = "gray",
+}: {
+    children: React.ReactNode;
+    tone?: "neutral" | "amber" | "gray";
+}) {
+    const styles = {
+        neutral: "border-slate-200 bg-slate-50 text-slate-700",
+        amber: "border-amber-200 bg-amber-50 text-amber-700",
+        gray: "border-slate-200 bg-slate-100 text-slate-700",
     };
+
+    return (
+        <span
+            className={cx(
+                "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                styles[tone]
+            )}
+        >
+            {children}
+        </span>
+    );
+}
+
+function SectionCard({
+    title,
+    icon,
+    badge,
+    children,
+}: {
+    title: string;
+    icon?: React.ReactNode;
+    badge?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    return (
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        {icon}
+                    </div>
+                    <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+                </div>
+                {badge}
+            </div>
+            <div className="space-y-5 p-5">{children}</div>
+        </section>
+    );
+}
+
+function Field({
+    label,
+    children,
+}: {
+    label: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">{label}</label>
+            {children}
+        </div>
+    );
+}
+
+function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+    return (
+        <input
+            {...props}
+            className={cx(
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition",
+                "placeholder:text-slate-400 focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
+}
+
+function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+    return (
+        <select
+            {...props}
+            className={cx(
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
+}
+
+function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+    return (
+        <textarea
+            {...props}
+            className={cx(
+                "min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition",
+                "placeholder:text-slate-400 focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
+}
+
+function Button({
+    children,
+    variant = "primary",
+    className,
+    ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: "primary" | "outline" | "ghost";
+}) {
+    const styles = {
+        primary: "bg-slate-900 text-white hover:bg-slate-800 border-slate-900",
+        outline: "bg-white text-slate-900 border-slate-200 hover:bg-slate-50",
+        ghost: "bg-transparent text-slate-700 border-transparent hover:bg-slate-100",
+    };
+
+    return (
+        <button
+            {...props}
+            className={cx(
+                "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50",
+                styles[variant],
+                className
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
+function CompactStatusToggle({
+    value,
+    onChange,
+    goodText = "Đẹp / ổn",
+    issueText = "Cần xử lý",
+}: {
+    value: HealthStatus;
+    onChange: (value: HealthStatus) => void;
+    goodText?: string;
+    issueText?: string;
+}) {
+    return (
+        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+            <button
+                type="button"
+                onClick={() => onChange("GOOD")}
+                className={cx(
+                    "rounded-lg px-4 py-2 text-sm font-medium transition",
+                    value === "GOOD"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                )}
+            >
+                {goodText}
+            </button>
+            <button
+                type="button"
+                onClick={() => onChange("ISSUE")}
+                className={cx(
+                    "rounded-lg px-4 py-2 text-sm font-medium transition",
+                    value === "ISSUE"
+                        ? "bg-white text-amber-700 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                )}
+            >
+                {issueText}
+            </button>
+        </div>
+    );
+}
+
+function statusBadge(status: HealthStatus, goodLabel = "Đẹp / ổn", issueLabel = "Cần xử lý") {
+    return status === "GOOD" ? (
+        <Pill tone="neutral">{goodLabel}</Pill>
+    ) : (
+        <Pill tone="amber">{issueLabel}</Pill>
+    );
+}
+
+function calculateAppearanceScore(
+    block: AppearanceBlockValue,
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+) {
+    const issueDeduction = block.issues.reduce((sum, code) => {
+        const found = definitions.find((item) => item.code === code);
+        return sum + (found?.deduction ?? 0);
+    }, 0);
+
+    const manual = Math.max(0, parseNumber(block.manualDeduction));
+    return Math.max(0, 100 - issueDeduction - manual);
+}
+
+function issueSummary(
+    block: AppearanceBlockValue,
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+) {
+    return block.issues
+        .map((code) => definitions.find((item) => item.code === code)?.label)
+        .filter(Boolean)
+        .join(", ");
+}
+
+function IssueCheckboxGroup({
+    options,
+    selected,
+    onChange,
+}: {
+    options: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    selected: AppearanceIssueCode[];
+    onChange: (next: AppearanceIssueCode[]) => void;
+}) {
+    function toggleIssue(code: AppearanceIssueCode) {
+        if (selected.includes(code)) {
+            onChange(selected.filter((item) => item !== code));
+            return;
+        }
+        onChange([...selected, code]);
+    }
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            {options.map((item) => {
+                const active = selected.includes(item.code);
+
+                return (
+                    <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => toggleIssue(item.code)}
+                        className={cx(
+                            "rounded-full border px-3 py-1.5 text-sm transition",
+                            active
+                                ? "border-slate-300 bg-slate-100 text-slate-900"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        )}
+                    >
+                        {item.label}
+                        <span className="ml-1 text-slate-400">(-{item.deduction})</span>
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function ScorePill({ score }: { score: number }) {
+    return (
+        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+            {score}/100
+        </div>
+    );
+}
+
+function AppearanceScoreBlock({
+    title,
+    description,
+    value,
+    onChange,
+    definitions,
+}: {
+    title: string;
+    description?: string;
+    value: AppearanceBlockValue;
+    onChange: (value: AppearanceBlockValue) => void;
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[];
+}) {
+    const score = calculateAppearanceScore(value, definitions);
+    const summary = issueSummary(value, definitions);
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                    <div className="text-sm font-semibold text-slate-900">{title}</div>
+                    {description ? <div className="mt-1 text-sm text-slate-500">{description}</div> : null}
+                </div>
+                <ScorePill score={score} />
+            </div>
+
+            <div className="grid gap-4">
+                <Field label="Khuyết điểm ghi nhận">
+                    <IssueCheckboxGroup
+                        options={definitions}
+                        selected={value.issues}
+                        onChange={(issues) => onChange({ ...value, issues })}
+                    />
+                </Field>
+
+                <div className="grid gap-4 md:grid-cols-[160px_1fr]">
+                    <Field label="Trừ thêm">
+                        <TextInput
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={value.manualDeduction}
+                            onChange={(e) => onChange({ ...value, manualDeduction: e.target.value })}
+                        />
+                    </Field>
+
+                    <Field label="Tóm tắt nhanh">
+                        <div className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                            {summary || "Chưa ghi nhận khuyết điểm"}
+                        </div>
+                    </Field>
+                </div>
+
+                <Field label="Ghi chú">
+                    <TextArea
+                        placeholder="Ghi chú thêm về tình trạng thực tế..."
+                        value={value.note ?? ""}
+                        onChange={(e) => onChange({ ...value, note: e.target.value })}
+                    />
+                </Field>
+            </div>
+        </div>
+    );
+}
+
+function CrownFunctionalBlock({
+    status,
+    onStatusChange,
+    note,
+    onNoteChange,
+}: {
+    status: FunctionalStatus;
+    onStatusChange: (value: FunctionalStatus) => void;
+    note?: string;
+    onNoteChange: (value: string) => void;
+}) {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-slate-900">Núm</div>
+                <Pill tone={status === "GOOD" ? "neutral" : "amber"}>
+                    {status === "GOOD" ? "Ổn" : "Cần xử lý"}
+                </Pill>
+            </div>
+
+            <div className="space-y-4">
+                <div>
+                    <div className="mb-2 text-sm font-medium text-slate-700">Tình trạng chức năng</div>
+                    <CompactStatusToggle
+                        value={status}
+                        onChange={onStatusChange}
+                        goodText="Ổn"
+                        issueText="Cần xử lý"
+                    />
+                </div>
+
+                {status === "ISSUE" ? (
+                    <Field label="Ghi chú">
+                        <TextArea
+                            placeholder="Ví dụ: núm lỏng, trượt ren, khó lên cót, khó chỉnh lịch..."
+                            value={note ?? ""}
+                            onChange={(e) => onNoteChange(e.target.value)}
+                        />
+                    </Field>
+                ) : null}
+            </div>
+        </div>
+    );
 }
 
 export default function TechnicalAssessmentModal({
@@ -102,647 +500,602 @@ export default function TechnicalAssessmentModal({
     serviceRequestId,
     onClose,
     onSaved,
-}: {
-    open: boolean;
-    serviceRequestId: string | null;
-    onClose: () => void;
-    onSaved?: () => void;
-}) {
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [panel, setPanel] = useState<PanelData | null>(null);
+    productName = "takeo kuchi méo pin mặt xanh",
+    productSku = "-",
+    productImage = null,
+    movementSpecLabel = "-",
+}: TechnicalAssessmentModalProps) {
+    const [machineType, setMachineType] = React.useState<MachineType>("MECHANICAL");
+    const [movementStatus, setMovementStatus] = React.useState<HealthStatus>("GOOD");
+    const [showBeforeSpecs, setShowBeforeSpecs] = React.useState(false);
 
-    const [movementKind, setMovementKind] = useState<"UNKNOWN" | "BATTERY" | "MECHANICAL">("UNKNOWN");
-    const [runningOk, setRunningOk] = useState<boolean | null>(null);
-    const [batteryWeak, setBatteryWeak] = useState(false);
-    const [batteryIssueBattery, setBatteryIssueBattery] = useState(false);
-    const [batteryIssueIC, setBatteryIssueIC] = useState(false);
-    const [batteryIssueCoil, setBatteryIssueCoil] = useState(false);
+    const [beforeSpecs, setBeforeSpecs] = React.useState({
+        rate: "",
+        amp: "",
+        err: "",
+    });
 
-    const [preRate, setPreRate] = useState("");
-    const [preAmplitude, setPreAmplitude] = useState("");
-    const [preBeatError, setPreBeatError] = useState("");
-    const [postRate, setPostRate] = useState("");
-    const [postAmplitude, setPostAmplitude] = useState("");
-    const [postBeatError, setPostBeatError] = useState("");
+    const [afterSpecs, setAfterSpecs] = React.useState({
+        rate: "",
+        amp: "",
+        err: "",
+    });
 
-    const [diagnosis, setDiagnosis] = useState("");
-    const [conclusion, setConclusion] = useState("");
-    const [imageFileKey, setImageFileKey] = useState("");
-    const [issues, setIssues] = useState<IssueRow[]>([]);
+    const [movementLines, setMovementLines] = React.useState<MovementLine[]>([
+        {
+            id: makeId(),
+            execution: "INHOUSE",
+        },
+    ]);
 
-    const serviceCatalogMap = useMemo(() => {
-        const map = new Map<string, PanelData["serviceCatalogs"][number]>();
-        for (const row of panel?.serviceCatalogs ?? []) map.set(row.id, row);
-        return map;
-    }, [panel]);
+    const [caseAppearance, setCaseAppearance] = React.useState<AppearanceBlockValue>({
+        issues: [],
+        manualDeduction: "",
+        note: "",
+    });
 
-    const supplyCatalogMap = useMemo(() => {
-        const map = new Map<string, PanelData["supplyCatalogs"][number]>();
-        for (const row of panel?.supplyCatalogs ?? []) map.set(row.id, row);
-        return map;
-    }, [panel]);
+    const [glassAppearance, setGlassAppearance] = React.useState<AppearanceBlockValue>({
+        issues: [],
+        manualDeduction: "",
+        note: "",
+    });
 
-    const shouldShowIssueSection = runningOk === false;
-    const shouldShowPostMetrics = movementKind === "MECHANICAL" && runningOk === false;
+    const [dialAppearance, setDialAppearance] = React.useState<AppearanceBlockValue>({
+        issues: [],
+        manualDeduction: "",
+        note: "",
+    });
 
-    useEffect(() => {
-        if (!open || !serviceRequestId) return;
+    const [crownStatus, setCrownStatus] = React.useState<FunctionalStatus>("GOOD");
+    const [crownNote, setCrownNote] = React.useState("");
 
-        let cancelled = false;
+    const [conclusion, setConclusion] = React.useState("");
 
-        async function run() {
-            try {
-                setLoading(true);
-                const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/technical-assessment`);
-                const data = await res.json().catch(() => null);
-                if (!res.ok) throw new Error(data?.error || "Load failed");
-                if (cancelled) return;
+    if (!open) return null;
 
-                setPanel(data);
+    const caseScore = calculateAppearanceScore(caseAppearance, CASE_ISSUES);
+    const glassScore = calculateAppearanceScore(glassAppearance, GLASS_ISSUES);
+    const dialScore = calculateAppearanceScore(dialAppearance, DIAL_ISSUES);
 
-                const a = data.assessment;
-                setMovementKind(a.movementKind ?? "UNKNOWN");
-                setRunningOk(a.runningOk ?? null);
-                setBatteryWeak(!!a.batteryWeak);
-                setBatteryIssueBattery(!!a.batteryIssueBattery);
-                setBatteryIssueIC(!!a.batteryIssueIC);
-                setBatteryIssueCoil(!!a.batteryIssueCoil);
+    const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
 
-                setPreRate(a.preRate != null ? String(a.preRate) : "");
-                setPreAmplitude(a.preAmplitude != null ? String(a.preAmplitude) : "");
-                setPreBeatError(a.preBeatError != null ? String(a.preBeatError) : "");
-                setPostRate(a.postRate != null ? String(a.postRate) : "");
-                setPostAmplitude(a.postAmplitude != null ? String(a.postAmplitude) : "");
-                setPostBeatError(a.postBeatError != null ? String(a.postBeatError) : "");
+    const movementCost = movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
+    const totalCost = movementCost;
 
-                setDiagnosis(a.diagnosis ?? "");
-                setConclusion(a.conclusion ?? "");
-                setImageFileKey(a.imageFileKey ?? "");
-                setIssues(
-                    Array.isArray(a.issues) && a.issues.length
-                        ? a.issues.map((x: any, idx: number) => ({
-                            id: x.id ?? `${idx}`,
-                            area: x.area ?? "",
-                            issueType: x.issueType ?? "CHECK",
-                            actionMode: x.actionMode ?? "INTERNAL",
-                            vendorId: x.vendorId ?? "",
-                            serviceCatalogId: x.serviceCatalogId ?? "",
-                            supplyCatalogId: x.supplyCatalogId ?? "",
-                            note: x.note ?? "",
-                            estimatedCost: x.estimatedCost != null ? String(x.estimatedCost) : "",
-                            sortOrder: x.sortOrder ?? idx,
-                        }))
-                        : []
-                );
-            } catch (e: any) {
-                alert(e?.message || "Load technical assessment failed");
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        run();
-        return () => {
-            cancelled = true;
-        };
-    }, [open, serviceRequestId]);
-
-    function addIssue() {
-        setIssues((prev) => [...prev, { ...emptyIssue(), sortOrder: prev.length }]);
+    function addMovementLine() {
+        setMovementLines((prev) => [
+            ...prev,
+            {
+                id: makeId(),
+                execution: "INHOUSE",
+            },
+        ]);
     }
 
-    function updateIssue(id: string, patch: Partial<IssueRow>) {
-        setIssues((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    function updateMovementLine(id: string, patch: Partial<MovementLine>) {
+        setMovementLines((prev) =>
+            prev.map((line) => (line.id === id ? { ...line, ...patch } : line))
+        );
     }
 
-    function removeIssue(id: string) {
-        setIssues((prev) => prev.filter((x) => x.id !== id));
+    function removeMovementLine(id: string) {
+        setMovementLines((prev) => prev.filter((line) => line.id !== id));
     }
-
-    async function handleSave() {
-        if (!serviceRequestId) return;
-
-        try {
-            setSaving(true);
-
-            const issuesPayload = shouldShowIssueSection
-                ? issues.map((x, idx) => ({
-                    area: x.area || null,
-                    issueType: x.issueType,
-                    actionMode: x.actionMode,
-                    vendorId: x.actionMode === "VENDOR" ? x.vendorId || null : null,
-                    serviceCatalogId: x.serviceCatalogId || null,
-                    supplyCatalogId: x.supplyCatalogId || null,
-                    note: x.note || null,
-                    estimatedCost: x.estimatedCost === "" ? null : Number(x.estimatedCost),
-                    sortOrder: idx,
-                }))
-                : [];
-
-            const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/technical-assessment`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    movementKind,
-                    runningOk,
-                    batteryWeak,
-                    batteryIssueBattery,
-                    batteryIssueIC,
-                    batteryIssueCoil,
-                    preRate: preRate === "" ? null : Number(preRate),
-                    preAmplitude: preAmplitude === "" ? null : Number(preAmplitude),
-                    preBeatError: preBeatError === "" ? null : Number(preBeatError),
-                    postRate: shouldShowPostMetrics && postRate !== "" ? Number(postRate) : null,
-                    postAmplitude: shouldShowPostMetrics && postAmplitude !== "" ? Number(postAmplitude) : null,
-                    postBeatError: shouldShowPostMetrics && postBeatError !== "" ? Number(postBeatError) : null,
-                    diagnosis,
-                    conclusion,
-                    imageFileKey: imageFileKey || null,
-                    issues: issuesPayload,
-                }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.error || "Save failed");
-
-            alert("Đã lưu đánh giá kỹ thuật");
-            onSaved?.();
-            onClose();
-        } catch (e: any) {
-            alert(e?.message || "Save failed");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    if (!open || !serviceRequestId) return null;
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 p-4">
-            <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white shadow-2xl">
-                <div className="sticky top-0 z-10 flex items-start justify-between border-b bg-white px-6 py-5">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4">
+            <div className="absolute inset-0" onClick={onClose} />
+
+            <div className="relative z-[1001] flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                     <div>
-                        <h2 className="text-2xl font-semibold">Đánh giá kỹ thuật</h2>
-                        <div className="mt-1 text-sm text-slate-500">
-                            {panel?.serviceRequest.refNo || panel?.serviceRequest.id || "-"}
-                        </div>
+                        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                            Đánh giá kỹ thuật
+                        </h1>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {serviceRequestId ? `Service Request: ${serviceRequestId}` : "Chưa có mã phiếu"}
+                        </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50"
-                    >
+                    <Button type="button" variant="outline" onClick={onClose}>
                         Đóng
-                    </button>
+                    </Button>
                 </div>
 
-                {loading ? (
-                    <div className="p-6 text-sm text-slate-500">Đang tải...</div>
-                ) : panel ? (
-                    <div className="space-y-6 p-6">
-                        <section className="rounded-xl border p-4">
-                            <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-center">
-                                        <InlineImagePicker
-                                            imageUrl={imageFileKey || panel.serviceRequest.primaryImageUrl || null}
-                                            onPick={(key) => setImageFileKey(key)}
-                                        />
+                <div className="flex-1 space-y-6 overflow-y-auto bg-slate-50/60 p-6">
+                    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="p-5">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                                        {productImage ? (
+                                            <img
+                                                src={productImage}
+                                                alt={productName}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                                                No image
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 shadow-sm"
+                                        >
+                                            <Camera className="h-4 w-4 text-slate-600" />
+                                        </button>
                                     </div>
 
-                                    {imageFileKey ? (
+                                    <div className="space-y-1">
+                                        <div className="text-lg font-semibold text-slate-900">{productName}</div>
+                                        <div className="text-sm text-slate-500">SKU: {productSku || "-"}</div>
+                                        <div className="text-sm text-slate-500">
+                                            Bộ máy từ spec: {movementSpecLabel || "-"}
+                                        </div>
+                                        <div className="pt-1">
+                                            <Pill tone="neutral">
+                                                Điểm ngoại hình: {appearanceScore}/100
+                                            </Pill>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <SectionCard
+                        title="Đánh giá máy"
+                        icon={<Wrench className="h-5 w-5" />}
+                        badge={statusBadge(movementStatus, "Chạy tốt")}
+                    >
+                        <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+                            <Field label="Loại máy">
+                                <SelectInput
+                                    value={machineType}
+                                    onChange={(e) => setMachineType(e.target.value as MachineType)}
+                                >
+                                    <option value="MECHANICAL">Máy cơ</option>
+                                    <option value="QUARTZ">Máy pin</option>
+                                </SelectInput>
+                            </Field>
+
+                            <Field label="Tình trạng máy">
+                                <CompactStatusToggle
+                                    value={movementStatus}
+                                    onChange={setMovementStatus}
+                                    goodText="Chạy tốt"
+                                    issueText="Cần xử lý"
+                                />
+                            </Field>
+                        </div>
+
+                        {movementStatus === "GOOD" ? (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                                        <CircleCheck className="h-5 w-5 text-slate-600" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-slate-800">
+                                            Máy chạy ổn, không cần can thiệp kỹ thuật
+                                        </div>
+                                        <div className="mt-1 text-sm text-slate-500">
+                                            Khi chọn chạy tốt thì ẩn toàn bộ thông số trước/sau và block xử lý.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-5">
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-amber-200 bg-white">
+                                            <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-amber-800">Máy cần xử lý kỹ thuật</div>
+                                            <div className="mt-1 text-sm text-amber-700/90">
+                                                Chỉ bung các phần chuyên sâu khi thực sự có vấn đề.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900">Xử lý máy</div>
+                                            <div className="text-sm text-slate-500">
+                                                Mỗi dòng là một nghiệp vụ kỹ thuật
+                                            </div>
+                                        </div>
+
+                                        <Button type="button" onClick={addMovementLine}>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Thêm dòng
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {movementLines.map((line, index) => {
+                                            const isVendor = line.execution === "VENDOR";
+                                            const isReplacePart = line.action === "REPLACE_PART";
+
+                                            return (
+                                                <div
+                                                    key={line.id}
+                                                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                                                >
+                                                    <div className="mb-4 flex items-center justify-between">
+                                                        <div className="text-sm font-semibold text-slate-900">
+                                                            Dòng #{index + 1}
+                                                        </div>
+
+                                                        {movementLines.length > 1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                className="px-2 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                                onClick={() => removeMovementLine(line.id)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid gap-4 md:grid-cols-3">
+                                                        <Field label="Xử lý">
+                                                            <SelectInput
+                                                                value={line.action ?? ""}
+                                                                onChange={(e) =>
+                                                                    updateMovementLine(line.id, {
+                                                                        action: e.target.value as MovementAction,
+                                                                        partId:
+                                                                            e.target.value === "REPLACE_PART"
+                                                                                ? line.partId
+                                                                                : undefined,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">Chọn xử lý</option>
+                                                                {machineType === "MECHANICAL" ? (
+                                                                    <>
+                                                                        <option value="SERVICE">Lau dầu</option>
+                                                                        <option value="REPLACE_PART">Thay linh kiện</option>
+                                                                        <option value="REGULATE">
+                                                                            Nắn chỉnh dây tóc / chỉnh sai số
+                                                                        </option>
+                                                                        <option value="WATERPROOF">Chống nước</option>
+                                                                        <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <option value="BATTERY_CHANGE">Thay pin</option>
+                                                                        <option value="REPLACE_PART">Thay linh kiện</option>
+                                                                        <option value="WATERPROOF">Chống nước</option>
+                                                                        <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                                                                    </>
+                                                                )}
+                                                            </SelectInput>
+                                                        </Field>
+
+                                                        <Field label="Thực hiện">
+                                                            <SelectInput
+                                                                value={line.execution ?? ""}
+                                                                onChange={(e) =>
+                                                                    updateMovementLine(line.id, {
+                                                                        execution: e.target.value as ExecutionType,
+                                                                        vendorId:
+                                                                            e.target.value === "VENDOR"
+                                                                                ? line.vendorId
+                                                                                : undefined,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">Chọn hình thức</option>
+                                                                <option value="INHOUSE">Nội bộ</option>
+                                                                <option value="VENDOR">Vendor</option>
+                                                            </SelectInput>
+                                                        </Field>
+
+                                                        <Field label="Chi phí">
+                                                            <TextInput
+                                                                inputMode="numeric"
+                                                                placeholder="0"
+                                                                value={line.cost ?? ""}
+                                                                onChange={(e) =>
+                                                                    updateMovementLine(line.id, {
+                                                                        cost: e.target.value,
+                                                                    })
+                                                                }
+                                                            />
+                                                        </Field>
+
+                                                        {isVendor ? (
+                                                            <Field label="Vendor">
+                                                                <SelectInput
+                                                                    value={line.vendorId ?? ""}
+                                                                    onChange={(e) =>
+                                                                        updateMovementLine(line.id, {
+                                                                            vendorId: e.target.value,
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <option value="">Chọn vendor</option>
+                                                                    {vendors.map((vendor) => (
+                                                                        <option key={vendor.id} value={vendor.id}>
+                                                                            {vendor.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </SelectInput>
+                                                            </Field>
+                                                        ) : null}
+
+                                                        {isReplacePart ? (
+                                                            <Field label="Linh kiện cần thay">
+                                                                <SelectInput
+                                                                    value={line.partId ?? ""}
+                                                                    onChange={(e) =>
+                                                                        updateMovementLine(line.id, {
+                                                                            partId: e.target.value,
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <option value="">Chọn linh kiện</option>
+                                                                    {parts.map((part) => (
+                                                                        <option key={part.id} value={part.id}>
+                                                                            {part.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </SelectInput>
+                                                            </Field>
+                                                        ) : null}
+
+                                                        <div className="md:col-span-3">
+                                                            <Field label="Ghi chú">
+                                                                <TextArea
+                                                                    placeholder="Ghi rõ linh kiện thay, sai số, xử lý chống nước..."
+                                                                    value={line.note ?? ""}
+                                                                    onChange={(e) =>
+                                                                        updateMovementLine(line.id, {
+                                                                            note: e.target.value,
+                                                                        })
+                                                                    }
+                                                                />
+                                                            </Field>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900">
+                                                Thông số sau xử lý
+                                            </div>
+                                            <div className="text-sm text-slate-500">
+                                                Chỉ nhập khi thực sự có kiểm tra lại thông số
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setShowBeforeSpecs((prev) => !prev)}
+                                        >
+                                            Thông số trước xử lý
+                                            <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </div>
+
+                                    {showBeforeSpecs ? (
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                                            <div className="mb-3 text-sm font-semibold text-slate-900">
+                                                Thông số trước xử lý
+                                            </div>
+
+                                            <div className="grid gap-4 md:grid-cols-3">
+                                                <Field label="Rate">
+                                                    <TextInput
+                                                        value={beforeSpecs.rate}
+                                                        onChange={(e) =>
+                                                            setBeforeSpecs((prev) => ({
+                                                                ...prev,
+                                                                rate: e.target.value,
+                                                            }))
+                                                        }
+                                                    />
+                                                </Field>
+                                                <Field label="Amp">
+                                                    <TextInput
+                                                        value={beforeSpecs.amp}
+                                                        onChange={(e) =>
+                                                            setBeforeSpecs((prev) => ({
+                                                                ...prev,
+                                                                amp: e.target.value,
+                                                            }))
+                                                        }
+                                                    />
+                                                </Field>
+                                                <Field label="Err">
+                                                    <TextInput
+                                                        value={beforeSpecs.err}
+                                                        onChange={(e) =>
+                                                            setBeforeSpecs((prev) => ({
+                                                                ...prev,
+                                                                err: e.target.value,
+                                                            }))
+                                                        }
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <Field label="Rate">
+                                            <TextInput
+                                                value={afterSpecs.rate}
+                                                onChange={(e) =>
+                                                    setAfterSpecs((prev) => ({
+                                                        ...prev,
+                                                        rate: e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                        <Field label="Amp">
+                                            <TextInput
+                                                value={afterSpecs.amp}
+                                                onChange={(e) =>
+                                                    setAfterSpecs((prev) => ({
+                                                        ...prev,
+                                                        amp: e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                        <Field label="Err">
+                                            <TextInput
+                                                value={afterSpecs.err}
+                                                onChange={(e) =>
+                                                    setAfterSpecs((prev) => ({
+                                                        ...prev,
+                                                        err: e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </SectionCard>
+
+                    <SectionCard
+                        title="Đánh giá ngoại hình"
+                        icon={<ShieldCheck className="h-5 w-5" />}
+                        badge={
+                            <div className="flex items-center gap-2">
+                                <Pill tone="gray">Vỏ / kính / mặt số</Pill>
+                                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                                    {appearanceScore}/100
+                                </div>
+                            </div>
+                        }
+                    >
+                        <AppearanceScoreBlock
+                            title="Vỏ"
+                            description="Tính điểm dựa trên mức độ hoàn thiện vỏ, cạnh nét, mòn mạ, trầy xước."
+                            value={caseAppearance}
+                            onChange={setCaseAppearance}
+                            definitions={CASE_ISSUES}
+                        />
+
+                        <AppearanceScoreBlock
+                            title="Kính"
+                            description="Tính điểm theo độ trong, độ xước, nứt hoặc tình trạng xuống cấp của kính."
+                            value={glassAppearance}
+                            onChange={setGlassAppearance}
+                            definitions={GLASS_ISSUES}
+                        />
+
+                        <AppearanceScoreBlock
+                            title="Mặt số"
+                            description="Tính điểm theo độ sạch, độ đều màu, tình trạng cọc số, kim và bề mặt."
+                            value={dialAppearance}
+                            onChange={setDialAppearance}
+                            definitions={DIAL_ISSUES}
+                        />
+
+                        <CrownFunctionalBlock
+                            status={crownStatus}
+                            onStatusChange={setCrownStatus}
+                            note={crownNote}
+                            onNoteChange={setCrownNote}
+                        />
+                    </SectionCard>
+
+                    <SectionCard
+                        title="Kết luận kỹ thuật"
+                        icon={<ScanSearch className="h-5 w-5" />}
+                        badge={
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                                    Ngoại hình: {appearanceScore}/100
+                                </div>
+                                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                                    Tổng chi phí: {formatCurrency(totalCost)}
+                                </div>
+                            </div>
+                        }
+                    >
+                        <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Ảnh kỹ thuật
+                                </label>
+                                <div className="h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                                    {productImage ? (
                                         <img
-                                            src={`/api/media/sign?key=${encodeURIComponent(imageFileKey)}`}
-                                            alt="main"
-                                            className="h-36 w-36 rounded-xl border object-cover"
+                                            src={productImage}
+                                            alt={productName}
+                                            className="h-full w-full object-cover"
                                         />
                                     ) : (
-                                        <div className="flex h-36 w-36 items-center justify-center rounded-xl border text-xs text-slate-400">
+                                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
                                             No image
                                         </div>
                                     )}
                                 </div>
-
-                                <div className="space-y-2">
-                                    <div className="text-lg font-semibold">
-                                        {panel.serviceRequest.productTitle || "-"}
-                                    </div>
-                                    <div className="text-sm text-slate-500">
-                                        SKU: {panel.serviceRequest.skuSnapshot || "-"}
-                                    </div>
-                                    <div className="text-sm text-slate-500">
-                                        Bộ máy từ spec: {panel.serviceRequest.movement || "-"}
-                                    </div>
-
-                                    <div className="grid gap-3 md:grid-cols-2">
-                                        <div>
-                                            <label className="mb-1 block text-xs text-slate-500">Loại máy</label>
-                                            <select
-                                                className="h-10 w-full rounded-md border px-3"
-                                                value={movementKind}
-                                                onChange={(e) =>
-                                                    setMovementKind(
-                                                        e.target.value as "UNKNOWN" | "BATTERY" | "MECHANICAL"
-                                                    )
-                                                }
-                                            >
-                                                <option value="UNKNOWN">Chưa rõ</option>
-                                                <option value="BATTERY">Máy pin</option>
-                                                <option value="MECHANICAL">Máy cơ</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1 block text-xs text-slate-500">
-                                                Tình trạng ban đầu
-                                            </label>
-                                            <div className="flex gap-3 rounded-md border px-3 py-2">
-                                                <label className="inline-flex items-center gap-2 text-sm">
-                                                    <input
-                                                        type="radio"
-                                                        checked={runningOk === true}
-                                                        onChange={() => setRunningOk(true)}
-                                                    />
-                                                    Chạy ổn
-                                                </label>
-                                                <label className="inline-flex items-center gap-2 text-sm">
-                                                    <input
-                                                        type="radio"
-                                                        checked={runningOk === false}
-                                                        onChange={() => setRunningOk(false)}
-                                                    />
-                                                    Có vấn đề
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {movementKind === "BATTERY" && runningOk === false ? (
-                            <section className="rounded-xl border p-4">
-                                <div className="mb-3 text-lg font-semibold">Đánh giá máy pin</div>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <label className="inline-flex items-center gap-2 rounded-md border px-3 py-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={batteryWeak}
-                                            onChange={(e) => setBatteryWeak(e.target.checked)}
-                                        />
-                                        Chạy yếu / pin yếu
-                                    </label>
-
-                                    <div className="rounded-md border p-3">
-                                        <div className="mb-2 text-sm font-medium">Yếu tố lỗi</div>
-                                        <div className="flex flex-wrap gap-3 text-sm">
-                                            <label className="inline-flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={batteryIssueBattery}
-                                                    onChange={(e) => setBatteryIssueBattery(e.target.checked)}
-                                                />
-                                                Pin
-                                            </label>
-                                            <label className="inline-flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={batteryIssueIC}
-                                                    onChange={(e) => setBatteryIssueIC(e.target.checked)}
-                                                />
-                                                IC
-                                            </label>
-                                            <label className="inline-flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={batteryIssueCoil}
-                                                    onChange={(e) => setBatteryIssueCoil(e.target.checked)}
-                                                />
-                                                Dây đồng / Coil
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-                        ) : null}
-
-                        {movementKind === "MECHANICAL" ? (
-                            <section className="rounded-xl border p-4">
-                                <div className="mb-3 text-lg font-semibold">Thông số máy cơ</div>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div className="rounded-lg border p-4">
-                                        <div className="mb-3 font-medium">Thông số trước xử lý</div>
-                                        <div className="grid gap-3 md:grid-cols-3">
-                                            <div>
-                                                <label className="mb-1 block text-xs text-slate-500">Rate</label>
-                                                <input
-                                                    type="number"
-                                                    className="h-10 w-full rounded-md border px-3"
-                                                    value={preRate}
-                                                    onChange={(e) => setPreRate(e.target.value)}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="mb-1 block text-xs text-slate-500">Amp</label>
-                                                <input
-                                                    type="number"
-                                                    className="h-10 w-full rounded-md border px-3"
-                                                    value={preAmplitude}
-                                                    onChange={(e) => setPreAmplitude(e.target.value)}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="mb-1 block text-xs text-slate-500">Err</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    className="h-10 w-full rounded-md border px-3"
-                                                    value={preBeatError}
-                                                    onChange={(e) => setPreBeatError(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {shouldShowPostMetrics ? (
-                                        <div className="rounded-lg border p-4">
-                                            <div className="mb-3 font-medium">Thông số sau xử lý</div>
-                                            <div className="grid gap-3 md:grid-cols-3">
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Rate</label>
-                                                    <input
-                                                        type="number"
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={postRate}
-                                                        onChange={(e) => setPostRate(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Amp</label>
-                                                    <input
-                                                        type="number"
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={postAmplitude}
-                                                        onChange={(e) => setPostAmplitude(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Err</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={postBeatError}
-                                                        onChange={(e) => setPostBeatError(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </section>
-                        ) : null}
-
-                        {shouldShowIssueSection ? (
-                            <section className="rounded-xl border p-4">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="text-lg font-semibold">Lỗi / hạng mục phát hiện</div>
-                                    <button
-                                        type="button"
-                                        onClick={addIssue}
-                                        className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50"
-                                    >
-                                        + Thêm dòng
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {issues.map((row, idx) => (
-                                        <div key={row.id} className="rounded-lg border p-4">
-                                            <div className="mb-3 flex items-center justify-between">
-                                                <div className="font-medium">Dòng #{idx + 1}</div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeIssue(row.id)}
-                                                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-                                                >
-                                                    Xóa
-                                                </button>
-                                            </div>
-
-                                            <div className="grid gap-3 md:grid-cols-3">
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Khu vực lỗi</label>
-                                                    <input
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.area}
-                                                        onChange={(e) => updateIssue(row.id, { area: e.target.value })}
-                                                        placeholder="Pin, IC, coil, bánh xe..."
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Loại xử lý</label>
-                                                    <select
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.issueType}
-                                                        onChange={(e) =>
-                                                            updateIssue(row.id, {
-                                                                issueType: e.target.value as IssueRow["issueType"],
-                                                            })
-                                                        }
-                                                    >
-                                                        <option value="CHECK">Kiểm tra</option>
-                                                        <option value="SERVICE">Lau dầu / service</option>
-                                                        <option value="REPAIR">Sửa chữa</option>
-                                                        <option value="REPLACE">Thay thế</option>
-                                                        <option value="OBSERVATION">Ghi nhận</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Thực hiện</label>
-                                                    <select
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.actionMode}
-                                                        onChange={(e) =>
-                                                            updateIssue(row.id, {
-                                                                actionMode: e.target.value as IssueRow["actionMode"],
-                                                                vendorId:
-                                                                    e.target.value === "VENDOR"
-                                                                        ? row.vendorId
-                                                                        : "",
-                                                            })
-                                                        }
-                                                    >
-                                                        <option value="INTERNAL">Nội bộ</option>
-                                                        <option value="VENDOR">Vendor</option>
-                                                        <option value="NONE">Chưa rõ</option>
-                                                    </select>
-                                                </div>
-
-                                                {row.actionMode === "VENDOR" ? (
-                                                    <div>
-                                                        <label className="mb-1 block text-xs text-slate-500">Vendor</label>
-                                                        <select
-                                                            className="h-10 w-full rounded-md border px-3"
-                                                            value={row.vendorId}
-                                                            onChange={(e) =>
-                                                                updateIssue(row.id, {
-                                                                    vendorId: e.target.value,
-                                                                })
-                                                            }
-                                                        >
-                                                            <option value="">-- Chọn vendor --</option>
-                                                            {panel.vendors.map((v) => (
-                                                                <option key={v.id} value={v.id}>
-                                                                    {v.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                ) : null}
-
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Hạng mục kỹ thuật</label>
-                                                    <select
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.serviceCatalogId}
-                                                        onChange={(e) => {
-                                                            const nextId = e.target.value;
-                                                            const cat = serviceCatalogMap.get(nextId);
-                                                            updateIssue(row.id, {
-                                                                serviceCatalogId: nextId,
-                                                                estimatedCost:
-                                                                    row.estimatedCost ||
-                                                                    (cat?.internalCost != null
-                                                                        ? String(cat.internalCost)
-                                                                        : ""),
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">-- Chọn hạng mục --</option>
-                                                        {panel.serviceCatalogs.map((x) => (
-                                                            <option key={x.id} value={x.id}>
-                                                                {x.code ? `${x.code} - ${x.name}` : x.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Vật tư</label>
-                                                    <select
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.supplyCatalogId}
-                                                        onChange={(e) => {
-                                                            const nextId = e.target.value;
-                                                            const supply = supplyCatalogMap.get(nextId);
-                                                            updateIssue(row.id, {
-                                                                supplyCatalogId: nextId,
-                                                                estimatedCost:
-                                                                    row.estimatedCost ||
-                                                                    (supply?.defaultCost != null
-                                                                        ? String(supply.defaultCost)
-                                                                        : ""),
-                                                            });
-                                                        }}
-                                                    >
-                                                        <option value="">-- Chọn vật tư --</option>
-                                                        {panel.supplyCatalogs.map((x) => (
-                                                            <option key={x.id} value={x.id}>
-                                                                {x.code} - {x.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="mb-1 block text-xs text-slate-500">Chi phí dự kiến</label>
-                                                    <input
-                                                        type="number"
-                                                        className="h-10 w-full rounded-md border px-3"
-                                                        value={row.estimatedCost}
-                                                        onChange={(e) =>
-                                                            updateIssue(row.id, {
-                                                                estimatedCost: e.target.value,
-                                                            })
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-3">
-                                                <label className="mb-1 block text-xs text-slate-500">Ghi chú</label>
-                                                <textarea
-                                                    className="min-h-[72px] w-full rounded-md border px-3 py-2"
-                                                    value={row.note}
-                                                    onChange={(e) => updateIssue(row.id, { note: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {issues.length === 0 ? (
-                                        <div className="rounded-lg border border-dashed px-4 py-6 text-sm text-slate-500">
-                                            Chưa có dòng lỗi / hạng mục nào.
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </section>
-                        ) : null}
-
-                        <section className="rounded-xl border p-4">
-                            <div className="mb-3 text-lg font-semibold">Kết luận kỹ thuật</div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium">Chẩn đoán</label>
-                                    <textarea
-                                        className="min-h-[110px] w-full rounded-md border px-3 py-2"
-                                        value={diagnosis}
-                                        onChange={(e) => setDiagnosis(e.target.value)}
-                                        placeholder="Mô tả tình trạng, nguyên nhân, nhận định kỹ thuật..."
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium">Kết luận / hướng xử lý</label>
-                                    <textarea
-                                        className="min-h-[110px] w-full rounded-md border px-3 py-2"
-                                        value={conclusion}
-                                        onChange={(e) => setConclusion(e.target.value)}
-                                        placeholder="Kết luận cuối, xử lý gì, thay gì..."
-                                    />
-                                </div>
                             </div>
 
-                            <div className="mt-6 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="rounded-md border px-4 py-2 text-sm hover:bg-slate-50"
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                                >
-                                    {saving ? "Đang lưu..." : "Lưu đánh giá kỹ thuật"}
-                                </button>
+                            <Field label="Kết luận / hướng xử lý">
+                                <TextArea
+                                    className="min-h-[160px]"
+                                    placeholder="Ví dụ: máy chạy ổn, ngoại hình tổng thể 84/100, kính có xước nhẹ, mặt số sạch, núm hoạt động bình thường..."
+                                    value={conclusion}
+                                    onChange={(e) => setConclusion(e.target.value)}
+                                />
+                            </Field>
+                        </div>
+                    </SectionCard>
+                </div>
+
+                <div className="border-t border-slate-200 bg-white px-6 py-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                <span className="mr-2 text-slate-500">Điểm ngoại hình</span>
+                                <span className="text-base font-semibold text-slate-950">
+                                    {appearanceScore}/100
+                                </span>
                             </div>
-                        </section>
+
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                <span className="mr-2 text-slate-500">Tổng chi phí xử lý</span>
+                                <span className="text-base font-semibold text-slate-950">
+                                    {formatCurrency(totalCost)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3">
+                            <Button type="button" variant="outline" onClick={onClose}>
+                                Hủy
+                            </Button>
+                            <Button type="button" onClick={onSaved}>
+                                Lưu đánh giá kỹ thuật
+                            </Button>
+                        </div>
                     </div>
-                ) : (
-                    <div className="p-6 text-sm text-slate-500">Không có dữ liệu</div>
-                )}
+                </div>
             </div>
         </div>
     );

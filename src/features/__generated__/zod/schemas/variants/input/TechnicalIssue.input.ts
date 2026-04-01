@@ -18,7 +18,9 @@ export const TechnicalIssueInputSchema = z.object({
     updatedAt: z.date(),
     vendorId: z.string().optional().nullable(),
     vendorNameSnap: z.string().optional().nullable(),
+    mechanicalPartCatalogId: z.string().optional().nullable(),
     TechnicalAssessment: z.unknown(),
+    MechanicalPartCatalog: z.unknown().optional().nullable(),
     ServiceCatalog: z.unknown().optional().nullable(),
     SupplyCatalog: z.unknown().optional().nullable(),
     Vendor: z.unknown().optional().nullable()

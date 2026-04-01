@@ -549,3 +549,43 @@ export async function updateAcquisitionItems(tx: DB, acqId: string, items: ItemI
 
     return { success: true, total };
 }
+
+export async function updateAcquisitionWithItems(acqId: string, payload: {
+    vendorId?: string;
+    acquiredAt?: string | Date | null;
+    currency?: string | null;
+    type?: AcquisitionType | string | null;
+    notes?: string | null;
+    items?: ItemInput[];
+}) {
+    const acq = await repoAcq.getAcqtById(acqId);
+    if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+    if (acq.accquisitionStt !== "DRAFT") {
+        throw new Error("Chỉ phiếu DRAFT mới được chỉnh sửa");
+    }
+
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    if (!items.length) {
+        throw new Error("Phiếu nhập phải có ít nhất 1 dòng sản phẩm");
+    }
+
+    return prisma.$transaction(async (tx) => {
+        await tx.acquisition.update({
+            where: { id: acqId },
+            data: {
+                vendorId: payload.vendorId ?? undefined,
+                acquiredAt: payload.acquiredAt ? new Date(payload.acquiredAt) : undefined,
+                currency: payload.currency ?? undefined,
+                type: (payload.type as AcquisitionType | undefined) ?? undefined,
+                notes: payload.notes ?? undefined,
+            },
+            select: { id: true },
+        });
+
+        await updateAcquisitionItems(tx, acqId, items);
+
+        const updated = await repoAcq.getAcqtById(acqId, tx);
+        return { success: true, id: acqId, acquisition: updated };
+    });
+}
+

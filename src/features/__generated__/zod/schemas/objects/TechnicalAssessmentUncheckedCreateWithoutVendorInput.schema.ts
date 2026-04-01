@@ -3,17 +3,13 @@ import type { Prisma } from '@prisma/client';
 import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.schema';
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
 import { TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
   serviceRequestId: z.string(),
   movementKind: TechnicalMovementKindSchema.optional(),
-  runningOk: z.boolean().optional().nullable(),
-  batteryWeak: z.boolean().optional().nullable(),
-  batteryIssueBattery: z.boolean().optional(),
-  batteryIssueIC: z.boolean().optional(),
-  batteryIssueCoil: z.boolean().optional(),
   preRate: z.number().int().optional().nullable(),
   preAmplitude: z.number().int().optional().nullable(),
   preBeatError: z.number().optional().nullable(),
@@ -22,7 +18,6 @@ const makeSchema = () => z.object({
   postBeatError: z.number().optional().nullable(),
   actionMode: TechnicalActionModeSchema.optional(),
   vendorNameSnap: z.string().optional().nullable(),
-  diagnosis: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
   imageFileKey: z.string().optional().nullable(),
   status: TechnicalAssessmentStatusSchema.optional(),
@@ -30,6 +25,10 @@ const makeSchema = () => z.object({
   evaluatedByNameSnap: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  movementStatus: TechnicalSectionStatusSchema.optional(),
+  caseStatus: TechnicalSectionStatusSchema.optional(),
+  crystalStatus: TechnicalSectionStatusSchema.optional(),
+  crownStatus: TechnicalSectionStatusSchema.optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema).optional()
 }).strict();
 export const TechnicalAssessmentUncheckedCreateWithoutVendorInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentUncheckedCreateWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentUncheckedCreateWithoutVendorInput>;

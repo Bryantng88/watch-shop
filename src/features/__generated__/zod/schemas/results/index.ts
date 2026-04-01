@@ -414,3 +414,16 @@ export { TechnicalIssueDeleteManyResultSchema } from './TechnicalIssueDeleteMany
 export { TechnicalIssueAggregateResultSchema } from './TechnicalIssueAggregateResult.schema';
 export { TechnicalIssueGroupByResultSchema } from './TechnicalIssueGroupByResult.schema';
 export { TechnicalIssueCountResultSchema } from './TechnicalIssueCountResult.schema';
+export { MechanicalPartCatalogFindUniqueResultSchema } from './MechanicalPartCatalogFindUniqueResult.schema';
+export { MechanicalPartCatalogFindFirstResultSchema } from './MechanicalPartCatalogFindFirstResult.schema';
+export { MechanicalPartCatalogFindManyResultSchema } from './MechanicalPartCatalogFindManyResult.schema';
+export { MechanicalPartCatalogCreateResultSchema } from './MechanicalPartCatalogCreateResult.schema';
+export { MechanicalPartCatalogCreateManyResultSchema } from './MechanicalPartCatalogCreateManyResult.schema';
+export { MechanicalPartCatalogUpdateResultSchema } from './MechanicalPartCatalogUpdateResult.schema';
+export { MechanicalPartCatalogUpdateManyResultSchema } from './MechanicalPartCatalogUpdateManyResult.schema';
+export { MechanicalPartCatalogUpsertResultSchema } from './MechanicalPartCatalogUpsertResult.schema';
+export { MechanicalPartCatalogDeleteResultSchema } from './MechanicalPartCatalogDeleteResult.schema';
+export { MechanicalPartCatalogDeleteManyResultSchema } from './MechanicalPartCatalogDeleteManyResult.schema';
+export { MechanicalPartCatalogAggregateResultSchema } from './MechanicalPartCatalogAggregateResult.schema';
+export { MechanicalPartCatalogGroupByResultSchema } from './MechanicalPartCatalogGroupByResult.schema';
+export { MechanicalPartCatalogCountResultSchema } from './MechanicalPartCatalogCountResult.schema';

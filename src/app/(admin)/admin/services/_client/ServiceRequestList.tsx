@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import GenericActionMenu from "../../__components/GenericActionMenu";
 import BulkAssignTechnicianModal from "./BulkAssignTechnicianModal";
-import MaintenanceDrawer from "./MaintenanceDrawer";
 import MaintenanceLogModal from "./MaintenaceLogModel";
 import DotLabel from "../../__components/DotLabel";
 import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
@@ -100,8 +99,6 @@ export default function ServiceRequestListClient(props: PageProps) {
     const [showBulkBar, setShowBulkBar] = useState(false);
 
     const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
-    const [openMaint, setOpenMaint] = useState(false);
-    const [maintSrId, setMaintSrId] = useState<string | null>(null);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
@@ -391,12 +388,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             <td className="px-3 py-4 text-right align-middle">
                                                 <GenericActionMenu
                                                     id={row.id}
-                                                    maintenance={{
-                                                        onOpen: () => {
-                                                            setMaintSrId(row.id);
-                                                            setOpenMaint(true);
-                                                        },
-                                                    }}
                                                     actions={[
                                                         {
                                                             label: "Xem logs",
@@ -472,15 +463,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                     router.refresh();
                 }}
             />
-
-            {maintSrId ? (
-                <MaintenanceDrawer
-                    open={openMaint}
-                    onClose={() => setOpenMaint(false)}
-                    serviceRequestId={maintSrId}
-                    onChanged={() => router.refresh()}
-                />
-            ) : null}
 
             <MaintenanceLogModal
                 open={openLogs}

@@ -6,11 +6,6 @@ const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   serviceRequestId: SortOrderSchema.optional(),
   movementKind: SortOrderSchema.optional(),
-  runningOk: SortOrderSchema.optional(),
-  batteryWeak: SortOrderSchema.optional(),
-  batteryIssueBattery: SortOrderSchema.optional(),
-  batteryIssueIC: SortOrderSchema.optional(),
-  batteryIssueCoil: SortOrderSchema.optional(),
   preRate: SortOrderSchema.optional(),
   preAmplitude: SortOrderSchema.optional(),
   preBeatError: SortOrderSchema.optional(),
@@ -20,14 +15,17 @@ const makeSchema = () => z.object({
   actionMode: SortOrderSchema.optional(),
   vendorId: SortOrderSchema.optional(),
   vendorNameSnap: SortOrderSchema.optional(),
-  diagnosis: SortOrderSchema.optional(),
   conclusion: SortOrderSchema.optional(),
   imageFileKey: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
   evaluatedById: SortOrderSchema.optional(),
   evaluatedByNameSnap: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  movementStatus: SortOrderSchema.optional(),
+  caseStatus: SortOrderSchema.optional(),
+  crystalStatus: SortOrderSchema.optional(),
+  crownStatus: SortOrderSchema.optional()
 }).strict();
 export const TechnicalAssessmentMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentMaxOrderByAggregateInput>;
 export const TechnicalAssessmentMaxOrderByAggregateInputObjectZodSchema = makeSchema();

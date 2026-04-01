@@ -35,3 +35,4 @@ export { ProductCategoryResultSchema } from './ProductCategory.result';
 export { SupplyCatalogResultSchema } from './SupplyCatalog.result';
 export { TechnicalAssessmentResultSchema } from './TechnicalAssessment.result';
 export { TechnicalIssueResultSchema } from './TechnicalIssue.result';
+export { MechanicalPartCatalogResultSchema } from './MechanicalPartCatalog.result';

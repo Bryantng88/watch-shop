@@ -14,7 +14,9 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     updatedAt: z.number(),
     vendorId: z.number(),
     vendorNameSnap: z.number(),
+    mechanicalPartCatalogId: z.number(),
     TechnicalAssessment: z.number(),
+    MechanicalPartCatalog: z.number(),
     ServiceCatalog: z.number(),
     SupplyCatalog: z.number(),
     Vendor: z.number()
@@ -39,7 +41,8 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    mechanicalPartCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -53,5 +56,6 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     vendorId: z.string().nullable(),
-    vendorNameSnap: z.string().nullable()
+    vendorNameSnap: z.string().nullable(),
+    mechanicalPartCatalogId: z.string().nullable()
   }).nullable().optional()});
