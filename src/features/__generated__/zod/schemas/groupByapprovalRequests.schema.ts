@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { approvalRequestsWhereInputObjectSchema as approvalRequestsWhereInputObjectSchema } from './objects/approvalRequestsWhereInput.schema';
+import { approvalRequestsOrderByWithAggregationInputObjectSchema as approvalRequestsOrderByWithAggregationInputObjectSchema } from './objects/approvalRequestsOrderByWithAggregationInput.schema';
+import { approvalRequestsScalarWhereWithAggregatesInputObjectSchema as approvalRequestsScalarWhereWithAggregatesInputObjectSchema } from './objects/approvalRequestsScalarWhereWithAggregatesInput.schema';
+import { ApprovalRequestsScalarFieldEnumSchema } from './enums/ApprovalRequestsScalarFieldEnum.schema';
+import { ApprovalRequestsCountAggregateInputObjectSchema as ApprovalRequestsCountAggregateInputObjectSchema } from './objects/ApprovalRequestsCountAggregateInput.schema';
+import { ApprovalRequestsMinAggregateInputObjectSchema as ApprovalRequestsMinAggregateInputObjectSchema } from './objects/ApprovalRequestsMinAggregateInput.schema';
+import { ApprovalRequestsMaxAggregateInputObjectSchema as ApprovalRequestsMaxAggregateInputObjectSchema } from './objects/ApprovalRequestsMaxAggregateInput.schema';
+
+export const approvalRequestsGroupBySchema: z.ZodType<Prisma.approvalRequestsGroupByArgs> = z.object({ where: approvalRequestsWhereInputObjectSchema.optional(), orderBy: z.union([approvalRequestsOrderByWithAggregationInputObjectSchema, approvalRequestsOrderByWithAggregationInputObjectSchema.array()]).optional(), having: approvalRequestsScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ApprovalRequestsScalarFieldEnumSchema), _count: z.union([ z.literal(true), ApprovalRequestsCountAggregateInputObjectSchema ]).optional(), _min: ApprovalRequestsMinAggregateInputObjectSchema.optional(), _max: ApprovalRequestsMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.approvalRequestsGroupByArgs>;
+
+export const approvalRequestsGroupByZodSchema = z.object({ where: approvalRequestsWhereInputObjectSchema.optional(), orderBy: z.union([approvalRequestsOrderByWithAggregationInputObjectSchema, approvalRequestsOrderByWithAggregationInputObjectSchema.array()]).optional(), having: approvalRequestsScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ApprovalRequestsScalarFieldEnumSchema), _count: z.union([ z.literal(true), ApprovalRequestsCountAggregateInputObjectSchema ]).optional(), _min: ApprovalRequestsMinAggregateInputObjectSchema.optional(), _max: ApprovalRequestsMaxAggregateInputObjectSchema.optional() }).strict();

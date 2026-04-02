@@ -26,6 +26,14 @@ type ServiceReqItem = {
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
+    product?: {
+        id: string;
+        title?: string | null;
+        primaryImageUrl?: string | null;
+        watchSpec?: {
+            movement?: string | null;
+        } | null;
+    } | null;
 };
 
 type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
@@ -97,12 +105,13 @@ export default function ServiceRequestListClient(props: PageProps) {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
-
+    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
+        useState<string | null>(null);
     const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
-    const [technicalAssessmentId, setTechnicalAssessmentId] = useState<string | null>(null);
+
     const completeOne = async (id: string) => {
         const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
             method: "POST",
@@ -112,6 +121,24 @@ export default function ServiceRequestListClient(props: PageProps) {
         if (!res.ok) throw new Error(await res.text());
         router.refresh();
     };
+
+    const selectedItem = useMemo(
+        () => items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
+        [items, technicalAssessmentRequestId]
+    );
+
+    const productImage =
+        selectedItem?.primaryImageUrl ??
+        selectedItem?.product?.primaryImageUrl ??
+        null;
+
+    const productTitle =
+        selectedItem?.productTitle ??
+        selectedItem?.product?.title ??
+        null;
+
+    const productSku = selectedItem?.skuSnapshot ?? null;
+    const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
 
     useEffect(() => {
         setSelectedIds([]);
@@ -413,9 +440,8 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         },
                                                         {
                                                             label: "Đánh giá kỹ thuật",
-
-                                                            onClick: () => setTechnicalAssessmentId(row.id)
-                                                        }
+                                                            onClick: () => setTechnicalAssessmentRequestId(row.id),
+                                                        },
                                                     ]}
                                                 />
                                             </td>
@@ -470,13 +496,20 @@ export default function ServiceRequestListClient(props: PageProps) {
                 serviceRequestId={logSrId}
                 title={logTitle}
             />
+
             <TechnicalAssessmentModal
-                open={!!technicalAssessmentId}
-                serviceRequestId={technicalAssessmentId}
-                onClose={() => setTechnicalAssessmentId(null)}
-                onSaved={() => {
+                key={technicalAssessmentRequestId || "technical-assessment-empty"}
+                open={!!technicalAssessmentRequestId}
+                serviceRequestId={technicalAssessmentRequestId}
+                onClose={() => setTechnicalAssessmentRequestId(null)}
+                onSaved={async () => {
+                    setTechnicalAssessmentRequestId(null);
                     router.refresh();
                 }}
+                productName={productTitle ?? undefined}
+                productSku={productSku ?? undefined}
+                productImage={productImage ?? undefined}
+                movementSpecLabel={movementSpecLabel ?? undefined}
             />
         </div>
     );

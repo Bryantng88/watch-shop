@@ -36,3 +36,6 @@ export { SupplyCatalogResultSchema } from './SupplyCatalog.result';
 export { TechnicalAssessmentResultSchema } from './TechnicalAssessment.result';
 export { TechnicalIssueResultSchema } from './TechnicalIssue.result';
 export { MechanicalPartCatalogResultSchema } from './MechanicalPartCatalog.result';
+export { approvalRequestsResultSchema } from './approvalRequests.result';
+export { maintenanceLogsResultSchema } from './maintenanceLogs.result';
+export { technicalAssessmentsResultSchema } from './technicalAssessments.result';

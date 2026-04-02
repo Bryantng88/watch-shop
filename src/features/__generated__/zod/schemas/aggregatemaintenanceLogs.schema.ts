@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { maintenanceLogsOrderByWithRelationInputObjectSchema as maintenanceLogsOrderByWithRelationInputObjectSchema } from './objects/maintenanceLogsOrderByWithRelationInput.schema';
+import { maintenanceLogsWhereInputObjectSchema as maintenanceLogsWhereInputObjectSchema } from './objects/maintenanceLogsWhereInput.schema';
+import { maintenanceLogsWhereUniqueInputObjectSchema as maintenanceLogsWhereUniqueInputObjectSchema } from './objects/maintenanceLogsWhereUniqueInput.schema';
+import { MaintenanceLogsCountAggregateInputObjectSchema as MaintenanceLogsCountAggregateInputObjectSchema } from './objects/MaintenanceLogsCountAggregateInput.schema';
+import { MaintenanceLogsMinAggregateInputObjectSchema as MaintenanceLogsMinAggregateInputObjectSchema } from './objects/MaintenanceLogsMinAggregateInput.schema';
+import { MaintenanceLogsMaxAggregateInputObjectSchema as MaintenanceLogsMaxAggregateInputObjectSchema } from './objects/MaintenanceLogsMaxAggregateInput.schema';
+import { MaintenanceLogsAvgAggregateInputObjectSchema as MaintenanceLogsAvgAggregateInputObjectSchema } from './objects/MaintenanceLogsAvgAggregateInput.schema';
+import { MaintenanceLogsSumAggregateInputObjectSchema as MaintenanceLogsSumAggregateInputObjectSchema } from './objects/MaintenanceLogsSumAggregateInput.schema';
+
+export const maintenanceLogsAggregateSchema: z.ZodType<Prisma.maintenanceLogsAggregateArgs> = z.object({ orderBy: z.union([maintenanceLogsOrderByWithRelationInputObjectSchema, maintenanceLogsOrderByWithRelationInputObjectSchema.array()]).optional(), where: maintenanceLogsWhereInputObjectSchema.optional(), cursor: maintenanceLogsWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MaintenanceLogsCountAggregateInputObjectSchema ]).optional(), _min: MaintenanceLogsMinAggregateInputObjectSchema.optional(), _max: MaintenanceLogsMaxAggregateInputObjectSchema.optional(), _avg: MaintenanceLogsAvgAggregateInputObjectSchema.optional(), _sum: MaintenanceLogsSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.maintenanceLogsAggregateArgs>;
+
+export const maintenanceLogsAggregateZodSchema = z.object({ orderBy: z.union([maintenanceLogsOrderByWithRelationInputObjectSchema, maintenanceLogsOrderByWithRelationInputObjectSchema.array()]).optional(), where: maintenanceLogsWhereInputObjectSchema.optional(), cursor: maintenanceLogsWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MaintenanceLogsCountAggregateInputObjectSchema ]).optional(), _min: MaintenanceLogsMinAggregateInputObjectSchema.optional(), _max: MaintenanceLogsMaxAggregateInputObjectSchema.optional(), _avg: MaintenanceLogsAvgAggregateInputObjectSchema.optional(), _sum: MaintenanceLogsSumAggregateInputObjectSchema.optional() }).strict();

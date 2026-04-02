@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { approvalRequestsOrderByWithRelationInputObjectSchema as approvalRequestsOrderByWithRelationInputObjectSchema } from './objects/approvalRequestsOrderByWithRelationInput.schema';
+import { approvalRequestsWhereInputObjectSchema as approvalRequestsWhereInputObjectSchema } from './objects/approvalRequestsWhereInput.schema';
+import { approvalRequestsWhereUniqueInputObjectSchema as approvalRequestsWhereUniqueInputObjectSchema } from './objects/approvalRequestsWhereUniqueInput.schema';
+import { ApprovalRequestsCountAggregateInputObjectSchema as ApprovalRequestsCountAggregateInputObjectSchema } from './objects/ApprovalRequestsCountAggregateInput.schema';
+import { ApprovalRequestsMinAggregateInputObjectSchema as ApprovalRequestsMinAggregateInputObjectSchema } from './objects/ApprovalRequestsMinAggregateInput.schema';
+import { ApprovalRequestsMaxAggregateInputObjectSchema as ApprovalRequestsMaxAggregateInputObjectSchema } from './objects/ApprovalRequestsMaxAggregateInput.schema';
+
+export const approvalRequestsAggregateSchema: z.ZodType<Prisma.approvalRequestsAggregateArgs> = z.object({ orderBy: z.union([approvalRequestsOrderByWithRelationInputObjectSchema, approvalRequestsOrderByWithRelationInputObjectSchema.array()]).optional(), where: approvalRequestsWhereInputObjectSchema.optional(), cursor: approvalRequestsWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ApprovalRequestsCountAggregateInputObjectSchema ]).optional(), _min: ApprovalRequestsMinAggregateInputObjectSchema.optional(), _max: ApprovalRequestsMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.approvalRequestsAggregateArgs>;
+
+export const approvalRequestsAggregateZodSchema = z.object({ orderBy: z.union([approvalRequestsOrderByWithRelationInputObjectSchema, approvalRequestsOrderByWithRelationInputObjectSchema.array()]).optional(), where: approvalRequestsWhereInputObjectSchema.optional(), cursor: approvalRequestsWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ApprovalRequestsCountAggregateInputObjectSchema ]).optional(), _min: ApprovalRequestsMinAggregateInputObjectSchema.optional(), _max: ApprovalRequestsMaxAggregateInputObjectSchema.optional() }).strict();

@@ -799,6 +799,94 @@ model MechanicalPartCatalog {
   @@index([isActive, sortOrder])
 }
 
+model approvalRequests {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                  String
+  sourceModule          String?
+  serviceRequestId      String?
+  technicalAssessmentId String?               @db.Uuid
+  title                 String
+  summary               String?
+  status                String                @default("PENDING")
+  autoApproved          Boolean               @default(false)
+  payloadJson           Json?
+  reviewNote            String?
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @db.Timestamptz(6)
+  technicalAssessments  technicalAssessments? @relation(fields: [technicalAssessmentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_approvalrequests_ta")
+  maintenanceLogs       maintenanceLogs[]
+
+  @@index([serviceRequestId], map: "idx_approvalrequests_servicerequestid")
+  @@index([technicalAssessmentId], map: "idx_approvalrequests_taid")
+}
+
+model maintenanceLogs {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceRequestId      String
+  technicalAssessmentId String?               @db.Uuid
+  approvalRequestId     String?               @db.Uuid
+  sourceType            String
+  category              String?
+  action                String?
+  execution             String?
+  vendorId              String?
+  partId                String?
+  cost                  Int                   @default(0)
+  note                  String?
+  status                String                @default("CREATED")
+  autoApproved          Boolean               @default(false)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @db.Timestamptz(6)
+  approvalRequests      approvalRequests?     @relation(fields: [approvalRequestId], references: [id], onUpdate: NoAction, map: "fk_maintenancelogs_approval")
+  technicalAssessments  technicalAssessments? @relation(fields: [technicalAssessmentId], references: [id], onUpdate: NoAction, map: "fk_maintenancelogs_ta")
+
+  @@index([serviceRequestId], map: "idx_maintenancelogs_servicerequestid")
+}
+
+model technicalAssessments {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceRequestId     String             @unique
+  machineType          String?
+  movementStatus       String?
+  beforeRate           String?
+  beforeAmp            String?
+  beforeErr            String?
+  afterRate            String?
+  afterAmp             String?
+  afterErr             String?
+  appearanceScore      Int                @default(0)
+  caseScore            Int                @default(0)
+  glassScore           Int                @default(0)
+  dialScore            Int                @default(0)
+  caseIssues           Json?
+  glassIssues          Json?
+  dialIssues           Json?
+  caseManualDeduction  Int                @default(0)
+  glassManualDeduction Int                @default(0)
+  dialManualDeduction  Int                @default(0)
+  caseNote             String?
+  glassNote            String?
+  dialNote             String?
+  crownStatus          String?
+  crownAction          String?
+  crownExecution       String?
+  crownVendorId        String?
+  crownPartId          String?
+  crownCost            Int                @default(0)
+  crownNote            String?
+  movementCost         Int                @default(0)
+  crownCostTotal       Int                @default(0)
+  cosmeticProposalCost Int                @default(0)
+  totalCost            Int                @default(0)
+  conclusion           String?
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @default(now()) @db.Timestamptz(6)
+  approvalRequests     approvalRequests[]
+  maintenanceLogs      maintenanceLogs[]
+
+  @@index([serviceRequestId], map: "idx_technicalassessments_servicerequestid")
+}
+
 enum Category {
   ENTRY
   MID_RANGE
