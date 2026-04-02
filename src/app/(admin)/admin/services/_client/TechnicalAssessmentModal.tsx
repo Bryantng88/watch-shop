@@ -15,7 +15,9 @@ import {
 
 type MachineType = "MECHANICAL" | "QUARTZ";
 type HealthStatus = "GOOD" | "ISSUE";
+type FunctionalStatus = "GOOD" | "ISSUE";
 type ExecutionType = "INHOUSE" | "VENDOR";
+
 type MovementAction =
     | "SERVICE"
     | "REPLACE_PART"
@@ -24,7 +26,26 @@ type MovementAction =
     | "REPLACE_MOVEMENT"
     | "BATTERY_CHANGE";
 
-type FunctionalStatus = "GOOD" | "ISSUE";
+type CrownAction =
+    | "FIX_CROWN"
+    | "REPLACE_CROWN"
+    | "RETHREAD"
+    | "STEM_ADJUST"
+    | "WATERPROOF";
+
+type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+type CosmeticProposalAction =
+    | "NO_ACTION"
+    | "SPA_CASE"
+    | "POLISH_CASE"
+    | "REPLATE_CASE"
+    | "POLISH_GLASS"
+    | "REPLACE_GLASS"
+    | "CLEAN_DIAL"
+    | "REPLACE_DIAL"
+    | "KEEP_ORIGINAL"
+    | "REVIEW_WITH_ADMIN";
 
 type AppearanceIssueCode =
     | "CASE_LIGHT_SCRATCH"
@@ -51,17 +72,138 @@ type MovementLine = {
     note?: string;
 };
 
+type CosmeticProposal = {
+    enabled: boolean;
+    action?: CosmeticProposalAction;
+    estimatedCost?: string;
+    execution?: ExecutionType;
+    vendorId?: string;
+    note?: string;
+    requiresApproval: boolean;
+    approvalStatus?: ApprovalStatus;
+};
+
 type AppearanceBlockValue = {
     issues: AppearanceIssueCode[];
     manualDeduction: string;
     note?: string;
+    proposal: CosmeticProposal;
+};
+
+type CrownRepairState = {
+    status: FunctionalStatus;
+    action?: CrownAction;
+    execution?: ExecutionType;
+    vendorId?: string;
+    partId?: string;
+    cost?: string;
+    note?: string;
+};
+
+export type TechnicalAssessmentSubmitPayload = {
+    serviceRequestId: string;
+    productSnapshot: {
+        name?: string;
+        sku?: string | null;
+        image?: string | null;
+        movementSpecLabel?: string | null;
+    };
+    movement: {
+        machineType: MachineType;
+        status: HealthStatus;
+        beforeSpecs?: {
+            rate?: string;
+            amp?: string;
+            err?: string;
+        };
+        afterSpecs?: {
+            rate?: string;
+            amp?: string;
+            err?: string;
+        };
+        lines: Array<{
+            action?: MovementAction;
+            execution?: ExecutionType;
+            vendorId?: string;
+            partId?: string;
+            cost?: number;
+            note?: string;
+        }>;
+    };
+    appearance: {
+        score: number;
+        case: {
+            score: number;
+            issues: AppearanceIssueCode[];
+            manualDeduction: number;
+            note?: string;
+            proposal: {
+                enabled: boolean;
+                action?: CosmeticProposalAction;
+                estimatedCost?: number;
+                execution?: ExecutionType;
+                vendorId?: string;
+                note?: string;
+                requiresApproval: boolean;
+                approvalStatus?: ApprovalStatus;
+            };
+        };
+        glass: {
+            score: number;
+            issues: AppearanceIssueCode[];
+            manualDeduction: number;
+            note?: string;
+            proposal: {
+                enabled: boolean;
+                action?: CosmeticProposalAction;
+                estimatedCost?: number;
+                execution?: ExecutionType;
+                vendorId?: string;
+                note?: string;
+                requiresApproval: boolean;
+                approvalStatus?: ApprovalStatus;
+            };
+        };
+        dial: {
+            score: number;
+            issues: AppearanceIssueCode[];
+            manualDeduction: number;
+            note?: string;
+            proposal: {
+                enabled: boolean;
+                action?: CosmeticProposalAction;
+                estimatedCost?: number;
+                execution?: ExecutionType;
+                vendorId?: string;
+                note?: string;
+                requiresApproval: boolean;
+                approvalStatus?: ApprovalStatus;
+            };
+        };
+        crown: {
+            status: FunctionalStatus;
+            action?: CrownAction;
+            execution?: ExecutionType;
+            vendorId?: string;
+            partId?: string;
+            cost?: number;
+            note?: string;
+        };
+    };
+    financialSummary: {
+        movementCost: number;
+        crownCost: number;
+        cosmeticProposalCost: number;
+        totalCost: number;
+    };
+    conclusion?: string;
 };
 
 type TechnicalAssessmentModalProps = {
     open: boolean;
     serviceRequestId: string | null;
     onClose: () => void;
-    onSaved: () => void;
+    onSaved: () => void | Promise<void>;
     productName?: string;
     productSku?: string | null;
     productImage?: string | null;
@@ -104,6 +246,31 @@ const DIAL_ISSUES: { code: AppearanceIssueCode; label: string; deduction: number
     { code: "DIAL_MARKER_DAMAGE", label: "Lỗi cọc / số / kim", deduction: 20 },
 ];
 
+const CASE_PROPOSAL_ACTIONS: { value: CosmeticProposalAction; label: string }[] = [
+    { value: "NO_ACTION", label: "Không xử lý" },
+    { value: "SPA_CASE", label: "Spa vỏ nhẹ" },
+    { value: "POLISH_CASE", label: "Đánh bóng vỏ" },
+    { value: "REPLATE_CASE", label: "Mạ lại vỏ" },
+    { value: "KEEP_ORIGINAL", label: "Giữ nguyên vì ưu tiên zin" },
+    { value: "REVIEW_WITH_ADMIN", label: "Báo admin xem xét riêng" },
+];
+
+const GLASS_PROPOSAL_ACTIONS: { value: CosmeticProposalAction; label: string }[] = [
+    { value: "NO_ACTION", label: "Không xử lý" },
+    { value: "POLISH_GLASS", label: "Đánh bóng kính" },
+    { value: "REPLACE_GLASS", label: "Thay kính" },
+    { value: "KEEP_ORIGINAL", label: "Giữ nguyên vì ưu tiên zin" },
+    { value: "REVIEW_WITH_ADMIN", label: "Báo admin xem xét riêng" },
+];
+
+const DIAL_PROPOSAL_ACTIONS: { value: CosmeticProposalAction; label: string }[] = [
+    { value: "NO_ACTION", label: "Không xử lý" },
+    { value: "CLEAN_DIAL", label: "Vệ sinh nhẹ" },
+    { value: "REPLACE_DIAL", label: "Thay mặt số" },
+    { value: "KEEP_ORIGINAL", label: "Giữ nguyên vì ưu tiên zin" },
+    { value: "REVIEW_WITH_ADMIN", label: "Báo admin xem xét riêng" },
+];
+
 function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
@@ -130,6 +297,28 @@ function makeId() {
         : Math.random().toString(36).slice(2);
 }
 
+function emptyProposal(): CosmeticProposal {
+    return {
+        enabled: false,
+        action: undefined,
+        estimatedCost: "",
+        execution: undefined,
+        vendorId: undefined,
+        note: "",
+        requiresApproval: false,
+        approvalStatus: undefined,
+    };
+}
+
+function emptyAppearanceBlock(): AppearanceBlockValue {
+    return {
+        issues: [],
+        manualDeduction: "",
+        note: "",
+        proposal: emptyProposal(),
+    };
+}
+
 function Pill({
     children,
     tone = "gray",
@@ -151,6 +340,30 @@ function Pill({
             )}
         >
             {children}
+        </span>
+    );
+}
+
+function ApprovalPill({ status }: { status?: ApprovalStatus }) {
+    if (status === "APPROVED") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                Đã duyệt
+            </span>
+        );
+    }
+
+    if (status === "REJECTED") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+                Từ chối
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+            Chờ duyệt
         </span>
     );
 }
@@ -269,32 +482,33 @@ function CompactStatusToggle({
     goodText = "Đẹp / ổn",
     issueText = "Cần xử lý",
 }: {
-    value: HealthStatus;
-    onChange: (value: HealthStatus) => void;
+    value: HealthStatus | FunctionalStatus;
+    onChange: (value: HealthStatus | FunctionalStatus) => void;
     goodText?: string;
     issueText?: string;
 }) {
     return (
-        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button
                 type="button"
                 onClick={() => onChange("GOOD")}
                 className={cx(
                     "rounded-lg px-4 py-2 text-sm font-medium transition",
                     value === "GOOD"
-                        ? "bg-white text-slate-900 shadow-sm"
+                        ? "border border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
                         : "text-slate-500 hover:text-slate-800"
                 )}
             >
                 {goodText}
             </button>
+
             <button
                 type="button"
                 onClick={() => onChange("ISSUE")}
                 className={cx(
                     "rounded-lg px-4 py-2 text-sm font-medium transition",
                     value === "ISSUE"
-                        ? "bg-white text-amber-700 shadow-sm"
+                        ? "border border-amber-200 bg-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-100"
                         : "text-slate-500 hover:text-slate-800"
                 )}
             >
@@ -379,9 +593,154 @@ function IssueCheckboxGroup({
 }
 
 function ScorePill({ score }: { score: number }) {
+    const tone =
+        score >= 90
+            ? "border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
+            : score >= 80
+                ? "border-slate-300 bg-slate-50 text-slate-800 shadow-sm"
+                : "border-amber-200 bg-amber-50/70 text-amber-800 shadow-sm";
+
     return (
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+        <div className={cx("rounded-full border px-3 py-1 text-xs font-semibold", tone)}>
             {score}/100
+        </div>
+    );
+}
+
+function CosmeticProposalFields({
+    title,
+    value,
+    onChange,
+    actionOptions,
+}: {
+    title: string;
+    value: CosmeticProposal;
+    onChange: (value: CosmeticProposal) => void;
+    actionOptions: { value: CosmeticProposalAction; label: string }[];
+}) {
+    const isVendor = value.execution === "VENDOR";
+
+    return (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                    <div className="text-sm font-semibold text-slate-900">Đề xuất xử lý</div>
+                    <div className="mt-1 text-sm text-slate-500">
+                        Đề xuất này nên được sale/admin duyệt trước khi thực hiện.
+                    </div>
+                </div>
+
+                {value.enabled ? <ApprovalPill status={value.approvalStatus} /> : null}
+            </div>
+
+            <div className="space-y-4">
+                <div>
+                    <CompactStatusToggle
+                        value={value.enabled ? "ISSUE" : "GOOD"}
+                        onChange={(v) =>
+                            onChange({
+                                ...value,
+                                enabled: v === "ISSUE",
+                                requiresApproval: v === "ISSUE",
+                                approvalStatus: v === "ISSUE" ? value.approvalStatus ?? "PENDING" : undefined,
+                            })
+                        }
+                        goodText="Không đề xuất"
+                        issueText="Có đề xuất"
+                    />
+                </div>
+
+                {value.enabled ? (
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Field label="Phương án đề xuất">
+                            <SelectInput
+                                value={value.action ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        action: e.target.value as CosmeticProposalAction,
+                                    })
+                                }
+                            >
+                                <option value="">Chọn phương án</option>
+                                {actionOptions.map((item) => (
+                                    <option key={item.value} value={item.value}>
+                                        {item.label}
+                                    </option>
+                                ))}
+                            </SelectInput>
+                        </Field>
+
+                        <Field label="Thực hiện dự kiến">
+                            <SelectInput
+                                value={value.execution ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        execution: e.target.value as ExecutionType,
+                                        vendorId:
+                                            e.target.value === "VENDOR" ? value.vendorId : undefined,
+                                    })
+                                }
+                            >
+                                <option value="">Chọn hình thức</option>
+                                <option value="INHOUSE">Nội bộ</option>
+                                <option value="VENDOR">Vendor</option>
+                            </SelectInput>
+                        </Field>
+
+                        <Field label="Chi phí dự kiến">
+                            <TextInput
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={value.estimatedCost ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        estimatedCost: e.target.value,
+                                    })
+                                }
+                            />
+                        </Field>
+
+                        {isVendor ? (
+                            <Field label="Vendor dự kiến">
+                                <SelectInput
+                                    value={value.vendorId ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            vendorId: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn vendor</option>
+                                    {vendors.map((vendor) => (
+                                        <option key={vendor.id} value={vendor.id}>
+                                            {vendor.name}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </Field>
+                        ) : null}
+
+                        <div className="md:col-span-3">
+                            <Field label="Lý do đề xuất">
+                                <TextArea
+                                    placeholder={`Ví dụ: ${title.toLowerCase()} chưa đủ đẹp để lên bài, nên đề xuất xử lý trước khi sale/admin quyết.`}
+                                    value={value.note ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            note: e.target.value,
+                                        })
+                                    }
+                                />
+                            </Field>
+                        </div>
+                    </div>
+                ) : null}
+            </div>
         </div>
     );
 }
@@ -392,12 +751,14 @@ function AppearanceScoreBlock({
     value,
     onChange,
     definitions,
+    proposalActions,
 }: {
     title: string;
     description?: string;
     value: AppearanceBlockValue;
     onChange: (value: AppearanceBlockValue) => void;
     definitions: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    proposalActions: { value: CosmeticProposalAction; label: string }[];
 }) {
     const score = calculateAppearanceScore(value, definitions);
     const summary = issueSummary(value, definitions);
@@ -445,28 +806,35 @@ function AppearanceScoreBlock({
                         onChange={(e) => onChange({ ...value, note: e.target.value })}
                     />
                 </Field>
+
+                <CosmeticProposalFields
+                    title={title}
+                    value={value.proposal}
+                    onChange={(proposal) => onChange({ ...value, proposal })}
+                    actionOptions={proposalActions}
+                />
             </div>
         </div>
     );
 }
 
 function CrownFunctionalBlock({
-    status,
-    onStatusChange,
-    note,
-    onNoteChange,
+    value,
+    onChange,
 }: {
-    status: FunctionalStatus;
-    onStatusChange: (value: FunctionalStatus) => void;
-    note?: string;
-    onNoteChange: (value: string) => void;
+    value: CrownRepairState;
+    onChange: (value: CrownRepairState) => void;
 }) {
+    const isIssue = value.status === "ISSUE";
+    const isVendor = value.execution === "VENDOR";
+    const isReplace = value.action === "REPLACE_CROWN";
+
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="text-sm font-semibold text-slate-900">Núm</div>
-                <Pill tone={status === "GOOD" ? "neutral" : "amber"}>
-                    {status === "GOOD" ? "Ổn" : "Cần xử lý"}
+                <Pill tone={isIssue ? "amber" : "neutral"}>
+                    {isIssue ? "Cần xử lý" : "Ổn"}
                 </Pill>
             </div>
 
@@ -474,25 +842,315 @@ function CrownFunctionalBlock({
                 <div>
                     <div className="mb-2 text-sm font-medium text-slate-700">Tình trạng chức năng</div>
                     <CompactStatusToggle
-                        value={status}
-                        onChange={onStatusChange}
+                        value={value.status}
+                        onChange={(status) =>
+                            onChange({
+                                ...value,
+                                status,
+                            })
+                        }
                         goodText="Ổn"
                         issueText="Cần xử lý"
                     />
                 </div>
 
-                {status === "ISSUE" ? (
-                    <Field label="Ghi chú">
-                        <TextArea
-                            placeholder="Ví dụ: núm lỏng, trượt ren, khó lên cót, khó chỉnh lịch..."
-                            value={note ?? ""}
-                            onChange={(e) => onNoteChange(e.target.value)}
-                        />
-                    </Field>
+                {isIssue ? (
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <Field label="Xử lý">
+                            <SelectInput
+                                value={value.action ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        action: e.target.value as CrownAction,
+                                        partId:
+                                            e.target.value === "REPLACE_CROWN"
+                                                ? value.partId
+                                                : undefined,
+                                    })
+                                }
+                            >
+                                <option value="">Chọn xử lý</option>
+                                <option value="FIX_CROWN">Fix núm</option>
+                                <option value="REPLACE_CROWN">Thay núm</option>
+                                <option value="RETHREAD">Làm lại ren</option>
+                                <option value="STEM_ADJUST">Chỉnh ti / trục núm</option>
+                                <option value="WATERPROOF">Xử lý chống nước</option>
+                            </SelectInput>
+                        </Field>
+
+                        <Field label="Thực hiện">
+                            <SelectInput
+                                value={value.execution ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        execution: e.target.value as ExecutionType,
+                                        vendorId:
+                                            e.target.value === "VENDOR"
+                                                ? value.vendorId
+                                                : undefined,
+                                    })
+                                }
+                            >
+                                <option value="">Chọn hình thức</option>
+                                <option value="INHOUSE">Nội bộ</option>
+                                <option value="VENDOR">Vendor</option>
+                            </SelectInput>
+                        </Field>
+
+                        <Field label="Chi phí">
+                            <TextInput
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={value.cost ?? ""}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...value,
+                                        cost: e.target.value,
+                                    })
+                                }
+                            />
+                        </Field>
+
+                        {isVendor ? (
+                            <Field label="Vendor">
+                                <SelectInput
+                                    value={value.vendorId ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            vendorId: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn vendor</option>
+                                    {vendors.map((vendor) => (
+                                        <option key={vendor.id} value={vendor.id}>
+                                            {vendor.name}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </Field>
+                        ) : null}
+
+                        {isReplace ? (
+                            <Field label="Danh mục linh kiện">
+                                <SelectInput
+                                    value={value.partId ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            partId: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn linh kiện</option>
+                                    <option value="crown">Núm</option>
+                                    <option value="stem">Ti / trục núm</option>
+                                    <option value="tube">Ống núm</option>
+                                </SelectInput>
+                            </Field>
+                        ) : null}
+
+                        <div className="md:col-span-3">
+                            <Field label="Ghi chú">
+                                <TextArea
+                                    placeholder="Ví dụ: núm trượt ren, lên cót nặng tay, cần thay cả ti..."
+                                    value={value.note ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            note: e.target.value,
+                                        })
+                                    }
+                                />
+                            </Field>
+                        </div>
+                    </div>
                 ) : null}
             </div>
         </div>
     );
+}
+
+function buildSubmitPayload(params: {
+    serviceRequestId: string;
+    productName?: string;
+    productSku?: string | null;
+    productImage?: string | null;
+    movementSpecLabel?: string | null;
+    machineType: MachineType;
+    movementStatus: HealthStatus;
+    showBeforeSpecs: boolean;
+    beforeSpecs: { rate: string; amp: string; err: string };
+    afterSpecs: { rate: string; amp: string; err: string };
+    movementLines: MovementLine[];
+    caseAppearance: AppearanceBlockValue;
+    glassAppearance: AppearanceBlockValue;
+    dialAppearance: AppearanceBlockValue;
+    crownRepair: CrownRepairState;
+    conclusion: string;
+}): TechnicalAssessmentSubmitPayload {
+    const {
+        serviceRequestId,
+        productName,
+        productSku,
+        productImage,
+        movementSpecLabel,
+        machineType,
+        movementStatus,
+        showBeforeSpecs,
+        beforeSpecs,
+        afterSpecs,
+        movementLines,
+        caseAppearance,
+        glassAppearance,
+        dialAppearance,
+        crownRepair,
+        conclusion,
+    } = params;
+
+    const caseScore = calculateAppearanceScore(caseAppearance, CASE_ISSUES);
+    const glassScore = calculateAppearanceScore(glassAppearance, GLASS_ISSUES);
+    const dialScore = calculateAppearanceScore(dialAppearance, DIAL_ISSUES);
+    const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
+
+    const movementCost = movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
+    const crownCost = parseMoney(crownRepair.cost);
+    const cosmeticProposalCost =
+        parseMoney(caseAppearance.proposal.enabled ? caseAppearance.proposal.estimatedCost : "") +
+        parseMoney(glassAppearance.proposal.enabled ? glassAppearance.proposal.estimatedCost : "") +
+        parseMoney(dialAppearance.proposal.enabled ? dialAppearance.proposal.estimatedCost : "");
+    const totalCost = movementCost + crownCost + cosmeticProposalCost;
+
+    return {
+        serviceRequestId,
+        productSnapshot: {
+            name: productName,
+            sku: productSku,
+            image: productImage,
+            movementSpecLabel,
+        },
+        movement: {
+            machineType,
+            status: movementStatus,
+            beforeSpecs: showBeforeSpecs
+                ? {
+                    rate: beforeSpecs.rate || undefined,
+                    amp: beforeSpecs.amp || undefined,
+                    err: beforeSpecs.err || undefined,
+                }
+                : undefined,
+            afterSpecs:
+                movementStatus === "ISSUE"
+                    ? {
+                        rate: afterSpecs.rate || undefined,
+                        amp: afterSpecs.amp || undefined,
+                        err: afterSpecs.err || undefined,
+                    }
+                    : undefined,
+            lines:
+                movementStatus === "ISSUE"
+                    ? movementLines.map((line) => ({
+                        action: line.action,
+                        execution: line.execution,
+                        vendorId: line.vendorId,
+                        partId: line.partId,
+                        cost: parseMoney(line.cost),
+                        note: line.note,
+                    }))
+                    : [],
+        },
+        appearance: {
+            score: appearanceScore,
+            case: {
+                score: caseScore,
+                issues: caseAppearance.issues,
+                manualDeduction: parseNumber(caseAppearance.manualDeduction),
+                note: caseAppearance.note,
+                proposal: {
+                    enabled: caseAppearance.proposal.enabled,
+                    action: caseAppearance.proposal.action,
+                    estimatedCost: parseMoney(caseAppearance.proposal.estimatedCost),
+                    execution: caseAppearance.proposal.execution,
+                    vendorId: caseAppearance.proposal.vendorId,
+                    note: caseAppearance.proposal.note,
+                    requiresApproval: caseAppearance.proposal.requiresApproval,
+                    approvalStatus: caseAppearance.proposal.approvalStatus,
+                },
+            },
+            glass: {
+                score: glassScore,
+                issues: glassAppearance.issues,
+                manualDeduction: parseNumber(glassAppearance.manualDeduction),
+                note: glassAppearance.note,
+                proposal: {
+                    enabled: glassAppearance.proposal.enabled,
+                    action: glassAppearance.proposal.action,
+                    estimatedCost: parseMoney(glassAppearance.proposal.estimatedCost),
+                    execution: glassAppearance.proposal.execution,
+                    vendorId: glassAppearance.proposal.vendorId,
+                    note: glassAppearance.proposal.note,
+                    requiresApproval: glassAppearance.proposal.requiresApproval,
+                    approvalStatus: glassAppearance.proposal.approvalStatus,
+                },
+            },
+            dial: {
+                score: dialScore,
+                issues: dialAppearance.issues,
+                manualDeduction: parseNumber(dialAppearance.manualDeduction),
+                note: dialAppearance.note,
+                proposal: {
+                    enabled: dialAppearance.proposal.enabled,
+                    action: dialAppearance.proposal.action,
+                    estimatedCost: parseMoney(dialAppearance.proposal.estimatedCost),
+                    execution: dialAppearance.proposal.execution,
+                    vendorId: dialAppearance.proposal.vendorId,
+                    note: dialAppearance.proposal.note,
+                    requiresApproval: dialAppearance.proposal.requiresApproval,
+                    approvalStatus: dialAppearance.proposal.approvalStatus,
+                },
+            },
+            crown: {
+                status: crownRepair.status,
+                action: crownRepair.action,
+                execution: crownRepair.execution,
+                vendorId: crownRepair.vendorId,
+                partId: crownRepair.partId,
+                cost: parseMoney(crownRepair.cost),
+                note: crownRepair.note,
+            },
+        },
+        financialSummary: {
+            movementCost,
+            crownCost,
+            cosmeticProposalCost,
+            totalCost,
+        },
+        conclusion,
+    };
+}
+
+async function saveTechnicalAssessment(payload: TechnicalAssessmentSubmitPayload) {
+    const res = await fetch("/api/admin/service-requests/technical-assessment", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        let message = "Lưu đánh giá kỹ thuật thất bại";
+        try {
+            const data = await res.json();
+            message = data?.error || message;
+        } catch { }
+        throw new Error(message);
+    }
+
+    return res.json();
 }
 
 export default function TechnicalAssessmentModal({
@@ -528,39 +1186,38 @@ export default function TechnicalAssessmentModal({
         },
     ]);
 
-    const [caseAppearance, setCaseAppearance] = React.useState<AppearanceBlockValue>({
-        issues: [],
-        manualDeduction: "",
+    const [caseAppearance, setCaseAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
+    const [glassAppearance, setGlassAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
+    const [dialAppearance, setDialAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
+
+    const [crownRepair, setCrownRepair] = React.useState<CrownRepairState>({
+        status: "GOOD",
+        action: undefined,
+        execution: undefined,
+        vendorId: undefined,
+        partId: undefined,
+        cost: "",
         note: "",
     });
-
-    const [glassAppearance, setGlassAppearance] = React.useState<AppearanceBlockValue>({
-        issues: [],
-        manualDeduction: "",
-        note: "",
-    });
-
-    const [dialAppearance, setDialAppearance] = React.useState<AppearanceBlockValue>({
-        issues: [],
-        manualDeduction: "",
-        note: "",
-    });
-
-    const [crownStatus, setCrownStatus] = React.useState<FunctionalStatus>("GOOD");
-    const [crownNote, setCrownNote] = React.useState("");
 
     const [conclusion, setConclusion] = React.useState("");
+    const [saving, setSaving] = React.useState(false);
+    const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
     if (!open) return null;
 
     const caseScore = calculateAppearanceScore(caseAppearance, CASE_ISSUES);
     const glassScore = calculateAppearanceScore(glassAppearance, GLASS_ISSUES);
     const dialScore = calculateAppearanceScore(dialAppearance, DIAL_ISSUES);
-
     const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
 
     const movementCost = movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
-    const totalCost = movementCost;
+    const crownCost = parseMoney(crownRepair.cost);
+    const cosmeticProposalCost =
+        parseMoney(caseAppearance.proposal.enabled ? caseAppearance.proposal.estimatedCost : "") +
+        parseMoney(glassAppearance.proposal.enabled ? glassAppearance.proposal.estimatedCost : "") +
+        parseMoney(dialAppearance.proposal.enabled ? dialAppearance.proposal.estimatedCost : "");
+    const totalCost = movementCost + crownCost + cosmeticProposalCost;
 
     function addMovementLine() {
         setMovementLines((prev) => [
@@ -580,6 +1237,44 @@ export default function TechnicalAssessmentModal({
 
     function removeMovementLine(id: string) {
         setMovementLines((prev) => prev.filter((line) => line.id !== id));
+    }
+
+    async function handleSave() {
+        if (!serviceRequestId) {
+            setErrorMessage("Thiếu service request id");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setErrorMessage(null);
+
+            const payload = buildSubmitPayload({
+                serviceRequestId,
+                productName,
+                productSku,
+                productImage,
+                movementSpecLabel,
+                machineType,
+                movementStatus,
+                showBeforeSpecs,
+                beforeSpecs,
+                afterSpecs,
+                movementLines,
+                caseAppearance,
+                glassAppearance,
+                dialAppearance,
+                crownRepair,
+                conclusion,
+            });
+
+            await saveTechnicalAssessment(payload);
+            await onSaved();
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Lưu thất bại");
+        } finally {
+            setSaving(false);
+        }
     }
 
     return (
@@ -664,7 +1359,7 @@ export default function TechnicalAssessmentModal({
                             <Field label="Tình trạng máy">
                                 <CompactStatusToggle
                                     value={movementStatus}
-                                    onChange={setMovementStatus}
+                                    onChange={(v) => setMovementStatus(v as HealthStatus)}
                                     goodText="Chạy tốt"
                                     issueText="Cần xử lý"
                                 />
@@ -984,9 +1679,7 @@ export default function TechnicalAssessmentModal({
                         badge={
                             <div className="flex items-center gap-2">
                                 <Pill tone="gray">Vỏ / kính / mặt số</Pill>
-                                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                                    {appearanceScore}/100
-                                </div>
+                                <ScorePill score={appearanceScore} />
                             </div>
                         }
                     >
@@ -996,6 +1689,7 @@ export default function TechnicalAssessmentModal({
                             value={caseAppearance}
                             onChange={setCaseAppearance}
                             definitions={CASE_ISSUES}
+                            proposalActions={CASE_PROPOSAL_ACTIONS}
                         />
 
                         <AppearanceScoreBlock
@@ -1004,6 +1698,7 @@ export default function TechnicalAssessmentModal({
                             value={glassAppearance}
                             onChange={setGlassAppearance}
                             definitions={GLASS_ISSUES}
+                            proposalActions={GLASS_PROPOSAL_ACTIONS}
                         />
 
                         <AppearanceScoreBlock
@@ -1012,13 +1707,12 @@ export default function TechnicalAssessmentModal({
                             value={dialAppearance}
                             onChange={setDialAppearance}
                             definitions={DIAL_ISSUES}
+                            proposalActions={DIAL_PROPOSAL_ACTIONS}
                         />
 
                         <CrownFunctionalBlock
-                            status={crownStatus}
-                            onStatusChange={setCrownStatus}
-                            note={crownNote}
-                            onNoteChange={setCrownNote}
+                            value={crownRepair}
+                            onChange={setCrownRepair}
                         />
                     </SectionCard>
 
@@ -1027,9 +1721,7 @@ export default function TechnicalAssessmentModal({
                         icon={<ScanSearch className="h-5 w-5" />}
                         badge={
                             <div className="flex items-center gap-2">
-                                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                                    Ngoại hình: {appearanceScore}/100
-                                </div>
+                                <ScorePill score={appearanceScore} />
                                 <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
                                     Tổng chi phí: {formatCurrency(totalCost)}
                                 </div>
@@ -1059,7 +1751,7 @@ export default function TechnicalAssessmentModal({
                             <Field label="Kết luận / hướng xử lý">
                                 <TextArea
                                     className="min-h-[160px]"
-                                    placeholder="Ví dụ: máy chạy ổn, ngoại hình tổng thể 84/100, kính có xước nhẹ, mặt số sạch, núm hoạt động bình thường..."
+                                    placeholder="Ví dụ: máy chạy ổn, ngoại hình tổng thể 84/100, kính có xước nhẹ, mặt số sạch, núm cần fix..."
                                     value={conclusion}
                                     onChange={(e) => setConclusion(e.target.value)}
                                 />
@@ -1069,30 +1761,38 @@ export default function TechnicalAssessmentModal({
                 </div>
 
                 <div className="border-t border-slate-200 bg-white px-6 py-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                                <span className="mr-2 text-slate-500">Điểm ngoại hình</span>
-                                <span className="text-base font-semibold text-slate-950">
-                                    {appearanceScore}/100
-                                </span>
+                    <div className="space-y-3">
+                        {errorMessage ? (
+                            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {errorMessage}
+                            </div>
+                        ) : null}
+
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                    <span className="mr-2 text-slate-500">Điểm ngoại hình</span>
+                                    <span className="text-base font-semibold text-slate-950">
+                                        {appearanceScore}/100
+                                    </span>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                    <span className="mr-2 text-slate-500">Tổng chi phí xử lý</span>
+                                    <span className="text-base font-semibold text-slate-950">
+                                        {formatCurrency(totalCost)}
+                                    </span>
+                                </div>
                             </div>
 
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                                <span className="mr-2 text-slate-500">Tổng chi phí xử lý</span>
-                                <span className="text-base font-semibold text-slate-950">
-                                    {formatCurrency(totalCost)}
-                                </span>
+                            <div className="flex items-center justify-end gap-3">
+                                <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                                    Hủy
+                                </Button>
+                                <Button type="button" onClick={handleSave} disabled={saving}>
+                                    {saving ? "Đang lưu..." : "Lưu đánh giá kỹ thuật"}
+                                </Button>
                             </div>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3">
-                            <Button type="button" variant="outline" onClick={onClose}>
-                                Hủy
-                            </Button>
-                            <Button type="button" onClick={onSaved}>
-                                Lưu đánh giá kỹ thuật
-                            </Button>
                         </div>
                     </div>
                 </div>
