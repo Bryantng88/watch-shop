@@ -36,3 +36,6 @@ export { SupplyCatalogModelSchema } from './SupplyCatalog.pure';
 export { TechnicalAssessmentModelSchema } from './TechnicalAssessment.pure';
 export { TechnicalIssueModelSchema } from './TechnicalIssue.pure';
 export { MechanicalPartCatalogModelSchema } from './MechanicalPartCatalog.pure';
+export { approvalRequestsModelSchema } from './approvalRequests.pure';
+export { maintenanceLogsModelSchema } from './maintenanceLogs.pure';
+export { technicalAssessmentsModelSchema } from './technicalAssessments.pure';

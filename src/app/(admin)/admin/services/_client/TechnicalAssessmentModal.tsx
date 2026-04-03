@@ -11,8 +11,31 @@ import {
     Camera,
     ChevronDown,
     ScanSearch,
+    ChevronRight,
+    ChevronDownIcon,
 } from "lucide-react";
-
+type TechnicalAssessmentFormState = {
+    machineType: MachineType;
+    movementStatus: HealthStatus;
+    showBeforeSpecs: boolean;
+    beforeSpecs: {
+        rate: string;
+        amp: string;
+        err: string;
+    };
+    afterSpecs: {
+        rate: string;
+        amp: string;
+        err: string;
+    };
+    movementLines: MovementLine[];
+    caseAppearance: AppearanceBlockValue;
+    glassAppearance: AppearanceBlockValue;
+    dialAppearance: AppearanceBlockValue;
+    crownRepair: CrownRepairState;
+    conclusion: string;
+    hasEditedConclusion: boolean;
+};
 type MachineType = "MECHANICAL" | "QUARTZ";
 type HealthStatus = "GOOD" | "ISSUE";
 type FunctionalStatus = "GOOD" | "ISSUE";
@@ -316,6 +339,36 @@ function emptyAppearanceBlock(): AppearanceBlockValue {
         manualDeduction: "",
         note: "",
         proposal: emptyProposal(),
+    };
+}
+
+function createInitialFormState(): TechnicalAssessmentFormState {
+    return {
+        machineType: "MECHANICAL" as MachineType,
+        movementStatus: "GOOD" as HealthStatus,
+        showBeforeSpecs: false,
+        beforeSpecs: { rate: "", amp: "", err: "" },
+        afterSpecs: { rate: "", amp: "", err: "" },
+        movementLines: [
+            {
+                id: makeId(),
+                execution: "INHOUSE" as ExecutionType,
+            },
+        ],
+        caseAppearance: emptyAppearanceBlock(),
+        glassAppearance: emptyAppearanceBlock(),
+        dialAppearance: emptyAppearanceBlock(),
+        crownRepair: {
+            status: "GOOD" as FunctionalStatus,
+            action: undefined,
+            execution: undefined,
+            vendorId: undefined,
+            partId: undefined,
+            cost: "",
+            note: "",
+        } satisfies CrownRepairState,
+        conclusion: "",
+        hasEditedConclusion: false,
     };
 }
 
@@ -626,7 +679,7 @@ function CosmeticProposalFields({
                 <div>
                     <div className="text-sm font-semibold text-slate-900">Đề xuất xử lý</div>
                     <div className="mt-1 text-sm text-slate-500">
-                        Đề xuất này nên được sale/admin duyệt trước khi thực hiện.
+                        Hệ thống đang chạy soft approve: vẫn tạo approval request nhưng auto duyệt.
                     </div>
                 </div>
 
@@ -642,7 +695,7 @@ function CosmeticProposalFields({
                                 ...value,
                                 enabled: v === "ISSUE",
                                 requiresApproval: v === "ISSUE",
-                                approvalStatus: v === "ISSUE" ? value.approvalStatus ?? "PENDING" : undefined,
+                                approvalStatus: v === "ISSUE" ? "APPROVED" : undefined,
                             })
                         }
                         goodText="Không đề xuất"
@@ -678,8 +731,7 @@ function CosmeticProposalFields({
                                     onChange({
                                         ...value,
                                         execution: e.target.value as ExecutionType,
-                                        vendorId:
-                                            e.target.value === "VENDOR" ? value.vendorId : undefined,
+                                        vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined,
                                     })
                                 }
                             >
@@ -727,7 +779,7 @@ function CosmeticProposalFields({
                         <div className="md:col-span-3">
                             <Field label="Lý do đề xuất">
                                 <TextArea
-                                    placeholder={`Ví dụ: ${title.toLowerCase()} chưa đủ đẹp để lên bài, nên đề xuất xử lý trước khi sale/admin quyết.`}
+                                    placeholder={`Ví dụ: ${title.toLowerCase()} chưa đủ đẹp để lên bài, cần xử lý trước khi sale đăng bán.`}
                                     value={value.note ?? ""}
                                     onChange={(e) =>
                                         onChange({
@@ -741,6 +793,58 @@ function CosmeticProposalFields({
                     </div>
                 ) : null}
             </div>
+        </div>
+    );
+}
+
+function CollapsibleAppearanceCard({
+    title,
+    score,
+    summary,
+    defaultOpen = false,
+    children,
+}: {
+    title: string;
+    score: number;
+    summary: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}) {
+    const [open, setOpen] = React.useState(defaultOpen);
+
+    React.useEffect(() => {
+        if (defaultOpen) setOpen(true);
+    }, [defaultOpen]);
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+            <button
+                type="button"
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50"
+            >
+                <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900">{title}</div>
+                    <div className="mt-1 truncate text-sm text-slate-500">
+                        {summary || "Chưa ghi nhận khuyết điểm"}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <ScorePill score={score} />
+                    {open ? (
+                        <ChevronDownIcon className="h-4 w-4 text-slate-400" />
+                    ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                    )}
+                </div>
+            </button>
+
+            {open ? (
+                <div className="border-t border-slate-200 bg-slate-50/40 p-4">
+                    {children}
+                </div>
+            ) : null}
         </div>
     );
 }
@@ -764,16 +868,17 @@ function AppearanceScoreBlock({
     const summary = issueSummary(value, definitions);
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                    <div className="text-sm font-semibold text-slate-900">{title}</div>
-                    {description ? <div className="mt-1 text-sm text-slate-500">{description}</div> : null}
-                </div>
-                <ScorePill score={score} />
-            </div>
+        <CollapsibleAppearanceCard
+            title={title}
+            score={score}
+            summary={summary}
+            defaultOpen={value.issues.length > 0 || value.proposal.enabled}
+        >
+            <div className="space-y-4">
+                {description ? (
+                    <div className="text-sm text-slate-500">{description}</div>
+                ) : null}
 
-            <div className="grid gap-4">
                 <Field label="Khuyết điểm ghi nhận">
                     <IssueCheckboxGroup
                         options={definitions}
@@ -793,7 +898,7 @@ function AppearanceScoreBlock({
                     </Field>
 
                     <Field label="Tóm tắt nhanh">
-                        <div className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                        <div className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
                             {summary || "Chưa ghi nhận khuyết điểm"}
                         </div>
                     </Field>
@@ -814,7 +919,7 @@ function AppearanceScoreBlock({
                     actionOptions={proposalActions}
                 />
             </div>
-        </div>
+        </CollapsibleAppearanceCard>
     );
 }
 
@@ -830,15 +935,15 @@ function CrownFunctionalBlock({
     const isReplace = value.action === "REPLACE_CROWN";
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
                 <div className="text-sm font-semibold text-slate-900">Núm</div>
                 <Pill tone={isIssue ? "amber" : "neutral"}>
                     {isIssue ? "Cần xử lý" : "Ổn"}
                 </Pill>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 bg-slate-50/40 p-4">
                 <div>
                     <div className="mb-2 text-sm font-medium text-slate-700">Tình trạng chức năng</div>
                     <CompactStatusToggle
@@ -846,7 +951,7 @@ function CrownFunctionalBlock({
                         onChange={(status) =>
                             onChange({
                                 ...value,
-                                status,
+                                status: status as FunctionalStatus,
                             })
                         }
                         goodText="Ổn"
@@ -863,10 +968,7 @@ function CrownFunctionalBlock({
                                     onChange({
                                         ...value,
                                         action: e.target.value as CrownAction,
-                                        partId:
-                                            e.target.value === "REPLACE_CROWN"
-                                                ? value.partId
-                                                : undefined,
+                                        partId: e.target.value === "REPLACE_CROWN" ? value.partId : undefined,
                                     })
                                 }
                             >
@@ -886,10 +988,7 @@ function CrownFunctionalBlock({
                                     onChange({
                                         ...value,
                                         execution: e.target.value as ExecutionType,
-                                        vendorId:
-                                            e.target.value === "VENDOR"
-                                                ? value.vendorId
-                                                : undefined,
+                                        vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined,
                                     })
                                 }
                             >
@@ -972,6 +1071,89 @@ function CrownFunctionalBlock({
             </div>
         </div>
     );
+}
+
+function generateTechnicalConclusion(params: {
+    movementStatus: HealthStatus;
+    machineType: MachineType;
+    movementLines: MovementLine[];
+    appearanceScore: number;
+    caseAppearance: AppearanceBlockValue;
+    glassAppearance: AppearanceBlockValue;
+    dialAppearance: AppearanceBlockValue;
+    crownRepair: CrownRepairState;
+}) {
+    const {
+        movementStatus,
+        machineType,
+        movementLines,
+        appearanceScore,
+        caseAppearance,
+        glassAppearance,
+        dialAppearance,
+        crownRepair,
+    } = params;
+
+    const parts: string[] = [];
+
+    if (movementStatus === "GOOD") {
+        parts.push(`${machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"} chạy ổn, chưa ghi nhận vấn đề cần can thiệp.`);
+    } else {
+        const actions = movementLines
+            .map((line) => {
+                switch (line.action) {
+                    case "SERVICE":
+                        return "lau dầu";
+                    case "REPLACE_PART":
+                        return "thay linh kiện";
+                    case "REGULATE":
+                        return "chỉnh sai số";
+                    case "WATERPROOF":
+                        return "xử lý chống nước";
+                    case "REPLACE_MOVEMENT":
+                        return "thay máy";
+                    case "BATTERY_CHANGE":
+                        return "thay pin";
+                    default:
+                        return null;
+                }
+            })
+            .filter(Boolean);
+
+        parts.push(
+            `Máy cần xử lý kỹ thuật${actions.length ? `, hướng xử lý gồm: ${actions.join(", ")}.` : "."}`
+        );
+    }
+
+    parts.push(`Điểm ngoại hình tổng thể ${appearanceScore}/100.`);
+
+    const cosmeticIssues: string[] = [];
+    if (caseAppearance.issues.length) cosmeticIssues.push("vỏ có khuyết điểm");
+    if (glassAppearance.issues.length) cosmeticIssues.push("kính có khuyết điểm");
+    if (dialAppearance.issues.length) cosmeticIssues.push("mặt số có khuyết điểm");
+
+    if (cosmeticIssues.length) {
+        parts.push(`Ghi nhận ngoại hình: ${cosmeticIssues.join(", ")}.`);
+    } else {
+        parts.push("Ngoại hình tổng thể sạch, chưa ghi nhận khuyết điểm đáng kể ở vỏ, kính và mặt số.");
+    }
+
+    if (crownRepair.status === "ISSUE") {
+        parts.push("Núm cần xử lý thêm.");
+    } else {
+        parts.push("Núm hoạt động ổn.");
+    }
+
+    const proposalParts: string[] = [];
+    if (caseAppearance.proposal.enabled) proposalParts.push("vỏ");
+    if (glassAppearance.proposal.enabled) proposalParts.push("kính");
+    if (dialAppearance.proposal.enabled) proposalParts.push("mặt số");
+
+    if (proposalParts.length) {
+        parts.push(`Có đề xuất xử lý cho ${proposalParts.join(", ")}; hệ thống sẽ tạo approval request theo chế độ auto approve.`);
+    }
+
+    return parts.join(" ");
 }
 
 function buildSubmitPayload(params: {
@@ -1077,7 +1259,7 @@ function buildSubmitPayload(params: {
                     vendorId: caseAppearance.proposal.vendorId,
                     note: caseAppearance.proposal.note,
                     requiresApproval: caseAppearance.proposal.requiresApproval,
-                    approvalStatus: caseAppearance.proposal.approvalStatus,
+                    approvalStatus: caseAppearance.proposal.enabled ? "APPROVED" : caseAppearance.proposal.approvalStatus,
                 },
             },
             glass: {
@@ -1093,7 +1275,7 @@ function buildSubmitPayload(params: {
                     vendorId: glassAppearance.proposal.vendorId,
                     note: glassAppearance.proposal.note,
                     requiresApproval: glassAppearance.proposal.requiresApproval,
-                    approvalStatus: glassAppearance.proposal.approvalStatus,
+                    approvalStatus: glassAppearance.proposal.enabled ? "APPROVED" : glassAppearance.proposal.approvalStatus,
                 },
             },
             dial: {
@@ -1109,7 +1291,7 @@ function buildSubmitPayload(params: {
                     vendorId: dialAppearance.proposal.vendorId,
                     note: dialAppearance.proposal.note,
                     requiresApproval: dialAppearance.proposal.requiresApproval,
-                    approvalStatus: dialAppearance.proposal.approvalStatus,
+                    approvalStatus: dialAppearance.proposal.enabled ? "APPROVED" : dialAppearance.proposal.approvalStatus,
                 },
             },
             crown: {
@@ -1163,80 +1345,91 @@ export default function TechnicalAssessmentModal({
     productImage = null,
     movementSpecLabel = "-",
 }: TechnicalAssessmentModalProps) {
-    const [machineType, setMachineType] = React.useState<MachineType>("MECHANICAL");
-    const [movementStatus, setMovementStatus] = React.useState<HealthStatus>("GOOD");
-    const [showBeforeSpecs, setShowBeforeSpecs] = React.useState(false);
-
-    const [beforeSpecs, setBeforeSpecs] = React.useState({
-        rate: "",
-        amp: "",
-        err: "",
-    });
-
-    const [afterSpecs, setAfterSpecs] = React.useState({
-        rate: "",
-        amp: "",
-        err: "",
-    });
-
-    const [movementLines, setMovementLines] = React.useState<MovementLine[]>([
-        {
-            id: makeId(),
-            execution: "INHOUSE",
-        },
-    ]);
-
-    const [caseAppearance, setCaseAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
-    const [glassAppearance, setGlassAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
-    const [dialAppearance, setDialAppearance] = React.useState<AppearanceBlockValue>(emptyAppearanceBlock());
-
-    const [crownRepair, setCrownRepair] = React.useState<CrownRepairState>({
-        status: "GOOD",
-        action: undefined,
-        execution: undefined,
-        vendorId: undefined,
-        partId: undefined,
-        cost: "",
-        note: "",
-    });
-
-    const [conclusion, setConclusion] = React.useState("");
+    const [form, setForm] = React.useState<TechnicalAssessmentFormState>(createInitialFormState());
     const [saving, setSaving] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+    React.useEffect(() => {
+        if (!open || !serviceRequestId) return;
+        setForm(createInitialFormState());
+        setErrorMessage(null);
+    }, [open, serviceRequestId]);
+
     if (!open) return null;
 
-    const caseScore = calculateAppearanceScore(caseAppearance, CASE_ISSUES);
-    const glassScore = calculateAppearanceScore(glassAppearance, GLASS_ISSUES);
-    const dialScore = calculateAppearanceScore(dialAppearance, DIAL_ISSUES);
+    const caseScore = calculateAppearanceScore(form.caseAppearance, CASE_ISSUES);
+    const glassScore = calculateAppearanceScore(form.glassAppearance, GLASS_ISSUES);
+    const dialScore = calculateAppearanceScore(form.dialAppearance, DIAL_ISSUES);
     const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
 
-    const movementCost = movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
-    const crownCost = parseMoney(crownRepair.cost);
+    const movementCost = form.movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
+    const crownCost = parseMoney(form.crownRepair.cost);
     const cosmeticProposalCost =
-        parseMoney(caseAppearance.proposal.enabled ? caseAppearance.proposal.estimatedCost : "") +
-        parseMoney(glassAppearance.proposal.enabled ? glassAppearance.proposal.estimatedCost : "") +
-        parseMoney(dialAppearance.proposal.enabled ? dialAppearance.proposal.estimatedCost : "");
+        parseMoney(form.caseAppearance.proposal.enabled ? form.caseAppearance.proposal.estimatedCost : "") +
+        parseMoney(form.glassAppearance.proposal.enabled ? form.glassAppearance.proposal.estimatedCost : "") +
+        parseMoney(form.dialAppearance.proposal.enabled ? form.dialAppearance.proposal.estimatedCost : "");
     const totalCost = movementCost + crownCost + cosmeticProposalCost;
 
+    const autoConclusion = React.useMemo(
+        () =>
+            generateTechnicalConclusion({
+                movementStatus: form.movementStatus,
+                machineType: form.machineType,
+                movementLines: form.movementLines,
+                appearanceScore,
+                caseAppearance: form.caseAppearance,
+                glassAppearance: form.glassAppearance,
+                dialAppearance: form.dialAppearance,
+                crownRepair: form.crownRepair,
+            }),
+        [
+            form.movementStatus,
+            form.machineType,
+            form.movementLines,
+            appearanceScore,
+            form.caseAppearance,
+            form.glassAppearance,
+            form.dialAppearance,
+            form.crownRepair,
+        ]
+    );
+
+    React.useEffect(() => {
+        if (!form.hasEditedConclusion) {
+            setForm((prev) => ({
+                ...prev,
+                conclusion: autoConclusion,
+            }));
+        }
+    }, [autoConclusion, form.hasEditedConclusion]);
+
     function addMovementLine() {
-        setMovementLines((prev) => [
+        setForm((prev) => ({
             ...prev,
-            {
-                id: makeId(),
-                execution: "INHOUSE",
-            },
-        ]);
+            movementLines: [
+                ...prev.movementLines,
+                {
+                    id: makeId(),
+                    execution: "INHOUSE",
+                },
+            ],
+        }));
     }
 
     function updateMovementLine(id: string, patch: Partial<MovementLine>) {
-        setMovementLines((prev) =>
-            prev.map((line) => (line.id === id ? { ...line, ...patch } : line))
-        );
+        setForm((prev) => ({
+            ...prev,
+            movementLines: prev.movementLines.map((line) =>
+                line.id === id ? { ...line, ...patch } : line
+            ),
+        }));
     }
 
     function removeMovementLine(id: string) {
-        setMovementLines((prev) => prev.filter((line) => line.id !== id));
+        setForm((prev) => ({
+            ...prev,
+            movementLines: prev.movementLines.filter((line) => line.id !== id),
+        }));
     }
 
     async function handleSave() {
@@ -1255,17 +1448,17 @@ export default function TechnicalAssessmentModal({
                 productSku,
                 productImage,
                 movementSpecLabel,
-                machineType,
-                movementStatus,
-                showBeforeSpecs,
-                beforeSpecs,
-                afterSpecs,
-                movementLines,
-                caseAppearance,
-                glassAppearance,
-                dialAppearance,
-                crownRepair,
-                conclusion,
+                machineType: form.machineType,
+                movementStatus: form.movementStatus,
+                showBeforeSpecs: form.showBeforeSpecs,
+                beforeSpecs: form.beforeSpecs,
+                afterSpecs: form.afterSpecs,
+                movementLines: form.movementLines,
+                caseAppearance: form.caseAppearance,
+                glassAppearance: form.glassAppearance,
+                dialAppearance: form.dialAppearance,
+                crownRepair: form.crownRepair,
+                conclusion: form.conclusion,
             });
 
             await saveTechnicalAssessment(payload);
@@ -1343,13 +1536,18 @@ export default function TechnicalAssessmentModal({
                     <SectionCard
                         title="Đánh giá máy"
                         icon={<Wrench className="h-5 w-5" />}
-                        badge={statusBadge(movementStatus, "Chạy tốt")}
+                        badge={statusBadge(form.movementStatus, "Chạy tốt")}
                     >
                         <div className="grid gap-4 md:grid-cols-[260px_1fr]">
                             <Field label="Loại máy">
                                 <SelectInput
-                                    value={machineType}
-                                    onChange={(e) => setMachineType(e.target.value as MachineType)}
+                                    value={form.machineType}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            machineType: e.target.value as MachineType,
+                                        }))
+                                    }
                                 >
                                     <option value="MECHANICAL">Máy cơ</option>
                                     <option value="QUARTZ">Máy pin</option>
@@ -1358,15 +1556,20 @@ export default function TechnicalAssessmentModal({
 
                             <Field label="Tình trạng máy">
                                 <CompactStatusToggle
-                                    value={movementStatus}
-                                    onChange={(v) => setMovementStatus(v as HealthStatus)}
+                                    value={form.movementStatus}
+                                    onChange={(v) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            movementStatus: v as HealthStatus,
+                                        }))
+                                    }
                                     goodText="Chạy tốt"
                                     issueText="Cần xử lý"
                                 />
                             </Field>
                         </div>
 
-                        {movementStatus === "GOOD" ? (
+                        {form.movementStatus === "GOOD" ? (
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white">
@@ -1414,7 +1617,7 @@ export default function TechnicalAssessmentModal({
                                     </div>
 
                                     <div className="space-y-4">
-                                        {movementLines.map((line, index) => {
+                                        {form.movementLines.map((line, index) => {
                                             const isVendor = line.execution === "VENDOR";
                                             const isReplacePart = line.action === "REPLACE_PART";
 
@@ -1428,7 +1631,7 @@ export default function TechnicalAssessmentModal({
                                                             Dòng #{index + 1}
                                                         </div>
 
-                                                        {movementLines.length > 1 && (
+                                                        {form.movementLines.length > 1 && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
@@ -1455,7 +1658,7 @@ export default function TechnicalAssessmentModal({
                                                                 }
                                                             >
                                                                 <option value="">Chọn xử lý</option>
-                                                                {machineType === "MECHANICAL" ? (
+                                                                {form.machineType === "MECHANICAL" ? (
                                                                     <>
                                                                         <option value="SERVICE">Lau dầu</option>
                                                                         <option value="REPLACE_PART">Thay linh kiện</option>
@@ -1582,14 +1785,19 @@ export default function TechnicalAssessmentModal({
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => setShowBeforeSpecs((prev) => !prev)}
+                                            onClick={() =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    showBeforeSpecs: !prev.showBeforeSpecs,
+                                                }))
+                                            }
                                         >
                                             Thông số trước xử lý
                                             <ChevronDown className="ml-2 h-4 w-4" />
                                         </Button>
                                     </div>
 
-                                    {showBeforeSpecs ? (
+                                    {form.showBeforeSpecs ? (
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                                             <div className="mb-3 text-sm font-semibold text-slate-900">
                                                 Thông số trước xử lý
@@ -1598,33 +1806,42 @@ export default function TechnicalAssessmentModal({
                                             <div className="grid gap-4 md:grid-cols-3">
                                                 <Field label="Rate">
                                                     <TextInput
-                                                        value={beforeSpecs.rate}
+                                                        value={form.beforeSpecs.rate}
                                                         onChange={(e) =>
-                                                            setBeforeSpecs((prev) => ({
+                                                            setForm((prev) => ({
                                                                 ...prev,
-                                                                rate: e.target.value,
+                                                                beforeSpecs: {
+                                                                    ...prev.beforeSpecs,
+                                                                    rate: e.target.value,
+                                                                },
                                                             }))
                                                         }
                                                     />
                                                 </Field>
                                                 <Field label="Amp">
                                                     <TextInput
-                                                        value={beforeSpecs.amp}
+                                                        value={form.beforeSpecs.amp}
                                                         onChange={(e) =>
-                                                            setBeforeSpecs((prev) => ({
+                                                            setForm((prev) => ({
                                                                 ...prev,
-                                                                amp: e.target.value,
+                                                                beforeSpecs: {
+                                                                    ...prev.beforeSpecs,
+                                                                    amp: e.target.value,
+                                                                },
                                                             }))
                                                         }
                                                     />
                                                 </Field>
                                                 <Field label="Err">
                                                     <TextInput
-                                                        value={beforeSpecs.err}
+                                                        value={form.beforeSpecs.err}
                                                         onChange={(e) =>
-                                                            setBeforeSpecs((prev) => ({
+                                                            setForm((prev) => ({
                                                                 ...prev,
-                                                                err: e.target.value,
+                                                                beforeSpecs: {
+                                                                    ...prev.beforeSpecs,
+                                                                    err: e.target.value,
+                                                                },
                                                             }))
                                                         }
                                                     />
@@ -1636,33 +1853,42 @@ export default function TechnicalAssessmentModal({
                                     <div className="grid gap-4 md:grid-cols-3">
                                         <Field label="Rate">
                                             <TextInput
-                                                value={afterSpecs.rate}
+                                                value={form.afterSpecs.rate}
                                                 onChange={(e) =>
-                                                    setAfterSpecs((prev) => ({
+                                                    setForm((prev) => ({
                                                         ...prev,
-                                                        rate: e.target.value,
+                                                        afterSpecs: {
+                                                            ...prev.afterSpecs,
+                                                            rate: e.target.value,
+                                                        },
                                                     }))
                                                 }
                                             />
                                         </Field>
                                         <Field label="Amp">
                                             <TextInput
-                                                value={afterSpecs.amp}
+                                                value={form.afterSpecs.amp}
                                                 onChange={(e) =>
-                                                    setAfterSpecs((prev) => ({
+                                                    setForm((prev) => ({
                                                         ...prev,
-                                                        amp: e.target.value,
+                                                        afterSpecs: {
+                                                            ...prev.afterSpecs,
+                                                            amp: e.target.value,
+                                                        },
                                                     }))
                                                 }
                                             />
                                         </Field>
                                         <Field label="Err">
                                             <TextInput
-                                                value={afterSpecs.err}
+                                                value={form.afterSpecs.err}
                                                 onChange={(e) =>
-                                                    setAfterSpecs((prev) => ({
+                                                    setForm((prev) => ({
                                                         ...prev,
-                                                        err: e.target.value,
+                                                        afterSpecs: {
+                                                            ...prev.afterSpecs,
+                                                            err: e.target.value,
+                                                        },
                                                     }))
                                                 }
                                             />
@@ -1686,8 +1912,13 @@ export default function TechnicalAssessmentModal({
                         <AppearanceScoreBlock
                             title="Vỏ"
                             description="Tính điểm dựa trên mức độ hoàn thiện vỏ, cạnh nét, mòn mạ, trầy xước."
-                            value={caseAppearance}
-                            onChange={setCaseAppearance}
+                            value={form.caseAppearance}
+                            onChange={(next) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    caseAppearance: next,
+                                }))
+                            }
                             definitions={CASE_ISSUES}
                             proposalActions={CASE_PROPOSAL_ACTIONS}
                         />
@@ -1695,8 +1926,13 @@ export default function TechnicalAssessmentModal({
                         <AppearanceScoreBlock
                             title="Kính"
                             description="Tính điểm theo độ trong, độ xước, nứt hoặc tình trạng xuống cấp của kính."
-                            value={glassAppearance}
-                            onChange={setGlassAppearance}
+                            value={form.glassAppearance}
+                            onChange={(next) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    glassAppearance: next,
+                                }))
+                            }
                             definitions={GLASS_ISSUES}
                             proposalActions={GLASS_PROPOSAL_ACTIONS}
                         />
@@ -1704,15 +1940,25 @@ export default function TechnicalAssessmentModal({
                         <AppearanceScoreBlock
                             title="Mặt số"
                             description="Tính điểm theo độ sạch, độ đều màu, tình trạng cọc số, kim và bề mặt."
-                            value={dialAppearance}
-                            onChange={setDialAppearance}
+                            value={form.dialAppearance}
+                            onChange={(next) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    dialAppearance: next,
+                                }))
+                            }
                             definitions={DIAL_ISSUES}
                             proposalActions={DIAL_PROPOSAL_ACTIONS}
                         />
 
                         <CrownFunctionalBlock
-                            value={crownRepair}
-                            onChange={setCrownRepair}
+                            value={form.crownRepair}
+                            onChange={(next) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    crownRepair: next,
+                                }))
+                            }
                         />
                     </SectionCard>
 
@@ -1748,14 +1994,40 @@ export default function TechnicalAssessmentModal({
                                 </div>
                             </div>
 
-                            <Field label="Kết luận / hướng xử lý">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-3">
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Kết luận / hướng xử lý
+                                    </label>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                conclusion: autoConclusion,
+                                                hasEditedConclusion: false,
+                                            }))
+                                        }
+                                    >
+                                        Tự tổng hợp
+                                    </Button>
+                                </div>
+
                                 <TextArea
                                     className="min-h-[160px]"
-                                    placeholder="Ví dụ: máy chạy ổn, ngoại hình tổng thể 84/100, kính có xước nhẹ, mặt số sạch, núm cần fix..."
-                                    value={conclusion}
-                                    onChange={(e) => setConclusion(e.target.value)}
+                                    placeholder="Ví dụ: máy chạy ổn, ngoại hình tổng thể 84/100..."
+                                    value={form.conclusion}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            conclusion: e.target.value,
+                                            hasEditedConclusion: true,
+                                        }))
+                                    }
                                 />
-                            </Field>
+                            </div>
                         </div>
                     </SectionCard>
                 </div>

@@ -36,3 +36,6 @@ export { SupplyCatalogInputSchema } from './SupplyCatalog.input';
 export { TechnicalAssessmentInputSchema } from './TechnicalAssessment.input';
 export { TechnicalIssueInputSchema } from './TechnicalIssue.input';
 export { MechanicalPartCatalogInputSchema } from './MechanicalPartCatalog.input';
+export { approvalRequestsInputSchema } from './approvalRequests.input';
+export { maintenanceLogsInputSchema } from './maintenanceLogs.input';
+export { technicalAssessmentsInputSchema } from './technicalAssessments.input';

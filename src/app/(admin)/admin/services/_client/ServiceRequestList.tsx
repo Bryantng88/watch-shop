@@ -26,6 +26,15 @@ type ServiceReqItem = {
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
+    product?: {
+        id: string;
+        name?: string | null;
+        sku?: string | null;
+        thumbnailUrl?: string | null;
+        imageUrl?: string | null;
+        coverImage?: string | null;
+        movementLabel?: string | null;
+    } | null;
 };
 
 type ViewKey = "all" | "draft" | "in_progress" | "done" | "canceled";
@@ -97,7 +106,8 @@ export default function ServiceRequestListClient(props: PageProps) {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
-
+    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
+        useState<string | null>(null);
     const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
@@ -112,6 +122,15 @@ export default function ServiceRequestListClient(props: PageProps) {
         if (!res.ok) throw new Error(await res.text());
         router.refresh();
     };
+    const selectedItem = useMemo(
+        () => items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
+        [items, technicalAssessmentRequestId]
+    );
+    const productImage =
+        selectedItem?.product?.thumbnailUrl ??
+        selectedItem?.product?.imageUrl ??
+        selectedItem?.product?.coverImage ??
+        null;
 
     useEffect(() => {
         setSelectedIds([]);
@@ -414,7 +433,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         {
                                                             label: "Đánh giá kỹ thuật",
 
-                                                            onClick: () => setTechnicalAssessmentId(row.id)
+                                                            onClick: () => setTechnicalAssessmentRequestId(row.id)
                                                         }
                                                     ]}
                                                 />
@@ -471,12 +490,18 @@ export default function ServiceRequestListClient(props: PageProps) {
                 title={logTitle}
             />
             <TechnicalAssessmentModal
-                open={!!technicalAssessmentId}
-                serviceRequestId={technicalAssessmentId}
-                onClose={() => setTechnicalAssessmentId(null)}
-                onSaved={() => {
+                key={technicalAssessmentRequestId || "technical-assessment-empty"}
+                open={!!technicalAssessmentRequestId}
+                serviceRequestId={technicalAssessmentRequestId}
+                onClose={() => setTechnicalAssessmentRequestId(null)}
+                onSaved={async () => {
+                    setTechnicalAssessmentRequestId(null);
                     router.refresh();
                 }}
+                productName={selectedItem?.product?.name ?? undefined}
+                productSku={selectedItem?.product?.sku ?? undefined}
+                productImage={productImage ?? undefined}
+                movementSpecLabel={selectedItem?.product?.movementLabel ?? undefined}
             />
         </div>
     );
