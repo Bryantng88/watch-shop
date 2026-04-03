@@ -14,28 +14,7 @@ import {
     ChevronRight,
     ChevronDownIcon,
 } from "lucide-react";
-type TechnicalAssessmentFormState = {
-    machineType: MachineType;
-    movementStatus: HealthStatus;
-    showBeforeSpecs: boolean;
-    beforeSpecs: {
-        rate: string;
-        amp: string;
-        err: string;
-    };
-    afterSpecs: {
-        rate: string;
-        amp: string;
-        err: string;
-    };
-    movementLines: MovementLine[];
-    caseAppearance: AppearanceBlockValue;
-    glassAppearance: AppearanceBlockValue;
-    dialAppearance: AppearanceBlockValue;
-    crownRepair: CrownRepairState;
-    conclusion: string;
-    hasEditedConclusion: boolean;
-};
+
 type MachineType = "MECHANICAL" | "QUARTZ";
 type HealthStatus = "GOOD" | "ISSUE";
 type FunctionalStatus = "GOOD" | "ISSUE";
@@ -342,7 +321,7 @@ function emptyAppearanceBlock(): AppearanceBlockValue {
     };
 }
 
-function createInitialFormState(): TechnicalAssessmentFormState {
+function createInitialFormState() {
     return {
         machineType: "MECHANICAL" as MachineType,
         movementStatus: "GOOD" as HealthStatus,
@@ -1094,68 +1073,92 @@ function generateTechnicalConclusion(params: {
         crownRepair,
     } = params;
 
-    const parts: string[] = [];
+    function movementActionLabel(action?: MovementAction) {
+        switch (action) {
+            case "SERVICE":
+                return "lau dầu";
+            case "REPLACE_PART":
+                return "thay linh kiện";
+            case "REGULATE":
+                return "chỉnh sai số";
+            case "WATERPROOF":
+                return "chống nước";
+            case "REPLACE_MOVEMENT":
+                return "thay máy";
+            case "BATTERY_CHANGE":
+                return "thay pin";
+            default:
+                return null;
+        }
+    }
 
+    function issueLabels(
+        issues: AppearanceIssueCode[],
+        definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+    ) {
+        return issues
+            .map((code) => definitions.find((item) => item.code === code)?.label)
+            .filter((value): value is string => Boolean(value));
+    }
+
+    const caseScore = calculateAppearanceScore(caseAppearance, CASE_ISSUES);
+    const glassScore = calculateAppearanceScore(glassAppearance, GLASS_ISSUES);
+    const dialScore = calculateAppearanceScore(dialAppearance, DIAL_ISSUES);
+
+    const lines: string[] = [];
+
+    // 1. Máy
     if (movementStatus === "GOOD") {
-        parts.push(`${machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"} chạy ổn, chưa ghi nhận vấn đề cần can thiệp.`);
+        lines.push(
+            `✓ Máy: ${machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"} chạy ổn.`
+        );
     } else {
         const actions = movementLines
-            .map((line) => {
-                switch (line.action) {
-                    case "SERVICE":
-                        return "lau dầu";
-                    case "REPLACE_PART":
-                        return "thay linh kiện";
-                    case "REGULATE":
-                        return "chỉnh sai số";
-                    case "WATERPROOF":
-                        return "xử lý chống nước";
-                    case "REPLACE_MOVEMENT":
-                        return "thay máy";
-                    case "BATTERY_CHANGE":
-                        return "thay pin";
-                    default:
-                        return null;
-                }
-            })
-            .filter(Boolean);
+            .map((line) => movementActionLabel(line.action))
+            .filter((value): value is string => Boolean(value));
 
-        parts.push(
-            `Máy cần xử lý kỹ thuật${actions.length ? `, hướng xử lý gồm: ${actions.join(", ")}.` : "."}`
+        lines.push(
+            `⚠ Máy: Cần xử lý kỹ thuật${actions.length ? ` (${actions.join(", ")})` : ""
+            }.`
         );
     }
 
-    parts.push(`Điểm ngoại hình tổng thể ${appearanceScore}/100.`);
+    // 2. Vỏ
+    const caseIssues = issueLabels(caseAppearance.issues, CASE_ISSUES);
+    lines.push(
+        caseIssues.length
+            ? `⚠ Vỏ: ${caseIssues.join(", ")} (${caseScore}/100).`
+            : `✓ Vỏ: Chưa ghi nhận khuyết điểm (${caseScore}/100).`
+    );
 
-    const cosmeticIssues: string[] = [];
-    if (caseAppearance.issues.length) cosmeticIssues.push("vỏ có khuyết điểm");
-    if (glassAppearance.issues.length) cosmeticIssues.push("kính có khuyết điểm");
-    if (dialAppearance.issues.length) cosmeticIssues.push("mặt số có khuyết điểm");
+    // 3. Kính
+    const glassIssues = issueLabels(glassAppearance.issues, GLASS_ISSUES);
+    lines.push(
+        glassIssues.length
+            ? `⚠ Kính: ${glassIssues.join(", ")} (${glassScore}/100).`
+            : `✓ Kính: Chưa ghi nhận khuyết điểm (${glassScore}/100).`
+    );
 
-    if (cosmeticIssues.length) {
-        parts.push(`Ghi nhận ngoại hình: ${cosmeticIssues.join(", ")}.`);
-    } else {
-        parts.push("Ngoại hình tổng thể sạch, chưa ghi nhận khuyết điểm đáng kể ở vỏ, kính và mặt số.");
-    }
+    // 4. Mặt số
+    const dialIssues = issueLabels(dialAppearance.issues, DIAL_ISSUES);
+    lines.push(
+        dialIssues.length
+            ? `⚠ Mặt số: ${dialIssues.join(", ")} (${dialScore}/100).`
+            : `✓ Mặt số: Chưa ghi nhận khuyết điểm (${dialScore}/100).`
+    );
 
-    if (crownRepair.status === "ISSUE") {
-        parts.push("Núm cần xử lý thêm.");
-    } else {
-        parts.push("Núm hoạt động ổn.");
-    }
+    // 5. Núm
+    lines.push(
+        crownRepair.status === "ISSUE"
+            ? "⚠ Núm: Cần xử lý."
+            : "✓ Núm: Hoạt động ổn."
+    );
 
-    const proposalParts: string[] = [];
-    if (caseAppearance.proposal.enabled) proposalParts.push("vỏ");
-    if (glassAppearance.proposal.enabled) proposalParts.push("kính");
-    if (dialAppearance.proposal.enabled) proposalParts.push("mặt số");
+    // 6. Tổng điểm ngoại hình
+    lines.push(`Điểm ngoại hình tổng thể: ${appearanceScore}/100.`);
 
-    if (proposalParts.length) {
-        parts.push(`Có đề xuất xử lý cho ${proposalParts.join(", ")}; hệ thống sẽ tạo approval request theo chế độ auto approve.`);
-    }
-
-    return parts.join(" ");
+    return lines.join("\n");
 }
-
 function buildSubmitPayload(params: {
     serviceRequestId: string;
     productName?: string;
@@ -1345,7 +1348,7 @@ export default function TechnicalAssessmentModal({
     productImage = null,
     movementSpecLabel = "-",
 }: TechnicalAssessmentModalProps) {
-    const [form, setForm] = React.useState<TechnicalAssessmentFormState>(createInitialFormState());
+    const [form, setForm] = React.useState(createInitialFormState());
     const [saving, setSaving] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -1354,8 +1357,6 @@ export default function TechnicalAssessmentModal({
         setForm(createInitialFormState());
         setErrorMessage(null);
     }, [open, serviceRequestId]);
-
-    if (!open) return null;
 
     const caseScore = calculateAppearanceScore(form.caseAppearance, CASE_ISSUES);
     const glassScore = calculateAppearanceScore(form.glassAppearance, GLASS_ISSUES);
@@ -1402,6 +1403,8 @@ export default function TechnicalAssessmentModal({
             }));
         }
     }, [autoConclusion, form.hasEditedConclusion]);
+
+    if (!open) return null;
 
     function addMovementLine() {
         setForm((prev) => ({
@@ -1498,7 +1501,7 @@ export default function TechnicalAssessmentModal({
                                     <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                                         {productImage ? (
                                             <img
-                                                src={productImage}
+                                                src={`/api/media/sign?key=${encodeURIComponent(productImage)}`}
                                                 alt={productName}
                                                 className="h-full w-full object-cover"
                                             />
@@ -1982,7 +1985,7 @@ export default function TechnicalAssessmentModal({
                                 <div className="h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                                     {productImage ? (
                                         <img
-                                            src={productImage}
+                                            src={`/api/media/sign?key=${encodeURIComponent(productImage)}`}
                                             alt={productName}
                                             className="h-full w-full object-cover"
                                         />

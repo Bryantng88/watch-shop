@@ -28,12 +28,11 @@ type ServiceReqItem = {
     maintenanceCount: number;
     product?: {
         id: string;
-        name?: string | null;
-        sku?: string | null;
-        thumbnailUrl?: string | null;
-        imageUrl?: string | null;
-        coverImage?: string | null;
-        movementLabel?: string | null;
+        title?: string | null;
+        primaryImageUrl?: string | null;
+        watchSpec?: {
+            movement?: string | null;
+        } | null;
     } | null;
 };
 
@@ -112,7 +111,7 @@ export default function ServiceRequestListClient(props: PageProps) {
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
-    const [technicalAssessmentId, setTechnicalAssessmentId] = useState<string | null>(null);
+
     const completeOne = async (id: string) => {
         const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
             method: "POST",
@@ -122,15 +121,24 @@ export default function ServiceRequestListClient(props: PageProps) {
         if (!res.ok) throw new Error(await res.text());
         router.refresh();
     };
+
     const selectedItem = useMemo(
         () => items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
         [items, technicalAssessmentRequestId]
     );
+
     const productImage =
-        selectedItem?.product?.thumbnailUrl ??
-        selectedItem?.product?.imageUrl ??
-        selectedItem?.product?.coverImage ??
+        selectedItem?.primaryImageUrl ??
+        selectedItem?.product?.primaryImageUrl ??
         null;
+
+    const productTitle =
+        selectedItem?.productTitle ??
+        selectedItem?.product?.title ??
+        null;
+
+    const productSku = selectedItem?.skuSnapshot ?? null;
+    const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
 
     useEffect(() => {
         setSelectedIds([]);
@@ -432,9 +440,8 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         },
                                                         {
                                                             label: "Đánh giá kỹ thuật",
-
-                                                            onClick: () => setTechnicalAssessmentRequestId(row.id)
-                                                        }
+                                                            onClick: () => setTechnicalAssessmentRequestId(row.id),
+                                                        },
                                                     ]}
                                                 />
                                             </td>
@@ -489,6 +496,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                 serviceRequestId={logSrId}
                 title={logTitle}
             />
+
             <TechnicalAssessmentModal
                 key={technicalAssessmentRequestId || "technical-assessment-empty"}
                 open={!!technicalAssessmentRequestId}
@@ -498,10 +506,10 @@ export default function ServiceRequestListClient(props: PageProps) {
                     setTechnicalAssessmentRequestId(null);
                     router.refresh();
                 }}
-                productName={selectedItem?.product?.name ?? undefined}
-                productSku={selectedItem?.product?.sku ?? undefined}
+                productName={productTitle ?? undefined}
+                productSku={productSku ?? undefined}
                 productImage={productImage ?? undefined}
-                movementSpecLabel={selectedItem?.product?.movementLabel ?? undefined}
+                movementSpecLabel={movementSpecLabel ?? undefined}
             />
         </div>
     );
