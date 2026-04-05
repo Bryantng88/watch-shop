@@ -1,18 +1,14 @@
-import { prisma } from "@/server/db";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import * as maintenanceService from "@/app/(admin)/admin/services/_server/maintenance.service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, ctx: Ctx) {
+export async function GET(_req: Request, ctx: Ctx) {
     const { id } = await ctx.params;
-
-    const logs = await prisma.maintenanceLogs.findMany({
-        where: { serviceRequestId: id },
-        orderBy: { createdAt: "desc" },
-    });
+    const items = await maintenanceService.getMaintenanceLogsByServiceRequest(id);
 
     return NextResponse.json({
         ok: true,
-        items: logs,
+        items,
     });
 }

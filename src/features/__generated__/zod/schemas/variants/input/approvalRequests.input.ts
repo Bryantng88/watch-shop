@@ -15,8 +15,7 @@ export const approvalRequestsInputSchema = z.object({
     reviewNote: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    technicalAssessments: z.unknown().optional().nullable(),
-    maintenanceLogs: z.array(z.unknown())
+    technicalAssessments: z.unknown().optional().nullable()
 }).strict();
 
 export type approvalRequestsInputType = z.infer<typeof approvalRequestsInputSchema>;

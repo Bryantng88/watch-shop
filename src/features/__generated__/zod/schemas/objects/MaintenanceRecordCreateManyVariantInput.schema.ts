@@ -37,7 +37,8 @@ const makeSchema = () => z.object({
   workSummary: z.string().optional().nullable(),
   serviceCatalogId: z.string().optional().nullable(),
   processingMode: z.string().optional().nullable(),
-  imageFileKey: z.string().optional().nullable()
+  imageFileKey: z.string().optional().nullable(),
+  technicalIssueId: z.string().optional().nullable()
 }).strict();
 export const MaintenanceRecordCreateManyVariantInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateManyVariantInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateManyVariantInput>;
 export const MaintenanceRecordCreateManyVariantInputObjectZodSchema = makeSchema();

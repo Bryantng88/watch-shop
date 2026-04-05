@@ -12,7 +12,6 @@ export const ServiceCatalogResultSchema = z.object({
     isActive: z.boolean(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    maintenanceRecordId: z.string().nullable(),
     detail: ServiceDetailSchema,
     vendorPrice: z.number().nullable(),
     customerPrice: z.number().nullable(),
@@ -20,8 +19,8 @@ export const ServiceCatalogResultSchema = z.object({
     note: z.string().nullable(),
     categoryKey: z.string().nullable(),
     sortOrder: z.number().int(),
+    MaintenanceRecord: z.array(z.unknown()),
     OrderItem: z.array(z.unknown()),
-    maintenanceRecord: z.unknown().nullable(),
     ServiceRequest: z.array(z.unknown()),
     TechnicalIssue: z.array(z.unknown())
 }).strict();

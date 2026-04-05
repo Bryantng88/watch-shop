@@ -180,33 +180,123 @@ export async function createProductDraft(title: string) {
 }
 
 export async function detail(id: string) {
-    return prisma.product.findUnique({
-        where: { id },
-        include: {
-            brand: true,
-            vendor: true,
-            watchSpec: {
-                include: {
-                    complication: true,
-                },
+    return prisma.$transaction(async (tx) => {
+        const [product, serviceHistory, tradeHistory] = await Promise.all([
+            prodRepo.getAdminProductDetail(tx, id),
+            prodRepo.getProductServiceHistory(tx, id),
+            prodRepo.getProductTradeHistory(tx, id),
+        ]);
+
+        if (!product) return null;
+
+        return {
+            product: {
+                ...product,
+                createdAt: product.createdAt?.toISOString?.() ?? null,
+                updatedAt: product.updatedAt?.toISOString?.() ?? null,
+                aiGeneratedAt: product.aiGeneratedAt?.toISOString?.() ?? null,
+                publishedAt: product.publishedAt?.toISOString?.() ?? null,
+                content: product.content
+                    ? {
+                        ...product.content,
+                        generatedAt: product.content.generatedAt?.toISOString?.() ?? null,
+                        createdAt: product.content.createdAt?.toISOString?.() ?? null,
+                        updatedAt: product.content.updatedAt?.toISOString?.() ?? null,
+                    }
+                    : null,
+                watchSpec: product.watchSpec
+                    ? {
+                        ...product.watchSpec,
+                        length: product.watchSpec.length != null ? Number(product.watchSpec.length) : null,
+                        width: product.watchSpec.width != null ? Number(product.watchSpec.width) : null,
+                        thickness: product.watchSpec.thickness != null ? Number(product.watchSpec.thickness) : null,
+                        createdAt: product.watchSpec.createdAt?.toISOString?.() ?? null,
+                        updatedAt: product.watchSpec.updatedAt?.toISOString?.() ?? null,
+                    }
+                    : null,
+                image: (product.image ?? []).map((img: any) => ({
+                    ...img,
+                    createdAt: img.createdAt?.toISOString?.() ?? null,
+                    updatedAt: img.updatedAt?.toISOString?.() ?? null,
+                })),
+                variants: (product.variants ?? []).map((variant: any) => ({
+                    ...variant,
+                    price: variant.price != null ? Number(variant.price) : null,
+                    listPrice: variant.listPrice != null ? Number(variant.listPrice) : null,
+                    discountValue: variant.discountValue != null ? Number(variant.discountValue) : null,
+                    salePrice: variant.salePrice != null ? Number(variant.salePrice) : null,
+                    costPrice: variant.costPrice != null ? Number(variant.costPrice) : null,
+                    saleStartsAt: variant.saleStartsAt?.toISOString?.() ?? null,
+                    saleEndsAt: variant.saleEndsAt?.toISOString?.() ?? null,
+                    createdAt: variant.createdAt?.toISOString?.() ?? null,
+                    updatedAt: variant.updatedAt?.toISOString?.() ?? null,
+                    acquisitionItem: (variant.acquisitionItem ?? []).map((item: any) => ({
+                        ...item,
+                        unitCost: item.unitCost != null ? Number(item.unitCost) : null,
+                        acquisition: item.acquisition
+                            ? {
+                                ...item.acquisition,
+                                acquiredAt: item.acquisition.acquiredAt?.toISOString?.() ?? null,
+                            }
+                            : null,
+                    })),
+                })),
             },
-            image: {
-                where: { role: { in: ["PRIMARY", "GALLERY"] } },
-                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            serviceHistory,
+            tradeHistory,
+        };
+    });
+}
+export async function saveContent(
+    id: string,
+    payload: {
+        generatedContent?: string | null;
+        promptNote?: string | null;
+        syncSnapshot?: boolean;
+    }
+) {
+    return prisma.$transaction(async (tx) => {
+        if (payload.syncSnapshot !== false) {
+            await prodRepo.syncProductContentSnapshot(tx, id);
+        }
+
+        const content = await prodRepo.saveProductContent(tx, id, {
+            generatedContent: payload.generatedContent,
+            promptNote: payload.promptNote,
+        });
+
+        const product = await prodRepo.getAdminProductDetail(tx, id);
+        if (!product) {
+            throw new Error("Không tìm thấy sản phẩm.");
+        }
+
+        return {
+            success: true,
+            product: {
+                id: product.id,
+                contentStatus: product.contentStatus,
+                postContent: product.postContent ?? null,
+                aiPromptUsed: product.aiPromptUsed ?? null,
+                aiGeneratedAt: product.aiGeneratedAt?.toISOString?.() ?? null,
+                updatedAt: product.updatedAt?.toISOString?.() ?? null,
             },
-            variants: {
-                orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
-                include: {
-                    acquisitionItem: {
-                        orderBy: { createdAt: "desc" },
-                        take: 1,
-                        select: {
-                            unitCost: true,
-                        },
-                    },
-                },
+            content: {
+                productId: content.productId,
+                titleSnapshot: content.titleSnapshot ?? null,
+                brandSnapshot: content.brandSnapshot ?? null,
+                refSnapshot: content.refSnapshot ?? null,
+                sizeSnapshot: content.sizeSnapshot ?? null,
+                movementSnapshot: content.movementSnapshot ?? null,
+                glassSnapshot: content.glassSnapshot ?? null,
+                strapClaspSnapshot: content.strapClaspSnapshot ?? null,
+                modelSnapshot: content.modelSnapshot ?? null,
+                yearSnapshot: content.yearSnapshot ?? null,
+                generatedContent: content.generatedContent ?? null,
+                promptNote: content.promptNote ?? null,
+                generatedAt: content.generatedAt?.toISOString?.() ?? null,
+                updatedAt: content.updatedAt?.toISOString?.() ?? null,
             },
-        },
+        };
     });
 }
 
@@ -345,13 +435,22 @@ export async function updateProduct(
     }
 ) {
     return prisma.$transaction(async (tx) => {
+
+
         const current = await prodRepo.getLatestVariantForAdmin(tx, id);
         if (!current) {
             throw new Error("Không tìm thấy product.");
         }
 
-        const variant = current.variants?.[0] ?? null;
-        const currentList = variant?.listPrice != null ? Number(variant.listPrice) : Number(variant?.price ?? 0);
+        const variant = await prodRepo.getLatestVariantForAdmin(tx, id);
+        if (!variant) {
+            throw new Error("Không tìm thấy variant của product.");
+        }
+
+        const currentList =
+            variant.listPrice != null
+                ? Number(variant.listPrice)
+                : Number(variant.price ?? 0);
 
         const nextListPrice =
             patch.listPrice !== undefined
@@ -361,30 +460,34 @@ export async function updateProduct(
                     : currentList;
 
         const nextDiscountType =
-            patch.discountType !== undefined ? patch.discountType : (variant?.discountType ?? null);
+            patch.discountType !== undefined ? patch.discountType : (variant.discountType ?? null);
+
         const nextDiscountValue =
             patch.discountValue !== undefined
                 ? patch.discountValue
-                : variant?.discountValue != null
+                : variant.discountValue != null
                     ? Number(variant.discountValue)
                     : null;
+
         const nextSalePrice =
             patch.salePrice !== undefined
                 ? patch.salePrice
-                : variant?.salePrice != null
+                : variant.salePrice != null
                     ? Number(variant.salePrice)
                     : null;
+
         const nextSaleStartsAt =
-            patch.saleStartsAt !== undefined ? patch.saleStartsAt : (variant?.saleStartsAt ?? null);
+            patch.saleStartsAt !== undefined ? patch.saleStartsAt : (variant.saleStartsAt ?? null);
+
         const nextSaleEndsAt =
-            patch.saleEndsAt !== undefined ? patch.saleEndsAt : (variant?.saleEndsAt ?? null);
+            patch.saleEndsAt !== undefined ? patch.saleEndsAt : (variant.saleEndsAt ?? null);
+
         const nextCostPrice =
             patch.purchasePrice !== undefined
                 ? patch.purchasePrice
-                : variant?.costPrice != null
+                : variant.costPrice != null
                     ? Number(variant.costPrice)
                     : null;
-
         const shouldTouchPricing =
             patch.minPrice !== undefined ||
             patch.listPrice !== undefined ||
@@ -433,6 +536,48 @@ export async function updateProduct(
 
 export async function remove(id: string) {
     return prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                title: true,
+                _count: {
+                    select: {
+                        AcquisitionItem: true,
+                        orderItems: true,
+                        InvoiceItem: true,
+                        ServiceRequest: true,
+                        maintenanceRecords: true,
+                        Reservation: true,
+                    },
+                },
+            },
+        });
+
+        if (!product) {
+            throw new Error("Không tìm thấy sản phẩm");
+        }
+
+        if (product._count.AcquisitionItem > 0) {
+            throw new Error(
+                `Sản phẩm "${product.title}" được tạo hoặc liên kết từ phiếu nhập, không thể xóa trực tiếp. Hãy điều chỉnh tại phiếu nhập.`
+            );
+        }
+
+        const blockers = [
+            product._count.orderItems > 0 ? "đơn hàng" : null,
+            product._count.InvoiceItem > 0 ? "hóa đơn" : null,
+            product._count.ServiceRequest > 0 ? "phiếu service" : null,
+            product._count.maintenanceRecords > 0 ? "maintenance log" : null,
+            product._count.Reservation > 0 ? "reservation" : null,
+        ].filter(Boolean);
+
+        if (blockers.length > 0) {
+            throw new Error(
+                `Sản phẩm "${product.title}" đã phát sinh ${blockers.join(", ")}, không thể xóa trực tiếp.`
+            );
+        }
+
         await prodRepo.deleteProduct(tx, id);
         return { success: true };
     });

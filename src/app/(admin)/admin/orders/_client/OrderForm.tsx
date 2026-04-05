@@ -1,9 +1,31 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+    CircleDollarSign,
+    Package,
+    Percent,
+    Phone,
+    Plus,
+    ShieldCheck,
+    ShoppingCart,
+    Truck,
+    Wrench,
+    X,
+} from "lucide-react";
+
 import ProductSearchInput from "../../__components/ProductSearchInput";
+import {
+    AdminCard,
+    AdminField,
+    AdminHeader,
+    AdminStickySubmit,
+    StatPill,
+    ToneBadge,
+    ui,
+} from "../../__components/AdminFormLayout";
+
 import type {
     OrderDraftForEdit,
     OrderDraftInput,
@@ -24,8 +46,6 @@ type Customer = {
 };
 
 type PaymentMethod = "BANK_TRANSFER" | "COD" | "CREDIT_CARD";
-type ReserveType = "DEPOSIT" | "COD";
-
 type ServiceScope = "WITH_PURCHASE" | "CUSTOMER_OWNED";
 
 type ServiceCatalog = {
@@ -63,10 +83,6 @@ const PAYMENT_METHODS: PaymentMethod[] = ["BANK_TRANSFER", "COD", "CREDIT_CARD"]
 /** ==============================
  * Helpers
  * ============================== */
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
-}
-
 function fmtMoney(n?: number | null, cur = "VND") {
     if (n == null) return "-";
     const v = Number(n);
@@ -84,8 +100,6 @@ function nowIso() {
     return new Date().toISOString();
 }
 
-// ISO -> datetime-local (YYYY-MM-DDTHH:mm)
-// ISO -> datetime-local (YYYY-MM-DDTHH:mm)
 function isoToLocalInput(iso?: string | Date | null) {
     if (!iso) return "";
     const d = iso instanceof Date ? iso : new Date(iso);
@@ -100,11 +114,9 @@ function isoToLocalInput(iso?: string | Date | null) {
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
-// datetime-local (YYYY-MM-DDTHH:mm) -> ISO (robust)
 function localInputToIso(v?: string | null) {
     if (!v) return nowIso();
 
-    // Expect "2026-01-21T19:40"
     const [datePart, timePart] = v.split("T");
     if (!datePart || !timePart) return nowIso();
 
@@ -121,7 +133,6 @@ function localInputToIso(v?: string | null) {
         return nowIso();
     }
 
-    // local time -> ISO
     const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
     if (Number.isNaN(dt.getTime())) return nowIso();
     return dt.toISOString();
@@ -180,7 +191,6 @@ function toInputFromEdit(d: OrderDraftForEdit): OrderDraftInput {
             listPrice: Number(it.listPrice ?? it.unitPrice ?? 0),
             img: it.img ?? null,
 
-            // service fields
             serviceCatalogId: it.serviceCatalogId ?? null,
             serviceScope: it.serviceScope ?? null,
             linkedOrderItemId: it.linkedOrderItemId ?? null,
@@ -189,64 +199,66 @@ function toInputFromEdit(d: OrderDraftForEdit): OrderDraftInput {
     } as any;
 }
 
-/** ==============================
- * UI atoms
- * ============================== */
-function Card({
-    title,
-    children,
-    right,
-}: {
-    title: string;
-    children: React.ReactNode;
-    right?: React.ReactNode;
-}) {
-    return (
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold">{title}</h3>
-                {right}
-            </div>
-            <div className="mt-4">{children}</div>
-        </div>
-    );
+function useDebounce<T>(value: T, delay = 300) {
+    const [debounced, setDebounced] = useState(value);
+
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+    }, [value, delay]);
+
+    return debounced;
 }
 
-function Field({
-    label,
-    children,
-    hint,
-}: {
-    label: string;
-    children: React.ReactNode;
-    hint?: string;
-}) {
-    return (
-        <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">{label}</label>
-            {children}
-            {hint ? <div className="text-[11px] text-gray-500">{hint}</div> : null}
-        </div>
-    );
+function kindLabel(kind: string) {
+    if (kind === "PRODUCT") return "Sản phẩm";
+    if (kind === "SERVICE") return "Dịch vụ";
+    if (kind === "DISCOUNT") return "Giảm giá";
+    return kind;
 }
 
-function Badge({
+function kindTone(kind: string) {
+    if (kind === "SERVICE") return "blue" as const;
+    if (kind === "DISCOUNT") return "green" as const;
+    return "gray" as const;
+}
+
+function SectionNote({
     children,
     tone = "gray",
 }: {
     children: React.ReactNode;
-    tone?: "gray" | "blue" | "green" | "red";
+    tone?: "gray" | "red" | "amber" | "blue" | "green";
 }) {
-    const base = "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium";
     const toneCls =
-        tone === "blue"
-            ? "bg-blue-50 text-blue-700"
-            : tone === "green"
-                ? "bg-green-50 text-green-700"
-                : tone === "red"
-                    ? "bg-red-50 text-red-700"
-                    : "bg-gray-100 text-gray-700";
-    return <span className={cls(base, toneCls)}>{children}</span>;
+        tone === "red"
+            ? "border-rose-200 bg-rose-50 text-rose-700"
+            : tone === "amber"
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : tone === "blue"
+                    ? "border-sky-200 bg-sky-50 text-sky-800"
+                    : tone === "green"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-slate-50 text-slate-700";
+
+    return <div className={ui("rounded-xl border px-4 py-3 text-sm", toneCls)}>{children}</div>;
+}
+
+function Modal({
+    title,
+    children,
+}: {
+    title: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+                <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+                <div className="mt-3">{children}</div>
+            </div>
+        </div>
+    );
 }
 
 /** ==============================
@@ -279,15 +291,12 @@ export default function OrderFormClient(props: Props) {
     const [saving, setSaving] = useState(false);
     const [errMsg, setErrMsg] = useState<string | null>(null);
 
-    // edit confirm modal (save + optional post)
     const [showPostConfirm, setShowPostConfirm] = useState(false);
     const [postAfterSave, setPostAfterSave] = useState(false);
 
-    // create-only success modal (optional)
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
-    // Sync initialData for edit/create
     useEffect(() => {
         if (props.mode === "edit") setForm(toInputFromEdit(props.initialData));
         else setForm(emptyDraft());
@@ -300,15 +309,6 @@ export default function OrderFormClient(props: Props) {
     const [suggestCustomers, setSuggestCustomers] = useState<Customer[]>([]);
     const [showSuggest, setShowSuggest] = useState(false);
     const [loadingSuggest, setLoadingSuggest] = useState(false);
-
-    function useDebounce<T>(value: T, delay = 300) {
-        const [debounced, setDebounced] = useState(value);
-        useEffect(() => {
-            const t = setTimeout(() => setDebounced(value), delay);
-            return () => clearTimeout(t);
-        }, [value, delay]);
-        return debounced;
-    }
 
     const debouncedPhone = useDebounce((form as any).shipPhone ?? "", 300);
 
@@ -427,7 +427,6 @@ export default function OrderFormClient(props: Props) {
         return Math.max(0, total - depositAmount);
     }, [total, depositAmount]);
 
-    // COD => auto enable reserve nếu chưa touched + chưa có reserve
     useEffect(() => {
         if ((form as any).paymentMethod !== "COD") return;
         if (reserveTouched) return;
@@ -443,12 +442,11 @@ export default function OrderFormClient(props: Props) {
     }, [(form as any).paymentMethod, total]);
 
     /** --------------------------
-     * Service/Discount block toggles
+     * Service/Discount toggles
      * -------------------------- */
     const [enableService, setEnableService] = useState(false);
     const [enableDiscount, setEnableDiscount] = useState(false);
 
-    // Keep toggles in sync with existing items (edit mode)
     useEffect(() => {
         setEnableService(serviceItems.length > 0);
         setEnableDiscount(Boolean(discountItem));
@@ -499,7 +497,6 @@ export default function OrderFormClient(props: Props) {
             if (!String((form as any).shipAddress ?? "").trim()) return "Vui lòng nhập địa chỉ giao hàng.";
         }
 
-        // item rules
         for (const it of items) {
             if (!it.kind) return "Có dòng item thiếu loại.";
             if (!String(it.title ?? "").trim()) return "Có dòng item thiếu tiêu đề.";
@@ -559,7 +556,6 @@ export default function OrderFormClient(props: Props) {
             return;
         }
 
-        // CREATE
         if (props.mode === "create") {
             setSaving(true);
 
@@ -572,11 +568,6 @@ export default function OrderFormClient(props: Props) {
                 if (!res.ok) throw new Error(await res.text());
                 const data = await res.json();
 
-                // nếu bạn muốn popup thay vì redirect ngay:
-                // setCreatedOrderId(data.id);
-                // setShowSuccessModal(true);
-                // return;
-
                 router.push(`/admin/orders/${data.id}`);
                 router.refresh();
             } catch (e: any) {
@@ -587,7 +578,6 @@ export default function OrderFormClient(props: Props) {
             return;
         }
 
-        // EDIT => open confirm (save + optional post)
         setShowPostConfirm(true);
     }
 
@@ -601,56 +591,54 @@ export default function OrderFormClient(props: Props) {
         setErrMsg(null);
     }
 
-    /** --------------------------
-     * Render helpers
-     * -------------------------- */
-    function kindLabel(kind: string) {
-        if (kind === "PRODUCT") return "Sản phẩm";
-        if (kind === "SERVICE") return "Dịch vụ";
-        if (kind === "DISCOUNT") return "Giảm giá";
-        return kind;
-    }
+    const orderStats = (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatPill label="Items" value={items.length} />
+            <StatPill label="Sản phẩm" value={productLineItems.length} />
+            <StatPill label="Dịch vụ" value={serviceItems.length} />
+            <StatPill label="Tổng" value={fmtMoney(total, "VND")} />
+        </div>
+    );
 
-    function kindTone(kind: string) {
-        if (kind === "SERVICE") return "blue" as const;
-        if (kind === "DISCOUNT") return "green" as const;
-        return "gray" as const;
-    }
-
-    /** --------------------------
-     * UI
-     * -------------------------- */
     return (
-        <div className="space-y-4 pb-24">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-                <div>
-                    <h1 className="text-xl font-semibold">{computedTitle}</h1>
-                    <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
-                        <Badge>{props.mode === "create" ? "Draft" : "Edit"}</Badge>
-                        <span>{computedSubtitle}</span>
-                    </div>
-                </div>
+        <form
+            className="space-y-6 pb-28"
+            onSubmit={(e) => {
+                e.preventDefault();
+                void submit();
+            }}
+        >
+            <AdminHeader
+                sectionLabel="Đơn hàng"
+                title={computedTitle}
+                subtitle={computedSubtitle}
+                backHref={computedBackHref}
+                backLabel={computedBackLabel}
+                rightStats={orderStats}
+                badge={
+                    <ToneBadge tone={props.mode === "create" ? "amber" : "blue"}>
+                        {props.mode === "create" ? "DRAFT" : "EDIT"}
+                    </ToneBadge>
+                }
+            />
 
-                <Link
-                    href={computedBackHref}
-                    className="rounded-md border px-3 py-2 hover:bg-gray-50 text-sm"
-                >
-                    {computedBackLabel}
-                </Link>
-            </div>
-
-            {/* Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left */}
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+                <div className="space-y-6">
                     {/* Customer */}
-                    <Card title="Khách hàng">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Field label="Số điện thoại" hint="Nhập số để gợi ý khách hàng cũ">
+                    <AdminCard
+                        title="Khách hàng"
+                        desc="Tìm khách cũ theo số điện thoại hoặc nhập nhanh thông tin khách mới."
+                        right={
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                                <Phone className="h-5 w-5" />
+                            </div>
+                        }
+                    >
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <AdminField label="Số điện thoại" hint="Nhập số để gợi ý khách hàng cũ">
                                 <div className="relative">
                                     <input
-                                        className="h-9 w-full rounded border px-3"
+                                        className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                         value={(form as any).shipPhone ?? ""}
                                         onChange={(e) => {
                                             set("shipPhone" as any, e.target.value as any);
@@ -664,9 +652,9 @@ export default function OrderFormClient(props: Props) {
                                     />
 
                                     {showSuggest && (loadingSuggest || suggestCustomers.length > 0) && (
-                                        <div className="absolute z-30 mt-1 w-full rounded-md border bg-white shadow-lg max-h-64 overflow-auto">
+                                        <div className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                                             {loadingSuggest && (
-                                                <div className="px-3 py-2 text-sm text-gray-500">Đang tìm…</div>
+                                                <div className="px-3 py-2 text-sm text-slate-500">Đang tìm…</div>
                                             )}
 
                                             {!loadingSuggest &&
@@ -674,11 +662,11 @@ export default function OrderFormClient(props: Props) {
                                                     <button
                                                         key={c.id}
                                                         type="button"
-                                                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                                        className="w-full px-3 py-2 text-left hover:bg-slate-50"
                                                         onClick={() => applyCustomer(c)}
                                                     >
-                                                        <div className="font-medium">{c.name}</div>
-                                                        <div className="text-xs text-gray-500">
+                                                        <div className="font-medium text-slate-900">{c.name}</div>
+                                                        <div className="text-xs text-slate-500">
                                                             {c.phone}
                                                             {c.address ? ` • ${c.address}` : ""}
                                                         </div>
@@ -686,107 +674,122 @@ export default function OrderFormClient(props: Props) {
                                                 ))}
 
                                             {!loadingSuggest && suggestCustomers.length === 0 && (
-                                                <div className="px-3 py-2 text-sm text-gray-500">Không tìm thấy khách cũ</div>
+                                                <div className="px-3 py-2 text-sm text-slate-500">
+                                                    Không tìm thấy khách cũ
+                                                </div>
                                             )}
                                         </div>
                                     )}
                                 </div>
-                            </Field>
+                            </AdminField>
 
-                            <Field label="Tên khách hàng" hint="Nếu khách mới, bạn nhập tên vào đây">
+                            <AdminField label="Tên khách hàng" hint="Nếu khách mới, nhập trực tiếp ở đây">
                                 <input
-                                    className="h-9 rounded border px-3"
+                                    className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                     value={(form as any).customerName ?? ""}
                                     onChange={(e) => set("customerName" as any, e.target.value as any)}
                                     placeholder="VD: Nguyễn Văn A"
                                 />
-                            </Field>
+                            </AdminField>
                         </div>
-                    </Card>
+                    </AdminCard>
 
                     {/* Shipping */}
-                    <Card
+                    <AdminCard
                         title="Giao hàng"
+                        desc="Có thể tắt shipment nếu khách tới lấy trực tiếp."
                         right={
-                            <label className="flex items-center gap-2 text-sm">
+                            <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                                 <input
                                     type="checkbox"
                                     checked={Boolean((form as any).hasShipment)}
                                     onChange={(e) => set("hasShipment" as any, e.target.checked as any)}
                                 />
-                                Có shipment (giao hàng)
+                                Có shipment
                             </label>
                         }
                     >
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Field label="Tỉnh / Thành phố">
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                                <Truck className="h-5 w-5" />
+                            </div>
+                            <div className="text-sm text-slate-500">
+                                {Boolean((form as any).hasShipment)
+                                    ? "Đơn này có giao hàng, cần nhập đầy đủ địa chỉ."
+                                    : "Đơn này là pickup, có thể bỏ qua thông tin địa chỉ."}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <AdminField label="Tỉnh / Thành phố">
                                 <input
                                     disabled={!Boolean((form as any).hasShipment)}
-                                    className={cls(
-                                        "h-9 rounded border px-3",
-                                        !Boolean((form as any).hasShipment) && "bg-gray-50 text-gray-500"
+                                    className={ui(
+                                        "h-10 w-full rounded-xl border border-slate-300 px-3",
+                                        !Boolean((form as any).hasShipment) && "bg-slate-50 text-slate-400"
                                     )}
                                     value={(form as any).shipCity ?? ""}
                                     onChange={(e) => set("shipCity" as any, e.target.value as any)}
                                     placeholder="VD: Hồ Chí Minh"
                                 />
-                            </Field>
+                            </AdminField>
 
-                            <Field label="Quận / Huyện">
+                            <AdminField label="Quận / Huyện">
                                 <input
                                     disabled={!Boolean((form as any).hasShipment)}
-                                    className={cls(
-                                        "h-9 rounded border px-3",
-                                        !Boolean((form as any).hasShipment) && "bg-gray-50 text-gray-500"
+                                    className={ui(
+                                        "h-10 w-full rounded-xl border border-slate-300 px-3",
+                                        !Boolean((form as any).hasShipment) && "bg-slate-50 text-slate-400"
                                     )}
                                     value={(form as any).shipDistrict ?? ""}
                                     onChange={(e) => set("shipDistrict" as any, (e.target.value || null) as any)}
                                     placeholder="VD: Quận 1"
                                 />
-                            </Field>
+                            </AdminField>
 
-                            <Field label="Phường / Xã">
+                            <AdminField label="Phường / Xã">
                                 <input
                                     disabled={!Boolean((form as any).hasShipment)}
-                                    className={cls(
-                                        "h-9 rounded border px-3",
-                                        !Boolean((form as any).hasShipment) && "bg-gray-50 text-gray-500"
+                                    className={ui(
+                                        "h-10 w-full rounded-xl border border-slate-300 px-3",
+                                        !Boolean((form as any).hasShipment) && "bg-slate-50 text-slate-400"
                                     )}
                                     value={(form as any).shipWard ?? ""}
                                     onChange={(e) => set("shipWard" as any, e.target.value as any)}
                                     placeholder="VD: Bến Nghé"
                                 />
-                            </Field>
+                            </AdminField>
                         </div>
 
                         <div className="mt-4">
-                            <Field label="Địa chỉ chi tiết">
+                            <AdminField label="Địa chỉ chi tiết">
                                 <textarea
                                     disabled={!Boolean((form as any).hasShipment)}
-                                    className={cls(
-                                        "min-h-[70px] w-full rounded border px-3 py-2",
-                                        !Boolean((form as any).hasShipment) && "bg-gray-50 text-gray-500"
+                                    className={ui(
+                                        "min-h-[90px] w-full rounded-xl border border-slate-300 px-3 py-2",
+                                        !Boolean((form as any).hasShipment) && "bg-slate-50 text-slate-400"
                                     )}
                                     value={(form as any).shipAddress ?? ""}
                                     onChange={(e) => set("shipAddress" as any, e.target.value as any)}
                                     placeholder="Số nhà, tên đường, ghi chú giao hàng…"
                                 />
-                            </Field>
+                            </AdminField>
 
                             {!Boolean((form as any).hasShipment) && (
-                                <div className="mt-2 text-xs text-gray-500">
+                                <div className="mt-2 text-xs text-slate-500">
                                     Đang chọn <b>pickup</b> nên không cần nhập địa chỉ giao hàng.
                                 </div>
                             )}
                         </div>
-                    </Card>
+                    </AdminCard>
 
                     {/* Items */}
-                    <Card
+                    <AdminCard
                         title="Nội dung đơn hàng"
+                        desc="Thêm sản phẩm, dịch vụ và giảm giá trong cùng một đơn."
                         right={
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 text-sm">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                                     <input
                                         type="checkbox"
                                         checked={enableService}
@@ -794,15 +797,14 @@ export default function OrderFormClient(props: Props) {
                                             const checked = e.target.checked;
                                             setEnableService(checked);
                                             if (!checked) {
-                                                // remove all service items
-                                                serviceItems.forEach((s) => removeItemById(s.id));
+                                                serviceItems.forEach((x) => removeItemById(x.id));
                                             }
                                         }}
                                     />
-                                    Dịch vụ
+                                    Có dịch vụ
                                 </label>
 
-                                <label className="flex items-center gap-2 text-sm">
+                                <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                                     <input
                                         type="checkbox"
                                         checked={enableDiscount}
@@ -810,10 +812,7 @@ export default function OrderFormClient(props: Props) {
                                             const checked = e.target.checked;
                                             setEnableDiscount(checked);
                                             if (!checked) clearDiscount();
-                                            else {
-                                                // nếu bật lên mà chưa có thì tạo khung mặc định (0 => chưa tạo line)
-                                                // user nhập sẽ tạo line
-                                            }
+                                            if (checked && !discountItem) ensureDiscount(0);
                                         }}
                                     />
                                     Giảm giá
@@ -821,340 +820,256 @@ export default function OrderFormClient(props: Props) {
                             </div>
                         }
                     >
-                        {/* Product add */}
-                        <div className="space-y-3">
-                            <div className="text-sm text-gray-600">Tìm và thêm sản phẩm vào đơn.</div>
-
-                            <ProductSearchInput
-                                value=""
-                                onSelect={(p: any) => {
-                                    addItem({
-                                        kind: "PRODUCT",
-                                        productId: p.id,
-                                        title: p.title,
-                                        quantity: 1,
-                                        listPrice: Number(p.price ?? 0),
-                                    } as any);
-                                }}
-                            />
-                        </div>
-
-                        {/* Service block */}
-                        {enableService && (
-                            <div className="mt-6 space-y-3">
-                                <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-6">
+                            {/* Product add */}
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                                <div className="mb-4 flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700">
+                                        <Package className="h-5 w-5" />
+                                    </div>
                                     <div>
-                                        <div className="font-semibold">Dịch vụ</div>
-                                        <div className="text-xs text-gray-500">
-                                            ServiceRequest sẽ được tạo khi ADMIN duyệt POST.
+                                        <div className="font-semibold text-slate-900">Thêm sản phẩm</div>
+                                        <div className="text-sm text-slate-500">
+                                            Chọn sản phẩm hiện có để đưa vào đơn.
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="rounded-lg border bg-gray-50 p-3">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                                        <div className="md:col-span-2">
-                                            <Field label="Chọn dịch vụ để thêm">
-                                                <select
-                                                    className="h-9 w-full rounded border px-2 bg-white"
-                                                    defaultValue=""
-                                                    onChange={(e) => {
-                                                        const id = e.target.value;
-                                                        if (!id) return;
-                                                        const s = serviceOptions.find((x) => x.id === id);
-                                                        if (!s) return;
+                                <ProductSearchInput
+                                    value=""
+                                    onSelect={(p) => {
+                                        addItem({
+                                            kind: "PRODUCT",
+                                            title: p.title,
+                                            productId: p.id,
+                                            quantity: 1,
+                                            listPrice: Number((p as any).price ?? 0),
+                                            img: (p as any).primaryImageUrl ?? null,
+                                        } as any);
+                                    }}
+                                />
+                            </div>
 
-                                                        // default apply to first product (if exists)
-                                                        const firstProductId = productLineItems[0]?.id ?? null;
-
-                                                        addItem({
-                                                            kind: "SERVICE",
-                                                            title: s.name,
-                                                            productId: null,
-                                                            quantity: 1,
-                                                            listPrice: Number(s.defaultPrice ?? 0),
-
-                                                            serviceCatalogId: s.id,
-                                                            serviceScope: "WITH_PURCHASE" as any,
-                                                            linkedOrderItemId: firstProductId,
-                                                            customerItemNote: null,
-                                                        } as any);
-
-                                                        e.currentTarget.value = "";
-                                                    }}
-                                                >
-                                                    <option value="" disabled>
-                                                        -- Chọn --
-                                                    </option>
-                                                    {serviceOptions.map((s) => (
-                                                        <option key={s.id} value={s.id}>
-                                                            {s.code ? `${s.code} — ` : ""}
-                                                            {s.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </Field>
-                                        </div>
-                                        <div className="text-xs text-gray-500 md:text-right">
-                                            Có {serviceItems.length} dịch vụ
-                                        </div>
+                            {/* Product block */}
+                            <div>
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <ShoppingCart className="h-4 w-4 text-slate-500" />
+                                        <div className="text-sm font-semibold text-slate-800">Sản phẩm trong đơn</div>
                                     </div>
+                                    <ToneBadge>{productLineItems.length} dòng</ToneBadge>
                                 </div>
 
-                                {serviceItems.length > 0 && (
+                                {productLineItems.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                                        Chưa có sản phẩm nào trong đơn.
+                                    </div>
+                                ) : (
                                     <div className="space-y-3">
-                                        {serviceItems.map((it) => (
-                                            <div key={it.id} className="rounded-lg border p-4 bg-white space-y-3">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <div className="font-medium">{it.title}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {it.serviceCatalogId ? (
-                                                                <>
-                                                                    serviceCatalogId:{" "}
-                                                                    <span className="font-mono">{it.serviceCatalogId}</span>
-                                                                </>
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-
-                                                    <button
-                                                        type="button"
-                                                        className="text-xs text-red-600 hover:underline"
-                                                        onClick={() => removeItemById(it.id)}
-                                                    >
-                                                        Xóa
-                                                    </button>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                    <Field label="Phạm vi dịch vụ">
-                                                        <select
-                                                            className="h-9 w-full rounded border px-2"
-                                                            value={(it.serviceScope ?? "WITH_PURCHASE") as any}
-                                                            onChange={(e) => {
-                                                                const scope = e.target.value as ServiceScope;
-                                                                updateItemById(it.id, {
-                                                                    serviceScope: scope as any,
-                                                                    linkedOrderItemId:
-                                                                        scope === "WITH_PURCHASE" ? it.linkedOrderItemId ?? null : null,
-                                                                    customerItemNote: scope === "CUSTOMER_OWNED" ? it.customerItemNote ?? "" : null,
-                                                                } as any);
-                                                            }}
-                                                        >
-                                                            <option value="WITH_PURCHASE">Đi kèm sản phẩm</option>
-                                                            <option value="CUSTOMER_OWNED">Đồ khách mang tới</option>
-                                                        </select>
-                                                    </Field>
-
-                                                    <Field label="Số lượng">
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            className="h-9 w-full rounded border px-2"
-                                                            value={Number(it.quantity ?? 1)}
-                                                            onChange={(e) =>
-                                                                updateItemById(it.id, {
-                                                                    quantity: Math.max(1, Number(e.target.value || 1)),
-                                                                } as any)
-                                                            }
-                                                        />
-                                                    </Field>
-
-                                                    <Field label="Đơn giá">
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            className="h-9 w-full rounded border px-2 text-right"
-                                                            value={Number(it.listPrice ?? 0)}
-                                                            onChange={(e) =>
-                                                                updateItemById(it.id, { listPrice: Number(e.target.value || 0) } as any)
-                                                            }
-                                                        />
-                                                    </Field>
-                                                </div>
-
-                                                {it.serviceScope !== "CUSTOMER_OWNED" && (
-                                                    <Field label="Áp cho sản phẩm" hint="Bắt buộc nếu dịch vụ đi kèm sản phẩm">
-                                                        <select
-                                                            className="h-9 w-full rounded border px-2"
-                                                            value={it.linkedOrderItemId ?? ""}
-                                                            onChange={(e) =>
-                                                                updateItemById(it.id, {
-                                                                    linkedOrderItemId: e.target.value || null,
-                                                                } as any)
-                                                            }
-                                                        >
-                                                            <option value="">-- Chọn sản phẩm --</option>
-                                                            {productLineItems.map((p) => (
-                                                                <option key={p.id} value={p.id}>
-                                                                    {p.title}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </Field>
-                                                )}
-
-                                                {it.serviceScope === "CUSTOMER_OWNED" && (
-                                                    <Field
-                                                        label="Mô tả đồ khách mang tới"
-                                                        hint="VD: seiko tròn mặt đen, đang chạy sai giờ"
-                                                    >
-                                                        <textarea
-                                                            className="min-h-[70px] w-full rounded border px-3 py-2"
-                                                            value={it.customerItemNote ?? ""}
-                                                            onChange={(e) =>
-                                                                updateItemById(it.id, { customerItemNote: e.target.value } as any)
-                                                            }
-                                                            placeholder="Mô tả tình trạng/ngoại hình..."
-                                                        />
-                                                    </Field>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Discount block */}
-                        {enableDiscount && (
-                            <div className="mt-6 rounded-lg border bg-red-50 p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div className="font-semibold text-red-700">Giảm giá toàn đơn</div>
-                                        <div className="text-xs text-red-700/70">
-                                            Nhập số dương. Hệ thống sẽ tự trừ vào tổng.
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="text-sm text-red-700 hover:underline"
-                                        onClick={() => {
-                                            setEnableDiscount(false);
-                                            clearDiscount();
-                                        }}
-                                    >
-                                        Bỏ giảm giá
-                                    </button>
-                                </div>
-
-                                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                                    <div className="md:col-span-2">
-                                        <Field label="Số tiền giảm">
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                className="h-10 w-full rounded border px-3 text-right text-red-700 font-semibold"
-                                                value={discountItem ? Math.abs(Number(discountItem.listPrice ?? 0)) : ""}
-                                                onChange={(e) => {
-                                                    const v = Number(e.target.value || 0);
-                                                    if (!Number.isFinite(v) || v <= 0) {
-                                                        // nếu user xóa input => xóa line discount
-                                                        clearDiscount();
-                                                        return;
-                                                    }
-                                                    ensureDiscount(v);
-                                                }}
-                                                placeholder="VD: 200000"
-                                            />
-                                        </Field>
-                                    </div>
-
-                                    <div className="md:text-right">
-                                        <div className="text-xs text-gray-600">Tác động</div>
-                                        <div className="text-lg font-semibold text-red-700">
-                                            {discountItem ? `− ${fmtMoney(Math.abs(Number(discountItem.listPrice ?? 0)), "VND")}` : "—"}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Line items table (simple, clean) */}
-                        <div className="mt-6 overflow-x-auto border rounded-lg">
-                            <table className="min-w-full text-sm border-collapse">
-                                <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                        <th className="px-3 py-2 text-left w-[110px]">Loại</th>
-                                        <th className="px-3 py-2 text-left">Tên</th>
-                                        <th className="px-3 py-2 text-right w-[120px]">SL</th>
-                                        <th className="px-3 py-2 text-right w-[160px]">Đơn giá</th>
-                                        <th className="px-3 py-2 text-right w-[180px]">Thành tiền</th>
-                                        <th className="px-3 py-2 text-right w-[80px]">Xóa</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {items.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-3 py-4 text-gray-500">
-                                                Chưa có item nào. Hãy thêm sản phẩm/dịch vụ/giảm giá.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        items.map((it) => {
-                                            const isProduct = it.kind === "PRODUCT";
-                                            const isService = it.kind === "SERVICE";
-                                            const isDiscount = it.kind === "DISCOUNT";
-
-                                            const qty = isDiscount ? 1 : Number(it.quantity ?? 1);
-                                            const price = Number(it.listPrice ?? 0);
-                                            const lineTotal = qty * price;
-
-                                            // service extra display
-                                            let subNote: string | null = null;
-                                            if (isService) {
-                                                if (it.serviceScope === "CUSTOMER_OWNED") {
-                                                    subNote = String(it.customerItemNote ?? "").trim() || null;
-                                                } else if (it.linkedOrderItemId) {
-                                                    const p = productLineItems.find((x) => x.id === it.linkedOrderItemId);
-                                                    subNote = p ? `Áp cho: ${p.title}` : "Áp cho: (chưa chọn)";
-                                                }
-                                            }
-
-                                            if (isProduct && it.productId) {
-                                                subNote = `productId: ${it.productId}`;
-                                            }
-
-                                            if (isDiscount) {
-                                                subNote = "Giảm giá toàn đơn";
-                                            }
+                                        {productLineItems.map((it) => {
+                                            const lineTotal =
+                                                Number(it.quantity ?? 1) * Number(it.listPrice ?? 0);
 
                                             return (
-                                                <tr
+                                                <div
                                                     key={it.id}
-                                                    className={cls(
-                                                        "border-b",
-                                                        isDiscount && "bg-red-50",
-                                                        !isDiscount && "hover:bg-gray-50"
-                                                    )}
+                                                    className="rounded-2xl border border-slate-200 bg-white p-4"
                                                 >
-                                                    <td className="px-3 py-3 align-top">
-                                                        <Badge tone={kindTone(it.kind)}>{kindLabel(it.kind)}</Badge>
-                                                    </td>
-
-                                                    <td className="px-3 py-3">
-                                                        <div className={cls("font-medium", isDiscount && "text-red-700")}>
-                                                            {it.title}
-                                                        </div>
-                                                        {subNote ? (
-                                                            <div className={cls("mt-1 text-xs", isDiscount ? "text-red-700/70" : "text-gray-500")}>
-                                                                {subNote}
+                                                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <ToneBadge tone="gray">Sản phẩm</ToneBadge>
+                                                                <div className="font-semibold text-slate-900">
+                                                                    {it.title}
+                                                                </div>
                                                             </div>
-                                                        ) : null}
-                                                    </td>
 
-                                                    <td className="px-3 py-3 text-right align-top">
-                                                        {isDiscount ? (
-                                                            <span className="text-gray-500">—</span>
-                                                        ) : isProduct ? (
-                                                            // product qty editable
+                                                            {it.productId ? (
+                                                                <div className="mt-1 text-xs text-slate-500">
+                                                                    productId: {it.productId}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeItemById(it.id)}
+                                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                            Xóa
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                                        <AdminField label="Số lượng">
                                                             <input
                                                                 type="number"
                                                                 min={1}
-                                                                className="h-9 w-24 rounded border px-2 text-right"
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-right"
+                                                                value={Number(it.quantity ?? 1)}
+                                                                onChange={(e) =>
+                                                                    updateItemById(it.id, {
+                                                                        quantity: Math.max(
+                                                                            1,
+                                                                            Number(e.target.value || 1)
+                                                                        ),
+                                                                    } as any)
+                                                                }
+                                                            />
+                                                        </AdminField>
+
+                                                        <AdminField label="Đơn giá">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-right"
+                                                                value={Number(it.listPrice ?? 0)}
+                                                                onChange={(e) =>
+                                                                    updateItemById(it.id, {
+                                                                        listPrice: Number(e.target.value || 0),
+                                                                    } as any)
+                                                                }
+                                                            />
+                                                        </AdminField>
+
+                                                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                                                                Thành tiền
+                                                            </div>
+                                                            <div className="mt-1 text-base font-semibold text-slate-900">
+                                                                {fmtMoney(lineTotal, "VND")}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Service block */}
+                            {enableService && (
+                                <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
+                                    <div className="mb-4 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-200 bg-white text-sky-700">
+                                                <Wrench className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-sky-900">Dịch vụ đi kèm</div>
+                                                <div className="text-sm text-sky-800/80">
+                                                    Áp cho sản phẩm trong đơn hoặc nhận đồ khách mang tới.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                addItem({
+                                                    kind: "SERVICE",
+                                                    title: "",
+                                                    quantity: 1,
+                                                    listPrice: 0,
+                                                    productId: null,
+                                                    serviceCatalogId: null,
+                                                    serviceScope: "WITH_PURCHASE" as ServiceScope,
+                                                    linkedOrderItemId: null,
+                                                    customerItemNote: null,
+                                                } as any)
+                                            }
+                                            className="inline-flex items-center gap-2 rounded-xl border border-sky-300 bg-white px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Thêm dịch vụ
+                                        </button>
+                                    </div>
+
+                                    {serviceItems.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed border-sky-200 bg-white px-4 py-8 text-center text-sm text-sky-700">
+                                            Đã bật block dịch vụ nhưng chưa có dòng nào.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {serviceItems.map((it, index) => (
+                                                <div
+                                                    key={it.id}
+                                                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                                                >
+                                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <ToneBadge tone="blue">Dịch vụ #{index + 1}</ToneBadge>
+                                                            {it.title ? (
+                                                                <span className="text-sm font-medium text-slate-900">
+                                                                    {it.title}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeItemById(it.id)}
+                                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                            Xóa
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                        <AdminField label="Danh mục dịch vụ">
+                                                            <select
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3"
+                                                                value={it.serviceCatalogId ?? ""}
+                                                                onChange={(e) => {
+                                                                    const catalogId = e.target.value || null;
+                                                                    const selected = serviceOptions.find((x) => x.id === catalogId);
+                                                                    updateItemById(it.id, {
+                                                                        serviceCatalogId: catalogId,
+                                                                        title: selected?.name ?? "",
+                                                                        listPrice: Number(selected?.defaultPrice ?? 0),
+                                                                    } as any);
+                                                                }}
+                                                            >
+                                                                <option value="">-- Chọn dịch vụ --</option>
+                                                                {serviceOptions.map((s) => (
+                                                                    <option key={s.id} value={s.id}>
+                                                                        {s.code ? `${s.code} - ${s.name}` : s.name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </AdminField>
+
+                                                        <AdminField label="Phạm vi áp dụng">
+                                                            <select
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3"
+                                                                value={it.serviceScope ?? "WITH_PURCHASE"}
+                                                                onChange={(e) =>
+                                                                    updateItemById(it.id, {
+                                                                        serviceScope: e.target.value as ServiceScope,
+                                                                        linkedOrderItemId:
+                                                                            e.target.value === "WITH_PURCHASE"
+                                                                                ? it.linkedOrderItemId ?? null
+                                                                                : null,
+                                                                        customerItemNote:
+                                                                            e.target.value === "CUSTOMER_OWNED"
+                                                                                ? it.customerItemNote ?? ""
+                                                                                : null,
+                                                                    } as any)
+                                                                }
+                                                            >
+                                                                <option value="WITH_PURCHASE">Đi kèm sản phẩm mua</option>
+                                                                <option value="CUSTOMER_OWNED">Đồ khách mang tới</option>
+                                                            </select>
+                                                        </AdminField>
+
+                                                        <AdminField label="Số lượng">
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-right"
                                                                 value={Number(it.quantity ?? 1)}
                                                                 onChange={(e) =>
                                                                     updateItemById(it.id, {
@@ -1162,98 +1077,331 @@ export default function OrderFormClient(props: Props) {
                                                                     } as any)
                                                                 }
                                                             />
-                                                        ) : (
-                                                            // service qty editable? -> keep edit in service block, so show readonly here
-                                                            <span className="inline-flex h-9 w-24 items-center justify-end">
-                                                                {Number(it.quantity ?? 1)}
-                                                            </span>
-                                                        )}
-                                                    </td>
+                                                        </AdminField>
 
-                                                    <td className="px-3 py-3 text-right align-top">
-                                                        {isProduct ? (
-                                                            // product price locked
-                                                            <span className="inline-flex h-9 items-center justify-end w-[140px] font-medium">
-                                                                {fmtMoney(price, "VND")}
-                                                            </span>
-                                                        ) : isService ? (
-                                                            // service price locked in line item (edited in block)
-                                                            <span className="inline-flex h-9 items-center justify-end w-[140px]">
-                                                                {fmtMoney(price, "VND")}
-                                                            </span>
-                                                        ) : (
-                                                            // discount price locked in line item (edited in block)
-                                                            <span className="inline-flex h-9 items-center justify-end w-[140px] text-red-700 font-medium">
-                                                                {fmtMoney(price, "VND")}
-                                                            </span>
-                                                        )}
-                                                    </td>
+                                                        <AdminField label="Đơn giá">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-right"
+                                                                value={Number(it.listPrice ?? 0)}
+                                                                onChange={(e) =>
+                                                                    updateItemById(it.id, {
+                                                                        listPrice: Number(e.target.value || 0),
+                                                                    } as any)
+                                                                }
+                                                            />
+                                                        </AdminField>
+                                                    </div>
 
-                                                    <td
-                                                        className={cls(
-                                                            "px-3 py-3 text-right font-semibold align-top",
-                                                            isDiscount && "text-red-700"
+                                                    {it.serviceScope !== "CUSTOMER_OWNED" && (
+                                                        <div className="mt-4">
+                                                            <AdminField
+                                                                label="Áp cho sản phẩm"
+                                                                hint="Bắt buộc nếu dịch vụ đi kèm sản phẩm"
+                                                            >
+                                                                <select
+                                                                    className="h-10 w-full rounded-xl border border-slate-300 px-3"
+                                                                    value={it.linkedOrderItemId ?? ""}
+                                                                    onChange={(e) =>
+                                                                        updateItemById(it.id, {
+                                                                            linkedOrderItemId: e.target.value || null,
+                                                                        } as any)
+                                                                    }
+                                                                >
+                                                                    <option value="">-- Chọn sản phẩm --</option>
+                                                                    {productLineItems.map((p) => (
+                                                                        <option key={p.id} value={p.id}>
+                                                                            {p.title}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </AdminField>
+                                                        </div>
+                                                    )}
+
+                                                    {it.serviceScope === "CUSTOMER_OWNED" && (
+                                                        <div className="mt-4">
+                                                            <AdminField
+                                                                label="Mô tả đồ khách mang tới"
+                                                                hint="VD: seiko tròn mặt đen, đang chạy sai giờ"
+                                                            >
+                                                                <textarea
+                                                                    className="min-h-[90px] w-full rounded-xl border border-slate-300 px-3 py-2"
+                                                                    value={it.customerItemNote ?? ""}
+                                                                    onChange={(e) =>
+                                                                        updateItemById(it.id, {
+                                                                            customerItemNote: e.target.value,
+                                                                        } as any)
+                                                                    }
+                                                                    placeholder="Mô tả tình trạng/ngoại hình..."
+                                                                />
+                                                            </AdminField>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Discount block */}
+                            {enableDiscount && (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-700">
+                                                <Percent className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-rose-900">Giảm giá toàn đơn</div>
+                                                <div className="text-sm text-rose-800/80">
+                                                    Nhập số dương. Hệ thống sẽ tự trừ vào tổng.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="rounded-lg px-2 py-1 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                                            onClick={() => {
+                                                setEnableDiscount(false);
+                                                clearDiscount();
+                                            }}
+                                        >
+                                            Bỏ giảm giá
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        <div className="md:col-span-2">
+                                            <AdminField label="Số tiền giảm">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    className="h-10 w-full rounded-xl border border-rose-300 px-3 text-right font-semibold text-rose-700"
+                                                    value={discountItem ? Math.abs(Number(discountItem.listPrice ?? 0)) : ""}
+                                                    onChange={(e) => {
+                                                        const v = Number(e.target.value || 0);
+                                                        if (!Number.isFinite(v) || v <= 0) {
+                                                            clearDiscount();
+                                                            return;
+                                                        }
+                                                        ensureDiscount(v);
+                                                    }}
+                                                    placeholder="VD: 200000"
+                                                />
+                                            </AdminField>
+                                        </div>
+
+                                        <div className="rounded-xl border border-rose-200 bg-white px-4 py-3">
+                                            <div className="text-xs uppercase tracking-wide text-rose-600">Tác động</div>
+                                            <div className="mt-1 text-lg font-semibold text-rose-700">
+                                                {discountItem
+                                                    ? `− ${fmtMoney(Math.abs(Number(discountItem.listPrice ?? 0)), "VND")}`
+                                                    : "—"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Summary item table */}
+                            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                                <table className="min-w-full border-collapse text-sm">
+                                    <thead className="border-b bg-slate-50">
+                                        <tr>
+                                            <th className="w-[120px] px-3 py-3 text-left">Loại</th>
+                                            <th className="px-3 py-3 text-left">Tên</th>
+                                            <th className="w-[120px] px-3 py-3 text-right">SL</th>
+                                            <th className="w-[160px] px-3 py-3 text-right">Đơn giá</th>
+                                            <th className="w-[180px] px-3 py-3 text-right">Thành tiền</th>
+                                            <th className="w-[90px] px-3 py-3 text-right">Xóa</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {items.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
+                                                    Chưa có item nào. Hãy thêm sản phẩm/dịch vụ/giảm giá.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            items.map((it) => {
+                                                const isProduct = it.kind === "PRODUCT";
+                                                const isService = it.kind === "SERVICE";
+                                                const isDiscount = it.kind === "DISCOUNT";
+
+                                                const qty = isDiscount ? 1 : Number(it.quantity ?? 1);
+                                                const price = Number(it.listPrice ?? 0);
+                                                const lineTotal = qty * price;
+
+                                                let subNote: string | null = null;
+                                                if (isService) {
+                                                    if (it.serviceScope === "CUSTOMER_OWNED") {
+                                                        subNote = String(it.customerItemNote ?? "").trim() || null;
+                                                    } else if (it.linkedOrderItemId) {
+                                                        const p = productLineItems.find((x) => x.id === it.linkedOrderItemId);
+                                                        subNote = p ? `Áp cho: ${p.title}` : "Áp cho: (chưa chọn)";
+                                                    }
+                                                }
+
+                                                if (isProduct && it.productId) {
+                                                    subNote = `productId: ${it.productId}`;
+                                                }
+
+                                                if (isDiscount) {
+                                                    subNote = "Giảm giá toàn đơn";
+                                                }
+
+                                                return (
+                                                    <tr
+                                                        key={it.id}
+                                                        className={ui(
+                                                            "border-b",
+                                                            isDiscount ? "bg-rose-50" : "hover:bg-slate-50"
                                                         )}
                                                     >
-                                                        {fmtMoney(lineTotal, "VND")}
-                                                    </td>
+                                                        <td className="px-3 py-3 align-top">
+                                                            <ToneBadge tone={kindTone(it.kind)}>
+                                                                {kindLabel(it.kind)}
+                                                            </ToneBadge>
+                                                        </td>
 
-                                                    <td className="px-3 py-3 text-right align-top">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (it.kind === "DISCOUNT") setEnableDiscount(false);
-                                                                removeItemById(it.id);
-                                                            }}
-                                                            className="text-red-600 hover:underline text-xs"
+                                                        <td className="px-3 py-3">
+                                                            <div className={ui("font-medium", isDiscount && "text-rose-700")}>
+                                                                {it.title}
+                                                            </div>
+                                                            {subNote ? (
+                                                                <div
+                                                                    className={ui(
+                                                                        "mt-1 text-xs",
+                                                                        isDiscount ? "text-rose-700/80" : "text-slate-500"
+                                                                    )}
+                                                                >
+                                                                    {subNote}
+                                                                </div>
+                                                            ) : null}
+                                                        </td>
+
+                                                        <td className="px-3 py-3 text-right align-top">
+                                                            {isDiscount ? (
+                                                                <span className="text-slate-400">—</span>
+                                                            ) : isProduct ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min={1}
+                                                                    className="h-10 w-24 rounded-xl border border-slate-300 px-2 text-right"
+                                                                    value={Number(it.quantity ?? 1)}
+                                                                    onChange={(e) =>
+                                                                        updateItemById(it.id, {
+                                                                            quantity: Math.max(
+                                                                                1,
+                                                                                Number(e.target.value || 1)
+                                                                            ),
+                                                                        } as any)
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <span className="inline-flex h-10 w-24 items-center justify-end">
+                                                                    {Number(it.quantity ?? 1)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+
+                                                        <td className="px-3 py-3 text-right align-top">
+                                                            <span
+                                                                className={ui(
+                                                                    "inline-flex h-10 w-[140px] items-center justify-end",
+                                                                    isDiscount && "font-medium text-rose-700"
+                                                                )}
+                                                            >
+                                                                {fmtMoney(price, "VND")}
+                                                            </span>
+                                                        </td>
+
+                                                        <td
+                                                            className={ui(
+                                                                "px-3 py-3 text-right font-semibold align-top",
+                                                                isDiscount && "text-rose-700"
+                                                            )}
                                                         >
-                                                            Xóa
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
+                                                            {fmtMoney(lineTotal, "VND")}
+                                                        </td>
 
-                                <tfoot>
-                                    <tr>
-                                        <td colSpan={4} className="px-3 py-3 text-right text-sm text-gray-600">
-                                            Tổng
-                                        </td>
-                                        <td className="px-3 py-3 text-right font-bold">{fmtMoney(total, "VND")}</td>
-                                        <td />
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                                        <td className="px-3 py-3 text-right align-top">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (it.kind === "DISCOUNT") setEnableDiscount(false);
+                                                                    removeItemById(it.id);
+                                                                }}
+                                                                className="text-xs font-medium text-rose-600 hover:underline"
+                                                            >
+                                                                Xóa
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+
+                                    <tfoot>
+                                        <tr>
+                                            <td colSpan={4} className="px-3 py-3 text-right text-sm text-slate-600">
+                                                Tổng
+                                            </td>
+                                            <td className="px-3 py-3 text-right font-bold">
+                                                {fmtMoney(total, "VND")}
+                                            </td>
+                                            <td />
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
-                    </Card>
+                    </AdminCard>
                 </div>
 
-                {/* Right */}
+                {/* Right sidebar */}
                 <div className="space-y-6">
-                    <Card title="Thông tin đơn hàng">
+                    <AdminCard
+                        title="Thông tin đơn hàng"
+                        desc="Ngày tạo, thanh toán, cọc và ghi chú nội bộ."
+                        right={
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
+                                <ShieldCheck className="h-5 w-5" />
+                            </div>
+                        }
+                    >
                         <div className="space-y-4">
-                            <Field label="Ngày tạo">
+                            <AdminField label="Ngày tạo">
                                 <input
                                     type="datetime-local"
-                                    className="h-9 w-full rounded border px-3"
+                                    className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                     value={isoToLocalInput((form as any).createdAt)}
                                     onChange={(e) => {
                                         const v = e.target.value;
-                                        // nếu user clear input -> set nowIso để tránh Invalid Date
-                                        set("createdAt" as any, localInputToIso(v) as any);
+                                        set("createdAt" as any, v ? localInputToIso(v) : nowIso());
                                     }}
                                 />
-                            </Field>
+                            </AdminField>
 
-                            <Field label="Thanh toán">
+                            <AdminField label="Phương thức thanh toán">
                                 <select
-                                    className="h-9 w-full rounded border px-2"
-                                    value={(form as any).paymentMethod as any}
+                                    className="h-10 w-full rounded-xl border border-slate-300 px-3"
+                                    value={(form as any).paymentMethod ?? "BANK_TRANSFER"}
                                     onChange={(e) => {
-                                        setReserveTouched(false);
-                                        set("paymentMethod" as any, e.target.value as any);
+                                        const next = e.target.value as PaymentMethod;
+                                        set("paymentMethod" as any, next as any);
+
+                                        if (next !== "COD" && (form as any).reserve?.type === "COD") {
+                                            setReserveTouched(true);
+                                            set("reserve" as any, null as any);
+                                        }
                                     }}
                                 >
                                     {PAYMENT_METHODS.map((m) => (
@@ -1262,39 +1410,49 @@ export default function OrderFormClient(props: Props) {
                                         </option>
                                     ))}
                                 </select>
-                            </Field>
+                            </AdminField>
 
-                            {/* RESERVE */}
-                            <div className="space-y-3">
-                                <label className="flex items-center gap-2 text-sm">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="mb-3 flex items-center gap-2">
+                                    <CircleDollarSign className="h-4 w-4 text-slate-500" />
+                                    <div className="text-sm font-semibold text-slate-800">Tiền cọc / giữ hàng</div>
+                                </div>
+
+                                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                                     <input
                                         type="checkbox"
                                         checked={Boolean((form as any).reserve)}
-                                        disabled={(form as any).paymentMethod === "COD"}
                                         onChange={(e) => {
                                             setReserveTouched(true);
-                                            if (!e.target.checked) set("reserve" as any, null as any);
-                                            else
+                                            if (e.target.checked) {
+                                                const suggested =
+                                                    (form as any).paymentMethod === "COD"
+                                                        ? Math.round(total * 0.1)
+                                                        : 0;
                                                 set("reserve" as any, {
-                                                    type: "DEPOSIT",
-                                                    amount: 0,
+                                                    type:
+                                                        (form as any).paymentMethod === "COD"
+                                                            ? "COD"
+                                                            : "DEPOSIT",
+                                                    amount: suggested,
                                                     expiresAt: null,
                                                 } as any);
+                                            } else {
+                                                set("reserve" as any, null as any);
+                                            }
                                         }}
                                     />
-                                    <span className="font-medium">
-                                        Đặt cọc giữ hàng
-                                        {(form as any).paymentMethod === "COD" && (
-                                            <span className="ml-1 text-xs text-orange-600">(bắt buộc với COD)</span>
-                                        )}
-                                    </span>
+                                    Bật cọc / giữ hàng
+                                    {(form as any).paymentMethod === "COD" && (
+                                        <span className="text-xs text-amber-600">(bắt buộc với COD)</span>
+                                    )}
                                 </label>
 
                                 {(form as any).reserve && (
-                                    <div className="space-y-3 rounded-md border bg-gray-50 p-3">
-                                        <Field label="Loại cọc">
+                                    <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+                                        <AdminField label="Loại cọc">
                                             <select
-                                                className="h-9 w-full rounded border px-2"
+                                                className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                                 value={(form as any).reserve.type}
                                                 onChange={(e) => {
                                                     setReserveTouched(true);
@@ -1307,9 +1465,9 @@ export default function OrderFormClient(props: Props) {
                                                 <option value="DEPOSIT">DEPOSIT</option>
                                                 <option value="COD">COD</option>
                                             </select>
-                                        </Field>
+                                        </AdminField>
 
-                                        <Field
+                                        <AdminField
                                             label="Số tiền cọc"
                                             hint={
                                                 (form as any).paymentMethod === "COD"
@@ -1320,7 +1478,7 @@ export default function OrderFormClient(props: Props) {
                                             <input
                                                 type="number"
                                                 min={0}
-                                                className="h-9 w-full rounded border px-3"
+                                                className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                                 value={Number((form as any).reserve.amount ?? 0)}
                                                 onChange={(e) => {
                                                     setReserveTouched(true);
@@ -1331,9 +1489,12 @@ export default function OrderFormClient(props: Props) {
                                                 }}
                                                 placeholder="VD: 5000000"
                                             />
-                                        </Field>
+                                        </AdminField>
 
-                                        <Field label="Giữ hàng đến" hint="Hết hạn có thể huỷ đơn nếu chưa thanh toán">
+                                        <AdminField
+                                            label="Giữ hàng đến"
+                                            hint="Hết hạn có thể huỷ đơn nếu chưa thanh toán"
+                                        >
                                             <input
                                                 type="datetime-local"
                                                 value={isoToLocalInput((form as any).reserve.expiresAt)}
@@ -1341,59 +1502,65 @@ export default function OrderFormClient(props: Props) {
                                                     setReserveTouched(true);
                                                     set("reserve" as any, {
                                                         ...(form as any).reserve,
-                                                        expiresAt: e.target.value ? localInputToIso(e.target.value) : null,
+                                                        expiresAt: e.target.value
+                                                            ? localInputToIso(e.target.value)
+                                                            : null,
                                                     } as any);
                                                 }}
-                                                className="h-9 w-full rounded border px-3"
+                                                className="h-10 w-full rounded-xl border border-slate-300 px-3"
                                                 disabled={(form as any).paymentMethod === "COD"}
                                             />
-                                        </Field>
+                                        </AdminField>
 
-                                        <div className="text-xs text-gray-500">
-                                            💡 Thường dùng cho COD hoặc giữ hàng cho khách VIP
+                                        <div className="text-xs text-slate-500">
+                                            Thường dùng cho COD hoặc giữ hàng cho khách.
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <Field label="Ghi chú">
+                            <AdminField label="Ghi chú">
                                 <textarea
-                                    className="min-h-[90px] w-full rounded border px-3 py-2"
+                                    className="min-h-[100px] w-full rounded-xl border border-slate-300 px-3 py-2"
                                     value={(form as any).notes ?? ""}
                                     onChange={(e) => set("notes" as any, (e.target.value || null) as any)}
                                     placeholder="Ghi chú nội bộ…"
                                 />
-                            </Field>
+                            </AdminField>
                         </div>
-                    </Card>
+                    </AdminCard>
 
-                    <Card title="Tóm tắt">
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Số item</span>
-                                <span className="font-medium">{items.length}</span>
+                    <AdminCard title="Tóm tắt đơn" desc="Đối chiếu nhanh trước khi lưu.">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <span className="text-sm text-slate-600">Số item</span>
+                                <span className="font-semibold text-slate-900">{items.length}</span>
                             </div>
 
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Tổng tiền</span>
-                                <span className="font-semibold">{fmtMoney(total, "VND")}</span>
+                            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <span className="text-sm text-slate-600">Tổng tiền</span>
+                                <span className="font-semibold text-slate-900">{fmtMoney(total, "VND")}</span>
                             </div>
 
                             {(form as any).reserve && (
                                 <>
-                                    <div className="flex justify-between text-amber-700">
-                                        <span>Đã cọc</span>
-                                        <span className="font-medium">− {fmtMoney(depositAmount, "VND")}</span>
+                                    <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                                        <span className="text-sm text-amber-800">Đã cọc</span>
+                                        <span className="font-semibold text-amber-800">
+                                            − {fmtMoney(depositAmount, "VND")}
+                                        </span>
                                     </div>
 
-                                    <div className="flex justify-between font-semibold text-red-700 border-t pt-2">
-                                        <span>Còn phải thu</span>
-                                        <span>{fmtMoney(remainingAmount, "VND")}</span>
+                                    <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                        <span className="text-sm text-rose-700">Còn phải thu</span>
+                                        <span className="font-semibold text-rose-700">
+                                            {fmtMoney(remainingAmount, "VND")}
+                                        </span>
                                     </div>
 
                                     {(form as any).reserve.expiresAt && (
-                                        <div className="text-xs text-gray-500">
-                                            ⏰ Giữ hàng đến:{" "}
+                                        <div className="text-xs text-slate-500">
+                                            Giữ hàng đến:{" "}
                                             {new Date((form as any).reserve.expiresAt).toLocaleString("vi-VN")}
                                         </div>
                                     )}
@@ -1401,155 +1568,126 @@ export default function OrderFormClient(props: Props) {
                             )}
 
                             {!(form as any).reserve && (
-                                <div className="pt-2 text-xs text-gray-500">
-                                    * RefNo / Shipment / ServiceRequest sẽ sinh khi Admin duyệt POST.
+                                <div className="pt-2 text-xs text-slate-500">
+                                    RefNo / Shipment / ServiceRequest sẽ sinh khi Admin duyệt POST.
                                 </div>
                             )}
                         </div>
-                    </Card>
+                    </AdminCard>
 
-                    {errMsg ? (
-                        <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                            {errMsg}
-                        </div>
-                    ) : null}
+                    {errMsg ? <SectionNote tone="red">{errMsg}</SectionNote> : null}
                 </div>
             </div>
 
-            {/* Sticky footer actions */}
-            <div className="fixed bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur">
-                <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="text-sm">
-                        <span className="text-gray-600">Tổng:</span>{" "}
-                        <span className="font-semibold">{fmtMoney(total, "VND")}</span>
+            <AdminStickySubmit
+                saving={saving}
+                submitLabel={props.mode === "create" ? "Tạo Draft" : "Lưu thay đổi"}
+                onCancelHref={computedBackHref}
+                total={
+                    <div>
+                        <div className="text-xs text-slate-500">Tổng đơn</div>
+                        <div className="text-base font-semibold text-slate-900">{fmtMoney(total, "VND")}</div>
                     </div>
+                }
+            />
 
-                    <div className="flex items-center gap-2">
-                        <Link
-                            href={computedBackHref}
-                            className={cls(
-                                "h-9 rounded border px-4 hover:bg-gray-50 flex items-center",
-                                saving && "pointer-events-none opacity-60"
-                            )}
+            {/* Create success modal */}
+            {props.mode === "create" && showSuccessModal && (
+                <Modal title="Tạo đơn thành công 🎉">
+                    <p className="text-sm text-slate-600">
+                        Bạn muốn tiếp tục tạo đơn mới hay quay lại danh sách đơn hàng?
+                    </p>
+
+                    <div className="mt-5 flex justify-end gap-2">
+                        <button
+                            type="button"
+                            className="rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                if (createdOrderId) router.push(`/admin/orders/${createdOrderId}`);
+                                else router.push("/admin/orders");
+                            }}
                         >
-                            Hủy
-                        </Link>
+                            Xem chi tiết
+                        </button>
 
                         <button
-                            className="rounded-md bg-black text-white px-4 h-9 text-sm hover:bg-neutral-800 disabled:opacity-60"
-                            onClick={submit}
-                            disabled={saving}
                             type="button"
+                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                resetFormForNewOrder();
+                            }}
                         >
-                            {saving ? "Đang lưu..." : props.mode === "create" ? "Tạo Draft" : "Lưu thay đổi"}
+                            Tạo đơn mới
                         </button>
                     </div>
-                </div>
-            </div>
-
-            {/* Create success modal (optional) */}
-            {props.mode === "create" && showSuccessModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
-                        <h3 className="text-lg font-semibold">Tạo đơn thành công 🎉</h3>
-
-                        <p className="mt-2 text-sm text-gray-600">
-                            Bạn muốn tiếp tục tạo đơn mới hay quay lại danh sách đơn hàng?
-                        </p>
-
-                        <div className="mt-5 flex justify-end gap-2">
-                            <button
-                                className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    if (createdOrderId) router.push(`/admin/orders/${createdOrderId}`);
-                                    else router.push("/admin/orders");
-                                }}
-                            >
-                                Xem chi tiết
-                            </button>
-
-                            <button
-                                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800"
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    resetFormForNewOrder();
-                                }}
-                            >
-                                Tạo đơn mới
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </Modal>
             )}
 
-            {/* Edit confirm (save + optional post) */}
+            {/* Edit confirm */}
             {showPostConfirm && props.mode === "edit" && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
-                        <h3 className="text-lg font-semibold">Xác nhận lưu thay đổi</h3>
+                <Modal title="Xác nhận lưu thay đổi">
+                    <p className="text-sm text-slate-600">
+                        Bạn muốn <b>lưu thay đổi</b> cho đơn hàng này.
+                        <br />
+                        Nếu chọn <b>Duyệt (POST) luôn</b> thì đơn chuyển sang <b>POSTED</b> và hệ thống tạo các bản ghi
+                        liên quan.
+                    </p>
 
-                        <p className="mt-2 text-sm text-gray-600">
-                            Bạn muốn <b>lưu thay đổi</b> cho đơn hàng này.
-                            <br />
-                            Nếu chọn <b>Duyệt (POST) luôn</b> thì đơn chuyển sang <b>POSTED</b> và hệ thống tạo các
-                            bản ghi liên quan (payments / shipment / service request...).
-                        </p>
-
-                        <div className="mt-4 flex items-center gap-2">
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                             <input
                                 id="postAfterSave"
                                 type="checkbox"
                                 checked={postAfterSave}
                                 onChange={(e) => setPostAfterSave(e.target.checked)}
                             />
-                            <label htmlFor="postAfterSave" className="text-sm">
-                                Duyệt (POST) luôn sau khi lưu
-                            </label>
-                        </div>
+                            Duyệt (POST) luôn sau khi lưu
+                        </label>
+                    </div>
 
-                        <div className="mt-5 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
-                                onClick={() => {
+                    <div className="mt-5 flex justify-end gap-2">
+                        <button
+                            type="button"
+                            className="rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
+                            onClick={() => {
+                                setShowPostConfirm(false);
+                                setPostAfterSave(false);
+                            }}
+                            disabled={saving}
+                        >
+                            Hủy
+                        </button>
+
+                        <button
+                            type="button"
+                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+                            onClick={async () => {
+                                setSaving(true);
+                                setErrMsg(null);
+                                try {
+                                    await saveDraftOnly();
+                                    if (postAfterSave) await postOrderNow((props as any).orderId);
+
                                     setShowPostConfirm(false);
                                     setPostAfterSave(false);
-                                }}
-                                disabled={saving}
-                            >
-                                Hủy
-                            </button>
 
-                            <button
-                                type="button"
-                                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800 disabled:opacity-60"
-                                onClick={async () => {
-                                    setSaving(true);
-                                    setErrMsg(null);
-                                    try {
-                                        await saveDraftOnly();
-                                        if (postAfterSave) await postOrderNow((props as any).orderId);
-
-                                        setShowPostConfirm(false);
-                                        setPostAfterSave(false);
-
-                                        router.push(`/admin/orders/${(props as any).orderId}`);
-                                        router.refresh();
-                                    } catch (e: any) {
-                                        setErrMsg(e?.message || "Thao tác thất bại");
-                                    } finally {
-                                        setSaving(false);
-                                    }
-                                }}
-                                disabled={saving}
-                            >
-                                {saving ? "Đang xử lý..." : postAfterSave ? "Lưu & POST" : "Chỉ lưu"}
-                            </button>
-                        </div>
+                                    router.push(`/admin/orders/${(props as any).orderId}`);
+                                    router.refresh();
+                                } catch (e: any) {
+                                    setErrMsg(e?.message || "Thao tác thất bại");
+                                } finally {
+                                    setSaving(false);
+                                }
+                            }}
+                            disabled={saving}
+                        >
+                            {saving ? "Đang xử lý..." : postAfterSave ? "Lưu & POST" : "Chỉ lưu"}
+                        </button>
                     </div>
-                </div>
+                </Modal>
             )}
-        </div>
+        </form>
     );
 }

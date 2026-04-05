@@ -3,7 +3,10 @@ import type { Prisma } from '@prisma/client';
 import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.schema';
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
-import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema'
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -27,7 +30,8 @@ const makeSchema = () => z.object({
   movementStatus: TechnicalSectionStatusSchema.optional(),
   caseStatus: TechnicalSectionStatusSchema.optional(),
   crystalStatus: TechnicalSectionStatusSchema.optional(),
-  crownStatus: TechnicalSectionStatusSchema.optional()
+  crownStatus: TechnicalSectionStatusSchema.optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional()
 }).strict();
 export const TechnicalAssessmentCreateManyVendorInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentCreateManyVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentCreateManyVendorInput>;
 export const TechnicalAssessmentCreateManyVendorInputObjectZodSchema = makeSchema();

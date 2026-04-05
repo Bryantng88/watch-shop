@@ -4,7 +4,8 @@ import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutServiceReqInput.schema';
-import { TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInput.schema'
+import { TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInput.schema';
+import { TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -36,7 +37,8 @@ const makeSchema = () => z.object({
   primaryImageUrlSnapshot: z.string().optional().nullable(),
   dummy_technical_rel: z.string().optional().nullable(),
   invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema).optional(),
-  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema).optional()
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
+  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedCreateWithoutMaintenanceInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutMaintenanceInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateWithoutMaintenanceInput>;
 export const ServiceRequestUncheckedCreateWithoutMaintenanceInputObjectZodSchema = makeSchema();

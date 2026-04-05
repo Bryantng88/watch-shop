@@ -37,5 +37,6 @@ export const ServiceRequestDeleteResultSchema = z.nullable(z.object({
   variant: z.unknown().optional(),
   vendor: z.unknown().optional(),
   serviceCatalog: z.unknown().optional(),
-  technicalAssessment: z.unknown().optional()
+  technicalAssessment: z.unknown().optional(),
+  TechnicalIssue: z.array(z.unknown())
 }));

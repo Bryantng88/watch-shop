@@ -1,7 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { maintenanceLogsCreateNestedManyWithoutApprovalRequestsInputObjectSchema as maintenanceLogsCreateNestedManyWithoutApprovalRequestsInputObjectSchema } from './maintenanceLogsCreateNestedManyWithoutApprovalRequestsInput.schema'
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -17,8 +16,7 @@ const makeSchema = () => z.object({
   payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   reviewNote: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsCreateNestedManyWithoutApprovalRequestsInputObjectSchema).optional()
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const approvalRequestsCreateWithoutTechnicalAssessmentsInputObjectSchema: z.ZodType<Prisma.approvalRequestsCreateWithoutTechnicalAssessmentsInput> = makeSchema() as unknown as z.ZodType<Prisma.approvalRequestsCreateWithoutTechnicalAssessmentsInput>;
 export const approvalRequestsCreateWithoutTechnicalAssessmentsInputObjectZodSchema = makeSchema();

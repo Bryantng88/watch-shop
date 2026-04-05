@@ -12,5 +12,6 @@ export const UserDeleteResultSchema = z.nullable(z.object({
   customer: z.unknown().optional(),
   MaintenanceRecord: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
+  TechnicalIssue: z.array(z.unknown()),
   roles: z.array(z.unknown())
 }));

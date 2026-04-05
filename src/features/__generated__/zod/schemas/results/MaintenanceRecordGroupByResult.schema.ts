@@ -33,6 +33,7 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
   serviceCatalogId: z.string(),
   processingMode: z.string(),
   imageFileKey: z.string(),
+  technicalIssueId: z.string(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -69,14 +70,16 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     serviceCatalogId: z.number(),
     processingMode: z.number(),
     imageFileKey: z.number(),
+    technicalIssueId: z.number(),
     parts: z.number(),
     Payment: z.number(),
     product: z.number(),
+    ServiceCatalog: z.number(),
     serviceRequest: z.number(),
+    TechnicalIssue: z.number(),
     User: z.number(),
     variant: z.number(),
-    vendor: z.number(),
-    serviceDetail: z.number()
+    vendor: z.number()
   }).optional(),
   _sum: z.object({
     totalCost: z.number().nullable(),
@@ -119,7 +122,8 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     workSummary: z.string().nullable(),
     serviceCatalogId: z.string().nullable(),
     processingMode: z.string().nullable(),
-    imageFileKey: z.string().nullable()
+    imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -152,6 +156,7 @@ export const MaintenanceRecordGroupByResultSchema = z.array(z.object({
     workSummary: z.string().nullable(),
     serviceCatalogId: z.string().nullable(),
     processingMode: z.string().nullable(),
-    imageFileKey: z.string().nullable()
+    imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable()
   }).nullable().optional()
 }));

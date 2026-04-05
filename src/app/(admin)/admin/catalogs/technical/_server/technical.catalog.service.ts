@@ -5,7 +5,7 @@ import {
     upsertTechnicalActionCatalog,
     upsertTechnicalAppearanceIssueCatalog,
     upsertTechnicalPartCatalog,
-} from "./technical_catalog.repo";
+} from "./technical.catalog.repo"
 
 export async function getTechnicalCatalogPageData() {
     const [actions, parts, appearanceIssues] = await Promise.all([

@@ -4,7 +4,10 @@ import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.sche
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
 import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -29,6 +32,7 @@ const makeSchema = () => z.object({
   caseStatus: TechnicalSectionStatusSchema.optional(),
   crystalStatus: TechnicalSectionStatusSchema.optional(),
   crownStatus: TechnicalSectionStatusSchema.optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema).optional()
 }).strict();
 export const TechnicalAssessmentUncheckedCreateWithoutVendorInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentUncheckedCreateWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentUncheckedCreateWithoutVendorInput>;

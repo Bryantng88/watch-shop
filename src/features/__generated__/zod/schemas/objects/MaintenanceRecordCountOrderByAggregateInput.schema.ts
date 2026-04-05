@@ -37,7 +37,8 @@ const makeSchema = () => z.object({
   workSummary: SortOrderSchema.optional(),
   serviceCatalogId: SortOrderSchema.optional(),
   processingMode: SortOrderSchema.optional(),
-  imageFileKey: SortOrderSchema.optional()
+  imageFileKey: SortOrderSchema.optional(),
+  technicalIssueId: SortOrderSchema.optional()
 }).strict();
 export const MaintenanceRecordCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCountOrderByAggregateInput>;
 export const MaintenanceRecordCountOrderByAggregateInputObjectZodSchema = makeSchema();

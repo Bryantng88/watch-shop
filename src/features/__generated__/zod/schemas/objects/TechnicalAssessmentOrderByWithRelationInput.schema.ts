@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   caseStatus: SortOrderSchema.optional(),
   crystalStatus: SortOrderSchema.optional(),
   crownStatus: SortOrderSchema.optional(),
+  payloadJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
   Vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional()

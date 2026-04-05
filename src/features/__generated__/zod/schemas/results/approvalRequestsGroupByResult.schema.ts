@@ -27,8 +27,7 @@ export const approvalRequestsGroupByResultSchema = z.array(z.object({
     reviewNote: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    technicalAssessments: z.number(),
-    maintenanceLogs: z.number()
+    technicalAssessments: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

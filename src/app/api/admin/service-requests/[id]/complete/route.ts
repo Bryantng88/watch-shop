@@ -1,21 +1,13 @@
 import { NextResponse } from "next/server";
-import * as srService from "@/app/(admin)/admin/services/_server/service_request.service";
+import { completeTechnicalAssessment } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-    try {
-        const serviceRequestId = String(params?.id || "").trim();
-        if (!serviceRequestId) {
-            return NextResponse.json({ error: "Missing id" }, { status: 400 });
-        }
+export async function POST(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params;
 
-        const body = await req.json().catch(() => ({}));
-        const result = await srService.completeServiceRequest({
-            serviceRequestId,
-            note: body?.note ?? null,
-        });
+    const data = await completeTechnicalAssessment(id);
 
-        return NextResponse.json(result);
-    } catch (e: any) {
-        return NextResponse.json({ error: e?.message ?? "Internal error" }, { status: 500 });
-    }
+    return NextResponse.json({ ok: true, data });
 }

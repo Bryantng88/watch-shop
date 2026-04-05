@@ -4,11 +4,12 @@ import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './PaymentCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema as ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema } from './ProductCreateNestedOneWithoutMaintenanceRecordsInput.schema';
+import { ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema as ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutMaintenanceInput.schema';
+import { TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './UserCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ProductVariantCreateNestedOneWithoutMaintenanceRecordInput.schema';
-import { VendorCreateNestedOneWithoutServicesInputObjectSchema as VendorCreateNestedOneWithoutServicesInputObjectSchema } from './VendorCreateNestedOneWithoutServicesInput.schema';
-import { ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInput.schema'
+import { VendorCreateNestedOneWithoutServicesInputObjectSchema as VendorCreateNestedOneWithoutServicesInputObjectSchema } from './VendorCreateNestedOneWithoutServicesInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -37,16 +38,16 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.string().optional().nullable(),
   diagnosis: z.string().optional().nullable(),
   workSummary: z.string().optional().nullable(),
-  serviceCatalogId: z.string().optional().nullable(),
   processingMode: z.string().optional().nullable(),
   imageFileKey: z.string().optional().nullable(),
   Payment: z.lazy(() => PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema).optional(),
+  ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema).optional(),
+  TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   User: z.lazy(() => UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorCreateNestedOneWithoutServicesInputObjectSchema).optional(),
-  serviceDetail: z.lazy(() => ServiceCatalogCreateNestedManyWithoutMaintenanceRecordInputObjectSchema).optional()
+  vendor: z.lazy(() => VendorCreateNestedOneWithoutServicesInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordCreateWithoutPartsInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateWithoutPartsInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateWithoutPartsInput>;
 export const MaintenanceRecordCreateWithoutPartsInputObjectZodSchema = makeSchema();

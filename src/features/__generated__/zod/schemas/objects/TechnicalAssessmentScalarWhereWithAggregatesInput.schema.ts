@@ -12,7 +12,8 @@ import { EnumTechnicalAssessmentStatusWithAggregatesFilterObjectSchema as EnumTe
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema as EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema } from './EnumTechnicalSectionStatusWithAggregatesFilter.schema';
-import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema'
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { JsonNullableWithAggregatesFilterObjectSchema as JsonNullableWithAggregatesFilterObjectSchema } from './JsonNullableWithAggregatesFilter.schema'
 
 const technicalassessmentscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalAssessmentScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => TechnicalAssessmentScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -40,7 +41,8 @@ const technicalassessmentscalarwherewithaggregatesinputSchema = z.object({
   movementStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   caseStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   crystalStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
-  crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema), TechnicalSectionStatusSchema]).optional()
+  crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusWithAggregatesFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  payloadJson: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional()
 }).strict();
 export const TechnicalAssessmentScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentScalarWhereWithAggregatesInput> = technicalassessmentscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TechnicalAssessmentScalarWhereWithAggregatesInput>;
 export const TechnicalAssessmentScalarWhereWithAggregatesInputObjectZodSchema = technicalassessmentscalarwherewithaggregatesinputSchema;

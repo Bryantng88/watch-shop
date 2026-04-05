@@ -44,6 +44,7 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   processingMode: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   imageFileKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicalIssueId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => MaintenanceRecordCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => MaintenanceRecordAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => MaintenanceRecordMaxOrderByAggregateInputObjectSchema).optional(),

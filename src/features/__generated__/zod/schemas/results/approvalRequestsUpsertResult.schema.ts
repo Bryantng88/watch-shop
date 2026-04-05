@@ -13,6 +13,5 @@ export const approvalRequestsUpsertResultSchema = z.object({
   reviewNote: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  technicalAssessments: z.unknown().optional(),
-  maintenanceLogs: z.array(z.unknown())
+  technicalAssessments: z.unknown().optional()
 });

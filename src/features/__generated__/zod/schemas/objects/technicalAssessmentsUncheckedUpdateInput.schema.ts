@@ -5,8 +5,7 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInput.schema';
-import { maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInput.schema'
+import { approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -48,8 +47,7 @@ const makeSchema = () => z.object({
   conclusion: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  approvalRequests: z.lazy(() => approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional()
+  approvalRequests: z.lazy(() => approvalRequestsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional()
 }).strict();
 export const technicalAssessmentsUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.technicalAssessmentsUncheckedUpdateInput>;
 export const technicalAssessmentsUncheckedUpdateInputObjectZodSchema = makeSchema();

@@ -13,8 +13,11 @@ import { EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema as 
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
 import { EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalSectionStatusFieldUpdateOperationsInput.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { ServiceRequestUpdateOneRequiredWithoutTechnicalAssessmentNestedInputObjectSchema as ServiceRequestUpdateOneRequiredWithoutTechnicalAssessmentNestedInputObjectSchema } from './ServiceRequestUpdateOneRequiredWithoutTechnicalAssessmentNestedInput.schema';
 import { TechnicalIssueUpdateManyWithoutTechnicalAssessmentNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutTechnicalAssessmentNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutTechnicalAssessmentNestedInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -38,6 +41,7 @@ const makeSchema = () => z.object({
   caseStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   crystalStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   crownStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateOneRequiredWithoutTechnicalAssessmentNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutTechnicalAssessmentNestedInputObjectSchema).optional()
 }).strict();

@@ -49,7 +49,8 @@ const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   workSummary: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   processingMode: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  imageFileKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  imageFileKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  technicalIssueId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput> = maintenancerecordscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.MaintenanceRecordScalarWhereWithAggregatesInput>;
 export const MaintenanceRecordScalarWhereWithAggregatesInputObjectZodSchema = maintenancerecordscalarwherewithaggregatesinputSchema;

@@ -35,14 +35,16 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     serviceCatalogId: z.number(),
     processingMode: z.number(),
     imageFileKey: z.number(),
+    technicalIssueId: z.number(),
     parts: z.number(),
     Payment: z.number(),
     product: z.number(),
+    ServiceCatalog: z.number(),
     serviceRequest: z.number(),
+    TechnicalIssue: z.number(),
     User: z.number(),
     variant: z.number(),
-    vendor: z.number(),
-    serviceDetail: z.number()
+    vendor: z.number()
   }).optional(),
   _sum: z.object({
     totalCost: z.number().nullable(),
@@ -85,7 +87,8 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     workSummary: z.string().nullable(),
     serviceCatalogId: z.string().nullable(),
     processingMode: z.string().nullable(),
-    imageFileKey: z.string().nullable()
+    imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -118,5 +121,6 @@ export const MaintenanceRecordAggregateResultSchema = z.object({  _count: z.obje
     workSummary: z.string().nullable(),
     serviceCatalogId: z.string().nullable(),
     processingMode: z.string().nullable(),
-    imageFileKey: z.string().nullable()
+    imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable()
   }).nullable().optional()});

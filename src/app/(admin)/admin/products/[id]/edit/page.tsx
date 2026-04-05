@@ -1,65 +1,54 @@
 import { notFound } from "next/navigation";
 
-import EditProductForm from "../../_client/EditProductForm";
-import { detail } from "../../_server/product.service";
-import * as prodRepo from "../../_server/product.repo";
-import { getOptions } from "../../_components/options";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import { PERMISSIONS } from "@/constants/permissions";
+import * as adminProductService from "@/app/(admin)/admin/products/_server/product.service";
 
-import { prisma } from "@/server/db/client";
-import { listBrands } from "@/features/catalog/server/brands.repo";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
+import ProductEditClient from "./_client/ProductEditClient";
 
-export const metadata = { title: "Sửa sản phẩm · Admin" };
+export const metadata = {
+    title: "Chỉnh sửa sản phẩm",
+};
 
-function serialize(obj: any) {
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (value instanceof Date) return value.toISOString();
-            if (typeof value === "object" && value?._isDecimal) return Number(value);
-            return value;
-        })
+function hasAdminRole(user: {
+    roles?: string[] | null;
+    permissions?: string[] | null;
+} | null) {
+    const roles = (user?.roles ?? []).map((x) => String(x).trim().toUpperCase());
+    const permissions = (user?.permissions ?? []).map((x) => String(x).trim());
+
+    return (
+        roles.includes("ADMIN") ||
+        permissions.includes("ADMIN") ||
+        permissions.includes("PRODUCT_COST_VIEW") ||
+        permissions.includes(PERMISSIONS.PRODUCT_UPDATE)
     );
 }
 
-export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    const product = await detail(id);
-    if (!product) notFound();
+export default async function ProductEditPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-    const [brands, vendors, opts, categoryOptions, strapInventoryOptions] = await Promise.all([
-        listBrands(),
-        listVendor(),
-        getOptions(),
-        prodRepo.listActiveProductCategories(prisma),
-        prodRepo.listAvailableStrapInventory(prisma),
-    ]);
+    const user = await getCurrentUser();
+    const canViewTradeFinancials = hasAdminRole(user);
+
+    const { id } = await params;
+    const data = await adminProductService.getEditDetail(id);
+
+    if (!data) {
+        notFound();
+    }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Chỉnh sửa sản phẩm</h1>
-            </div>
-
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-                <EditProductForm
-                    initial={serialize(product)}
-                    brands={serialize(brands)}
-                    vendors={serialize(vendors)}
-                    productStatusOptions={serialize(opts.productStatus)}
-                    availabilityStatusOptions={serialize(opts.availabilityStatus)}
-                    typeOptions={serialize(opts.type)}
-                    caseOptions={serialize(opts.case)}
-                    movementOptions={serialize(opts.movement)}
-                    caseMaterialOptions={serialize(opts.caseMaterial)}
-                    genderOptions={serialize(opts.gender)}
-                    strapOptions={serialize(opts.strap)}
-                    glassOptions={serialize(opts.glass)}
-                    goldColorOptions={serialize(opts.goldColor)}
-                    complicationOptions={serialize(opts.complication)}
-                    categoryOptions={serialize(categoryOptions)}
-                    strapInventoryOptions={serialize(strapInventoryOptions)}
-                />
-            </div>
+        <div className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6">
+            <ProductEditClient
+                initialData={data}
+                canViewTradeFinancials={canViewTradeFinancials}
+            />
         </div>
     );
 }

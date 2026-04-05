@@ -4,9 +4,12 @@ import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.sche
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
 import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { ServiceRequestCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema as ServiceRequestCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutTechnicalAssessmentInput.schema';
 import { VendorCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema as VendorCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema } from './VendorCreateNestedOneWithoutTechnicalAssessmentInput.schema';
 import { TechnicalIssueCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema as TechnicalIssueCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutTechnicalAssessmentInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -30,6 +33,7 @@ const makeSchema = () => z.object({
   caseStatus: TechnicalSectionStatusSchema.optional(),
   crystalStatus: TechnicalSectionStatusSchema.optional(),
   crownStatus: TechnicalSectionStatusSchema.optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema),
   Vendor: z.lazy(() => VendorCreateNestedOneWithoutTechnicalAssessmentInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutTechnicalAssessmentInputObjectSchema)

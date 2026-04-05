@@ -13,6 +13,7 @@ export const UserFindManyResultSchema = z.object({
   customer: z.unknown().optional(),
   MaintenanceRecord: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
+  TechnicalIssue: z.array(z.unknown()),
   roles: z.array(z.unknown())
 })),
   pagination: z.object({

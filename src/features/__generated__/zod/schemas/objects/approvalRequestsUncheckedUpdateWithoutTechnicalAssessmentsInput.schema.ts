@@ -4,8 +4,7 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { maintenanceLogsUncheckedUpdateManyWithoutApprovalRequestsNestedInputObjectSchema as maintenanceLogsUncheckedUpdateManyWithoutApprovalRequestsNestedInputObjectSchema } from './maintenanceLogsUncheckedUpdateManyWithoutApprovalRequestsNestedInput.schema'
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -21,8 +20,7 @@ const makeSchema = () => z.object({
   payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   reviewNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsUncheckedUpdateManyWithoutApprovalRequestsNestedInputObjectSchema).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const approvalRequestsUncheckedUpdateWithoutTechnicalAssessmentsInputObjectSchema: z.ZodType<Prisma.approvalRequestsUncheckedUpdateWithoutTechnicalAssessmentsInput> = makeSchema() as unknown as z.ZodType<Prisma.approvalRequestsUncheckedUpdateWithoutTechnicalAssessmentsInput>;
 export const approvalRequestsUncheckedUpdateWithoutTechnicalAssessmentsInputObjectZodSchema = makeSchema();

@@ -1,7 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { maintenanceLogsCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema as maintenanceLogsCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema } from './maintenanceLogsCreateNestedManyWithoutTechnicalAssessmentsInput.schema'
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -42,8 +41,7 @@ const makeSchema = () => z.object({
   totalCost: z.number().int().optional(),
   conclusion: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema).optional()
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const technicalAssessmentsCreateWithoutApprovalRequestsInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsCreateWithoutApprovalRequestsInput> = makeSchema() as unknown as z.ZodType<Prisma.technicalAssessmentsCreateWithoutApprovalRequestsInput>;
 export const technicalAssessmentsCreateWithoutApprovalRequestsInputObjectZodSchema = makeSchema();

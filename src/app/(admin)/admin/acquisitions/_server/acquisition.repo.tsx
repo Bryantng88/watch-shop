@@ -101,14 +101,21 @@ export async function getAcqList(
                 updatedAt: true,
                 notes: true,
                 vendor: { select: { id: true, name: true } },
-                _count: { select: { acquisitionItem: true, invoice: true } },
+                acquisitionItem: {
+                    select: {
+                        id: true,
+                        status: true,
+                        quantity: true,
+                        unitCost: true,
+                    },
+                },
+                _count: { select: { invoice: true } },
             },
         }),
         db.acquisition.count({ where }),
     ]);
     return { rows, total };
 }
-
 export async function getAcqtById(id: string, tx?: DB) {
     const db = dbOrTx(tx);
     return db.acquisition.findUnique({
@@ -153,6 +160,7 @@ export async function createAcqItem(
             description: stringifyAcquisitionItemMeta({
                 strapSpec: item.strapSpec,
                 watchFlags: item.watchFlags,
+                quickSpec: item.quickSpec,
             }),
         },
     });
@@ -176,10 +184,11 @@ export async function updateAcqItem(tx: DB, it: any) {
             productId,
             variantId,
             description:
-                it.strapSpec || it.watchFlags
+                it.strapSpec || it.watchFlags || it.quickSpec
                     ? stringifyAcquisitionItemMeta({
                         strapSpec: it.strapSpec,
                         watchFlags: it.watchFlags,
+                        quickSpec: it.quickSpec,
                     })
                     : undefined,
         },

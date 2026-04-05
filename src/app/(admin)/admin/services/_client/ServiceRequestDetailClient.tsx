@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
-import TechnicalIssuesPanel from "./TechnicalIssuesPanel";
 
 function fmtDT(s?: string | null) {
     if (!s) return "-";
@@ -12,34 +11,58 @@ function fmtDT(s?: string | null) {
     return d.toLocaleString("vi-VN");
 }
 
-function fmtMoney(n?: number | null) {
-    if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(Number(n)) + "đ";
+function AssessmentStatusBadge({ status }: { status?: string | null }) {
+    const s = String(status || "DRAFT").toUpperCase();
+    const cls =
+        s === "COMPLETED"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            : s === "IN_PROGRESS"
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-slate-200 bg-slate-50 text-slate-700";
+
+    return (
+        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${cls}`}>
+            {s}
+        </span>
+    );
 }
 
 export default function ServiceRequestDetailClient({ detail }: { detail: any }) {
     const router = useRouter();
-    const [openTechnical, setOpenTechnical] = React.useState(false);
-
     const sr = detail.serviceRequest;
-    const assessment = detail.technicalAssessment;
-    const issues = detail.technicalIssues ?? [];
-    const logs = detail.maintenanceLogs ?? [];
+    const assessment = detail.assessment ?? null;
+    const issueCount = detail.stats?.issueCount ?? 0;
+    const openIssueCount = detail.stats?.openIssueCount ?? 0;
 
     const imageSrc = sr.primaryImageUrl
         ? `/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`
         : null;
 
+    async function handleOpenAssessment() {
+        const res = await fetch(`/api/admin/service-requests/${sr.id}/open-assessment`, {
+            method: "POST",
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            alert(json?.error || "Không thể mở phiếu kỹ thuật");
+            return;
+        }
+
+        const id = json?.data?.id;
+        if (!id) {
+            router.refresh();
+            return;
+        }
+
+        router.push(`/admin/technical-assessments/${id}`);
+    }
+
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold text-slate-950">
-                        Service Request Detail
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-500">
-                        {sr.refNo || sr.id}
-                    </p>
+                    <h1 className="text-2xl font-semibold text-slate-950">Service Request Detail</h1>
+                    <p className="mt-1 text-sm text-slate-500">{sr.refNo || sr.id}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -54,9 +77,9 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                     <button
                         type="button"
                         className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
-                        onClick={() => setOpenTechnical(true)}
+                        onClick={handleOpenAssessment}
                     >
-                        {assessment ? "Mở lại phiếu kỹ thuật" : "Đánh giá kỹ thuật"}
+                        {assessment ? "Tiếp tục phiếu kỹ thuật" : "Tạo phiếu kỹ thuật"}
                     </button>
                 </div>
             </div>
@@ -84,6 +107,8 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                             </div>
                             <div className="text-sm text-slate-500">SKU: {sr.skuSnapshot || "-"}</div>
                             <div className="text-sm text-slate-500">Bộ máy: {sr.movement || "-"}</div>
+                            <div className="text-sm text-slate-500">Model: {sr.model || "-"}</div>
+                            <div className="text-sm text-slate-500">Ref: {sr.ref || "-"}</div>
                         </div>
 
                         <div className="grid gap-2 text-sm text-slate-700">
@@ -99,89 +124,79 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-5 py-4">
-                    <h2 className="text-base font-semibold text-slate-900">Kết luận kỹ thuật</h2>
-                </div>
-                <div className="p-5">
-                    {assessment?.conclusion ? (
-                        <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                            {assessment.conclusion}
-                        </pre>
-                    ) : (
-                        <div className="text-sm text-slate-500">Chưa có kết luận kỹ thuật.</div>
-                    )}
-                </div>
-            </section>
-
-            <TechnicalIssuesPanel
-                serviceRequestId={sr.id}
-                items={issues}
-            />
-
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                    <h2 className="text-base font-semibold text-slate-900">Lịch sử xử lý / Maintenance</h2>
-                    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                        {logs.length} dòng
+                    <div>
+                        <h2 className="text-base font-semibold text-slate-900">Phiếu kỹ thuật</h2>
+                        <div className="mt-1 text-sm text-slate-500">
+                            Tại trang này chỉ hiển thị tóm tắt. Thao tác chi tiết nằm trong detail của phiếu kỹ thuật.
+                        </div>
                     </div>
+
+                    {assessment ? <AssessmentStatusBadge status={assessment.status} /> : null}
                 </div>
 
                 <div className="p-5">
-                    {logs.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
-                            Chưa có log bảo trì nào.
+                    {!assessment ? (
+                        <div className="rounded-2xl border border-dashed border-slate-200 p-6">
+                            <div className="text-sm font-medium text-slate-900">
+                                Chưa có phiếu kỹ thuật nào cho service request này.
+                            </div>
+                            <div className="mt-2 text-sm text-slate-500">
+                                Bấm “Tạo phiếu kỹ thuật” để bắt đầu đánh giá và xử lý nghiệp vụ.
+                            </div>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {logs.map((log: any, idx: number) => (
-                                <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                        <div className="space-y-2">
-                                            <div className="text-sm font-semibold text-slate-900">
-                                                #{idx + 1} · {log.ServiceCatalog?.name || log.eventType || "NOTE"}
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                                {fmtDT(log.servicedAt || log.createdAt)}
-                                            </div>
-                                            <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                                                {log.notes || "-"}
-                                            </div>
-                                            {log.workSummary ? (
-                                                <div className="text-sm text-slate-600">
-                                                    Xử lý: {log.workSummary}
-                                                </div>
-                                            ) : null}
-                                            {log.vendorName ? (
-                                                <div className="text-sm text-slate-600">
-                                                    Vendor: {log.vendorName}
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                        <div className="text-sm font-medium text-slate-900">
-                                            {fmtMoney(log.totalCost)}
-                                        </div>
+                        <div className="rounded-2xl border border-slate-200 p-5">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2 text-sm text-slate-700">
+                                    <div>
+                                        Movement: <span className="font-medium">{assessment.movementStatus || "-"}</span>
+                                    </div>
+                                    <div>
+                                        Case: <span className="font-medium">{assessment.caseStatus || "-"}</span>
+                                    </div>
+                                    <div>
+                                        Crystal: <span className="font-medium">{assessment.crystalStatus || "-"}</span>
+                                    </div>
+                                    <div>
+                                        Crown: <span className="font-medium">{assessment.crownStatus || "-"}</span>
                                     </div>
                                 </div>
-                            ))}
+
+                                <div className="space-y-2 text-sm text-slate-700">
+                                    <div>
+                                        Nghiệp vụ: <span className="font-medium">{issueCount}</span>
+                                    </div>
+                                    <div>
+                                        Đang mở: <span className="font-medium">{openIssueCount}</span>
+                                    </div>
+                                    <div>
+                                        Người đánh giá: <span className="font-medium">{assessment.evaluatedByNameSnap || "-"}</span>
+                                    </div>
+                                    <div>
+                                        Cập nhật: <span className="font-medium">{fmtDT(assessment.updatedAt)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                                {assessment.conclusion?.trim()
+                                    ? assessment.conclusion
+                                    : "Chưa có kết luận kỹ thuật."}
+                            </div>
+
+                            <div className="mt-4 flex justify-end">
+                                <Link
+                                    href={`/admin/technical-assessments/${assessment.id}`}
+                                    className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+                                >
+                                    Xem detail phiếu kỹ thuật
+                                </Link>
+                            </div>
                         </div>
                     )}
                 </div>
             </section>
-
-            <TechnicalAssessmentModal
-                key={openTechnical ? sr.id : "technical-detail-modal"}
-                open={openTechnical}
-                serviceRequestId={sr.id}
-                onClose={() => setOpenTechnical(false)}
-                onSaved={async () => {
-                    setOpenTechnical(false);
-                    router.refresh();
-                }}
-                productName={sr.productTitle ?? undefined}
-                productSku={sr.skuSnapshot ?? undefined}
-                productImage={sr.primaryImageUrl ?? undefined}
-                movementSpecLabel={sr.movement ?? undefined}
-            />
         </div>
     );
 }

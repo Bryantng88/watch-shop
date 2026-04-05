@@ -22,6 +22,7 @@ export const UserFindFirstSelectSchema: z.ZodType<Prisma.UserSelect> = z.object(
     customer: z.boolean().optional(),
     MaintenanceRecord: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     roles: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.UserSelect>;
@@ -39,6 +40,7 @@ export const UserFindFirstSelectZodSchema = z.object({
     customer: z.boolean().optional(),
     MaintenanceRecord: z.boolean().optional(),
     ServiceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     roles: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

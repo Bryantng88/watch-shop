@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as technicalService from "@/app/(admin)/admin/services/_server/technical_assessment.serivce"
+import * as technicalService from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
 
 export async function GET(
     _req: Request,
@@ -27,30 +27,15 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-        const body = await req.json();
+        const body = await req.json().catch(() => ({}));
 
         if (!id) {
             return NextResponse.json({ error: "Missing id" }, { status: 400 });
         }
 
         const saved = await technicalService.saveTechnicalAssessment({
+            ...body,
             serviceRequestId: id,
-            movementKind: body.movementKind ?? "UNKNOWN",
-            runningOk: body.runningOk ?? null,
-            batteryWeak: body.batteryWeak ?? null,
-            batteryIssueBattery: body.batteryIssueBattery ?? false,
-            batteryIssueIC: body.batteryIssueIC ?? false,
-            batteryIssueCoil: body.batteryIssueCoil ?? false,
-            preRate: body.preRate ?? null,
-            preAmplitude: body.preAmplitude ?? null,
-            preBeatError: body.preBeatError ?? null,
-            postRate: body.postRate ?? null,
-            postAmplitude: body.postAmplitude ?? null,
-            postBeatError: body.postBeatError ?? null,
-            diagnosis: body.diagnosis ?? null,
-            conclusion: body.conclusion ?? null,
-            imageFileKey: body.imageFileKey ?? null,
-            issues: Array.isArray(body.issues) ? body.issues : [],
         });
 
         return NextResponse.json({ ok: true, item: saved });

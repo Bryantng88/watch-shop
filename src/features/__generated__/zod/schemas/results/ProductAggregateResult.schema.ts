@@ -29,6 +29,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     brand: z.number(),
     ProductCategory: z.number(),
     vendor: z.number(),
+    content: z.number(),
     image: z.number(),
     variants: z.number(),
     Reservation: z.number(),

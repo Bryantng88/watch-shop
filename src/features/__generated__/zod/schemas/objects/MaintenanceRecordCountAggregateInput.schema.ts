@@ -38,6 +38,7 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.literal(true).optional(),
   processingMode: z.literal(true).optional(),
   imageFileKey: z.literal(true).optional(),
+  technicalIssueId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const MaintenanceRecordCountAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCountAggregateInputType>;

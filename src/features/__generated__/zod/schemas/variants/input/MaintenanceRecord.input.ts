@@ -39,14 +39,16 @@ export const MaintenanceRecordInputSchema = z.object({
     serviceCatalogId: z.string().optional().nullable(),
     processingMode: z.string().optional().nullable(),
     imageFileKey: z.string().optional().nullable(),
+    technicalIssueId: z.string().optional().nullable(),
     parts: z.array(z.unknown()),
     Payment: z.unknown().optional().nullable(),
     product: z.unknown().optional().nullable(),
+    ServiceCatalog: z.unknown().optional().nullable(),
     serviceRequest: z.unknown().optional().nullable(),
+    TechnicalIssue: z.unknown().optional().nullable(),
     User: z.unknown().optional().nullable(),
     variant: z.unknown().optional().nullable(),
-    vendor: z.unknown().optional().nullable(),
-    serviceDetail: z.array(z.unknown())
+    vendor: z.unknown().optional().nullable()
 }).strict();
 
 export type MaintenanceRecordInputType = z.infer<typeof MaintenanceRecordInputSchema>;

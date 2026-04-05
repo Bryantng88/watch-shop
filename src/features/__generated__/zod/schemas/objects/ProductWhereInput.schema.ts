@@ -26,6 +26,8 @@ import { ProductCategoryNullableScalarRelationFilterObjectSchema as ProductCateg
 import { ProductCategoryWhereInputObjectSchema as ProductCategoryWhereInputObjectSchema } from './ProductCategoryWhereInput.schema';
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
 import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema';
+import { ProductContentNullableScalarRelationFilterObjectSchema as ProductContentNullableScalarRelationFilterObjectSchema } from './ProductContentNullableScalarRelationFilter.schema';
+import { ProductContentWhereInputObjectSchema as ProductContentWhereInputObjectSchema } from './ProductContentWhereInput.schema';
 import { ProductImageListRelationFilterObjectSchema as ProductImageListRelationFilterObjectSchema } from './ProductImageListRelationFilter.schema';
 import { ProductVariantListRelationFilterObjectSchema as ProductVariantListRelationFilterObjectSchema } from './ProductVariantListRelationFilter.schema';
 import { ReservationListRelationFilterObjectSchema as ReservationListRelationFilterObjectSchema } from './ReservationListRelationFilter.schema';
@@ -66,6 +68,7 @@ const productwhereinputSchema = z.object({
   brand: z.union([z.lazy(() => BrandNullableScalarRelationFilterObjectSchema), z.lazy(() => BrandWhereInputObjectSchema)]).optional(),
   ProductCategory: z.union([z.lazy(() => ProductCategoryNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductCategoryWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
+  content: z.union([z.lazy(() => ProductContentNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductContentWhereInputObjectSchema)]).optional(),
   image: z.lazy(() => ProductImageListRelationFilterObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantListRelationFilterObjectSchema).optional(),
   Reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional(),

@@ -5,8 +5,7 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInput.schema';
-import { maintenanceLogsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as maintenanceLogsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './maintenanceLogsUpdateManyWithoutTechnicalAssessmentsNestedInput.schema'
+import { approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -48,8 +47,7 @@ const makeSchema = () => z.object({
   conclusion: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  approvalRequests: z.lazy(() => approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional()
+  approvalRequests: z.lazy(() => approvalRequestsUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional()
 }).strict();
 export const technicalAssessmentsUpdateInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.technicalAssessmentsUpdateInput>;
 export const technicalAssessmentsUpdateInputObjectZodSchema = makeSchema();

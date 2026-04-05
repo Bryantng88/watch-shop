@@ -39,8 +39,7 @@ export const technicalAssessmentsResultSchema = z.object({
     conclusion: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    approvalRequests: z.array(z.unknown()),
-    maintenanceLogs: z.array(z.unknown())
+    approvalRequests: z.array(z.unknown())
 }).strict();
 
 export type technicalAssessmentsResultType = z.infer<typeof technicalAssessmentsResultSchema>;

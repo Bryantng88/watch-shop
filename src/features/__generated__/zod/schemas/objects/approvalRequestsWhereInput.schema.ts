@@ -8,8 +8,7 @@ import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.s
 import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { TechnicalAssessmentsNullableScalarRelationFilterObjectSchema as TechnicalAssessmentsNullableScalarRelationFilterObjectSchema } from './TechnicalAssessmentsNullableScalarRelationFilter.schema';
-import { technicalAssessmentsWhereInputObjectSchema as technicalAssessmentsWhereInputObjectSchema } from './technicalAssessmentsWhereInput.schema';
-import { MaintenanceLogsListRelationFilterObjectSchema as MaintenanceLogsListRelationFilterObjectSchema } from './MaintenanceLogsListRelationFilter.schema'
+import { technicalAssessmentsWhereInputObjectSchema as technicalAssessmentsWhereInputObjectSchema } from './technicalAssessmentsWhereInput.schema'
 
 const approvalrequestswhereinputSchema = z.object({
   AND: z.union([z.lazy(() => approvalRequestsWhereInputObjectSchema), z.lazy(() => approvalRequestsWhereInputObjectSchema).array()]).optional(),
@@ -28,8 +27,7 @@ const approvalrequestswhereinputSchema = z.object({
   reviewNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  technicalAssessments: z.union([z.lazy(() => TechnicalAssessmentsNullableScalarRelationFilterObjectSchema), z.lazy(() => technicalAssessmentsWhereInputObjectSchema)]).optional(),
-  maintenanceLogs: z.lazy(() => MaintenanceLogsListRelationFilterObjectSchema).optional()
+  technicalAssessments: z.union([z.lazy(() => TechnicalAssessmentsNullableScalarRelationFilterObjectSchema), z.lazy(() => technicalAssessmentsWhereInputObjectSchema)]).optional()
 }).strict();
 export const approvalRequestsWhereInputObjectSchema: z.ZodType<Prisma.approvalRequestsWhereInput> = approvalrequestswhereinputSchema as unknown as z.ZodType<Prisma.approvalRequestsWhereInput>;
 export const approvalRequestsWhereInputObjectZodSchema = approvalrequestswhereinputSchema;

@@ -13,6 +13,7 @@ import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentSta
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumTechnicalSectionStatusFilterObjectSchema as EnumTechnicalSectionStatusFilterObjectSchema } from './EnumTechnicalSectionStatusFilter.schema';
 import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { ServiceRequestScalarRelationFilterObjectSchema as ServiceRequestScalarRelationFilterObjectSchema } from './ServiceRequestScalarRelationFilter.schema';
 import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './ServiceRequestWhereInput.schema';
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
@@ -46,6 +47,7 @@ const technicalassessmentwhereinputSchema = z.object({
   caseStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   crystalStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  payloadJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   ServiceRequest: z.union([z.lazy(() => ServiceRequestScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
   Vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()

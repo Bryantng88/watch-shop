@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import * as maintenanceService from "@/app/(admin)/admin/services/_server/maintenance.service";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const id = String(params.id || "").trim();
-        if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+        const { id } = await params;
+        const serviceRequestId = String(id || "").trim();
+        if (!serviceRequestId) {
+            return NextResponse.json({ error: "Missing id" }, { status: 400 });
+        }
 
-        const panel = await maintenanceService.getMaintenancePanelByServiceRequest(id);
+        const panel = await maintenanceService.getMaintenancePanelByServiceRequest(serviceRequestId);
         return NextResponse.json({
             sr: panel?.sr ?? null,
             items: panel?.logs ?? [],
@@ -18,9 +21,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     }
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const serviceRequestId = String(params?.id || "").trim();
+        const { id } = await params;
+        const serviceRequestId = String(id || "").trim();
         if (!serviceRequestId) {
             return NextResponse.json({ error: "Missing id" }, { status: 400 });
         }

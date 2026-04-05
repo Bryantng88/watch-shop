@@ -36,6 +36,7 @@ export const ProductInputSchema = z.object({
     brand: z.unknown().optional().nullable(),
     ProductCategory: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
+    content: z.unknown().optional().nullable(),
     image: z.array(z.unknown()),
     variants: z.array(z.unknown()),
     Reservation: z.array(z.unknown()),

@@ -1,4 +1,4 @@
-import prisma from "@/server/db/client";
+import { prisma } from "@/server/db/client";
 
 export async function listTechnicalActionCatalog() {
     return prisma.technicalActionCatalog.findMany({
@@ -25,13 +25,24 @@ export async function upsertTechnicalActionCatalog(input: any) {
         appliesTo: String(input.appliesTo || "BOTH").trim(),
         groupKey: String(input.groupKey || "MOVEMENT").trim(),
         requiresPart: Boolean(input.requiresPart),
-        defaultExecutionMode: input.defaultExecutionMode ? String(input.defaultExecutionMode) : null,
+        defaultExecutionMode: input.defaultExecutionMode
+            ? String(input.defaultExecutionMode)
+            : null,
         sortOrder: Number(input.sortOrder || 0),
         isActive: input.isActive !== false,
         note: input.note ? String(input.note) : null,
     };
 
-    if (!data.code || !data.name) throw new Error("Thiếu code hoặc name");
+    if (!data.code || !data.name) {
+        throw new Error("Thiếu code hoặc name");
+    }
+
+    if (input.id) {
+        return prisma.technicalActionCatalog.update({
+            where: { id: String(input.id) },
+            data,
+        });
+    }
 
     return prisma.technicalActionCatalog.upsert({
         where: { code: data.code },
@@ -51,7 +62,16 @@ export async function upsertTechnicalPartCatalog(input: any) {
         note: input.note ? String(input.note) : null,
     };
 
-    if (!data.code || !data.name) throw new Error("Thiếu code hoặc name");
+    if (!data.code || !data.name) {
+        throw new Error("Thiếu code hoặc name");
+    }
+
+    if (input.id) {
+        return prisma.technicalPartCatalog.update({
+            where: { id: String(input.id) },
+            data,
+        });
+    }
 
     return prisma.technicalPartCatalog.upsert({
         where: { code: data.code },
@@ -71,7 +91,16 @@ export async function upsertTechnicalAppearanceIssueCatalog(input: any) {
         note: input.note ? String(input.note) : null,
     };
 
-    if (!data.code || !data.label) throw new Error("Thiếu code hoặc label");
+    if (!data.code || !data.label) {
+        throw new Error("Thiếu code hoặc label");
+    }
+
+    if (input.id) {
+        return prisma.technicalAppearanceIssueCatalog.update({
+            where: { id: String(input.id) },
+            data,
+        });
+    }
 
     return prisma.technicalAppearanceIssueCatalog.upsert({
         where: { code: data.code },

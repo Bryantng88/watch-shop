@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   caseStatus: z.literal(true).optional(),
   crystalStatus: z.literal(true).optional(),
   crownStatus: z.literal(true).optional(),
+  payloadJson: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TechnicalAssessmentCountAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentCountAggregateInputType>;

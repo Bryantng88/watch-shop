@@ -5,11 +5,12 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { MaintenancePartOrderByRelationAggregateInputObjectSchema as MaintenancePartOrderByRelationAggregateInputObjectSchema } from './MaintenancePartOrderByRelationAggregateInput.schema';
 import { PaymentOrderByWithRelationInputObjectSchema as PaymentOrderByWithRelationInputObjectSchema } from './PaymentOrderByWithRelationInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
+import { ServiceCatalogOrderByWithRelationInputObjectSchema as ServiceCatalogOrderByWithRelationInputObjectSchema } from './ServiceCatalogOrderByWithRelationInput.schema';
 import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrderByWithRelationInputObjectSchema } from './ServiceRequestOrderByWithRelationInput.schema';
+import { TechnicalIssueOrderByWithRelationInputObjectSchema as TechnicalIssueOrderByWithRelationInputObjectSchema } from './TechnicalIssueOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
 import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrderByWithRelationInputObjectSchema } from './ProductVariantOrderByWithRelationInput.schema';
-import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
-import { ServiceCatalogOrderByRelationAggregateInputObjectSchema as ServiceCatalogOrderByRelationAggregateInputObjectSchema } from './ServiceCatalogOrderByRelationAggregateInput.schema'
+import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -47,14 +48,16 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   processingMode: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   imageFileKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicalIssueId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   parts: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
+  TechnicalIssue: z.lazy(() => TechnicalIssueOrderByWithRelationInputObjectSchema).optional(),
   User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
-  serviceDetail: z.lazy(() => ServiceCatalogOrderByRelationAggregateInputObjectSchema).optional()
+  vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordOrderByWithRelationInput>;
 export const MaintenanceRecordOrderByWithRelationInputObjectZodSchema = makeSchema();

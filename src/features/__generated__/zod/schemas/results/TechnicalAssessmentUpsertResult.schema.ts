@@ -23,6 +23,7 @@ export const TechnicalAssessmentUpsertResultSchema = z.object({
   caseStatus: z.unknown(),
   crystalStatus: z.unknown(),
   crownStatus: z.unknown(),
+  payloadJson: z.unknown().optional(),
   ServiceRequest: z.unknown(),
   Vendor: z.unknown().optional(),
   TechnicalIssue: z.array(z.unknown())

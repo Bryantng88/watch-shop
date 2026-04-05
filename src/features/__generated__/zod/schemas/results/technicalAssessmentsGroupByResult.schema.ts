@@ -75,8 +75,7 @@ export const technicalAssessmentsGroupByResultSchema = z.array(z.object({
     conclusion: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    approvalRequests: z.number(),
-    maintenanceLogs: z.number()
+    approvalRequests: z.number()
   }).optional(),
   _sum: z.object({
     appearanceScore: z.number().nullable(),

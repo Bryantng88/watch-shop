@@ -25,11 +25,26 @@ export const TechnicalIssueFindFirstSelectSchema: z.ZodType<Prisma.TechnicalIssu
     vendorId: z.boolean().optional(),
     vendorNameSnap: z.boolean().optional(),
     mechanicalPartCatalogId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    executionStatus: z.boolean().optional(),
+    openedAt: z.boolean().optional(),
+    startedAt: z.boolean().optional(),
+    completedAt: z.boolean().optional(),
+    canceledAt: z.boolean().optional(),
+    actualCost: z.boolean().optional(),
+    technicianId: z.boolean().optional(),
+    summary: z.boolean().optional(),
+    resolutionNote: z.boolean().optional(),
+    completedByNameSnap: z.boolean().optional(),
+    MaintenanceRecord: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     MechanicalPartCatalog: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
+    ServiceRequest: z.boolean().optional(),
     SupplyCatalog: z.boolean().optional(),
-    Vendor: z.boolean().optional()
+    User: z.boolean().optional(),
+    Vendor: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 
 export const TechnicalIssueFindFirstSelectZodSchema = z.object({
@@ -48,11 +63,26 @@ export const TechnicalIssueFindFirstSelectZodSchema = z.object({
     vendorId: z.boolean().optional(),
     vendorNameSnap: z.boolean().optional(),
     mechanicalPartCatalogId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    executionStatus: z.boolean().optional(),
+    openedAt: z.boolean().optional(),
+    startedAt: z.boolean().optional(),
+    completedAt: z.boolean().optional(),
+    canceledAt: z.boolean().optional(),
+    actualCost: z.boolean().optional(),
+    technicianId: z.boolean().optional(),
+    summary: z.boolean().optional(),
+    resolutionNote: z.boolean().optional(),
+    completedByNameSnap: z.boolean().optional(),
+    MaintenanceRecord: z.boolean().optional(),
     TechnicalAssessment: z.boolean().optional(),
     MechanicalPartCatalog: z.boolean().optional(),
     ServiceCatalog: z.boolean().optional(),
+    ServiceRequest: z.boolean().optional(),
     SupplyCatalog: z.boolean().optional(),
-    Vendor: z.boolean().optional()
+    User: z.boolean().optional(),
+    Vendor: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict();
 
 export const TechnicalIssueFindFirstSchema: z.ZodType<Prisma.TechnicalIssueFindFirstArgs> = z.object({ select: TechnicalIssueFindFirstSelectSchema.optional(), include: TechnicalIssueIncludeObjectSchema.optional(), orderBy: z.union([TechnicalIssueOrderByWithRelationInputObjectSchema, TechnicalIssueOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalIssueWhereInputObjectSchema.optional(), cursor: TechnicalIssueWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TechnicalIssueScalarFieldEnumSchema, TechnicalIssueScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueFindFirstArgs>;

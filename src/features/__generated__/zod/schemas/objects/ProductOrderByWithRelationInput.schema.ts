@@ -9,6 +9,7 @@ import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByR
 import { BrandOrderByWithRelationInputObjectSchema as BrandOrderByWithRelationInputObjectSchema } from './BrandOrderByWithRelationInput.schema';
 import { ProductCategoryOrderByWithRelationInputObjectSchema as ProductCategoryOrderByWithRelationInputObjectSchema } from './ProductCategoryOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
+import { ProductContentOrderByWithRelationInputObjectSchema as ProductContentOrderByWithRelationInputObjectSchema } from './ProductContentOrderByWithRelationInput.schema';
 import { ProductImageOrderByRelationAggregateInputObjectSchema as ProductImageOrderByRelationAggregateInputObjectSchema } from './ProductImageOrderByRelationAggregateInput.schema';
 import { ProductVariantOrderByRelationAggregateInputObjectSchema as ProductVariantOrderByRelationAggregateInputObjectSchema } from './ProductVariantOrderByRelationAggregateInput.schema';
 import { ReservationOrderByRelationAggregateInputObjectSchema as ReservationOrderByRelationAggregateInputObjectSchema } from './ReservationOrderByRelationAggregateInput.schema';
@@ -45,6 +46,7 @@ const makeSchema = () => z.object({
   brand: z.lazy(() => BrandOrderByWithRelationInputObjectSchema).optional(),
   ProductCategory: z.lazy(() => ProductCategoryOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
+  content: z.lazy(() => ProductContentOrderByWithRelationInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageOrderByRelationAggregateInputObjectSchema).optional(),
   variants: z.lazy(() => ProductVariantOrderByRelationAggregateInputObjectSchema).optional(),
   Reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional(),

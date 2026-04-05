@@ -6,8 +6,7 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { ApprovalRequestsListRelationFilterObjectSchema as ApprovalRequestsListRelationFilterObjectSchema } from './ApprovalRequestsListRelationFilter.schema';
-import { MaintenanceLogsListRelationFilterObjectSchema as MaintenanceLogsListRelationFilterObjectSchema } from './MaintenanceLogsListRelationFilter.schema'
+import { ApprovalRequestsListRelationFilterObjectSchema as ApprovalRequestsListRelationFilterObjectSchema } from './ApprovalRequestsListRelationFilter.schema'
 
 const technicalassessmentswhereinputSchema = z.object({
   AND: z.union([z.lazy(() => technicalAssessmentsWhereInputObjectSchema), z.lazy(() => technicalAssessmentsWhereInputObjectSchema).array()]).optional(),
@@ -50,8 +49,7 @@ const technicalassessmentswhereinputSchema = z.object({
   conclusion: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  approvalRequests: z.lazy(() => ApprovalRequestsListRelationFilterObjectSchema).optional(),
-  maintenanceLogs: z.lazy(() => MaintenanceLogsListRelationFilterObjectSchema).optional()
+  approvalRequests: z.lazy(() => ApprovalRequestsListRelationFilterObjectSchema).optional()
 }).strict();
 export const technicalAssessmentsWhereInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsWhereInput> = technicalassessmentswhereinputSchema as unknown as z.ZodType<Prisma.technicalAssessmentsWhereInput>;
 export const technicalAssessmentsWhereInputObjectZodSchema = technicalassessmentswhereinputSchema;

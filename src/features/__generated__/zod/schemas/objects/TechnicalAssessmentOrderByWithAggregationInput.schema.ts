@@ -32,6 +32,7 @@ const makeSchema = () => z.object({
   caseStatus: SortOrderSchema.optional(),
   crystalStatus: SortOrderSchema.optional(),
   crownStatus: SortOrderSchema.optional(),
+  payloadJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TechnicalAssessmentCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => TechnicalAssessmentAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TechnicalAssessmentMaxOrderByAggregateInputObjectSchema).optional(),

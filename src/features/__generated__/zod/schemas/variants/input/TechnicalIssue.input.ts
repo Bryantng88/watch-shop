@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { TechnicalIssueTypeSchema } from '../../enums/TechnicalIssueType.schema';
 import { TechnicalActionModeSchema } from '../../enums/TechnicalActionMode.schema';
+import { TechnicalIssueExecutionStatusSchema } from '../../enums/TechnicalIssueExecutionStatus.schema';
 // prettier-ignore
 export const TechnicalIssueInputSchema = z.object({
     id: z.string(),
@@ -19,10 +20,24 @@ export const TechnicalIssueInputSchema = z.object({
     vendorId: z.string().optional().nullable(),
     vendorNameSnap: z.string().optional().nullable(),
     mechanicalPartCatalogId: z.string().optional().nullable(),
+    serviceRequestId: z.string(),
+    executionStatus: TechnicalIssueExecutionStatusSchema,
+    openedAt: z.date(),
+    startedAt: z.date().optional().nullable(),
+    completedAt: z.date().optional().nullable(),
+    canceledAt: z.date().optional().nullable(),
+    actualCost: z.number().optional().nullable(),
+    technicianId: z.string().optional().nullable(),
+    summary: z.string().optional().nullable(),
+    resolutionNote: z.string().optional().nullable(),
+    completedByNameSnap: z.string().optional().nullable(),
+    MaintenanceRecord: z.array(z.unknown()),
     TechnicalAssessment: z.unknown(),
     MechanicalPartCatalog: z.unknown().optional().nullable(),
     ServiceCatalog: z.unknown().optional().nullable(),
+    ServiceRequest: z.unknown(),
     SupplyCatalog: z.unknown().optional().nullable(),
+    User: z.unknown().optional().nullable(),
     Vendor: z.unknown().optional().nullable()
 }).strict();
 

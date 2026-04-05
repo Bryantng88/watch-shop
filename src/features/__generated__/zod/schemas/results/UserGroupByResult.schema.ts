@@ -22,6 +22,7 @@ export const UserGroupByResultSchema = z.array(z.object({
     customer: z.number(),
     MaintenanceRecord: z.number(),
     ServiceRequest: z.number(),
+    TechnicalIssue: z.number(),
     roles: z.number()
   }).optional(),
   _min: z.object({

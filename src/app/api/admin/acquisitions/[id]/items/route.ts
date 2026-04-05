@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { getAcquisitionDetail, createAcquisitionWithItem } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
-import { getWatchFlagsFromDescription } from "@/app/(admin)/admin/acquisitions/_server/item-metadata";
+import {
+    getAcquisitionDetail,
+    createAcquisitionWithItem,
+} from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
-    const { id } = await ctx.params
+    const { id } = await ctx.params;
     const acq = await getAcquisitionDetail(id);
-    if (!acq) return NextResponse.json({ items: [] });
+
+    if (!acq) {
+        return NextResponse.json({ items: [] });
+    }
 
     return NextResponse.json({
         items: acq.acquisitionItem.map((i) => ({
@@ -14,15 +19,14 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
             quantity: i.quantity ?? 1,
             unitCost: Number(i.unitCost ?? 0),
             productType: i.productType,
-            watchFlags: getWatchFlagsFromDescription(i.description),
+            status: i.status ?? null,
         })),
     });
 }
 
-
 export async function POST(req: Request) {
     try {
-        const body = await req.json();            // service sẽ validate bằng Zod
+        const body = await req.json();
         const created = await createAcquisitionWithItem(body);
 
         return NextResponse.json(created, { status: 201 });
@@ -30,7 +34,7 @@ export async function POST(req: Request) {
         console.dir(err, { depth: 10 });
         return NextResponse.json(
             { error: err?.message ?? "Failed to create acquisition" },
-            { status: 400 },
+            { status: 400 }
         );
     }
 }

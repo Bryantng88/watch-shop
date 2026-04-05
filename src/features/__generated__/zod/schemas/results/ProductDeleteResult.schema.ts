@@ -29,6 +29,7 @@ export const ProductDeleteResultSchema = z.nullable(z.object({
   brand: z.unknown().optional(),
   ProductCategory: z.unknown().optional(),
   vendor: z.unknown().optional(),
+  content: z.unknown().optional(),
   image: z.array(z.unknown()),
   variants: z.array(z.unknown()),
   Reservation: z.array(z.unknown()),

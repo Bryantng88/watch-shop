@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProductContentOrderByWithRelationInputObjectSchema as ProductContentOrderByWithRelationInputObjectSchema } from './objects/ProductContentOrderByWithRelationInput.schema';
+import { ProductContentWhereInputObjectSchema as ProductContentWhereInputObjectSchema } from './objects/ProductContentWhereInput.schema';
+import { ProductContentWhereUniqueInputObjectSchema as ProductContentWhereUniqueInputObjectSchema } from './objects/ProductContentWhereUniqueInput.schema';
+import { ProductContentCountAggregateInputObjectSchema as ProductContentCountAggregateInputObjectSchema } from './objects/ProductContentCountAggregateInput.schema';
+import { ProductContentMinAggregateInputObjectSchema as ProductContentMinAggregateInputObjectSchema } from './objects/ProductContentMinAggregateInput.schema';
+import { ProductContentMaxAggregateInputObjectSchema as ProductContentMaxAggregateInputObjectSchema } from './objects/ProductContentMaxAggregateInput.schema';
+
+export const ProductContentAggregateSchema: z.ZodType<Prisma.ProductContentAggregateArgs> = z.object({ orderBy: z.union([ProductContentOrderByWithRelationInputObjectSchema, ProductContentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductContentWhereInputObjectSchema.optional(), cursor: ProductContentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductContentCountAggregateInputObjectSchema ]).optional(), _min: ProductContentMinAggregateInputObjectSchema.optional(), _max: ProductContentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ProductContentAggregateArgs>;
+
+export const ProductContentAggregateZodSchema = z.object({ orderBy: z.union([ProductContentOrderByWithRelationInputObjectSchema, ProductContentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductContentWhereInputObjectSchema.optional(), cursor: ProductContentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductContentCountAggregateInputObjectSchema ]).optional(), _min: ProductContentMinAggregateInputObjectSchema.optional(), _max: ProductContentMaxAggregateInputObjectSchema.optional() }).strict();

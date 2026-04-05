@@ -39,8 +39,7 @@ export const technicalAssessmentsInputSchema = z.object({
     conclusion: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    approvalRequests: z.array(z.unknown()),
-    maintenanceLogs: z.array(z.unknown())
+    approvalRequests: z.array(z.unknown())
 }).strict();
 
 export type technicalAssessmentsInputType = z.infer<typeof technicalAssessmentsInputSchema>;

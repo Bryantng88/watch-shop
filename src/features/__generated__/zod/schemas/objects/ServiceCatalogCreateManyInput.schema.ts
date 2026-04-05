@@ -12,7 +12,6 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  maintenanceRecordId: z.string().optional().nullable(),
   detail: ServiceDetailSchema,
   vendorPrice: z.number().optional().nullable(),
   customerPrice: z.number().optional().nullable(),

@@ -39,14 +39,16 @@ export const MaintenanceRecordModelSchema = z.object({
     serviceCatalogId: z.string().nullable(),
     processingMode: z.string().nullable(),
     imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable(),
     parts: z.array(z.unknown()),
     Payment: z.unknown().nullable(),
     product: z.unknown().nullable(),
+    ServiceCatalog: z.unknown().nullable(),
     serviceRequest: z.unknown().nullable(),
+    TechnicalIssue: z.unknown().nullable(),
     User: z.unknown().nullable(),
     variant: z.unknown().nullable(),
-    vendor: z.unknown().nullable(),
-    serviceDetail: z.array(z.unknown())
+    vendor: z.unknown().nullable()
 }).strict();
 
 export type MaintenanceRecordPureType = z.infer<typeof MaintenanceRecordModelSchema>;

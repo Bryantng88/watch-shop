@@ -35,12 +35,14 @@ export const MaintenanceRecordUpsertResultSchema = z.object({
   serviceCatalogId: z.string().optional(),
   processingMode: z.string().optional(),
   imageFileKey: z.string().optional(),
+  technicalIssueId: z.string().optional(),
   parts: z.array(z.unknown()),
   Payment: z.unknown().optional(),
   product: z.unknown().optional(),
+  ServiceCatalog: z.unknown().optional(),
   serviceRequest: z.unknown().optional(),
+  TechnicalIssue: z.unknown().optional(),
   User: z.unknown().optional(),
   variant: z.unknown().optional(),
-  vendor: z.unknown().optional(),
-  serviceDetail: z.array(z.unknown())
+  vendor: z.unknown().optional()
 });

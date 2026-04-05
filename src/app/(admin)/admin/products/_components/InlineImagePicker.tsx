@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import HoverPreviewPortal from "../../__components/HoverPreviewPortal";
 
 type Props = {
     imageUrl: string | null;
@@ -76,6 +77,7 @@ function MediaGrid({
         <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
             <div className="space-y-2">
                 <div className="text-xs text-gray-500">/{prefix}</div>
+
                 <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-6">
                     {files.map((f) => (
                         <button
@@ -172,6 +174,7 @@ export default function InlineImagePicker({
 }: Props) {
     const [open, setOpen] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
+    const triggerRef = useRef<HTMLDivElement | null>(null);
 
     const previewSrc = useMemo(() => {
         if (!imageUrl) return null;
@@ -180,16 +183,20 @@ export default function InlineImagePicker({
 
     return (
         <>
-            <div className="relative inline-flex">
+            <div
+                ref={triggerRef}
+                className="relative inline-flex"
+                onMouseEnter={() => setShowPreview(true)}
+                onMouseLeave={() => setShowPreview(false)}
+            >
                 <button
                     type="button"
                     onClick={() => !disabled && setOpen(true)}
-                    onMouseEnter={() => setShowPreview(true)}
-                    onMouseLeave={() => setShowPreview(false)}
                     disabled={disabled}
                     className={[
                         "relative flex h-14 w-14 min-h-[56px] min-w-[56px] max-h-[56px] max-w-[56px]",
                         "shrink-0 items-center justify-center overflow-hidden rounded-md border",
+                        "transition-colors",
                         disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer",
                         previewSrc ? "bg-transparent" : "bg-gray-100 hover:bg-gray-200",
                     ].join(" ")}
@@ -213,16 +220,25 @@ export default function InlineImagePicker({
                         </div>
                     )}
                 </button>
-
-                {previewSrc && showPreview && !open && (
-                    <div className="pointer-events-none absolute left-full top-0 z-20 ml-3 hidden w-56 rounded-xl border bg-white p-2 shadow-2xl md:block">
-                        <div className="overflow-hidden rounded-lg border bg-gray-50">
-                            <img src={previewSrc} alt="Preview" className="h-56 w-full object-contain bg-white" />
-                        </div>
-                        <div className="mt-2 text-[11px] text-gray-500">Ảnh đại diện hiện tại</div>
-                    </div>
-                )}
             </div>
+
+            <HoverPreviewPortal
+                anchorRef={triggerRef}
+                open={Boolean(previewSrc && showPreview && !open)}
+                width={224}
+                height={244}
+            >
+                <div className="rounded-xl border bg-white p-2 shadow-2xl">
+                    <div className="overflow-hidden rounded-lg border bg-gray-50">
+                        <img
+                            src={previewSrc ?? ""}
+                            alt="Preview"
+                            className="h-56 w-full object-contain bg-white"
+                        />
+                    </div>
+                    <div className="mt-2 text-[11px] text-gray-500">Ảnh đại diện hiện tại</div>
+                </div>
+            </HoverPreviewPortal>
 
             <PickerModal open={open} onClose={() => setOpen(false)} onPick={onPick} />
         </>

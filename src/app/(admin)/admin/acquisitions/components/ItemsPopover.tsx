@@ -1,7 +1,6 @@
-// features/acquisitions/client/AcqItemsPopover.tsx
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAcqItems } from "../hooks/useAcgItems";
 import { isAcqItemsCached } from "../_server/acqItems.cache";
@@ -12,12 +11,12 @@ export default function AcqItemsPopover({
     acqId,
     count,
     currency = "VND",
-    status, // ✅ truyền status để biết có được sửa hay không
+    status,
 }: {
     acqId: string;
     count: number;
     currency?: string | null;
-    status: string; // "DRAFT" | "POSTED" | ...
+    status: string;
 }) {
     const btnRef = useRef<HTMLButtonElement>(null);
     const [open, setOpen] = useState(false);
@@ -30,6 +29,7 @@ export default function AcqItemsPopover({
 
     useEffect(() => {
         if (items?.length) setEditItems(items);
+        else setEditItems([]);
     }, [items]);
 
     const measure = () => {
@@ -59,8 +59,9 @@ export default function AcqItemsPopover({
                 pop &&
                 (pop.contains(e.target as Node) ||
                     btnRef.current?.contains(e.target as Node))
-            )
+            ) {
                 return;
+            }
             setOpen(false);
         };
 
@@ -78,23 +79,39 @@ export default function AcqItemsPopover({
     const fmt = (n: number) =>
         new Intl.NumberFormat("vi-VN").format(n) + (currency ? ` ${currency}` : "");
 
-    const total = editItems.reduce(
+    const activeItems = useMemo(
+        () =>
+            (editItems ?? []).filter(
+                (it) => String(it?.status ?? "").toUpperCase() !== "CANCELLED"
+            ),
+        [editItems]
+    );
+
+    const cancelledCount = useMemo(
+        () =>
+            (editItems ?? []).filter(
+                (it) => String(it?.status ?? "").toUpperCase() === "CANCELLED"
+            ).length,
+        [editItems]
+    );
+
+    const total = activeItems.reduce(
         (sum, it) =>
             sum +
             (Number(it?.quantity ?? 0) || 0) * (Number(it?.unitCost ?? 0) || 0),
         0
     );
 
-    // ✅ thêm dòng mới (chỉ dùng cho DRAFT)
     const handleAddRow = () => {
         if (!isDraft) return;
         setEditItems((prev) => [
             ...prev,
             {
-                id: `tmp-${Date.now()}-${Math.random()}`, // id tạm, backend xử lý sau
+                id: `tmp-${Date.now()}-${Math.random()}`,
                 title: "",
                 quantity: 1,
                 unitCost: 0,
+                status: "ACTIVE",
             },
         ]);
     };
@@ -150,7 +167,6 @@ export default function AcqItemsPopover({
                         }}
                         className="rounded-lg border bg-white shadow-xl"
                     >
-                        {/* HEADER */}
                         <div className="flex items-center justify-between gap-3 p-2 text-xs text-gray-600 border-b">
                             <span>Dòng sản phẩm</span>
 
@@ -174,15 +190,14 @@ export default function AcqItemsPopover({
                             </div>
                         </div>
 
-                        {/* BODY */}
                         <div className="max-h-64 overflow-auto">
                             {loading ? (
                                 <div className="text-center text-gray-500 text-sm py-6">
                                     Đang tải...
                                 </div>
-                            ) : !editItems?.length ? (
+                            ) : !activeItems?.length ? (
                                 <div className="text-center text-gray-400 text-sm py-6">
-                                    Chưa có dòng nào
+                                    Chưa có dòng hiệu lực nào
                                 </div>
                             ) : (
                                 <table className="w-full text-xs">
@@ -195,7 +210,7 @@ export default function AcqItemsPopover({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {editItems.map((it, idx) => (
+                                        {activeItems.map((it, idx) => (
                                             <tr key={it.id} className="border-t">
                                                 <td className="px-2 py-1">
                                                     {isDraft ? (
@@ -204,8 +219,11 @@ export default function AcqItemsPopover({
                                                             value={it.title ?? ""}
                                                             onChange={(e) => {
                                                                 const arr = [...editItems];
-                                                                arr[idx].title = e.target.value;
-                                                                setEditItems(arr);
+                                                                const realIdx = editItems.findIndex((x) => x.id === it.id);
+                                                                if (realIdx >= 0) {
+                                                                    arr[realIdx].title = e.target.value;
+                                                                    setEditItems(arr);
+                                                                }
                                                             }}
                                                         />
                                                     ) : (
@@ -221,8 +239,11 @@ export default function AcqItemsPopover({
                                                             value={it.quantity ?? 0}
                                                             onChange={(e) => {
                                                                 const arr = [...editItems];
-                                                                arr[idx].quantity = Number(e.target.value);
-                                                                setEditItems(arr);
+                                                                const realIdx = editItems.findIndex((x) => x.id === it.id);
+                                                                if (realIdx >= 0) {
+                                                                    arr[realIdx].quantity = Number(e.target.value);
+                                                                    setEditItems(arr);
+                                                                }
                                                             }}
                                                         />
                                                     ) : (
@@ -238,8 +259,11 @@ export default function AcqItemsPopover({
                                                             value={it.unitCost ?? 0}
                                                             onChange={(e) => {
                                                                 const arr = [...editItems];
-                                                                arr[idx].unitCost = Number(e.target.value);
-                                                                setEditItems(arr);
+                                                                const realIdx = editItems.findIndex((x) => x.id === it.id);
+                                                                if (realIdx >= 0) {
+                                                                    arr[realIdx].unitCost = Number(e.target.value);
+                                                                    setEditItems(arr);
+                                                                }
                                                             }}
                                                         />
                                                     ) : (
@@ -253,9 +277,11 @@ export default function AcqItemsPopover({
                                             </tr>
                                         ))}
 
-                                        <tr>
-                                            <td colSpan={4} className="px-2 py-1 text-right text-gray-400">
-                                                {cached ? "Đã cache" : ""}
+                                        <tr className="border-t bg-gray-50">
+                                            <td colSpan={4} className="px-2 py-2 text-right text-gray-500">
+                                                {cancelledCount > 0 ? `Đã hủy: ${cancelledCount} dòng • ` : ""}
+                                                {cached ? "Đã cache • " : ""}
+                                                Tổng tiền: <span className="font-medium text-gray-800">{fmt(total)}</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -263,23 +289,24 @@ export default function AcqItemsPopover({
                             )}
                         </div>
 
-                        {/* FOOTER: Tổng tiền + Lưu */}
-                        <div className="border-t px-2 py-2 bg-gray-50 flex items-center justify-between">
-                            <span className="text-xs text-gray-600">
-                                Tổng tiền:&nbsp;
-                                <span className="font-semibold">{fmt(total)}</span>
-                            </span>
-
-                            {isDraft && (
+                        {isDraft && (
+                            <div className="flex items-center justify-end gap-2 border-t p-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setOpen(false)}
+                                    className="rounded border px-3 py-1 text-xs hover:bg-gray-50"
+                                >
+                                    Đóng
+                                </button>
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                                    className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
                                 >
-                                    Lưu thay đổi
+                                    Lưu
                                 </button>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>,
                     document.body
                 )}

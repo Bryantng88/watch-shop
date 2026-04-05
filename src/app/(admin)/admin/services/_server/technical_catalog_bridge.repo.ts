@@ -1,10 +1,13 @@
 import prisma from "@/server/db/client";
 
-export async function listTechnicalActionOptions(machineType: "MECHANICAL" | "QUARTZ") {
+export async function listTechnicalActionOptionsByGroup(
+    machineType: "MECHANICAL" | "QUARTZ",
+    groupKey: string
+) {
     return prisma.technicalActionCatalog.findMany({
         where: {
             isActive: true,
-            groupKey: "MOVEMENT",
+            groupKey,
             OR: [{ appliesTo: "BOTH" }, { appliesTo: machineType }],
         },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -17,6 +20,18 @@ export async function listTechnicalActionOptions(machineType: "MECHANICAL" | "QU
             defaultExecutionMode: true,
         },
     });
+}
+
+export async function listTechnicalActionOptions(machineType: "MECHANICAL" | "QUARTZ") {
+    return listTechnicalActionOptionsByGroup(machineType, "MOVEMENT");
+}
+
+export async function listCrownActionOptions(machineType: "MECHANICAL" | "QUARTZ") {
+    return listTechnicalActionOptionsByGroup(machineType, "CROWN");
+}
+
+export async function listFunctionalActionOptions(machineType: "MECHANICAL" | "QUARTZ") {
+    return listTechnicalActionOptionsByGroup(machineType, "FUNCTIONAL");
 }
 
 export async function listTechnicalPartOptions(machineType: "MECHANICAL" | "QUARTZ") {

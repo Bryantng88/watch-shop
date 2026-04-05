@@ -13,10 +13,11 @@ import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumM
 import { MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutRecordNestedInput.schema';
 import { PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './PaymentUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordsNestedInput.schema';
+import { ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceNestedInput.schema';
+import { TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenanceRecordNestedInput.schema';
-import { VendorUpdateOneWithoutServicesNestedInputObjectSchema as VendorUpdateOneWithoutServicesNestedInputObjectSchema } from './VendorUpdateOneWithoutServicesNestedInput.schema';
-import { ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInput.schema'
+import { VendorUpdateOneWithoutServicesNestedInputObjectSchema as VendorUpdateOneWithoutServicesNestedInputObjectSchema } from './VendorUpdateOneWithoutServicesNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -45,16 +46,16 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   diagnosis: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   workSummary: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  serviceCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   parts: z.lazy(() => MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   product: z.lazy(() => ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema).optional(),
+  ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema).optional(),
+  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorUpdateOneWithoutServicesNestedInputObjectSchema).optional(),
-  serviceDetail: z.lazy(() => ServiceCatalogUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()
+  vendor: z.lazy(() => VendorUpdateOneWithoutServicesNestedInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUpdateWithoutUserInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUpdateWithoutUserInput>;
 export const MaintenanceRecordUpdateWithoutUserInputObjectZodSchema = makeSchema();

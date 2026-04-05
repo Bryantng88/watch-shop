@@ -13,8 +13,7 @@ export const approvalRequestsAggregateResultSchema = z.object({  _count: z.objec
     reviewNote: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    technicalAssessments: z.number(),
-    maintenanceLogs: z.number()
+    technicalAssessments: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

@@ -14,6 +14,7 @@ export const UserModelSchema = z.object({
     customer: z.unknown().nullable(),
     MaintenanceRecord: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
+    TechnicalIssue: z.array(z.unknown()),
     roles: z.array(z.unknown())
 }).strict();
 

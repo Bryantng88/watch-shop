@@ -133,8 +133,13 @@ export async function createOne(tx: DB, data: Prisma.ServiceRequestCreateInput) 
 
 export async function findProductForService(tx: DB, productId: string) {
   const db = dbOrTx(tx);
-  return db.product.findUnique({
-    where: { id: productId },
+  return db.product.findFirst({
+    where: {
+      id: productId,
+      contentStatus: {
+        not: ContentStatus.ARCHIVED,
+      },
+    },
     select: {
       id: true,
       title: true,

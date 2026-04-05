@@ -4,8 +4,7 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema as maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema } from './maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInput.schema'
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -46,8 +45,7 @@ const makeSchema = () => z.object({
   totalCost: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   conclusion: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsUncheckedUpdateManyWithoutTechnicalAssessmentsNestedInputObjectSchema).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const technicalAssessmentsUncheckedUpdateWithoutApprovalRequestsInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsUncheckedUpdateWithoutApprovalRequestsInput> = makeSchema() as unknown as z.ZodType<Prisma.technicalAssessmentsUncheckedUpdateWithoutApprovalRequestsInput>;
 export const technicalAssessmentsUncheckedUpdateWithoutApprovalRequestsInputObjectZodSchema = makeSchema();

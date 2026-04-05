@@ -18,6 +18,17 @@ const makeSchema = () => z.object({
   vendorId: z.literal(true).optional(),
   vendorNameSnap: z.literal(true).optional(),
   mechanicalPartCatalogId: z.literal(true).optional(),
+  serviceRequestId: z.literal(true).optional(),
+  executionStatus: z.literal(true).optional(),
+  openedAt: z.literal(true).optional(),
+  startedAt: z.literal(true).optional(),
+  completedAt: z.literal(true).optional(),
+  canceledAt: z.literal(true).optional(),
+  actualCost: z.literal(true).optional(),
+  technicianId: z.literal(true).optional(),
+  summary: z.literal(true).optional(),
+  resolutionNote: z.literal(true).optional(),
+  completedByNameSnap: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TechnicalIssueCountAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCountAggregateInputType>;

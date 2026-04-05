@@ -2,8 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
-import { technicalAssessmentsOrderByWithRelationInputObjectSchema as technicalAssessmentsOrderByWithRelationInputObjectSchema } from './technicalAssessmentsOrderByWithRelationInput.schema';
-import { maintenanceLogsOrderByRelationAggregateInputObjectSchema as maintenanceLogsOrderByRelationAggregateInputObjectSchema } from './maintenanceLogsOrderByRelationAggregateInput.schema'
+import { technicalAssessmentsOrderByWithRelationInputObjectSchema as technicalAssessmentsOrderByWithRelationInputObjectSchema } from './technicalAssessmentsOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -19,8 +18,7 @@ const makeSchema = () => z.object({
   reviewNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  technicalAssessments: z.lazy(() => technicalAssessmentsOrderByWithRelationInputObjectSchema).optional(),
-  maintenanceLogs: z.lazy(() => maintenanceLogsOrderByRelationAggregateInputObjectSchema).optional()
+  technicalAssessments: z.lazy(() => technicalAssessmentsOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const approvalRequestsOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.approvalRequestsOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.approvalRequestsOrderByWithRelationInput>;
 export const approvalRequestsOrderByWithRelationInputObjectZodSchema = makeSchema();

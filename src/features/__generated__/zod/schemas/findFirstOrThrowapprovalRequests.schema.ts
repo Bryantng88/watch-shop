@@ -23,9 +23,7 @@ export const approvalRequestsFindFirstOrThrowSelectSchema: z.ZodType<Prisma.appr
     reviewNote: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    technicalAssessments: z.boolean().optional(),
-    maintenanceLogs: z.boolean().optional(),
-    _count: z.boolean().optional()
+    technicalAssessments: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.approvalRequestsSelect>;
 
 export const approvalRequestsFindFirstOrThrowSelectZodSchema = z.object({
@@ -42,9 +40,7 @@ export const approvalRequestsFindFirstOrThrowSelectZodSchema = z.object({
     reviewNote: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    technicalAssessments: z.boolean().optional(),
-    maintenanceLogs: z.boolean().optional(),
-    _count: z.boolean().optional()
+    technicalAssessments: z.boolean().optional()
   }).strict();
 
 export const approvalRequestsFindFirstOrThrowSchema: z.ZodType<Prisma.approvalRequestsFindFirstOrThrowArgs> = z.object({ select: approvalRequestsFindFirstOrThrowSelectSchema.optional(), include: approvalRequestsIncludeObjectSchema.optional(), orderBy: z.union([approvalRequestsOrderByWithRelationInputObjectSchema, approvalRequestsOrderByWithRelationInputObjectSchema.array()]).optional(), where: approvalRequestsWhereInputObjectSchema.optional(), cursor: approvalRequestsWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ApprovalRequestsScalarFieldEnumSchema, ApprovalRequestsScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.approvalRequestsFindFirstOrThrowArgs>;

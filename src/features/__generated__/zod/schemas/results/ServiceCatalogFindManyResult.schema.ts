@@ -10,7 +10,6 @@ export const ServiceCatalogFindManyResultSchema = z.object({
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  maintenanceRecordId: z.string().optional(),
   detail: z.unknown(),
   vendorPrice: z.number().optional(),
   customerPrice: z.number().optional(),
@@ -18,8 +17,8 @@ export const ServiceCatalogFindManyResultSchema = z.object({
   note: z.string().optional(),
   categoryKey: z.string().optional(),
   sortOrder: z.number().int(),
+  MaintenanceRecord: z.array(z.unknown()),
   OrderItem: z.array(z.unknown()),
-  maintenanceRecord: z.unknown().optional(),
   ServiceRequest: z.array(z.unknown()),
   TechnicalIssue: z.array(z.unknown())
 })),

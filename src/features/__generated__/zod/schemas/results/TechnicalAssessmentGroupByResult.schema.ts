@@ -16,6 +16,7 @@ export const TechnicalAssessmentGroupByResultSchema = z.array(z.object({
   evaluatedByNameSnap: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  payloadJson: z.unknown(),
   _count: z.object({
     id: z.number(),
     serviceRequestId: z.number(),
@@ -40,6 +41,7 @@ export const TechnicalAssessmentGroupByResultSchema = z.array(z.object({
     caseStatus: z.number(),
     crystalStatus: z.number(),
     crownStatus: z.number(),
+    payloadJson: z.number(),
     ServiceRequest: z.number(),
     Vendor: z.number(),
     TechnicalIssue: z.number()

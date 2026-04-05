@@ -38,8 +38,7 @@ export const technicalAssessmentsFindManyResultSchema = z.object({
   conclusion: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  approvalRequests: z.array(z.unknown()),
-  maintenanceLogs: z.array(z.unknown())
+  approvalRequests: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

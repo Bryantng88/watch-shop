@@ -5,6 +5,7 @@ import {
     ServiceRequestStatus,
     ServiceScope,
     ServiceType,
+    ContentStatus
 } from "@prisma/client";
 import * as serviceRequestRepo from "./service_request.repo";
 import * as maintRepo from "./maintenance.repo";
@@ -92,8 +93,22 @@ function combineWhere(
 ): Prisma.ServiceRequestWhereInput {
     if (a && b) return { AND: [a, b] };
     return a ?? b ?? {};
+} function visibleProductWhere(): Prisma.ServiceRequestWhereInput {
+    return {
+        OR: [
+            { productId: null },
+            {
+                product: {
+                    is: {
+                        contentStatus: {
+                            not: ContentStatus.ARCHIVED,
+                        },
+                    },
+                },
+            },
+        ],
+    };
 }
-
 async function resolveDefaultTechnicianTx(tx: Prisma.TransactionClient) {
     return serviceRequestRepo.findDefaultTechnician(tx as any);
 }
@@ -146,7 +161,7 @@ async function restoreProductStatusIfDone(tx: Prisma.TransactionClient, productI
 export async function getAdminServiceRequestList(input: ServiceRequestSearchInput) {
     const { page, pageSize, q, sort, view } = input;
 
-    const baseWhere: Prisma.ServiceRequestWhereInput = q?.trim()
+    const keywordWhere: Prisma.ServiceRequestWhereInput = q?.trim()
         ? {
             OR: [
                 { id: { contains: q, mode: "insensitive" } },
@@ -168,6 +183,7 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
         }
         : {};
 
+    const baseWhere = combineWhere(keywordWhere, visibleProductWhere());
     const where = combineWhere(baseWhere, viewToStatusWhere(view));
     const skip = (page - 1) * pageSize;
 
@@ -361,7 +377,17 @@ export async function bulkAssignVendorAndCreateMaintenance(input: {
         });
     });
 }
+export async function getServiceCatalogOptions() {
+    const rows = await serviceRequestRepo.listServiceCatalogRepo(prisma as any, { isActive: true });
 
+    return rows.map((x) => ({
+        id: x.id,
+        code: x.code ?? null,
+        name: x.name,
+        defaultPrice: x.defaultPrice == null ? null : Number(x.defaultPrice),
+        isActive: x.isActive,
+    }));
+}
 export async function postServiceRequests(ids: string[]) {
     const cleanIds = Array.from(new Set((ids ?? []).map((x) => String(x).trim()).filter(Boolean)));
     if (!cleanIds.length) return { updated: 0 };

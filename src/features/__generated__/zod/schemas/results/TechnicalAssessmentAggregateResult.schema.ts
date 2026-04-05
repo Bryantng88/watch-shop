@@ -23,6 +23,7 @@ export const TechnicalAssessmentAggregateResultSchema = z.object({  _count: z.ob
     caseStatus: z.number(),
     crystalStatus: z.number(),
     crownStatus: z.number(),
+    payloadJson: z.number(),
     ServiceRequest: z.number(),
     Vendor: z.number(),
     TechnicalIssue: z.number()

@@ -48,6 +48,7 @@ export const ServiceRequestFindManySelectSchema: z.ZodType<Prisma.ServiceRequest
     vendor: z.boolean().optional(),
     serviceCatalog: z.boolean().optional(),
     technicalAssessment: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;
 
@@ -90,6 +91,7 @@ export const ServiceRequestFindManySelectZodSchema = z.object({
     vendor: z.boolean().optional(),
     serviceCatalog: z.boolean().optional(),
     technicalAssessment: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

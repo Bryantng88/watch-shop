@@ -1542,6 +1542,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                                 <td className="px-3 py-5 text-right">
                                                     <RowActionsMenu
+                                                        onView={() => router.push(`/admin/products/${p.id}`)}
                                                         onEdit={() => router.push(`/admin/products/${p.id}/edit`)}
                                                         onDelete={() => handleDelete(p.id)}
                                                         onService={() => {

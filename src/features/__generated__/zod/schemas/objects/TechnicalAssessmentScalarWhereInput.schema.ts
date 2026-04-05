@@ -12,7 +12,8 @@ import { EnumTechnicalAssessmentStatusFilterObjectSchema as EnumTechnicalAssessm
 import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumTechnicalSectionStatusFilterObjectSchema as EnumTechnicalSectionStatusFilterObjectSchema } from './EnumTechnicalSectionStatusFilter.schema';
-import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema'
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema'
 
 const technicalassessmentscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalAssessmentScalarWhereInputObjectSchema), z.lazy(() => TechnicalAssessmentScalarWhereInputObjectSchema).array()]).optional(),
@@ -40,7 +41,8 @@ const technicalassessmentscalarwhereinputSchema = z.object({
   movementStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   caseStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
   crystalStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
-  crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional()
+  crownStatus: z.union([z.lazy(() => EnumTechnicalSectionStatusFilterObjectSchema), TechnicalSectionStatusSchema]).optional(),
+  payloadJson: z.lazy(() => JsonNullableFilterObjectSchema).optional()
 }).strict();
 export const TechnicalAssessmentScalarWhereInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentScalarWhereInput> = technicalassessmentscalarwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalAssessmentScalarWhereInput>;
 export const TechnicalAssessmentScalarWhereInputObjectZodSchema = technicalassessmentscalarwhereinputSchema;

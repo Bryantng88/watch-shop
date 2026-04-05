@@ -12,7 +12,6 @@ const makeSchema = () => z.object({
   isActive: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  maintenanceRecordId: SortOrderSchema.optional(),
   detail: SortOrderSchema.optional(),
   vendorPrice: SortOrderSchema.optional(),
   customerPrice: SortOrderSchema.optional(),

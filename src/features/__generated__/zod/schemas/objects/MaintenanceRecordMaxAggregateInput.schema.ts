@@ -37,7 +37,8 @@ const makeSchema = () => z.object({
   workSummary: z.literal(true).optional(),
   serviceCatalogId: z.literal(true).optional(),
   processingMode: z.literal(true).optional(),
-  imageFileKey: z.literal(true).optional()
+  imageFileKey: z.literal(true).optional(),
+  technicalIssueId: z.literal(true).optional()
 }).strict();
 export const MaintenanceRecordMaxAggregateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordMaxAggregateInputType>;
 export const MaintenanceRecordMaxAggregateInputObjectZodSchema = makeSchema();

@@ -9,8 +9,7 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
-import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
-import { ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInput.schema'
+import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -48,7 +47,7 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  serviceDetail: z.lazy(() => ServiceCatalogUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()
+  technicalIssueId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const MaintenanceRecordUncheckedUpdateWithoutPartsInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUncheckedUpdateWithoutPartsInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUncheckedUpdateWithoutPartsInput>;
 export const MaintenanceRecordUncheckedUpdateWithoutPartsInputObjectZodSchema = makeSchema();

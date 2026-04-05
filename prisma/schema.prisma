@@ -100,6 +100,7 @@ model Product {
   brand              Brand?              @relation(fields: [brandId], references: [id])
   ProductCategory    ProductCategory?    @relation(fields: [categoryId], references: [id])
   vendor             Vendor?             @relation(fields: [vendorId], references: [id])
+  content            ProductContent?
   image              ProductImage[]
   variants           ProductVariant[]
   Reservation        Reservation[]
@@ -292,27 +293,26 @@ model Reservation {
 }
 
 model ServiceCatalog {
-  id                  String             @id @default(cuid())
-  code                String             @unique
-  name                String
-  description         String?
-  defaultPrice        Decimal?           @db.Decimal(12, 2)
-  durationMin         Int?
-  isActive            Boolean            @default(true)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  maintenanceRecordId String?
-  detail              ServiceDetail
-  vendorPrice         Decimal?           @db.Decimal(12, 2)
-  customerPrice       Decimal?           @db.Decimal(12, 2)
-  internalCost        Decimal?           @db.Decimal(12, 2)
-  note                String?
-  categoryKey         String?
-  sortOrder           Int                @default(0)
-  OrderItem           OrderItem[]
-  maintenanceRecord   MaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id])
-  ServiceRequest      ServiceRequest[]
-  TechnicalIssue      TechnicalIssue[]
+  id                String              @id @default(cuid())
+  code              String              @unique
+  name              String
+  description       String?
+  defaultPrice      Decimal?            @db.Decimal(12, 2)
+  durationMin       Int?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  detail            ServiceDetail
+  vendorPrice       Decimal?            @db.Decimal(12, 2)
+  customerPrice     Decimal?            @db.Decimal(12, 2)
+  internalCost      Decimal?            @db.Decimal(12, 2)
+  note              String?
+  categoryKey       String?
+  sortOrder         Int                 @default(0)
+  MaintenanceRecord MaintenanceRecord[]
+  OrderItem         OrderItem[]
+  ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
 
   @@index([detail], map: "idx_service_catalog_detail")
 }
@@ -356,6 +356,7 @@ model ServiceRequest {
   vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
   serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
   technicalAssessment     TechnicalAssessment?
+  TechnicalIssue          TechnicalIssue[]
 
   @@index([customerId])
   @@index([productId])
@@ -404,14 +405,16 @@ model MaintenanceRecord {
   serviceCatalogId   String?
   processingMode     String?
   imageFileKey       String?
+  technicalIssueId   String?
   parts              MaintenancePart[]
   Payment            Payment?             @relation(fields: [paymentId], references: [id])
   product            Product?             @relation(fields: [productId], references: [id])
+  ServiceCatalog     ServiceCatalog?      @relation(fields: [serviceCatalogId], references: [id])
   serviceRequest     ServiceRequest?      @relation(fields: [serviceRequestId], references: [id])
+  TechnicalIssue     TechnicalIssue?      @relation(fields: [technicalIssueId], references: [id])
   User               User?                @relation(fields: [technicianId], references: [id])
   variant            ProductVariant?      @relation(fields: [variantId], references: [id])
   vendor             Vendor?              @relation(fields: [vendorId], references: [id])
-  serviceDetail      ServiceCatalog[]
 
   @@index([serviceRequestId])
   @@index([productId])
@@ -421,6 +424,8 @@ model MaintenanceRecord {
   @@index([paymentId], map: "idx_maintenance_record_payment_id")
   @@index([technicianId])
   @@index([technicianId], map: "idx_maintenance_record_technician_id")
+  @@index([technicalIssueId])
+  @@index([serviceCatalogId])
 }
 
 model MaintenancePart {
@@ -537,6 +542,7 @@ model User {
   customer          Customer?
   MaintenanceRecord MaintenanceRecord[]
   ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
   roles             Role[]              @relation("UserRoles")
 
   @@index([isActive])
@@ -751,35 +757,54 @@ model TechnicalAssessment {
   caseStatus          TechnicalSectionStatus    @default(GOOD)
   crystalStatus       TechnicalSectionStatus    @default(GOOD)
   crownStatus         TechnicalSectionStatus    @default(GOOD)
+  payloadJson         Json?
   ServiceRequest      ServiceRequest            @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   Vendor              Vendor?                   @relation(fields: [vendorId], references: [id])
   TechnicalIssue      TechnicalIssue[]
 }
 
 model TechnicalIssue {
-  id                      String                 @id @default(dbgenerated("gen_random_uuid()"))
+  id                      String                        @id @default(dbgenerated("gen_random_uuid()"))
   assessmentId            String
   area                    String?
-  issueType               TechnicalIssueType     @default(CHECK)
-  actionMode              TechnicalActionMode    @default(INTERNAL)
+  issueType               TechnicalIssueType            @default(CHECK)
+  actionMode              TechnicalActionMode           @default(INTERNAL)
   serviceCatalogId        String?
   supplyCatalogId         String?
   note                    String?
-  estimatedCost           Decimal?               @db.Decimal(12, 2)
-  sortOrder               Int                    @default(0)
-  createdAt               DateTime               @default(now()) @db.Timestamp(6)
-  updatedAt               DateTime               @default(now()) @db.Timestamp(6)
+  estimatedCost           Decimal?                      @db.Decimal(12, 2)
+  sortOrder               Int                           @default(0)
+  createdAt               DateTime                      @default(now()) @db.Timestamp(6)
+  updatedAt               DateTime                      @default(now()) @db.Timestamp(6)
   vendorId                String?
   vendorNameSnap          String?
   mechanicalPartCatalogId String?
-  TechnicalAssessment     TechnicalAssessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  MechanicalPartCatalog   MechanicalPartCatalog? @relation(fields: [mechanicalPartCatalogId], references: [id])
-  ServiceCatalog          ServiceCatalog?        @relation(fields: [serviceCatalogId], references: [id])
-  SupplyCatalog           SupplyCatalog?         @relation(fields: [supplyCatalogId], references: [id])
-  Vendor                  Vendor?                @relation(fields: [vendorId], references: [id])
+  serviceRequestId        String
+  executionStatus         TechnicalIssueExecutionStatus @default(OPEN)
+  openedAt                DateTime
+  startedAt               DateTime?
+  completedAt             DateTime?
+  canceledAt              DateTime?
+  actualCost              Decimal?                      @db.Decimal(18, 2)
+  technicianId            String?
+  summary                 String?
+  resolutionNote          String?
+  completedByNameSnap     String?
+  MaintenanceRecord       MaintenanceRecord[]
+  TechnicalAssessment     TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  MechanicalPartCatalog   MechanicalPartCatalog?        @relation(fields: [mechanicalPartCatalogId], references: [id])
+  ServiceCatalog          ServiceCatalog?               @relation(fields: [serviceCatalogId], references: [id])
+  ServiceRequest          ServiceRequest                @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  SupplyCatalog           SupplyCatalog?                @relation(fields: [supplyCatalogId], references: [id])
+  User                    User?                         @relation(fields: [technicianId], references: [id])
+  Vendor                  Vendor?                       @relation(fields: [vendorId], references: [id])
 
   @@index([assessmentId])
   @@index([mechanicalPartCatalogId])
+  @@index([executionStatus])
+  @@index([serviceRequestId])
+  @@index([technicianId])
+  @@index([vendorId])
 }
 
 model MechanicalPartCatalog {
@@ -814,33 +839,9 @@ model approvalRequests {
   createdAt             DateTime              @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime              @default(now()) @db.Timestamptz(6)
   technicalAssessments  technicalAssessments? @relation(fields: [technicalAssessmentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_approvalrequests_ta")
-  maintenanceLogs       maintenanceLogs[]
 
   @@index([serviceRequestId], map: "idx_approvalrequests_servicerequestid")
   @@index([technicalAssessmentId], map: "idx_approvalrequests_taid")
-}
-
-model maintenanceLogs {
-  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serviceRequestId      String
-  technicalAssessmentId String?               @db.Uuid
-  approvalRequestId     String?               @db.Uuid
-  sourceType            String
-  category              String?
-  action                String?
-  execution             String?
-  vendorId              String?
-  partId                String?
-  cost                  Int                   @default(0)
-  note                  String?
-  status                String                @default("CREATED")
-  autoApproved          Boolean               @default(false)
-  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
-  updatedAt             DateTime              @default(now()) @db.Timestamptz(6)
-  approvalRequests      approvalRequests?     @relation(fields: [approvalRequestId], references: [id], onUpdate: NoAction, map: "fk_maintenancelogs_approval")
-  technicalAssessments  technicalAssessments? @relation(fields: [technicalAssessmentId], references: [id], onUpdate: NoAction, map: "fk_maintenancelogs_ta")
-
-  @@index([serviceRequestId], map: "idx_maintenancelogs_servicerequestid")
 }
 
 model technicalAssessments {
@@ -882,9 +883,78 @@ model technicalAssessments {
   createdAt            DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime           @default(now()) @db.Timestamptz(6)
   approvalRequests     approvalRequests[]
-  maintenanceLogs      maintenanceLogs[]
 
   @@index([serviceRequestId], map: "idx_technicalassessments_servicerequestid")
+}
+
+model technicalActionCatalog {
+  id                   String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code                 String   @unique
+  name                 String
+  appliesTo            String   @default("BOTH")
+  groupKey             String   @default("MOVEMENT")
+  requiresPart         Boolean  @default(false)
+  defaultExecutionMode String?
+  sortOrder            Int      @default(0)
+  isActive             Boolean  @default(true)
+  note                 String?
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, groupKey, appliesTo, sortOrder], map: "technicalActionCatalog_active_idx")
+}
+
+model technicalAppearanceIssueCatalog {
+  id             String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code           String   @unique
+  area           String
+  label          String
+  deductionScore Int      @default(0)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  note           String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, area, sortOrder], map: "technicalAppearanceIssueCatalog_active_idx")
+}
+
+model technicalPartCatalog {
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code      String   @unique
+  name      String
+  appliesTo String   @default("BOTH")
+  partGroup String   @default("MOVEMENT")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, partGroup, appliesTo, sortOrder], map: "technicalPartCatalog_active_idx")
+}
+
+model ProductContent {
+  productId          String    @id
+  titleSnapshot      String?
+  brandSnapshot      String?
+  refSnapshot        String?
+  sizeSnapshot       String?
+  movementSnapshot   String?
+  glassSnapshot      String?
+  strapClaspSnapshot String?
+  modelSnapshot      String?
+  yearSnapshot       String?
+  generatedContent   String?
+  promptNote         String?
+  generatedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now())
+  Product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([brandSnapshot])
+  @@index([modelSnapshot])
+  @@index([yearSnapshot])
 }
 
 enum Category {
@@ -1269,6 +1339,8 @@ enum TechnicalActionMode {
 enum TechnicalAssessmentStatus {
   DRAFT
   COMPLETED
+  IN_PROGRESS
+  CANCELED
 }
 
 enum TechnicalIssueType {
@@ -1298,4 +1370,11 @@ enum MechanicalPartGroup {
 enum TechnicalSectionStatus {
   GOOD
   ISSUE
+}
+
+enum TechnicalIssueExecutionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
 }

@@ -45,14 +45,16 @@ export const MaintenanceRecordFindManySelectSchema: z.ZodType<Prisma.Maintenance
     serviceCatalogId: z.boolean().optional(),
     processingMode: z.boolean().optional(),
     imageFileKey: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     parts: z.boolean().optional(),
     Payment: z.boolean().optional(),
     product: z.boolean().optional(),
+    ServiceCatalog: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     User: z.boolean().optional(),
     variant: z.boolean().optional(),
     vendor: z.boolean().optional(),
-    serviceDetail: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.MaintenanceRecordSelect>;
 
@@ -92,14 +94,16 @@ export const MaintenanceRecordFindManySelectZodSchema = z.object({
     serviceCatalogId: z.boolean().optional(),
     processingMode: z.boolean().optional(),
     imageFileKey: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     parts: z.boolean().optional(),
     Payment: z.boolean().optional(),
     product: z.boolean().optional(),
+    ServiceCatalog: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
+    TechnicalIssue: z.boolean().optional(),
     User: z.boolean().optional(),
     variant: z.boolean().optional(),
     vendor: z.boolean().optional(),
-    serviceDetail: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

@@ -12,6 +12,7 @@ export const UserAggregateResultSchema = z.object({  _count: z.object({
     customer: z.number(),
     MaintenanceRecord: z.number(),
     ServiceRequest: z.number(),
+    TechnicalIssue: z.number(),
     roles: z.number()
   }).optional(),
   _min: z.object({

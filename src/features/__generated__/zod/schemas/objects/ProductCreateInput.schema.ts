@@ -12,6 +12,7 @@ import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCr
 import { BrandCreateNestedOneWithoutProductsInputObjectSchema as BrandCreateNestedOneWithoutProductsInputObjectSchema } from './BrandCreateNestedOneWithoutProductsInput.schema';
 import { ProductCategoryCreateNestedOneWithoutProductInputObjectSchema as ProductCategoryCreateNestedOneWithoutProductInputObjectSchema } from './ProductCategoryCreateNestedOneWithoutProductInput.schema';
 import { VendorCreateNestedOneWithoutProductInputObjectSchema as VendorCreateNestedOneWithoutProductInputObjectSchema } from './VendorCreateNestedOneWithoutProductInput.schema';
+import { ProductContentCreateNestedOneWithoutProductInputObjectSchema as ProductContentCreateNestedOneWithoutProductInputObjectSchema } from './ProductContentCreateNestedOneWithoutProductInput.schema';
 import { ProductImageCreateNestedManyWithoutProductInputObjectSchema as ProductImageCreateNestedManyWithoutProductInputObjectSchema } from './ProductImageCreateNestedManyWithoutProductInput.schema';
 import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as ProductVariantCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantCreateNestedManyWithoutProductInput.schema';
 import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema';
@@ -44,6 +45,7 @@ const makeSchema = () => z.object({
   brand: z.lazy(() => BrandCreateNestedOneWithoutProductsInputObjectSchema).optional(),
   ProductCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  content: z.lazy(() => ProductContentCreateNestedOneWithoutProductInputObjectSchema).optional(),
   image: z.lazy(() => ProductImageCreateNestedManyWithoutProductInputObjectSchema),
   variants: z.lazy(() => ProductVariantCreateNestedManyWithoutProductInputObjectSchema),
   Reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema),

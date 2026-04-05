@@ -7,6 +7,7 @@ import { OrderItemFindManySchema as OrderItemFindManySchema } from '../findManyO
 import { BrandArgsObjectSchema as BrandArgsObjectSchema } from './BrandArgs.schema';
 import { ProductCategoryArgsObjectSchema as ProductCategoryArgsObjectSchema } from './ProductCategoryArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
+import { ProductContentArgsObjectSchema as ProductContentArgsObjectSchema } from './ProductContentArgs.schema';
 import { ProductImageFindManySchema as ProductImageFindManySchema } from '../findManyProductImage.schema';
 import { ProductVariantFindManySchema as ProductVariantFindManySchema } from '../findManyProductVariant.schema';
 import { ReservationFindManySchema as ReservationFindManySchema } from '../findManyReservation.schema';
@@ -22,6 +23,7 @@ const makeSchema = () => z.object({
   brand: z.union([z.boolean(), z.lazy(() => BrandArgsObjectSchema)]).optional(),
   ProductCategory: z.union([z.boolean(), z.lazy(() => ProductCategoryArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  content: z.union([z.boolean(), z.lazy(() => ProductContentArgsObjectSchema)]).optional(),
   image: z.union([z.boolean(), z.lazy(() => ProductImageFindManySchema)]).optional(),
   variants: z.union([z.boolean(), z.lazy(() => ProductVariantFindManySchema)]).optional(),
   Reservation: z.union([z.boolean(), z.lazy(() => ReservationFindManySchema)]).optional(),

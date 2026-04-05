@@ -1,8 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema as approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema } from './approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInput.schema';
-import { maintenanceLogsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema as maintenanceLogsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema } from './maintenanceLogsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInput.schema'
+import { approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema as approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema } from './approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -44,8 +43,7 @@ const makeSchema = () => z.object({
   conclusion: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  approvalRequests: z.lazy(() => approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema),
-  maintenanceLogs: z.lazy(() => maintenanceLogsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema)
+  approvalRequests: z.lazy(() => approvalRequestsUncheckedCreateNestedManyWithoutTechnicalAssessmentsInputObjectSchema)
 }).strict();
 export const technicalAssessmentsUncheckedCreateInputObjectSchema: z.ZodType<Prisma.technicalAssessmentsUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.technicalAssessmentsUncheckedCreateInput>;
 export const technicalAssessmentsUncheckedCreateInputObjectZodSchema = makeSchema();

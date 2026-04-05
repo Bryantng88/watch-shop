@@ -3,11 +3,12 @@ import type { Prisma } from '@prisma/client';
 import { MaintenancePartFindManySchema as MaintenancePartFindManySchema } from '../findManyMaintenancePart.schema';
 import { PaymentArgsObjectSchema as PaymentArgsObjectSchema } from './PaymentArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
+import { ServiceCatalogArgsObjectSchema as ServiceCatalogArgsObjectSchema } from './ServiceCatalogArgs.schema';
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
+import { TechnicalIssueArgsObjectSchema as TechnicalIssueArgsObjectSchema } from './TechnicalIssueArgs.schema';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
-import { ServiceCatalogFindManySchema as ServiceCatalogFindManySchema } from '../findManyServiceCatalog.schema';
 import { MaintenanceRecordCountOutputTypeArgsObjectSchema as MaintenanceRecordCountOutputTypeArgsObjectSchema } from './MaintenanceRecordCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -46,14 +47,16 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.boolean().optional(),
   processingMode: z.boolean().optional(),
   imageFileKey: z.boolean().optional(),
+  technicalIssueId: z.boolean().optional(),
   parts: z.union([z.boolean(), z.lazy(() => MaintenancePartFindManySchema)]).optional(),
   Payment: z.union([z.boolean(), z.lazy(() => PaymentArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  ServiceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
+  TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueArgsObjectSchema)]).optional(),
   User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
-  serviceDetail: z.union([z.boolean(), z.lazy(() => ServiceCatalogFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => MaintenanceRecordCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const MaintenanceRecordSelectObjectSchema: z.ZodType<Prisma.MaintenanceRecordSelect> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordSelect>;

@@ -5,7 +5,7 @@ import * as maintenanceRepo from "./maintenance.repo";
 import { MaintenanceEventType, Prisma } from "@prisma/client";
 import { createPayment } from "../../payments/_server/payment.repo";
 
-type CreateMaintenanceLogInput = {
+type CreateMaintenanceRecordInput = {
   serviceRequestId: string;
   vendorId?: string | null;
   notes?: string | null;
@@ -21,18 +21,37 @@ type CreateMaintenanceLogInput = {
   paymentPurpose?: string | null;
   serviceCatalogId?: string | null;
   imageFileKey?: string | null;
+  technicalIssueId?: string | null;
 };
 
 type AssignVendorInput = { serviceRequestId: string; vendorId: string; reason?: string | null; setInProgress?: boolean; };
 function serialize(obj: any) { return JSON.parse(JSON.stringify(obj, (_k, v) => { if (v instanceof Date) return v.toISOString(); if (typeof v === 'object' && v?._isDecimal) return Number(v); return v; })); }
-export async function getMaintenancePanelByServiceRequest(serviceRequestId: string) { const id = String(serviceRequestId || '').trim(); if (!id) throw new Error('Missing serviceRequestId'); return serialize(await maintenanceRepo.getPanelByServiceRequestId(prisma, id)); }
-export async function getMaintenanceLogsByServiceRequest(serviceRequestId: string) { const id = String(serviceRequestId || '').trim(); if (!id) throw new Error('Missing serviceRequestId'); const panel = await maintenanceRepo.getPanelByServiceRequestId(prisma, id); return serialize(panel?.logs ?? []); }
-export async function createMaintenanceLogForServiceRequest(input: CreateMaintenanceLogInput) {
+
+export async function getMaintenancePanelByServiceRequest(serviceRequestId: string) {
+  const id = String(serviceRequestId || '').trim();
+  if (!id) throw new Error('Missing serviceRequestId');
+  return serialize(await maintenanceRepo.getPanelByServiceRequestId(prisma, id));
+}
+
+export async function getMaintenanceRecordsByServiceRequest(serviceRequestId: string) {
+  const id = String(serviceRequestId || '').trim();
+  if (!id) throw new Error('Missing serviceRequestId');
+  const panel = await maintenanceRepo.getPanelByServiceRequestId(prisma, id);
+  return serialize(panel?.maintenanceRecords ?? []);
+}
+
+export async function createMaintenanceRecordForServiceRequest(input: CreateMaintenanceRecordInput) {
   const serviceRequestId = String(input.serviceRequestId || '').trim();
   if (!serviceRequestId) throw new Error('Missing serviceRequestId');
   return prisma.$transaction(async (tx) => {
     const sr = await tx.serviceRequest.findUnique({ where: { id: serviceRequestId }, select: { id: true, vendorId: true, vendorNameSnap: true, technicianId: true, technicianNameSnap: true, productId: true, variantId: true, brandSnapshot: true, modelSnapshot: true, refSnapshot: true, serialSnapshot: true } });
     if (!sr) throw new Error('Service request not found');
+    if (sr.productId) {
+      const product = await tx.product.findUnique({ where: { id: sr.productId }, select: { contentStatus: true } });
+      if (product && String((product as any).contentStatus ?? '').toUpperCase() === 'ARCHIVED') {
+        throw new Error('Sản phẩm đã hủy/ẩn, không thể ghi thêm nhật ký xử lý.');
+      }
+    }
     const useExternal = (input.processingMode ?? 'INTERNAL') === 'EXTERNAL';
     const vendorId = useExternal ? (input.vendorId ?? sr.vendorId ?? null) as string | null : null;
     let vendorName: string | null = useExternal ? (sr.vendorNameSnap ?? null) : null;
@@ -47,7 +66,7 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
       const createdPayment = await createPayment(tx, { amount: amountDec, currency, service_request_id: sr.id, vendor_id: vendorId, note: input.notes ?? null, method: (input.paymentMethod ?? 'CASH') as any, status: (input.paymentStatus ?? 'UNPAID') as any, direction: ('OUT' as any), type: (input.paymentType ?? 'SERVICE') as any, purpose: (input.paymentPurpose ?? 'MAINTENANCE_COST') as any });
       paymentId = createdPayment.id; paidAmount = amountDec; paidAt = new Date();
     }
-    const created = await maintenanceRepo.createLog(tx, { serviceRequestId: sr.id, eventType: input.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE, vendorId, vendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: input.notes ?? null, diagnosis: input.diagnosis ?? null, workSummary: input.workSummary ?? null, processingMode: input.processingMode ?? 'INTERNAL', servicedAt: input.servicedAt ?? new Date(), totalCost: input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)), currency, paymentId, paidAmount, paidAt, productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null, serviceCatalogId: input.serviceCatalogId ?? null, imageFileKey: input.imageFileKey ?? null });
+    const created = await maintenanceRepo.createMaintenanceRecord(tx, { serviceRequestId: sr.id, eventType: input.totalCost != null ? MaintenanceEventType.COST : MaintenanceEventType.NOTE, vendorId, vendorName, technicianId: sr.technicianId ?? null, technicianNameSnap: sr.technicianNameSnap ?? null, notes: input.notes ?? null, diagnosis: input.diagnosis ?? null, workSummary: input.workSummary ?? null, processingMode: input.processingMode ?? 'INTERNAL', servicedAt: input.servicedAt ?? new Date(), totalCost: input.totalCost == null ? null : new Prisma.Decimal(String(input.totalCost)), currency, paymentId, paidAmount, paidAt, productId: sr.productId ?? null, variantId: sr.variantId ?? null, brandSnapshot: sr.brandSnapshot ?? null, modelSnapshot: sr.modelSnapshot ?? null, refSnapshot: sr.refSnapshot ?? null, serialSnapshot: sr.serialSnapshot ?? null, serviceCatalogId: input.serviceCatalogId ?? null, imageFileKey: input.imageFileKey ?? null, technicalIssueId: input.technicalIssueId ?? null });
     if (useExternal && vendorId) {
       const v = await tx.vendor.findUnique({ where: { id: vendorId }, select: { id: true, name: true } });
       if (v) {
@@ -57,6 +76,7 @@ export async function createMaintenanceLogForServiceRequest(input: CreateMainten
     return serialize(created);
   });
 }
+
 export async function assignVendorForServiceRequest(input: AssignVendorInput) {
   const serviceRequestId = String(input.serviceRequestId || '').trim();
   const vendorId = String(input.vendorId || '').trim();
@@ -72,3 +92,7 @@ export async function assignVendorForServiceRequest(input: AssignVendorInput) {
     return serialize({ ok: true, skipped: false });
   });
 }
+
+// Backward-compatible aliases
+export const getMaintenanceLogsByServiceRequest = getMaintenanceRecordsByServiceRequest;
+export const createMaintenanceLogForServiceRequest = createMaintenanceRecordForServiceRequest;

@@ -29,6 +29,7 @@ const makeSchema = () => z.object({
   caseStatus: z.boolean().optional(),
   crystalStatus: z.boolean().optional(),
   crownStatus: z.boolean().optional(),
+  payloadJson: z.boolean().optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
   Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
   TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),

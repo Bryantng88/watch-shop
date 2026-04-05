@@ -105,8 +105,7 @@ export default function ServiceRequestListClient(props: PageProps) {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = useState(false);
-    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
-        useState<string | null>(null);
+    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] = useState<string | null>(null);
     const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
@@ -127,16 +126,8 @@ export default function ServiceRequestListClient(props: PageProps) {
         [items, technicalAssessmentRequestId]
     );
 
-    const productImage =
-        selectedItem?.primaryImageUrl ??
-        selectedItem?.product?.primaryImageUrl ??
-        null;
-
-    const productTitle =
-        selectedItem?.productTitle ??
-        selectedItem?.product?.title ??
-        null;
-
+    const productImage = selectedItem?.primaryImageUrl ?? selectedItem?.product?.primaryImageUrl ?? null;
+    const productTitle = selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
     const productSku = selectedItem?.skuSnapshot ?? null;
     const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
 
@@ -358,7 +349,13 @@ export default function ServiceRequestListClient(props: PageProps) {
                                             </td>
 
                                             <td className="align-top px-3 py-4">
-                                                <div className="text-sm font-medium">{row.refNo || "-"}</div>
+                                                <button
+                                                    type="button"
+                                                    className="text-left text-sm font-medium text-blue-600 hover:underline"
+                                                    onClick={() => router.push(`/admin/services/${row.id}`)}
+                                                >
+                                                    {row.refNo || "-"}
+                                                </button>
                                                 <div className="mt-1 text-xs text-gray-500">ID: {row.id}</div>
                                             </td>
 
@@ -417,7 +414,11 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                     id={row.id}
                                                     actions={[
                                                         {
-                                                            label: "Xem logs",
+                                                            label: "Mở chi tiết",
+                                                            onClick: () => router.push(`/admin/services/${row.id}`),
+                                                        },
+                                                        {
+                                                            label: "Xem nhật ký xử lý",
                                                             onClick: () => {
                                                                 setLogSrId(row.id);
                                                                 setLogTitle(row.refNo || row.serviceName || row.id);
@@ -439,7 +440,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                             },
                                                         },
                                                         {
-                                                            label: "Đánh giá kỹ thuật",
+                                                            label: row.status === "IN_PROGRESS" ? "Mở lại phiếu kỹ thuật" : "Đánh giá kỹ thuật",
                                                             onClick: () => setTechnicalAssessmentRequestId(row.id),
                                                         },
                                                     ]}

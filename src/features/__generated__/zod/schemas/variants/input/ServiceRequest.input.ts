@@ -42,7 +42,8 @@ export const ServiceRequestInputSchema = z.object({
     variant: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
     serviceCatalog: z.unknown().optional().nullable(),
-    technicalAssessment: z.unknown().optional().nullable()
+    technicalAssessment: z.unknown().optional().nullable(),
+    TechnicalIssue: z.array(z.unknown())
 }).strict();
 
 export type ServiceRequestInputType = z.infer<typeof ServiceRequestInputSchema>;

@@ -1,456 +1,390 @@
-import crypto from "node:crypto";
 import prisma from "@/server/db/client";
 import * as repo from "./technical.assessment.repo";
-
 import {
-    MaintenanceEventType,
-    Prisma,
     ServiceRequestStatus,
     TechnicalAssessmentStatus,
 } from "@prisma/client";
 
-function inferMovementKind(raw?: string | null): "BATTERY" | "MECHANICAL" | "UNKNOWN" {
-    const text = String(raw || "").toUpperCase();
-
-    if (!text) return "UNKNOWN";
-
-    if (
-        text.includes("QUARTZ") ||
-        text.includes("PIN") ||
-        text.includes("ECO") ||
-        text.includes("SOLAR") ||
-        text.includes("KINETIC")
-    ) {
-        return "BATTERY";
-    }
-
-    if (
-        text.includes("AUTOMATIC") ||
-        text.includes("AUTO") ||
-        text.includes("MANUAL") ||
-        text.includes("CÓT") ||
-        text.includes("MECHANICAL")
-    ) {
-        return "MECHANICAL";
-    }
-
-    return "UNKNOWN";
-}
-
-function marker(serviceRequestId: string) {
-    return `[AUTO_TECH_ASSESSMENT:${serviceRequestId}]`;
-}
-
-function makeStatusChangeNote(nextStatus: ServiceRequestStatus, conclusion?: string | null) {
-    return [
-        `[AUTO_TECH_STATUS] ${nextStatus}`,
-        conclusion ? `Kết luận: ${conclusion}` : null,
-    ]
-        .filter(Boolean)
-        .join("\n");
-}
-
-async function syncAutoLogsAndCost(
-    tx: Prisma.TransactionClient,
-    input: {
-        serviceRequestId: string;
-        productId?: string | null;
-        variantId?: string | null;
-        brandSnapshot?: string | null;
-        modelSnapshot?: string | null;
-        refSnapshot?: string | null;
-        serialSnapshot?: string | null;
-        technicianId?: string | null;
-        technicianNameSnap?: string | null;
-        issues: Array<{
-            area?: string | null;
-            issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
-            actionMode: "NONE" | "INTERNAL" | "VENDOR";
-            vendorId?: string | null;
-            vendorNameSnap?: string | null;
-            serviceCatalogId?: string | null;
-            supplyCatalogId?: string | null;
-            mechanicalPartCatalogId?: string | null;
-            note?: string | null;
-            estimatedCost?: number | null;
-            sortOrder?: number | null;
-        }>;
-        conclusion?: string | null;
-    }
-) {
-    const mark = marker(input.serviceRequestId);
-
-    const oldAutoLogs = await tx.maintenanceRecord.findMany({
-        where: {
-            serviceRequestId: input.serviceRequestId,
-            notes: { startsWith: mark },
-        },
-        select: { id: true, totalCost: true },
-    });
-
-    const oldAutoTotal = oldAutoLogs.reduce((sum, x) => sum + Number(x.totalCost ?? 0), 0);
-
-    if (oldAutoLogs.length) {
-        await tx.maintenanceRecord.deleteMany({
-            where: { id: { in: oldAutoLogs.map((x) => x.id) } },
-        });
-    }
-
-    const vendorIds = Array.from(new Set(input.issues.map((x) => x.vendorId).filter((x): x is string => !!x)));
-
-    const [serviceCatalogs, supplyCatalogs, mechanicalPartCatalogs, vendors] = await Promise.all([
-        tx.serviceCatalog.findMany({
-            where: {
-                id: {
-                    in: Array.from(new Set(input.issues.map((x) => x.serviceCatalogId).filter((x): x is string => !!x))),
-                },
-            },
-            select: { id: true, name: true },
-        }),
-        tx.supplyCatalog.findMany({
-            where: {
-                id: {
-                    in: Array.from(new Set(input.issues.map((x) => x.supplyCatalogId).filter((x): x is string => !!x))),
-                },
-            },
-            select: { id: true, name: true, defaultCost: true },
-        }),
-        tx.mechanicalPartCatalog.findMany({
-            where: {
-                id: {
-                    in: Array.from(
-                        new Set(input.issues.map((x) => x.mechanicalPartCatalogId).filter((x): x is string => !!x))
-                    ),
-                },
-            },
-            select: { id: true, name: true, defaultCost: true },
-        }),
-        vendorIds.length
-            ? tx.vendor.findMany({
-                where: { id: { in: vendorIds } },
-                select: { id: true, name: true },
-            })
-            : Promise.resolve([]),
-    ]);
-
-    const serviceMap = new Map(serviceCatalogs.map((x) => [x.id, x]));
-    const supplyMap = new Map(
-        supplyCatalogs.map((x) => [x.id, { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null }])
-    );
-    const partMap = new Map(
-        mechanicalPartCatalogs.map((x) => [x.id, { ...x, defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null }])
-    );
-    const vendorMap = new Map(vendors.map((x) => [x.id, x]));
-
-    let newAutoTotal = 0;
-
-    for (const [idx, issue] of input.issues.entries()) {
-        const serviceName = issue.serviceCatalogId ? serviceMap.get(issue.serviceCatalogId)?.name : null;
-        const supplyName = issue.supplyCatalogId ? supplyMap.get(issue.supplyCatalogId)?.name : null;
-        const partName = issue.mechanicalPartCatalogId ? partMap.get(issue.mechanicalPartCatalogId)?.name : null;
-        const vendorName = issue.vendorId ? vendorMap.get(issue.vendorId)?.name ?? null : null;
-
-        const cost = Number(issue.estimatedCost ?? 0);
-        if (cost > 0) newAutoTotal += cost;
-
-        const lines = [
-            `${mark} #${idx + 1}`,
-            issue.area ? `Hạng mục: ${issue.area}` : null,
-            `Loại xử lý: ${issue.issueType}`,
-            serviceName ? `Hạng mục kỹ thuật: ${serviceName}` : null,
-            supplyName ? `Vật tư: ${supplyName}` : null,
-            partName ? `Linh kiện máy cơ: ${partName}` : null,
-            issue.actionMode === "VENDOR"
-                ? `Thực hiện: Vendor${vendorName ? ` (${vendorName})` : ""}`
-                : issue.actionMode === "INTERNAL"
-                    ? "Thực hiện: Nội bộ"
-                    : "Thực hiện: Chưa rõ",
-            input.conclusion ? `Kết luận: ${input.conclusion}` : null,
-            issue.note ? `Ghi chú: ${issue.note}` : null,
-        ].filter(Boolean);
-
-        const createdLog = await tx.maintenanceRecord.create({
-            data: {
-                serviceRequestId: input.serviceRequestId,
-                productId: input.productId ?? null,
-                variantId: input.variantId ?? null,
-                brandSnapshot: input.brandSnapshot ?? null,
-                modelSnapshot: input.modelSnapshot ?? null,
-                refSnapshot: input.refSnapshot ?? null,
-                serialSnapshot: input.serialSnapshot ?? null,
-                technicianId: input.technicianId ?? null,
-                technicianNameSnap: input.technicianNameSnap ?? null,
-                vendorId: issue.actionMode === "VENDOR" ? issue.vendorId ?? null : null,
-                vendorName: issue.actionMode === "VENDOR" ? vendorName ?? issue.vendorNameSnap ?? null : null,
-                eventType:
-                    issue.actionMode === "VENDOR"
-                        ? MaintenanceEventType.ASSIGN_VENDOR
-                        : MaintenanceEventType.NOTE,
-                notes: lines.join("\n"),
-                totalCost: cost > 0 ? new Prisma.Decimal(String(cost)) : null,
-                currency: "VND",
-                servicedAt: new Date(),
-            },
-            select: { id: true },
-        });
-
-        if (issue.supplyCatalogId || issue.mechanicalPartCatalogId) {
-            const supply = issue.supplyCatalogId ? supplyMap.get(issue.supplyCatalogId) : null;
-            const part = issue.mechanicalPartCatalogId ? partMap.get(issue.mechanicalPartCatalogId) : null;
-
-            await tx.maintenancePart.create({
-                data: {
-                    recordId: createdLog.id,
-                    variantId: null,
-                    name: supply?.name || part?.name || "Vật tư / linh kiện",
-                    quantity: 1,
-                    unitCost:
-                        cost > 0
-                            ? new Prisma.Decimal(String(cost))
-                            : supply?.defaultCost != null
-                                ? new Prisma.Decimal(String(supply.defaultCost))
-                                : part?.defaultCost != null
-                                    ? new Prisma.Decimal(String(part.defaultCost))
-                                    : null,
-                    notes: issue.note ?? null,
-                } as any,
-            });
-        }
-    }
-
-    if (input.variantId) {
-        const currentVariant = await tx.productVariant.findUnique({
-            where: { id: input.variantId },
-            select: { id: true, costPrice: true },
-        });
-
-        if (currentVariant) {
-            const currentCost = Number(currentVariant.costPrice ?? 0);
-            const nextCost = Math.max(0, currentCost - oldAutoTotal + newAutoTotal);
-
-            await tx.productVariant.update({
-                where: { id: currentVariant.id },
-                data: { costPrice: new Prisma.Decimal(String(nextCost)) },
-            });
-        }
-    }
-
-    return { oldAutoTotal, newAutoTotal };
+function toNumberOrNull(v: any) {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
 }
 
 export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
     const panel = await repo.getPanel(serviceRequestId);
     if (!panel) throw new Error("Không tìm thấy service request");
 
-    if (!panel.assessment) {
-        return {
-            ...panel,
-            assessment: {
-                movementKind: inferMovementKind(panel.serviceRequest.movement),
-                movementStatus: "GOOD",
-                caseStatus: "GOOD",
-                crystalStatus: "GOOD",
-                crownStatus: "GOOD",
-                preRate: null,
-                preAmplitude: null,
-                preBeatError: null,
-                postRate: null,
-                postAmplitude: null,
-                postBeatError: null,
-                conclusion: "",
-                imageFileKey:
-                    panel.serviceRequest.primaryImageUrl ??
-                    panel.serviceRequest.productImages?.[0]?.fileKey ??
-                    null,
-                status: "DRAFT",
-                issues: [],
-            },
-        };
-    }
+    const maintenanceRecords = await repo.listServiceMaintenanceRecords(
+        prisma,
+        serviceRequestId
+    );
 
-    return panel;
+    return {
+        serviceRequest: panel.serviceRequest,
+        assessment: panel.assessment,
+        technicalIssues: panel.assessment?.issues ?? [],
+        maintenanceRecords,
+        catalogs: panel.catalogs,
+        stats: {
+            issueCount: panel.assessment?.issues?.length ?? 0,
+            openIssueCount:
+                panel.assessment?.issues?.filter(
+                    (x: any) =>
+                        x.executionStatus === "OPEN" ||
+                        x.executionStatus === "IN_PROGRESS"
+                ).length ?? 0,
+            maintenanceCount: maintenanceRecords.length,
+        },
+    };
 }
 
-export async function saveTechnicalAssessment(input: {
-    serviceRequestId: string;
-    movementKind?: "BATTERY" | "MECHANICAL" | "UNKNOWN";
-    movementStatus: "GOOD" | "ISSUE";
-    caseStatus: "GOOD" | "ISSUE";
-    crystalStatus: "GOOD" | "ISSUE";
-    crownStatus: "GOOD" | "ISSUE";
-    preRate?: number | null;
-    preAmplitude?: number | null;
-    preBeatError?: number | null;
-    postRate?: number | null;
-    postAmplitude?: number | null;
-    postBeatError?: number | null;
-    conclusion?: string | null;
-    imageFileKey?: string | null;
-    issues?: Array<{
-        area?: string | null;
-        issueType: "CHECK" | "SERVICE" | "REPAIR" | "REPLACE" | "OBSERVATION";
-        actionMode: "NONE" | "INTERNAL" | "VENDOR";
-        vendorId?: string | null;
-        serviceCatalogId?: string | null;
-        supplyCatalogId?: string | null;
-        mechanicalPartCatalogId?: string | null;
-        note?: string | null;
-        estimatedCost?: number | null;
-        sortOrder?: number | null;
-    }>;
-}) {
-    const serviceRequestId = String(input.serviceRequestId || "").trim();
-    if (!serviceRequestId) throw new Error("Missing serviceRequestId");
+export async function getTechnicalAssessmentWorkbench(assessmentId: string) {
+    const assessment = await prisma.technicalAssessment.findUnique({
+        where: { id: assessmentId },
+        include: {
+            ServiceRequest: {
+                select: {
+                    id: true,
+                    refNo: true,
+                    status: true,
+                    scope: true,
+                    notes: true,
+                    skuSnapshot: true,
+                    vendorNameSnap: true,
+                    technicianNameSnap: true,
+                    primaryImageUrlSnapshot: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    product: {
+                        select: {
+                            id: true,
+                            title: true,
+                            primaryImageUrl: true,
+                            watchSpec: {
+                                select: {
+                                    movement: true,
+                                    model: true,
+                                    ref: true,
+                                },
+                            },
+                            image: {
+                                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                                take: 8,
+                                select: {
+                                    fileKey: true,
+                                    role: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            TechnicalIssue: {
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                include: {
+                    Vendor: { select: { id: true, name: true } },
+                    User: { select: { id: true, name: true, email: true } },
+                    ServiceCatalog: { select: { id: true, code: true, name: true } },
+                    SupplyCatalog: { select: { id: true, code: true, name: true } },
+                    MechanicalPartCatalog: {
+                        select: { id: true, code: true, name: true },
+                    },
+                    MaintenanceRecord: {
+                        orderBy: { createdAt: "desc" },
+                        select: {
+                            id: true,
+                            eventType: true,
+                            notes: true,
+                            diagnosis: true,
+                            workSummary: true,
+                            totalCost: true,
+                            servicedAt: true,
+                            createdAt: true,
+                            vendorName: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!assessment) {
+        throw new Error("Không tìm thấy phiếu kỹ thuật");
+    }
+
+    const [serviceCatalogs, supplyCatalogs, mechanicalPartCatalogs, vendors] =
+        await Promise.all([
+            prisma.serviceCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    vendorPrice: true,
+                    customerPrice: true,
+                    internalCost: true,
+                    note: true,
+                },
+            }),
+            prisma.supplyCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    category: true,
+                    unit: true,
+                    defaultCost: true,
+                    note: true,
+                },
+            }),
+            prisma.mechanicalPartCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    group: true,
+                    defaultCost: true,
+                    note: true,
+                },
+            }),
+            prisma.vendor.findMany({
+                orderBy: { name: "asc" },
+                select: { id: true, name: true },
+            }),
+        ]);
+
+    const sr = assessment.ServiceRequest;
+
+    return {
+        serviceRequest: {
+            id: sr.id,
+            refNo: sr.refNo ?? null,
+            status: sr.status,
+            scope: sr.scope ?? null,
+            notes: sr.notes ?? null,
+            skuSnapshot: sr.skuSnapshot ?? null,
+            productTitle: sr.product?.title ?? null,
+            movement: sr.product?.watchSpec?.movement ?? null,
+            model: sr.product?.watchSpec?.model ?? null,
+            ref: sr.product?.watchSpec?.ref ?? null,
+            vendorNameSnap: sr.vendorNameSnap ?? null,
+            technicianNameSnap: sr.technicianNameSnap ?? null,
+            primaryImageUrl:
+                sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
+            productImages: sr.product?.image ?? [],
+            createdAt: sr.createdAt,
+            updatedAt: sr.updatedAt,
+        },
+        assessment: {
+            id: assessment.id,
+            serviceRequestId: assessment.serviceRequestId,
+            movementKind: assessment.movementKind,
+            movementStatus: assessment.movementStatus,
+            caseStatus: assessment.caseStatus,
+            crystalStatus: assessment.crystalStatus,
+            crownStatus: assessment.crownStatus,
+            preRate: assessment.preRate,
+            preAmplitude: assessment.preAmplitude,
+            preBeatError:
+                assessment.preBeatError != null
+                    ? Number(assessment.preBeatError)
+                    : null,
+            postRate: assessment.postRate,
+            postAmplitude: assessment.postAmplitude,
+            postBeatError:
+                assessment.postBeatError != null
+                    ? Number(assessment.postBeatError)
+                    : null,
+            actionMode: assessment.actionMode,
+            vendorId: assessment.vendorId ?? null,
+            vendorNameSnap: assessment.vendorNameSnap ?? null,
+            conclusion: assessment.conclusion ?? "",
+            imageFileKey: assessment.imageFileKey ?? null,
+            status: assessment.status,
+            evaluatedById: assessment.evaluatedById ?? null,
+            evaluatedByNameSnap: assessment.evaluatedByNameSnap ?? null,
+            createdAt: assessment.createdAt,
+            updatedAt: assessment.updatedAt,
+        },
+        technicalIssues: assessment.TechnicalIssue.map((x) => ({
+            id: x.id,
+            area: x.area ?? null,
+            summary: x.summary ?? null,
+            note: x.note ?? null,
+            issueType: x.issueType,
+            actionMode: x.actionMode,
+            executionStatus: x.executionStatus,
+            estimatedCost: x.estimatedCost != null ? Number(x.estimatedCost) : null,
+            actualCost: x.actualCost != null ? Number(x.actualCost) : null,
+            resolutionNote: x.resolutionNote ?? null,
+            vendorId: x.vendorId ?? null,
+            vendorNameSnap: x.vendorNameSnap ?? null,
+            technicianId: x.technicianId ?? null,
+            serviceCatalogId: x.serviceCatalogId ?? null,
+            supplyCatalogId: x.supplyCatalogId ?? null,
+            mechanicalPartCatalogId: x.mechanicalPartCatalogId ?? null,
+            sortOrder: x.sortOrder ?? 0,
+            openedAt: x.openedAt,
+            startedAt: x.startedAt,
+            completedAt: x.completedAt,
+            canceledAt: x.canceledAt,
+            Vendor: x.Vendor,
+            User: x.User,
+            ServiceCatalog: x.ServiceCatalog,
+            SupplyCatalog: x.SupplyCatalog,
+            MechanicalPartCatalog: x.MechanicalPartCatalog,
+            MaintenanceRecord: x.MaintenanceRecord.map((r) => ({
+                ...r,
+                totalCost: r.totalCost != null ? Number(r.totalCost) : null,
+            })),
+        })),
+        catalogs: {
+            serviceCatalogs: serviceCatalogs.map((x) => ({
+                ...x,
+                vendorPrice: x.vendorPrice != null ? Number(x.vendorPrice) : null,
+                customerPrice: x.customerPrice != null ? Number(x.customerPrice) : null,
+                internalCost: x.internalCost != null ? Number(x.internalCost) : null,
+            })),
+            supplyCatalogs: supplyCatalogs.map((x) => ({
+                ...x,
+                defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
+            })),
+            mechanicalPartCatalogs: mechanicalPartCatalogs.map((x) => ({
+                ...x,
+                defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
+            })),
+            vendors,
+        },
+        stats: {
+            issueCount: assessment.TechnicalIssue.length,
+            openIssueCount: assessment.TechnicalIssue.filter(
+                (x) =>
+                    x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS"
+            ).length,
+            maintenanceCount: assessment.TechnicalIssue.reduce(
+                (sum, x) => sum + x.MaintenanceRecord.length,
+                0
+            ),
+        },
+    };
+}
+
+export async function openTechnicalAssessment(serviceRequestId: string) {
+    return prisma.$transaction(async (tx) => {
+        const existing = await tx.technicalAssessment.findFirst({
+            where: {
+                serviceRequestId,
+                status: {
+                    in: ["DRAFT", "IN_PROGRESS"],
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        if (existing) return existing;
+
+        const lastCompleted = await tx.technicalAssessment.findFirst({
+            where: {
+                serviceRequestId,
+                status: "COMPLETED",
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        const created = await tx.technicalAssessment.create({
+            data: {
+                serviceRequestId,
+                status: "DRAFT",
+            },
+        });
+
+        if (lastCompleted) {
+            await tx.serviceRequest.update({
+                where: { id: serviceRequestId },
+                data: { status: ServiceRequestStatus.IN_PROGRESS },
+            });
+        }
+
+        return created;
+    });
+}
+
+export async function saveTechnicalAssessment(input: any) {
+    const id = String(input?.serviceRequestId || "").trim();
+    if (!id) throw new Error("Missing serviceRequestId");
 
     return prisma.$transaction(async (tx) => {
         const sr = await tx.serviceRequest.findUnique({
-            where: { id: serviceRequestId },
-            select: {
-                id: true,
-                status: true,
-                technicianId: true,
-                technicianNameSnap: true,
-                productId: true,
-                variantId: true,
-                brandSnapshot: true,
-                modelSnapshot: true,
-                refSnapshot: true,
-                serialSnapshot: true,
-            },
+            where: { id },
+            select: { id: true },
         });
 
         if (!sr) throw new Error("Service request not found");
 
-        const movementKind = input.movementKind ?? "UNKNOWN";
-
-        const normalizedIssues = Array.isArray(input.issues)
-            ? input.issues.map((x, idx) => ({
-                area: x.area ?? null,
-                issueType: x.issueType,
-                actionMode: x.actionMode ?? "NONE",
-                vendorId: x.vendorId ?? null,
-                vendorNameSnap: null,
-                serviceCatalogId: x.serviceCatalogId ?? null,
-                supplyCatalogId: x.supplyCatalogId ?? null,
-                mechanicalPartCatalogId: x.mechanicalPartCatalogId ?? null,
-                note: x.note ?? null,
-                estimatedCost: x.estimatedCost ?? null,
-                sortOrder: x.sortOrder ?? idx,
-            }))
-            : [];
-
-        const vendorIds = Array.from(new Set(normalizedIssues.map((x) => x.vendorId).filter((x): x is string => !!x)));
-        const vendors = vendorIds.length
-            ? await tx.vendor.findMany({
-                where: { id: { in: vendorIds } },
-                select: { id: true, name: true },
-            })
-            : [];
-        const vendorMap = new Map(vendors.map((x) => [x.id, x.name]));
-
-        const issuesWithVendorSnap = normalizedIssues.map((x) => ({
-            ...x,
-            vendorNameSnap: x.vendorId ? vendorMap.get(x.vendorId) ?? null : null,
-        }));
-
-        const hasAnyIssue =
-            input.movementStatus === "ISSUE" ||
-            input.caseStatus === "ISSUE" ||
-            input.crystalStatus === "ISSUE" ||
-            input.crownStatus === "ISSUE" ||
-            issuesWithVendorSnap.length > 0;
-
-        const nextServiceStatus = hasAnyIssue
-            ? ServiceRequestStatus.IN_PROGRESS
-            : ServiceRequestStatus.COMPLETED;
-
-        const nextAssessmentStatus = TechnicalAssessmentStatus.COMPLETED;
-
-        const topLevelActionMode: "NONE" | "INTERNAL" | "VENDOR" =
-            issuesWithVendorSnap.some((x) => x.actionMode === "VENDOR")
-                ? "VENDOR"
-                : issuesWithVendorSnap.some((x) => x.actionMode === "INTERNAL")
-                    ? "INTERNAL"
-                    : "NONE";
-
-        const firstVendor = issuesWithVendorSnap.find((x) => x.vendorId)?.vendorId ?? null;
-        const firstVendorName = firstVendor ? vendorMap.get(firstVendor) ?? null : null;
-
         const assessment = await repo.upsertAssessment(tx, {
-            serviceRequestId,
-            movementKind,
+            serviceRequestId: id,
+            movementKind: input.movementKind,
             movementStatus: input.movementStatus,
             caseStatus: input.caseStatus,
             crystalStatus: input.crystalStatus,
             crownStatus: input.crownStatus,
-            preRate: input.preRate ?? null,
-            preAmplitude: input.preAmplitude ?? null,
-            preBeatError: input.preBeatError ?? null,
-            postRate: input.postRate ?? null,
-            postAmplitude: input.postAmplitude ?? null,
-            postBeatError: input.postBeatError ?? null,
-            actionMode: topLevelActionMode,
-            vendorId: firstVendor,
-            vendorNameSnap: firstVendorName,
+            preRate: toNumberOrNull(input.preRate),
+            preAmplitude: toNumberOrNull(input.preAmplitude),
+            preBeatError: toNumberOrNull(input.preBeatError),
+            postRate: toNumberOrNull(input.postRate),
+            postAmplitude: toNumberOrNull(input.postAmplitude),
+            postBeatError: toNumberOrNull(input.postBeatError),
             conclusion: input.conclusion ?? null,
             imageFileKey: input.imageFileKey ?? null,
-            status: nextAssessmentStatus,
-            evaluatedById: sr.technicianId ?? null,
-            evaluatedByNameSnap: sr.technicianNameSnap ?? null,
-            issues: issuesWithVendorSnap,
+            status: "IN_PROGRESS",
         });
 
-        const autoArtifacts = await syncAutoLogsAndCost(tx, {
-            serviceRequestId,
-            productId: sr.productId ?? null,
-            variantId: sr.variantId ?? null,
-            brandSnapshot: sr.brandSnapshot ?? null,
-            modelSnapshot: sr.modelSnapshot ?? null,
-            refSnapshot: sr.refSnapshot ?? null,
-            serialSnapshot: sr.serialSnapshot ?? null,
-            technicianId: sr.technicianId ?? null,
-            technicianNameSnap: sr.technicianNameSnap ?? null,
-            conclusion: input.conclusion ?? null,
-            issues: issuesWithVendorSnap,
+        await tx.serviceRequest.update({
+            where: { id },
+            data: {
+                status: ServiceRequestStatus.IN_PROGRESS,
+            },
         });
 
-        if (nextServiceStatus !== sr.status) {
-            await tx.serviceRequest.update({
-                where: { id: serviceRequestId },
-                data: {
-                    status: nextServiceStatus,
-                    vendorId: firstVendor,
-                    vendorNameSnap: firstVendorName,
-                    updatedAt: new Date(),
-                },
-            });
+        return assessment;
+    });
+}
 
-            await tx.maintenanceRecord.create({
-                data: {
-                    id: crypto.randomUUID(),
-                    serviceRequestId,
-                    productId: sr.productId ?? null,
-                    variantId: sr.variantId ?? null,
-                    brandSnapshot: sr.brandSnapshot ?? null,
-                    modelSnapshot: sr.modelSnapshot ?? null,
-                    refSnapshot: sr.refSnapshot ?? null,
-                    serialSnapshot: sr.serialSnapshot ?? null,
-                    technicianId: sr.technicianId ?? null,
-                    technicianNameSnap: sr.technicianNameSnap ?? null,
-                    vendorId: firstVendor,
-                    vendorName: firstVendorName,
-                    eventType: MaintenanceEventType.NOTE,
-                    notes: makeStatusChangeNote(nextServiceStatus, input.conclusion ?? null),
-                    currency: "VND",
-                    servicedAt: new Date(),
-                },
-            });
+export async function completeTechnicalAssessment(assessmentId: string) {
+    return prisma.$transaction(async (tx) => {
+        const a = await tx.technicalAssessment.findUnique({
+            where: { id: assessmentId },
+            include: { TechnicalIssue: true },
+        });
+
+        if (!a) throw new Error("Assessment not found");
+
+        const hasOpen = a.TechnicalIssue.some(
+            (x) =>
+                x.executionStatus === "OPEN" ||
+                x.executionStatus === "IN_PROGRESS"
+        );
+
+        if (hasOpen) {
+            throw new Error("Còn issue chưa hoàn tất");
         }
 
-        return {
-            assessment,
-            autoArtifacts,
-            serviceRequestStatus: nextServiceStatus,
-        };
+        await tx.technicalAssessment.update({
+            where: { id: assessmentId },
+            data: { status: TechnicalAssessmentStatus.COMPLETED },
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: a.serviceRequestId },
+            data: { status: ServiceRequestStatus.COMPLETED },
+        });
+
+        return { ok: true };
     });
 }

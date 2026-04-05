@@ -36,6 +36,7 @@ export const ProductModelSchema = z.object({
     brand: z.unknown().nullable(),
     ProductCategory: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
+    content: z.unknown().nullable(),
     image: z.array(z.unknown()),
     variants: z.array(z.unknown()),
     Reservation: z.array(z.unknown()),

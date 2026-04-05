@@ -12,7 +12,10 @@ import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentSta
 import { EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalAssessmentStatusFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
-import { EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalSectionStatusFieldUpdateOperationsInput.schema'
+import { EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalSectionStatusFieldUpdateOperationsInput.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -35,7 +38,8 @@ const makeSchema = () => z.object({
   movementStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   caseStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   crystalStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
-  crownStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional()
+  crownStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional()
 }).strict();
 export const TechnicalAssessmentUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentUpdateManyMutationInput>;
 export const TechnicalAssessmentUpdateManyMutationInputObjectZodSchema = makeSchema();

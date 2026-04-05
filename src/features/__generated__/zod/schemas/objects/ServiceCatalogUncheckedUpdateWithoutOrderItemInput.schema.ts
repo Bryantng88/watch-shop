@@ -9,6 +9,7 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
 import { EnumServiceDetailFieldUpdateOperationsInputObjectSchema as EnumServiceDetailFieldUpdateOperationsInputObjectSchema } from './EnumServiceDetailFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
+import { MaintenanceRecordUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutServiceCatalogNestedInput.schema';
 import { ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInput.schema';
 import { TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInput.schema'
 
@@ -22,7 +23,6 @@ const makeSchema = () => z.object({
   isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  maintenanceRecordId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   detail: z.union([ServiceDetailSchema, z.lazy(() => EnumServiceDetailFieldUpdateOperationsInputObjectSchema)]).optional(),
   vendorPrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerPrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   categoryKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
 }).strict();

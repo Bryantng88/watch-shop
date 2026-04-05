@@ -63,7 +63,8 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     variant: z.number(),
     vendor: z.number(),
     serviceCatalog: z.number(),
-    technicalAssessment: z.number()
+    technicalAssessment: z.number(),
+    TechnicalIssue: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

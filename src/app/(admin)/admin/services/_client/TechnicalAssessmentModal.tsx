@@ -88,6 +88,19 @@ type CrownRepairState = {
     note?: string;
 };
 
+type FunctionalFeatureKey = "chronograph" | "moonphase";
+
+type FunctionalFeatureState = {
+    enabled: boolean;
+    status: FunctionalStatus;
+    note?: string;
+};
+
+type FunctionalChecksState = {
+    chronograph: FunctionalFeatureState;
+    moonphase: FunctionalFeatureState;
+};
+
 type TechnicalAssessmentFormState = {
     machineType: MachineType;
     movementStatus: HealthStatus;
@@ -107,6 +120,7 @@ type TechnicalAssessmentFormState = {
     glassAppearance: AppearanceBlockValue;
     dialAppearance: AppearanceBlockValue;
     crownRepair: CrownRepairState;
+    functionalChecks: FunctionalChecksState;
     conclusion: string;
     hasEditedConclusion: boolean;
 };
@@ -236,6 +250,19 @@ export type TechnicalAssessmentSubmitPayload = {
     conclusion?: string;
 };
 
+type HydrationIssueItem = {
+    area?: string | null;
+    actionMode?: string | null;
+    note?: string | null;
+    summary?: string | null;
+    estimatedCost?: number | null;
+    actualCost?: number | null;
+    vendorId?: string | null;
+    serviceCatalogId?: string | null;
+    supplyCatalogId?: string | null;
+    mechanicalPartCatalogId?: string | null;
+};
+
 type TechnicalAssessmentModalProps = {
     open: boolean;
     serviceRequestId: string | null;
@@ -245,6 +272,9 @@ type TechnicalAssessmentModalProps = {
     productSku?: string | null;
     productImage?: string | null;
     movementSpecLabel?: string | null;
+    initialSavedPayload?: any;
+    initialAssessment?: any;
+    initialIssues?: HydrationIssueItem[];
 };
 
 const fallbackVendors = [
@@ -346,9 +376,215 @@ function createInitialFormState(): TechnicalAssessmentFormState {
             cost: "",
             note: "",
         },
+        functionalChecks: {
+            chronograph: { enabled: false, status: "GOOD", note: "" },
+            moonphase: { enabled: false, status: "GOOD", note: "" },
+        },
         conclusion: "",
         hasEditedConclusion: false,
     };
+}
+
+function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState {
+    const base = createInitialFormState();
+    if (!payload || typeof payload !== "object") return base;
+
+    const movement = payload.movement ?? {};
+    const appearance = payload.appearance ?? {};
+    const crown = appearance.crown ?? payload.crown ?? {};
+
+    return {
+        ...base,
+        machineType: movement.machineType === "QUARTZ" ? "QUARTZ" : "MECHANICAL",
+        movementStatus: movement.status === "ISSUE" ? "ISSUE" : "GOOD",
+        showBeforeSpecs: Boolean(movement.beforeSpecs),
+        beforeSpecs: {
+            rate: String(movement.beforeSpecs?.rate ?? ""),
+            amp: String(movement.beforeSpecs?.amp ?? ""),
+            err: String(movement.beforeSpecs?.err ?? ""),
+        },
+        afterSpecs: {
+            rate: String(movement.afterSpecs?.rate ?? ""),
+            amp: String(movement.afterSpecs?.amp ?? ""),
+            err: String(movement.afterSpecs?.err ?? ""),
+        },
+        movementLines:
+            Array.isArray(movement.lines) && movement.lines.length > 0
+                ? movement.lines.map((line: any) => ({
+                    id: makeId(),
+                    action: line.action,
+                    execution: line.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
+                    vendorId: line.vendorId ?? "",
+                    partId: line.partId ?? "",
+                    cost: line.cost != null ? String(line.cost) : "",
+                    note: line.note ?? "",
+                }))
+                : base.movementLines,
+        caseAppearance: {
+            issues: Array.isArray(appearance.case?.issues) ? appearance.case.issues : [],
+            manualDeduction: String(appearance.case?.manualDeduction ?? ""),
+            note: appearance.case?.note ?? "",
+            proposal: {
+                enabled: Boolean(appearance.case?.proposal?.enabled),
+                action: appearance.case?.proposal?.action,
+                estimatedCost:
+                    appearance.case?.proposal?.estimatedCost != null
+                        ? String(appearance.case?.proposal?.estimatedCost)
+                        : "",
+                execution:
+                    appearance.case?.proposal?.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
+                vendorId: appearance.case?.proposal?.vendorId ?? "",
+                note: appearance.case?.proposal?.note ?? "",
+                requiresApproval: false,
+                approvalStatus: undefined,
+            },
+        },
+        glassAppearance: {
+            issues: Array.isArray(appearance.glass?.issues) ? appearance.glass.issues : [],
+            manualDeduction: String(appearance.glass?.manualDeduction ?? ""),
+            note: appearance.glass?.note ?? "",
+            proposal: {
+                enabled: Boolean(appearance.glass?.proposal?.enabled),
+                action: appearance.glass?.proposal?.action,
+                estimatedCost:
+                    appearance.glass?.proposal?.estimatedCost != null
+                        ? String(appearance.glass?.proposal?.estimatedCost)
+                        : "",
+                execution:
+                    appearance.glass?.proposal?.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
+                vendorId: appearance.glass?.proposal?.vendorId ?? "",
+                note: appearance.glass?.proposal?.note ?? "",
+                requiresApproval: false,
+                approvalStatus: undefined,
+            },
+        },
+        dialAppearance: {
+            issues: Array.isArray(appearance.dial?.issues) ? appearance.dial.issues : [],
+            manualDeduction: String(appearance.dial?.manualDeduction ?? ""),
+            note: appearance.dial?.note ?? "",
+            proposal: {
+                enabled: Boolean(appearance.dial?.proposal?.enabled),
+                action: appearance.dial?.proposal?.action,
+                estimatedCost:
+                    appearance.dial?.proposal?.estimatedCost != null
+                        ? String(appearance.dial?.proposal?.estimatedCost)
+                        : "",
+                execution:
+                    appearance.dial?.proposal?.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
+                vendorId: appearance.dial?.proposal?.vendorId ?? "",
+                note: appearance.dial?.proposal?.note ?? "",
+                requiresApproval: false,
+                approvalStatus: undefined,
+            },
+        },
+        crownRepair: {
+            status: crown.status === "ISSUE" ? "ISSUE" : "GOOD",
+            action: crown.action,
+            execution: crown.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
+            vendorId: crown.vendorId ?? "",
+            partId: crown.partId ?? "",
+            cost: crown.cost != null ? String(crown.cost) : "",
+            note: crown.note ?? "",
+        },
+        conclusion: payload.conclusion ?? "",
+        hasEditedConclusion: Boolean(payload.conclusion),
+    };
+}
+
+
+function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: HydrationIssueItem[] | null | undefined) {
+    if (!Array.isArray(issues) || issues.length === 0) return baseForm;
+    const next = {
+        ...baseForm,
+        movementLines: [...baseForm.movementLines],
+        caseAppearance: {
+            ...baseForm.caseAppearance,
+            proposal: { ...baseForm.caseAppearance.proposal },
+        },
+        glassAppearance: {
+            ...baseForm.glassAppearance,
+            proposal: { ...baseForm.glassAppearance.proposal },
+        },
+        dialAppearance: {
+            ...baseForm.dialAppearance,
+            proposal: { ...baseForm.dialAppearance.proposal },
+        },
+        crownRepair: { ...baseForm.crownRepair },
+    };
+
+    const movementIssues = issues.filter((x) => String(x.area ?? "").toUpperCase() === "MOVEMENT");
+    if (movementIssues.length > 0) {
+        next.movementStatus = "ISSUE";
+        next.movementLines = movementIssues.map((issue) => ({
+            id: makeId(),
+            action: (issue.serviceCatalogId ? "SERVICE" : undefined) as MovementAction | undefined,
+            execution: String(issue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+            vendorId: issue.vendorId ?? "",
+            partId: issue.mechanicalPartCatalogId ?? "",
+            cost: issue.estimatedCost != null ? String(issue.estimatedCost) : "",
+            note: issue.note ?? issue.summary ?? "",
+        }));
+    }
+
+    const crownIssue = issues.find((x) => String(x.area ?? "").toUpperCase() === "CROWN");
+    if (crownIssue) {
+        next.crownRepair = {
+            status: "ISSUE",
+            action: next.crownRepair.action,
+            execution: String(crownIssue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+            vendorId: crownIssue.vendorId ?? "",
+            partId: crownIssue.mechanicalPartCatalogId ?? "",
+            cost: crownIssue.estimatedCost != null ? String(crownIssue.estimatedCost) : "",
+            note: crownIssue.note ?? crownIssue.summary ?? "",
+        };
+    }
+
+    const applyAppearanceIssue = (area: string, blockKey: "caseAppearance" | "glassAppearance" | "dialAppearance") => {
+        const issue = issues.find((x) => String(x.area ?? "").toUpperCase() === area);
+        if (!issue) return;
+        next[blockKey] = {
+            ...next[blockKey],
+            note: issue.note ?? issue.summary ?? next[blockKey].note,
+            proposal: {
+                ...next[blockKey].proposal,
+                enabled: true,
+                execution: String(issue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+                vendorId: issue.vendorId ?? "",
+                estimatedCost: issue.estimatedCost != null ? String(issue.estimatedCost) : "",
+                note: issue.note ?? issue.summary ?? "",
+            },
+        };
+    };
+
+    applyAppearanceIssue("CASE", "caseAppearance");
+    applyAppearanceIssue("CRYSTAL", "glassAppearance");
+    applyAppearanceIssue("DIAL", "dialAppearance");
+
+    const chrono = issues.find((x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_CHRONOGRAPH");
+    if (chrono) {
+        next.functionalChecks = {
+            ...next.functionalChecks,
+            chronograph: {
+                enabled: true,
+                status: "ISSUE",
+                note: chrono.note ?? chrono.summary ?? "",
+            },
+        };
+    }
+
+    const moon = issues.find((x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_MOONPHASE");
+    if (moon) {
+        next.functionalChecks = {
+            ...next.functionalChecks,
+            moonphase: {
+                enabled: true,
+                status: "ISSUE",
+                note: moon.note ?? moon.summary ?? "",
+            },
+        };
+    }
+
+    return next;
 }
 
 function Pill({ children, tone = "gray" }: { children: React.ReactNode; tone?: "neutral" | "amber" | "gray" }) {
@@ -597,6 +833,133 @@ function CrownFunctionalBlock({ value, onChange, vendors, crownActions, parts }:
     );
 }
 
+function FunctionalFeaturesAccordion({
+    value,
+    onChange,
+}: {
+    value: FunctionalChecksState;
+    onChange: (value: FunctionalChecksState) => void;
+}) {
+    const [open, setOpen] = React.useState(false);
+
+    const entries: Array<{ key: FunctionalFeatureKey; label: string }> = [
+        { key: "chronograph", label: "Chronograph" },
+        { key: "moonphase", label: "Moonphase" },
+    ];
+
+    const activeCount = entries.filter(({ key }) => value[key].enabled).length;
+    const summary = entries
+        .filter(({ key }) => value[key].enabled)
+        .map(({ key, label }) => `${label}: ${value[key].status === "ISSUE" ? "Cần xử lý" : "Ổn"}`)
+        .join(" • ");
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+            <button
+                type="button"
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50"
+            >
+                <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900">Đánh giá tính năng</div>
+                    <div className="mt-1 truncate text-sm text-slate-500">
+                        {activeCount > 0 ? summary : "Chronograph / Moonphase / các chức năng mở rộng"}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Pill tone={activeCount > 0 ? "neutral" : "gray"}>
+                        {activeCount > 0 ? `${activeCount} tính năng` : "Tùy chọn"}
+                    </Pill>
+                    {open ? (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                    ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                    )}
+                </div>
+            </button>
+
+            {open ? (
+                <div className="border-t border-slate-200 bg-slate-50/40 p-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {entries.map(({ key, label }) => {
+                            const item = value[key];
+                            return (
+                                <div key={key} className="rounded-2xl border border-slate-200 bg-white">
+                                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                                        <div className="text-sm font-semibold text-slate-900">{label}</div>
+                                        <Pill tone={item.enabled ? (item.status === "ISSUE" ? "amber" : "neutral") : "gray"}>
+                                            {!item.enabled
+                                                ? "Chưa dùng"
+                                                : item.status === "ISSUE"
+                                                    ? "Cần xử lý"
+                                                    : "Ổn"}
+                                        </Pill>
+                                    </div>
+
+                                    <div className="space-y-4 p-4">
+                                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={item.enabled}
+                                                onChange={(e) =>
+                                                    onChange({
+                                                        ...value,
+                                                        [key]: {
+                                                            ...item,
+                                                            enabled: e.target.checked,
+                                                            status: e.target.checked ? item.status : "GOOD",
+                                                        },
+                                                    })
+                                                }
+                                            />
+                                            Áp dụng đánh giá cho tính năng này
+                                        </label>
+
+                                        {item.enabled ? (
+                                            <>
+                                                <div>
+                                                    <div className="mb-2 text-sm font-medium text-slate-700">
+                                                        Tình trạng chức năng
+                                                    </div>
+                                                    <CompactStatusToggle
+                                                        value={item.status}
+                                                        onChange={(status) =>
+                                                            onChange({
+                                                                ...value,
+                                                                [key]: { ...item, status: status as FunctionalStatus },
+                                                            })
+                                                        }
+                                                        goodText="Ổn"
+                                                        issueText="Cần xử lý"
+                                                    />
+                                                </div>
+
+                                                <Field label="Ghi chú">
+                                                    <TextArea
+                                                        placeholder={`Ghi chú thêm về ${label.toLowerCase()}...`}
+                                                        value={item.note ?? ""}
+                                                        onChange={(e) =>
+                                                            onChange({
+                                                                ...value,
+                                                                [key]: { ...item, note: e.target.value },
+                                                            })
+                                                        }
+                                                    />
+                                                </Field>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 function generateTechnicalConclusion(params: { movementStatus: HealthStatus; machineType: MachineType; movementLines: MovementLine[]; appearanceScore: number; caseAppearance: AppearanceBlockValue; glassAppearance: AppearanceBlockValue; dialAppearance: AppearanceBlockValue; crownRepair: CrownRepairState; caseDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; glassDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; dialDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; }) {
     const { movementStatus, machineType, movementLines, appearanceScore, caseAppearance, glassAppearance, dialAppearance, crownRepair, caseDefs, glassDefs, dialDefs } = params;
     function movementActionLabel(action?: MovementAction) {
@@ -684,7 +1047,7 @@ async function saveTechnicalAssessment(payload: TechnicalAssessmentSubmitPayload
     return res.json();
 }
 
-export default function TechnicalAssessmentModal({ open, serviceRequestId, onClose, onSaved, productName = "takeo kuchi méo pin mặt xanh", productSku = "-", productImage = null, movementSpecLabel = "-" }: TechnicalAssessmentModalProps) {
+export default function TechnicalAssessmentModal({ open, serviceRequestId, onClose, onSaved, productName = "takeo kuchi méo pin mặt xanh", productSku = "-", productImage = null, movementSpecLabel = "-", initialSavedPayload = null, initialAssessment = null, initialIssues = [] }: TechnicalAssessmentModalProps) {
     const [form, setForm] = React.useState<TechnicalAssessmentFormState>(createInitialFormState());
     const [saving, setSaving] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -693,9 +1056,13 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
 
     React.useEffect(() => {
         if (!open || !serviceRequestId) return;
-        setForm(createInitialFormState());
         setErrorMessage(null);
-    }, [open, serviceRequestId]);
+        if (initialSavedPayload) {
+            setForm(hydrateFormFromSavedPayload(initialSavedPayload));
+            return;
+        }
+        setForm(createInitialFormState());
+    }, [open, serviceRequestId, initialSavedPayload]);
 
     React.useEffect(() => {
         if (!open || !serviceRequestId) return;
@@ -724,7 +1091,7 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
     const GLASS_ISSUES = React.useMemo(() => (catalogs?.appearanceIssues?.CRYSTAL ?? []).map((x) => ({ code: x.code as AppearanceIssueCode, label: x.label, deduction: x.deductionScore })), [catalogs]);
     const DIAL_ISSUES = React.useMemo(() => (catalogs?.appearanceIssues?.DIAL ?? []).map((x) => ({ code: x.code as AppearanceIssueCode, label: x.label, deduction: x.deductionScore })), [catalogs]);
 
-    const vendors = fallbackVendors;
+    const vendors = catalogs?.vendors ?? fallbackVendors;
     const movementActions = catalogs?.movementActions ?? [];
     const crownActions = catalogs?.crownActions ?? [];
     const parts = catalogs?.parts ?? [];
@@ -755,7 +1122,7 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
         try {
             setSaving(true); setErrorMessage(null);
             const payload = buildSubmitPayload({ serviceRequestId, productName, productSku, productImage, movementSpecLabel, machineType: form.machineType, movementStatus: form.movementStatus, showBeforeSpecs: form.showBeforeSpecs, beforeSpecs: form.beforeSpecs, afterSpecs: form.afterSpecs, movementLines: form.movementLines, caseAppearance: form.caseAppearance, glassAppearance: form.glassAppearance, dialAppearance: form.dialAppearance, crownRepair: form.crownRepair, conclusion: form.conclusion, caseDefs: CASE_ISSUES, glassDefs: GLASS_ISSUES, dialDefs: DIAL_ISSUES });
-            await saveTechnicalAssessment(payload);
+            await saveTechnicalAssessment({ ...payload, payloadJson: payload } as any);
             await onSaved();
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : "Lưu thất bại");
@@ -1260,6 +1627,22 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                 setForm((prev) => ({
                                     ...prev,
                                     crownRepair: next,
+                                }))
+                            }
+                        />
+                    </SectionCard>
+
+                    <SectionCard
+                        title="Đánh giá tính năng"
+                        icon={<Wrench className="h-5 w-5" />}
+                        badge={<Pill tone="gray">Chronograph / Moonphase</Pill>}
+                    >
+                        <FunctionalFeaturesAccordion
+                            value={form.functionalChecks}
+                            onChange={(next) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    functionalChecks: next,
                                 }))
                             }
                         />
