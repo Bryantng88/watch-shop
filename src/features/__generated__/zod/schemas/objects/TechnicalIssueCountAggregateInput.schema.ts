@@ -29,6 +29,10 @@ const makeSchema = () => z.object({
   summary: z.literal(true).optional(),
   resolutionNote: z.literal(true).optional(),
   completedByNameSnap: z.literal(true).optional(),
+  isConfirmed: z.literal(true).optional(),
+  confirmedAt: z.literal(true).optional(),
+  confirmedById: z.literal(true).optional(),
+  confirmedByNameSnap: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TechnicalIssueCountAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCountAggregateInputType>;

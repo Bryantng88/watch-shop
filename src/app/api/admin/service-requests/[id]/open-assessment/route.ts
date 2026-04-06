@@ -5,9 +5,14 @@ export async function POST(
     _req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
-
-    const data = await openTechnicalAssessment(id);
-
-    return NextResponse.json({ ok: true, data });
+    try {
+        const { id } = await params;
+        const data = await openTechnicalAssessment(id);
+        return NextResponse.json({ ok: true, data });
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error?.message || "Open technical assessment failed" },
+            { status: 500 }
+        );
+    }
 }

@@ -32,6 +32,10 @@ const makeSchema = () => z.object({
   summary: z.string().optional().nullable(),
   resolutionNote: z.string().optional().nullable(),
   completedByNameSnap: z.string().optional().nullable(),
+  isConfirmed: z.boolean().optional(),
+  confirmedAt: z.coerce.date().optional().nullable(),
+  confirmedById: z.string().optional().nullable(),
+  confirmedByNameSnap: z.string().optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema)
 }).strict();
 export const TechnicalIssueUncheckedCreateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateInput>;

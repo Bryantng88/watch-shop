@@ -12,6 +12,7 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { EnumTechnicalIssueExecutionStatusFilterObjectSchema as EnumTechnicalIssueExecutionStatusFilterObjectSchema } from './EnumTechnicalIssueExecutionStatusFilter.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { TechnicalAssessmentScalarRelationFilterObjectSchema as TechnicalAssessmentScalarRelationFilterObjectSchema } from './TechnicalAssessmentScalarRelationFilter.schema';
 import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereInputObjectSchema } from './TechnicalAssessmentWhereInput.schema';
@@ -58,6 +59,10 @@ const technicalissuewhereinputSchema = z.object({
   summary: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   resolutionNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   completedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  isConfirmed: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  confirmedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  confirmedById: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   TechnicalAssessment: z.union([z.lazy(() => TechnicalAssessmentScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   MechanicalPartCatalog: z.union([z.lazy(() => MechanicalPartCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => MechanicalPartCatalogWhereInputObjectSchema)]).optional(),

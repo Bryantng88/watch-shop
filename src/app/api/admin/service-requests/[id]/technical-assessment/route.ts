@@ -12,7 +12,11 @@ export async function GET(
         }
 
         const panel = await technicalService.getTechnicalAssessmentPanel(id);
-        return NextResponse.json(panel);
+
+        return NextResponse.json({
+            ok: true,
+            data: panel,
+        });
     } catch (e: any) {
         return NextResponse.json(
             { error: e?.message || "Load technical assessment failed" },
@@ -38,7 +42,10 @@ export async function POST(
             serviceRequestId: id,
         });
 
-        return NextResponse.json({ ok: true, item: saved });
+        return NextResponse.json({
+            ok: true,
+            data: saved,
+        });
     } catch (e: any) {
         return NextResponse.json(
             { error: e?.message || "Save technical assessment failed" },

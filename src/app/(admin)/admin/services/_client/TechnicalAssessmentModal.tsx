@@ -52,6 +52,7 @@ type AppearanceIssueCode = string;
 
 type MovementLine = {
     id: string;
+    isConfirmed?: boolean;
     action?: MovementAction;
     execution?: ExecutionType;
     vendorId?: string;
@@ -62,6 +63,7 @@ type MovementLine = {
 
 type CosmeticProposal = {
     enabled: boolean;
+    isConfirmed?: boolean;
     action?: CosmeticProposalAction;
     estimatedCost?: string;
     execution?: ExecutionType;
@@ -80,6 +82,7 @@ type AppearanceBlockValue = {
 
 type CrownRepairState = {
     status: FunctionalStatus;
+    isConfirmed?: boolean;
     action?: CrownAction;
     execution?: ExecutionType;
     vendorId?: string;
@@ -129,16 +132,16 @@ type CatalogAction = {
     id: string;
     code: string;
     name: string;
-    appliesTo: string;
-    requiresPart: boolean;
-    defaultExecutionMode: string | null;
+    appliesTo?: string;
+    requiresPart?: boolean;
+    defaultExecutionMode?: string | null;
 };
 
 type CatalogPart = {
     id: string;
     code: string;
     name: string;
-    partGroup: string;
+    partGroup?: string;
 };
 
 type CatalogAppearanceIssue = {
@@ -149,9 +152,13 @@ type CatalogAppearanceIssue = {
 };
 
 type TechnicalCatalogs = {
+    vendors: Array<{ id: string; name: string }>;
     movementActions: CatalogAction[];
-    crownActions?: CatalogAction[];
+    crownActions: CatalogAction[];
     parts: CatalogPart[];
+    serviceCatalogs?: Array<any>;
+    supplyCatalogs?: Array<any>;
+    mechanicalPartCatalogs?: Array<any>;
     appearanceIssues: {
         CASE: CatalogAppearanceIssue[];
         CRYSTAL: CatalogAppearanceIssue[];
@@ -173,6 +180,7 @@ export type TechnicalAssessmentSubmitPayload = {
         beforeSpecs?: { rate?: string; amp?: string; err?: string };
         afterSpecs?: { rate?: string; amp?: string; err?: string };
         lines: Array<{
+            isConfirmed?: boolean;
             action?: MovementAction;
             execution?: ExecutionType;
             vendorId?: string;
@@ -190,6 +198,9 @@ export type TechnicalAssessmentSubmitPayload = {
             note?: string;
             proposal: {
                 enabled: boolean;
+                isConfirmed?: boolean;
+                isConfirmed?: boolean;
+                isConfirmed?: boolean;
                 action?: CosmeticProposalAction;
                 estimatedCost?: number;
                 execution?: ExecutionType;
@@ -206,6 +217,7 @@ export type TechnicalAssessmentSubmitPayload = {
             note?: string;
             proposal: {
                 enabled: boolean;
+                isConfirmed?: boolean;
                 action?: CosmeticProposalAction;
                 estimatedCost?: number;
                 execution?: ExecutionType;
@@ -222,6 +234,7 @@ export type TechnicalAssessmentSubmitPayload = {
             note?: string;
             proposal: {
                 enabled: boolean;
+                isConfirmed?: boolean;
                 action?: CosmeticProposalAction;
                 estimatedCost?: number;
                 execution?: ExecutionType;
@@ -233,6 +246,7 @@ export type TechnicalAssessmentSubmitPayload = {
         };
         crown: {
             status: FunctionalStatus;
+            isConfirmed?: boolean;
             action?: CrownAction;
             execution?: ExecutionType;
             vendorId?: string;
@@ -251,6 +265,7 @@ export type TechnicalAssessmentSubmitPayload = {
 };
 
 type HydrationIssueItem = {
+    id?: string;
     area?: string | null;
     actionMode?: string | null;
     note?: string | null;
@@ -261,6 +276,16 @@ type HydrationIssueItem = {
     serviceCatalogId?: string | null;
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
+    executionStatus?: string | null;
+    issueType?: string | null;
+    openedAt?: string | null;
+};
+
+type TechnicalAssessmentPanelResponse = {
+    assessment?: any;
+    technicalAssessment?: any;
+    technicalIssues?: HydrationIssueItem[];
+    catalogs?: TechnicalCatalogs | null;
 };
 
 type TechnicalAssessmentModalProps = {
@@ -337,6 +362,7 @@ function makeId() {
 function emptyProposal(): CosmeticProposal {
     return {
         enabled: false,
+        isConfirmed: false,
         action: undefined,
         estimatedCost: "",
         execution: undefined,
@@ -356,19 +382,37 @@ function emptyAppearanceBlock(): AppearanceBlockValue {
     };
 }
 
-function createInitialFormState(): TechnicalAssessmentFormState {
+function mapMovementSpecLabelToMachineType(
+    movementSpecLabel?: string | null
+): MachineType {
+    const raw = String(movementSpecLabel || "").toUpperCase();
+
+    if (
+        raw.includes("QUARTZ") ||
+        raw.includes("SOLAR") ||
+        raw.includes("KINETIC") ||
+        raw.includes("MECHAQUARTZ")
+    ) {
+        return "QUARTZ";
+    }
+
+    return "MECHANICAL";
+}
+
+function createInitialFormState(machineType: MachineType = "MECHANICAL"): TechnicalAssessmentFormState {
     return {
-        machineType: "MECHANICAL",
+        machineType,
         movementStatus: "GOOD",
         showBeforeSpecs: false,
         beforeSpecs: { rate: "", amp: "", err: "" },
         afterSpecs: { rate: "", amp: "", err: "" },
-        movementLines: [{ id: makeId(), execution: "INHOUSE" }],
+        movementLines: [{ id: makeId(), execution: "INHOUSE", isConfirmed: false }],
         caseAppearance: emptyAppearanceBlock(),
         glassAppearance: emptyAppearanceBlock(),
         dialAppearance: emptyAppearanceBlock(),
         crownRepair: {
             status: "GOOD",
+            isConfirmed: false,
             action: undefined,
             execution: undefined,
             vendorId: undefined,
@@ -385,8 +429,11 @@ function createInitialFormState(): TechnicalAssessmentFormState {
     };
 }
 
-function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState {
-    const base = createInitialFormState();
+function hydrateFormFromSavedPayload(
+    payload: any,
+    inheritedMachineType: MachineType
+): TechnicalAssessmentFormState {
+    const base = createInitialFormState(inheritedMachineType);
     if (!payload || typeof payload !== "object") return base;
 
     const movement = payload.movement ?? {};
@@ -395,7 +442,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
 
     return {
         ...base,
-        machineType: movement.machineType === "QUARTZ" ? "QUARTZ" : "MECHANICAL",
+        machineType: inheritedMachineType,
         movementStatus: movement.status === "ISSUE" ? "ISSUE" : "GOOD",
         showBeforeSpecs: Boolean(movement.beforeSpecs),
         beforeSpecs: {
@@ -418,6 +465,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
                     partId: line.partId ?? "",
                     cost: line.cost != null ? String(line.cost) : "",
                     note: line.note ?? "",
+                    isConfirmed: Boolean(line.isConfirmed),
                 }))
                 : base.movementLines,
         caseAppearance: {
@@ -426,6 +474,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
             note: appearance.case?.note ?? "",
             proposal: {
                 enabled: Boolean(appearance.case?.proposal?.enabled),
+                isConfirmed: Boolean(appearance.case?.proposal?.isConfirmed),
                 action: appearance.case?.proposal?.action,
                 estimatedCost:
                     appearance.case?.proposal?.estimatedCost != null
@@ -445,6 +494,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
             note: appearance.glass?.note ?? "",
             proposal: {
                 enabled: Boolean(appearance.glass?.proposal?.enabled),
+                isConfirmed: Boolean(appearance.glass?.proposal?.isConfirmed),
                 action: appearance.glass?.proposal?.action,
                 estimatedCost:
                     appearance.glass?.proposal?.estimatedCost != null
@@ -464,6 +514,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
             note: appearance.dial?.note ?? "",
             proposal: {
                 enabled: Boolean(appearance.dial?.proposal?.enabled),
+                isConfirmed: Boolean(appearance.dial?.proposal?.isConfirmed),
                 action: appearance.dial?.proposal?.action,
                 estimatedCost:
                     appearance.dial?.proposal?.estimatedCost != null
@@ -479,6 +530,7 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
         },
         crownRepair: {
             status: crown.status === "ISSUE" ? "ISSUE" : "GOOD",
+            isConfirmed: Boolean(crown.isConfirmed),
             action: crown.action,
             execution: crown.execution === "VENDOR" ? "VENDOR" : "INHOUSE",
             vendorId: crown.vendorId ?? "",
@@ -491,10 +543,13 @@ function hydrateFormFromSavedPayload(payload: any): TechnicalAssessmentFormState
     };
 }
 
-
-function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: HydrationIssueItem[] | null | undefined) {
+function applyIssuesIntoForm(
+    baseForm: TechnicalAssessmentFormState,
+    issues: HydrationIssueItem[] | null | undefined
+): TechnicalAssessmentFormState {
     if (!Array.isArray(issues) || issues.length === 0) return baseForm;
-    const next = {
+
+    const next: TechnicalAssessmentFormState = {
         ...baseForm,
         movementLines: [...baseForm.movementLines],
         caseAppearance: {
@@ -512,13 +567,22 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
         crownRepair: { ...baseForm.crownRepair },
     };
 
-    const movementIssues = issues.filter((x) => String(x.area ?? "").toUpperCase() === "MOVEMENT");
+    const movementIssues = issues.filter(
+        (x) => String(x.area ?? "").toUpperCase() === "MOVEMENT"
+    );
+
     if (movementIssues.length > 0) {
         next.movementStatus = "ISSUE";
         next.movementLines = movementIssues.map((issue) => ({
             id: makeId(),
-            action: (issue.serviceCatalogId ? "SERVICE" : undefined) as MovementAction | undefined,
-            execution: String(issue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+            isConfirmed: Boolean((issue as any).isConfirmed ?? true),
+            action: (issue.serviceCatalogId ? "SERVICE" : undefined) as
+                | MovementAction
+                | undefined,
+            execution:
+                String(issue.actionMode ?? "").toUpperCase() === "VENDOR"
+                    ? "VENDOR"
+                    : "INHOUSE",
             vendorId: issue.vendorId ?? "",
             partId: issue.mechanicalPartCatalogId ?? "",
             cost: issue.estimatedCost != null ? String(issue.estimatedCost) : "",
@@ -526,20 +590,32 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
         }));
     }
 
-    const crownIssue = issues.find((x) => String(x.area ?? "").toUpperCase() === "CROWN");
+    const crownIssue = issues.find(
+        (x) => String(x.area ?? "").toUpperCase() === "CROWN"
+    );
     if (crownIssue) {
         next.crownRepair = {
             status: "ISSUE",
+            isConfirmed: Boolean((crownIssue as any).isConfirmed ?? true),
             action: next.crownRepair.action,
-            execution: String(crownIssue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+            execution:
+                String(crownIssue.actionMode ?? "").toUpperCase() === "VENDOR"
+                    ? "VENDOR"
+                    : "INHOUSE",
             vendorId: crownIssue.vendorId ?? "",
             partId: crownIssue.mechanicalPartCatalogId ?? "",
-            cost: crownIssue.estimatedCost != null ? String(crownIssue.estimatedCost) : "",
+            cost:
+                crownIssue.estimatedCost != null
+                    ? String(crownIssue.estimatedCost)
+                    : "",
             note: crownIssue.note ?? crownIssue.summary ?? "",
         };
     }
 
-    const applyAppearanceIssue = (area: string, blockKey: "caseAppearance" | "glassAppearance" | "dialAppearance") => {
+    const applyAppearanceIssue = (
+        area: string,
+        blockKey: "caseAppearance" | "glassAppearance" | "dialAppearance"
+    ) => {
         const issue = issues.find((x) => String(x.area ?? "").toUpperCase() === area);
         if (!issue) return;
         next[blockKey] = {
@@ -548,9 +624,16 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
             proposal: {
                 ...next[blockKey].proposal,
                 enabled: true,
-                execution: String(issue.actionMode ?? "").toUpperCase() === "VENDOR" ? "VENDOR" : "INHOUSE",
+                isConfirmed: Boolean((issue as any).isConfirmed ?? true),
+                isConfirmed: Boolean((issue as any).isConfirmed ?? true),
+                isConfirmed: Boolean((issue as any).isConfirmed ?? true),
+                execution:
+                    String(issue.actionMode ?? "").toUpperCase() === "VENDOR"
+                        ? "VENDOR"
+                        : "INHOUSE",
                 vendorId: issue.vendorId ?? "",
-                estimatedCost: issue.estimatedCost != null ? String(issue.estimatedCost) : "",
+                estimatedCost:
+                    issue.estimatedCost != null ? String(issue.estimatedCost) : "",
                 note: issue.note ?? issue.summary ?? "",
             },
         };
@@ -560,7 +643,9 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
     applyAppearanceIssue("CRYSTAL", "glassAppearance");
     applyAppearanceIssue("DIAL", "dialAppearance");
 
-    const chrono = issues.find((x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_CHRONOGRAPH");
+    const chrono = issues.find(
+        (x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_CHRONOGRAPH"
+    );
     if (chrono) {
         next.functionalChecks = {
             ...next.functionalChecks,
@@ -572,7 +657,9 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
         };
     }
 
-    const moon = issues.find((x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_MOONPHASE");
+    const moon = issues.find(
+        (x) => String(x.area ?? "").toUpperCase() === "FUNCTIONAL_MOONPHASE"
+    );
     if (moon) {
         next.functionalChecks = {
             ...next.functionalChecks,
@@ -587,28 +674,71 @@ function applyIssuesIntoForm(baseForm: TechnicalAssessmentFormState, issues: Hyd
     return next;
 }
 
-function Pill({ children, tone = "gray" }: { children: React.ReactNode; tone?: "neutral" | "amber" | "gray" }) {
+function Pill({
+    children,
+    tone = "gray",
+}: {
+    children: React.ReactNode;
+    tone?: "neutral" | "amber" | "gray";
+}) {
     const styles = {
         neutral: "border-slate-200 bg-slate-50 text-slate-700",
         amber: "border-amber-200 bg-amber-50 text-amber-700",
         gray: "border-slate-200 bg-slate-100 text-slate-700",
     };
 
-    return <span className={cx("inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium", styles[tone])}>{children}</span>;
+    return (
+        <span
+            className={cx(
+                "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                styles[tone]
+            )}
+        >
+            {children}
+        </span>
+    );
 }
 
 function ApprovalPill({ status }: { status?: ApprovalStatus }) {
-    if (status === "APPROVED") return <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Đã duyệt</span>;
-    if (status === "REJECTED") return <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Từ chối</span>;
-    return <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">Chờ duyệt</span>;
+    if (status === "APPROVED") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                Đã duyệt
+            </span>
+        );
+    }
+    if (status === "REJECTED") {
+        return (
+            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+                Từ chối
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+            Chờ duyệt
+        </span>
+    );
 }
 
-function SectionCard({ title, icon, badge, children }: { title: string; icon?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode }) {
+function SectionCard({
+    title,
+    icon,
+    badge,
+    children,
+}: {
+    title: string;
+    icon?: React.ReactNode;
+    badge?: React.ReactNode;
+    children: React.ReactNode;
+}) {
     return (
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">{icon}</div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        {icon}
+                    </div>
                     <h2 className="text-base font-semibold text-slate-900">{title}</h2>
                 </div>
                 {badge}
@@ -618,7 +748,13 @@ function SectionCard({ title, icon, badge, children }: { title: string; icon?: R
     );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+    label,
+    children,
+}: {
+    label: string;
+    children: React.ReactNode;
+}) {
     return (
         <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700">{label}</label>
@@ -628,41 +764,126 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-    return <input {...props} className={cx("h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400", props.className)} />;
+    return (
+        <input
+            {...props}
+            className={cx(
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
 }
 
 function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-    return <select {...props} className={cx("h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400", props.className)} />;
+    return (
+        <select
+            {...props}
+            className={cx(
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
 }
 
 function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-    return <textarea {...props} className={cx("min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400", props.className)} />;
+    return (
+        <textarea
+            {...props}
+            className={cx(
+                "min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400",
+                props.className
+            )}
+        />
+    );
 }
 
-function Button({ children, variant = "primary", className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "ghost" }) {
+function Button({
+    children,
+    variant = "primary",
+    className,
+    ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: "primary" | "outline" | "ghost";
+}) {
     const styles = {
         primary: "bg-slate-900 text-white hover:bg-slate-800 border-slate-900",
         outline: "bg-white text-slate-900 border-slate-200 hover:bg-slate-50",
         ghost: "bg-transparent text-slate-700 border-transparent hover:bg-slate-100",
     };
 
-    return <button {...props} className={cx("inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50", styles[variant], className)}>{children}</button>;
+    return (
+        <button
+            {...props}
+            className={cx(
+                "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50",
+                styles[variant],
+                className
+            )}
+        >
+            {children}
+        </button>
+    );
 }
 
-function CompactStatusToggle({ value, onChange, goodText = "Đẹp / ổn", issueText = "Cần xử lý" }: { value: HealthStatus | FunctionalStatus; onChange: (value: HealthStatus | FunctionalStatus) => void; goodText?: string; issueText?: string }) {
+function CompactStatusToggle({
+    value,
+    onChange,
+    goodText = "Đẹp / ổn",
+    issueText = "Cần xử lý",
+}: {
+    value: HealthStatus | FunctionalStatus;
+    onChange: (value: HealthStatus | FunctionalStatus) => void;
+    goodText?: string;
+    issueText?: string;
+}) {
     return (
         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-            <button type="button" onClick={() => onChange("GOOD")} className={cx("rounded-lg px-4 py-2 text-sm font-medium transition", value === "GOOD" ? "border border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70" : "text-slate-500 hover:text-slate-800")}>{goodText}</button>
-            <button type="button" onClick={() => onChange("ISSUE")} className={cx("rounded-lg px-4 py-2 text-sm font-medium transition", value === "ISSUE" ? "border border-amber-200 bg-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-100" : "text-slate-500 hover:text-slate-800")}>{issueText}</button>
+            <button
+                type="button"
+                onClick={() => onChange("GOOD")}
+                className={cx(
+                    "rounded-lg px-4 py-2 text-sm font-medium transition",
+                    value === "GOOD"
+                        ? "border border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
+                        : "text-slate-500 hover:text-slate-800"
+                )}
+            >
+                {goodText}
+            </button>
+            <button
+                type="button"
+                onClick={() => onChange("ISSUE")}
+                className={cx(
+                    "rounded-lg px-4 py-2 text-sm font-medium transition",
+                    value === "ISSUE"
+                        ? "border border-amber-200 bg-amber-50 text-amber-800 shadow-sm ring-1 ring-amber-100"
+                        : "text-slate-500 hover:text-slate-800"
+                )}
+            >
+                {issueText}
+            </button>
         </div>
     );
 }
 
-function statusBadge(status: HealthStatus, goodLabel = "Đẹp / ổn", issueLabel = "Cần xử lý") {
-    return status === "GOOD" ? <Pill tone="neutral">{goodLabel}</Pill> : <Pill tone="amber">{issueLabel}</Pill>;
+function statusBadge(
+    status: HealthStatus,
+    goodLabel = "Đẹp / ổn",
+    issueLabel = "Cần xử lý"
+) {
+    return status === "GOOD" ? (
+        <Pill tone="neutral">{goodLabel}</Pill>
+    ) : (
+        <Pill tone="amber">{issueLabel}</Pill>
+    );
 }
 
-function calculateAppearanceScore(block: AppearanceBlockValue, definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]) {
+function calculateAppearanceScore(
+    block: AppearanceBlockValue,
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+) {
     const issueDeduction = block.issues.reduce((sum, code) => {
         const found = definitions.find((item) => item.code === code);
         return sum + (found?.deduction ?? 0);
@@ -671,13 +892,29 @@ function calculateAppearanceScore(block: AppearanceBlockValue, definitions: { co
     return Math.max(0, 100 - issueDeduction - manual);
 }
 
-function issueSummary(block: AppearanceBlockValue, definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]) {
-    return block.issues.map((code) => definitions.find((item) => item.code === code)?.label).filter(Boolean).join(", ");
+function issueSummary(
+    block: AppearanceBlockValue,
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+) {
+    return block.issues
+        .map((code) => definitions.find((item) => item.code === code)?.label)
+        .filter(Boolean)
+        .join(", ");
 }
 
-function IssueCheckboxGroup({ options, selected, onChange }: { options: { code: AppearanceIssueCode; label: string; deduction: number }[]; selected: AppearanceIssueCode[]; onChange: (next: AppearanceIssueCode[]) => void }) {
+function IssueCheckboxGroup({
+    options,
+    selected,
+    onChange,
+}: {
+    options: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    selected: AppearanceIssueCode[];
+    onChange: (next: AppearanceIssueCode[]) => void;
+}) {
     function toggleIssue(code: AppearanceIssueCode) {
-        if (selected.includes(code)) return onChange(selected.filter((item) => item !== code));
+        if (selected.includes(code)) {
+            return onChange(selected.filter((item) => item !== code));
+        }
         onChange([...selected, code]);
     }
 
@@ -686,7 +923,20 @@ function IssueCheckboxGroup({ options, selected, onChange }: { options: { code: 
             {options.map((item) => {
                 const active = selected.includes(item.code);
                 return (
-                    <button key={item.code} type="button" onClick={() => toggleIssue(item.code)} className={cx("rounded-full border px-3 py-1.5 text-sm transition", active ? "border-slate-300 bg-slate-100 text-slate-900" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300")}>{item.label}<span className="ml-1 text-slate-400">(-{item.deduction})</span></button>
+                    <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => toggleIssue(item.code)}
+                        className={cx(
+                            "rounded-full border px-3 py-1.5 text-sm transition",
+                            active
+                                ? "border-slate-300 bg-slate-100 text-slate-900"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        )}
+                    >
+                        {item.label}
+                        <span className="ml-1 text-slate-400">(-{item.deduction})</span>
+                    </button>
                 );
             })}
         </div>
@@ -694,101 +944,307 @@ function IssueCheckboxGroup({ options, selected, onChange }: { options: { code: 
 }
 
 function ScorePill({ score }: { score: number }) {
-    const tone = score >= 90 ? "border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70" : score >= 80 ? "border-slate-300 bg-slate-50 text-slate-800 shadow-sm" : "border-amber-200 bg-amber-50/70 text-amber-800 shadow-sm";
-    return <div className={cx("rounded-full border px-3 py-1 text-xs font-semibold", tone)}>{score}/100</div>;
+    const tone =
+        score >= 90
+            ? "border-slate-300 bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70"
+            : score >= 80
+                ? "border-slate-300 bg-slate-50 text-slate-800 shadow-sm"
+                : "border-amber-200 bg-amber-50/70 text-amber-800 shadow-sm";
+    return (
+        <div className={cx("rounded-full border px-3 py-1 text-xs font-semibold", tone)}>
+            {score}/100
+        </div>
+    );
 }
 
-function CosmeticProposalFields({ title, value, onChange, actionOptions, vendors }: { title: string; value: CosmeticProposal; onChange: (value: CosmeticProposal) => void; actionOptions: { value: CosmeticProposalAction; label: string }[]; vendors: Array<{ id: string; name: string }> }) {
+function CosmeticProposalFields({
+    title,
+    value,
+    onChange,
+    actionOptions,
+    vendors,
+}: {
+    title: string;
+    value: CosmeticProposal;
+    onChange: (value: CosmeticProposal) => void;
+    actionOptions: { value: CosmeticProposalAction; label: string }[];
+    vendors: Array<{ id: string; name: string }>;
+}) {
     const isVendor = value.execution === "VENDOR";
+
     return (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                    <div className="text-sm font-semibold text-slate-900">Đề xuất xử lý</div>
-                    <div className="mt-1 text-sm text-slate-500">Đề xuất này sẽ sinh Technical Issue để theo dõi tiếp sau khi lưu phiếu.</div>
+                    <div className="text-sm font-semibold text-slate-900">
+                        Đề xuất xử lý
+                    </div>
+                    <div className="mt-1 text-sm text-slate-500">
+                        Đề xuất này sẽ sinh Technical Issue để theo dõi tiếp sau khi lưu phiếu.
+                    </div>
                 </div>
                 {value.enabled ? <ApprovalPill status={value.approvalStatus} /> : null}
             </div>
+
             <div className="space-y-4">
-                <CompactStatusToggle value={value.enabled ? "ISSUE" : "GOOD"} onChange={(v) => onChange({ ...value, enabled: v === "ISSUE", requiresApproval: false, approvalStatus: undefined })} goodText="Không đề xuất" issueText="Có đề xuất" />
+                <CompactStatusToggle
+                    value={value.enabled ? "ISSUE" : "GOOD"}
+                    onChange={(v) =>
+                        onChange({
+                            ...value,
+                            enabled: v === "ISSUE",
+                            isConfirmed: v === "ISSUE" ? Boolean(value.isConfirmed) : false,
+                            requiresApproval: false,
+                            approvalStatus: undefined,
+                        })
+                    }
+                    goodText="Không đề xuất"
+                    issueText="Có đề xuất"
+                />
+
                 {value.enabled ? (
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Phương án đề xuất">
-                            <SelectInput value={value.action ?? ""} onChange={(e) => onChange({ ...value, action: e.target.value as CosmeticProposalAction })}>
-                                <option value="">Chọn phương án</option>
-                                {actionOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện dự kiến">
-                            <SelectInput value={value.execution ?? ""} onChange={(e) => onChange({ ...value, execution: e.target.value as ExecutionType, vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined })}>
-                                <option value="">Chọn hình thức</option>
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí dự kiến">
-                            <TextInput inputMode="numeric" placeholder="0" value={value.estimatedCost ?? ""} onChange={(e) => onChange({ ...value, estimatedCost: e.target.value })} />
-                        </Field>
-                        {isVendor ? (
-                            <Field label="Vendor dự kiến">
-                                <SelectInput value={value.vendorId ?? ""} onChange={(e) => onChange({ ...value, vendorId: e.target.value })}>
-                                    <option value="">Chọn vendor</option>
-                                    {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+                    <>
+                        <label className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(value.isConfirmed)}
+                                onChange={(e) =>
+                                    onChange({ ...value, isConfirmed: e.target.checked })
+                                }
+                            />
+                            Xác nhận mở technical issue cho hạng mục này
+                        </label>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Phương án đề xuất">
+                                <SelectInput
+                                    value={value.action ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            action: e.target.value as CosmeticProposalAction,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn phương án</option>
+                                    {actionOptions.map((item) => (
+                                        <option key={item.value} value={item.value}>
+                                            {item.label}
+                                        </option>
+                                    ))}
                                 </SelectInput>
                             </Field>
-                        ) : null}
-                        <div className="md:col-span-3">
-                            <Field label="Lý do đề xuất">
-                                <TextArea placeholder={`Ví dụ: ${title.toLowerCase()} chưa đủ đẹp để lên bài, cần xử lý trước khi sale đăng bán.`} value={value.note ?? ""} onChange={(e) => onChange({ ...value, note: e.target.value })} />
+
+                            <Field label="Thực hiện dự kiến">
+                                <SelectInput
+                                    value={value.execution ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            execution: e.target.value as ExecutionType,
+                                            vendorId:
+                                                e.target.value === "VENDOR"
+                                                    ? value.vendorId
+                                                    : undefined,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn hình thức</option>
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
                             </Field>
+
+                            <Field label="Chi phí dự kiến">
+                                <TextInput
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={value.estimatedCost ?? ""}
+                                    onChange={(e) =>
+                                        onChange({ ...value, estimatedCost: e.target.value })
+                                    }
+                                />
+                            </Field>
+
+                            {isVendor ? (
+                                <Field label="Vendor dự kiến">
+                                    <SelectInput
+                                        value={value.vendorId ?? ""}
+                                        onChange={(e) =>
+                                            onChange({ ...value, vendorId: e.target.value })
+                                        }
+                                    >
+                                        <option value="">Chọn vendor</option>
+                                        {vendors.map((vendor) => (
+                                            <option key={vendor.id} value={vendor.id}>
+                                                {vendor.name}
+                                            </option>
+                                        ))}
+                                    </SelectInput>
+                                </Field>
+                            ) : null}
+
+                            <div className="md:col-span-3">
+                                <Field label="Lý do đề xuất">
+                                    <TextArea
+                                        placeholder={`Ví dụ: ${title.toLowerCase()} chưa đủ đẹp để lên bài, cần xử lý trước khi sale đăng bán.`}
+                                        value={value.note ?? ""}
+                                        onChange={(e) =>
+                                            onChange({ ...value, note: e.target.value })
+                                        }
+                                    />
+                                </Field>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 ) : null}
             </div>
         </div>
     );
 }
 
-function CollapsibleAppearanceCard({ title, score, summary, defaultOpen = false, children }: { title: string; score: number; summary: string; defaultOpen?: boolean; children: React.ReactNode }) {
+function CollapsibleAppearanceCard({
+    title,
+    score,
+    summary,
+    defaultOpen = false,
+    children,
+}: {
+    title: string;
+    score: number;
+    summary: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}) {
     const [open, setOpen] = React.useState(defaultOpen);
-    React.useEffect(() => { if (defaultOpen) setOpen(true); }, [defaultOpen]);
+
+    React.useEffect(() => {
+        if (defaultOpen) setOpen(true);
+    }, [defaultOpen]);
+
     return (
         <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
-            <button type="button" onClick={() => setOpen((prev) => !prev)} className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50">
+            <button
+                type="button"
+                onClick={() => setOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50"
+            >
                 <div className="min-w-0">
                     <div className="text-sm font-semibold text-slate-900">{title}</div>
-                    <div className="mt-1 truncate text-sm text-slate-500">{summary || "Chưa ghi nhận khuyết điểm"}</div>
+                    <div className="mt-1 truncate text-sm text-slate-500">
+                        {summary || "Chưa ghi nhận khuyết điểm"}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <ScorePill score={score} />
-                    {open ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
+                    {open ? (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                    ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                    )}
                 </div>
             </button>
-            {open ? <div className="border-t border-slate-200 bg-slate-50/40 p-4">{children}</div> : null}
+            {open ? (
+                <div className="border-t border-slate-200 bg-slate-50/40 p-4">
+                    {children}
+                </div>
+            ) : null}
         </div>
     );
 }
 
-function AppearanceScoreBlock({ title, description, value, onChange, definitions, proposalActions, vendors }: { title: string; description?: string; value: AppearanceBlockValue; onChange: (value: AppearanceBlockValue) => void; definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]; proposalActions: { value: CosmeticProposalAction; label: string }[]; vendors: Array<{ id: string; name: string }> }) {
+function AppearanceScoreBlock({
+    title,
+    description,
+    value,
+    onChange,
+    definitions,
+    proposalActions,
+    vendors,
+}: {
+    title: string;
+    description?: string;
+    value: AppearanceBlockValue;
+    onChange: (value: AppearanceBlockValue) => void;
+    definitions: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    proposalActions: { value: CosmeticProposalAction; label: string }[];
+    vendors: Array<{ id: string; name: string }>;
+}) {
     const score = calculateAppearanceScore(value, definitions);
     const summary = issueSummary(value, definitions);
+
     return (
-        <CollapsibleAppearanceCard title={title} score={score} summary={summary} defaultOpen={value.issues.length > 0 || value.proposal.enabled}>
+        <CollapsibleAppearanceCard
+            title={title}
+            score={score}
+            summary={summary}
+            defaultOpen={value.issues.length > 0 || value.proposal.enabled}
+        >
             <div className="space-y-4">
-                {description ? <div className="text-sm text-slate-500">{description}</div> : null}
-                <Field label="Khuyết điểm ghi nhận"><IssueCheckboxGroup options={definitions} selected={value.issues} onChange={(issues) => onChange({ ...value, issues })} /></Field>
+                {description ? (
+                    <div className="text-sm text-slate-500">{description}</div>
+                ) : null}
+
+                <Field label="Khuyết điểm ghi nhận">
+                    <IssueCheckboxGroup
+                        options={definitions}
+                        selected={value.issues}
+                        onChange={(issues) => onChange({ ...value, issues })}
+                    />
+                </Field>
+
                 <div className="grid gap-4 md:grid-cols-[160px_1fr]">
-                    <Field label="Trừ thêm"><TextInput inputMode="numeric" placeholder="0" value={value.manualDeduction} onChange={(e) => onChange({ ...value, manualDeduction: e.target.value })} /></Field>
-                    <Field label="Tóm tắt nhanh"><div className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">{summary || "Chưa ghi nhận khuyết điểm"}</div></Field>
+                    <Field label="Trừ thêm">
+                        <TextInput
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={value.manualDeduction}
+                            onChange={(e) =>
+                                onChange({ ...value, manualDeduction: e.target.value })
+                            }
+                        />
+                    </Field>
+
+                    <Field label="Tóm tắt nhanh">
+                        <div className="flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
+                            {summary || "Chưa ghi nhận khuyết điểm"}
+                        </div>
+                    </Field>
                 </div>
-                <Field label="Ghi chú"><TextArea placeholder="Ghi chú thêm về tình trạng thực tế..." value={value.note ?? ""} onChange={(e) => onChange({ ...value, note: e.target.value })} /></Field>
-                <CosmeticProposalFields title={title} value={value.proposal} onChange={(proposal) => onChange({ ...value, proposal })} actionOptions={proposalActions} vendors={vendors} />
+
+                <Field label="Ghi chú">
+                    <TextArea
+                        placeholder="Ghi chú thêm về tình trạng thực tế..."
+                        value={value.note ?? ""}
+                        onChange={(e) => onChange({ ...value, note: e.target.value })}
+                    />
+                </Field>
+
+                <CosmeticProposalFields
+                    title={title}
+                    value={value.proposal}
+                    onChange={(proposal) => onChange({ ...value, proposal })}
+                    actionOptions={proposalActions}
+                    vendors={vendors}
+                />
             </div>
         </CollapsibleAppearanceCard>
     );
 }
 
-function CrownFunctionalBlock({ value, onChange, vendors, crownActions, parts }: { value: CrownRepairState; onChange: (value: CrownRepairState) => void; vendors: Array<{ id: string; name: string }>; crownActions: CatalogAction[]; parts: CatalogPart[] }) {
+function CrownFunctionalBlock({
+    value,
+    onChange,
+    vendors,
+    crownActions,
+    parts,
+}: {
+    value: CrownRepairState;
+    onChange: (value: CrownRepairState) => void;
+    vendors: Array<{ id: string; name: string }>;
+    crownActions: CatalogAction[];
+    parts: CatalogPart[];
+}) {
     const isIssue = value.status === "ISSUE";
     const isVendor = value.execution === "VENDOR";
     const selectedCrownAction = (crownActions ?? []).find(
@@ -800,33 +1256,153 @@ function CrownFunctionalBlock({ value, onChange, vendors, crownActions, parts }:
         <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
                 <div className="text-sm font-semibold text-slate-900">Núm</div>
-                <Pill tone={isIssue ? "amber" : "neutral"}>{isIssue ? "Cần xử lý" : "Ổn"}</Pill>
+                <Pill tone={isIssue ? "amber" : "neutral"}>
+                    {isIssue ? "Cần xử lý" : "Ổn"}
+                </Pill>
             </div>
+
             <div className="space-y-4 bg-slate-50/40 p-4">
                 <div>
-                    <div className="mb-2 text-sm font-medium text-slate-700">Tình trạng chức năng</div>
-                    <CompactStatusToggle value={value.status} onChange={(status) => onChange({ ...value, status: status as FunctionalStatus })} goodText="Ổn" issueText="Cần xử lý" />
-                </div>
-                {isIssue ? (
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Xử lý">
-                            <SelectInput value={value.action ?? ""} onChange={(e) => { const picked = crownActions.find((x) => x.code === e.target.value); onChange({ ...value, action: e.target.value as CrownAction, execution: picked?.defaultExecutionMode === "VENDOR" ? "VENDOR" : value.execution, partId: picked?.requiresPart ? value.partId : undefined }); }}>
-                                <option value="">Chọn xử lý</option>
-                                {crownActions.map((item) => <option key={item.id} value={item.code}>{item.name}</option>)}
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện">
-                            <SelectInput value={value.execution ?? ""} onChange={(e) => onChange({ ...value, execution: e.target.value as ExecutionType, vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined })}>
-                                <option value="">Chọn hình thức</option>
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí"><TextInput inputMode="numeric" placeholder="0" value={value.cost ?? ""} onChange={(e) => onChange({ ...value, cost: e.target.value })} /></Field>
-                        {isVendor ? <Field label="Vendor"><SelectInput value={value.vendorId ?? ""} onChange={(e) => onChange({ ...value, vendorId: e.target.value })}><option value="">Chọn vendor</option>{vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</SelectInput></Field> : null}
-                        {crownNeedsPart ? <Field label="Danh mục linh kiện"><SelectInput value={value.partId ?? ""} onChange={(e) => onChange({ ...value, partId: e.target.value })}><option value="">Chọn linh kiện</option>{parts.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}</SelectInput></Field> : null}
-                        <div className="md:col-span-3"><Field label="Ghi chú"><TextArea placeholder="Ví dụ: núm trượt ren, lên cót nặng tay, cần thay cả ti..." value={value.note ?? ""} onChange={(e) => onChange({ ...value, note: e.target.value })} /></Field></div>
+                    <div className="mb-2 text-sm font-medium text-slate-700">
+                        Tình trạng chức năng
                     </div>
+                    <CompactStatusToggle
+                        value={value.status}
+                        onChange={(status) =>
+                            onChange({
+                                ...value,
+                                status: status as FunctionalStatus,
+                                isConfirmed: status === "ISSUE" ? Boolean(value.isConfirmed) : false,
+                            })
+                        }
+                        goodText="Ổn"
+                        issueText="Cần xử lý"
+                    />
+                </div>
+
+                {isIssue ? (
+                    <>
+                        <label className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(value.isConfirmed)}
+                                onChange={(e) =>
+                                    onChange({ ...value, isConfirmed: e.target.checked })
+                                }
+                            />
+                            Xác nhận mở technical issue cho núm
+                        </label>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Xử lý">
+                                <SelectInput
+                                    value={value.action ?? ""}
+                                    onChange={(e) => {
+                                        const picked = crownActions.find(
+                                            (x) => x.code === e.target.value
+                                        );
+                                        onChange({
+                                            ...value,
+                                            action: e.target.value as CrownAction,
+                                            execution:
+                                                picked?.defaultExecutionMode === "VENDOR"
+                                                    ? "VENDOR"
+                                                    : value.execution,
+                                            partId: picked?.requiresPart
+                                                ? value.partId
+                                                : undefined,
+                                        });
+                                    }}
+                                >
+                                    <option value="">Chọn xử lý</option>
+                                    {crownActions.map((item) => (
+                                        <option key={item.id} value={item.code}>
+                                            {item.name}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </Field>
+
+                            <Field label="Thực hiện">
+                                <SelectInput
+                                    value={value.execution ?? ""}
+                                    onChange={(e) =>
+                                        onChange({
+                                            ...value,
+                                            execution: e.target.value as ExecutionType,
+                                            vendorId:
+                                                e.target.value === "VENDOR"
+                                                    ? value.vendorId
+                                                    : undefined,
+                                        })
+                                    }
+                                >
+                                    <option value="">Chọn hình thức</option>
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
+                            </Field>
+
+                            <Field label="Chi phí">
+                                <TextInput
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={value.cost ?? ""}
+                                    onChange={(e) =>
+                                        onChange({ ...value, cost: e.target.value })
+                                    }
+                                />
+                            </Field>
+
+                            {isVendor ? (
+                                <Field label="Vendor">
+                                    <SelectInput
+                                        value={value.vendorId ?? ""}
+                                        onChange={(e) =>
+                                            onChange({ ...value, vendorId: e.target.value })
+                                        }
+                                    >
+                                        <option value="">Chọn vendor</option>
+                                        {vendors.map((vendor) => (
+                                            <option key={vendor.id} value={vendor.id}>
+                                                {vendor.name}
+                                            </option>
+                                        ))}
+                                    </SelectInput>
+                                </Field>
+                            ) : null}
+
+                            {crownNeedsPart ? (
+                                <Field label="Danh mục linh kiện">
+                                    <SelectInput
+                                        value={value.partId ?? ""}
+                                        onChange={(e) =>
+                                            onChange({ ...value, partId: e.target.value })
+                                        }
+                                    >
+                                        <option value="">Chọn linh kiện</option>
+                                        {parts.map((part) => (
+                                            <option key={part.id} value={part.id}>
+                                                {part.name}
+                                            </option>
+                                        ))}
+                                    </SelectInput>
+                                </Field>
+                            ) : null}
+
+                            <div className="md:col-span-3">
+                                <Field label="Ghi chú">
+                                    <TextArea
+                                        placeholder="Ví dụ: núm trượt ren, lên cót nặng tay, cần thay cả ti..."
+                                        value={value.note ?? ""}
+                                        onChange={(e) =>
+                                            onChange({ ...value, note: e.target.value })
+                                        }
+                                    />
+                                </Field>
+                            </div>
+                        </div>
+                    </>
                 ) : null}
             </div>
         </div>
@@ -850,7 +1426,10 @@ function FunctionalFeaturesAccordion({
     const activeCount = entries.filter(({ key }) => value[key].enabled).length;
     const summary = entries
         .filter(({ key }) => value[key].enabled)
-        .map(({ key, label }) => `${label}: ${value[key].status === "ISSUE" ? "Cần xử lý" : "Ổn"}`)
+        .map(
+            ({ key, label }) =>
+                `${label}: ${value[key].status === "ISSUE" ? "Cần xử lý" : "Ổn"}`
+        )
         .join(" • ");
 
     return (
@@ -861,9 +1440,13 @@ function FunctionalFeaturesAccordion({
                 className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50"
             >
                 <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900">Đánh giá tính năng</div>
+                    <div className="text-sm font-semibold text-slate-900">
+                        Đánh giá tính năng
+                    </div>
                     <div className="mt-1 truncate text-sm text-slate-500">
-                        {activeCount > 0 ? summary : "Chronograph / Moonphase / các chức năng mở rộng"}
+                        {activeCount > 0
+                            ? summary
+                            : "Chronograph / Moonphase / các chức năng mở rộng"}
                     </div>
                 </div>
 
@@ -885,10 +1468,23 @@ function FunctionalFeaturesAccordion({
                         {entries.map(({ key, label }) => {
                             const item = value[key];
                             return (
-                                <div key={key} className="rounded-2xl border border-slate-200 bg-white">
+                                <div
+                                    key={key}
+                                    className="rounded-2xl border border-slate-200 bg-white"
+                                >
                                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                                        <div className="text-sm font-semibold text-slate-900">{label}</div>
-                                        <Pill tone={item.enabled ? (item.status === "ISSUE" ? "amber" : "neutral") : "gray"}>
+                                        <div className="text-sm font-semibold text-slate-900">
+                                            {label}
+                                        </div>
+                                        <Pill
+                                            tone={
+                                                item.enabled
+                                                    ? item.status === "ISSUE"
+                                                        ? "amber"
+                                                        : "neutral"
+                                                    : "gray"
+                                            }
+                                        >
                                             {!item.enabled
                                                 ? "Chưa dùng"
                                                 : item.status === "ISSUE"
@@ -908,7 +1504,9 @@ function FunctionalFeaturesAccordion({
                                                         [key]: {
                                                             ...item,
                                                             enabled: e.target.checked,
-                                                            status: e.target.checked ? item.status : "GOOD",
+                                                            status: e.target.checked
+                                                                ? item.status
+                                                                : "GOOD",
                                                         },
                                                     })
                                                 }
@@ -927,7 +1525,11 @@ function FunctionalFeaturesAccordion({
                                                         onChange={(status) =>
                                                             onChange({
                                                                 ...value,
-                                                                [key]: { ...item, status: status as FunctionalStatus },
+                                                                [key]: {
+                                                                    ...item,
+                                                                    status:
+                                                                        status as FunctionalStatus,
+                                                                },
                                                             })
                                                         }
                                                         goodText="Ổn"
@@ -942,7 +1544,10 @@ function FunctionalFeaturesAccordion({
                                                         onChange={(e) =>
                                                             onChange({
                                                                 ...value,
-                                                                [key]: { ...item, note: e.target.value },
+                                                                [key]: {
+                                                                    ...item,
+                                                                    note: e.target.value,
+                                                                },
                                                             })
                                                         }
                                                     />
@@ -960,72 +1565,294 @@ function FunctionalFeaturesAccordion({
     );
 }
 
-function generateTechnicalConclusion(params: { movementStatus: HealthStatus; machineType: MachineType; movementLines: MovementLine[]; appearanceScore: number; caseAppearance: AppearanceBlockValue; glassAppearance: AppearanceBlockValue; dialAppearance: AppearanceBlockValue; crownRepair: CrownRepairState; caseDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; glassDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; dialDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; }) {
-    const { movementStatus, machineType, movementLines, appearanceScore, caseAppearance, glassAppearance, dialAppearance, crownRepair, caseDefs, glassDefs, dialDefs } = params;
+function generateTechnicalConclusion(params: {
+    movementStatus: HealthStatus;
+    machineType: MachineType;
+    movementLines: MovementLine[];
+    appearanceScore: number;
+    caseAppearance: AppearanceBlockValue;
+    glassAppearance: AppearanceBlockValue;
+    dialAppearance: AppearanceBlockValue;
+    crownRepair: CrownRepairState;
+    caseDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    glassDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    dialDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+}) {
+    const {
+        movementStatus,
+        machineType,
+        movementLines,
+        appearanceScore,
+        caseAppearance,
+        glassAppearance,
+        dialAppearance,
+        crownRepair,
+        caseDefs,
+        glassDefs,
+        dialDefs,
+    } = params;
+
     function movementActionLabel(action?: MovementAction) {
         switch (action) {
-            case "SERVICE": return "lau dầu";
-            case "REPLACE_PART": return "thay linh kiện";
-            case "REGULATE": return "chỉnh sai số";
-            case "WATERPROOF": return "chống nước";
-            case "REPLACE_MOVEMENT": return "thay máy";
-            case "BATTERY_CHANGE": return "thay pin";
-            default: return null;
+            case "SERVICE":
+                return "lau dầu";
+            case "REPLACE_PART":
+                return "thay linh kiện";
+            case "REGULATE":
+                return "chỉnh sai số";
+            case "WATERPROOF":
+                return "chống nước";
+            case "REPLACE_MOVEMENT":
+                return "thay máy";
+            case "BATTERY_CHANGE":
+                return "thay pin";
+            default:
+                return null;
         }
     }
-    function issueLabels(issues: AppearanceIssueCode[], definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]) {
-        return issues.map((code) => definitions.find((item) => item.code === code)?.label).filter((value): value is string => Boolean(value));
+
+    function issueLabels(
+        issues: AppearanceIssueCode[],
+        definitions: { code: AppearanceIssueCode; label: string; deduction: number }[]
+    ) {
+        return issues
+            .map((code) => definitions.find((item) => item.code === code)?.label)
+            .filter((value): value is string => Boolean(value));
     }
+
     const caseScore = calculateAppearanceScore(caseAppearance, caseDefs);
     const glassScore = calculateAppearanceScore(glassAppearance, glassDefs);
     const dialScore = calculateAppearanceScore(dialAppearance, dialDefs);
+
     const lines: string[] = [];
+
     if (movementStatus === "GOOD") {
-        lines.push(`✓ Máy: ${machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"} chạy ổn${machineType === "MECHANICAL" ? ", đã ghi nhận thông số kiểm tra." : "."}`);
+        lines.push(
+            `✓ Máy: ${machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"} chạy ổn${machineType === "MECHANICAL" ? ", đã ghi nhận thông số kiểm tra." : "."}`
+        );
     } else {
-        const actions = movementLines.map((line) => movementActionLabel(line.action)).filter((value): value is string => Boolean(value));
-        lines.push(`⚠ Máy: Cần xử lý kỹ thuật${actions.length ? ` (${actions.join(", ")})` : ""}.`);
+        const actions = movementLines
+            .map((line) => movementActionLabel(line.action))
+            .filter((value): value is string => Boolean(value));
+        lines.push(
+            `⚠ Máy: Cần xử lý kỹ thuật${actions.length ? ` (${actions.join(", ")})` : ""}.`
+        );
     }
+
     const caseIssues = issueLabels(caseAppearance.issues, caseDefs);
-    lines.push(caseIssues.length ? `⚠ Vỏ: ${caseIssues.join(", ")} (${caseScore}/100).` : `✓ Vỏ: Chưa ghi nhận khuyết điểm (${caseScore}/100).`);
+    lines.push(
+        caseIssues.length
+            ? `⚠ Vỏ: ${caseIssues.join(", ")} (${caseScore}/100).`
+            : `✓ Vỏ: Chưa ghi nhận khuyết điểm (${caseScore}/100).`
+    );
+
     const glassIssues = issueLabels(glassAppearance.issues, glassDefs);
-    lines.push(glassIssues.length ? `⚠ Kính: ${glassIssues.join(", ")} (${glassScore}/100).` : `✓ Kính: Chưa ghi nhận khuyết điểm (${glassScore}/100).`);
+    lines.push(
+        glassIssues.length
+            ? `⚠ Kính: ${glassIssues.join(", ")} (${glassScore}/100).`
+            : `✓ Kính: Chưa ghi nhận khuyết điểm (${glassScore}/100).`
+    );
+
     const dialIssues = issueLabels(dialAppearance.issues, dialDefs);
-    lines.push(dialIssues.length ? `⚠ Mặt số: ${dialIssues.join(", ")} (${dialScore}/100).` : `✓ Mặt số: Chưa ghi nhận khuyết điểm (${dialScore}/100).`);
-    lines.push(crownRepair.status === "ISSUE" ? "⚠ Núm: Cần xử lý." : "✓ Núm: Hoạt động ổn.");
+    lines.push(
+        dialIssues.length
+            ? `⚠ Mặt số: ${dialIssues.join(", ")} (${dialScore}/100).`
+            : `✓ Mặt số: Chưa ghi nhận khuyết điểm (${dialScore}/100).`
+    );
+
+    lines.push(
+        crownRepair.status === "ISSUE"
+            ? "⚠ Núm: Cần xử lý."
+            : "✓ Núm: Hoạt động ổn."
+    );
+
     lines.push(`Điểm ngoại hình tổng thể: ${appearanceScore}/100.`);
+
     return lines.join("\n");
 }
 
-function buildSubmitPayload(params: { serviceRequestId: string; productName?: string; productSku?: string | null; productImage?: string | null; movementSpecLabel?: string | null; machineType: MachineType; movementStatus: HealthStatus; showBeforeSpecs: boolean; beforeSpecs: { rate: string; amp: string; err: string }; afterSpecs: { rate: string; amp: string; err: string }; movementLines: MovementLine[]; caseAppearance: AppearanceBlockValue; glassAppearance: AppearanceBlockValue; dialAppearance: AppearanceBlockValue; crownRepair: CrownRepairState; conclusion: string; caseDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; glassDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; dialDefs: { code: AppearanceIssueCode; label: string; deduction: number }[]; }): TechnicalAssessmentSubmitPayload {
-    const { serviceRequestId, productName, productSku, productImage, movementSpecLabel, machineType, movementStatus, showBeforeSpecs, beforeSpecs, afterSpecs, movementLines, caseAppearance, glassAppearance, dialAppearance, crownRepair, conclusion, caseDefs, glassDefs, dialDefs } = params;
+function buildSubmitPayload(params: {
+    serviceRequestId: string;
+    productName?: string;
+    productSku?: string | null;
+    productImage?: string | null;
+    movementSpecLabel?: string | null;
+    machineType: MachineType;
+    movementStatus: HealthStatus;
+    showBeforeSpecs: boolean;
+    beforeSpecs: { rate: string; amp: string; err: string };
+    afterSpecs: { rate: string; amp: string; err: string };
+    movementLines: MovementLine[];
+    caseAppearance: AppearanceBlockValue;
+    glassAppearance: AppearanceBlockValue;
+    dialAppearance: AppearanceBlockValue;
+    crownRepair: CrownRepairState;
+    conclusion: string;
+    caseDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    glassDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+    dialDefs: { code: AppearanceIssueCode; label: string; deduction: number }[];
+}): TechnicalAssessmentSubmitPayload {
+    const {
+        serviceRequestId,
+        productName,
+        productSku,
+        productImage,
+        movementSpecLabel,
+        machineType,
+        movementStatus,
+        showBeforeSpecs,
+        beforeSpecs,
+        afterSpecs,
+        movementLines,
+        caseAppearance,
+        glassAppearance,
+        dialAppearance,
+        crownRepair,
+        conclusion,
+        caseDefs,
+        glassDefs,
+        dialDefs,
+    } = params;
+
     const caseScore = calculateAppearanceScore(caseAppearance, caseDefs);
     const glassScore = calculateAppearanceScore(glassAppearance, glassDefs);
     const dialScore = calculateAppearanceScore(dialAppearance, dialDefs);
     const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
-    const movementCost = movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
+
+    const movementCost = movementLines.reduce(
+        (sum, line) => sum + parseMoney(line.cost),
+        0
+    );
     const crownCost = parseMoney(crownRepair.cost);
-    const cosmeticProposalCost = parseMoney(caseAppearance.proposal.enabled ? caseAppearance.proposal.estimatedCost : "") + parseMoney(glassAppearance.proposal.enabled ? glassAppearance.proposal.estimatedCost : "") + parseMoney(dialAppearance.proposal.enabled ? dialAppearance.proposal.estimatedCost : "");
+    const cosmeticProposalCost =
+        parseMoney(
+            caseAppearance.proposal.enabled
+                ? caseAppearance.proposal.estimatedCost
+                : ""
+        ) +
+        parseMoney(
+            glassAppearance.proposal.enabled
+                ? glassAppearance.proposal.estimatedCost
+                : ""
+        ) +
+        parseMoney(
+            dialAppearance.proposal.enabled
+                ? dialAppearance.proposal.estimatedCost
+                : ""
+        );
+
     const totalCost = movementCost + crownCost + cosmeticProposalCost;
 
     return {
         serviceRequestId,
-        productSnapshot: { name: productName, sku: productSku, image: productImage, movementSpecLabel },
+        productSnapshot: {
+            name: productName,
+            sku: productSku,
+            image: productImage,
+            movementSpecLabel,
+        },
         movement: {
             machineType,
             status: movementStatus,
-            beforeSpecs: machineType === "MECHANICAL" && showBeforeSpecs ? { rate: beforeSpecs.rate || undefined, amp: beforeSpecs.amp || undefined, err: beforeSpecs.err || undefined } : undefined,
-            afterSpecs: machineType === "MECHANICAL" ? { rate: afterSpecs.rate || undefined, amp: afterSpecs.amp || undefined, err: afterSpecs.err || undefined } : undefined,
-            lines: movementStatus === "ISSUE" ? movementLines.map((line) => ({ action: line.action, execution: line.execution, vendorId: line.vendorId, partId: line.partId, cost: parseMoney(line.cost), note: line.note })) : [],
+            beforeSpecs:
+                machineType === "MECHANICAL" && showBeforeSpecs
+                    ? {
+                        rate: beforeSpecs.rate || undefined,
+                        amp: beforeSpecs.amp || undefined,
+                        err: beforeSpecs.err || undefined,
+                    }
+                    : undefined,
+            afterSpecs:
+                machineType === "MECHANICAL"
+                    ? {
+                        rate: afterSpecs.rate || undefined,
+                        amp: afterSpecs.amp || undefined,
+                        err: afterSpecs.err || undefined,
+                    }
+                    : undefined,
+            lines:
+                movementStatus === "ISSUE"
+                    ? movementLines.map((line) => ({
+                        isConfirmed: Boolean(line.isConfirmed),
+                        action: line.action,
+                        execution: line.execution,
+                        vendorId: line.vendorId,
+                        partId: line.partId,
+                        cost: parseMoney(line.cost),
+                        note: line.note,
+                    }))
+                    : [],
         },
         appearance: {
             score: appearanceScore,
-            case: { score: caseScore, issues: caseAppearance.issues, manualDeduction: parseNumber(caseAppearance.manualDeduction), note: caseAppearance.note, proposal: { enabled: caseAppearance.proposal.enabled, action: caseAppearance.proposal.action, estimatedCost: parseMoney(caseAppearance.proposal.estimatedCost), execution: caseAppearance.proposal.execution, vendorId: caseAppearance.proposal.vendorId, note: caseAppearance.proposal.note, requiresApproval: false, approvalStatus: undefined } },
-            glass: { score: glassScore, issues: glassAppearance.issues, manualDeduction: parseNumber(glassAppearance.manualDeduction), note: glassAppearance.note, proposal: { enabled: glassAppearance.proposal.enabled, action: glassAppearance.proposal.action, estimatedCost: parseMoney(glassAppearance.proposal.estimatedCost), execution: glassAppearance.proposal.execution, vendorId: glassAppearance.proposal.vendorId, note: glassAppearance.proposal.note, requiresApproval: false, approvalStatus: undefined } },
-            dial: { score: dialScore, issues: dialAppearance.issues, manualDeduction: parseNumber(dialAppearance.manualDeduction), note: dialAppearance.note, proposal: { enabled: dialAppearance.proposal.enabled, action: dialAppearance.proposal.action, estimatedCost: parseMoney(dialAppearance.proposal.estimatedCost), execution: dialAppearance.proposal.execution, vendorId: dialAppearance.proposal.vendorId, note: dialAppearance.proposal.note, requiresApproval: false, approvalStatus: undefined } },
-            crown: { status: crownRepair.status, action: crownRepair.action, execution: crownRepair.execution, vendorId: crownRepair.vendorId, partId: crownRepair.partId, cost: parseMoney(crownRepair.cost), note: crownRepair.note },
+            case: {
+                score: caseScore,
+                issues: caseAppearance.issues,
+                manualDeduction: parseNumber(caseAppearance.manualDeduction),
+                note: caseAppearance.note,
+                proposal: {
+                    enabled: caseAppearance.proposal.enabled,
+                    isConfirmed: Boolean(caseAppearance.proposal.isConfirmed),
+                    action: caseAppearance.proposal.action,
+                    estimatedCost: parseMoney(caseAppearance.proposal.estimatedCost),
+                    execution: caseAppearance.proposal.execution,
+                    vendorId: caseAppearance.proposal.vendorId,
+                    note: caseAppearance.proposal.note,
+                    requiresApproval: false,
+                    approvalStatus: undefined,
+                },
+            },
+            glass: {
+                score: glassScore,
+                issues: glassAppearance.issues,
+                manualDeduction: parseNumber(glassAppearance.manualDeduction),
+                note: glassAppearance.note,
+                proposal: {
+                    enabled: glassAppearance.proposal.enabled,
+                    isConfirmed: Boolean(glassAppearance.proposal.isConfirmed),
+                    action: glassAppearance.proposal.action,
+                    estimatedCost: parseMoney(glassAppearance.proposal.estimatedCost),
+                    execution: glassAppearance.proposal.execution,
+                    vendorId: glassAppearance.proposal.vendorId,
+                    note: glassAppearance.proposal.note,
+                    requiresApproval: false,
+                    approvalStatus: undefined,
+                },
+            },
+            dial: {
+                score: dialScore,
+                issues: dialAppearance.issues,
+                manualDeduction: parseNumber(dialAppearance.manualDeduction),
+                note: dialAppearance.note,
+                proposal: {
+                    enabled: dialAppearance.proposal.enabled,
+                    isConfirmed: Boolean(dialAppearance.proposal.isConfirmed),
+                    action: dialAppearance.proposal.action,
+                    estimatedCost: parseMoney(dialAppearance.proposal.estimatedCost),
+                    execution: dialAppearance.proposal.execution,
+                    vendorId: dialAppearance.proposal.vendorId,
+                    note: dialAppearance.proposal.note,
+                    requiresApproval: false,
+                    approvalStatus: undefined,
+                },
+            },
+            crown: {
+                status: crownRepair.status,
+                isConfirmed: Boolean(crownRepair.isConfirmed),
+                action: crownRepair.action,
+                execution: crownRepair.execution,
+                vendorId: crownRepair.vendorId,
+                partId: crownRepair.partId,
+                cost: parseMoney(crownRepair.cost),
+                note: crownRepair.note,
+            },
         },
-        financialSummary: { movementCost, crownCost, cosmeticProposalCost, totalCost },
+        financialSummary: {
+            movementCost,
+            crownCost,
+            cosmeticProposalCost,
+            totalCost,
+        },
         conclusion,
     };
 }
@@ -1036,6 +1863,7 @@ async function saveTechnicalAssessment(payload: TechnicalAssessmentSubmitPayload
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
+
     if (!res.ok) {
         let message = "Lưu đánh giá kỹ thuật thất bại";
         try {
@@ -1044,68 +1872,249 @@ async function saveTechnicalAssessment(payload: TechnicalAssessmentSubmitPayload
         } catch { }
         throw new Error(message);
     }
+
     return res.json();
 }
 
-export default function TechnicalAssessmentModal({ open, serviceRequestId, onClose, onSaved, productName = "takeo kuchi méo pin mặt xanh", productSku = "-", productImage = null, movementSpecLabel = "-", initialSavedPayload = null, initialAssessment = null, initialIssues = [] }: TechnicalAssessmentModalProps) {
-    const [form, setForm] = React.useState<TechnicalAssessmentFormState>(createInitialFormState());
+export default function TechnicalAssessmentModal(props: TechnicalAssessmentModalProps) {
+    const {
+        open,
+        serviceRequestId,
+        onClose,
+        onSaved,
+        productName = "takeo kuchi méo pin mặt xanh",
+        productSku = "-",
+        productImage = null,
+        movementSpecLabel = "-",
+        initialSavedPayload,
+        initialAssessment,
+    } = props;
+
+    const initialIssues = React.useMemo(
+        () => props.initialIssues ?? [],
+        [props.initialIssues]
+    );
+    const inheritedMachineType = React.useMemo<MachineType>(
+        () => mapMovementSpecLabelToMachineType(movementSpecLabel),
+        [movementSpecLabel]
+    );
+    const [form, setForm] = React.useState<TechnicalAssessmentFormState>(
+        createInitialFormState(inheritedMachineType)
+    );
     const [saving, setSaving] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
     const [catalogs, setCatalogs] = React.useState<TechnicalCatalogs | null>(null);
     const [panelLoading, setPanelLoading] = React.useState(false);
+    const [panel, setPanel] = React.useState<TechnicalAssessmentPanelResponse | null>(
+        null
+    );
+
+    const assessment =
+        panel?.technicalAssessment ?? panel?.assessment ?? initialAssessment ?? null;
+    const hydratedIssues = panel?.technicalIssues ?? initialIssues ?? [];
+
+    const vendors = catalogs?.vendors ?? fallbackVendors;
+    const crownActions = catalogs?.crownActions ?? [];
+    const parts = catalogs?.parts ?? [];
 
     React.useEffect(() => {
         if (!open || !serviceRequestId) return;
-        setErrorMessage(null);
-        if (initialSavedPayload) {
-            setForm(hydrateFormFromSavedPayload(initialSavedPayload));
-            return;
-        }
-        setForm(createInitialFormState());
-    }, [open, serviceRequestId, initialSavedPayload]);
 
-    React.useEffect(() => {
-        if (!open || !serviceRequestId) return;
         let cancelled = false;
+
         async function loadPanel() {
             try {
                 setPanelLoading(true);
-                const res = await fetch(`/api/admin/service-requests/${serviceRequestId}/technical-panel`, { cache: "no-store" });
-                if (!res.ok) throw new Error("Load technical panel failed");
-                const json = await res.json();
-                const data = json?.data;
-                if (cancelled || !data) return;
-                setCatalogs(data.catalogs ?? null);
-            } catch (error) {
+                setErrorMessage(null);
+
+                const res = await fetch(
+                    `/api/admin/service-requests/${serviceRequestId}/technical-assessment`,
+                    { cache: "no-store" }
+                );
+
+                if (!res.ok) {
+                    throw new Error("Load technical assessment failed");
+                }
+
+                const json = await res.json().catch(() => null);
+                if (cancelled || !json) return;
+
+                const data = json?.data ?? json;
+
+                setPanel(data);
+                setCatalogs((data?.catalogs ?? null) as TechnicalCatalogs | null);
+
+                const nextAssessment =
+                    data?.technicalAssessment ?? data?.assessment ?? null;
+
+                if (nextAssessment?.payloadJson) {
+                    const hydrated = hydrateFormFromSavedPayload(nextAssessment.payloadJson, inheritedMachineType);
+                    setForm(applyIssuesIntoForm(hydrated, data?.technicalIssues ?? initialIssues));
+                    return;
+                }
+
+                if (initialSavedPayload) {
+                    const hydrated = hydrateFormFromSavedPayload(initialSavedPayload, inheritedMachineType);
+                    setForm(applyIssuesIntoForm(hydrated, data?.technicalIssues ?? initialIssues));
+                    return;
+                }
+
+                if (nextAssessment) {
+                    const base = createInitialFormState(inheritedMachineType);
+
+                    const next: TechnicalAssessmentFormState = {
+                        ...base,
+                        machineType: inheritedMachineType,
+                        movementStatus:
+                            nextAssessment.movementStatus === "ISSUE" ? "ISSUE" : "GOOD",
+                        showBeforeSpecs:
+                            nextAssessment.preRate != null ||
+                            nextAssessment.preAmplitude != null ||
+                            nextAssessment.preBeatError != null,
+                        beforeSpecs: {
+                            rate: nextAssessment.preRate != null ? String(nextAssessment.preRate) : "",
+                            amp: nextAssessment.preAmplitude != null ? String(nextAssessment.preAmplitude) : "",
+                            err: nextAssessment.preBeatError != null ? String(nextAssessment.preBeatError) : "",
+                        },
+                        afterSpecs: {
+                            rate: nextAssessment.postRate != null ? String(nextAssessment.postRate) : "",
+                            amp: nextAssessment.postAmplitude != null ? String(nextAssessment.postAmplitude) : "",
+                            err: nextAssessment.postBeatError != null ? String(nextAssessment.postBeatError) : "",
+                        },
+                        conclusion: nextAssessment.conclusion ?? "",
+                        hasEditedConclusion: Boolean(nextAssessment.conclusion),
+                        caseAppearance: {
+                            ...base.caseAppearance,
+                            proposal: { ...base.caseAppearance.proposal },
+                        },
+                        glassAppearance: {
+                            ...base.glassAppearance,
+                            proposal: { ...base.glassAppearance.proposal },
+                        },
+                        dialAppearance: {
+                            ...base.dialAppearance,
+                            proposal: { ...base.dialAppearance.proposal },
+                        },
+                        crownRepair: {
+                            ...base.crownRepair,
+                            status: nextAssessment.crownStatus === "ISSUE" ? "ISSUE" : "GOOD",
+                        },
+                    };
+
+                    setForm(applyIssuesIntoForm(next, data?.technicalIssues ?? []));
+                    return;
+                }
+
+                setForm(createInitialFormState(inheritedMachineType));
+            } catch (error: any) {
                 console.error(error);
-                if (!cancelled) setCatalogs(null);
+                if (!cancelled) {
+                    setCatalogs(null);
+                    setPanel(null);
+                    setErrorMessage(
+                        error?.message || "Không thể tải dữ liệu phiếu kỹ thuật"
+                    );
+                }
             } finally {
-                if (!cancelled) setPanelLoading(false);
+                if (!cancelled) {
+                    setPanelLoading(false);
+                }
             }
         }
+
         loadPanel();
-        return () => { cancelled = true; };
+
+        return () => {
+            cancelled = true;
+        };
     }, [open, serviceRequestId]);
 
-    const CASE_ISSUES = React.useMemo(() => (catalogs?.appearanceIssues?.CASE ?? []).map((x) => ({ code: x.code as AppearanceIssueCode, label: x.label, deduction: x.deductionScore })), [catalogs]);
-    const GLASS_ISSUES = React.useMemo(() => (catalogs?.appearanceIssues?.CRYSTAL ?? []).map((x) => ({ code: x.code as AppearanceIssueCode, label: x.label, deduction: x.deductionScore })), [catalogs]);
-    const DIAL_ISSUES = React.useMemo(() => (catalogs?.appearanceIssues?.DIAL ?? []).map((x) => ({ code: x.code as AppearanceIssueCode, label: x.label, deduction: x.deductionScore })), [catalogs]);
+    const CASE_ISSUES = React.useMemo(
+        () =>
+            (catalogs?.appearanceIssues?.CASE ?? []).map((x) => ({
+                code: x.code as AppearanceIssueCode,
+                label: x.label,
+                deduction: x.deductionScore,
+            })),
+        [catalogs]
+    );
 
-    const vendors = catalogs?.vendors ?? fallbackVendors;
-    const movementActions = catalogs?.movementActions ?? [];
-    const crownActions = catalogs?.crownActions ?? [];
-    const parts = catalogs?.parts ?? [];
+    const GLASS_ISSUES = React.useMemo(
+        () =>
+            (catalogs?.appearanceIssues?.CRYSTAL ?? []).map((x) => ({
+                code: x.code as AppearanceIssueCode,
+                label: x.label,
+                deduction: x.deductionScore,
+            })),
+        [catalogs]
+    );
+
+    const DIAL_ISSUES = React.useMemo(
+        () =>
+            (catalogs?.appearanceIssues?.DIAL ?? []).map((x) => ({
+                code: x.code as AppearanceIssueCode,
+                label: x.label,
+                deduction: x.deductionScore,
+            })),
+        [catalogs]
+    );
 
     const caseScore = calculateAppearanceScore(form.caseAppearance, CASE_ISSUES);
     const glassScore = calculateAppearanceScore(form.glassAppearance, GLASS_ISSUES);
     const dialScore = calculateAppearanceScore(form.dialAppearance, DIAL_ISSUES);
     const appearanceScore = Math.round(caseScore * 0.4 + glassScore * 0.2 + dialScore * 0.4);
-    const movementCost = form.movementLines.reduce((sum, line) => sum + parseMoney(line.cost), 0);
+    const movementCost = form.movementLines.reduce(
+        (sum, line) => sum + parseMoney(line.cost),
+        0
+    );
     const crownCost = parseMoney(form.crownRepair.cost);
-    const cosmeticProposalCost = parseMoney(form.caseAppearance.proposal.enabled ? form.caseAppearance.proposal.estimatedCost : "") + parseMoney(form.glassAppearance.proposal.enabled ? form.glassAppearance.proposal.estimatedCost : "") + parseMoney(form.dialAppearance.proposal.enabled ? form.dialAppearance.proposal.estimatedCost : "");
+    const cosmeticProposalCost =
+        parseMoney(
+            form.caseAppearance.proposal.enabled
+                ? form.caseAppearance.proposal.estimatedCost
+                : ""
+        ) +
+        parseMoney(
+            form.glassAppearance.proposal.enabled
+                ? form.glassAppearance.proposal.estimatedCost
+                : ""
+        ) +
+        parseMoney(
+            form.dialAppearance.proposal.enabled
+                ? form.dialAppearance.proposal.estimatedCost
+                : ""
+        );
     const totalCost = movementCost + crownCost + cosmeticProposalCost;
 
-    const autoConclusion = React.useMemo(() => generateTechnicalConclusion({ movementStatus: form.movementStatus, machineType: form.machineType, movementLines: form.movementLines, appearanceScore, caseAppearance: form.caseAppearance, glassAppearance: form.glassAppearance, dialAppearance: form.dialAppearance, crownRepair: form.crownRepair, caseDefs: CASE_ISSUES, glassDefs: GLASS_ISSUES, dialDefs: DIAL_ISSUES }), [form.movementStatus, form.machineType, form.movementLines, appearanceScore, form.caseAppearance, form.glassAppearance, form.dialAppearance, form.crownRepair, CASE_ISSUES, GLASS_ISSUES, DIAL_ISSUES]);
+    const autoConclusion = React.useMemo(
+        () =>
+            generateTechnicalConclusion({
+                movementStatus: form.movementStatus,
+                machineType: form.machineType,
+                movementLines: form.movementLines,
+                appearanceScore,
+                caseAppearance: form.caseAppearance,
+                glassAppearance: form.glassAppearance,
+                dialAppearance: form.dialAppearance,
+                crownRepair: form.crownRepair,
+                caseDefs: CASE_ISSUES,
+                glassDefs: GLASS_ISSUES,
+                dialDefs: DIAL_ISSUES,
+            }),
+        [
+            form.movementStatus,
+            form.machineType,
+            form.movementLines,
+            appearanceScore,
+            form.caseAppearance,
+            form.glassAppearance,
+            form.dialAppearance,
+            form.crownRepair,
+            CASE_ISSUES,
+            GLASS_ISSUES,
+            DIAL_ISSUES,
+        ]
+    );
 
     React.useEffect(() => {
         if (!form.hasEditedConclusion) {
@@ -1113,27 +2122,89 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
         }
     }, [autoConclusion, form.hasEditedConclusion]);
 
-    function addMovementLine() { setForm((prev) => ({ ...prev, movementLines: [...prev.movementLines, { id: makeId(), execution: "INHOUSE" }] })); }
-    function updateMovementLine(id: string, patch: Partial<MovementLine>) { setForm((prev) => ({ ...prev, movementLines: prev.movementLines.map((line) => line.id === id ? { ...line, ...patch } : line) })); }
-    function removeMovementLine(id: string) { setForm((prev) => ({ ...prev, movementLines: prev.movementLines.filter((line) => line.id !== id) })); }
+    function addMovementLine() {
+        setForm((prev) => ({
+            ...prev,
+            movementLines: [...prev.movementLines, { id: makeId(), execution: "INHOUSE", isConfirmed: false }],
+        }));
+    }
+
+    function updateMovementLine(id: string, patch: Partial<MovementLine>) {
+        setForm((prev) => ({
+            ...prev,
+            movementLines: prev.movementLines.map((line) =>
+                line.id === id ? { ...line, ...patch } : line
+            ),
+        }));
+    }
+
+    function removeMovementLine(id: string) {
+        setForm((prev) => ({
+            ...prev,
+            movementLines: prev.movementLines.filter((line) => line.id !== id),
+        }));
+    }
+
+    async function reloadPanel() {
+        if (!serviceRequestId) return;
+
+        const res = await fetch(
+            `/api/admin/service-requests/${serviceRequestId}/technical-assessment`,
+            {
+                cache: "no-store",
+            }
+        );
+        const json = await res.json().catch(() => null);
+        if (json) {
+            const data = json?.data ?? json;
+            setPanel(data);
+            setCatalogs((data?.catalogs ?? null) as TechnicalCatalogs | null);
+        }
+    }
 
     async function handleSave() {
-        if (!serviceRequestId) return setErrorMessage("Thiếu service request id");
+        if (!serviceRequestId) {
+            setErrorMessage("Thiếu service request id");
+            return;
+        }
+
         try {
-            setSaving(true); setErrorMessage(null);
-            const payload = buildSubmitPayload({ serviceRequestId, productName, productSku, productImage, movementSpecLabel, machineType: form.machineType, movementStatus: form.movementStatus, showBeforeSpecs: form.showBeforeSpecs, beforeSpecs: form.beforeSpecs, afterSpecs: form.afterSpecs, movementLines: form.movementLines, caseAppearance: form.caseAppearance, glassAppearance: form.glassAppearance, dialAppearance: form.dialAppearance, crownRepair: form.crownRepair, conclusion: form.conclusion, caseDefs: CASE_ISSUES, glassDefs: GLASS_ISSUES, dialDefs: DIAL_ISSUES });
-            await saveTechnicalAssessment({ ...payload, payloadJson: payload } as any);
+            setSaving(true);
+            setErrorMessage(null);
+
+            const payload = buildSubmitPayload({
+                serviceRequestId,
+                productName,
+                productSku,
+                productImage,
+                movementSpecLabel,
+                machineType: form.machineType,
+                movementStatus: form.movementStatus,
+                showBeforeSpecs: form.showBeforeSpecs,
+                beforeSpecs: form.beforeSpecs,
+                afterSpecs: form.afterSpecs,
+                movementLines: form.movementLines,
+                caseAppearance: form.caseAppearance,
+                glassAppearance: form.glassAppearance,
+                dialAppearance: form.dialAppearance,
+                crownRepair: form.crownRepair,
+                conclusion: form.conclusion,
+                caseDefs: CASE_ISSUES,
+                glassDefs: GLASS_ISSUES,
+                dialDefs: DIAL_ISSUES,
+            });
+
+            await saveTechnicalAssessment(payload);
+            await reloadPanel();
             await onSaved();
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Lưu thất bại");
+            setErrorMessage(
+                error instanceof Error ? error.message : "Lưu thất bại"
+            );
         } finally {
             setSaving(false);
         }
     }
-
-    const isMechanical = form.machineType === "MECHANICAL";
-    const needsRepair = form.movementStatus === "ISSUE";
-    const imageSrc = productImage ? `/api/media/sign?key=${encodeURIComponent(productImage)}` : null;
 
     if (!open) return null;
 
@@ -1148,7 +2219,9 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                             Đánh giá kỹ thuật
                         </h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            {serviceRequestId ? `Service Request: ${serviceRequestId}` : "Chưa có mã phiếu"}
+                            {serviceRequestId
+                                ? `Service Request: ${serviceRequestId}`
+                                : "Chưa có mã phiếu"}
                         </p>
                     </div>
 
@@ -1184,8 +2257,12 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                     </div>
 
                                     <div className="space-y-1">
-                                        <div className="text-lg font-semibold text-slate-900">{productName}</div>
-                                        <div className="text-sm text-slate-500">SKU: {productSku || "-"}</div>
+                                        <div className="text-lg font-semibold text-slate-900">
+                                            {productName}
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            SKU: {productSku || "-"}
+                                        </div>
                                         <div className="text-sm text-slate-500">
                                             Bộ máy từ spec: {movementSpecLabel || "-"}
                                         </div>
@@ -1200,6 +2277,12 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                         </div>
                     </section>
 
+                    {panelLoading ? (
+                        <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+                            Đang tải dữ liệu phiếu kỹ thuật...
+                        </section>
+                    ) : null}
+
                     <SectionCard
                         title="Đánh giá máy"
                         icon={<Wrench className="h-5 w-5" />}
@@ -1207,18 +2290,12 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                     >
                         <div className="grid gap-4 md:grid-cols-[260px_1fr]">
                             <Field label="Loại máy">
-                                <SelectInput
-                                    value={form.machineType}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            machineType: e.target.value as MachineType,
-                                        }))
-                                    }
-                                >
-                                    <option value="MECHANICAL">Máy cơ</option>
-                                    <option value="QUARTZ">Máy pin</option>
-                                </SelectInput>
+                                <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
+                                    {form.machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"}
+                                    <span className="ml-2 text-xs font-normal text-slate-500">
+                                        (kế thừa từ spec sản phẩm)
+                                    </span>
+                                </div>
                             </Field>
 
                             <Field label="Tình trạng máy">
@@ -1247,7 +2324,8 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                             Máy chạy ổn, không cần can thiệp kỹ thuật
                                         </div>
                                         <div className="mt-1 text-sm text-slate-500">
-                                            Khi chọn chạy tốt thì ẩn toàn bộ thông số trước/sau và block xử lý.
+                                            Khi chọn chạy tốt thì ẩn toàn bộ thông số trước/sau
+                                            và block xử lý.
                                         </div>
                                     </div>
                                 </div>
@@ -1260,9 +2338,12 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                             <AlertTriangle className="h-5 w-5 text-amber-600" />
                                         </div>
                                         <div>
-                                            <div className="font-medium text-amber-800">Máy cần xử lý kỹ thuật</div>
+                                            <div className="font-medium text-amber-800">
+                                                Máy cần xử lý kỹ thuật
+                                            </div>
                                             <div className="mt-1 text-sm text-amber-700/90">
-                                                Chỉ bung các phần chuyên sâu khi thực sự có vấn đề.
+                                                Chỉ bung các phần chuyên sâu khi thực sự có vấn
+                                                đề.
                                             </div>
                                         </div>
                                     </div>
@@ -1271,7 +2352,9 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
                                     <div className="mb-4 flex items-center justify-between">
                                         <div>
-                                            <div className="text-sm font-semibold text-slate-900">Xử lý máy</div>
+                                            <div className="text-sm font-semibold text-slate-900">
+                                                Xử lý máy
+                                            </div>
                                             <div className="text-sm text-slate-500">
                                                 Mỗi dòng là một nghiệp vụ kỹ thuật
                                             </div>
@@ -1286,7 +2369,8 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                     <div className="space-y-4">
                                         {form.movementLines.map((line, index) => {
                                             const isVendor = line.execution === "VENDOR";
-                                            const isReplacePart = line.action === "REPLACE_PART";
+                                            const isReplacePart =
+                                                line.action === "REPLACE_PART";
 
                                             return (
                                                 <div
@@ -1303,7 +2387,9 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                 type="button"
                                                                 variant="ghost"
                                                                 className="px-2 text-red-500 hover:bg-red-50 hover:text-red-600"
-                                                                onClick={() => removeMovementLine(line.id)}
+                                                                onClick={() =>
+                                                                    removeMovementLine(line.id)
+                                                                }
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -1316,9 +2402,11 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                 value={line.action ?? ""}
                                                                 onChange={(e) =>
                                                                     updateMovementLine(line.id, {
-                                                                        action: e.target.value as MovementAction,
+                                                                        action: e.target
+                                                                            .value as MovementAction,
                                                                         partId:
-                                                                            e.target.value === "REPLACE_PART"
+                                                                            e.target.value ===
+                                                                                "REPLACE_PART"
                                                                                 ? line.partId
                                                                                 : undefined,
                                                                     })
@@ -1327,20 +2415,37 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                 <option value="">Chọn xử lý</option>
                                                                 {form.machineType === "MECHANICAL" ? (
                                                                     <>
-                                                                        <option value="SERVICE">Lau dầu</option>
-                                                                        <option value="REPLACE_PART">Thay linh kiện</option>
-                                                                        <option value="REGULATE">
-                                                                            Nắn chỉnh dây tóc / chỉnh sai số
+                                                                        <option value="SERVICE">
+                                                                            Lau dầu
                                                                         </option>
-                                                                        <option value="WATERPROOF">Chống nước</option>
-                                                                        <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                                                                        <option value="REPLACE_PART">
+                                                                            Thay linh kiện
+                                                                        </option>
+                                                                        <option value="REGULATE">
+                                                                            Nắn chỉnh dây tóc / chỉnh
+                                                                            sai số
+                                                                        </option>
+                                                                        <option value="WATERPROOF">
+                                                                            Chống nước
+                                                                        </option>
+                                                                        <option value="REPLACE_MOVEMENT">
+                                                                            Thay máy mới
+                                                                        </option>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <option value="BATTERY_CHANGE">Thay pin</option>
-                                                                        <option value="REPLACE_PART">Thay linh kiện</option>
-                                                                        <option value="WATERPROOF">Chống nước</option>
-                                                                        <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                                                                        <option value="BATTERY_CHANGE">
+                                                                            Thay pin
+                                                                        </option>
+                                                                        <option value="REPLACE_PART">
+                                                                            Thay linh kiện
+                                                                        </option>
+                                                                        <option value="WATERPROOF">
+                                                                            Chống nước
+                                                                        </option>
+                                                                        <option value="REPLACE_MOVEMENT">
+                                                                            Thay máy mới
+                                                                        </option>
                                                                     </>
                                                                 )}
                                                             </SelectInput>
@@ -1351,9 +2456,11 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                 value={line.execution ?? ""}
                                                                 onChange={(e) =>
                                                                     updateMovementLine(line.id, {
-                                                                        execution: e.target.value as ExecutionType,
+                                                                        execution: e.target
+                                                                            .value as ExecutionType,
                                                                         vendorId:
-                                                                            e.target.value === "VENDOR"
+                                                                            e.target.value ===
+                                                                                "VENDOR"
                                                                                 ? line.vendorId
                                                                                 : undefined,
                                                                     })
@@ -1390,7 +2497,10 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                 >
                                                                     <option value="">Chọn vendor</option>
                                                                     {vendors.map((vendor) => (
-                                                                        <option key={vendor.id} value={vendor.id}>
+                                                                        <option
+                                                                            key={vendor.id}
+                                                                            value={vendor.id}
+                                                                        >
                                                                             {vendor.name}
                                                                         </option>
                                                                     ))}
@@ -1408,9 +2518,14 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                                                         })
                                                                     }
                                                                 >
-                                                                    <option value="">Chọn linh kiện</option>
+                                                                    <option value="">
+                                                                        Chọn linh kiện
+                                                                    </option>
                                                                     {parts.map((part) => (
-                                                                        <option key={part.id} value={part.id}>
+                                                                        <option
+                                                                            key={part.id}
+                                                                            value={part.id}
+                                                                        >
                                                                             {part.name}
                                                                         </option>
                                                                     ))}
@@ -1455,7 +2570,8 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                             onClick={() =>
                                                 setForm((prev) => ({
                                                     ...prev,
-                                                    showBeforeSpecs: !prev.showBeforeSpecs,
+                                                    showBeforeSpecs:
+                                                        !prev.showBeforeSpecs,
                                                 }))
                                             }
                                         >
@@ -1629,6 +2745,9 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                                     crownRepair: next,
                                 }))
                             }
+                            vendors={vendors}
+                            crownActions={crownActions}
+                            parts={parts}
                         />
                     </SectionCard>
 
@@ -1729,14 +2848,18 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="flex flex-wrap items-center gap-2">
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                                    <span className="mr-2 text-slate-500">Điểm ngoại hình</span>
+                                    <span className="mr-2 text-slate-500">
+                                        Điểm ngoại hình
+                                    </span>
                                     <span className="text-base font-semibold text-slate-950">
                                         {appearanceScore}/100
                                     </span>
                                 </div>
 
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                                    <span className="mr-2 text-slate-500">Tổng chi phí xử lý</span>
+                                    <span className="mr-2 text-slate-500">
+                                        Tổng chi phí xử lý
+                                    </span>
                                     <span className="text-base font-semibold text-slate-950">
                                         {formatCurrency(totalCost)}
                                     </span>
@@ -1744,10 +2867,19 @@ export default function TechnicalAssessmentModal({ open, serviceRequestId, onClo
                             </div>
 
                             <div className="flex items-center justify-end gap-3">
-                                <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={onClose}
+                                    disabled={saving}
+                                >
                                     Hủy
                                 </Button>
-                                <Button type="button" onClick={handleSave} disabled={saving}>
+                                <Button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                >
                                     {saving ? "Đang lưu..." : "Lưu đánh giá kỹ thuật"}
                                 </Button>
                             </div>

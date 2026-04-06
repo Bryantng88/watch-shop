@@ -11,7 +11,8 @@ import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.sche
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumTechnicalIssueExecutionStatusFilterObjectSchema as EnumTechnicalIssueExecutionStatusFilterObjectSchema } from './EnumTechnicalIssueExecutionStatusFilter.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
-import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema'
+import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema'
 
 const technicalissuescalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalIssueScalarWhereInputObjectSchema), z.lazy(() => TechnicalIssueScalarWhereInputObjectSchema).array()]).optional(),
@@ -42,7 +43,11 @@ const technicalissuescalarwhereinputSchema = z.object({
   technicianId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   summary: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   resolutionNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  completedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  completedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  isConfirmed: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  confirmedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  confirmedById: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const TechnicalIssueScalarWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueScalarWhereInput> = technicalissuescalarwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueScalarWhereInput>;
 export const TechnicalIssueScalarWhereInputObjectZodSchema = technicalissuescalarwhereinputSchema;

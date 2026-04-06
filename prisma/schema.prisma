@@ -790,6 +790,10 @@ model TechnicalIssue {
   summary                 String?
   resolutionNote          String?
   completedByNameSnap     String?
+  isConfirmed             Boolean                       @default(false)
+  confirmedAt             DateTime?                     @db.Timestamp(6)
+  confirmedById           String?
+  confirmedByNameSnap     String?
   MaintenanceRecord       MaintenanceRecord[]
   TechnicalAssessment     TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   MechanicalPartCatalog   MechanicalPartCatalog?        @relation(fields: [mechanicalPartCatalogId], references: [id])
@@ -805,6 +809,7 @@ model TechnicalIssue {
   @@index([serviceRequestId])
   @@index([technicianId])
   @@index([vendorId])
+  @@index([isConfirmed])
 }
 
 model MechanicalPartCatalog {

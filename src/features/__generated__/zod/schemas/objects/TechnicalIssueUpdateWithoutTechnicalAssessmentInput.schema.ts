@@ -12,6 +12,7 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
+import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInput.schema';
 import { MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInput.schema';
@@ -40,6 +41,10 @@ const makeSchema = () => z.object({
   summary: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   resolutionNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   completedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  isConfirmed: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  confirmedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  confirmedById: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   MechanicalPartCatalog: z.lazy(() => MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
 import { prisma } from "@/server/db/client";
 import * as adminProductService from "@/app/(admin)/admin/products/_server/product.service";
 import * as prodRepo from "@/app/(admin)/admin/products/_server/product.repo";
@@ -73,13 +74,11 @@ const PatchBodySchema = z.object({
             thickness: z.union([z.string(), z.number()]).nullish().optional(),
             strap: z.string().nullish().optional(),
             glass: z.string().nullish().optional(),
+            dialColor: z.string().nullish().optional(),
+            dialCondition: z.string().nullish().optional(),
             boxIncluded: z.boolean().optional(),
             bookletIncluded: z.boolean().optional(),
             cardIncluded: z.boolean().optional(),
-            hasStrap: z.boolean().optional(),
-            isServiced: z.boolean().optional(),
-            hasClasp: z.boolean().optional(),
-            isSpa: z.boolean().optional(),
             complicationIds: z.array(z.string()).optional(),
         })
         .partial()
@@ -114,7 +113,6 @@ function toNullableNumber(value: unknown) {
 
 function parseStoredStrapAttachment(raw: string | null | undefined): StoredStrapAttachment | null {
     if (!raw || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
-
     try {
         const parsed = JSON.parse(raw.slice(STRAP_ATTACHMENT_PREFIX.length));
         if (!parsed || typeof parsed !== "object") return null;
@@ -137,9 +135,7 @@ async function syncInventoryStrapAttachment(tx: any, productId: string, patch: z
     const previousStrapCost = toNullableNumber(existingAttachment?.costPrice) ?? 0;
     const acquisitionBaseCost = toNullableNumber(latestVariant?.acquisitionItem?.[0]?.unitCost);
     const derivedBaseCost =
-        currentCostPrice != null
-            ? Math.max(currentCostPrice - previousStrapCost, 0)
-            : acquisitionBaseCost;
+        currentCostPrice != null ? Math.max(currentCostPrice - previousStrapCost, 0) : acquisitionBaseCost;
 
     let resolvedCostPrice = patch.variant?.costPrice;
     let resolvedVariantName = patch.variant?.name;
@@ -257,140 +253,104 @@ async function syncInventoryStrapAttachment(tx: any, productId: string, patch: z
     return {
         variantPatch: {
             ...(patch.variant ?? {}),
-            name: resolvedVariantName,
-            costPrice: resolvedCostPrice,
-            id: patch.variant?.id ?? latestVariant?.id ?? undefined,
+            ...(resolvedVariantName !== undefined ? { name: resolvedVariantName } : {}),
+            ...(resolvedCostPrice !== undefined ? { costPrice: resolvedCostPrice } : {}),
         },
     };
-}
-
-export async function GET(_req: NextRequest, ctx: Ctx) {
-    try {
-        const { id } = await ctx.params;
-        const data = await adminProductService.detail(id);
-
-        if (!data) {
-            return NextResponse.json({ error: "Not found" }, { status: 404 });
-        }
-        return NextResponse.json(data, { status: 200 });
-    } catch (err: any) {
-        return NextResponse.json({ error: err?.message ?? "Failed" }, { status: 400 });
-    }
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
     const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
     if (auth instanceof Response) return auth;
 
+    const canEditPricing = !('error' in auth) && !!auth.user?.permissions?.includes(PERMISSIONS.PRODUCT_PRICE_EDIT);
+
     try {
         const { id } = await ctx.params;
-        const body = await req.json();
-        const patch = PatchBodySchema.parse(body);
-        const current = await prisma.product.findUnique({ where: { id }, select: { status: true } });
-        const nextStatus = patch.product?.status;
-        const shouldArchiveAfterSave = nextStatus === "SOLD" && current?.status !== "SOLD";
+        const raw = await req.json();
+        const body = PatchBodySchema.parse(raw ?? {});
 
-        const normalizedImages = patch.images?.map((img) => ({
-            ...img,
-            fileKey: normalizeKey(img.fileKey),
-        }));
-
-        const updated = await prisma.$transaction(async (tx) => {
-            if (hasKeys(patch.product)) {
-                const product = patch.product!;
-                const data: any = {};
-
-                if (product.title !== undefined) data.title = product.title;
-                if (product.description !== undefined) data.description = product.description || null;
-                if (product.status !== undefined) data.status = product.status as any;
-                if (product.type !== undefined) data.type = product.type as any;
-                if (product.primaryImageUrl !== undefined) {
-                    data.primaryImageUrl = product.primaryImageUrl
-                        ? normalizeKey(product.primaryImageUrl)
-                        : null;
-                }
-                if (product.seoDescription !== undefined) data.seoDescription = product.seoDescription || null;
-                if (product.tag !== undefined) data.tag = product.tag || null;
-                if (product.brandId !== undefined) {
-                    data.brand = product.brandId ? { connect: { id: product.brandId } } : { disconnect: true };
-                }
-                if (product.vendorId !== undefined) {
-                    data.vendor = product.vendorId ? { connect: { id: product.vendorId } } : { disconnect: true };
-                }
-                if (product.categoryId !== undefined) {
-                    data.ProductCategory = product.categoryId
-                        ? { connect: { id: product.categoryId } }
-                        : { disconnect: true };
-                }
-
-                if (Object.keys(data).length) {
-                    await prodRepo.updateProduct(tx, id, data);
-                }
-            }
-
-            if (normalizedImages !== undefined) {
-                await prodRepo.replaceProductImages(tx, id, normalizedImages);
-            }
-
-            if (hasKeys(patch.watchSpec)) {
-                const watchSpec = patch.watchSpec!;
-                const { complicationIds, ...watchSpecFields } = watchSpec;
-                await prodRepo.upsertWatchSpecForAdmin(tx, id, {
-                    watchSpec: watchSpecFields,
-                    complicationIds,
-                });
-            }
-
-            const hasLegacyVariantFields = patch.minPrice !== undefined || patch.salePrice !== undefined;
-            const hasAnyVariantChange = hasKeys(patch.variant) || hasLegacyVariantFields || patch.strapAttachment !== undefined;
-
-            if (hasAnyVariantChange) {
-                const synced = await syncInventoryStrapAttachment(tx, id, patch);
-                const variant = synced.variantPatch ?? patch.variant ?? {};
-
-                await prodRepo.upsertPrimaryVariantForAdmin(tx, id, {
-                    id: variant.id,
-                    name: variant.name ?? undefined,
-                    price: variant.price ?? patch.minPrice ?? undefined,
-                    salePrice: variant.salePrice ?? patch.salePrice ?? undefined,
-                    costPrice: variant.costPrice ?? undefined,
-                    stockQty: variant.stockQty ?? undefined,
-                    availabilityStatus: variant.availabilityStatus as any,
-                });
-            }
-
-            return { success: true };
-        });
-
-        let imageArchive: any = null;
-        let imageArchiveError: string | null = null;
-
-        if (shouldArchiveAfterSave) {
-            try {
-                imageArchive = await archiveProductImagesForSold(id);
-            } catch (archiveErr: any) {
-                console.error("archiveProductImagesForSold failed:", archiveErr);
-                imageArchiveError = archiveErr?.message ?? "Archive ảnh thất bại";
-            }
+        const existing = await prodRepo.getAdminProductDetail(prisma, id);
+        if (!existing) {
+            return NextResponse.json({ error: "Không tìm thấy sản phẩm." }, { status: 404 });
         }
 
-        return NextResponse.json({ ...updated, imageArchive, imageArchiveError }, { status: 200 });
-    } catch (err: any) {
-        console.error("PATCH /api/admin/products/:id failed:", err);
-        const message = err?.issues ? JSON.stringify(err.issues) : err?.message ?? "Unexpected error";
+        const lockedFieldWarnings: string[] = [];
+
+        // Hard lock source-of-truth fields from Acquisition.
+        const incomingProduct = body.product ?? {};
+        if (incomingProduct.vendorId !== undefined) lockedFieldWarnings.push("vendorId");
+        if (incomingProduct.type !== undefined) lockedFieldWarnings.push("type");
+        if (incomingProduct.status !== undefined) lockedFieldWarnings.push("status");
+
+        const productPatch = {
+            title: incomingProduct.title,
+            brandId: incomingProduct.brandId,
+            categoryId: incomingProduct.categoryId,
+            description: incomingProduct.description,
+            primaryImageUrl: incomingProduct.primaryImageUrl,
+            seoDescription: incomingProduct.seoDescription,
+            tag: incomingProduct.tag,
+            // vendorId / type / status intentionally ignored
+        };
+
+        const watchSpecPatch = {
+            ...(body.watchSpec ?? {}),
+            year: body.watchSpec?.year != null && body.watchSpec.year !== "" ? String(body.watchSpec.year) : body.watchSpec?.year,
+            goldKarat: toNullableNumber(body.watchSpec?.goldKarat),
+            length: toNullableNumber(body.watchSpec?.length),
+            width: toNullableNumber(body.watchSpec?.width),
+            thickness: toNullableNumber(body.watchSpec?.thickness),
+            complicationIds: body.watchSpec?.complicationIds ?? [],
+        };
+
+        const imagePatch = (body.images ?? []).map((img, index) => ({
+            fileKey: normalizeKey(img.fileKey),
+            alt: img.alt ?? null,
+            sortOrder: img.sortOrder ?? index,
+        }));
+
+        const strapSync = await prisma.$transaction(async (tx) => syncInventoryStrapAttachment(tx, id, body));
+
+        const variantPatchBase = {
+            ...(strapSync.variantPatch ?? {}),
+            ...(body.variant ?? {}),
+        };
+
+        const variantPatch = {
+            id: body.variant?.id,
+            name: variantPatchBase.name ?? undefined,
+            price: canEditPricing ? toNullableNumber(body.salePrice ?? body.variant?.price) : undefined,
+            salePrice: canEditPricing ? toNullableNumber(body.variant?.salePrice) : undefined,
+            costPrice: canEditPricing ? toNullableNumber(variantPatchBase.costPrice) : undefined,
+            stockQty: body.variant?.stockQty,
+            availabilityStatus: body.variant?.availabilityStatus,
+        };
+
+        const payload = {
+            product: hasKeys(productPatch) ? productPatch : undefined,
+            watchSpec: hasKeys(watchSpecPatch) ? watchSpecPatch : undefined,
+            variant: hasKeys(variantPatch) ? variantPatch : undefined,
+            images: imagePatch,
+            minPrice: canEditPricing ? toNullableNumber(body.minPrice) : undefined,
+        };
+
+        const updated = await adminProductService.update(id, payload as any);
+
+        if (existing?.status !== updated?.status && updated?.status === "SOLD") {
+            await archiveProductImagesForSold(id);
+        }
+
+        return NextResponse.json({
+            ok: true,
+            data: updated,
+            lockedFieldWarnings,
+            meta: {
+                pricingEditable: canEditPricing,
+            },
+        });
+    } catch (error: any) {
+        const message = error?.message ?? "Cập nhật sản phẩm thất bại.";
         return NextResponse.json({ error: message }, { status: 400 });
-    }
-}
-
-export async function DELETE(_req: NextRequest, ctx: Ctx) {
-    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_DELETE);
-    if (auth instanceof Response) return auth;
-
-    try {
-        const { id } = await ctx.params;
-        const result = await adminProductService.remove(id);
-        return NextResponse.json(result, { status: 200 });
-    } catch (err: any) {
-        return NextResponse.json({ error: err?.message ?? "Failed to delete" }, { status: 400 });
     }
 }

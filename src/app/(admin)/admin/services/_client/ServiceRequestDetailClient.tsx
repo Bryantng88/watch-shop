@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
 
 function fmtDT(s?: string | null) {
     if (!s) return "-";
@@ -11,61 +11,57 @@ function fmtDT(s?: string | null) {
     return d.toLocaleString("vi-VN");
 }
 
-function AssessmentStatusBadge({ status }: { status?: string | null }) {
-    const s = String(status || "DRAFT").toUpperCase();
-    const cls =
-        s === "COMPLETED"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-            : s === "IN_PROGRESS"
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-slate-200 bg-slate-50 text-slate-700";
+function MiniCard({
+    label,
+    value,
+    tone = "slate",
+}: {
+    label: string;
+    value: React.ReactNode;
+    tone?: "slate" | "amber" | "sky" | "emerald";
+}) {
+    const tones: Record<string, string> = {
+        slate: "border-slate-200 bg-slate-50 text-slate-900",
+        amber: "border-amber-200 bg-amber-50 text-amber-900",
+        sky: "border-sky-200 bg-sky-50 text-sky-900",
+        emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    };
 
     return (
-        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${cls}`}>
-            {s}
-        </span>
+        <div className={`rounded-xl border px-4 py-3 ${tones[tone]}`}>
+            <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
+            <div className="mt-1 text-lg font-semibold">{value}</div>
+        </div>
     );
 }
 
 export default function ServiceRequestDetailClient({ detail }: { detail: any }) {
     const router = useRouter();
+    const [openTechnical, setOpenTechnical] = React.useState(false);
+
     const sr = detail.serviceRequest;
-    const assessment = detail.assessment ?? null;
-    const issueCount = detail.stats?.issueCount ?? 0;
-    const openIssueCount = detail.stats?.openIssueCount ?? 0;
+    const technical = detail.technicalSummary ?? {
+        assessmentCount: 0,
+        issueCount: 0,
+        openIssueCount: 0,
+        activeAssessment: null,
+    };
 
     const imageSrc = sr.primaryImageUrl
         ? `/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`
         : null;
 
-    async function handleOpenAssessment() {
-        const res = await fetch(`/api/admin/service-requests/${sr.id}/open-assessment`, {
-            method: "POST",
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            alert(json?.error || "Không thể mở phiếu kỹ thuật");
-            return;
-        }
-
-        const id = json?.data?.id;
-        if (!id) {
-            router.refresh();
-            return;
-        }
-
-        router.push(`/admin/technical-assessments/${id}`);
-    }
-
     return (
         <div className="space-y-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-slate-950">Service Request Detail</h1>
+                    <h1 className="text-2xl font-semibold text-slate-950">
+                        Service Request Detail
+                    </h1>
                     <p className="mt-1 text-sm text-slate-500">{sr.refNo || sr.id}</p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         type="button"
                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
@@ -76,10 +72,10 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
 
                     <button
                         type="button"
-                        className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
-                        onClick={handleOpenAssessment}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                        onClick={() => router.push("/admin/services/issues-board")}
                     >
-                        {assessment ? "Tiếp tục phiếu kỹ thuật" : "Tạo phiếu kỹ thuật"}
+                        Đi tới Issue Board
                     </button>
                 </div>
             </div>
@@ -124,79 +120,130 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                    <div>
-                        <h2 className="text-base font-semibold text-slate-900">Phiếu kỹ thuật</h2>
-                        <div className="mt-1 text-sm text-slate-500">
-                            Tại trang này chỉ hiển thị tóm tắt. Thao tác chi tiết nằm trong detail của phiếu kỹ thuật.
-                        </div>
+                <div className="border-b border-slate-100 px-5 py-4">
+                    <div className="text-base font-semibold text-slate-900">
+                        Phiếu đánh giá kỹ thuật
                     </div>
-
-                    {assessment ? <AssessmentStatusBadge status={assessment.status} /> : null}
+                    <div className="mt-1 text-sm text-slate-500">
+                        Trang này chỉ tập trung vào vòng đời phiếu kỹ thuật. Việc điều phối issue được quản lý ở Issue Board.
+                    </div>
                 </div>
 
                 <div className="p-5">
-                    {!assessment ? (
-                        <div className="rounded-2xl border border-dashed border-slate-200 p-6">
-                            <div className="text-sm font-medium text-slate-900">
-                                Chưa có phiếu kỹ thuật nào cho service request này.
-                            </div>
-                            <div className="mt-2 text-sm text-slate-500">
-                                Bấm “Tạo phiếu kỹ thuật” để bắt đầu đánh giá và xử lý nghiệp vụ.
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="rounded-2xl border border-slate-200 p-5">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2 text-sm text-slate-700">
-                                    <div>
-                                        Movement: <span className="font-medium">{assessment.movementStatus || "-"}</span>
+                    <div className="grid gap-3 md:grid-cols-4">
+                        <MiniCard
+                            label="Tổng phiếu"
+                            value={technical.assessmentCount ?? 0}
+                        />
+                        <MiniCard
+                            label="Tổng issue"
+                            value={technical.issueCount ?? 0}
+                            tone="amber"
+                        />
+                        <MiniCard
+                            label="Issue đang mở"
+                            value={technical.openIssueCount ?? 0}
+                            tone="sky"
+                        />
+                        <MiniCard
+                            label="Phiếu active"
+                            value={technical.activeAssessment?.status || "Chưa có"}
+                            tone="emerald"
+                        />
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        {technical.activeAssessment ? (
+                            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                                <div className="space-y-2">
+                                    <div className="text-base font-semibold text-slate-900">
+                                        Phiếu hiện tại: {technical.activeAssessment.status}
                                     </div>
-                                    <div>
-                                        Case: <span className="font-medium">{assessment.caseStatus || "-"}</span>
+                                    <div className="text-sm text-slate-500">
+                                        {technical.activeAssessment.issueCount} issue • cập nhật{" "}
+                                        {fmtDT(technical.activeAssessment.updatedAt)}
                                     </div>
-                                    <div>
-                                        Crystal: <span className="font-medium">{assessment.crystalStatus || "-"}</span>
-                                    </div>
-                                    <div>
-                                        Crown: <span className="font-medium">{assessment.crownStatus || "-"}</span>
+                                    <div className="text-sm text-slate-500">
+                                        Nếu nghiệp vụ đặc biệt phát sinh sau khi phiếu đã hoàn tất, hệ thống có thể mở một phiếu mới để tiếp tục vòng xử lý.
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 text-sm text-slate-700">
-                                    <div>
-                                        Nghiệp vụ: <span className="font-medium">{issueCount}</span>
-                                    </div>
-                                    <div>
-                                        Đang mở: <span className="font-medium">{openIssueCount}</span>
-                                    </div>
-                                    <div>
-                                        Người đánh giá: <span className="font-medium">{assessment.evaluatedByNameSnap || "-"}</span>
-                                    </div>
-                                    <div>
-                                        Cập nhật: <span className="font-medium">{fmtDT(assessment.updatedAt)}</span>
-                                    </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                                        onClick={() => router.push("/admin/services/issues-board")}
+                                    >
+                                        Điều phối tại Issue Board
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+                                        onClick={() => setOpenTechnical(true)}
+                                    >
+                                        Tiếp tục phiếu kỹ thuật
+                                    </button>
                                 </div>
                             </div>
+                        ) : (
+                            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                                <div className="space-y-2">
+                                    <div className="text-base font-semibold text-slate-900">
+                                        Chưa có phiếu kỹ thuật nào
+                                    </div>
+                                    <div className="text-sm text-slate-500">
+                                        Tạo phiếu để kỹ thuật đánh giá. Nếu sau này phát sinh nghiệp vụ đặc biệt, có thể mở phiếu mới tiếp theo.
+                                    </div>
+                                </div>
 
-                            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-                                {assessment.conclusion?.trim()
-                                    ? assessment.conclusion
-                                    : "Chưa có kết luận kỹ thuật."}
-                            </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                                        onClick={() => router.push("/admin/services/issues-board")}
+                                    >
+                                        Đi tới Issue Board
+                                    </button>
 
-                            <div className="mt-4 flex justify-end">
-                                <Link
-                                    href={`/admin/technical-assessments/${assessment.id}`}
-                                    className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
-                                >
-                                    Xem detail phiếu kỹ thuật
-                                </Link>
+                                    <button
+                                        type="button"
+                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+                                        onClick={async () => {
+                                            const res = await fetch(
+                                                `/api/admin/service-requests/${sr.id}/open-assessment`,
+                                                { method: "POST" }
+                                            );
+                                            const json = await res.json().catch(() => ({}));
+                                            if (!res.ok) {
+                                                alert(json?.error || "Không thể mở phiếu kỹ thuật");
+                                                return;
+                                            }
+                                            setOpenTechnical(true);
+                                            router.refresh();
+                                        }}
+                                    >
+                                        Tạo phiếu kỹ thuật
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </section>
+
+            <TechnicalAssessmentModal
+                open={openTechnical}
+                serviceRequestId={sr.id}
+                onClose={() => setOpenTechnical(false)}
+                onSaved={async () => {
+                    router.refresh();
+                }}
+                productName={sr.productTitle ?? undefined}
+                productSku={sr.skuSnapshot ?? undefined}
+                productImage={sr.primaryImageUrl ?? undefined}
+                movementSpecLabel={sr.movement ?? undefined}
+            />
         </div>
     );
 }

@@ -30,7 +30,11 @@ const makeSchema = () => z.object({
   technicianId: z.string().optional().nullable(),
   summary: z.string().optional().nullable(),
   resolutionNote: z.string().optional().nullable(),
-  completedByNameSnap: z.string().optional().nullable()
+  completedByNameSnap: z.string().optional().nullable(),
+  isConfirmed: z.boolean().optional(),
+  confirmedAt: z.coerce.date().optional().nullable(),
+  confirmedById: z.string().optional().nullable(),
+  confirmedByNameSnap: z.string().optional().nullable()
 }).strict();
 export const TechnicalIssueCreateManyInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCreateManyInput>;
 export const TechnicalIssueCreateManyInputObjectZodSchema = makeSchema();

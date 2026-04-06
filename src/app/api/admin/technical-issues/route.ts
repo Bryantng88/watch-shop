@@ -11,20 +11,20 @@ export async function POST(req: Request) {
             area: body.area,
             issueType: body.issueType,
             actionMode: body.actionMode,
-            note: body.note ?? null,
-            summary: body.summary ?? null,
-            estimatedCost: body.estimatedCost ?? null,
-            vendorId: body.vendorId ?? null,
-            technicianId: body.technicianId ?? null,
-            serviceCatalogId: body.serviceCatalogId ?? null,
-            supplyCatalogId: body.supplyCatalogId ?? null,
-            mechanicalPartCatalogId: body.mechanicalPartCatalogId ?? null,
+            note: body.note,
+            estimatedCost: body.estimatedCost,
+            vendorId: body.vendorId,
+            technicianId: body.technicianId,
+            serviceCatalogId: body.serviceCatalogId,
+            supplyCatalogId: body.supplyCatalogId,
+            mechanicalPartCatalogId: body.mechanicalPartCatalogId,
+            summary: body.summary,
         });
 
         return NextResponse.json({ ok: true, item });
-    } catch (e: any) {
+    } catch (error: any) {
         return NextResponse.json(
-            { error: e?.message ?? "Internal error" },
+            { error: error?.message || "Create technical issue failed" },
             { status: 500 }
         );
     }

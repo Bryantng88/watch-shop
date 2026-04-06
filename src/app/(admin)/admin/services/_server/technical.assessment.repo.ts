@@ -1,11 +1,9 @@
 import prisma from "@/server/db/client";
 import type {
-
     TechnicalAssessmentStatus,
-    TechnicalIssueExecutionStatus,
     TechnicalMovementKind,
 } from "@prisma/client";
-
+import { TechnicalIssueExecutionStatus } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
 export type RepoIssueInput = {
@@ -241,7 +239,8 @@ export async function getPanel(serviceRequestId: string) {
                     executionStatus: x.executionStatus,
                     estimatedCost:
                         x.estimatedCost != null ? Number(x.estimatedCost) : null,
-                    actualCost: x.actualCost != null ? Number(x.actualCost) : null,
+                    actualCost:
+                        x.actualCost != null ? Number(x.actualCost) : null,
                     resolutionNote: x.resolutionNote ?? null,
                     vendorId: x.vendorId ?? null,
                     vendorNameSnap: x.vendorNameSnap ?? null,
@@ -254,6 +253,10 @@ export async function getPanel(serviceRequestId: string) {
                     startedAt: x.startedAt,
                     completedAt: x.completedAt,
                     canceledAt: x.canceledAt,
+                    isConfirmed: (x as any).isConfirmed ?? false,
+                    confirmedAt: (x as any).confirmedAt ?? null,
+                    confirmedById: (x as any).confirmedById ?? null,
+                    confirmedByNameSnap: (x as any).confirmedByNameSnap ?? null,
                     Vendor: x.Vendor,
                     User: x.User,
                     ServiceCatalog: x.ServiceCatalog,
@@ -278,13 +281,11 @@ export async function getPanel(serviceRequestId: string) {
             })),
             supplyCatalogs: supplyCatalogs.map((x) => ({
                 ...x,
-                defaultCost:
-                    x.defaultCost != null ? Number(x.defaultCost) : null,
+                defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
             })),
             mechanicalPartCatalogs: mechanicalPartCatalogs.map((x) => ({
                 ...x,
-                defaultCost:
-                    x.defaultCost != null ? Number(x.defaultCost) : null,
+                defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
             })),
             vendors,
         },
@@ -425,3 +426,116 @@ export async function upsertAssessment(
     });
 }
 
+export async function listAssessmentIssuesForSync(
+    tx: Prisma.TransactionClient,
+    assessmentId: string
+) {
+    return tx.technicalIssue.findMany({
+        where: { assessmentId },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: {
+            id: true,
+            area: true,
+            summary: true,
+            note: true,
+            issueType: true,
+            actionMode: true,
+            executionStatus: true,
+            vendorId: true,
+            vendorNameSnap: true,
+            serviceCatalogId: true,
+            supplyCatalogId: true,
+            mechanicalPartCatalogId: true,
+            estimatedCost: true,
+            sortOrder: true,
+            isConfirmed: true,
+        } as any,
+    });
+}
+
+export async function createAssessmentIssue(
+    tx: Prisma.TransactionClient,
+    data: Prisma.TechnicalIssueUncheckedCreateInput
+) {
+    return tx.technicalIssue.create({ data });
+}
+
+export async function updateAssessmentIssue(
+    tx: Prisma.TransactionClient,
+    id: string,
+    data: Prisma.TechnicalIssueUncheckedUpdateInput
+) {
+    return tx.technicalIssue.update({
+        where: { id },
+        data,
+    });
+}
+
+export async function countAssessmentIssues(
+    tx: Prisma.TransactionClient,
+    assessmentId: string
+) {
+    return tx.technicalIssue.count({
+        where: { assessmentId },
+    });
+}
+
+export async function getTechnicalSummaryByServiceRequest(serviceRequestId: string) {
+    const assessments = await prisma.technicalAssessment.findMany({
+        where: { serviceRequestId },
+        orderBy: [{ createdAt: "desc" }],
+        select: {
+            id: true,
+            status: true,
+            updatedAt: true,
+            TechnicalIssue: {
+                select: {
+                    id: true,
+                    executionStatus: true,
+                    isConfirmed: true,
+                } as any,
+            },
+        },
+    });
+
+    const assessmentCount = assessments.length;
+
+    const issueCount = assessments.reduce(
+        (sum, a) =>
+            sum + (a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0),
+        0
+    );
+
+    const openIssueCount = assessments.reduce((sum, a) => {
+        return (
+            sum +
+            (a.TechnicalIssue?.filter(
+                (x: any) =>
+                    x.isConfirmed &&
+                    (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+                        x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+            ).length ?? 0)
+        );
+    }, 0);
+
+    const activeAssessment =
+        assessments.find((a) => a.status === "DRAFT" || a.status === "IN_PROGRESS") ||
+        null;
+
+    return {
+        assessmentCount,
+        issueCount,
+        openIssueCount,
+        activeAssessment: activeAssessment
+            ? {
+                id: activeAssessment.id,
+                status: activeAssessment.status,
+                issueCount:
+                    activeAssessment.TechnicalIssue?.filter(
+                        (x: any) => x.isConfirmed
+                    ).length ?? 0,
+                updatedAt: activeAssessment.updatedAt,
+            }
+            : null,
+    };
+}

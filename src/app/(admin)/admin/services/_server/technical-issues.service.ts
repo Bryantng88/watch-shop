@@ -1,404 +1,390 @@
-import { prisma } from "@/server/db/client";
+import prisma from "@/server/db/client";
+import * as repo from "./technical.assessment.repo";
 import {
-    MaintenanceEventType,
     ServiceRequestStatus,
-    TechnicalActionMode,
+    TechnicalAssessmentStatus,
     TechnicalIssueExecutionStatus,
-    TechnicalIssueType,
 } from "@prisma/client";
-import * as repo from "./technical-issues.repo";
 
-function normalizeActionMode(v?: string | null) {
-    return String(v ?? "").toUpperCase() === "VENDOR"
-        ? TechnicalActionMode.VENDOR
-        : TechnicalActionMode.INTERNAL;
+function toNumberOrNull(v: any) {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
 }
 
-async function ensureServiceRequestActive(
-    tx: typeof prisma,
-    serviceRequestId: string
-) {
-    const sr = await tx.serviceRequest.findUnique({
-        where: { id: serviceRequestId },
-        select: {
-            id: true,
-            productId: true,
-        },
+function inferMovementKindFromPayload(input: any): "BATTERY" | "MECHANICAL" {
+    const machineType = String(input?.movement?.machineType || "").toUpperCase();
+    const movementKind = String(input?.movementKind || "").toUpperCase();
+
+    if (machineType === "QUARTZ" || movementKind === "BATTERY") {
+        return "BATTERY";
+    }
+    return "MECHANICAL";
+}
+
+function inferMovementStatusFromPayload(input: any): "GOOD" | "ISSUE" {
+    const raw =
+        String(input?.movement?.status || input?.movementStatus || "").toUpperCase();
+    return raw === "ISSUE" ? "ISSUE" : "GOOD";
+}
+
+function inferCaseStatusFromPayload(input: any): "GOOD" | "ISSUE" {
+    const appearanceCase = input?.appearance?.case;
+    if (!appearanceCase) {
+        return String(input?.caseStatus || "").toUpperCase() === "ISSUE"
+            ? "ISSUE"
+            : "GOOD";
+    }
+
+    const hasIssue =
+        (Array.isArray(appearanceCase.issues) && appearanceCase.issues.length > 0) ||
+        Boolean(appearanceCase?.proposal?.enabled);
+
+    return hasIssue ? "ISSUE" : "GOOD";
+}
+
+function inferCrystalStatusFromPayload(input: any): "GOOD" | "ISSUE" {
+    const appearanceGlass = input?.appearance?.glass;
+    if (!appearanceGlass) {
+        return String(input?.crystalStatus || "").toUpperCase() === "ISSUE"
+            ? "ISSUE"
+            : "GOOD";
+    }
+
+    const hasIssue =
+        (Array.isArray(appearanceGlass.issues) && appearanceGlass.issues.length > 0) ||
+        Boolean(appearanceGlass?.proposal?.enabled);
+
+    return hasIssue ? "ISSUE" : "GOOD";
+}
+
+function inferCrownStatusFromPayload(input: any): "GOOD" | "ISSUE" {
+    const crown = input?.appearance?.crown;
+    if (!crown) {
+        return String(input?.crownStatus || "").toUpperCase() === "ISSUE"
+            ? "ISSUE"
+            : "GOOD";
+    }
+
+    return String(crown?.status || "").toUpperCase() === "ISSUE"
+        ? "ISSUE"
+        : "GOOD";
+}
+
+function inferActionModeFromPayload(input: any): "NONE" | "INTERNAL" | "VENDOR" {
+    const candidates: string[] = [];
+
+    const movementLines = Array.isArray(input?.movement?.lines)
+        ? input.movement.lines
+        : [];
+
+    for (const line of movementLines) {
+        if (line?.execution) candidates.push(String(line.execution).toUpperCase());
+    }
+
+    const caseProposal = input?.appearance?.case?.proposal;
+    const glassProposal = input?.appearance?.glass?.proposal;
+    const dialProposal = input?.appearance?.dial?.proposal;
+    const crown = input?.appearance?.crown;
+
+    [caseProposal, glassProposal, dialProposal, crown].forEach((x) => {
+        if (x?.execution) candidates.push(String(x.execution).toUpperCase());
     });
 
-    if (!sr) {
-        throw new Error("Không tìm thấy service request.");
+    if (candidates.includes("VENDOR")) return "VENDOR";
+    if (candidates.includes("INHOUSE") || candidates.includes("INTERNAL")) {
+        return "INTERNAL";
     }
-
-    if (sr.productId) {
-        const product = await tx.product.findUnique({
-            where: { id: sr.productId },
-            select: {
-                contentStatus: true,
-            },
-        });
-
-        if (String(product?.contentStatus ?? "").toUpperCase() === "ARCHIVED") {
-            throw new Error("Sản phẩm đã hủy/ẩn, không thể tiếp tục quy trình service.");
-        }
-    }
-
-    return sr;
+    return "NONE";
 }
 
-async function syncServiceRequestStatus(
-    tx: typeof prisma,
-    serviceRequestId: string
-) {
-    const openCount = await repo.countOpenIssuesByServiceRequest(
-        tx as any,
+function inferVendorIdFromPayload(input: any): string | null {
+    const movementLines = Array.isArray(input?.movement?.lines)
+        ? input.movement.lines
+        : [];
+
+    for (const line of movementLines) {
+        const id = String(line?.vendorId || "").trim();
+        if (id) return id;
+    }
+
+    const blocks = [
+        input?.appearance?.case?.proposal,
+        input?.appearance?.glass?.proposal,
+        input?.appearance?.dial?.proposal,
+        input?.appearance?.crown,
+    ];
+
+    for (const block of blocks) {
+        const id = String(block?.vendorId || "").trim();
+        if (id) return id;
+    }
+
+    return null;
+}
+
+function inferPreRate(input: any) {
+    return toNumberOrNull(input?.movement?.beforeSpecs?.rate ?? input?.preRate);
+}
+function inferPreAmplitude(input: any) {
+    return toNumberOrNull(input?.movement?.beforeSpecs?.amp ?? input?.preAmplitude);
+}
+function inferPreBeatError(input: any) {
+    return toNumberOrNull(input?.movement?.beforeSpecs?.err ?? input?.preBeatError);
+}
+function inferPostRate(input: any) {
+    return toNumberOrNull(input?.movement?.afterSpecs?.rate ?? input?.postRate);
+}
+function inferPostAmplitude(input: any) {
+    return toNumberOrNull(input?.movement?.afterSpecs?.amp ?? input?.postAmplitude);
+}
+function inferPostBeatError(input: any) {
+    return toNumberOrNull(input?.movement?.afterSpecs?.err ?? input?.postBeatError);
+}
+
+function inferConclusion(input: any) {
+    return input?.conclusion ?? null;
+}
+
+function inferImageFileKey(input: any) {
+    return input?.imageFileKey ?? input?.productSnapshot?.image ?? null;
+}
+function toText(v: any) {
+    const s = String(v ?? "").trim();
+    return s.length ? s : null;
+}
+export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
+    const panel = await repo.getPanel(serviceRequestId);
+    if (!panel) {
+        throw new Error("Không tìm thấy service request");
+    }
+
+    const maintenanceRecords = await repo.listServiceMaintenanceRecords(
+        prisma,
         serviceRequestId
     );
 
-    await tx.serviceRequest.update({
-        where: { id: serviceRequestId },
-        data: {
-            status:
-                openCount > 0
-                    ? ServiceRequestStatus.IN_PROGRESS
-                    : ServiceRequestStatus.COMPLETED,
+    const issues = panel.assessment?.issues ?? [];
+    const openIssueCount = issues.filter(
+        (x: any) =>
+            x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+            x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS
+    ).length;
+
+    return {
+        serviceRequest: panel.serviceRequest,
+        assessment: panel.assessment,
+        technicalAssessment: panel.assessment,
+        technicalIssues: issues,
+        maintenanceRecords,
+        catalogs: panel.catalogs,
+        stats: {
+            issueCount: issues.length,
+            openIssueCount,
+            maintenanceCount: maintenanceRecords.length,
         },
-    });
+    };
 }
-
-export async function getTechnicalIssues(serviceRequestId: string) {
-    return repo.listTechnicalIssues(prisma as any, {
-        serviceRequestId,
-        status: "ALL",
-    });
-}
-
-export async function createTechnicalIssue(input: {
-    assessmentId: string;
-    serviceRequestId: string;
-    area: string;
-    issueType?: TechnicalIssueType;
-    actionMode?: string | null;
-    note?: string | null;
-    estimatedCost?: number | null;
-    vendorId?: string | null;
-    technicianId?: string | null;
-    serviceCatalogId?: string | null;
-    supplyCatalogId?: string | null;
-    mechanicalPartCatalogId?: string | null;
-    summary?: string | null;
-}) {
-    return prisma.$transaction(async (tx) => {
-        await ensureServiceRequestActive(tx as any, input.serviceRequestId);
-
-        const vendor = input.vendorId
-            ? await tx.vendor.findUnique({
-                where: { id: input.vendorId },
-                select: { id: true, name: true },
-            })
-            : null;
-
-        const issue = await repo.createTechnicalIssue(tx as any, {
-            TechnicalAssessment: { connect: { id: input.assessmentId } },
-            ServiceRequest: { connect: { id: input.serviceRequestId } },
-            area: input.area,
-            issueType: input.issueType ?? TechnicalIssueType.REPAIR,
-            actionMode: normalizeActionMode(input.actionMode),
-            note: input.note ?? null,
-            estimatedCost: input.estimatedCost ?? null,
-            summary: input.summary ?? null,
-            executionStatus: TechnicalIssueExecutionStatus.OPEN,
-            openedAt: new Date(),
-
-            ...(input.vendorId
-                ? {
-                    Vendor: { connect: { id: input.vendorId } },
-                    vendorNameSnap: vendor?.name ?? null,
-                }
-                : {
-                    vendorNameSnap: null,
-                }),
-
-            ...(input.technicianId
-                ? {
-                    User: { connect: { id: input.technicianId } },
-                }
-                : {}),
-
-            ...(input.serviceCatalogId
-                ? { ServiceCatalog: { connect: { id: input.serviceCatalogId } } }
-                : {}),
-
-            ...(input.supplyCatalogId
-                ? { SupplyCatalog: { connect: { id: input.supplyCatalogId } } }
-                : {}),
-
-            ...(input.mechanicalPartCatalogId
-                ? {
-                    MechanicalPartCatalog: {
-                        connect: { id: input.mechanicalPartCatalogId },
-                    },
-                }
-                : {}),
-        });
-
-        await syncServiceRequestStatus(tx as any, input.serviceRequestId);
-        return issue;
-    });
-}
-
-export async function updateTechnicalIssue(input: {
-    id: string;
-    note?: string | null;
-    summary?: string | null;
-    estimatedCost?: number | null;
-    actualCost?: number | null;
-    resolutionNote?: string | null;
-    actionMode?: string | null;
-    vendorId?: string | null;
-    technicianId?: string | null;
-    serviceCatalogId?: string | null;
-    supplyCatalogId?: string | null;
-    mechanicalPartCatalogId?: string | null;
-}) {
-    return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, input.id);
-
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
-        }
-
-        await ensureServiceRequestActive(tx as any, current.serviceRequestId);
-
-        const vendor =
-            input.vendorId
-                ? await tx.vendor.findUnique({
-                    where: { id: input.vendorId },
-                    select: { id: true, name: true },
-                })
-                : input.vendorId === null
-                    ? null
-                    : undefined;
-
-        return repo.updateTechnicalIssue(tx as any, input.id, {
-            ...(input.note !== undefined ? { note: input.note } : {}),
-            ...(input.summary !== undefined ? { summary: input.summary } : {}),
-            ...(input.estimatedCost !== undefined
-                ? { estimatedCost: input.estimatedCost }
-                : {}),
-            ...(input.actualCost !== undefined ? { actualCost: input.actualCost } : {}),
-            ...(input.resolutionNote !== undefined
-                ? { resolutionNote: input.resolutionNote }
-                : {}),
-            ...(input.actionMode !== undefined
-                ? { actionMode: normalizeActionMode(input.actionMode) }
-                : {}),
-
-            ...(input.vendorId !== undefined
-                ? input.vendorId
-                    ? {
-                        Vendor: { connect: { id: input.vendorId } },
-                        vendorNameSnap:
-                            vendor === undefined ? current.vendorNameSnap : vendor?.name ?? null,
-                    }
-                    : {
-                        Vendor: { disconnect: true },
-                        vendorNameSnap: null,
-                    }
-                : {}),
-
-            ...(input.technicianId !== undefined
-                ? input.technicianId
-                    ? {
-                        User: { connect: { id: input.technicianId } },
-                    }
-                    : {
-                        User: { disconnect: true },
-                    }
-                : {}),
-
-            ...(input.serviceCatalogId !== undefined
-                ? input.serviceCatalogId
-                    ? { ServiceCatalog: { connect: { id: input.serviceCatalogId } } }
-                    : { ServiceCatalog: { disconnect: true } }
-                : {}),
-
-            ...(input.supplyCatalogId !== undefined
-                ? input.supplyCatalogId
-                    ? { SupplyCatalog: { connect: { id: input.supplyCatalogId } } }
-                    : { SupplyCatalog: { disconnect: true } }
-                : {}),
-
-            ...(input.mechanicalPartCatalogId !== undefined
-                ? input.mechanicalPartCatalogId
-                    ? {
-                        MechanicalPartCatalog: {
-                            connect: { id: input.mechanicalPartCatalogId },
-                        },
-                    }
-                    : { MechanicalPartCatalog: { disconnect: true } }
-                : {}),
-        });
-    });
-}
-
 export async function startTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
 }) {
-    return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, input.id);
+    const id = toText(input.id);
+    if (!id) throw new Error("Missing issue id");
 
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
+    return prisma.$transaction(async (tx) => {
+        const issue = await tx.technicalIssue.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                executionStatus: true,
+                isConfirmed: true,
+            },
+        });
+
+        if (!issue) throw new Error("Issue not found");
+
+        if (!issue.isConfirmed) {
+            throw new Error("Issue chưa được xác nhận");
         }
 
-        await ensureServiceRequestActive(tx as any, current.serviceRequestId);
-
-        const issue = await repo.updateTechnicalIssue(tx as any, input.id, {
-            executionStatus: TechnicalIssueExecutionStatus.IN_PROGRESS,
-            startedAt: new Date(),
-            canceledAt: null,
-        });
-
-        await repo.createMaintenanceRecordForIssue(tx as any, {
-            serviceRequest: { connect: { id: current.serviceRequestId } },
-            TechnicalIssue: { connect: { id: current.id } },
-            eventType: MaintenanceEventType.NOTE,
-            notes: `Bắt đầu xử lý issue ${current.area}${current.note ? `: ${current.note}` : ""}`,
-            technicianNameSnap: input.actorName ?? null,
-            servicedAt: new Date(),
-        });
-
-        await syncServiceRequestStatus(tx as any, current.serviceRequestId);
-        return issue;
-    });
-}
-
-export async function completeTechnicalIssue(input: {
-    id: string;
-    actorName?: string | null;
-    actualCost?: number | null;
-    resolutionNote?: string | null;
-}) {
-    return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, input.id);
-
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
+        if (issue.executionStatus !== "OPEN") {
+            throw new Error("Issue không ở trạng thái OPEN");
         }
 
-        await ensureServiceRequestActive(tx as any, current.serviceRequestId);
-
-        const issue = await repo.updateTechnicalIssue(tx as any, input.id, {
-            executionStatus: TechnicalIssueExecutionStatus.DONE,
-            completedAt: new Date(),
-            actualCost: input.actualCost ?? current.actualCost ?? null,
-            resolutionNote: input.resolutionNote ?? current.resolutionNote ?? null,
-        });
-
-        await repo.createMaintenanceRecordForIssue(tx as any, {
-            serviceRequest: { connect: { id: current.serviceRequestId } },
-            TechnicalIssue: { connect: { id: current.id } },
-            eventType:
-                input.actualCost != null
-                    ? MaintenanceEventType.COST
-                    : MaintenanceEventType.NOTE,
-            notes: input.resolutionNote ?? `Hoàn tất issue ${current.area}`,
-            technicianNameSnap: input.actorName ?? null,
-            totalCost: input.actualCost ?? current.actualCost ?? null,
-            servicedAt: new Date(),
-        });
-
-        await syncServiceRequestStatus(tx as any, current.serviceRequestId);
-        return issue;
-    });
-}
-
-export async function cancelTechnicalIssue(input: {
-    id: string;
-    actorName?: string | null;
-    reason?: string | null;
-}) {
-    return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, input.id);
-
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
-        }
-
-        await ensureServiceRequestActive(tx as any, current.serviceRequestId);
-
-        const issue = await repo.updateTechnicalIssue(tx as any, input.id, {
-            executionStatus: TechnicalIssueExecutionStatus.CANCELED,
-            canceledAt: new Date(),
-            resolutionNote: input.reason ?? current.resolutionNote ?? null,
-        });
-
-        await repo.createMaintenanceRecordForIssue(tx as any, {
-            serviceRequest: { connect: { id: current.serviceRequestId } },
-            TechnicalIssue: { connect: { id: current.id } },
-            eventType: MaintenanceEventType.NOTE,
-            notes: input.reason ?? `Hủy issue ${current.area}`,
-            technicianNameSnap: input.actorName ?? null,
-            servicedAt: new Date(),
-        });
-
-        await syncServiceRequestStatus(tx as any, current.serviceRequestId);
-        return issue;
-    });
-}
-
-export async function addTechnicalIssueRecord(input: {
-    id: string;
-    actorName?: string | null;
-    notes?: string | null;
-    diagnosis?: string | null;
-    workSummary?: string | null;
-    totalCost?: number | null;
-    servicedAt?: string | null;
-    serviceCatalogId?: string | null;
-}) {
-    return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, input.id);
-
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
-        }
-
-        await ensureServiceRequestActive(tx as any, current.serviceRequestId);
-
-        return repo.createMaintenanceRecordForIssue(tx as any, {
-            serviceRequest: { connect: { id: current.serviceRequestId } },
-            TechnicalIssue: { connect: { id: current.id } },
-            eventType:
-                input.totalCost != null
-                    ? MaintenanceEventType.COST
-                    : MaintenanceEventType.NOTE,
-            notes: input.notes ?? null,
-            diagnosis: input.diagnosis ?? null,
-            workSummary: input.workSummary ?? null,
-            totalCost: input.totalCost ?? null,
-            technicianNameSnap: input.actorName ?? null,
-            servicedAt: input.servicedAt ? new Date(input.servicedAt) : new Date(),
-            ...(input.serviceCatalogId
-                ? { ServiceCatalog: { connect: { id: input.serviceCatalogId } } }
-                : {}),
+        return tx.technicalIssue.update({
+            where: { id },
+            data: {
+                executionStatus: "IN_PROGRESS",
+                startedAt: new Date(),
+                updatedAt: new Date(),
+            },
         });
     });
 }
-
-export async function removeTechnicalIssue(id: string) {
+export async function openTechnicalAssessment(serviceRequestId: string) {
     return prisma.$transaction(async (tx) => {
-        const current = await repo.getTechnicalIssueById(tx as any, id);
+        const existing = await tx.technicalAssessment.findFirst({
+            where: {
+                serviceRequestId,
+                status: {
+                    in: ["DRAFT", "IN_PROGRESS"],
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
 
-        if (!current) {
-            throw new Error("Không tìm thấy technical issue.");
+        if (existing) return existing;
+
+        const created = await tx.technicalAssessment.create({
+            data: {
+                serviceRequestId,
+                status: "DRAFT",
+            },
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: serviceRequestId },
+            data: {
+                status: ServiceRequestStatus.IN_PROGRESS,
+            },
+        });
+
+        return created;
+    });
+}
+
+export async function saveTechnicalAssessment(input: any) {
+    const serviceRequestId = String(input?.serviceRequestId || "").trim();
+    if (!serviceRequestId) {
+        throw new Error("Missing serviceRequestId");
+    }
+
+    return prisma.$transaction(async (tx) => {
+        const sr = await tx.serviceRequest.findUnique({
+            where: { id: serviceRequestId },
+            select: {
+                id: true,
+                technicianId: true,
+                technicianNameSnap: true,
+            },
+        });
+
+        if (!sr) {
+            throw new Error("Service request not found");
         }
 
-        await repo.deleteTechnicalIssue(tx as any, id);
-        await syncServiceRequestStatus(tx as any, current.serviceRequestId);
+        const vendorId = inferVendorIdFromPayload(input);
+        let vendorNameSnap: string | null = null;
+
+        if (vendorId) {
+            const vendor = await tx.vendor.findUnique({
+                where: { id: vendorId },
+                select: { id: true, name: true },
+            });
+            vendorNameSnap = vendor?.name ?? null;
+        }
+
+        const assessment = await repo.upsertAssessment(tx, {
+            serviceRequestId,
+            movementKind: inferMovementKindFromPayload(input),
+            movementStatus: inferMovementStatusFromPayload(input),
+            caseStatus: inferCaseStatusFromPayload(input),
+            crystalStatus: inferCrystalStatusFromPayload(input),
+            crownStatus: inferCrownStatusFromPayload(input),
+            preRate: inferPreRate(input),
+            preAmplitude: inferPreAmplitude(input),
+            preBeatError: inferPreBeatError(input),
+            postRate: inferPostRate(input),
+            postAmplitude: inferPostAmplitude(input),
+            postBeatError: inferPostBeatError(input),
+            actionMode: inferActionModeFromPayload(input),
+            vendorId,
+            vendorNameSnap,
+            conclusion: inferConclusion(input),
+            imageFileKey: inferImageFileKey(input),
+            status: TechnicalAssessmentStatus.IN_PROGRESS,
+            evaluatedById: sr.technicianId ?? null,
+            evaluatedByNameSnap: sr.technicianNameSnap ?? null,
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: serviceRequestId },
+            data: {
+                status: ServiceRequestStatus.IN_PROGRESS,
+                vendorId,
+                vendorNameSnap,
+            },
+        });
+
+        return {
+            ok: true,
+            item: assessment,
+        };
+    });
+}
+
+export async function completeTechnicalAssessment(assessmentId: string) {
+    return prisma.$transaction(async (tx) => {
+        const assessment = await tx.technicalAssessment.findUnique({
+            where: { id: assessmentId },
+            include: {
+                TechnicalIssue: true,
+            },
+        });
+
+        if (!assessment) {
+            throw new Error("Assessment not found");
+        }
+
+        const hasOpen = assessment.TechnicalIssue.some(
+            (x) =>
+                x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+                x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS
+        );
+
+        if (hasOpen) {
+            throw new Error("Còn issue chưa hoàn tất");
+        }
+
+        await tx.technicalAssessment.update({
+            where: { id: assessmentId },
+            data: {
+                status: TechnicalAssessmentStatus.COMPLETED,
+            },
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: assessment.serviceRequestId },
+            data: {
+                status: ServiceRequestStatus.COMPLETED,
+            },
+        });
 
         return { ok: true };
+    });
+}
+
+export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {
+    return repo.getTechnicalSummaryByServiceRequest(serviceRequestId);
+}
+
+export async function confirmTechnicalIssue(input: {
+    id: string;
+    actorId?: string | null;
+    actorName?: string | null;
+}) {
+    const id = String(input.id || "").trim();
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            isConfirmed: true,
+            confirmedAt: new Date(),
+            confirmedById: input.actorId ?? null,
+            confirmedByNameSnap: input.actorName ?? null,
+            updatedAt: new Date(),
+        } as any,
     });
 }

@@ -179,74 +179,7 @@ export async function createProductDraft(title: string) {
     });
 }
 
-export async function detail(id: string) {
-    return prisma.$transaction(async (tx) => {
-        const [product, serviceHistory, tradeHistory] = await Promise.all([
-            prodRepo.getAdminProductDetail(tx, id),
-            prodRepo.getProductServiceHistory(tx, id),
-            prodRepo.getProductTradeHistory(tx, id),
-        ]);
 
-        if (!product) return null;
-
-        return {
-            product: {
-                ...product,
-                createdAt: product.createdAt?.toISOString?.() ?? null,
-                updatedAt: product.updatedAt?.toISOString?.() ?? null,
-                aiGeneratedAt: product.aiGeneratedAt?.toISOString?.() ?? null,
-                publishedAt: product.publishedAt?.toISOString?.() ?? null,
-                content: product.content
-                    ? {
-                        ...product.content,
-                        generatedAt: product.content.generatedAt?.toISOString?.() ?? null,
-                        createdAt: product.content.createdAt?.toISOString?.() ?? null,
-                        updatedAt: product.content.updatedAt?.toISOString?.() ?? null,
-                    }
-                    : null,
-                watchSpec: product.watchSpec
-                    ? {
-                        ...product.watchSpec,
-                        length: product.watchSpec.length != null ? Number(product.watchSpec.length) : null,
-                        width: product.watchSpec.width != null ? Number(product.watchSpec.width) : null,
-                        thickness: product.watchSpec.thickness != null ? Number(product.watchSpec.thickness) : null,
-                        createdAt: product.watchSpec.createdAt?.toISOString?.() ?? null,
-                        updatedAt: product.watchSpec.updatedAt?.toISOString?.() ?? null,
-                    }
-                    : null,
-                image: (product.image ?? []).map((img: any) => ({
-                    ...img,
-                    createdAt: img.createdAt?.toISOString?.() ?? null,
-                    updatedAt: img.updatedAt?.toISOString?.() ?? null,
-                })),
-                variants: (product.variants ?? []).map((variant: any) => ({
-                    ...variant,
-                    price: variant.price != null ? Number(variant.price) : null,
-                    listPrice: variant.listPrice != null ? Number(variant.listPrice) : null,
-                    discountValue: variant.discountValue != null ? Number(variant.discountValue) : null,
-                    salePrice: variant.salePrice != null ? Number(variant.salePrice) : null,
-                    costPrice: variant.costPrice != null ? Number(variant.costPrice) : null,
-                    saleStartsAt: variant.saleStartsAt?.toISOString?.() ?? null,
-                    saleEndsAt: variant.saleEndsAt?.toISOString?.() ?? null,
-                    createdAt: variant.createdAt?.toISOString?.() ?? null,
-                    updatedAt: variant.updatedAt?.toISOString?.() ?? null,
-                    acquisitionItem: (variant.acquisitionItem ?? []).map((item: any) => ({
-                        ...item,
-                        unitCost: item.unitCost != null ? Number(item.unitCost) : null,
-                        acquisition: item.acquisition
-                            ? {
-                                ...item.acquisition,
-                                acquiredAt: item.acquisition.acquiredAt?.toISOString?.() ?? null,
-                            }
-                            : null,
-                    })),
-                })),
-            },
-            serviceHistory,
-            tradeHistory,
-        };
-    });
-}
 export async function saveContent(
     id: string,
     payload: {
@@ -665,4 +598,67 @@ export async function bulkPostProducts(productIds: string[]): Promise<BulkPostPr
             failed,
         };
     });
+}
+
+
+export async function detail(id: string) {
+    const [product, serviceHistory, tradeHistory] = await Promise.all([
+        prodRepo.getAdminProductDetail(prisma, id),
+        prodRepo.getProductServiceHistory(prisma, id),
+        prodRepo.getProductTradeHistory(prisma, id),
+    ]);
+
+    if (!product) return null;
+
+    return {
+        product: {
+            ...product,
+            createdAt: product.createdAt?.toISOString?.() ?? null,
+            updatedAt: product.updatedAt?.toISOString?.() ?? null,
+            aiGeneratedAt: product.aiGeneratedAt?.toISOString?.() ?? null,
+            publishedAt: product.publishedAt?.toISOString?.() ?? null,
+            content: product.content
+                ? {
+                    ...product.content,
+                    generatedAt: product.content.generatedAt?.toISOString?.() ?? null,
+                    createdAt: product.content.createdAt?.toISOString?.() ?? null,
+                    updatedAt: product.content.updatedAt?.toISOString?.() ?? null,
+                }
+                : null,
+            watchSpec: product.watchSpec
+                ? {
+                    ...product.watchSpec,
+                    length: product.watchSpec.length != null ? Number(product.watchSpec.length) : null,
+                    width: product.watchSpec.width != null ? Number(product.watchSpec.width) : null,
+                    thickness: product.watchSpec.thickness != null ? Number(product.watchSpec.thickness) : null,
+                    createdAt: product.watchSpec.createdAt?.toISOString?.() ?? null,
+                    updatedAt: product.watchSpec.updatedAt?.toISOString?.() ?? null,
+                }
+                : null,
+            image: (product.image ?? []).map((img: any) => ({
+                ...img,
+                createdAt: img.createdAt?.toISOString?.() ?? null,
+                updatedAt: img.updatedAt?.toISOString?.() ?? null,
+            })),
+            variants: (product.variants ?? []).map((variant: any) => ({
+                ...variant,
+                price: variant.price != null ? Number(variant.price) : null,
+                listPrice: variant.listPrice != null ? Number(variant.listPrice) : null,
+                discountValue: variant.discountValue != null ? Number(variant.discountValue) : null,
+                salePrice: variant.salePrice != null ? Number(variant.salePrice) : null,
+                costPrice: variant.costPrice != null ? Number(variant.costPrice) : null,
+                saleStartsAt: variant.saleStartsAt?.toISOString?.() ?? null,
+                saleEndsAt: variant.saleEndsAt?.toISOString?.() ?? null,
+                createdAt: variant.createdAt?.toISOString?.() ?? null,
+                updatedAt: variant.updatedAt?.toISOString?.() ?? null,
+                acquisitionItem: (variant.acquisitionItem ?? []).map((item: any) => ({
+                    ...item,
+                    unitCost: item.unitCost != null ? Number(item.unitCost) : null,
+                    acquisition: item.acquisition ? { ...item.acquisition, acquiredAt: item.acquisition.acquiredAt?.toISOString?.() ?? null } : null,
+                })),
+            })),
+        },
+        serviceHistory,
+        tradeHistory,
+    };
 }
