@@ -428,17 +428,22 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
 
 export async function openTechnicalAssessment(serviceRequestId: string) {
     return prisma.$transaction(async (tx) => {
-        const existing = await tx.technicalAssessment.findFirst({
+        const active = await tx.technicalAssessment.findFirst({
             where: {
                 serviceRequestId,
-                status: {
-                    in: ["DRAFT", "IN_PROGRESS"],
-                },
+                status: { in: ["DRAFT", "IN_PROGRESS"] },
             },
             orderBy: { createdAt: "desc" },
         });
 
-        if (existing) return existing;
+        if (active) {
+            await tx.serviceRequest.update({
+                where: { id: serviceRequestId },
+                data: { status: ServiceRequestStatus.IN_PROGRESS },
+            });
+
+            return active;
+        }
 
         const created = await tx.technicalAssessment.create({
             data: {
@@ -449,15 +454,12 @@ export async function openTechnicalAssessment(serviceRequestId: string) {
 
         await tx.serviceRequest.update({
             where: { id: serviceRequestId },
-            data: {
-                status: ServiceRequestStatus.IN_PROGRESS,
-            },
+            data: { status: ServiceRequestStatus.IN_PROGRESS },
         });
 
         return created;
     });
 }
-
 export async function saveTechnicalAssessment(input: any) {
     const serviceRequestId = String(input?.serviceRequestId || "").trim();
     if (!serviceRequestId) {
@@ -617,23 +619,25 @@ export async function completeTechnicalAssessment(assessmentId: string) {
 
 export async function completeServiceRequestById(serviceRequestId: string) {
     return prisma.$transaction(async (tx) => {
-        const assessment = await tx.technicalAssessment.findFirst({
-            where: { serviceRequestId },
+        const activeAssessment = await tx.technicalAssessment.findFirst({
+            where: {
+                serviceRequestId,
+                status: { in: ["DRAFT", "IN_PROGRESS"] },
+            },
             orderBy: [{ createdAt: "desc" }],
             include: {
                 TechnicalIssue: true,
             },
         });
 
-        if (!assessment) {
-            throw new Error("Chưa có phiếu kỹ thuật để chốt service request");
+        if (!activeAssessment) {
+            throw new Error("Chưa có phiếu kỹ thuật active để chốt service request");
         }
 
-        const hasOpenConfirmedIssue = assessment.TechnicalIssue.some(
+        const hasOpenConfirmedIssue = activeAssessment.TechnicalIssue.some(
             (x: any) =>
                 x.isConfirmed &&
-                (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
-                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+                (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
         );
 
         if (hasOpenConfirmedIssue) {
@@ -641,9 +645,9 @@ export async function completeServiceRequestById(serviceRequestId: string) {
         }
 
         await tx.technicalAssessment.update({
-            where: { id: assessment.id },
+            where: { id: activeAssessment.id },
             data: {
-                status: TechnicalAssessmentStatus.COMPLETED,
+                status: "COMPLETED",
             },
         });
 
@@ -656,7 +660,7 @@ export async function completeServiceRequestById(serviceRequestId: string) {
 
         return {
             ok: true,
-            assessmentId: assessment.id,
+            assessmentId: activeAssessment.id,
             serviceRequestId,
         };
     });

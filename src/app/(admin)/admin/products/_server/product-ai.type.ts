@@ -1,9 +1,52 @@
-export type AiTonePreset =
-    | 'balanced'
-    | 'elegant'
-    | 'collector'
-    | 'sales'
-    | 'listing';
+export type ConfidenceLevel = "high" | "medium" | "low";
+
+export type ExtractedSpec = {
+    brandName: string | null;
+    ref: string | null;
+    model: string | null;
+    year: string | null;
+    caseType: "ROUND" | "SQUARE" | "RECTANGULAR" | "TONNEAU" | "CUSHION" | null;
+    gender: "MEN" | "WOMEN" | "UNISEX" | null;
+    movement: "QUARTZ" | "AUTOMATIC" | "MANUAL" | null;
+    caliber: string | null;
+    caseMaterial: "STAINLESS_STEEL" | "GOLD" | "PLATED" | "TWO_TONE" | null;
+    goldKarat: string | null;
+    goldColor: "YELLOW_GOLD" | "ROSE_GOLD" | "WHITE_GOLD" | null;
+    width: number | null;
+    length: number | null;
+    thickness: number | null;
+    strap: "LEATHER" | "BRACELET" | "RUBBER" | "FABRIC" | null;
+    glass: "MINERAL" | "SAPPHIRE" | "ACRYLIC" | null;
+    dialColor: string | null;
+    dialCondition: string | null;
+    boxIncluded: boolean | null;
+    bookletIncluded: boolean | null;
+    cardIncluded: boolean | null;
+    confidence: {
+        brandName: ConfidenceLevel;
+        ref: ConfidenceLevel;
+        model: ConfidenceLevel;
+        year: ConfidenceLevel;
+        caseType: ConfidenceLevel;
+        gender: ConfidenceLevel;
+        movement: ConfidenceLevel;
+        caliber: ConfidenceLevel;
+        caseMaterial: ConfidenceLevel;
+        goldKarat: ConfidenceLevel;
+        goldColor: ConfidenceLevel;
+        width: ConfidenceLevel;
+        length: ConfidenceLevel;
+        thickness: ConfidenceLevel;
+        strap: ConfidenceLevel;
+        glass: ConfidenceLevel;
+        dialColor: ConfidenceLevel;
+        dialCondition: ConfidenceLevel;
+        boxIncluded: ConfidenceLevel;
+        bookletIncluded: ConfidenceLevel;
+        cardIncluded: ConfidenceLevel;
+    };
+    confidenceNotes: string[];
+};
 
 export type GeneratedPayload = {
     specBullets: string[];
@@ -17,73 +60,9 @@ export type GeneratedPayload = {
     safetyNotes: string[];
 };
 
-export type ProductAiMeta = {
-    mode: 'openai' | 'rule';
-    model: string | null;
-    message: string | null;
-};
-
-export type ProductAiDraft = {
-    id?: string;
-    title?: string;
-    description?: string | null;
-    brandId?: string | null;
-    brandName?: string | null;
-    categoryId?: string | null;
-    categoryName?: string | null;
-    images?: Array<{ url?: string | null; fileKey?: string | null }>;
-    image?: Array<{ url?: string | null; fileKey?: string | null }>;
-    aiPromptHint?: string | null;
-    aiToneSample?: string | null;
-    aiTonePreset?: AiTonePreset | null;
-    aiFocusPoints?: string[];
-    watchSpec?: {
-        ref?: string | null;
-        model?: string | null;
-        year?: string | number | null;
-        caseType?: string | null;
-        gender?: string | null;
-        movement?: string | null;
-        caliber?: string | null;
-        caseMaterial?: string | null;
-        goldKarat?: string | number | null;
-        goldColor?: string | null;
-        width?: string | number | null;
-        length?: string | number | null;
-        thickness?: string | number | null;
-        strap?: string | null;
-        glass?: string | null;
-        dialColor?: string | null;
-        dialCondition?: string | null;
-        boxIncluded?: boolean;
-        bookletIncluded?: boolean;
-        cardIncluded?: boolean;
-    };
-};
-
-export type SpecExtractedPayload = {
-    brandName: string | null;
-    ref: string | null;
-    model: string | null;
-    year: string | null;
-    caseType: string | null;
-    gender: string | null;
-    movement: string | null;
-    caliber: string | null;
-    caseMaterial: string | null;
-    goldKarat: number | null;
-    goldColor: string | null;
-    width: number | null;
-    length: number | null;
-    thickness: number | null;
-    strap: string | null;
-    glass: string | null;
-    dialColor: string | null;
-    dialCondition: string | null;
-    boxIncluded: boolean | null;
-    bookletIncluded: boolean | null;
-    cardIncluded: boolean | null;
-    confidenceNotes: string[];
-    warnings: string[];
-    rawVisualNotes: string;
-};
+export type TonePreset =
+    | "balanced"
+    | "refined"
+    | "collector"
+    | "sales"
+    | "listing";

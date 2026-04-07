@@ -365,63 +365,56 @@ export async function upsertAssessment(
         evaluatedByNameSnap?: string | null;
     }
 ) {
-    return tx.technicalAssessment.upsert({
-        where: { serviceRequestId: input.serviceRequestId },
-        create: {
+    const existing = await tx.technicalAssessment.findFirst({
+        where: {
             serviceRequestId: input.serviceRequestId,
-            movementKind: input.movementKind,
-            movementStatus: input.movementStatus as any,
-            caseStatus: input.caseStatus as any,
-            crystalStatus: input.crystalStatus as any,
-            crownStatus: input.crownStatus as any,
-            preRate: input.preRate ?? null,
-            preAmplitude: input.preAmplitude ?? null,
-            preBeatError:
-                input.preBeatError != null
-                    ? new Prisma.Decimal(String(input.preBeatError))
-                    : null,
-            postRate: input.postRate ?? null,
-            postAmplitude: input.postAmplitude ?? null,
-            postBeatError:
-                input.postBeatError != null
-                    ? new Prisma.Decimal(String(input.postBeatError))
-                    : null,
-            actionMode: input.actionMode as any,
-            vendorId: input.vendorId ?? null,
-            vendorNameSnap: input.vendorNameSnap ?? null,
-            conclusion: input.conclusion ?? null,
-            imageFileKey: input.imageFileKey ?? null,
-            status: input.status ?? "DRAFT",
-            evaluatedById: input.evaluatedById ?? null,
-            evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
+            status: { in: ["DRAFT", "IN_PROGRESS"] },
         },
-        update: {
-            movementKind: input.movementKind,
-            movementStatus: input.movementStatus as any,
-            caseStatus: input.caseStatus as any,
-            crystalStatus: input.crystalStatus as any,
-            crownStatus: input.crownStatus as any,
-            preRate: input.preRate ?? null,
-            preAmplitude: input.preAmplitude ?? null,
-            preBeatError:
-                input.preBeatError != null
-                    ? new Prisma.Decimal(String(input.preBeatError))
-                    : null,
-            postRate: input.postRate ?? null,
-            postAmplitude: input.postAmplitude ?? null,
-            postBeatError:
-                input.postBeatError != null
-                    ? new Prisma.Decimal(String(input.postBeatError))
-                    : null,
-            actionMode: input.actionMode as any,
-            vendorId: input.vendorId ?? null,
-            vendorNameSnap: input.vendorNameSnap ?? null,
-            conclusion: input.conclusion ?? null,
-            imageFileKey: input.imageFileKey ?? null,
-            status: input.status ?? "DRAFT",
-            evaluatedById: input.evaluatedById ?? null,
-            evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
-            updatedAt: new Date(),
+        orderBy: [{ createdAt: "desc" }],
+    });
+
+    const payload = {
+        movementKind: input.movementKind,
+        movementStatus: input.movementStatus as any,
+        caseStatus: input.caseStatus as any,
+        crystalStatus: input.crystalStatus as any,
+        crownStatus: input.crownStatus as any,
+        preRate: input.preRate ?? null,
+        preAmplitude: input.preAmplitude ?? null,
+        preBeatError:
+            input.preBeatError != null
+                ? new Prisma.Decimal(String(input.preBeatError))
+                : null,
+        postRate: input.postRate ?? null,
+        postAmplitude: input.postAmplitude ?? null,
+        postBeatError:
+            input.postBeatError != null
+                ? new Prisma.Decimal(String(input.postBeatError))
+                : null,
+        actionMode: input.actionMode as any,
+        vendorId: input.vendorId ?? null,
+        vendorNameSnap: input.vendorNameSnap ?? null,
+        conclusion: input.conclusion ?? null,
+        imageFileKey: input.imageFileKey ?? null,
+        status: input.status ?? "DRAFT",
+        evaluatedById: input.evaluatedById ?? null,
+        evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
+    };
+
+    if (existing) {
+        return tx.technicalAssessment.update({
+            where: { id: existing.id },
+            data: {
+                ...payload,
+                updatedAt: new Date(),
+            },
+        });
+    }
+
+    return tx.technicalAssessment.create({
+        data: {
+            serviceRequestId: input.serviceRequestId,
+            ...payload,
         },
     });
 }
@@ -487,6 +480,7 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
         select: {
             id: true,
             status: true,
+            createdAt: true,
             updatedAt: true,
             TechnicalIssue: {
                 select: {
@@ -500,11 +494,9 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
 
     const assessmentCount = assessments.length;
 
-    const issueCount = assessments.reduce(
-        (sum, a) =>
-            sum + (a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0),
-        0
-    );
+    const issueCount = assessments.reduce((sum, a) => {
+        return sum + (a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0);
+    }, 0);
 
     const openIssueCount = assessments.reduce((sum, a) => {
         return (
@@ -512,15 +504,13 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
             (a.TechnicalIssue?.filter(
                 (x: any) =>
                     x.isConfirmed &&
-                    (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
-                        x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+                    (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
             ).length ?? 0)
         );
     }, 0);
 
     const activeAssessment =
-        assessments.find((a) => a.status === "DRAFT" || a.status === "IN_PROGRESS") ||
-        null;
+        assessments.find((a) => a.status === "DRAFT" || a.status === "IN_PROGRESS") || null;
 
     return {
         assessmentCount,
@@ -531,11 +521,23 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
                 id: activeAssessment.id,
                 status: activeAssessment.status,
                 issueCount:
-                    activeAssessment.TechnicalIssue?.filter(
-                        (x: any) => x.isConfirmed
-                    ).length ?? 0,
+                    activeAssessment.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0,
+                createdAt: activeAssessment.createdAt,
                 updatedAt: activeAssessment.updatedAt,
             }
             : null,
+        assessments: assessments.map((a) => ({
+            id: a.id,
+            status: a.status,
+            createdAt: a.createdAt,
+            updatedAt: a.updatedAt,
+            issueCount: a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0,
+            openIssueCount:
+                a.TechnicalIssue?.filter(
+                    (x: any) =>
+                        x.isConfirmed &&
+                        (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
+                ).length ?? 0,
+        })),
     };
 }

@@ -303,11 +303,100 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                                             <button
                                                 type="button"
                                                 className="rounded-xl border border-teal-200 bg-white px-4 py-2 text-sm text-teal-800 hover:bg-teal-100 disabled:opacity-60"
-                                                onClick={() => setOpenTechnical(true)}
+                                                onClick={handleOpenAssessment}
                                                 disabled={submitting}
                                             >
                                                 Mở phiếu kỹ thuật mới
                                             </button>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {Array.isArray(technical.assessments) && technical.assessments.length > 0 ? (
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div className="text-sm font-semibold text-slate-900">Lịch sử phiếu kỹ thuật</div>
+                                        <div className="mt-3 space-y-3">
+                                            {technical.assessments.map((a: any, idx: number) => (
+                                                <div
+                                                    key={a.id}
+                                                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between"
+                                                >
+                                                    <div>
+                                                        <div className="text-sm font-medium text-slate-900">
+                                                            Phiếu #{technical.assessments.length - idx}
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-slate-500">
+                                                            {a.status} • {a.issueCount} issue • {a.openIssueCount} issue mở
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="text-xs text-slate-500">
+                                                        Cập nhật: {fmtDT(a.updatedAt)}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : Number(technical.assessmentCount ?? 0) > 0 ? (
+                            <div className="space-y-4">
+                                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                                    <div className="space-y-2">
+                                        <div className="text-base font-semibold text-slate-900">
+                                            Không còn phiếu kỹ thuật active
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            Service request này đã có phiếu kỹ thuật trước đó, nhưng hiện tất cả phiếu đang ở trạng thái đã hoàn tất.
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            Bạn có thể mở một phiếu kỹ thuật mới nếu phát sinh vòng xử lý tiếp theo.
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-3">
+                                        <button
+                                            type="button"
+                                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                                            onClick={() => router.push("/admin/services/issues-board")}
+                                        >
+                                            Đi tới Issue Board
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+                                            onClick={handleOpenAssessment}
+                                            disabled={submitting}
+                                        >
+                                            Tạo phiếu kỹ thuật mới
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {Array.isArray(technical.assessments) && technical.assessments.length > 0 ? (
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div className="text-sm font-semibold text-slate-900">Lịch sử phiếu kỹ thuật</div>
+                                        <div className="mt-3 space-y-3">
+                                            {technical.assessments.map((a: any, idx: number) => (
+                                                <div
+                                                    key={a.id}
+                                                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between"
+                                                >
+                                                    <div>
+                                                        <div className="text-sm font-medium text-slate-900">
+                                                            Phiếu #{technical.assessments.length - idx}
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-slate-500">
+                                                            {a.status} • {a.issueCount} issue • {a.openIssueCount} issue mở
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="text-xs text-slate-500">
+                                                        Cập nhật: {fmtDT(a.updatedAt)}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ) : null}
