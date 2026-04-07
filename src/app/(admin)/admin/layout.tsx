@@ -3,6 +3,7 @@ import AdminSidebar from "./_client/AdmidSideBar";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
 import { AppToastProvider } from "@/components/feedback/AppToastProvider";
+import { AppDialogProvider } from "@/components/feedback/AppDialogProvider";
 import { getSideMenuNotificationCounts } from "./_server/sidebar-notifications";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -42,9 +43,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
 
                 <AppToastProvider>
-                    <main className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 py-6 lg:px-6 2xl:px-8">
-                        {children}
-                    </main>
+                    <AppDialogProvider>
+                        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 py-6 lg:px-6 2xl:px-8">
+                            {children}
+                        </main>
+                    </AppDialogProvider>
                 </AppToastProvider>
             </div>
         </div>

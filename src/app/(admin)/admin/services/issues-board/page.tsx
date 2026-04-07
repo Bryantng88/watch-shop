@@ -1,6 +1,6 @@
-import { getTechnicalIssueBoardData } from "../_server/technical-issue-board.service";
-
 import TechnicalIssueBoardClient from "../_client/TechnicalIssuesBoardClient";
+
+import { getTechnicalIssueBoardData } from "../_server/technical-issue-board.service";
 
 function serialize(obj: any) {
     return JSON.parse(

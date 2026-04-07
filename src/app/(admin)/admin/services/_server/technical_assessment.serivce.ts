@@ -615,7 +615,55 @@ export async function completeTechnicalAssessment(assessmentId: string) {
     });
 }
 
+export async function completeServiceRequestById(serviceRequestId: string) {
+    return prisma.$transaction(async (tx) => {
+        const assessment = await tx.technicalAssessment.findFirst({
+            where: { serviceRequestId },
+            orderBy: [{ createdAt: "desc" }],
+            include: {
+                TechnicalIssue: true,
+            },
+        });
+
+        if (!assessment) {
+            throw new Error("Chưa có phiếu kỹ thuật để chốt service request");
+        }
+
+        const hasOpenConfirmedIssue = assessment.TechnicalIssue.some(
+            (x: any) =>
+                x.isConfirmed &&
+                (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+        );
+
+        if (hasOpenConfirmedIssue) {
+            throw new Error("Còn issue đã xác nhận nhưng chưa hoàn tất");
+        }
+
+        await tx.technicalAssessment.update({
+            where: { id: assessment.id },
+            data: {
+                status: TechnicalAssessmentStatus.COMPLETED,
+            },
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: serviceRequestId },
+            data: {
+                status: ServiceRequestStatus.COMPLETED,
+            },
+        });
+
+        return {
+            ok: true,
+            assessmentId: assessment.id,
+            serviceRequestId,
+        };
+    });
+}
+
 export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {
     return repo.getTechnicalSummaryByServiceRequest(serviceRequestId);
 }
+
 

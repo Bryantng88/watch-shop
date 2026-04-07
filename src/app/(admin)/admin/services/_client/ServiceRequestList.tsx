@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import GenericActionMenu from "../../__components/GenericActionMenu";
-import BulkAssignTechnicianModal from "./BulkAssignTechnicianModal";
 import MaintenanceLogModal from "./MaintenaceLogModel";
 import DotLabel from "../../__components/DotLabel";
 import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
 import StatusBadge from "@/components/badges/StatusBadge";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
+import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useAppDialog } from "@/components/feedback/AppDialogProvider";
 
 type ServiceReqItem = {
     id: string;
@@ -81,6 +82,8 @@ export default function ServiceRequestListClient(props: PageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
+    const notify = useNotify();
+    const dialog = useAppDialog();
 
     const items = props.items ?? [];
 
@@ -103,23 +106,10 @@ export default function ServiceRequestListClient(props: PageProps) {
     const q = sp.get("q") ?? "";
     const sort = sp.get("sort") ?? "updatedDesc";
 
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [showBulkBar, setShowBulkBar] = useState(false);
     const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] = useState<string | null>(null);
-    const [openBulkAssignTechnician, setOpenBulkAssignTechnician] = useState(false);
     const [openLogs, setOpenLogs] = useState(false);
     const [logSrId, setLogSrId] = useState<string>("");
     const [logTitle, setLogTitle] = useState<string>("");
-
-    const completeOne = async (id: string) => {
-        const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        router.refresh();
-    };
 
     const selectedItem = useMemo(
         () => items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
@@ -130,20 +120,6 @@ export default function ServiceRequestListClient(props: PageProps) {
     const productTitle = selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
     const productSku = selectedItem?.skuSnapshot ?? null;
     const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
-
-    useEffect(() => {
-        setSelectedIds([]);
-        setShowBulkBar(false);
-    }, [currentView, q, sort, props.page]);
-
-    useEffect(() => {
-        setShowBulkBar(selectedIds.length > 0);
-    }, [selectedIds.length]);
-
-    const displayItems = items;
-    const pageIds = useMemo(() => displayItems.map((x) => x.id), [displayItems]);
-    const allChecked = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
-    const someChecked = pageIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     const counts: Counts = useMemo(() => {
         if (props.counts?.all != null) {
@@ -197,6 +173,37 @@ export default function ServiceRequestListClient(props: PageProps) {
         router.push(`${pathname}?${next.toString()}`);
     }
 
+    const completeOne = async (id: string) => {
+        const confirmed = await dialog.confirm({
+            title: "Đóng service request",
+            message: "Bạn có chắc muốn chốt service request này không?",
+            confirmText: "Đóng SR",
+            cancelText: "Hủy",
+            tone: "success",
+        });
+
+        if (!confirmed) return;
+
+        const res = await fetch(`/api/admin/service-requests/${id}/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(json?.error || "Không thể đóng service request");
+        }
+
+        notify.success({
+            title: "Đã đóng service request",
+            message: "Service request đã được chốt thành công.",
+        });
+
+        router.refresh();
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -235,7 +242,7 @@ export default function ServiceRequestListClient(props: PageProps) {
                         <input
                             value={formQ}
                             onChange={(e) => setFormQ(e.target.value)}
-                            placeholder="refNo / order / service / thợ / vendor / notes..."
+                            placeholder="refNo / order / service / vendor / notes..."
                             className="w-full rounded-lg border px-3 py-2 text-sm"
                         />
                     </div>
@@ -261,93 +268,35 @@ export default function ServiceRequestListClient(props: PageProps) {
                     <button type="button" onClick={clearFilters} className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
                         Clear
                     </button>
-                    <div className="ml-auto text-sm text-gray-600">
-                        Đã chọn: <b>{selectedIds.length}</b>
-                    </div>
                 </div>
             </form>
-
-            {showBulkBar && (
-                <div className="flex items-center gap-4 rounded border bg-blue-50 p-3">
-                    <span className="font-medium text-blue-700">{selectedIds.length} service request đã chọn</span>
-                    <button
-                        type="button"
-                        className="rounded border px-3 py-1 text-sm"
-                        onClick={() => setOpenBulkAssignTechnician(true)}
-                    >
-                        Gán thợ
-                    </button>
-                    <button
-                        className="rounded border px-3 py-1 text-sm"
-                        onClick={() => {
-                            setSelectedIds([]);
-                            setShowBulkBar(false);
-                        }}
-                        type="button"
-                    >
-                        Bỏ chọn
-                    </button>
-                </div>
-            )}
 
             <div className="overflow-hidden rounded-xl border">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                             <tr className="text-left text-gray-700">
-                                <th className="w-10 px-3 py-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={allChecked}
-                                        ref={(el) => {
-                                            if (el) el.indeterminate = someChecked;
-                                        }}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
-                                            } else {
-                                                setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
-                                            }
-                                        }}
-                                    />
-                                </th>
                                 <th className="px-3 py-3">RefNo</th>
                                 <th className="px-3 py-3">Ảnh</th>
                                 <th className="px-3 py-3">Service</th>
                                 <th className="px-3 py-3">Nguồn / xử lý</th>
                                 <th className="px-3 py-3">Status</th>
                                 <th className="px-3 py-3">Ngày tạo</th>
-                                <th className="px-3 py-3">Link</th>
                                 <th className="px-3 py-3 text-right">Hành động</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            {displayItems.length === 0 ? (
+                            {items.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                    <td colSpan={7} className="px-3 py-10 text-center text-gray-500">
                                         Không có dữ liệu trong tab này
                                     </td>
                                 </tr>
                             ) : (
-                                displayItems.map((row) => {
-                                    const checked = selectedIds.includes(row.id);
+                                items.map((row) => {
                                     return (
                                         <tr key={row.id} className="border-t">
-                                            <td className="align-middle px-3 py-4">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedIds((prev) => Array.from(new Set([...prev, row.id])));
-                                                        } else {
-                                                            setSelectedIds((prev) => prev.filter((id) => id !== row.id));
-                                                        }
-                                                    }}
-                                                />
-                                            </td>
-
                                             <td className="align-top px-3 py-4">
                                                 <button
                                                     type="button"
@@ -375,15 +324,20 @@ export default function ServiceRequestListClient(props: PageProps) {
 
                                             <td className="align-top px-3 py-4">
                                                 <div className="font-medium">{row.serviceName || "-"}</div>
-                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">product · {row.productTitle || "-"}</div>
+                                                <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400">
+                                                    product · {row.productTitle || "-"}
+                                                </div>
                                                 <div className="mt-1 text-xs text-gray-500">SKU: {row.skuSnapshot || "-"}</div>
+                                                {row.orderRefNo ? (
+                                                    <div className="mt-1 text-xs text-gray-500">Order: {row.orderRefNo}</div>
+                                                ) : null}
                                                 <div className="mt-1 text-xs text-gray-500">Note: {row.customerItemNote || "-"}</div>
                                             </td>
 
                                             <td className="align-top px-3 py-4">
                                                 <DotLabel label={formatScope(row.scope)} tone={scopeTone(row.scope)} />
                                                 <div className="mt-2 text-sm">
-                                                    <div>Thợ: <span className="font-medium">{row.technicianName || "Chưa gán"}</span></div>
+                                                    <div>Thợ: <span className="font-medium">{row.technicianName || "-"}</span></div>
                                                     <div className="mt-1">Vendor: <span className="font-medium">{row.vendorName || "-"}</span></div>
                                                 </div>
                                                 <div className="mt-1 text-xs text-gray-500">Maintenance: {row.maintenanceCount ?? 0}</div>
@@ -398,17 +352,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                 <div className="mt-1 text-xs text-gray-500">Updated: {fmtDT(row.updatedAt)}</div>
                                             </td>
 
-                                            <td className="align-middle px-3 py-4">
-                                                {row.orderRefNo ? (
-                                                    <div className="text-sm">
-                                                        <span className="font-medium text-blue-600">Order</span>{" "}
-                                                        <span className="text-gray-600">{row.orderRefNo}</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-400">-</span>
-                                                )}
-                                            </td>
-
                                             <td className="px-3 py-4 text-right align-middle">
                                                 <GenericActionMenu
                                                     id={row.id}
@@ -416,6 +359,11 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         {
                                                             label: "Mở chi tiết",
                                                             onClick: () => router.push(`/admin/services/${row.id}`),
+                                                        },
+                                                        {
+                                                            label: "Đi tới Issue Board",
+                                                            onClick: () =>
+                                                                router.push(`/admin/services/issues-board?serviceRequestId=${row.id}`),
                                                         },
                                                         {
                                                             label: "Xem nhật ký xử lý",
@@ -428,19 +376,32 @@ export default function ServiceRequestListClient(props: PageProps) {
                                                         {
                                                             label: "Kết thúc / DONE",
                                                             hidden:
-                                                                row.status === "COMPLETED" || row.status === "DELIVERED" || row.status === "CANCELED",
+                                                                row.status === "COMPLETED" ||
+                                                                row.status === "DELIVERED" ||
+                                                                row.status === "CANCELED",
                                                             onClick: async () => {
-                                                                await completeOne(row.id);
+                                                                try {
+                                                                    await completeOne(row.id);
+                                                                } catch (error: any) {
+                                                                    notify.error({
+                                                                        title: "Không thể đóng service request",
+                                                                        message: error?.message || "Đã có lỗi xảy ra.",
+                                                                    });
+                                                                }
                                                             },
                                                         },
                                                         {
                                                             label: "Copy ID",
                                                             onClick: async () => {
                                                                 await navigator.clipboard?.writeText(row.id);
+                                                                notify.success({
+                                                                    title: "Đã copy ID",
+                                                                    message: row.id,
+                                                                });
                                                             },
                                                         },
                                                         {
-                                                            label: row.status === "IN_PROGRESS" ? "Mở lại phiếu kỹ thuật" : "Đánh giá kỹ thuật",
+                                                            label: row.status === "IN_PROGRESS" ? "Mở phiếu kỹ thuật" : "Đánh giá kỹ thuật",
                                                             onClick: () => setTechnicalAssessmentRequestId(row.id),
                                                         },
                                                     ]}
@@ -479,18 +440,6 @@ export default function ServiceRequestListClient(props: PageProps) {
                 </div>
             </div>
 
-            <BulkAssignTechnicianModal
-                open={openBulkAssignTechnician}
-                onClose={() => setOpenBulkAssignTechnician(false)}
-                serviceRequestIds={selectedIds}
-                onAssigned={() => {
-                    setOpenBulkAssignTechnician(false);
-                    setSelectedIds([]);
-                    setShowBulkBar(false);
-                    router.refresh();
-                }}
-            />
-
             <MaintenanceLogModal
                 open={openLogs}
                 onClose={() => setOpenLogs(false)}
@@ -505,6 +454,10 @@ export default function ServiceRequestListClient(props: PageProps) {
                 onClose={() => setTechnicalAssessmentRequestId(null)}
                 onSaved={async () => {
                     setTechnicalAssessmentRequestId(null);
+                    notify.success({
+                        title: "Đã lưu phiếu kỹ thuật",
+                        message: "Dữ liệu đánh giá kỹ thuật đã được cập nhật.",
+                    });
                     router.refresh();
                 }}
                 productName={productTitle ?? undefined}

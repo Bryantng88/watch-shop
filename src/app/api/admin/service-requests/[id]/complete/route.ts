@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
-import { completeTechnicalAssessment } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import { completeServiceRequestById } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
 
 export async function POST(
     _req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
+    try {
+        const { id } = await params;
 
-    const data = await completeTechnicalAssessment(id);
+        const data = await completeServiceRequestById(id);
 
-    return NextResponse.json({ ok: true, data });
+        return NextResponse.json({ ok: true, data });
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error?.message || "Không thể đóng service request" },
+            { status: 400 }
+        );
+    }
 }

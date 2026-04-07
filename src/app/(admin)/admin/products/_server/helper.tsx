@@ -3,6 +3,7 @@ import { Prisma, CaseType, ProductType, Gender, MovementType } from "@prisma/cli
 import slugify from "slugify";
 import { Tx } from "@/server/db/client";
 
+
 export type AdminSort =
     | "updatedDesc" | "updatedAsc"
     | "createdDesc" | "createdAsc"
@@ -154,4 +155,65 @@ export function buildOrderBy(sort: AdminSort | undefined): Prisma.ProductOrderBy
         case "titleDesc": return [{ title: "desc" }];
         default: return [{ updatedAt: "desc" }];
     }
+}
+
+
+export function getProductSkuPrefix(type?: ProductType | string | null) {
+    switch (String(type ?? "WATCH").toUpperCase()) {
+        case "WATCH":
+            return "W";
+        case "WATCH_STRAP":
+            return "ST";
+        case "BOX":
+            return "BX";
+        case "ACCESSORIES":
+            return "AC";
+        case "PARTS":
+            return "PT";
+        case "SERVICE":
+            return "SV";
+        default:
+            return "PR";
+    }
+}
+
+function pad2(n: number) {
+    return String(n).padStart(2, "0");
+}
+
+export async function genUniqueProductSku(
+    db: Tx,
+    type?: ProductType | string | null,
+    date?: Date
+) {
+    const now = date ?? new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = pad2(now.getMonth() + 1);
+    const prefix = getProductSkuPrefix(type);
+    const startsWith = `${prefix}-${yy}${mm}-`;
+
+    const last = await db.product.findFirst({
+        where: {
+            sku: {
+                startsWith,
+            },
+        },
+        orderBy: {
+            sku: "desc",
+        },
+        select: {
+            sku: true,
+        },
+    });
+
+    let nextNum = 1;
+
+    if (last?.sku) {
+        const match = String(last.sku).match(/-(\d+)$/);
+        if (match?.[1]) {
+            nextNum = Number(match[1]) + 1;
+        }
+    }
+
+    return `${startsWith}${String(nextNum).padStart(4, "0")}`;
 }

@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrderWithItems, getAdminOrderDetail } from "@/app/(admin)/admin/orders/_servers/order.service";
-// POST /api/admin/orders
+import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
+
 export async function POST(req: NextRequest) {
     let body: any;
-    // ==========================
-    // Parse JSON
-    // ==========================
+
     try {
         body = await req.json();
-        console.log('in ra test body o order api: ' + JSON.stringify(body))
-
     } catch {
         return NextResponse.json(
             { error: "Body không hợp lệ (không phải JSON)" },
@@ -17,19 +13,16 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // ==========================
-    // Validate bắt buộc
-    // ==========================
-    if (!body.customerName && !body.customerId) {
+    if (!body.customerName?.trim()) {
         return NextResponse.json(
-            { error: "Thiếu thông tin khách hàng" },
+            { error: "Thiếu tên khách hàng" },
             { status: 400 }
         );
     }
 
     if (!Array.isArray(body.items) || body.items.length === 0) {
         return NextResponse.json(
-            { error: "Phải có ít nhất 1 sản phẩm" },
+            { error: "Phải có ít nhất 1 dòng sản phẩm / dịch vụ" },
             { status: 400 }
         );
     }
@@ -37,36 +30,33 @@ export async function POST(req: NextRequest) {
     for (const [i, item] of body.items.entries()) {
         if (!item.title || typeof item.title !== "string") {
             return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} thiếu tên (title)` },
+                { error: `Dòng ${i + 1} thiếu tên` },
                 { status: 400 }
             );
         }
 
-        if (!item.quantity || item.quantity < 1) {
+        if (!item.quantity || Number(item.quantity) < 1) {
             return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} số lượng phải ≥ 1` },
+                { error: `Dòng ${i + 1} số lượng phải ≥ 1` },
                 { status: 400 }
             );
         }
 
-        if (item.listPrice == null) {
+        if (item.listPrice == null || Number.isNaN(Number(item.listPrice))) {
             return NextResponse.json(
-                { error: `Sản phẩm dòng ${i + 1} đơn giá không hợp lệ` },
+                { error: `Dòng ${i + 1} đơn giá không hợp lệ` },
                 { status: 400 }
             );
         }
     }
 
-    // ==========================
-    // Create order
-    // ==========================
     const payload = {
         ...body,
         source: "ADMIN",
         verificationStatus: "VERIFIED",
+        status: body.status ?? "DRAFT",
     };
 
-    // (optional)
     try {
         const order = await createOrderWithItems(payload);
         return NextResponse.json(order, { status: 201 });
@@ -76,13 +66,5 @@ export async function POST(req: NextRequest) {
             { error: err?.message || "Lỗi hệ thống" },
             { status: 400 }
         );
-    }
-}
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
-    try {
-        const data = await getAdminOrderDetail(ctx.params.id);
-        return NextResponse.json(data);
-    } catch (e: any) {
-        return NextResponse.json({ error: e?.message ?? "Lỗi hệ thống" }, { status: 404 });
     }
 }

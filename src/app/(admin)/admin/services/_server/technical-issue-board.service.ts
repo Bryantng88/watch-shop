@@ -1,13 +1,17 @@
 import prisma from "@/server/db/client";
 
-function toNumber(v: any) {
-    return v != null ? Number(v) : null;
+type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
+
+function toNumber(v: unknown): number | null {
+    if (v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
 }
 
 function normalizeBoardColumn(issue: {
     executionStatus?: string | null;
     isConfirmed?: boolean | null;
-}) {
+}): BoardColumnKey {
     const status = String(issue.executionStatus || "").toUpperCase();
 
     if (status === "DONE" || status === "COMPLETED") return "DONE";
@@ -16,9 +20,32 @@ function normalizeBoardColumn(issue: {
     return "PENDING_CONFIRM";
 }
 
+function normalizeAssessments(
+    raw: unknown
+): Array<{
+    id: string;
+    status: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    TechnicalIssue?: Array<{
+        id: string;
+        executionStatus: string | null;
+        isConfirmed?: boolean | null;
+    }>;
+}> {
+    if (Array.isArray(raw)) return raw as any[];
+    if (raw && typeof raw === "object") return [raw as any];
+    return [];
+}
+
 export async function getTechnicalIssueBoardData() {
     const rows = await prisma.technicalIssue.findMany({
-        orderBy: [{ openedAt: "desc" }, { createdAt: "desc" }],
+        where: {
+            executionStatus: {
+                not: "CANCELED" as any,
+            },
+        },
+        orderBy: [{ openedAt: "desc" }, { createdAt: "desc" as any }],
         include: {
             ServiceRequest: {
                 select: {
@@ -28,6 +55,26 @@ export async function getTechnicalIssueBoardData() {
                     scope: true,
                     technicianNameSnap: true,
                     vendorNameSnap: true,
+                    technicalAssessment: {
+                        select: {
+                            id: true,
+                            status: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            TechnicalIssue: {
+                                where: {
+                                    executionStatus: {
+                                        not: "CANCELED" as any,
+                                    },
+                                },
+                                select: {
+                                    id: true,
+                                    executionStatus: true,
+                                    isConfirmed: true,
+                                } as any,
+                            },
+                        },
+                    },
                     product: {
                         select: {
                             id: true,
@@ -65,61 +112,124 @@ export async function getTechnicalIssueBoardData() {
         },
     });
 
-    const items = rows.map((x) => ({
-        id: x.id,
-        summary: x.summary ?? "",
-        note: x.note ?? "",
-        area: x.area ?? "",
-        issueType: x.issueType,
-        actionMode: x.actionMode,
-        executionStatus: x.executionStatus,
-        isConfirmed: (x as any).isConfirmed ?? false,
-        confirmedAt: (x as any).confirmedAt ?? null,
-        openedAt: x.openedAt,
-        startedAt: x.startedAt,
-        completedAt: x.completedAt,
-        canceledAt: x.canceledAt,
-        estimatedCost: toNumber(x.estimatedCost),
-        actualCost: toNumber(x.actualCost),
-        resolutionNote: x.resolutionNote ?? "",
-        vendorId: x.vendorId ?? null,
-        vendorNameSnap: x.vendorNameSnap ?? x.Vendor?.name ?? null,
-        boardColumn: normalizeBoardColumn({
-            executionStatus: x.executionStatus,
-            isConfirmed: (x as any).isConfirmed ?? false,
-        }),
+    const items = rows
+        .map((x) => {
+            const sr = x.ServiceRequest;
+            if (!sr?.id) return null;
 
-        serviceRequest: {
-            id: x.ServiceRequest.id,
-            refNo: x.ServiceRequest.refNo ?? x.ServiceRequest.id,
-            status: x.ServiceRequest.status,
-            scope: x.ServiceRequest.scope ?? null,
-            technicianNameSnap: x.ServiceRequest.technicianNameSnap ?? null,
-            vendorNameSnap: x.ServiceRequest.vendorNameSnap ?? null,
-            productTitle: x.ServiceRequest.product?.title ?? null,
-            primaryImageUrl: x.ServiceRequest.product?.primaryImageUrl ?? null,
-            movement: x.ServiceRequest.product?.watchSpec?.movement ?? null,
-            model: x.ServiceRequest.product?.watchSpec?.model ?? null,
-            ref: x.ServiceRequest.product?.watchSpec?.ref ?? null,
-        },
+            const assessments = normalizeAssessments(sr.technicalAssessment).sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
 
-        assessment: x.TechnicalAssessment
-            ? {
-                id: x.TechnicalAssessment.id,
-                status: x.TechnicalAssessment.status,
-            }
-            : null,
+            const activeAssessment =
+                assessments.find(
+                    (a) => a.status === "DRAFT" || a.status === "IN_PROGRESS"
+                ) ??
+                assessments[0] ??
+                null;
 
-        serviceCatalog: x.ServiceCatalog,
-        supplyCatalog: x.SupplyCatalog,
-        mechanicalPartCatalog: x.MechanicalPartCatalog,
-    }));
+            const activeIssues = activeAssessment?.TechnicalIssue ?? [];
+
+            const hasOpenIssue = activeIssues.some((i) => {
+                const status = String(i.executionStatus || "").toUpperCase();
+                return status === "OPEN" || status === "IN_PROGRESS";
+            });
+
+            const serviceRequestReadyToClose =
+                activeIssues.length > 0 && !hasOpenIssue;
+
+            return {
+                id: x.id,
+                summary: x.summary ?? "",
+                note: x.note ?? "",
+                area: x.area ?? "",
+                issueType: x.issueType ?? null,
+                actionMode: x.actionMode ?? null,
+                executionStatus: x.executionStatus ?? null,
+                isConfirmed: (x as any).isConfirmed ?? false,
+                confirmedAt: (x as any).confirmedAt ?? null,
+                openedAt: x.openedAt ?? null,
+                startedAt: x.startedAt ?? null,
+                completedAt: x.completedAt ?? null,
+                canceledAt: x.canceledAt ?? null,
+                estimatedCost: toNumber(x.estimatedCost),
+                actualCost: toNumber(x.actualCost),
+                resolutionNote: x.resolutionNote ?? "",
+                vendorId: x.vendorId ?? null,
+                vendorNameSnap: x.vendorNameSnap ?? x.Vendor?.name ?? null,
+                boardColumn: normalizeBoardColumn({
+                    executionStatus: x.executionStatus,
+                    isConfirmed: (x as any).isConfirmed ?? false,
+                }),
+                serviceRequestReadyToClose,
+                isLastDoneIssueOfServiceRequest:
+                    serviceRequestReadyToClose &&
+                    String(x.executionStatus || "").toUpperCase() === "DONE",
+
+                serviceRequest: {
+                    id: sr.id,
+                    refNo: sr.refNo ?? sr.id,
+                    status: sr.status ?? null,
+                    scope: sr.scope ?? null,
+                    technicianNameSnap: sr.technicianNameSnap ?? null,
+                    vendorNameSnap: sr.vendorNameSnap ?? null,
+                    productTitle: sr.product?.title ?? null,
+                    primaryImageUrl: sr.product?.primaryImageUrl ?? null,
+                    movement: sr.product?.watchSpec?.movement ?? null,
+                    model: sr.product?.watchSpec?.model ?? null,
+                    ref: sr.product?.watchSpec?.ref ?? null,
+                },
+
+                assessment: x.TechnicalAssessment
+                    ? {
+                        id: x.TechnicalAssessment.id,
+                        status: x.TechnicalAssessment.status ?? null,
+                    }
+                    : null,
+
+                serviceCatalog: x.ServiceCatalog
+                    ? {
+                        id: x.ServiceCatalog.id,
+                        code: x.ServiceCatalog.code ?? null,
+                        name: x.ServiceCatalog.name ?? null,
+                    }
+                    : null,
+
+                supplyCatalog: x.SupplyCatalog
+                    ? {
+                        id: x.SupplyCatalog.id,
+                        code: x.SupplyCatalog.code ?? null,
+                        name: x.SupplyCatalog.name ?? null,
+                    }
+                    : null,
+
+                mechanicalPartCatalog: x.MechanicalPartCatalog
+                    ? {
+                        id: x.MechanicalPartCatalog.id,
+                        code: x.MechanicalPartCatalog.code ?? null,
+                        name: x.MechanicalPartCatalog.name ?? null,
+                    }
+                    : null,
+            };
+        })
+        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+    const readyToCloseSrIds = Array.from(
+        new Set(
+            items
+                .filter((x) => x.serviceRequestReadyToClose && x.serviceRequest?.id)
+                .map((x) => x.serviceRequest.id)
+        )
+    );
 
     const counts = {
-        pendingConfirm: items.filter((x) => x.boardColumn === "PENDING_CONFIRM").length,
+        pendingConfirm: items.filter((x) => x.boardColumn === "PENDING_CONFIRM")
+            .length,
         ready: items.filter((x) => x.boardColumn === "READY").length,
         inProgress: items.filter((x) => x.boardColumn === "IN_PROGRESS").length,
         done: items.filter((x) => x.boardColumn === "DONE").length,
+        readyToCloseSrCount: readyToCloseSrIds.length,
     };
 
     return { items, counts };

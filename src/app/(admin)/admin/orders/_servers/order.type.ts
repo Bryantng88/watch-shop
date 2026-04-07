@@ -1,4 +1,4 @@
-import { PaymentMethod, ReserveType, service_scope } from "@prisma/client";
+import { PaymentMethod, ReserveType, ServiceScope } from "@prisma/client";
 
 export type OrderItemInput = {
     id?: string; // dùng cho edit (optional)
@@ -11,7 +11,7 @@ export type OrderItemInput = {
     unitPriceAgreed: number;
     img: string;
     serviceCatalogId?: string | null;
-    serviceScope?: service_scope | null;
+    serviceScope?: ServiceScope | null;
 
     // Nếu đi kèm sản phẩm: link tới OrderItem PRODUCT
     linkedOrderItemId?: string | null;
@@ -48,7 +48,7 @@ export type OrderDraftInput = {
 
 export type OrderDraftForEdit = {
     id: string;
-    status: string; // DRAFT | RESERVED ...
+    status: string;
     refNo: string | null;
 
     customerName: string;
@@ -60,22 +60,28 @@ export type OrderDraftForEdit = {
     shipDistrict: string | null;
     shipWard: string | null;
 
-    createdAt: string; // ISO
+    createdAt: string | Date;
     paymentMethod: PaymentMethod;
     notes: string | null;
 
-    reserve: null | {
-        type: ReserveType;
-        amount: number;
-        expiresAt: string | null;
-    };
+    reserveType: ReserveType | null;
+    depositRequired: number | null;
+    reserveUntil: string | Date | null;
 
     items: Array<{
         id: string;
         kind: string;
         productId: string | null;
+        variantId?: string | null;
         title: string;
         quantity: number;
-        unitPrice: any; // Decimal -> serialize ngoài page.tsx
+        listPrice: any;
+        unitPriceAgreed?: any;
+        img?: string | null;
+        serviceCatalogId?: string | null;
+        serviceScope?: ServiceScope | null;
+        linkedOrderItemId?: string | null;
+        customerItemNote?: string | null;
+        taxRate?: any;
     }>;
 };

@@ -13,7 +13,7 @@ import type {
     ProductListSort,
     ProductCatalogKey,
 } from "../helpers/search-params";
-
+import { genUniqueProductSku } from "./helper";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
@@ -35,7 +35,7 @@ type AdminProductListRepoInput = ProductListInput & {
 };
 
 const STRAP_ATTACHMENT_PREFIX = "__STRAP_LINK__:";
-
+type ReadBatchFactory<T = unknown> = () => Promise<T>;
 type StoredStrapAttachment = {
     productId: string;
     variantId: string;
@@ -52,6 +52,56 @@ type StoredStrapAttachment = {
     } | null;
     baseName?: string | null;
 };
+
+export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs>()({
+    select: {
+        id: true,
+        title: true,
+        status: true,
+        contentStatus: true,
+        type: true,
+        brandId: true,
+        categoryId: true,
+        primaryImageUrl: true,
+        image: {
+            where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } },
+            select: { id: true },
+        },
+        variants: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            select: {
+                sku: true,
+                price: true,
+                stockQty: true,
+                availabilityStatus: true,
+            },
+        },
+        watchSpec: {
+            select: {
+                ref: true,
+                model: true,
+                year: true,
+                caseType: true,
+                movement: true,
+                caseMaterial: true,
+                goldKarat: true,
+                goldColor: true,
+                length: true,
+                width: true,
+                thickness: true,
+                dialColor: true,
+                strap: true,
+                glass: true,
+                boxIncluded: true,
+                bookletIncluded: true,
+                cardIncluded: true,
+            },
+        },
+    },
+});
+
+export type ProductForBulkPost = Prisma.ProductGetPayload<typeof productForBulkPostArgs>;
 
 function parseStoredStrapAttachment(raw: unknown): StoredStrapAttachment | null {
     if (typeof raw !== "string" || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
@@ -265,7 +315,7 @@ function buildWhereForView(
     }
 }
 
-type ReadBatchFactory<T = unknown> = () => Promise<T>;
+
 
 async function runReadBatch<T extends unknown[]>(
     factories: { [K in keyof T]: ReadBatchFactory<T[K]> }
@@ -703,10 +753,12 @@ export async function createProductDraft(
     vendorId: string | null
 ) {
     const db = dbOrTx(tx);
+    const sku = await genUniqueProductSku(db as any, type);
 
     return db.product.create({
         data: {
             title,
+            sku,
             vendorId: vendorId ?? undefined,
             status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
@@ -715,22 +767,27 @@ export async function createProductDraft(
                 create: [
                     {
                         stockQty: quantity,
+                        sku, // mirror tạm thời để không vỡ code cũ
                     },
                 ],
             },
         },
-        select: { id: true, slug: true },
+        select: { id: true, slug: true, sku: true },
     });
 }
-
 export async function searchProductsRepo(tx: DB, q: string) {
     const db = dbOrTx(tx);
 
-    const product = await db.product.findMany({
+    const products = await db.product.findMany({
         where: {
-            OR: [{ title: { contains: q, mode: "insensitive" } }],
+            OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { sku: { contains: q, mode: "insensitive" } },
+            ],
             status: ProductStatus.AVAILABLE,
-            contentStatus: ContentStatus.DRAFT,
+            contentStatus: {
+                in: [ContentStatus.DRAFT, ContentStatus.PUBLISHED],
+            },
             variants: {
                 some: {
                     availabilityStatus: AvailabilityStatus.ACTIVE,
@@ -739,6 +796,7 @@ export async function searchProductsRepo(tx: DB, q: string) {
         },
         select: {
             id: true,
+            sku: true,
             title: true,
             type: true,
             primaryImageUrl: true,
@@ -750,6 +808,7 @@ export async function searchProductsRepo(tx: DB, q: string) {
                     id: true,
                     price: true,
                     availabilityStatus: true,
+                    sku: true,
                 },
                 orderBy: {
                     updatedAt: "desc",
@@ -763,19 +822,22 @@ export async function searchProductsRepo(tx: DB, q: string) {
             },
         },
         take: 20,
-        orderBy: { updatedAt: "desc" },
+        orderBy: {
+            updatedAt: "desc",
+        },
     });
 
-    return product.map((p) => ({
+    return products.map((p) => ({
         id: p.id,
+        sku: p.sku ?? p.variants?.[0]?.sku ?? null,
         title: p.title,
         type: p.type,
-        primaryImageUrl: p.primaryImageUrl,
+        primaryImageUrl: p.primaryImageUrl ?? null,
         price: p.variants[0] ? Number(p.variants[0].price) : 0,
+        variantId: p.variants[0]?.id ?? null,
         vendorName: p.vendor?.name ?? null,
     }));
 }
-
 export async function updateProduct(
     tx: DB,
     id: string,
@@ -1097,56 +1159,6 @@ export async function markProductsShippedOrDelivered(
         },
     });
 }
-
-export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs>()({
-    select: {
-        id: true,
-        title: true,
-        status: true,
-        contentStatus: true,
-        type: true,
-        brandId: true,
-        categoryId: true,
-        primaryImageUrl: true,
-        image: {
-            where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } },
-            select: { id: true },
-        },
-        variants: {
-            orderBy: { updatedAt: "desc" },
-            take: 1,
-            select: {
-                sku: true,
-                price: true,
-                stockQty: true,
-                availabilityStatus: true,
-            },
-        },
-        watchSpec: {
-            select: {
-                ref: true,
-                model: true,
-                year: true,
-                caseType: true,
-                movement: true,
-                caseMaterial: true,
-                goldKarat: true,
-                goldColor: true,
-                length: true,
-                width: true,
-                thickness: true,
-                dialColor: true,
-                strap: true,
-                glass: true,
-                boxIncluded: true,
-                bookletIncluded: true,
-                cardIncluded: true,
-            },
-        },
-    },
-});
-
-export type ProductForBulkPost = Prisma.ProductGetPayload<typeof productForBulkPostArgs>;
 
 export async function getProductsForBulkPost(tx: DB, ids: string[]) {
     const db = dbOrTx(tx);

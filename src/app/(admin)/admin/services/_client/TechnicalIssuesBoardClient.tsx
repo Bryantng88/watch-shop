@@ -7,6 +7,7 @@ import {
     DragEndEvent,
     DragOverlay,
     DragStartEvent,
+    DragOverEvent,
     PointerSensor,
     closestCorners,
     useDraggable,
@@ -39,7 +40,9 @@ type IssueItem = {
     vendorId?: string | null;
     vendorNameSnap?: string | null;
     boardColumn: BoardColumnKey;
-    serviceRequest: {
+    serviceRequestReadyToClose?: boolean;
+    isLastDoneIssueOfServiceRequest?: boolean;
+    serviceRequest?: {
         id: string;
         refNo?: string | null;
         status?: string | null;
@@ -51,7 +54,7 @@ type IssueItem = {
         movement?: string | null;
         model?: string | null;
         ref?: string | null;
-    };
+    } | null;
     assessment?: {
         id: string;
         status?: string | null;
@@ -213,7 +216,7 @@ function canMove(from: BoardColumnKey, to: BoardColumnKey) {
     return false;
 }
 
-function normalizeText(v: any) {
+function normalizeText(v: unknown) {
     return String(v ?? "")
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
@@ -289,6 +292,14 @@ function FilterChip({
     );
 }
 
+function ReadyToCloseBadge() {
+    return (
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+            SR sẵn sàng đóng
+        </span>
+    );
+}
+
 function IssueCard({
     item,
     dragging,
@@ -302,14 +313,16 @@ function IssueCard({
     onOpenServiceRequest?: () => void;
     dragHandleProps?: Record<string, any>;
 }) {
+    const sr = item?.serviceRequest ?? null;
     const accent = getAreaAccent(item.area);
-    const imageSrc = item.serviceRequest.primaryImageUrl
-        ? `/api/media/sign?key=${encodeURIComponent(item.serviceRequest.primaryImageUrl)}`
+
+    const imageSrc = sr?.primaryImageUrl
+        ? `/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`
         : null;
 
     return (
         <div
-            className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${dragging ? "shadow-xl rotate-[1.5deg]" : "hover:shadow-md"
+            className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${dragging ? "rotate-[1.5deg] shadow-xl" : "hover:shadow-md"
                 }`}
         >
             <div className={`h-1.5 ${accent.topBar}`} />
@@ -334,7 +347,7 @@ function IssueCard({
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onOpenServiceRequest?.();
+                                if (sr?.id) onOpenServiceRequest?.();
                             }}
                             className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
                         >
@@ -362,7 +375,9 @@ function IssueCard({
             >
                 <div className="space-y-3 p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${accent.chip}`}>
+                        <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${accent.chip}`}
+                        >
                             {areaLabel(item.area)}
                         </span>
                         <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-700">
@@ -371,6 +386,7 @@ function IssueCard({
                         <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-700">
                             {statusLabel(item.executionStatus)}
                         </span>
+                        {item.serviceRequestReadyToClose ? <ReadyToCloseBadge /> : null}
                     </div>
 
                     <div className="rounded-xl bg-stone-50 px-3 py-3">
@@ -381,10 +397,10 @@ function IssueCard({
                         <div className="mt-2 grid grid-cols-[1fr_72px] gap-3">
                             <div className="min-w-0">
                                 <div className="line-clamp-2 text-sm font-semibold text-stone-900">
-                                    {item.serviceRequest.productTitle || "-"}
+                                    {sr?.productTitle || "-"}
                                 </div>
                                 <div className="mt-1 text-xs text-stone-500">
-                                    {item.serviceRequest.refNo}
+                                    {sr?.refNo || "-"}
                                 </div>
                             </div>
 
@@ -392,7 +408,7 @@ function IssueCard({
                                 {imageSrc ? (
                                     <img
                                         src={imageSrc}
-                                        alt={item.serviceRequest.productTitle || "product"}
+                                        alt={sr?.productTitle || "product"}
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (
@@ -550,6 +566,7 @@ export default function TechnicalIssueBoardClient({
         ready: number;
         inProgress: number;
         done: number;
+        readyToCloseSrCount?: number;
     };
 }) {
     const router = useRouter();
@@ -597,9 +614,7 @@ export default function TechnicalIssueBoardClient({
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
+            activationConstraint: { distance: 8 },
         })
     );
 
@@ -607,15 +622,17 @@ export default function TechnicalIssueBoardClient({
         const q = normalizeText(query);
 
         return (boardItems ?? []).filter((item) => {
+            const sr = item?.serviceRequest ?? null;
+
             const matchesQuery =
                 !q ||
                 [
                     item.summary,
                     item.note,
-                    item.serviceRequest.productTitle,
-                    item.serviceRequest.refNo,
+                    sr?.productTitle,
+                    sr?.refNo,
                     item.vendorNameSnap,
-                    item.serviceRequest.technicianNameSnap,
+                    sr?.technicianNameSnap,
                     areaLabel(item.area),
                     actionModeLabel(item.actionMode),
                 ]
@@ -642,9 +659,9 @@ export default function TechnicalIssueBoardClient({
             DONE: [],
         };
 
-        for (const item of filteredItems ?? []) {
+        for (const item of filteredItems) {
             const key = (item.boardColumn || "PENDING_CONFIRM") as BoardColumnKey;
-            if (base[key]) base[key].push(item);
+            base[key].push(item);
         }
 
         return {
@@ -659,15 +676,23 @@ export default function TechnicalIssueBoardClient({
         };
     }, [filteredItems, visibleCountByColumn]);
 
-    const filteredCounts = React.useMemo(
-        () => ({
+    const filteredCounts = React.useMemo(() => {
+        const readyToCloseSrIds = Array.from(
+            new Set(
+                filteredItems
+                    .filter((x) => x?.serviceRequestReadyToClose && x?.serviceRequest?.id)
+                    .map((x) => x.serviceRequest!.id)
+            )
+        );
+
+        return {
             pendingConfirm: grouped.raw.PENDING_CONFIRM.length,
             ready: grouped.raw.READY.length,
             inProgress: grouped.raw.IN_PROGRESS.length,
             done: grouped.raw.DONE.length,
-        }),
-        [grouped]
-    );
+            readyToCloseSrCount: readyToCloseSrIds.length,
+        };
+    }, [grouped, filteredItems]);
 
     const activeItem = React.useMemo(
         () => boardItems.find((x) => x.id === activeId) ?? null,
@@ -773,6 +798,22 @@ export default function TechnicalIssueBoardClient({
         setActiveId(String(event.active.id));
     }
 
+    function handleDragOver(event: DragOverEvent) {
+        const overId = event.over?.id ? String(event.over.id) : null;
+
+        if (
+            overId === "PENDING_CONFIRM" ||
+            overId === "READY" ||
+            overId === "IN_PROGRESS" ||
+            overId === "DONE"
+        ) {
+            setOverColumn(overId);
+            return;
+        }
+
+        setOverColumn(null);
+    }
+
     function handleDragEnd(event: DragEndEvent) {
         const active = event.active;
         const over = event.over;
@@ -828,7 +869,6 @@ export default function TechnicalIssueBoardClient({
         }
         if (from === "IN_PROGRESS" && targetColumn === "DONE") {
             void callAction(issueId, "complete", snapshot);
-            return;
         }
     }
 
@@ -863,7 +903,7 @@ export default function TechnicalIssueBoardClient({
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-amber-700">
                                 Chờ xác nhận
@@ -896,6 +936,14 @@ export default function TechnicalIssueBoardClient({
                                 {filteredCounts.done}
                             </div>
                         </div>
+                        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-teal-700">
+                                SR sẵn sàng đóng
+                            </div>
+                            <div className="mt-1 text-xl font-semibold text-teal-900">
+                                {filteredCounts.readyToCloseSrCount}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -921,40 +969,22 @@ export default function TechnicalIssueBoardClient({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            <FilterChip
-                                active={areaFilter === "ALL"}
-                                onClick={() => setAreaFilter("ALL")}
-                            >
+                            <FilterChip active={areaFilter === "ALL"} onClick={() => setAreaFilter("ALL")}>
                                 Tất cả khu vực
                             </FilterChip>
-                            <FilterChip
-                                active={areaFilter === "MOVEMENT"}
-                                onClick={() => setAreaFilter("MOVEMENT")}
-                            >
+                            <FilterChip active={areaFilter === "MOVEMENT"} onClick={() => setAreaFilter("MOVEMENT")}>
                                 Máy
                             </FilterChip>
-                            <FilterChip
-                                active={areaFilter === "CASE"}
-                                onClick={() => setAreaFilter("CASE")}
-                            >
+                            <FilterChip active={areaFilter === "CASE"} onClick={() => setAreaFilter("CASE")}>
                                 Vỏ
                             </FilterChip>
-                            <FilterChip
-                                active={areaFilter === "CRYSTAL"}
-                                onClick={() => setAreaFilter("CRYSTAL")}
-                            >
+                            <FilterChip active={areaFilter === "CRYSTAL"} onClick={() => setAreaFilter("CRYSTAL")}>
                                 Kính
                             </FilterChip>
-                            <FilterChip
-                                active={areaFilter === "DIAL"}
-                                onClick={() => setAreaFilter("DIAL")}
-                            >
+                            <FilterChip active={areaFilter === "DIAL"} onClick={() => setAreaFilter("DIAL")}>
                                 Mặt số
                             </FilterChip>
-                            <FilterChip
-                                active={areaFilter === "CROWN"}
-                                onClick={() => setAreaFilter("CROWN")}
-                            >
+                            <FilterChip active={areaFilter === "CROWN"} onClick={() => setAreaFilter("CROWN")}>
                                 Núm
                             </FilterChip>
                         </div>
@@ -996,6 +1026,7 @@ export default function TechnicalIssueBoardClient({
                     sensors={sensors}
                     collisionDetection={closestCorners}
                     onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
                     onDragEnd={handleDragEnd}
                 >
                     <div className="grid gap-4 xl:grid-cols-4">
@@ -1020,9 +1051,11 @@ export default function TechnicalIssueBoardClient({
                                             item={item}
                                             activeId={activeId}
                                             onOpen={() => setSelectedIssue(item)}
-                                            onOpenServiceRequest={() =>
-                                                router.push(`/admin/services/${item.serviceRequest.id}`)
-                                            }
+                                            onOpenServiceRequest={() => {
+                                                if (item?.serviceRequest?.id) {
+                                                    router.push(`/admin/services/${item.serviceRequest.id}`);
+                                                }
+                                            }}
                                         />
                                     ))}
                                 </BoardColumn>
@@ -1046,220 +1079,231 @@ export default function TechnicalIssueBoardClient({
             </div>
 
             {selectedIssue && (
-                <div className="fixed inset-0 z-50 flex">
-                    <div
-                        className="flex-1 bg-stone-950/35"
-                        onClick={() => setSelectedIssue(null)}
-                    />
-                    <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-white shadow-2xl">
-                        <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <div className="text-lg font-semibold text-stone-950">
-                                        {selectedIssue.summary || "Technical issue"}
-                                    </div>
-                                    <div className="mt-1 text-sm text-stone-500">
-                                        {selectedIssue.serviceRequest.productTitle || "-"} •{" "}
-                                        {selectedIssue.serviceRequest.refNo}
-                                    </div>
-                                </div>
+                <IssueDrawer
+                    issue={selectedIssue}
+                    busyId={busyId}
+                    actualCost={drawerState.actualCost}
+                    resolutionNote={drawerState.resolutionNote}
+                    onChangeActualCost={(value) =>
+                        setDrawerState((prev) => ({ ...prev, actualCost: value }))
+                    }
+                    onChangeResolutionNote={(value) =>
+                        setDrawerState((prev) => ({ ...prev, resolutionNote: value }))
+                    }
+                    onClose={() => setSelectedIssue(null)}
+                    onAction={callAction}
+                    onOpenServiceRequest={() => {
+                        if (selectedIssue?.serviceRequest?.id) {
+                            router.push(`/admin/services/${selectedIssue.serviceRequest.id}`);
+                        }
+                    }}
+                />
+            )}
+        </>
+    );
+}
 
-                                <button
-                                    type="button"
-                                    className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
-                                    onClick={() => setSelectedIssue(null)}
-                                >
-                                    Đóng
-                                </button>
+function IssueDrawer({
+    issue,
+    busyId,
+    actualCost,
+    resolutionNote,
+    onChangeActualCost,
+    onChangeResolutionNote,
+    onClose,
+    onAction,
+    onOpenServiceRequest,
+}: {
+    issue: IssueItem;
+    busyId: string | null;
+    actualCost: string;
+    resolutionNote: string;
+    onChangeActualCost: (value: string) => void;
+    onChangeResolutionNote: (value: string) => void;
+    onClose: () => void;
+    onAction: (
+        issueId: string,
+        action: "confirm" | "start" | "complete" | "cancel",
+        rollback?: IssueItem[]
+    ) => Promise<void>;
+    onOpenServiceRequest: () => void;
+}) {
+    const sr = issue?.serviceRequest ?? null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-stone-950/35" onClick={onClose} />
+            <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-white shadow-2xl">
+                <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <div className="text-lg font-semibold text-stone-950">
+                                {issue.summary || "Technical issue"}
                             </div>
+                            <div className="mt-1 text-sm text-stone-500">
+                                {sr?.productTitle || "-"} • {sr?.refNo || "-"}
+                            </div>
+                            {issue.serviceRequestReadyToClose ? (
+                                <div className="mt-2">
+                                    <ReadyToCloseBadge />
+                                </div>
+                            ) : null}
                         </div>
 
-                        <div className="space-y-5 p-5">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                <DrawerField
-                                    label="Khu vực"
-                                    value={areaLabel(selectedIssue.area)}
-                                />
-                                <DrawerField
-                                    label="Thực hiện"
-                                    value={actionModeLabel(selectedIssue.actionMode)}
-                                />
-                                <DrawerField
-                                    label="Trạng thái"
-                                    value={statusLabel(selectedIssue.executionStatus)}
-                                />
-                                <DrawerField
-                                    label="Xác nhận"
-                                    value={selectedIssue.isConfirmed ? "Đã xác nhận" : "Chưa xác nhận"}
-                                />
-                                <DrawerField
-                                    label="Vendor"
-                                    value={selectedIssue.vendorNameSnap || "-"}
-                                />
-                                <DrawerField
-                                    label="Kỹ thuật viên"
-                                    value={selectedIssue.serviceRequest.technicianNameSnap || "-"}
-                                />
-                                <DrawerField
-                                    label="Chi phí dự kiến"
-                                    value={fmtMoney(selectedIssue.estimatedCost)}
-                                />
-                                <DrawerField
-                                    label="Chi phí thực tế"
-                                    value={fmtMoney(selectedIssue.actualCost)}
+                        <button
+                            type="button"
+                            className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
+                            onClick={onClose}
+                        >
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+
+                <div className="space-y-5 p-5">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <DrawerField label="Khu vực" value={areaLabel(issue.area)} />
+                        <DrawerField label="Thực hiện" value={actionModeLabel(issue.actionMode)} />
+                        <DrawerField label="Trạng thái" value={statusLabel(issue.executionStatus)} />
+                        <DrawerField
+                            label="Xác nhận"
+                            value={issue.isConfirmed ? "Đã xác nhận" : "Chưa xác nhận"}
+                        />
+                        <DrawerField label="Vendor" value={issue.vendorNameSnap || "-"} />
+                        <DrawerField
+                            label="Kỹ thuật viên"
+                            value={sr?.technicianNameSnap || "-"}
+                        />
+                        <DrawerField
+                            label="Chi phí dự kiến"
+                            value={fmtMoney(issue.estimatedCost)}
+                        />
+                        <DrawerField
+                            label="Chi phí thực tế"
+                            value={fmtMoney(issue.actualCost)}
+                        />
+                    </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                        <div className="text-sm font-semibold text-stone-900">
+                            Ghi chú kỹ thuật
+                        </div>
+                        <div className="mt-2 text-sm text-stone-600">
+                            {issue.note || "Chưa có ghi chú."}
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                        <div className="text-sm font-semibold text-stone-900">Timeline</div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <Step label="Mở issue" value={fmtDT(issue.openedAt)} active />
+                            <Step
+                                label="Xác nhận"
+                                value={fmtDT(issue.confirmedAt)}
+                                active={Boolean(issue.confirmedAt)}
+                            />
+                            <Step
+                                label="Bắt đầu"
+                                value={fmtDT(issue.startedAt)}
+                                active={Boolean(issue.startedAt)}
+                            />
+                            <Step
+                                label="Hoàn tất"
+                                value={fmtDT(issue.completedAt)}
+                                active={Boolean(issue.completedAt)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                        <div className="text-sm font-semibold text-stone-900">
+                            Cập nhật xử lý
+                        </div>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+                            <div>
+                                <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-400">
+                                    Chi phí thực tế
+                                </label>
+                                <input
+                                    value={actualCost}
+                                    onChange={(e) => onChangeActualCost(e.target.value)}
+                                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                                    placeholder="0"
                                 />
                             </div>
 
-                            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                                <div className="text-sm font-semibold text-stone-900">
-                                    Ghi chú kỹ thuật
-                                </div>
-                                <div className="mt-2 text-sm text-stone-600">
-                                    {selectedIssue.note || "Chưa có ghi chú."}
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                                <div className="text-sm font-semibold text-stone-900">
-                                    Timeline
-                                </div>
-                                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                    <Step
-                                        label="Mở issue"
-                                        value={fmtDT(selectedIssue.openedAt)}
-                                        active
-                                    />
-                                    <Step
-                                        label="Xác nhận"
-                                        value={fmtDT(selectedIssue.confirmedAt)}
-                                        active={Boolean(selectedIssue.confirmedAt)}
-                                    />
-                                    <Step
-                                        label="Bắt đầu"
-                                        value={fmtDT(selectedIssue.startedAt)}
-                                        active={Boolean(selectedIssue.startedAt)}
-                                    />
-                                    <Step
-                                        label="Hoàn tất"
-                                        value={fmtDT(selectedIssue.completedAt)}
-                                        active={Boolean(selectedIssue.completedAt)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                                <div className="text-sm font-semibold text-stone-900">
-                                    Cập nhật xử lý
-                                </div>
-
-                                <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
-                                    <div>
-                                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-400">
-                                            Chi phí thực tế
-                                        </label>
-                                        <input
-                                            value={drawerState.actualCost}
-                                            onChange={(e) =>
-                                                setDrawerState((prev) => ({
-                                                    ...prev,
-                                                    actualCost: e.target.value,
-                                                }))
-                                            }
-                                            className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
-                                            placeholder="0"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-400">
-                                            Ghi chú hoàn tất / hủy
-                                        </label>
-                                        <textarea
-                                            value={drawerState.resolutionNote}
-                                            onChange={(e) =>
-                                                setDrawerState((prev) => ({
-                                                    ...prev,
-                                                    resolutionNote: e.target.value,
-                                                }))
-                                            }
-                                            className="min-h-[110px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
-                                            placeholder="Nhập kết quả xử lý, linh kiện đã thay, lưu ý sau xử lý..."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-stone-200 bg-white p-4">
-                                <div className="flex flex-wrap gap-3">
-                                    {selectedIssue.boardColumn === "PENDING_CONFIRM" && (
-                                        <button
-                                            type="button"
-                                            disabled={busyId === selectedIssue.id}
-                                            onClick={() =>
-                                                callAction(selectedIssue.id, "confirm")
-                                            }
-                                            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
-                                        >
-                                            Xác nhận
-                                        </button>
-                                    )}
-
-                                    {selectedIssue.boardColumn === "READY" && (
-                                        <button
-                                            type="button"
-                                            disabled={busyId === selectedIssue.id}
-                                            onClick={() =>
-                                                callAction(selectedIssue.id, "start")
-                                            }
-                                            className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
-                                        >
-                                            Bắt đầu
-                                        </button>
-                                    )}
-
-                                    {selectedIssue.boardColumn === "IN_PROGRESS" && (
-                                        <button
-                                            type="button"
-                                            disabled={busyId === selectedIssue.id}
-                                            onClick={() =>
-                                                callAction(selectedIssue.id, "complete")
-                                            }
-                                            className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                                        >
-                                            Hoàn tất
-                                        </button>
-                                    )}
-
-                                    {selectedIssue.boardColumn !== "DONE" && (
-                                        <button
-                                            type="button"
-                                            disabled={busyId === selectedIssue.id}
-                                            onClick={() =>
-                                                callAction(selectedIssue.id, "cancel")
-                                            }
-                                            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
-                                        >
-                                            Hủy issue
-                                        </button>
-                                    )}
-
-                                    <button
-                                        type="button"
-                                        className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
-                                        onClick={() =>
-                                            router.push(
-                                                `/admin/services/${selectedIssue.serviceRequest.id}`
-                                            )
-                                        }
-                                    >
-                                        Mở Service Request
-                                    </button>
-                                </div>
+                            <div>
+                                <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-400">
+                                    Ghi chú hoàn tất / hủy
+                                </label>
+                                <textarea
+                                    value={resolutionNote}
+                                    onChange={(e) => onChangeResolutionNote(e.target.value)}
+                                    className="min-h-[110px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
+                                    placeholder="Nhập kết quả xử lý, linh kiện đã thay, lưu ý sau xử lý..."
+                                />
                             </div>
                         </div>
                     </div>
+
+                    <div className="rounded-2xl border border-stone-200 bg-white p-4">
+                        <div className="flex flex-wrap gap-3">
+                            {issue.boardColumn === "PENDING_CONFIRM" && (
+                                <button
+                                    type="button"
+                                    disabled={busyId === issue.id}
+                                    onClick={() => onAction(issue.id, "confirm")}
+                                    className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                                >
+                                    Xác nhận
+                                </button>
+                            )}
+
+                            {issue.boardColumn === "READY" && (
+                                <button
+                                    type="button"
+                                    disabled={busyId === issue.id}
+                                    onClick={() => onAction(issue.id, "start")}
+                                    className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                                >
+                                    Bắt đầu
+                                </button>
+                            )}
+
+                            {issue.boardColumn === "IN_PROGRESS" && (
+                                <button
+                                    type="button"
+                                    disabled={busyId === issue.id}
+                                    onClick={() => onAction(issue.id, "complete")}
+                                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                >
+                                    Hoàn tất
+                                </button>
+                            )}
+
+                            {issue.boardColumn !== "DONE" && (
+                                <button
+                                    type="button"
+                                    disabled={busyId === issue.id}
+                                    onClick={() => onAction(issue.id, "cancel")}
+                                    className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                                >
+                                    Hủy issue
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
+                                onClick={onOpenServiceRequest}
+                            >
+                                Mở Service Request
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            )}
-        </>
+            </div>
+        </div>
     );
 }

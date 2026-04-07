@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
+import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useAppDialog } from "@/components/feedback/AppDialogProvider";
 
 function fmtDT(s?: string | null) {
     if (!s) return "-";
@@ -18,13 +20,14 @@ function MiniCard({
 }: {
     label: string;
     value: React.ReactNode;
-    tone?: "slate" | "amber" | "sky" | "emerald";
+    tone?: "slate" | "amber" | "sky" | "emerald" | "teal";
 }) {
     const tones: Record<string, string> = {
         slate: "border-slate-200 bg-slate-50 text-slate-900",
         amber: "border-amber-200 bg-amber-50 text-amber-900",
         sky: "border-sky-200 bg-sky-50 text-sky-900",
         emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
+        teal: "border-teal-200 bg-teal-50 text-teal-900",
     };
 
     return (
@@ -37,7 +40,11 @@ function MiniCard({
 
 export default function ServiceRequestDetailClient({ detail }: { detail: any }) {
     const router = useRouter();
+    const notify = useNotify();
+    const dialog = useAppDialog();
+
     const [openTechnical, setOpenTechnical] = React.useState(false);
+    const [submitting, setSubmitting] = React.useState(false);
 
     const sr = detail.serviceRequest;
     const technical = detail.technicalSummary ?? {
@@ -47,9 +54,100 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
         activeAssessment: null,
     };
 
+    const readyToClose =
+        technical.activeAssessment &&
+        Number(technical.issueCount ?? 0) > 0 &&
+        Number(technical.openIssueCount ?? 0) === 0;
+
     const imageSrc = sr.primaryImageUrl
         ? `/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`
         : null;
+
+    async function handleOpenAssessment() {
+        try {
+            setSubmitting(true);
+
+            const res = await fetch(`/api/admin/service-requests/${sr.id}/open-assessment`, {
+                method: "POST",
+            });
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                notify.error({
+                    title: "Không thể mở phiếu kỹ thuật",
+                    message: json?.error || "Đã có lỗi xảy ra khi mở phiếu kỹ thuật.",
+                });
+                return;
+            }
+
+            notify.success({
+                title: "Đã sẵn sàng phiếu kỹ thuật",
+                message: "Bạn có thể tiếp tục thao tác đánh giá kỹ thuật cho service request này.",
+            });
+
+            setOpenTechnical(true);
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể mở phiếu kỹ thuật",
+                message: error?.message || "Đã có lỗi xảy ra.",
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleCloseServiceRequest() {
+        const confirmed = await dialog.confirm({
+            title: "Đóng service request",
+            message:
+                "Tất cả issue đã hoàn tất. Bạn có chắc muốn chốt service request này không?",
+            confirmText: "Đóng SR",
+            cancelText: "Quay lại",
+            tone: "success",
+        });
+
+        if (!confirmed) return;
+
+        try {
+            setSubmitting(true);
+
+            const res = await fetch(`/api/admin/service-requests/${sr.id}/complete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                await dialog.alert({
+                    title: "Chưa thể đóng service request",
+                    message:
+                        json?.error ||
+                        "Service request vẫn còn điều kiện chưa đạt để chốt.",
+                    confirmText: "Đã hiểu",
+                    tone: "warning",
+                });
+                return;
+            }
+
+            notify.success({
+                title: "Đã đóng service request",
+                message: "Service request đã được chốt thành công.",
+            });
+
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Đóng service request thất bại",
+                message: error?.message || "Đã có lỗi xảy ra.",
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -130,61 +228,89 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 </div>
 
                 <div className="p-5">
-                    <div className="grid gap-3 md:grid-cols-4">
-                        <MiniCard
-                            label="Tổng phiếu"
-                            value={technical.assessmentCount ?? 0}
-                        />
-                        <MiniCard
-                            label="Tổng issue"
-                            value={technical.issueCount ?? 0}
-                            tone="amber"
-                        />
-                        <MiniCard
-                            label="Issue đang mở"
-                            value={technical.openIssueCount ?? 0}
-                            tone="sky"
-                        />
+                    <div className="grid gap-3 md:grid-cols-5">
+                        <MiniCard label="Tổng phiếu" value={technical.assessmentCount ?? 0} />
+                        <MiniCard label="Tổng issue" value={technical.issueCount ?? 0} tone="amber" />
+                        <MiniCard label="Issue đang mở" value={technical.openIssueCount ?? 0} tone="sky" />
                         <MiniCard
                             label="Phiếu active"
                             value={technical.activeAssessment?.status || "Chưa có"}
                             tone="emerald"
                         />
+                        <MiniCard
+                            label="SR sẵn sàng đóng"
+                            value={readyToClose ? "Có" : "Chưa"}
+                            tone="teal"
+                        />
                     </div>
 
                     <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                         {technical.activeAssessment ? (
-                            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                                <div className="space-y-2">
-                                    <div className="text-base font-semibold text-slate-900">
-                                        Phiếu hiện tại: {technical.activeAssessment.status}
+                            <div className="space-y-4">
+                                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                                    <div className="space-y-2">
+                                        <div className="text-base font-semibold text-slate-900">
+                                            Phiếu hiện tại: {technical.activeAssessment.status}
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            {technical.activeAssessment.issueCount} issue • cập nhật{" "}
+                                            {fmtDT(technical.activeAssessment.updatedAt)}
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            Nếu nghiệp vụ đặc biệt phát sinh sau khi phiếu đã hoàn tất, hệ thống có thể mở một phiếu mới để tiếp tục vòng xử lý.
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-slate-500">
-                                        {technical.activeAssessment.issueCount} issue • cập nhật{" "}
-                                        {fmtDT(technical.activeAssessment.updatedAt)}
-                                    </div>
-                                    <div className="text-sm text-slate-500">
-                                        Nếu nghiệp vụ đặc biệt phát sinh sau khi phiếu đã hoàn tất, hệ thống có thể mở một phiếu mới để tiếp tục vòng xử lý.
+
+                                    <div className="flex flex-wrap gap-3">
+                                        <button
+                                            type="button"
+                                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                                            onClick={() => router.push("/admin/services/issues-board")}
+                                        >
+                                            Điều phối tại Issue Board
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+                                            onClick={() => setOpenTechnical(true)}
+                                            disabled={submitting}
+                                        >
+                                            Tiếp tục phiếu kỹ thuật
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-wrap gap-3">
-                                    <button
-                                        type="button"
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
-                                        onClick={() => router.push("/admin/services/issues-board")}
-                                    >
-                                        Điều phối tại Issue Board
-                                    </button>
+                                {readyToClose ? (
+                                    <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
+                                        <div className="text-sm font-semibold text-teal-900">
+                                            Service Request sẵn sàng đóng
+                                        </div>
+                                        <div className="mt-1 text-sm text-teal-800">
+                                            Tất cả issue trong phiếu hiện tại đã hoàn tất. Bạn có thể chốt SR, hoặc mở một phiếu kỹ thuật mới nếu phát sinh vòng xử lý tiếp theo.
+                                        </div>
 
-                                    <button
-                                        type="button"
-                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
-                                        onClick={() => setOpenTechnical(true)}
-                                    >
-                                        Tiếp tục phiếu kỹ thuật
-                                    </button>
-                                </div>
+                                        <div className="mt-4 flex flex-wrap gap-3">
+                                            <button
+                                                type="button"
+                                                className="rounded-xl border border-teal-200 bg-white px-4 py-2 text-sm text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+                                                onClick={handleCloseServiceRequest}
+                                                disabled={submitting}
+                                            >
+                                                Đóng service request
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="rounded-xl border border-teal-200 bg-white px-4 py-2 text-sm text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+                                                onClick={() => setOpenTechnical(true)}
+                                                disabled={submitting}
+                                            >
+                                                Mở phiếu kỹ thuật mới
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         ) : (
                             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -208,20 +334,9 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
 
                                     <button
                                         type="button"
-                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
-                                        onClick={async () => {
-                                            const res = await fetch(
-                                                `/api/admin/service-requests/${sr.id}/open-assessment`,
-                                                { method: "POST" }
-                                            );
-                                            const json = await res.json().catch(() => ({}));
-                                            if (!res.ok) {
-                                                alert(json?.error || "Không thể mở phiếu kỹ thuật");
-                                                return;
-                                            }
-                                            setOpenTechnical(true);
-                                            router.refresh();
-                                        }}
+                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800 disabled:opacity-60"
+                                        onClick={handleOpenAssessment}
+                                        disabled={submitting}
                                     >
                                         Tạo phiếu kỹ thuật
                                     </button>
@@ -237,6 +352,10 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 serviceRequestId={sr.id}
                 onClose={() => setOpenTechnical(false)}
                 onSaved={async () => {
+                    notify.success({
+                        title: "Đã lưu phiếu kỹ thuật",
+                        message: "Dữ liệu đánh giá kỹ thuật đã được cập nhật.",
+                    });
                     router.refresh();
                 }}
                 productName={sr.productTitle ?? undefined}

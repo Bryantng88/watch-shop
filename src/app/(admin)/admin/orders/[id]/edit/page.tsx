@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import OrderFormClient from "../../_client/OrderForm";
-import { getOrderDraftForEdit, getServiceCatalogOptions } from "../../_servers/order.service";
+import {
+    getOrderDraftForEdit,
+    getServiceCatalogOptions,
+} from "../../_servers/order.service";
 
 export default async function EditOrderPage({
     params,
@@ -9,18 +12,20 @@ export default async function EditOrderPage({
 }) {
     const { id } = await params;
 
-    const [data, services] = await Promise.all([
+    const [draft, services] = await Promise.all([
         getOrderDraftForEdit(id),
         getServiceCatalogOptions(),
     ]);
 
-    if (!data) return notFound();
+    if (!draft) return notFound();
 
     return (
         <div className="mx-auto w-full max-w-[1500px] px-4 pt-6 lg:px-6">
             <OrderFormClient
+                key={id}
                 mode="edit"
-                initialData={data}
+                orderId={id}
+                initialData={draft as any}
                 services={services}
                 backHref={`/admin/orders/${id}`}
                 backLabel="← Chi tiết"

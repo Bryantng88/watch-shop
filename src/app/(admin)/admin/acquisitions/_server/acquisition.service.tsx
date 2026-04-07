@@ -9,7 +9,7 @@ import { Prisma, ProductStatus, ContentStatus } from "@prisma/client";
 import { createInvoiceFromAcquisition } from "../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "../../services/_server/service_request.service";
 import { ItemInput } from "./acquisition.dto";
-
+import { genUniqueProductSku } from "../../products/_server/helper";
 type AcqViewKey = "all" | "draft" | "posted" | "canceled";
 
 type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
@@ -279,10 +279,14 @@ async function createProductForPostedItem(
             ? parseWatchFlagsFromDescription(item.description)
             : null;
 
+    const productType = (item.productType ?? "WATCH") as any;
+    const sku = await genUniqueProductSku(tx as any, productType);
+
     if (item.productType === "WATCH_STRAP") {
         const created = await tx.product.create({
             data: {
                 title: item.productTitle,
+                sku,
                 status: ProductStatus.AVAILABLE,
                 contentStatus: ContentStatus.DRAFT,
                 type: "WATCH_STRAP" as any,
@@ -290,6 +294,7 @@ async function createProductForPostedItem(
                 variants: {
                     create: [
                         {
+                            sku,
                             stockQty: Number(item.quantity ?? 1),
                             costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                             price: new Prisma.Decimal(
@@ -316,8 +321,9 @@ async function createProductForPostedItem(
             },
             select: {
                 id: true,
+                sku: true,
                 variants: {
-                    select: { id: true },
+                    select: { id: true, sku: true },
                     take: 1,
                 },
             },
@@ -337,13 +343,15 @@ async function createProductForPostedItem(
     const created = await tx.product.create({
         data: {
             title: item.productTitle,
+            sku,
             status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
-            type: (item.productType ?? "WATCH") as any,
+            type: productType,
             vendor: { connect: { id: vendorId } },
             variants: {
                 create: [
                     {
+                        sku,
                         stockQty: Number(item.quantity ?? 1),
                         costPrice: new Prisma.Decimal(Number(item.unitCost ?? 0)),
                         availabilityStatus: "HIDDEN" as any,
@@ -353,6 +361,7 @@ async function createProductForPostedItem(
         },
         select: {
             id: true,
+            sku: true,
             primaryImageUrl: true,
             variants: {
                 select: { id: true, sku: true },
@@ -377,13 +386,12 @@ async function createProductForPostedItem(
         await createTechnicalCheckFromAcquisitionTx(tx as any, {
             productId: created.id,
             variantId: created.variants?.[0]?.id ?? null,
-            skuSnapshot: created.variants?.[0]?.sku ?? null,
+            skuSnapshot: created.sku ?? created.variants?.[0]?.sku ?? null,
             primaryImageUrlSnapshot: created.primaryImageUrl ?? null,
             notes: `Tạo từ phiếu nhập ${acqId}: Kiểm tra kỹ thuật tổng quát`,
         });
     }
 }
-
 async function syncProductFromAcquisitionItem(tx: DB, itemId: string) {
     const item = await tx.acquisitionItem.findUnique({
         where: { id: itemId },

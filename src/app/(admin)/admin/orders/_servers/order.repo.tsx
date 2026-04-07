@@ -635,11 +635,11 @@ export async function getDraftForEdit(
                     productId: true,
                     title: true,
                     quantity: true,
-
-                    // ✅ thống nhất field giá theo schema của bạn
                     listPrice: true,
                 },
             },
+
+
         },
     }) as any;
 }
