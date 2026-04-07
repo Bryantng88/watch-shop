@@ -12,6 +12,9 @@ import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"
 import { OrderDraftInput } from "./order.type";
 import { genRefNo } from "../../__components/AutoGenRef";
+import * as serviceRequestRepo from "../../services/_server/service_request.repo"
+
+
 /* ================================
    TYPES
 ================================ */
@@ -595,4 +598,17 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
     await orderRepo.assertCanEditDraft(tx, orderId);
     return orderRepo.updateDraft(tx, orderId, input);
   });
+}
+
+export async function getServiceCatalogOptions(opts?: { isActive?: boolean }) {
+  const rows = await serviceRequestRepo.getOptions(prisma as any, opts);
+
+  return rows.map((item) => ({
+    id: item.id,
+    code: item.code ?? null,
+    name: item.name,
+    defaultPrice:
+      item.defaultPrice == null ? null : Number(item.defaultPrice),
+    isActive: true,
+  }));
 }

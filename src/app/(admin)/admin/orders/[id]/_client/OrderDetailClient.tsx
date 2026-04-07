@@ -1,69 +1,75 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { StatusBadge } from "@/components/badges/StatusBadge";
+import { useMemo, useState } from "react";
+import StatusBadge from "@/components/badges/StatusBadge";
+
 import {
     ORDER_STATUS,
     ORDER_SOURCE,
     VERIFICATION_STATUS,
     RESERVE_TYPE,
 } from "@/components/badges/StatusMaps";
-import { ServiceScope } from "@prisma/client";
+
 type OrderDetailItem = {
     id: string;
     title: string;
-    kind?: string | null; // PRODUCT | SERVICE...
     quantity: number;
+    kind?: string | null;
     listPrice: number;
-    lineTotal: number;
-    serviceScope?: ServiceScope | null;
+    unitPriceAgreed?: number | null;
+    subtotal?: number | null;
+    lineTotal?: number | null;
+    img?: string | null;
+    productId?: string | null;
+    variantId?: string | null;
+    productType?: string | null;
+    serviceScope?: string | null;
     customerItemNote?: string | null;
     linkedOrderItemId?: string | null;
-
-    // ✅ (optional) nếu API trả kèm title của product được link
     linkedProductTitle?: string | null;
 };
 
 type OrderDetailData = {
     id: string;
-    refNo: string | null;
-
+    refNo?: string | null;
     status: string;
-    source: string;
-    verificationStatus: string;
-    reserveType: string | null;
-
-    customerName: string | null;
-    shipPhone: string | null;
-
+    source?: string | null;
+    verificationStatus?: string | null;
+    reserveType?: string | null;
+    reserveUntil?: string | null;
+    customerName?: string | null;
+    shipPhone?: string | null;
     shipAddress?: string | null;
     shipWard?: string | null;
     shipDistrict?: string | null;
     shipCity?: string | null;
-
     paymentMethod?: string | null;
     depositRequired?: number | null;
-
-    currency: string;
-    subtotal: number;
-
-    createdAt: string;
-    updatedAt: string;
-
+    depositPaid?: number | null;
+    hasShipment?: boolean | null;
+    currency?: string | null;
+    subtotal?: number | null;
     notes?: string | null;
-
+    createdAt?: string | null;
+    updatedAt?: string | null;
     items: OrderDetailItem[];
 };
 
-function cls(...xs: Array<string | false | null | undefined>) {
-    return xs.filter(Boolean).join(" ");
+function cx(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
 }
 
-function fmtDate(d?: string | null) {
-    if (!d) return "-";
-    const dt = new Date(d);
-    return dt.toLocaleString("vi-VN", {
+function fmtMoney(value?: number | null, currency = "VND") {
+    if (value == null) return "-";
+    return `${new Intl.NumberFormat("vi-VN").format(Number(value))} ${currency}`;
+}
+
+function fmtDate(value?: string | null) {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleString("vi-VN", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -72,10 +78,6 @@ function fmtDate(d?: string | null) {
     });
 }
 
-function fmtMoney(n?: number | null, cur = "VND") {
-    if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(Number(n)) + " " + cur;
-}
 function renderServiceScope(scope?: string | null) {
     if (!scope) return "-";
     if (scope === "WITH_PURCHASE") return "Đi kèm sản phẩm";
@@ -83,298 +85,388 @@ function renderServiceScope(scope?: string | null) {
     return scope;
 }
 
-function Section({
+function Panel({
     title,
-    children,
+    description,
     right,
+    children,
+    className,
 }: {
     title: string;
-    children: React.ReactNode;
+    description?: string;
     right?: React.ReactNode;
+    children: React.ReactNode;
+    className?: string;
 }) {
     return (
-        <div className="rounded-lg border bg-white">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <section className={cx("overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm", className)}>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-200 px-5 py-4 sm:px-6">
+                <div>
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-neutral-900">
+                        {title}
+                    </h2>
+                    {description ? (
+                        <p className="mt-1 text-sm text-neutral-500">{description}</p>
+                    ) : null}
+                </div>
                 {right}
             </div>
-            <div className="p-4">{children}</div>
-        </div>
+            <div className="p-5 sm:p-6">{children}</div>
+        </section>
     );
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoGrid({ children }: { children: React.ReactNode }) {
+    return <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">{children}</div>;
+}
+
+function Field({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
-        <div className="space-y-1">
-            <div className="text-xs text-gray-500">{label}</div>
-            <div className="text-sm text-gray-900">{value}</div>
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3">
+            <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-neutral-500">{label}</div>
+            <div className={cx("mt-1 text-sm text-neutral-900", mono && "font-mono text-[13px]")}>{value}</div>
         </div>
     );
 }
 
 export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
+    const [posting, setPosting] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+
+    const currency = data.currency || "VND";
     const fullAddress = useMemo(() => {
-        const parts = [
-            data.shipAddress,
-            data.shipWard,
-            data.shipDistrict,
-            data.shipCity,
-        ].filter(Boolean);
+        const parts = [data.shipAddress, data.shipWard, data.shipDistrict, data.shipCity].filter(Boolean);
         return parts.length ? parts.join(", ") : "-";
-    }, [data]);
+    }, [data.shipAddress, data.shipWard, data.shipDistrict, data.shipCity]);
+
+    const totals = useMemo(() => {
+        const subtotal = Number(data.subtotal || 0);
+        const depositRequired = Number(data.depositRequired || 0);
+        const depositPaid = Number(data.depositPaid || 0);
+        return {
+            subtotal,
+            depositRequired,
+            depositPaid,
+            remainingDeposit: Math.max(depositRequired - depositPaid, 0),
+        };
+    }, [data.subtotal, data.depositPaid, data.depositRequired]);
 
     const canPost = data.status === "DRAFT" || data.status === "RESERVED";
     const canVerify = data.source === "WEB" && data.verificationStatus === "PENDING";
-    const canCancel = data.status !== "CANCELLED";
+    const canCancel = data.status !== "CANCELLED" && data.status !== "COMPLETED";
+
+    async function runAction(url: string, setter: (v: boolean) => void, confirmText?: string) {
+        if (confirmText && !window.confirm(confirmText)) return;
+        setter(true);
+        try {
+            const res = await fetch(url, { method: "POST" });
+            if (!res.ok) {
+                const text = await res.text().catch(() => "");
+                throw new Error(text || "Thao tác thất bại");
+            }
+            window.location.reload();
+        } catch (error: any) {
+            alert(error?.message || "Thao tác thất bại");
+        } finally {
+            setter(false);
+        }
+    }
 
     return (
-        <div className="space-y-4">
-            {/* Top bar */}
-            <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                    <h1 className="text-xl font-semibold">Chi tiết đơn hàng</h1>
-                    <div className="text-xs text-gray-500">
-                        ID: <span className="font-mono">{data.id}</span>
+        <div className="mx-auto w-full max-w-[1500px] space-y-6 px-4 pt-6 lg:px-6">
+            <div className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
+                    <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                                href="/admin/orders"
+                                className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
+                            >
+                                ← Danh sách đơn hàng
+                            </Link>
+                            <Link
+                                href={`/admin/orders/${data.id}/edit`}
+                                className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
+                            >
+                                Chỉnh sửa
+                            </Link>
+                        </div>
+
+                        <div>
+                            <div className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-500">
+                                Chi tiết đơn hàng
+                            </div>
+                            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-[30px]">
+                                {data.refNo?.trim() ? data.refNo : "Đơn hàng chưa phát sinh mã"}
+                            </h1>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+                                <span>Mã hệ thống:</span>
+                                <span className="rounded-full bg-neutral-100 px-3 py-1 font-mono text-[13px] text-neutral-700">
+                                    {data.id}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge value={data.status} map={ORDER_STATUS} />
+                            {data.source ? <StatusBadge value={data.source} map={ORDER_SOURCE} /> : null}
+                            {data.verificationStatus ? (
+                                <StatusBadge value={data.verificationStatus} map={VERIFICATION_STATUS} />
+                            ) : null}
+                            <StatusBadge value={data.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                        </div>
                     </div>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <StatusBadge value={data.status} map={ORDER_STATUS} />
-                        <StatusBadge value={data.source} map={ORDER_SOURCE} />
-                        <StatusBadge value={data.verificationStatus} map={VERIFICATION_STATUS} />
-                        <StatusBadge value={data.reserveType ?? "NONE"} map={RESERVE_TYPE} />
+                    <div className="min-w-[260px] rounded-[24px] border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                        <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-neutral-500">
+                            Tổng giá trị đơn
+                        </div>
+                        <div className="mt-2 text-3xl font-semibold tracking-tight text-neutral-950">
+                            {fmtMoney(totals.subtotal, currency)}
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-2xl border border-neutral-200 bg-white px-3 py-3">
+                                <div className="text-xs text-neutral-500">Tiền cọc yêu cầu</div>
+                                <div className="mt-1 font-semibold text-neutral-900">
+                                    {fmtMoney(totals.depositRequired, currency)}
+                                </div>
+                            </div>
+                            <div className="rounded-2xl border border-neutral-200 bg-white px-3 py-3">
+                                <div className="text-xs text-neutral-500">Đã nhận cọc</div>
+                                <div className="mt-1 font-semibold text-neutral-900">
+                                    {fmtMoney(totals.depositPaid, currency)}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <Link
-                    href="/admin/orders"
-                    className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
-                >
-                    ← Quay lại danh sách
-                </Link>
             </div>
 
-            {/* 2 columns */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                {/* LEFT */}
-                <div className="lg:col-span-8 space-y-4">
-                    <Section
-                        title="Tóm tắt"
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-6">
+                    <Panel title="Tổng quan đơn hàng" description="Thông tin trạng thái, nguồn tạo và thời điểm xử lý của đơn hàng.">
+                        <InfoGrid>
+                            <Field label="Ngày tạo" value={fmtDate(data.createdAt)} />
+                            <Field label="Cập nhật lần cuối" value={fmtDate(data.updatedAt)} />
+                            <Field label="Phương thức thanh toán" value={data.paymentMethod || "-"} />
+                            <Field label="Hình thức giữ hàng" value={data.reserveType || "-"} />
+                            <Field label="Hạn giữ hàng" value={fmtDate(data.reserveUntil)} />
+                            <Field label="Có giao hàng" value={data.hasShipment ? "Có" : "Không"} />
+                            <Field label="Nguồn đơn" value={data.source || "-"} />
+                            <Field label="Xác minh" value={data.verificationStatus || "-"} />
+                        </InfoGrid>
+                    </Panel>
+
+                    <Panel title="Khách hàng & giao nhận" description="Thông tin liên hệ và địa chỉ nhận hàng của khách.">
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <div className="space-y-4">
+                                <Field label="Khách hàng" value={data.customerName || "-"} />
+                                <Field label="Số điện thoại" value={data.shipPhone || "-"} />
+                            </div>
+                            <div className="space-y-4">
+                                <Field label="Địa chỉ giao hàng" value={fullAddress} />
+                            </div>
+                        </div>
+                    </Panel>
+
+                    <Panel
+                        title="Sản phẩm & dịch vụ"
+                        description="Danh sách các dòng trong đơn hàng, bao gồm sản phẩm bán ra và dịch vụ đi kèm."
                         right={
-                            <div className="text-sm text-gray-600">
-                                RefNo: <b>{data.refNo ?? "-"}</b>
+                            <div className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-600">
+                                {data.items.length} dòng
                             </div>
                         }
                     >
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="Tạo lúc" value={fmtDate(data.createdAt)} />
-                            <Field label="Cập nhật" value={fmtDate(data.updatedAt)} />
-                            <Field label="Phương thức thanh toán" value={data.paymentMethod ?? "-"} />
-                            <Field label="Tiền cọc" value={fmtMoney(data.depositRequired ?? 0, data.currency)} />
-                        </div>
-                    </Section>
-
-                    <Section title="Khách hàng & giao hàng">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="space-y-4">
-                                <Field label="Tên khách" value={data.customerName ?? "-"} />
-                                <Field label="Số điện thoại" value={data.shipPhone ?? "-"} />
-                            </div>
-                            <div className="space-y-4">
-                                <Field label="Địa chỉ" value={fullAddress} />
-                            </div>
-                        </div>
-                    </Section>
-
-                    <Section
-                        title="Danh sách sản phẩm"
-                        right={
-                            <div className="text-sm text-gray-600">
-                                {data.items.length} dòng • Tạm tính:{" "}
-                                <b>{fmtMoney(data.subtotal, data.currency)}</b>
-                            </div>
-                        }
-                    >
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="border-b bg-gray-50">
-                                    <tr>
-                                        <th className="px-3 py-2 text-left">Tên</th>
-                                        <th className="px-3 py-2 text-left">Loại</th>
-                                        <th className="px-3 py-2 text-right">SL</th>
-                                        <th className="px-3 py-2 text-right">Đơn giá</th>
-                                        <th className="px-3 py-2 text-right">Thành tiền</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.items.map((it) => {
-                                        const isService = it.kind === "SERVICE";
-
-                                        return (
-                                            <tr key={it.id} className="border-b align-top">
-                                                {/* TÊN */}
-                                                <td className="px-3 py-2">
-                                                    <div className="font-medium">{it.title}</div>
-
-                                                    {/* ✅ service detail lines */}
-                                                    {isService && (
-                                                        <div className="mt-1 space-y-1 text-[12px] text-gray-600">
-                                                            <div>
-                                                                <span className="text-gray-500">Phạm vi:</span>{" "}
-                                                                <span className="font-medium text-gray-700">
-                                                                    {renderServiceScope(it.serviceScope)}
-                                                                </span>
-
-                                                                {/* Nếu scope đi kèm sản phẩm thì show áp cho */}
-                                                                {it.serviceScope === "WITH_PURCHASE" && (
-                                                                    <>
-                                                                        <span className="mx-2 text-gray-300">•</span>
-                                                                        <span className="text-gray-500">Áp cho:</span>{" "}
-                                                                        <span className="font-medium text-gray-700">
-                                                                            {it.linkedProductTitle?.trim()
-                                                                                ? it.linkedProductTitle
-                                                                                : it.linkedOrderItemId
-                                                                                    ? `#${it.linkedOrderItemId.slice(0, 8)}`
-                                                                                    : "-"}
-                                                                        </span>
-                                                                    </>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Note đồ khách mang tới */}
-                                                            {it.serviceScope === "CUSTOMER_ITEM" && it.customerItemNote?.trim() ? (
-                                                                <div className="text-gray-500">
-                                                                    <span className="text-gray-500">Ghi chú:</span>{" "}
-                                                                    <span className="text-gray-700">{it.customerItemNote}</span>
-                                                                </div>
-                                                            ) : null}
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* LOẠI */}
-                                                <td className="px-3 py-2 text-gray-600">
-                                                    {it.kind ?? "-"}
-                                                </td>
-
-                                                {/* SL */}
-                                                <td className="px-3 py-2 text-right">{it.quantity}</td>
-
-                                                {/* ĐƠN GIÁ */}
-                                                <td className="px-3 py-2 text-right">
-                                                    {fmtMoney(it.listPrice, data.currency)}
-                                                </td>
-
-                                                {/* THÀNH TIỀN */}
-                                                <td className="px-3 py-2 text-right font-medium">
-                                                    {fmtMoney(it.lineTotal, data.currency)}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-
-                            </table>
-                        </div>
-
-                        <div className="mt-4 flex justify-end">
-                            <div className="w-full max-w-sm rounded-lg border bg-gray-50 p-3">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-600">Tạm tính</span>
-                                    <span className="font-semibold">
-                                        {fmtMoney(data.subtotal, data.currency)}
-                                    </span>
+                        <div className="space-y-4">
+                            {data.items.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">
+                                    Đơn hàng chưa có sản phẩm hoặc dịch vụ.
                                 </div>
-                            </div>
-                        </div>
-                    </Section>
+                            ) : (
+                                data.items.map((item, index) => {
+                                    const lineTotal = item.lineTotal ?? item.subtotal ?? (item.unitPriceAgreed ?? item.listPrice) * item.quantity;
+                                    const isService = item.kind === "SERVICE";
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className="overflow-hidden rounded-[24px] border border-neutral-200 bg-white"
+                                        >
+                                            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:p-5">
+                                                <div className="flex h-[86px] w-[86px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
+                                                    {item.img ? (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img
+                                                            src={item.img}
+                                                            alt={item.title}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-400">
+                                                            {isService ? "SERVICE" : "ITEM"}
+                                                        </span>
+                                                    )}
+                                                </div>
 
-                    <Section title="Ghi chú">
-                        <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                            {data.notes?.trim() ? data.notes : "-"}
+                                                <div className="min-w-0 flex-1 space-y-3">
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="inline-flex rounded-full bg-neutral-900 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-white">
+                                                                    {item.kind || "ITEM"}
+                                                                </span>
+                                                                <span className="text-xs text-neutral-400">Dòng #{index + 1}</span>
+                                                            </div>
+                                                            <div className="mt-2 text-base font-semibold text-neutral-900 sm:text-lg">
+                                                                {item.title}
+                                                            </div>
+                                                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-500">
+                                                                {item.productType ? <span>Phân loại: {item.productType}</span> : null}
+                                                                {item.variantId ? <span className="font-mono text-[12px]">Variant: {item.variantId}</span> : null}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-right">
+                                                            <div className="text-xs text-neutral-500">Thành tiền</div>
+                                                            <div className="mt-1 text-base font-semibold text-neutral-950">
+                                                                {fmtMoney(lineTotal, currency)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                                                        <Field label="Số lượng" value={item.quantity} />
+                                                        <Field label="Giá niêm yết" value={fmtMoney(item.listPrice, currency)} />
+                                                        <Field
+                                                            label="Giá chốt"
+                                                            value={fmtMoney(item.unitPriceAgreed ?? item.listPrice, currency)}
+                                                        />
+                                                        <Field label="Line total" value={fmtMoney(lineTotal, currency)} />
+                                                    </div>
+
+                                                    {isService ? (
+                                                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                                            <Field label="Phạm vi dịch vụ" value={renderServiceScope(item.serviceScope)} />
+                                                            <Field
+                                                                label="Áp cho sản phẩm"
+                                                                value={
+                                                                    item.linkedProductTitle?.trim()
+                                                                        ? item.linkedProductTitle
+                                                                        : item.linkedOrderItemId || "-"
+                                                                }
+                                                                mono={!item.linkedProductTitle}
+                                                            />
+                                                            <div className="lg:col-span-2">
+                                                                <Field label="Ghi chú đồ khách" value={item.customerItemNote?.trim() || "-"} />
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
-                    </Section>
+                    </Panel>
+
+                    <Panel title="Ghi chú nội bộ" description="Thông tin bổ sung, lưu ý giao dịch hoặc dặn dò liên quan tới đơn hàng.">
+                        <div className="min-h-[120px] whitespace-pre-wrap rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm leading-6 text-neutral-800">
+                            {data.notes?.trim() ? data.notes : "Chưa có ghi chú."}
+                        </div>
+                    </Panel>
                 </div>
 
-                {/* RIGHT (sticky sidebar) */}
-                <div className="lg:col-span-4">
-                    <div className="space-y-4 lg:sticky lg:top-4">
-                        <div className="rounded-lg border bg-white p-4">
-                            <div className="text-xs text-gray-500">Tổng tiền</div>
-                            <div className="mt-1 text-2xl font-semibold">
-                                {fmtMoney(data.subtotal, data.currency)}
+                <aside className="space-y-6 xl:sticky xl:top-4 xl:self-start">
+                    <Panel title="Tổng hợp thanh toán" description="Theo dõi số tiền đơn hàng và tình trạng cọc.">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                                <span className="text-sm text-neutral-600">Tạm tính</span>
+                                <span className="text-sm font-semibold text-neutral-950">
+                                    {fmtMoney(totals.subtotal, currency)}
+                                </span>
                             </div>
-
-                            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                <div className="rounded-md bg-gray-50 p-2">
-                                    <div className="text-xs text-gray-500">Trạng thái</div>
-                                    <div className="mt-1">
-                                        <StatusBadge value={data.status} map={ORDER_STATUS} />
-                                    </div>
-                                </div>
-                                <div className="rounded-md bg-gray-50 p-2">
-                                    <div className="text-xs text-gray-500">Xác minh</div>
-                                    <div className="mt-1">
-                                        <StatusBadge value={data.verificationStatus} map={VERIFICATION_STATUS} />
-                                    </div>
-                                </div>
+                            <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                                <span className="text-sm text-neutral-600">Cọc yêu cầu</span>
+                                <span className="text-sm font-semibold text-neutral-950">
+                                    {fmtMoney(totals.depositRequired, currency)}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                                <span className="text-sm text-neutral-600">Đã nhận cọc</span>
+                                <span className="text-sm font-semibold text-neutral-950">
+                                    {fmtMoney(totals.depositPaid, currency)}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between rounded-2xl border border-neutral-900 bg-neutral-900 px-4 py-3 text-white">
+                                <span className="text-sm text-white/75">Cọc còn thiếu</span>
+                                <span className="text-sm font-semibold">
+                                    {fmtMoney(totals.remainingDeposit, currency)}
+                                </span>
                             </div>
                         </div>
+                    </Panel>
 
-                        <div className="rounded-lg border bg-white p-4 space-y-2">
-                            <div className="text-sm font-semibold">Hành động</div>
-
+                    <Panel title="Thao tác" description="Các hành động nhanh dành cho vận hành đơn hàng.">
+                        <div className="space-y-3">
                             <button
-                                disabled={!canPost}
-                                className={cls(
-                                    "w-full rounded-md px-3 py-2 text-sm font-medium",
-                                    canPost ? "bg-black text-white hover:bg-neutral-800" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                type="button"
+                                disabled={!canPost || posting}
+                                onClick={() => runAction(`/api/admin/orders/${data.id}/post`, setPosting)}
+                                className={cx(
+                                    "w-full rounded-2xl px-4 py-3 text-sm font-medium transition",
+                                    canPost && !posting
+                                        ? "bg-neutral-900 text-white hover:bg-neutral-800"
+                                        : "cursor-not-allowed bg-neutral-100 text-neutral-400"
                                 )}
-                                onClick={async () => {
-                                    await fetch(`/api/admin/orders/${data.id}/post`, { method: "POST" });
-                                    location.reload();
-                                }}
                             >
-                                Duyệt (POST)
+                                {posting ? "Đang duyệt..." : "Duyệt đơn"}
                             </button>
 
                             <button
-                                disabled={!canVerify}
-                                className={cls(
-                                    "w-full rounded-md border px-3 py-2 text-sm font-medium",
-                                    canVerify ? "hover:bg-gray-50" : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                                type="button"
+                                disabled={!canVerify || verifying}
+                                onClick={() => runAction(`/api/admin/orders/${data.id}/verify`, setVerifying)}
+                                className={cx(
+                                    "w-full rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                                    canVerify && !verifying
+                                        ? "border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50"
+                                        : "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-400"
                                 )}
-                                onClick={async () => {
-                                    await fetch(`/api/admin/orders/${data.id}/verify`, { method: "POST" });
-                                    location.reload();
-                                }}
                             >
-                                Verify
+                                {verifying ? "Đang xác minh..." : "Verify đơn"}
                             </button>
 
                             <button
-                                disabled={!canCancel}
-                                className={cls(
-                                    "w-full rounded-md border px-3 py-2 text-sm font-medium text-red-600",
-                                    canCancel ? "hover:bg-red-50" : "bg-gray-50 text-gray-400 cursor-not-allowed"
+                                type="button"
+                                disabled={!canCancel || cancelling}
+                                onClick={() =>
+                                    runAction(
+                                        `/api/admin/orders/${data.id}/cancel`,
+                                        setCancelling,
+                                        "Bạn có chắc muốn hủy đơn hàng này?"
+                                    )
+                                }
+                                className={cx(
+                                    "w-full rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                                    canCancel && !cancelling
+                                        ? "border-red-200 bg-white text-red-600 hover:bg-red-50"
+                                        : "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-400"
                                 )}
-                                onClick={async () => {
-                                    if (!confirm("Bạn có chắc muốn hủy đơn?")) return;
-                                    await fetch(`/api/admin/orders/${data.id}/cancel`, { method: "POST" });
-                                    location.reload();
-                                }}
                             >
-                                Hủy đơn
+                                {cancelling ? "Đang hủy..." : "Hủy đơn"}
                             </button>
 
                             <Link
                                 href={`/admin/orders/${data.id}/edit`}
-                                className="block w-full rounded-md border px-3 py-2 text-center text-sm font-medium hover:bg-gray-50"
+                                className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-center text-sm font-medium text-neutral-900 transition hover:bg-neutral-50"
                             >
-                                Sửa (nếu có)
+                                Mở trang chỉnh sửa
                             </Link>
                         </div>
-                    </div>
-                </div>
+                    </Panel>
+                </aside>
             </div>
         </div>
     );

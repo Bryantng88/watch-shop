@@ -508,38 +508,6 @@ export async function getOrderLite(tx: DB, id: string) {
 }
 
 
-export async function getOrderDetail(id: string, tx: DB) {
-
-
-    const db = dbOrTx(tx);
-    return db.order.findUnique({
-        where: { id },
-        select: {
-            id: true,
-            refNo: true,
-            status: true,
-            shipAddress: true,
-            shipDistrict: true,
-            shipCity: true,
-            shipPhone: true,
-            customerName: true,
-            paymentMethod: true,
-            subtotal: true,
-            createdAt: true,
-            items: {
-                select: {
-                    id: true,
-                    title: true,
-                    quantity: true,
-                    unitPriceAgreed: true,
-                    listPrice: true,
-                    kind: true,
-                    //productType: true
-                },
-            },
-        },
-    });
-}
 
 export function getOrderForPost(
     tx: DB,
@@ -752,4 +720,70 @@ export async function assertCanEditDraft(
     if (o.status !== "DRAFT" && o.status !== "RESERVED") {
         throw new Error(`Order cannot be edited at status=${o.status}`);
     }
+}
+
+export async function getOrderDetail(id: string, tx: DB) {
+    const db = dbOrTx(tx);
+
+    return db.order.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            refNo: true,
+            status: true,
+            source: true,
+            verificationStatus: true,
+            reserveType: true,
+            reserveUntil: true,
+            depositRequired: true,
+            depositPaid: true,
+            customerName: true,
+            shipPhone: true,
+            shipAddress: true,
+            shipWard: true,
+            shipDistrict: true,
+            shipCity: true,
+            paymentMethod: true,
+            hasShipment: true,
+            notes: true,
+            subtotal: true,
+            createdAt: true,
+            updatedAt: true,
+            items: {
+                orderBy: [{ createdAt: "asc" }],
+                select: {
+                    id: true,
+                    productId: true,
+                    variantId: true,
+                    title: true,
+                    img: true,
+                    quantity: true,
+                    kind: true,
+                    productType: true,
+                    listPrice: true,
+                    unitPriceAgreed: true,
+                    subtotal: true,
+                    serviceScope: true,
+                    linkedOrderItemId: true,
+                    customerItemNote: true,
+                    OrderItem: {
+                        select: {
+                            title: true,
+                        },
+                    },
+                },
+            },
+        },
+    }).then((row) => {
+        if (!row) return null;
+
+        return {
+            ...row,
+            currency: "VND",
+            items: row.items.map((item) => ({
+                ...item,
+                linkedProductTitle: item.OrderItem?.title ?? null,
+            })),
+        };
+    });
 }

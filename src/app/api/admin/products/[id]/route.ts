@@ -335,7 +335,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
             minPrice: canEditPricing ? toNullableNumber(body.minPrice) : undefined,
         };
 
-        const updated = await adminProductService.update(id, payload as any);
+        const updated = await adminProductService.updateProduct(id, payload as any);
 
         if (existing?.status !== updated?.status && updated?.status === "SOLD") {
             await archiveProductImagesForSold(id);

@@ -1,5 +1,5 @@
 import OrderFormClient from "../_client/OrderForm";
-import { getServiceCatalogOptions } from "../../services/_server/service_request.service";
+import { getServiceCatalogOptions } from "../_servers/order.service";
 
 export default async function NewOrderPage() {
     const services = await getServiceCatalogOptions();

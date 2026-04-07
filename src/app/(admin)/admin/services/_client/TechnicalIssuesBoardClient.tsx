@@ -9,17 +9,13 @@ import {
     DragStartEvent,
     PointerSensor,
     closestCorners,
+    useDraggable,
     useDroppable,
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
-import {
-    SortableContext,
-    useSortable,
-    verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Search, X } from "lucide-react";
 
 type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
 
@@ -133,33 +129,33 @@ function statusLabel(status?: string | null) {
 function getColumnStyle(key: BoardColumnKey) {
     if (key === "PENDING_CONFIRM") {
         return {
-            wrap: "border-amber-200 bg-[#fffaf0]",
-            head: "text-amber-900",
-            badge: "border-amber-200 bg-white text-amber-700",
-            ring: "ring-amber-300",
+            wrap: "border-[#E7C873] bg-[#FFF9EA]",
+            head: "text-[#8A6116]",
+            badge: "border-[#E7C873] bg-white text-[#A56B00]",
+            ring: "ring-[#E7C873]",
         };
     }
     if (key === "READY") {
         return {
-            wrap: "border-sky-200 bg-[#f4fbff]",
-            head: "text-sky-900",
-            badge: "border-sky-200 bg-white text-sky-700",
-            ring: "ring-sky-300",
+            wrap: "border-[#BCD8F4] bg-[#F5FAFF]",
+            head: "text-[#225B8F]",
+            badge: "border-[#BCD8F4] bg-white text-[#2F75B5]",
+            ring: "ring-[#9EC6EF]",
         };
     }
     if (key === "IN_PROGRESS") {
         return {
-            wrap: "border-indigo-200 bg-[#f7f7ff]",
-            head: "text-indigo-900",
-            badge: "border-indigo-200 bg-white text-indigo-700",
-            ring: "ring-indigo-300",
+            wrap: "border-[#C9C4F5] bg-[#F8F6FF]",
+            head: "text-[#5642A6]",
+            badge: "border-[#C9C4F5] bg-white text-[#6A56C9]",
+            ring: "ring-[#B4ACEF]",
         };
     }
     return {
-        wrap: "border-emerald-200 bg-[#f3fcf7]",
-        head: "text-emerald-900",
-        badge: "border-emerald-200 bg-white text-emerald-700",
-        ring: "ring-emerald-300",
+        wrap: "border-[#BFE6C8] bg-[#F3FCF5]",
+        head: "text-[#2E7D4A]",
+        badge: "border-[#BFE6C8] bg-white text-[#329A59]",
+        ring: "ring-[#9FD7AE]",
     };
 }
 
@@ -168,43 +164,43 @@ function getAreaAccent(area?: string | null) {
 
     if (raw === "MOVEMENT") {
         return {
-            topBar: "bg-teal-500",
-            headerBg: "bg-teal-50",
-            chip: "border-teal-200 bg-teal-100 text-teal-700",
+            topBar: "bg-[#1F9D8B]",
+            headerBg: "bg-[#F2FBF8]",
+            chip: "border-[#BDE7DF] bg-[#E8F8F4] text-[#177A6C]",
         };
     }
     if (raw === "CASE") {
         return {
-            topBar: "bg-amber-500",
-            headerBg: "bg-amber-50",
-            chip: "border-amber-200 bg-amber-100 text-amber-700",
+            topBar: "bg-[#C9862A]",
+            headerBg: "bg-[#FFF8EF]",
+            chip: "border-[#F0D1A5] bg-[#FFF0DA] text-[#9A6117]",
         };
     }
     if (raw === "CRYSTAL") {
         return {
-            topBar: "bg-violet-500",
-            headerBg: "bg-violet-50",
-            chip: "border-violet-200 bg-violet-100 text-violet-700",
+            topBar: "bg-[#8A6FD1]",
+            headerBg: "bg-[#F8F5FF]",
+            chip: "border-[#D8CCF5] bg-[#F2ECFF] text-[#6850A9]",
         };
     }
     if (raw === "DIAL") {
         return {
-            topBar: "bg-emerald-500",
-            headerBg: "bg-emerald-50",
-            chip: "border-emerald-200 bg-emerald-100 text-emerald-700",
+            topBar: "bg-[#4DAA73]",
+            headerBg: "bg-[#F3FBF6]",
+            chip: "border-[#C7E7D1] bg-[#ECF9F0] text-[#347651]",
         };
     }
     if (raw === "CROWN") {
         return {
-            topBar: "bg-rose-500",
-            headerBg: "bg-rose-50",
-            chip: "border-rose-200 bg-rose-100 text-rose-700",
+            topBar: "bg-[#D07C90]",
+            headerBg: "bg-[#FFF6F8]",
+            chip: "border-[#F1CCD7] bg-[#FDEEF2] text-[#A9576C]",
         };
     }
 
     return {
-        topBar: "bg-stone-400",
-        headerBg: "bg-stone-50",
+        topBar: "bg-[#8F8A83]",
+        headerBg: "bg-[#FAF9F7]",
         chip: "border-stone-200 bg-stone-100 text-stone-700",
     };
 }
@@ -215,6 +211,14 @@ function canMove(from: BoardColumnKey, to: BoardColumnKey) {
     if (from === "READY" && to === "IN_PROGRESS") return true;
     if (from === "IN_PROGRESS" && to === "DONE") return true;
     return false;
+}
+
+function normalizeText(v: any) {
+    return String(v ?? "")
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .trim();
 }
 
 function DrawerField({
@@ -262,6 +266,29 @@ function Step({
     );
 }
 
+function FilterChip({
+    active,
+    children,
+    onClick,
+}: {
+    active?: boolean;
+    children: React.ReactNode;
+    onClick?: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`rounded-full border px-3 py-1 text-xs transition ${active
+                    ? "border-stone-300 bg-stone-900 text-white"
+                    : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                }`}
+        >
+            {children}
+        </button>
+    );
+}
+
 function IssueCard({
     item,
     dragging,
@@ -282,7 +309,7 @@ function IssueCard({
 
     return (
         <div
-            className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${dragging ? "opacity-80 shadow-xl" : "hover:shadow-md"
+            className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${dragging ? "shadow-xl rotate-[1.5deg]" : "hover:shadow-md"
                 }`}
         >
             <div className={`h-1.5 ${accent.topBar}`} />
@@ -397,34 +424,30 @@ function IssueCard({
     );
 }
 
-function SortableIssueCard({
+function DraggableIssueCard({
     item,
+    activeId,
     onOpen,
     onOpenServiceRequest,
 }: {
     item: IssueItem;
+    activeId: string | null;
     onOpen?: () => void;
     onOpenServiceRequest?: () => void;
 }) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({
-        id: item.id,
-        data: {
-            type: "issue",
-            issue: item,
-            column: item.boardColumn,
-        },
-    });
+    const { setNodeRef, transform, isDragging, attributes, listeners } =
+        useDraggable({
+            id: item.id,
+            data: {
+                type: "issue",
+                issue: item,
+                column: item.boardColumn,
+            },
+        });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: CSS.Translate.toString(transform),
+        opacity: activeId === item.id ? 0 : 1,
     };
 
     return (
@@ -448,6 +471,7 @@ function BoardColumn({
     canLoadMore,
     onLoadMore,
     loadingMore,
+    totalCount,
 }: {
     column: { key: BoardColumnKey; title: string; subtitle: string };
     items: IssueItem[];
@@ -456,6 +480,7 @@ function BoardColumn({
     canLoadMore?: boolean;
     onLoadMore?: () => void;
     loadingMore?: boolean;
+    totalCount?: number;
 }) {
     const style = getColumnStyle(column.key);
     const { setNodeRef } = useDroppable({
@@ -485,37 +510,32 @@ function BoardColumn({
                 <span
                     className={`rounded-full border px-2.5 py-1 text-xs font-medium ${style.badge}`}
                 >
-                    {items.length}
+                    {totalCount ?? items.length}
                 </span>
             </div>
 
-            <SortableContext
-                items={items.map((x) => x.id)}
-                strategy={verticalListSortingStrategy}
-            >
-                <div className="space-y-3">
-                    {items.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-8 text-center text-sm text-stone-400">
-                            Kéo thả issue vào đây
-                        </div>
-                    ) : (
-                        <>
-                            {children}
+            <div className="space-y-3">
+                {items.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-8 text-center text-sm text-stone-400">
+                        Kéo thả issue vào đây
+                    </div>
+                ) : (
+                    <>
+                        {children}
 
-                            {canLoadMore ? (
-                                <button
-                                    type="button"
-                                    onClick={onLoadMore}
-                                    disabled={loadingMore}
-                                    className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
-                                >
-                                    {loadingMore ? "Đang tải..." : "Tải thêm"}
-                                </button>
-                            ) : null}
-                        </>
-                    )}
-                </div>
-            </SortableContext>
+                        {canLoadMore ? (
+                            <button
+                                type="button"
+                                onClick={onLoadMore}
+                                disabled={loadingMore}
+                                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+                            >
+                                {loadingMore ? "Đang tải..." : "Tải thêm"}
+                            </button>
+                        ) : null}
+                    </>
+                )}
+            </div>
         </div>
     );
 }
@@ -542,6 +562,10 @@ export default function TechnicalIssueBoardClient({
         actualCost: "",
         resolutionNote: "",
     });
+
+    const [query, setQuery] = React.useState("");
+    const [areaFilter, setAreaFilter] = React.useState<string>("ALL");
+    const [actionModeFilter, setActionModeFilter] = React.useState<string>("ALL");
 
     const [visibleCountByColumn, setVisibleCountByColumn] = React.useState<
         Record<BoardColumnKey, number>
@@ -579,6 +603,37 @@ export default function TechnicalIssueBoardClient({
         })
     );
 
+    const filteredItems = React.useMemo(() => {
+        const q = normalizeText(query);
+
+        return (boardItems ?? []).filter((item) => {
+            const matchesQuery =
+                !q ||
+                [
+                    item.summary,
+                    item.note,
+                    item.serviceRequest.productTitle,
+                    item.serviceRequest.refNo,
+                    item.vendorNameSnap,
+                    item.serviceRequest.technicianNameSnap,
+                    areaLabel(item.area),
+                    actionModeLabel(item.actionMode),
+                ]
+                    .map(normalizeText)
+                    .some((x) => x.includes(q));
+
+            const matchesArea =
+                areaFilter === "ALL" ||
+                String(item.area || "").toUpperCase() === areaFilter;
+
+            const matchesActionMode =
+                actionModeFilter === "ALL" ||
+                String(item.actionMode || "").toUpperCase() === actionModeFilter;
+
+            return matchesQuery && matchesArea && matchesActionMode;
+        });
+    }, [boardItems, query, areaFilter, actionModeFilter]);
+
     const grouped = React.useMemo(() => {
         const base: Record<BoardColumnKey, IssueItem[]> = {
             PENDING_CONFIRM: [],
@@ -587,7 +642,7 @@ export default function TechnicalIssueBoardClient({
             DONE: [],
         };
 
-        for (const item of boardItems ?? []) {
+        for (const item of filteredItems ?? []) {
             const key = (item.boardColumn || "PENDING_CONFIRM") as BoardColumnKey;
             if (base[key]) base[key].push(item);
         }
@@ -602,7 +657,17 @@ export default function TechnicalIssueBoardClient({
             DONE: base.DONE.slice(0, visibleCountByColumn.DONE),
             raw: base,
         };
-    }, [boardItems, visibleCountByColumn]);
+    }, [filteredItems, visibleCountByColumn]);
+
+    const filteredCounts = React.useMemo(
+        () => ({
+            pendingConfirm: grouped.raw.PENDING_CONFIRM.length,
+            ready: grouped.raw.READY.length,
+            inProgress: grouped.raw.IN_PROGRESS.length,
+            done: grouped.raw.DONE.length,
+        }),
+        [grouped]
+    );
 
     const activeItem = React.useMemo(
         () => boardItems.find((x) => x.id === activeId) ?? null,
@@ -705,38 +770,15 @@ export default function TechnicalIssueBoardClient({
     }
 
     function handleDragStart(event: DragStartEvent) {
-        const id = String(event.active.id);
-        setActiveId(id);
+        setActiveId(String(event.active.id));
     }
 
-    function handleDragOver(event: any) {
-        const overId = event.over?.id;
-        if (!overId) {
-            setOverColumn(null);
-            return;
-        }
-
-        if (
-            overId === "PENDING_CONFIRM" ||
-            overId === "READY" ||
-            overId === "IN_PROGRESS" ||
-            overId === "DONE"
-        ) {
-            setOverColumn(overId);
-            return;
-        }
-
-        const overIssue = boardItems.find((x) => x.id === String(overId));
-        setOverColumn(overIssue?.boardColumn ?? null);
-    }
-
-    async function handleDragEnd(event: DragEndEvent) {
+    function handleDragEnd(event: DragEndEvent) {
         const active = event.active;
         const over = event.over;
 
-        setActiveId(null);
-
         if (!active || !over) {
+            setActiveId(null);
             setOverColumn(null);
             return;
         }
@@ -745,55 +787,47 @@ export default function TechnicalIssueBoardClient({
         const issue = boardItems.find((x) => x.id === issueId);
 
         if (!issue) {
+            setActiveId(null);
             setOverColumn(null);
             return;
         }
 
-        let targetColumn: BoardColumnKey | null = null;
-        const overId = String(over.id);
+        const targetColumn = String(over.id) as BoardColumnKey;
 
         if (
-            overId === "PENDING_CONFIRM" ||
-            overId === "READY" ||
-            overId === "IN_PROGRESS" ||
-            overId === "DONE"
+            targetColumn !== "PENDING_CONFIRM" &&
+            targetColumn !== "READY" &&
+            targetColumn !== "IN_PROGRESS" &&
+            targetColumn !== "DONE"
         ) {
-            targetColumn = overId;
-        } else {
-            const overIssue = boardItems.find((x) => x.id === overId);
-            targetColumn = (overIssue?.boardColumn as BoardColumnKey) ?? null;
-        }
-
-        if (!targetColumn) {
+            setActiveId(null);
             setOverColumn(null);
             return;
         }
 
         const from = issue.boardColumn;
-        const snapshot = boardItems;
+        const snapshot = [...boardItems];
 
         if (!canMove(from, targetColumn)) {
+            setActiveId(null);
             setOverColumn(null);
             return;
         }
 
         optimisticMove(issueId, targetColumn);
+        setActiveId(null);
         setOverColumn(null);
 
         if (from === "PENDING_CONFIRM" && targetColumn === "READY") {
-            await callAction(issueId, "confirm", snapshot);
+            void callAction(issueId, "confirm", snapshot);
             return;
         }
         if (from === "READY" && targetColumn === "IN_PROGRESS") {
-            await callAction(issueId, "start", snapshot);
+            void callAction(issueId, "start", snapshot);
             return;
         }
         if (from === "IN_PROGRESS" && targetColumn === "DONE") {
-            const moved = boardItems.find((x) => x.id === issueId);
-            if (moved) {
-                setSelectedIssue(moved);
-            }
-            await callAction(issueId, "complete", snapshot);
+            void callAction(issueId, "complete", snapshot);
             return;
         }
     }
@@ -808,6 +842,12 @@ export default function TechnicalIssueBoardClient({
             }));
             setLoadingMoreColumn(null);
         }, 250);
+    }
+
+    function clearFilters() {
+        setQuery("");
+        setAreaFilter("ALL");
+        setActionModeFilter("ALL");
     }
 
     return (
@@ -829,7 +869,7 @@ export default function TechnicalIssueBoardClient({
                                 Chờ xác nhận
                             </div>
                             <div className="mt-1 text-xl font-semibold text-amber-900">
-                                {counts.pendingConfirm ?? 0}
+                                {filteredCounts.pendingConfirm}
                             </div>
                         </div>
                         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
@@ -837,7 +877,7 @@ export default function TechnicalIssueBoardClient({
                                 Đã xác nhận
                             </div>
                             <div className="mt-1 text-xl font-semibold text-sky-900">
-                                {counts.ready ?? 0}
+                                {filteredCounts.ready}
                             </div>
                         </div>
                         <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
@@ -845,7 +885,7 @@ export default function TechnicalIssueBoardClient({
                                 Đang xử lý
                             </div>
                             <div className="mt-1 text-xl font-semibold text-indigo-900">
-                                {counts.inProgress ?? 0}
+                                {filteredCounts.inProgress}
                             </div>
                         </div>
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -853,9 +893,102 @@ export default function TechnicalIssueBoardClient({
                                 Hoàn tất
                             </div>
                             <div className="mt-1 text-xl font-semibold text-emerald-900">
-                                {counts.done ?? 0}
+                                {filteredCounts.done}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="relative w-full max-w-xl">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                            <input
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Tìm theo sản phẩm, SR, issue, kỹ thuật viên, vendor..."
+                                className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm outline-none focus:border-stone-400"
+                            />
+                            {query ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setQuery("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <FilterChip
+                                active={areaFilter === "ALL"}
+                                onClick={() => setAreaFilter("ALL")}
+                            >
+                                Tất cả khu vực
+                            </FilterChip>
+                            <FilterChip
+                                active={areaFilter === "MOVEMENT"}
+                                onClick={() => setAreaFilter("MOVEMENT")}
+                            >
+                                Máy
+                            </FilterChip>
+                            <FilterChip
+                                active={areaFilter === "CASE"}
+                                onClick={() => setAreaFilter("CASE")}
+                            >
+                                Vỏ
+                            </FilterChip>
+                            <FilterChip
+                                active={areaFilter === "CRYSTAL"}
+                                onClick={() => setAreaFilter("CRYSTAL")}
+                            >
+                                Kính
+                            </FilterChip>
+                            <FilterChip
+                                active={areaFilter === "DIAL"}
+                                onClick={() => setAreaFilter("DIAL")}
+                            >
+                                Mặt số
+                            </FilterChip>
+                            <FilterChip
+                                active={areaFilter === "CROWN"}
+                                onClick={() => setAreaFilter("CROWN")}
+                            >
+                                Núm
+                            </FilterChip>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <FilterChip
+                            active={actionModeFilter === "ALL"}
+                            onClick={() => setActionModeFilter("ALL")}
+                        >
+                            Tất cả thực hiện
+                        </FilterChip>
+                        <FilterChip
+                            active={actionModeFilter === "INTERNAL"}
+                            onClick={() => setActionModeFilter("INTERNAL")}
+                        >
+                            Nội bộ
+                        </FilterChip>
+                        <FilterChip
+                            active={actionModeFilter === "VENDOR"}
+                            onClick={() => setActionModeFilter("VENDOR")}
+                        >
+                            Vendor
+                        </FilterChip>
+
+                        {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="ml-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
+                            >
+                                Xóa filter
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -863,7 +996,6 @@ export default function TechnicalIssueBoardClient({
                     sensors={sensors}
                     collisionDetection={closestCorners}
                     onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
                     onDragEnd={handleDragEnd}
                 >
                     <div className="grid gap-4 xl:grid-cols-4">
@@ -880,11 +1012,13 @@ export default function TechnicalIssueBoardClient({
                                     canLoadMore={rawCount > columnItems.length}
                                     onLoadMore={() => loadMore(column.key)}
                                     loadingMore={loadingMoreColumn === column.key}
+                                    totalCount={rawCount}
                                 >
                                     {columnItems.map((item) => (
-                                        <SortableIssueCard
+                                        <DraggableIssueCard
                                             key={item.id}
                                             item={item}
+                                            activeId={activeId}
                                             onOpen={() => setSelectedIssue(item)}
                                             onOpenServiceRequest={() =>
                                                 router.push(`/admin/services/${item.serviceRequest.id}`)

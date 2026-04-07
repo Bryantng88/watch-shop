@@ -365,6 +365,9 @@ export async function completeTechnicalAssessment(assessmentId: string) {
     });
 }
 
+
+
+
 export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {
     return repo.getTechnicalSummaryByServiceRequest(serviceRequestId);
 }
@@ -386,5 +389,44 @@ export async function confirmTechnicalIssue(input: {
             confirmedByNameSnap: input.actorName ?? null,
             updatedAt: new Date(),
         } as any,
+    });
+}
+export async function completeTechnicalIssue(input: {
+    id: string;
+    actorName?: string | null;
+    actualCost?: number | null;
+    resolutionNote?: string | null;
+}) {
+    const id = toText(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.$transaction(async (tx) => {
+        const issue = await tx.technicalIssue.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                executionStatus: true,
+            },
+        });
+
+        if (!issue) throw new Error("Issue not found");
+        if (String(issue.executionStatus || "").toUpperCase() !== "IN_PROGRESS") {
+            throw new Error("Issue không ở trạng thái IN_PROGRESS");
+        }
+
+        return tx.technicalIssue.update({
+            where: { id },
+            data: {
+                executionStatus: "DONE",
+                completedAt: new Date(),
+                completedByNameSnap: input.actorName ?? null,
+                resolutionNote: toText(input.resolutionNote),
+                actualCost:
+                    input.actualCost != null && Number.isFinite(Number(input.actualCost))
+                        ? Number(input.actualCost)
+                        : null,
+                updatedAt: new Date(),
+            } as any,
+        });
     });
 }

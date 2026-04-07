@@ -1,54 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+import { prisma } from '@/server/db/client';
+import { requirePermissionApi } from '@/server/auth/requirePermissionApi';
+import { PERMISSIONS } from '@/constants/permissions';
+import * as prodRepo from '@/app/(admin)/admin/products/_server/product.repo';
+import { buildRuleBasedContent, enhanceWithOpenAI, mergeProductWithDraft } from '@/app/(admin)/admin/products/_server/product-ai.server';
+
+import type { ProductAiDraft } from '@/app/(admin)/admin/products/_server/product-ai.type';
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function POST(req: NextRequest, ctx: RouteContext) {
+    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
+    if (auth instanceof Response) return auth;
+
     try {
-        const { watchSpec, promptHint, toneSample } = await req.json();
+        const { id } = await ctx.params;
+        const draft = (await req.json().catch(() => null)) as ProductAiDraft | null;
 
-        const prompt = `
-Bạn là chuyên gia viết content đồng hồ vintage.
+        const product = await prodRepo.getAdminProductDetail(prisma, id);
+        if (!product) {
+            return NextResponse.json({ error: 'Không tìm thấy sản phẩm.' }, { status: 404 });
+        }
 
-FACT:
-${JSON.stringify(watchSpec, null, 2)}
+        const merged = mergeProductWithDraft(product, draft);
+        const rule = buildRuleBasedContent(merged);
+        const { generated, meta } = await enhanceWithOpenAI(rule, merged);
 
-HINT:
-${promptHint}
-
-STYLE:
-${toneSample}
-
-Trả về JSON:
-{
-  "specBullets": [],
-  "promoteShort": "",
-  "promoteLong": "",
-  "facebookCaption": "",
-  "instagramCaption": "",
-  "titleOptions": [],
-  "hashtags": []
-}
-`;
-
-        const res = await fetch('https://api.openai.com/v1/responses', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'gpt-5-mini',
-                input: prompt,
-            }),
-        });
-
-        const json = await res.json();
-
-        const text =
-            json.output?.[0]?.content?.find((c: any) => c.type === 'output_text')?.text || '{}';
-
-        return NextResponse.json({
-            generated: JSON.parse(text),
-        });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ success: true, generated, meta }, { status: 200 });
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error?.message ?? 'Generate nội dung thất bại.' },
+            { status: 400 }
+        );
     }
 }

@@ -30,7 +30,7 @@ import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 
 // 1) Import near top of EditProductForm.tsx
 import ProductAiPanel from '@/app/(admin)/admin/products/_client/ProductAiPanel';
-import type { GeneratedPayload } from '../_server/product-ai.type';
+import type { GeneratedPayload } from '@/app/(admin)/admin/products/_server/product-ai.types';
 
 // 2) Add state inside component
 
@@ -282,9 +282,19 @@ function SectionHeading({
     );
 }
 
+function FieldShell({
+    children,
+    withHint = false,
+}: {
+    children: ReactNode;
+    withHint?: boolean;
+}) {
+    return <div className={withHint ? 'min-h-[92px]' : 'min-h-[74px]'}>{children}</div>;
+}
+
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
     return (
-        <label className="mb-2.5 block text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-slate-500">
+        <label className="mb-2 block text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-slate-500">
             {label}
             {required ? <span className="ml-1 text-rose-500">*</span> : null}
         </label>
@@ -313,7 +323,7 @@ function InputField({
     required?: boolean;
 }) {
     return (
-        <div>
+        <FieldShell>
             <FieldLabel label={label} required={required} />
             <input
                 name={name}
@@ -323,10 +333,9 @@ function InputField({
                 placeholder={placeholder}
                 className={inputClassName()}
             />
-        </div>
+        </FieldShell>
     );
 }
-
 
 function ReadonlyField({
     label,
@@ -338,13 +347,13 @@ function ReadonlyField({
     hint?: string;
 }) {
     return (
-        <div>
+        <FieldShell withHint={!!hint}>
             <FieldLabel label={label} />
-            <div className="flex min-h-[42px] w-full items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700">
+            <div className="flex h-[42px] w-full items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700">
                 {value || '—'}
             </div>
-            {hint ? <p className="mt-1 text-xs text-slate-400">{hint}</p> : null}
-        </div>
+            {hint ? <p className="mt-1.5 text-xs leading-5 text-slate-400">{hint}</p> : null}
+        </FieldShell>
     );
 }
 
@@ -366,7 +375,7 @@ function SelectField({
     required?: boolean;
 }) {
     return (
-        <div>
+        <FieldShell>
             <FieldLabel label={label} required={required} />
             <select
                 name={name}
@@ -381,7 +390,7 @@ function SelectField({
                     </option>
                 ))}
             </select>
-        </div>
+        </FieldShell>
     );
 }
 
@@ -422,7 +431,7 @@ function CollapsibleSection({
                     ].join(' ')}
                 />
             </button>
-            {open ? <div className={compact ? 'px-5 pb-5' : 'px-5 pb-5 pt-1'}>{children}</div> : null}
+            {open ? <div className={compact ? 'px-5 pb-5 pt-1' : 'px-5 pb-5 pt-2'}>{children}</div> : null}
         </section>
     );
 }
@@ -971,7 +980,7 @@ export default function EditProductForm({
                         icon={<Layers3 className="h-5 w-5" />}
                         defaultOpen
                     >
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                             <InputField
                                 label="Tên sản phẩm"
                                 name="title"
@@ -1004,7 +1013,7 @@ export default function EditProductForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
                             <ReadonlyField label="Loại sản phẩm" value={formData.type || '—'} />
                             <ReadonlyField label="Trạng thái" value={formData.status || '—'} />
                             <SelectField
@@ -1034,13 +1043,13 @@ export default function EditProductForm({
                         icon={<Wrench className="h-5 w-5" />}
                         defaultOpen
                     >
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-3">
                             <InputField label="Reference" name="ref" value={formData.ref} onChange={handleChange as any} />
                             <InputField label="Model / Dòng" name="model" value={formData.model} onChange={handleChange as any} />
                             <InputField label="Năm sản xuất" name="year" value={formData.year} onChange={handleChange as any} />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-3">
                             <SelectField
                                 label="Dạng vỏ"
                                 name="caseType"
@@ -1067,7 +1076,7 @@ export default function EditProductForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-2">
                             <SelectField
                                 label="Bộ máy"
                                 name="movement"
@@ -1105,7 +1114,7 @@ export default function EditProductForm({
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-3">
                             <SelectField
                                 label="Kính"
                                 name="glass"
@@ -1131,7 +1140,7 @@ export default function EditProductForm({
                         </div>
 
                         {isGoldCase ? (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-x-4 gap-y-6 md:grid-cols-3">
                                 <InputField
                                     label="K vàng"
                                     name="goldKarat"
@@ -1321,14 +1330,27 @@ export default function EditProductForm({
 
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        handleSaveProductContent(generatedContent, {
-                                            hint: '',
-                                            sample: '',
-                                            tonePreset: 'default',
-                                            focusPoints: [],
-                                        })
-                                    }
+                                    onClick={async () => {
+                                        try {
+                                            setSavingContent(true);
+                                            await handleSaveProductContent(generatedContent, {
+                                                hint: '',
+                                                sample: '',
+                                                tonePreset: 'balanced',
+                                                focusPoints: [],
+                                            });
+                                            notify.success({
+                                                title: 'Đã lưu ProductContent',
+                                                message: 'Nội dung promote đã được lưu.',
+                                            });
+                                        } catch (e: any) {
+                                            const message = e?.message || 'Lưu ProductContent thất bại.';
+                                            setErr(message);
+                                            notify.error({ title: 'Lưu thất bại', message });
+                                        } finally {
+                                            setSavingContent(false);
+                                        }
+                                    }}
                                     disabled={savingContent}
                                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
@@ -1581,7 +1603,13 @@ export default function EditProductForm({
                     </CollapsibleSection>
                     <ProductAiPanel
                         productId={id}
+                        title={formData.title ?? ''}
+                        description={formData.description ?? ''}
+                        brandId={formData.brandId ?? ''}
+                        categoryId={formData.categoryId ?? ''}
                         images={images}
+                        brands={brands}
+                        categories={categoryOptions}
                         watchSpec={{
                             ref: formData.ref,
                             model: formData.model,
@@ -1606,16 +1634,16 @@ export default function EditProductForm({
                         }}
                         initialContent={generatedContent}
                         onContentChange={setGeneratedContent}
+                        onSaveContent={handleSaveProductContent}
                         onApplyExtractedSpecs={(patch) => {
                             setFormData((prev: any) => ({
                                 ...prev,
-
                                 brandId: patch.brandName
-                                    ? (brands.find((b: any) =>
-                                        b.name?.toLowerCase() === String(patch.brandName).toLowerCase()
+                                    ? (brands.find(
+                                        (b: any) =>
+                                            b.name?.toLowerCase() === String(patch.brandName).toLowerCase()
                                     )?.id ?? prev.brandId)
                                     : prev.brandId,
-
                                 ref: patch.ref ?? prev.ref,
                                 model: patch.model ?? prev.model,
                                 year: patch.year ?? prev.year,
@@ -1633,17 +1661,14 @@ export default function EditProductForm({
                                 glass: patch.glass ?? prev.glass,
                                 dialColor: patch.dialColor ?? prev.dialColor,
                                 dialCondition: patch.dialCondition ?? prev.dialCondition,
-
                                 boxIncluded:
                                     typeof patch.boxIncluded === 'boolean'
                                         ? patch.boxIncluded
                                         : prev.boxIncluded,
-
                                 bookletIncluded:
                                     typeof patch.bookletIncluded === 'boolean'
                                         ? patch.bookletIncluded
                                         : prev.bookletIncluded,
-
                                 cardIncluded:
                                     typeof patch.cardIncluded === 'boolean'
                                         ? patch.cardIncluded

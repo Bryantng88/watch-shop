@@ -4,7 +4,9 @@ import type {
     ProductAiMeta,
     AiTonePreset,
     SpecExtractedPayload,
-} from './product-ai.types';
+} from './product-ai.type';
+
+
 
 function text(v: any) {
     if (v == null) return '';
