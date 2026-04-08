@@ -365,60 +365,66 @@ export async function upsertAssessment(
         evaluatedByNameSnap?: string | null;
     }
 ) {
-    const existing = await tx.technicalAssessment.findFirst({
-        where: {
+    return tx.technicalAssessment.upsert({
+        where: { serviceRequestId: input.serviceRequestId },
+        create: {
             serviceRequestId: input.serviceRequestId,
-            status: { in: ["DRAFT", "IN_PROGRESS"] },
+            movementKind: input.movementKind,
+            movementStatus: input.movementStatus as any,
+            caseStatus: input.caseStatus as any,
+            crystalStatus: input.crystalStatus as any,
+            crownStatus: input.crownStatus as any,
+            preRate: input.preRate ?? null,
+            preAmplitude: input.preAmplitude ?? null,
+            preBeatError:
+                input.preBeatError != null
+                    ? new Prisma.Decimal(String(input.preBeatError))
+                    : null,
+            postRate: input.postRate ?? null,
+            postAmplitude: input.postAmplitude ?? null,
+            postBeatError:
+                input.postBeatError != null
+                    ? new Prisma.Decimal(String(input.postBeatError))
+                    : null,
+            actionMode: input.actionMode as any,
+            vendorId: input.vendorId ?? null,
+            vendorNameSnap: input.vendorNameSnap ?? null,
+            conclusion: input.conclusion ?? null,
+            imageFileKey: input.imageFileKey ?? null,
+            status: input.status ?? "DRAFT",
+            evaluatedById: input.evaluatedById ?? null,
+            evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
         },
-        orderBy: [{ createdAt: "desc" }],
-    });
-
-    const payload = {
-        movementKind: input.movementKind,
-        movementStatus: input.movementStatus as any,
-        caseStatus: input.caseStatus as any,
-        crystalStatus: input.crystalStatus as any,
-        crownStatus: input.crownStatus as any,
-        preRate: input.preRate ?? null,
-        preAmplitude: input.preAmplitude ?? null,
-        preBeatError:
-            input.preBeatError != null
-                ? new Prisma.Decimal(String(input.preBeatError))
-                : null,
-        postRate: input.postRate ?? null,
-        postAmplitude: input.postAmplitude ?? null,
-        postBeatError:
-            input.postBeatError != null
-                ? new Prisma.Decimal(String(input.postBeatError))
-                : null,
-        actionMode: input.actionMode as any,
-        vendorId: input.vendorId ?? null,
-        vendorNameSnap: input.vendorNameSnap ?? null,
-        conclusion: input.conclusion ?? null,
-        imageFileKey: input.imageFileKey ?? null,
-        status: input.status ?? "DRAFT",
-        evaluatedById: input.evaluatedById ?? null,
-        evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
-    };
-
-    if (existing) {
-        return tx.technicalAssessment.update({
-            where: { id: existing.id },
-            data: {
-                ...payload,
-                updatedAt: new Date(),
-            },
-        });
-    }
-
-    return tx.technicalAssessment.create({
-        data: {
-            serviceRequestId: input.serviceRequestId,
-            ...payload,
+        update: {
+            movementKind: input.movementKind,
+            movementStatus: input.movementStatus as any,
+            caseStatus: input.caseStatus as any,
+            crystalStatus: input.crystalStatus as any,
+            crownStatus: input.crownStatus as any,
+            preRate: input.preRate ?? null,
+            preAmplitude: input.preAmplitude ?? null,
+            preBeatError:
+                input.preBeatError != null
+                    ? new Prisma.Decimal(String(input.preBeatError))
+                    : null,
+            postRate: input.postRate ?? null,
+            postAmplitude: input.postAmplitude ?? null,
+            postBeatError:
+                input.postBeatError != null
+                    ? new Prisma.Decimal(String(input.postBeatError))
+                    : null,
+            actionMode: input.actionMode as any,
+            vendorId: input.vendorId ?? null,
+            vendorNameSnap: input.vendorNameSnap ?? null,
+            conclusion: input.conclusion ?? null,
+            imageFileKey: input.imageFileKey ?? null,
+            status: input.status ?? "DRAFT",
+            evaluatedById: input.evaluatedById ?? null,
+            evaluatedByNameSnap: input.evaluatedByNameSnap ?? null,
+            updatedAt: new Date(),
         },
     });
 }
-
 export async function listAssessmentIssuesForSync(
     tx: Prisma.TransactionClient,
     assessmentId: string
@@ -474,9 +480,8 @@ export async function countAssessmentIssues(
 }
 
 export async function getTechnicalSummaryByServiceRequest(serviceRequestId: string) {
-    const assessments = await prisma.technicalAssessment.findMany({
+    const assessment = await prisma.technicalAssessment.findUnique({
         where: { serviceRequestId },
-        orderBy: [{ createdAt: "desc" }],
         select: {
             id: true,
             status: true,
@@ -492,52 +497,36 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
         },
     });
 
-    const assessmentCount = assessments.length;
+    if (!assessment) {
+        return {
+            assessmentCount: 0,
+            issueCount: 0,
+            openIssueCount: 0,
+            activeAssessment: null,
+        };
+    }
 
-    const issueCount = assessments.reduce((sum, a) => {
-        return sum + (a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0);
-    }, 0);
-
-    const openIssueCount = assessments.reduce((sum, a) => {
-        return (
-            sum +
-            (a.TechnicalIssue?.filter(
-                (x: any) =>
-                    x.isConfirmed &&
-                    (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
-            ).length ?? 0)
-        );
-    }, 0);
+    const confirmedIssues = assessment.TechnicalIssue?.filter((x: any) => x.isConfirmed) ?? [];
+    const openConfirmedIssues = confirmedIssues.filter(
+        (x: any) =>
+            x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+            x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS
+    );
 
     const activeAssessment =
-        assessments.find((a) => a.status === "DRAFT" || a.status === "IN_PROGRESS") || null;
+        assessment.status === "DRAFT" || assessment.status === "IN_PROGRESS"
+            ? {
+                id: assessment.id,
+                status: assessment.status,
+                issueCount: confirmedIssues.length,
+                updatedAt: assessment.updatedAt,
+            }
+            : null;
 
     return {
-        assessmentCount,
-        issueCount,
-        openIssueCount,
-        activeAssessment: activeAssessment
-            ? {
-                id: activeAssessment.id,
-                status: activeAssessment.status,
-                issueCount:
-                    activeAssessment.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0,
-                createdAt: activeAssessment.createdAt,
-                updatedAt: activeAssessment.updatedAt,
-            }
-            : null,
-        assessments: assessments.map((a) => ({
-            id: a.id,
-            status: a.status,
-            createdAt: a.createdAt,
-            updatedAt: a.updatedAt,
-            issueCount: a.TechnicalIssue?.filter((x: any) => x.isConfirmed).length ?? 0,
-            openIssueCount:
-                a.TechnicalIssue?.filter(
-                    (x: any) =>
-                        x.isConfirmed &&
-                        (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
-                ).length ?? 0,
-        })),
+        assessmentCount: 1,
+        issueCount: confirmedIssues.length,
+        openIssueCount: openConfirmedIssues.length,
+        activeAssessment,
     };
 }

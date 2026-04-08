@@ -428,38 +428,42 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
 
 export async function openTechnicalAssessment(serviceRequestId: string) {
     return prisma.$transaction(async (tx) => {
-        const active = await tx.technicalAssessment.findFirst({
-            where: {
-                serviceRequestId,
-                status: { in: ["DRAFT", "IN_PROGRESS"] },
-            },
-            orderBy: { createdAt: "desc" },
+        const existing = await tx.technicalAssessment.findUnique({
+            where: { serviceRequestId },
         });
 
-        if (active) {
-            await tx.serviceRequest.update({
-                where: { id: serviceRequestId },
-                data: { status: ServiceRequestStatus.IN_PROGRESS },
-            });
+        if (existing) {
+            if (existing.status === TechnicalAssessmentStatus.COMPLETED) {
+                return tx.technicalAssessment.update({
+                    where: { id: existing.id },
+                    data: {
+                        status: TechnicalAssessmentStatus.IN_PROGRESS,
+                        updatedAt: new Date(),
+                    },
+                });
+            }
 
-            return active;
+            return existing;
         }
 
         const created = await tx.technicalAssessment.create({
             data: {
                 serviceRequestId,
-                status: "DRAFT",
+                status: TechnicalAssessmentStatus.DRAFT,
             },
         });
 
         await tx.serviceRequest.update({
             where: { id: serviceRequestId },
-            data: { status: ServiceRequestStatus.IN_PROGRESS },
+            data: {
+                status: ServiceRequestStatus.IN_PROGRESS,
+            },
         });
 
         return created;
     });
 }
+
 export async function saveTechnicalAssessment(input: any) {
     const serviceRequestId = String(input?.serviceRequestId || "").trim();
     if (!serviceRequestId) {
@@ -619,25 +623,22 @@ export async function completeTechnicalAssessment(assessmentId: string) {
 
 export async function completeServiceRequestById(serviceRequestId: string) {
     return prisma.$transaction(async (tx) => {
-        const activeAssessment = await tx.technicalAssessment.findFirst({
-            where: {
-                serviceRequestId,
-                status: { in: ["DRAFT", "IN_PROGRESS"] },
-            },
-            orderBy: [{ createdAt: "desc" }],
+        const assessment = await tx.technicalAssessment.findUnique({
+            where: { serviceRequestId },
             include: {
                 TechnicalIssue: true,
             },
         });
 
-        if (!activeAssessment) {
-            throw new Error("Chưa có phiếu kỹ thuật active để chốt service request");
+        if (!assessment) {
+            throw new Error("Chưa có phiếu kỹ thuật để chốt service request");
         }
 
-        const hasOpenConfirmedIssue = activeAssessment.TechnicalIssue.some(
+        const hasOpenConfirmedIssue = assessment.TechnicalIssue.some(
             (x: any) =>
                 x.isConfirmed &&
-                (x.executionStatus === "OPEN" || x.executionStatus === "IN_PROGRESS")
+                (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
+                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
         );
 
         if (hasOpenConfirmedIssue) {
@@ -645,9 +646,9 @@ export async function completeServiceRequestById(serviceRequestId: string) {
         }
 
         await tx.technicalAssessment.update({
-            where: { id: activeAssessment.id },
+            where: { id: assessment.id },
             data: {
-                status: "COMPLETED",
+                status: TechnicalAssessmentStatus.COMPLETED,
             },
         });
 
@@ -660,12 +661,11 @@ export async function completeServiceRequestById(serviceRequestId: string) {
 
         return {
             ok: true,
-            assessmentId: activeAssessment.id,
+            assessmentId: assessment.id,
             serviceRequestId,
         };
     });
 }
-
 export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {
     return repo.getTechnicalSummaryByServiceRequest(serviceRequestId);
 }

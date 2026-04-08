@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Search, X } from "lucide-react";
+import { useNotify } from "@/components/feedback/AppToastProvider";
 
 type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
 
@@ -253,8 +254,8 @@ function Step({
             <div className="mt-0.5 flex flex-col items-center">
                 <div
                     className={`h-3 w-3 rounded-full border ${active
-                            ? "border-stone-900 bg-stone-900"
-                            : "border-stone-300 bg-white"
+                        ? "border-stone-900 bg-stone-900"
+                        : "border-stone-300 bg-white"
                         }`}
                 />
                 <div className="mt-1 h-8 w-px bg-stone-200" />
@@ -283,8 +284,8 @@ function FilterChip({
             type="button"
             onClick={onClick}
             className={`rounded-full border px-3 py-1 text-xs transition ${active
-                    ? "border-stone-300 bg-stone-900 text-white"
-                    : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+                ? "border-stone-300 bg-stone-900 text-white"
+                : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
                 }`}
         >
             {children}
@@ -556,6 +557,9 @@ function BoardColumn({
     );
 }
 
+
+
+
 export default function TechnicalIssueBoardClient({
     items,
     counts,
@@ -579,7 +583,8 @@ export default function TechnicalIssueBoardClient({
         actualCost: "",
         resolutionNote: "",
     });
-
+    const notify = useNotify();
+    const [cancelingIssueId, setCancelingIssueId] = React.useState<string | null>(null);
     const [query, setQuery] = React.useState("");
     const [areaFilter, setAreaFilter] = React.useState<string>("ALL");
     const [actionModeFilter, setActionModeFilter] = React.useState<string>("ALL");
@@ -871,7 +876,37 @@ export default function TechnicalIssueBoardClient({
             void callAction(issueId, "complete", snapshot);
         }
     }
+    async function handleCancelIssue(issueId: string) {
+        try {
+            setCancelingIssueId(issueId);
 
+            const res = await fetch(`/api/admin/technical-issues/${issueId}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: "Hủy issue từ Issue Board" }),
+            });
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(json?.error || "Không thể hủy issue");
+            }
+
+            notify.success({
+                title: "Đã hủy issue",
+                message: "Issue đã được chuyển sang trạng thái hủy.",
+            });
+
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Hủy issue thất bại",
+                message: error?.message || "Đã có lỗi xảy ra.",
+            });
+        } finally {
+            setCancelingIssueId(null);
+        }
+    }
     function loadMore(column: BoardColumnKey) {
         setLoadingMoreColumn(column);
 
@@ -1285,11 +1320,11 @@ function IssueDrawer({
                             {issue.boardColumn !== "DONE" && (
                                 <button
                                     type="button"
-                                    disabled={busyId === issue.id}
-                                    onClick={() => onAction(issue.id, "cancel")}
-                                    className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                                    onClick={() => handleCancelIssue(selectedIssue.id)}
+                                    disabled={cancelingIssueId === selectedIssue.id}
+                                    className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                                 >
-                                    Hủy issue
+                                    {cancelingIssueId === selectedIssue.id ? "Đang hủy..." : "Hủy issue"}
                                 </button>
                             )}
 

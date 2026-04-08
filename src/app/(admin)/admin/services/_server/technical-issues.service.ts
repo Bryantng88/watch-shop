@@ -366,6 +366,38 @@ export async function completeTechnicalAssessment(assessmentId: string) {
 }
 
 
+export async function cancelTechnicalIssue(
+    issueId: string,
+    opts?: { reason?: string | null }
+) {
+    const issue = await prisma.technicalIssue.findUnique({
+        where: { id: issueId },
+        select: {
+            id: true,
+            executionStatus: true,
+            isConfirmed: true,
+        } as any,
+    });
+
+    if (!issue) {
+        throw new Error("Issue không tồn tại");
+    }
+
+    const currentStatus = String(issue.executionStatus || "").toUpperCase();
+
+    if (currentStatus === "DONE" || currentStatus === "COMPLETED") {
+        throw new Error("Issue đã hoàn tất, không thể hủy");
+    }
+
+    return prisma.technicalIssue.update({
+        where: { id: issueId },
+        data: {
+            executionStatus: "CANCELED" as any,
+            canceledAt: new Date(),
+            resolutionNote: opts?.reason || "Hủy issue từ Issue Board",
+        } as any,
+    });
+}
 
 
 export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {

@@ -7,9 +7,7 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-
         const data = await completeServiceRequestById(id);
-
         return NextResponse.json({ ok: true, data });
     } catch (error: any) {
         return NextResponse.json(
