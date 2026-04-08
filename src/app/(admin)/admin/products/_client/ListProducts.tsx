@@ -10,6 +10,10 @@ import SegmentTabs from "@/components/tabs/SegmenTabs";
 import StatusBadge from "@/components/badges/StatusBadge";
 import InlineImagePicker from "../_components/InlineImagePicker";
 
+function cx(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
+}
+
 type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
 type CatalogKey = "product" | "strap";
 
@@ -474,24 +478,24 @@ function ReadinessDetailModal({
     const quickFixHints = getQuickFixHints(product);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-            <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
-                <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
                     <div>
-                        <div className="text-lg font-semibold">Kiểm tra thông tin sản phẩm</div>
-                        <div className="mt-1 text-sm text-gray-600">{product.title || "-"}</div>
+                        <div className="text-lg font-semibold text-slate-950">Kiểm tra thông tin sản phẩm</div>
+                        <div className="mt-1 text-sm text-slate-500">{product.title || "-"}</div>
                     </div>
 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                         Đóng
                     </button>
                 </div>
 
-                <div className="space-y-4 px-5 py-4 text-sm">
+                <div className="space-y-4 px-5 py-5 text-sm">
                     <div className="flex flex-wrap gap-2">
                         <DotLabel
                             label={
@@ -532,10 +536,10 @@ function ReadinessDetailModal({
                     </div>
 
                     {hasMissingReadinessInfo(product) ? (
-                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                            <div className="font-medium text-orange-900">Các mục còn thiếu</div>
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <div className="font-medium text-amber-900">Các mục còn thiếu</div>
 
-                            <div className="mt-3 space-y-3 text-orange-900">
+                            <div className="mt-3 space-y-3 text-amber-900">
                                 {isPublishMissing(product, "images") ? (
                                     <div>
                                         • Chưa đủ ảnh hiển thị ({Number(product.imagesCount ?? 0)}/
@@ -569,21 +573,21 @@ function ReadinessDetailModal({
                             </div>
                         </div>
                     ) : (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
                             Sản phẩm đã sẵn sàng public.
                         </div>
                     )}
 
                     {isWomenWatch(product) ? (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
+                        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
                             Đồng hồ nữ đi theo luồng quản lý bài đăng thủ công. Có thể giữ trạng thái draft và lên bài thủ công sau.
                         </div>
                     ) : null}
 
                     {quickFixHints.length ? (
-                        <div className="rounded-lg border bg-gray-50 p-4">
-                            <div className="font-medium text-gray-900">Gợi ý bổ sung nhanh</div>
-                            <div className="mt-2 space-y-1 text-gray-700">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="font-medium text-slate-900">Gợi ý bổ sung nhanh</div>
+                            <div className="mt-2 space-y-1 text-slate-700">
                                 {quickFixHints.map((hint) => (
                                     <div key={hint}>• {hint}</div>
                                 ))}
@@ -592,28 +596,28 @@ function ReadinessDetailModal({
                     ) : null}
 
                     {product.hasOpenService ? (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900">
+                        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
                             Sản phẩm đang trong quá trình service nên chưa nên bulk post cho đến khi hoàn tất.
                         </div>
                     ) : product.latestServiceStatus === "COMPLETED" || product.latestServiceStatus === "DELIVERED" ? (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
                             Sản phẩm đã có service hoàn tất gần nhất.
                         </div>
                     ) : null}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 border-t px-5 py-4">
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded border px-4 py-2 text-sm hover:bg-gray-50"
+                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                         Đóng
                     </button>
                     <button
                         type="button"
                         onClick={() => onEdit(product.id)}
-                        className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+                        className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
                     >
                         Bổ sung ngay
                     </button>
@@ -940,190 +944,246 @@ export default function AdminProductListPageClient(props: PageProps) {
         ];
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-                <div className="space-y-3">
-                    <div className="inline-flex rounded-lg border bg-white p-1">
-                        <button
-                            type="button"
-                            onClick={() => setCatalog("product")}
-                            className={`rounded-md px-3 py-1.5 text-sm ${!isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"}`}
-                        >
-                            Sản phẩm
-                        </button>
+        <div className="space-y-6">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-4">
+                        <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                            <button
+                                type="button"
+                                onClick={() => setCatalog("product")}
+                                className={cx(
+                                    "rounded-xl px-4 py-2 text-sm font-medium transition",
+                                    !isStrapCatalog
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                )}
+                            >
+                                Sản phẩm
+                            </button>
 
-                        <button
-                            type="button"
-                            onClick={() => setCatalog("strap")}
-                            className={`rounded-md px-3 py-1.5 text-sm ${isStrapCatalog ? "bg-black text-white" : "text-gray-700 hover:bg-gray-50"}`}
-                        >
-                            Dây
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => setCatalog("strap")}
+                                className={cx(
+                                    "rounded-xl px-4 py-2 text-sm font-medium transition",
+                                    isStrapCatalog
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                )}
+                            >
+                                Dây
+                            </button>
+                        </div>
+
+                        <div>
+                            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                                {isStrapCatalog ? "Quản lý dây" : "Danh sách sản phẩm"}
+                            </h1>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Đồng bộ phong cách với service request detail: sạch, rõ trạng thái, thao tác nhanh và sẵn sàng production.
+                            </p>
+                        </div>
                     </div>
 
-                    <h1 className="text-2xl font-semibold">
-                        {isStrapCatalog ? "Quản lý dây" : "Sản phẩm"}
-                    </h1>
+                    <div className="flex shrink-0 items-center gap-3">
+                        {!isStrapCatalog && (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                                <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                                    Đã chọn
+                                </div>
+                                <div className="mt-1 text-xl font-semibold text-slate-950">{selectedIds.length}</div>
+                            </div>
+                        )}
+
+                        <Link
+                            href={isStrapCatalog ? "/admin/acquisitions/new?focus=strap" : "/admin/products/new"}
+                            className="inline-flex items-center rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                        >
+                            {isStrapCatalog ? "+ Nhập dây" : "+ Tạo sản phẩm"}
+                        </Link>
+                    </div>
                 </div>
 
-                <Link
-                    href={isStrapCatalog ? "/admin/acquisitions/new?focus=strap" : "/admin/products/new"}
-                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
-                >
-                    {isStrapCatalog ? "+ Nhập dây" : "+ Tạo sản phẩm"}
-                </Link>
+                <div className="grid gap-3 border-t border-slate-100 px-5 py-4 sm:grid-cols-2 xl:grid-cols-6">
+                    {segmentTabs.map((tab) => {
+                        const active = currentView === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setView(tab.key)}
+                                className={cx(
+                                    "rounded-2xl border px-4 py-3 text-left transition",
+                                    active
+                                        ? "border-slate-900 bg-slate-900 text-white"
+                                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                )}
+                            >
+                                <div className={cx("text-xs font-medium uppercase tracking-[0.14em]", active ? "text-slate-300" : "text-slate-500")}>
+                                    {tab.label}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">{tab.count}</div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </section>
+
+            <div className="hidden">
+                <SegmentTabs
+                    active={currentView}
+                    onChange={(v) => setView(v as string)}
+                    tabs={segmentTabs as any}
+                />
             </div>
 
-            <SegmentTabs
-                active={currentView}
-                onChange={(v) => setView(v as string)}
-                tabs={segmentTabs as any}
-            />
-
-            <form
-                className="space-y-3"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    applyFilters({
-                        q: formQ,
-                        sku: formSku,
-                        type: formType,
-                        brandId: formBrandId,
-                        vendorId: formVendorId,
-                        hasImages: formHasImages,
-                        sort: formSort,
-                    });
-                }}
-            >
-                <div className={`grid grid-cols-1 gap-3 ${isStrapCatalog ? "lg:grid-cols-5" : "lg:grid-cols-7"}`}>
-                    <div>
-                        <div className="mb-1 text-xs text-gray-500">Tìm kiếm</div>
-                        <input
-                            value={formQ}
-                            onChange={(e) => setFormQ(e.target.value)}
-                            placeholder={isStrapCatalog ? "Tên dây / chất liệu..." : "Tên / brand..."}
-                            className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                    </div>
-
-                    {!isStrapCatalog && (
+            <section className="rounded-2xl border border-slate-200 bg-white">
+                <form
+                    className="space-y-4 p-5"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        applyFilters({
+                            q: formQ,
+                            sku: formSku,
+                            type: formType,
+                            brandId: formBrandId,
+                            vendorId: formVendorId,
+                            hasImages: formHasImages,
+                            sort: formSort,
+                        });
+                    }}
+                >
+                    <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${isStrapCatalog ? "xl:grid-cols-5" : "xl:grid-cols-7"}`}>
                         <div>
-                            <div className="mb-1 text-xs text-gray-500">SKU</div>
+                            <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Tìm kiếm</div>
                             <input
-                                value={formSku}
-                                onChange={(e) => setFormSku(e.target.value)}
-                                placeholder="SKU..."
-                                className="w-full rounded-lg border px-3 py-2 text-sm"
+                                value={formQ}
+                                onChange={(e) => setFormQ(e.target.value)}
+                                placeholder={isStrapCatalog ? "Tên dây / chất liệu..." : "Tên / brand..."}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                             />
                         </div>
-                    )}
 
-                    {!isStrapCatalog && (
-                        <>
+                        {!isStrapCatalog && (
                             <div>
-                                <div className="mb-1 text-xs text-gray-500">Type</div>
-                                <select
-                                    value={formType}
-                                    onChange={(e) => setFormType(e.target.value)}
-                                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                                >
-                                    <option value="">(All)</option>
-                                    {props.productTypes.map((x) => (
-                                        <option key={x.value} value={x.value}>
-                                            {x.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">SKU</div>
+                                <input
+                                    value={formSku}
+                                    onChange={(e) => setFormSku(e.target.value)}
+                                    placeholder="SKU..."
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                                />
                             </div>
+                        )}
 
-                            <div>
-                                <div className="mb-1 text-xs text-gray-500">Brand</div>
-                                <select
-                                    value={formBrandId}
-                                    onChange={(e) => setFormBrandId(e.target.value)}
-                                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                                >
-                                    <option value="">(All)</option>
-                                    {props.brands.map((b) => (
-                                        <option key={b.id} value={b.id}>
-                                            {b.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </>
-                    )}
+                        {!isStrapCatalog && (
+                            <>
+                                <div>
+                                    <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Type</div>
+                                    <select
+                                        value={formType}
+                                        onChange={(e) => setFormType(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                                    >
+                                        <option value="">(All)</option>
+                                        {props.productTypes.map((x) => (
+                                            <option key={x.value} value={x.value}>
+                                                {x.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                    <div>
-                        <div className="mb-1 text-xs text-gray-500">Vendor</div>
-                        <select
-                            value={formVendorId}
-                            onChange={(e) => setFormVendorId(e.target.value)}
-                            className="w-full rounded-lg border px-3 py-2 text-sm"
-                        >
-                            <option value="">(All)</option>
-                            {props.vendors.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                    {v.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                                <div>
+                                    <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Brand</div>
+                                    <select
+                                        value={formBrandId}
+                                        onChange={(e) => setFormBrandId(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                                    >
+                                        <option value="">(All)</option>
+                                        {props.brands.map((b) => (
+                                            <option key={b.id} value={b.id}>
+                                                {b.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
+                        )}
 
-                    <div>
-                        <div className="mb-1 text-xs text-gray-500">Image</div>
-                        <select
-                            value={formHasImages}
-                            onChange={(e) => setFormHasImages(e.target.value)}
-                            className="w-full rounded-lg border px-3 py-2 text-sm"
-                        >
-                            <option value="">(All)</option>
-                            <option value="yes">Có ảnh</option>
-                            <option value="no">Chưa có ảnh</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <div className="mb-1 text-xs text-gray-500">Sắp xếp</div>
-                        <select
-                            value={formSort}
-                            onChange={(e) => setFormSort(e.target.value)}
-                            className="w-full rounded-lg border px-3 py-2 text-sm"
-                        >
-                            <option value="updatedDesc">Cập nhật ↓</option>
-                            <option value="updatedAsc">Cập nhật ↑</option>
-                            <option value="createdDesc">Tạo ↓</option>
-                            <option value="createdAsc">Tạo ↑</option>
-                            <option value="titleAsc">Title A → Z</option>
-                            <option value="titleDesc">Title Z → A</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <button type="submit" className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
-                        Lọc
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
-                    >
-                        Clear
-                    </button>
-
-                    {!isStrapCatalog && (
-                        <div className="ml-auto text-sm text-gray-600">
-                            Đã chọn: <b>{selectedIds.length}</b>
+                        <div>
+                            <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Vendor</div>
+                            <select
+                                value={formVendorId}
+                                onChange={(e) => setFormVendorId(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            >
+                                <option value="">(All)</option>
+                                {props.vendors.map((v) => (
+                                    <option key={v.id} value={v.id}>
+                                        {v.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                    )}
-                </div>
-            </form>
+
+                        <div>
+                            <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Image</div>
+                            <select
+                                value={formHasImages}
+                                onChange={(e) => setFormHasImages(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            >
+                                <option value="">(All)</option>
+                                <option value="yes">Có ảnh</option>
+                                <option value="no">Chưa có ảnh</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div className="mb-1.5 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Sắp xếp</div>
+                            <select
+                                value={formSort}
+                                onChange={(e) => setFormSort(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            >
+                                <option value="updatedDesc">Cập nhật ↓</option>
+                                <option value="updatedAsc">Cập nhật ↑</option>
+                                <option value="createdDesc">Tạo ↓</option>
+                                <option value="createdAsc">Tạo ↑</option>
+                                <option value="titleAsc">Title A → Z</option>
+                                <option value="titleDesc">Title Z → A</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button type="submit" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                            Lọc
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Clear
+                        </button>
+
+                        {!isStrapCatalog && (
+                            <div className="ml-auto text-sm text-gray-600">
+                                Đã chọn: <b>{selectedIds.length}</b>
+                            </div>
+                        )}
+                    </div>
+                </form>
+            </section>
 
             {!isStrapCatalog && showBulkBar && (
-                <div className="flex items-center gap-4 rounded border bg-blue-50 p-3">
-                    <span className="font-medium text-blue-700">
+                <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1 text-sm font-semibold text-sky-700">
                         {selectedIds.length} product đã chọn
                     </span>
 
@@ -1162,21 +1222,21 @@ export default function AdminProductListPageClient(props: PageProps) {
                     >
                         {bulkServiceLoading ? "Đang tạo..." : "Bulk request service"}
                     </button>
-                </div>
+                </section>
             )}
 
             {!isStrapCatalog && showBulkConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-                    <div className="w-[420px] space-y-4 rounded-lg bg-white p-5">
-                        <h3 className="text-lg font-semibold">Post products</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+                    <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+                        <h3 className="text-lg font-semibold text-slate-950">Post products</h3>
 
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                             Bạn đang post <b>{selectedIds.length}</b> sản phẩm.
                         </div>
 
                         <div className="flex justify-end gap-2 pt-3">
                             <button
-                                className="rounded border px-3 py-1"
+                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                 onClick={() => setShowBulkConfirm(false)}
                                 type="button"
                             >
@@ -1184,7 +1244,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                             </button>
 
                             <button
-                                className="rounded bg-blue-600 px-3 py-1 text-white"
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
                                 onClick={async () => {
                                     const res = await fetch("/api/admin/products/bulk-post", {
                                         method: "POST",
@@ -1226,11 +1286,11 @@ export default function AdminProductListPageClient(props: PageProps) {
             )}
 
             {!isStrapCatalog && showBulkSaleModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-                    <div className="w-[420px] space-y-4 rounded-lg bg-white p-5">
-                        <h3 className="text-lg font-semibold">Bulk sale</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+                    <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+                        <h3 className="text-lg font-semibold text-slate-950">Bulk sale</h3>
 
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                             Áp dụng giá sale cho <b>{selectedIds.length}</b> sản phẩm.
                         </div>
 
@@ -1251,7 +1311,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                         <div className="flex justify-end gap-2 pt-3">
                             <button
-                                className="rounded border px-3 py-1"
+                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                 onClick={() => {
                                     setShowBulkSaleModal(false);
                                     setBulkSaleValue("");
@@ -1263,7 +1323,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                             </button>
 
                             <button
-                                className="rounded bg-blue-600 px-3 py-1 text-white"
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
                                 onClick={applyBulkSale}
                                 type="button"
                                 disabled={bulkSaleSaving}
@@ -1275,12 +1335,12 @@ export default function AdminProductListPageClient(props: PageProps) {
                 </div>
             )}
 
-            <div className="overflow-hidden rounded-xl border">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="overflow-x-auto">
                     {isStrapCatalog ? (
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50">
-                                <tr className="text-left text-gray-700">
+                        <table className="min-w-full text-sm text-slate-700">
+                            <thead className="bg-slate-50">
+                                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                                     <th className="px-3 py-3">Ảnh</th>
                                     <th className="px-3 py-3">Tên dây</th>
                                     <th className="px-3 py-3">Spec</th>
@@ -1296,13 +1356,13 @@ export default function AdminProductListPageClient(props: PageProps) {
                             <tbody>
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="px-3 py-10 text-center text-gray-500">
+                                        <td colSpan={9} className="px-3 py-14 text-center text-slate-500">
                                             Không có dây nào trong tab này
                                         </td>
                                     </tr>
                                 ) : (
                                     rows.map((p) => (
-                                        <tr key={p.id} className="border-t [&>td]:align-middle">
+                                        <tr key={p.id} className="border-t border-slate-100 transition hover:bg-slate-50/80 [&>td]:align-middle">
                                             <td className="min-w-[76px] w-[76px] px-4 py-5">
                                                 <InlineImagePicker
                                                     imageUrl={p.primaryImageUrl ?? null}
@@ -1356,9 +1416,9 @@ export default function AdminProductListPageClient(props: PageProps) {
                             </tbody>
                         </table>
                     ) : (
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50">
-                                <tr className="text-left text-gray-700">
+                        <table className="min-w-full text-sm text-slate-700">
+                            <thead className="bg-slate-50">
+                                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                                     <th className="w-10 px-3 py-3">
                                         <input
                                             type="checkbox"
@@ -1400,7 +1460,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                     <tr>
                                         <td
                                             colSpan={props.canViewCost ? 12 : 11}
-                                            className="px-3 py-10 text-center text-gray-500"
+                                            className="px-3 py-14 text-center text-slate-500"
                                         >
                                             Không có dữ liệu trong tab này
                                         </td>
@@ -1411,7 +1471,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                         const postState = getPostReadinessState(p);
 
                                         return (
-                                            <tr key={p.id} className="border-t [&>td]:align-middle">
+                                            <tr key={p.id} className="border-t border-slate-100 transition hover:bg-slate-50/80 [&>td]:align-middle">
                                                 <td className="px-3 py-5">
                                                     <input
                                                         type="checkbox"
@@ -1427,7 +1487,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 </td>
 
                                                 <td className="px-4 py-5">
-                                                    <div className="origin-left scale-110">
+                                                    <div className="origin-left scale-[1.05]">
                                                         <InlineImagePicker
                                                             imageUrl={p.primaryImageUrl ?? null}
                                                             onPick={(fileKey) => updateProductImage(p.id, fileKey)}
@@ -1437,15 +1497,15 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                                                 <td className="px-3 py-5">
                                                     <div className="space-y-1">
-                                                        <div className="text-sm font-medium leading-5">{p.title || "-"}</div>
+                                                        <div className="text-sm font-semibold leading-5 text-slate-950">{p.title || "-"}</div>
 
-                                                        <div className="text-[11px] uppercase tracking-wide text-gray-400">
+                                                        <div className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                                                             {`${(p.brand || "-").toLowerCase()} · ${(p.type || "-").toLowerCase()}`}
                                                         </div>
                                                     </div>
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-3 py-5 text-sm font-mono">
+                                                <td className="whitespace-nowrap px-3 py-5 text-xs font-medium uppercase tracking-[0.12em] text-slate-600">
                                                     {p.variantSnapshot?.sku || "-"}
                                                 </td>
 
@@ -1461,12 +1521,12 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                     {p.acquisitionId && p.acquisitionRefNo ? (
                                                         <Link
                                                             href={`/admin/acquisitions/${p.acquisitionId}/edit`}
-                                                            className="text-blue-600 hover:underline"
+                                                            className="font-medium text-sky-700 hover:underline"
                                                         >
                                                             {p.acquisitionRefNo}
                                                         </Link>
                                                     ) : (
-                                                        <span className="text-gray-400">-</span>
+                                                        <span className="text-slate-400">-</span>
                                                     )}
                                                 </td>
 
@@ -1480,7 +1540,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             onSaved={(v) => patchLocalPrice(p.id, v)}
                                                         />
                                                     ) : (
-                                                        <div className="tabular-nums text-[17px] font-semibold leading-none text-gray-950">
+                                                        <div className="tabular-nums text-[17px] font-semibold leading-none text-slate-950">
                                                             {fmtMoney(p.minPrice)}
                                                         </div>
                                                     )}
@@ -1496,7 +1556,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                             onSaved={(v) => patchLocalSalePrice(p.id, v)}
                                                         />
                                                     ) : (
-                                                        <div className="text-sm text-emerald-700">
+                                                        <div className="text-sm font-medium text-emerald-700">
                                                             {p.salePrice != null ? fmtMoney(p.salePrice) : "-"}
                                                         </div>
                                                     )}
@@ -1533,11 +1593,11 @@ export default function AdminProductListPageClient(props: PageProps) {
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-3 py-5">
-                                                    <div className="text-sm leading-5">{fmtDT(p.updatedAt)}</div>
+                                                    <div className="text-sm leading-5 text-slate-600">{fmtDT(p.updatedAt)}</div>
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-3 py-5">
-                                                    <div className="text-sm leading-5">{fmtDT(p.createdAt)}</div>
+                                                    <div className="text-sm leading-5 text-slate-600">{fmtDT(p.createdAt)}</div>
                                                 </td>
 
                                                 <td className="px-3 py-5 text-right">
@@ -1558,9 +1618,9 @@ export default function AdminProductListPageClient(props: PageProps) {
                         </table>
                     )}
                 </div>
-            </div>
+            </section>
 
-            <div className="flex items-center justify-between text-sm text-gray-700">
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
@@ -1568,7 +1628,7 @@ export default function AdminProductListPageClient(props: PageProps) {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        className="rounded-lg border px-3 py-2 disabled:opacity-50"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                         disabled={props.page <= 1}
                         onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
@@ -1577,7 +1637,7 @@ export default function AdminProductListPageClient(props: PageProps) {
 
                     <button
                         type="button"
-                        className="rounded-lg border px-3 py-2 disabled:opacity-50"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                         disabled={props.page >= props.totalPages}
                         onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >

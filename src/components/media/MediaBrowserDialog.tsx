@@ -58,7 +58,15 @@ export default function MediaBrowserDialog({
                 throw new Error(json?.error || "Không tải được thư viện ảnh");
             }
 
-            setItems(Array.isArray(json?.items) ? json.items : []);
+            setItems(
+                Array.isArray(json?.files)
+                    ? json.files.map((item: any) => ({
+                        key: item.key,
+                        signedUrl: item.url ?? null,
+                    }))
+                    : []
+            );
+
             hasLoadedRef.current = true;
         } catch (e: any) {
             setError(e?.message || "Không tải được thư viện ảnh");

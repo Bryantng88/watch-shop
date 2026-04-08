@@ -82,15 +82,3 @@ export type GenerateAcquisitionDraftInput = {
     titleHint?: string | null;
     hintText?: string | null;
 };
-
-export type CreateWithAiInput = {
-    origin: string;
-    imageUrls: string[];
-    vendorId: string;
-    vendorName?: string | null;
-    cost: number;
-    note?: string | null;
-    titleHint?: string | null;
-    hintText?: string | null;
-    categoryId?: string | null;
-};

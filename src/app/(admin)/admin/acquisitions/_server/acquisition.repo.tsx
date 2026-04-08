@@ -161,6 +161,7 @@ export async function createAcqItem(
                 strapSpec: item.strapSpec,
                 watchFlags: item.watchFlags,
                 quickSpec: item.quickSpec,
+                aiMeta: item.aiMeta,
             }),
         },
     });
@@ -189,6 +190,7 @@ export async function updateAcqItem(tx: DB, it: any) {
                         strapSpec: it.strapSpec,
                         watchFlags: it.watchFlags,
                         quickSpec: it.quickSpec,
+                        aiMeta: item.aiMeta,
                     })
                     : undefined,
         },

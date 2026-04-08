@@ -2,30 +2,9 @@ import type {
     AcquisitionDraftResponse,
     AcquisitionExtractedSpec,
     AcquisitionGeneratedDraft,
-    CreateWithAiInput,
     GenerateAcquisitionDraftInput,
 } from "./acquisition-ai.types";
 import * as repo from "./acquisition-ai.repo";
-
-function toAbsoluteUrl(input: string, origin: string) {
-    if (!input) return "";
-    if (/^https?:\/\//i.test(input) || input.startsWith("data:")) return input;
-    if (input.startsWith("/")) return `${origin}${input}`;
-    return `${origin}/${input.replace(/^\/+/, "")}`;
-}
-
-async function fetchImageAsDataUrl(imageUrl: string, origin: string) {
-    const absoluteUrl = toAbsoluteUrl(imageUrl, origin);
-    const res = await fetch(absoluteUrl);
-    if (!res.ok) {
-        throw new Error(`Không tải được ảnh: ${res.status}`);
-    }
-
-    const contentType = res.headers.get("content-type") || "image/jpeg";
-    const arrayBuffer = await res.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
-}
 
 function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionExtractedSpec {
     const source = `${titleHint || ""} ${hintText || ""}`.toLowerCase();
@@ -38,17 +17,17 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
                 ? "Longines"
                 : null;
 
-    const movement = source.includes("pin") || source.includes("quartz")
-        ? "QUARTZ"
-        : source.includes("automatic")
-            ? "AUTOMATIC"
-            : source.includes("lên dây")
-                ? "MANUAL"
-                : null;
+    const movement =
+        source.includes("pin") || source.includes("quartz")
+            ? "QUARTZ"
+            : source.includes("automatic") || source.includes("tự động")
+                ? "AUTOMATIC"
+                : source.includes("lên dây")
+                    ? "MANUAL"
+                    : null;
 
-    const caseMaterial = source.includes("18k gold") || source.includes("18k")
-        ? "GOLD"
-        : source.includes("gold")
+    const caseMaterial =
+        source.includes("18k gold") || source.includes("18k") || source.includes("gold")
             ? "GOLD"
             : null;
 
@@ -133,12 +112,6 @@ function buildFallbackDraft(input: {
         input.titleHint ||
         "Vintage watch";
 
-    const missingData = [
-        !s.bestRefCandidate ? "reference" : null,
-        !s.yearEstimate ? "year" : null,
-        !s.bestCaliberCandidate ? "caliber" : null,
-    ].filter(Boolean) as string[];
-
     return {
         generatedTitle: title,
         titleOptions: [title].filter(Boolean),
@@ -154,7 +127,11 @@ function buildFallbackDraft(input: {
         socialBalanced: `${title} mang tinh thần vintage rõ rệt, gọn và dễ đeo. Đây là AI draft ban đầu để tiếp tục review sâu hơn.`,
         storytellingCopy: `${title} là một mẫu đồng hồ gợi cảm giác vintage khá rõ. Đây là draft AI ban đầu để tiếp tục kiểm tra ref, năm và các chi tiết sâu hơn.`,
         hashtags: [brand ? `#${brand.replace(/\s+/g, "")}` : null, "#vintagewatch"].filter(Boolean) as string[],
-        missingData,
+        missingData: [
+            !s.bestRefCandidate ? "reference" : null,
+            !s.yearEstimate ? "year" : null,
+            !s.bestCaliberCandidate ? "caliber" : null,
+        ].filter(Boolean) as string[],
         safetyNotes: [
             "Draft AI ban đầu, cần review lại trước khi post.",
             "Không dùng claim zin/NOS/serviced nếu chưa có xác nhận.",
@@ -332,54 +309,6 @@ function draftSchema() {
     };
 }
 
-async function callOpenAIJson<T>({
-    apiKey,
-    model,
-    input,
-    schema,
-}: {
-    apiKey: string;
-    model: string;
-    input: any;
-    schema: ReturnType<typeof specSchema> | ReturnType<typeof draftSchema>;
-}): Promise<T> {
-    const res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            model,
-            input,
-            text: {
-                format: {
-                    type: "json_schema",
-                    name: schema.name,
-                    strict: true,
-                    schema: schema.schema,
-                },
-            },
-        }),
-    });
-
-    const json = await res.json();
-
-    if (!res.ok) {
-        throw new Error(`OpenAI lỗi ${res.status}: ${JSON.stringify(json)}`);
-    }
-
-    const raw =
-        json?.output?.flatMap((item: any) => item?.content || [])
-            ?.find((c: any) => c?.type === "output_text")?.text || "";
-
-    if (!raw) {
-        throw new Error("OpenAI không trả về output_text.");
-    }
-
-    return JSON.parse(raw) as T;
-}
-
 export async function generateAcquisitionDraft(
     input: GenerateAcquisitionDraftInput
 ): Promise<AcquisitionDraftResponse> {
@@ -405,7 +334,7 @@ export async function generateAcquisitionDraft(
     }
 
     const dataUrls = await Promise.all(
-        input.imageUrls.slice(0, 4).map((u) => fetchImageAsDataUrl(u, input.origin))
+        input.imageUrls.slice(0, 4).map((u) => repo.fetchImageAsDataUrl(u, input.origin))
     );
 
     const extractInput = [
@@ -417,8 +346,8 @@ export async function generateAcquisitionDraft(
                     text: [
                         "Bạn là chuyên gia nhận diện đồng hồ vintage từ ảnh cho nghiệp vụ nhập hàng.",
                         "Mục tiêu là chuẩn xác tối đa, không phán bừa.",
-                        "Ref, year, caliber chỉ đưa candidate/estimate khi có căn cứ; không chắc thì để null hoặc candidate confidence thấp.",
-                        "Hint người dùng là nguồn thông tin mạnh, nhưng vẫn cần phân biệt đâu là confirmedFacts, đâu là suggestedFacts.",
+                        "Ref, year, caliber chỉ đưa candidate/estimate khi có căn cứ; không chắc thì để null hoặc confidence thấp.",
+                        "Hint người dùng là nguồn thông tin mạnh, nhưng vẫn phải phân biệt confirmedFacts và suggestedFacts.",
                         "Nếu user hint nói 'niềng 18K gold' thì đừng vội suy ra toàn bộ case là vàng khối nếu ảnh không đủ bằng chứng.",
                         "Nếu cần thêm ảnh để chốt ref/năm, hãy nêu rõ trong needsMoreImages.",
                     ].join(" "),
@@ -449,7 +378,7 @@ export async function generateAcquisitionDraft(
         },
     ];
 
-    const extractedSpec = await callOpenAIJson<AcquisitionExtractedSpec>({
+    const extractedSpec = await repo.callOpenAIJson<AcquisitionExtractedSpec>({
         apiKey,
         model,
         input: extractInput,
@@ -493,7 +422,7 @@ export async function generateAcquisitionDraft(
         },
     ];
 
-    const generatedDraft = await callOpenAIJson<AcquisitionGeneratedDraft>({
+    const generatedDraft = await repo.callOpenAIJson<AcquisitionGeneratedDraft>({
         apiKey,
         model,
         input: draftInput,
@@ -508,27 +437,5 @@ export async function generateAcquisitionDraft(
             model,
             message: null,
         },
-    };
-}
-
-export async function createWithAi(input: CreateWithAiInput) {
-    const aiDraft = await generateAcquisitionDraft({
-        origin: input.origin,
-        imageUrls: input.imageUrls,
-        vendorName: input.vendorName,
-        cost: input.cost,
-        titleHint: input.titleHint,
-        hintText: input.hintText,
-    });
-
-    const persisted = await repo.persistCreateWithAiPayload({
-        createInput: input,
-        extractedSpec: aiDraft.extractedSpec,
-        generatedDraft: aiDraft.generatedDraft,
-    });
-
-    return {
-        ...persisted,
-        aiDraft,
     };
 }

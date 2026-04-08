@@ -1,5 +1,5 @@
 // import { prisma } from "@/server/db";
-import type { TechnicalAssessmentSubmitPayload } from "@/app/(admin)/admin/services/_client/TechnicalAssessmentModal";
+import type { TechnicalAssessmentSubmitPayload } from "@/app/(admin)/admin/services/_client/temp-file/TechnicalAssessmentModal";
 
 /**
  * Luồng:

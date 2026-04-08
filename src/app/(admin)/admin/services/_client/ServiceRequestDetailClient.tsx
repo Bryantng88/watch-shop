@@ -4,7 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { useNotify } from "@/components/feedback/AppToastProvider";
-import TechnicalAssessmentInlinePanel from "./TechnicalAssessmentInlinePanel";
+
+import { TechnicalAssessmentInlinePanel } from "../_client/technical-assessment"
 import {
     CompletedSummaryCard,
     HeaderActionButton,
@@ -243,7 +244,7 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 totalCost={totalCost}
                 onEditSpec={
                     sr.productId
-                        ? () => router.push(`/admin/products/${sr.productId}/edit`)
+                        ? () => router.push(`/admin/products/${sr.productId}/spec`)
                         : undefined
                 }
                 onOpenIssueBoard={

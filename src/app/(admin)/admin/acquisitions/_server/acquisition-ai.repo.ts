@@ -1,119 +1,68 @@
-import { prisma } from "@/server/db/client";
-import type {
-    AcquisitionExtractedSpec,
-    AcquisitionGeneratedDraft,
-    CreateWithAiInput,
-} from "./acquisition-ai.types";
-
-export async function createAcquisitionDraftRecord(input: {
-    vendorId: string;
-    cost: number;
-    note?: string | null;
-    imageUrls: string[];
-    titleHint?: string | null;
-    hintText?: string | null;
-    aiExtractedSpec: AcquisitionExtractedSpec;
-    aiGeneratedDraft: AcquisitionGeneratedDraft;
-}) {
-    // TODO: map về schema acquisition thật của project bạn
-    // Đây là payload mẫu theo pattern repo.
-    return {
-        vendorId: input.vendorId,
-        cost: input.cost,
-        note: input.note ?? null,
-        imageUrls: input.imageUrls,
-        titleHint: input.titleHint ?? null,
-        hintText: input.hintText ?? null,
-        aiExtractedSpec: input.aiExtractedSpec,
-        aiGeneratedDraft: input.aiGeneratedDraft,
-    };
+function toAbsoluteUrl(input: string, origin: string) {
+    if (!input) return "";
+    if (/^https?:\/\//i.test(input) || input.startsWith("data:")) return input;
+    if (input.startsWith("/")) return `${origin}${input}`;
+    return `${origin}/${input.replace(/^\/+/, "")}`;
 }
 
-export async function createProductDraftFromAcquisitionAi(input: {
-    vendorId: string;
-    categoryId?: string | null;
-    imageUrls: string[];
-    generatedTitle: string;
-    extractedSpec: AcquisitionExtractedSpec;
-    generatedDraft: AcquisitionGeneratedDraft;
-}) {
-    // TODO: nối vào model/service thật của product
-    return {
-        vendorId: input.vendorId,
-        categoryId: input.categoryId ?? null,
-        primaryImageUrl: input.imageUrls[0] ?? null,
-        title: input.generatedTitle,
-        aiDraftPendingReview: true,
-        watchSpec: {
-            ref: input.extractedSpec.bestRefCandidate,
-            model: input.extractedSpec.modelFamily,
-            year: input.extractedSpec.yearEstimate,
-            caseType: input.extractedSpec.caseType,
-            gender: input.extractedSpec.gender,
-            movement: input.extractedSpec.movement,
-            caliber: input.extractedSpec.bestCaliberCandidate,
-            caseMaterial: input.extractedSpec.caseMaterial,
-            goldKarat: input.extractedSpec.goldKarat,
-            goldColor: input.extractedSpec.goldColor,
-            width: input.extractedSpec.widthEstimateMm,
-            length: input.extractedSpec.lengthEstimateMm,
-            thickness: input.extractedSpec.thicknessEstimateMm,
-            strap: input.extractedSpec.strapType,
-            glass: input.extractedSpec.glass,
-            dialColor: input.extractedSpec.dialColor,
-            dialCondition: input.extractedSpec.dialCondition,
-            boxIncluded: input.extractedSpec.likelyAccessories.boxIncluded,
-            bookletIncluded: input.extractedSpec.likelyAccessories.bookletIncluded,
-            cardIncluded: input.extractedSpec.likelyAccessories.cardIncluded,
-        },
-        content: {
-            generatedContent: input.generatedDraft.listingCopy,
-            specBullets: input.generatedDraft.specBullets,
-            titleOptions: input.generatedDraft.titleOptions,
-            hashtags: input.generatedDraft.hashtags,
-            missingData: input.generatedDraft.missingData,
-            safetyNotes: input.generatedDraft.safetyNotes,
-        },
-        aiExtractedSpecRaw: input.extractedSpec,
-    };
+export async function fetchImageAsDataUrl(imageUrl: string, origin: string) {
+    const absoluteUrl = toAbsoluteUrl(imageUrl, origin);
+    const res = await fetch(absoluteUrl);
+
+    if (!res.ok) {
+        throw new Error(`Không tải được ảnh: ${res.status}`);
+    }
+
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
 }
 
-export async function persistCreateWithAiPayload(input: {
-    createInput: CreateWithAiInput;
-    extractedSpec: AcquisitionExtractedSpec;
-    generatedDraft: AcquisitionGeneratedDraft;
-}) {
-    // TODO:
-    // Đây là điểm bạn thay bằng transaction thật của project:
-    // - tạo acquisition
-    // - tạo product draft
-    // - link acquisition với product
-    //
-    // Ví dụ:
-    // return prisma.$transaction(async (tx) => { ... })
-
-    const acquisition = await createAcquisitionDraftRecord({
-        vendorId: input.createInput.vendorId,
-        cost: input.createInput.cost,
-        note: input.createInput.note,
-        imageUrls: input.createInput.imageUrls,
-        titleHint: input.createInput.titleHint,
-        hintText: input.createInput.hintText,
-        aiExtractedSpec: input.extractedSpec,
-        aiGeneratedDraft: input.generatedDraft,
+export async function callOpenAIJson<T>({
+    apiKey,
+    model,
+    input,
+    schema,
+}: {
+    apiKey: string;
+    model: string;
+    input: any;
+    schema: { name: string; schema: any };
+}): Promise<T> {
+    const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            model,
+            input,
+            text: {
+                format: {
+                    type: "json_schema",
+                    name: schema.name,
+                    strict: true,
+                    schema: schema.schema,
+                },
+            },
+        }),
     });
 
-    const productDraft = await createProductDraftFromAcquisitionAi({
-        vendorId: input.createInput.vendorId,
-        categoryId: input.createInput.categoryId,
-        imageUrls: input.createInput.imageUrls,
-        generatedTitle: input.generatedDraft.generatedTitle,
-        extractedSpec: input.extractedSpec,
-        generatedDraft: input.generatedDraft,
-    });
+    const json = await res.json();
 
-    return {
-        acquisition,
-        productDraft,
-    };
+    if (!res.ok) {
+        throw new Error(`OpenAI lỗi ${res.status}: ${JSON.stringify(json)}`);
+    }
+
+    const raw =
+        json?.output?.flatMap((item: any) => item?.content || [])
+            ?.find((c: any) => c?.type === "output_text")?.text || "";
+
+    if (!raw) {
+        throw new Error("OpenAI không trả về output_text.");
+    }
+
+    return JSON.parse(raw) as T;
 }

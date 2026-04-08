@@ -208,9 +208,14 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
         });
 
         let total = 0;
+        for (const raw of input.items) {
+            const it = {
+                ...raw,
+                productTitle:
+                    String((raw as any).productTitle ?? "").trim() || "Untitled watch",
+            };
 
-        for (const it of input.items) {
-            await repoAcq.createAcqItem(tx, acq.id, it);
+            await repoAcq.createAcqItem(tx, acq.id, it as any);
             total += (it.quantity ?? 1) * (it.unitCost ?? 0);
         }
 
@@ -260,7 +265,27 @@ function parseWatchFlagsFromDescription(description?: string | null) {
         return null;
     }
 }
+function parseAiMetaFromDescription(description?: string | null) {
+    if (!description) return null;
 
+    try {
+        const parsed = JSON.parse(description);
+        const candidate = parsed?.aiMeta ?? null;
+        if (!candidate || typeof candidate !== "object") return null;
+
+        return candidate as {
+            images?: Array<{ key?: string | null; url?: string | null }>;
+            aiHint?: string | null;
+            ai?: {
+                extractedSpec?: any;
+                generatedDraft?: any;
+                meta?: any;
+            } | null;
+        };
+    } catch {
+        return null;
+    }
+}
 async function createProductForPostedItem(
     tx: DB,
     params: {
@@ -270,17 +295,31 @@ async function createProductForPostedItem(
     }
 ) {
     const { acqId, vendorId, item } = params;
+
     const strapSpec =
         item.productType === "WATCH_STRAP"
             ? parseStrapSpecFromDescription(item.description)
             : null;
+
     const watchFlags =
         item.productType !== "WATCH_STRAP"
             ? parseWatchFlagsFromDescription(item.description)
             : null;
 
+    const aiMeta =
+        item.productType !== "WATCH_STRAP"
+            ? parseAiMetaFromDescription(item.description)
+            : null;
+
+    const aiExtracted = aiMeta?.ai?.extractedSpec ?? null;
+    const aiGenerated = aiMeta?.ai?.generatedDraft ?? null;
+
     const productType = (item.productType ?? "WATCH") as any;
     const sku = await genUniqueProductSku(tx as any, productType);
+
+    const primaryImageKey =
+        aiMeta?.images?.[0]?.key ??
+        null;
 
     if (item.productType === "WATCH_STRAP") {
         const created = await tx.product.create({
@@ -291,6 +330,7 @@ async function createProductForPostedItem(
                 contentStatus: ContentStatus.DRAFT,
                 type: "WATCH_STRAP" as any,
                 vendor: { connect: { id: vendorId } },
+                primaryImageUrl: primaryImageKey,
                 variants: {
                     create: [
                         {
@@ -340,14 +380,81 @@ async function createProductForPostedItem(
         return;
     }
 
+    let brandConnect: { connect: { id: string } } | undefined = undefined;
+
+    if (aiExtracted?.brandName) {
+        const matchedBrand = await tx.brand.findFirst({
+            where: {
+                name: {
+                    equals: String(aiExtracted.brandName),
+                    mode: "insensitive" as any,
+                },
+            },
+            select: { id: true },
+        });
+
+        if (matchedBrand?.id) {
+            brandConnect = { connect: { id: matchedBrand.id } };
+        }
+    }
+
     const created = await tx.product.create({
         data: {
-            title: item.productTitle,
+            title: aiGenerated?.generatedTitle || item.productTitle,
             sku,
             status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
             type: productType,
+            primaryImageUrl: primaryImageKey,
             vendor: { connect: { id: vendorId } },
+            ...(brandConnect ? { brand: brandConnect } : {}),
+            ...(aiExtracted
+                ? {
+                    watchSpec: {
+                        create: {
+                            ref: aiExtracted.bestRefCandidate ?? null,
+                            model: aiExtracted.modelFamily ?? null,
+                            year: aiExtracted.yearEstimate ?? null,
+                            caseType: aiExtracted.caseType ?? null,
+                            gender: aiExtracted.gender ?? null,
+                            movement: aiExtracted.movement ?? null,
+                            caliber: aiExtracted.bestCaliberCandidate ?? null,
+                            caseMaterial: aiExtracted.caseMaterial ?? null,
+                            goldKarat: aiExtracted.goldKarat ?? null,
+                            goldColor: aiExtracted.goldColor ?? null,
+                            length: aiExtracted.lengthEstimateMm ?? null,
+                            width: aiExtracted.widthEstimateMm ?? null,
+                            thickness: aiExtracted.thicknessEstimateMm ?? null,
+                            strap: aiExtracted.strapType ?? null,
+                            glass: aiExtracted.glass ?? null,
+                            dialColor: aiExtracted.dialColor ?? null,
+                            dialCondition: aiExtracted.dialCondition ?? null,
+                            boxIncluded: aiExtracted.likelyAccessories?.boxIncluded ?? false,
+                            bookletIncluded: aiExtracted.likelyAccessories?.bookletIncluded ?? false,
+                            cardIncluded: aiExtracted.likelyAccessories?.cardIncluded ?? false,
+                        },
+                    },
+                }
+                : {}),
+            ...(aiGenerated
+                ? {
+                    content: {
+                        create: {
+                            generatedContent: aiGenerated.listingCopy ?? null,
+                            specBullets: aiGenerated.specBullets ?? [],
+                            promoteShort: aiGenerated.socialBalanced ?? "",
+                            promoteLong: aiGenerated.storytellingCopy ?? "",
+                            facebookCaption: aiGenerated.socialBalanced ?? "",
+                            instagramCaption: aiGenerated.socialBalanced ?? "",
+                            titleOptions: aiGenerated.titleOptions ?? [],
+                            hashtags: aiGenerated.hashtags ?? [],
+                            missingData: aiGenerated.missingData ?? [],
+                            safetyNotes: aiGenerated.safetyNotes ?? [],
+                            promptNote: aiMeta?.aiHint ?? null,
+                        },
+                    },
+                }
+                : {}),
             variants: {
                 create: [
                     {

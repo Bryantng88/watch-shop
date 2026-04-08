@@ -122,6 +122,7 @@ export type CreateMaintenanceLogInput = {
     serialSnapshot?: string | null;
     serviceCatalogId?: string | null;
     imageFileKey?: string | null;
+    technicalIssueId?: string | null;
 };
 
 export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
@@ -154,6 +155,7 @@ export async function createLog(tx: DB, input: CreateMaintenanceLogInput) {
             serialSnapshot: input.serialSnapshot ?? null,
             serviceCatalogId: input.serviceCatalogId ?? null,
             imageFileKey: input.imageFileKey ?? null,
+            technicalIssueId: input.technicalIssueId ?? null,
         },
     });
 }
@@ -291,3 +293,28 @@ export async function bulkAssignVendor(
     const created = await db.maintenanceRecord.createMany({ data, skipDuplicates: false });
     return { updatedCount: updated.count, createdLogs: created.count };
 }
+
+
+export async function findLatestLogByTechnicalIssue(
+    tx: DB,
+    technicalIssueId: string,
+    eventTypes?: MaintenanceEventType[]
+) {
+    const db = dbOrTx(tx);
+    return db.maintenanceRecord.findFirst({
+        where: {
+            technicalIssueId,
+            ...(eventTypes?.length ? { eventType: { in: eventTypes } } : {}),
+        },
+        orderBy: [{ servicedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+            id: true,
+            eventType: true,
+            technicalIssueId: true,
+            createdAt: true,
+            servicedAt: true,
+        },
+    });
+}
+
+export const createMaintenanceRecord = createLog;

@@ -1,6 +1,8 @@
 import prisma from "@/server/db/client";
 import * as repo from "./technical.assessment.repo";
+import * as maintenanceRepo from "./maintenance.repo";
 import {
+    MaintenanceEventType,
     ServiceRequestStatus,
     TechnicalAssessmentStatus,
     TechnicalIssueExecutionStatus,
@@ -152,6 +154,78 @@ function inferImageFileKey(input: any) {
 function toText(v: any) {
     const s = String(v ?? "").trim();
     return s.length ? s : null;
+}
+function buildIssueCompletionWorkSummary(issue: {
+    area?: string | null;
+    summary?: string | null;
+    serviceCatalog?: { name?: string | null } | null;
+}) {
+    const summary = toText(issue.summary);
+    if (summary) return summary;
+    return toText(issue.serviceCatalog?.name) ?? toText(issue.area);
+}
+
+function buildIssueCompletionDiagnosis(issue: {
+    area?: string | null;
+    note?: string | null;
+}) {
+    const parts = [toText(issue.area), toText(issue.note)].filter(Boolean);
+    return parts.length ? parts.join(" • ") : null;
+}
+
+async function syncCompletionStateAfterIssueDone(
+    tx: any,
+    args: { assessmentId: string; serviceRequestId: string }
+) {
+    const remainingOpenCount = await tx.technicalIssue.count({
+        where: {
+            assessmentId: args.assessmentId,
+            executionStatus: {
+                in: [
+                    TechnicalIssueExecutionStatus.OPEN,
+                    TechnicalIssueExecutionStatus.IN_PROGRESS,
+                ],
+            },
+        },
+    });
+
+    if (remainingOpenCount > 0) {
+        await tx.technicalAssessment.update({
+            where: { id: args.assessmentId },
+            data: {
+                status: TechnicalAssessmentStatus.IN_PROGRESS,
+                updatedAt: new Date(),
+            },
+        });
+
+        await tx.serviceRequest.update({
+            where: { id: args.serviceRequestId },
+            data: {
+                status: ServiceRequestStatus.IN_PROGRESS,
+                updatedAt: new Date(),
+            },
+        });
+
+        return { remainingOpenCount, completedAll: false };
+    }
+
+    await tx.technicalAssessment.update({
+        where: { id: args.assessmentId },
+        data: {
+            status: TechnicalAssessmentStatus.COMPLETED,
+            updatedAt: new Date(),
+        },
+    });
+
+    await tx.serviceRequest.update({
+        where: { id: args.serviceRequestId },
+        data: {
+            status: ServiceRequestStatus.COMPLETED,
+            updatedAt: new Date(),
+        },
+    });
+
+    return { remainingOpenCount: 0, completedAll: true };
 }
 export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
     const panel = await repo.getPanel(serviceRequestId);
@@ -437,7 +511,36 @@ export async function completeTechnicalIssue(input: {
             where: { id },
             select: {
                 id: true,
+                assessmentId: true,
+                serviceRequestId: true,
                 executionStatus: true,
+                actionMode: true,
+                area: true,
+                note: true,
+                summary: true,
+                vendorId: true,
+                vendorNameSnap: true,
+                technicianId: true,
+                serviceCatalogId: true,
+                ServiceCatalog: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                ServiceRequest: {
+                    select: {
+                        id: true,
+                        productId: true,
+                        variantId: true,
+                        brandSnapshot: true,
+                        modelSnapshot: true,
+                        refSnapshot: true,
+                        serialSnapshot: true,
+                        technicianId: true,
+                        technicianNameSnap: true,
+                    },
+                },
             },
         });
 
@@ -446,19 +549,81 @@ export async function completeTechnicalIssue(input: {
             throw new Error("Issue không ở trạng thái IN_PROGRESS");
         }
 
-        return tx.technicalIssue.update({
+        const completedAt = new Date();
+        const normalizedActualCost =
+            input.actualCost != null && Number.isFinite(Number(input.actualCost))
+                ? Number(input.actualCost)
+                : null;
+        const normalizedResolutionNote = toText(input.resolutionNote);
+
+        const updatedIssue = await tx.technicalIssue.update({
             where: { id },
             data: {
-                executionStatus: "DONE",
-                completedAt: new Date(),
+                executionStatus: TechnicalIssueExecutionStatus.DONE,
+                completedAt,
                 completedByNameSnap: input.actorName ?? null,
-                resolutionNote: toText(input.resolutionNote),
-                actualCost:
-                    input.actualCost != null && Number.isFinite(Number(input.actualCost))
-                        ? Number(input.actualCost)
-                        : null,
+                resolutionNote: normalizedResolutionNote,
+                actualCost: normalizedActualCost,
                 updatedAt: new Date(),
             } as any,
         });
+
+        const existingCompletionLog = await maintenanceRepo.findLatestLogByTechnicalIssue(
+            tx,
+            issue.id,
+            [MaintenanceEventType.NOTE, MaintenanceEventType.COST]
+        );
+
+        if (!existingCompletionLog) {
+            await maintenanceRepo.createLog(tx, {
+                serviceRequestId: issue.serviceRequestId,
+                technicalIssueId: issue.id,
+                eventType:
+                    normalizedActualCost != null && normalizedActualCost > 0
+                        ? MaintenanceEventType.COST
+                        : MaintenanceEventType.NOTE,
+                vendorId:
+                    issue.actionMode === "VENDOR" ? issue.vendorId ?? null : null,
+                vendorName:
+                    issue.actionMode === "VENDOR"
+                        ? issue.vendorNameSnap ?? null
+                        : null,
+                technicianId:
+                    issue.technicianId ?? issue.ServiceRequest?.technicianId ?? null,
+                technicianNameSnap:
+                    input.actorName ?? issue.ServiceRequest?.technicianNameSnap ?? null,
+                notes: normalizedResolutionNote,
+                diagnosis: buildIssueCompletionDiagnosis(issue),
+                workSummary: buildIssueCompletionWorkSummary({
+                    area: issue.area,
+                    summary: issue.summary,
+                    serviceCatalog: issue.ServiceCatalog,
+                }),
+                processingMode:
+                    issue.actionMode === "VENDOR" ? "EXTERNAL" : "INTERNAL",
+                servicedAt: completedAt,
+                totalCost: normalizedActualCost,
+                currency: "VND",
+                productId: issue.ServiceRequest?.productId ?? null,
+                variantId: issue.ServiceRequest?.variantId ?? null,
+                brandSnapshot: issue.ServiceRequest?.brandSnapshot ?? null,
+                modelSnapshot: issue.ServiceRequest?.modelSnapshot ?? null,
+                refSnapshot: issue.ServiceRequest?.refSnapshot ?? null,
+                serialSnapshot: issue.ServiceRequest?.serialSnapshot ?? null,
+                serviceCatalogId: issue.serviceCatalogId ?? null,
+            });
+        }
+
+        const completionState = await syncCompletionStateAfterIssueDone(tx, {
+            assessmentId: issue.assessmentId,
+            serviceRequestId: issue.serviceRequestId,
+        });
+
+        return {
+            ...updatedIssue,
+            maintenanceLogCreated: !existingCompletionLog,
+            autoCompletedServiceRequest: completionState.completedAll,
+            remainingOpenIssueCount: completionState.remainingOpenCount,
+        };
     });
 }

@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import GenericActionMenu from "../../__components/GenericActionMenu";
 import MaintenanceLogModal from "./MaintenaceLogModel";
 import DotLabel from "../../__components/DotLabel";
-import TechnicalAssessmentModal from "./TechnicalAssessmentModal";
+import TechnicalAssessmentModal from "./temp-file/TechnicalAssessmentModal";
 import StatusBadge from "@/components/badges/StatusBadge";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
 import { useNotify } from "@/components/feedback/AppToastProvider";

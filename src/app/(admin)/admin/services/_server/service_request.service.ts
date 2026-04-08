@@ -409,6 +409,45 @@ export async function completeServiceRequest(input: {
             return { ok: true, skipped: true, status: existing.status };
         }
 
+        const technicalAssessment = await tx.technicalAssessment.findUnique({
+            where: { serviceRequestId },
+            select: {
+                id: true,
+                movementKind: true,
+                imageFileKey: true,
+                TechnicalIssue: {
+                    select: {
+                        id: true,
+                        isConfirmed: true,
+                        executionStatus: true,
+                    },
+                },
+            },
+        });
+
+        if (technicalAssessment) {
+            const confirmedIssues = technicalAssessment.TechnicalIssue.filter(
+                (issue: any) => issue.isConfirmed && String(issue.executionStatus || "").toUpperCase() !== "CANCELED"
+            );
+            const hasOpenConfirmedIssue = confirmedIssues.some((issue: any) => {
+                const status = String(issue.executionStatus || "").toUpperCase();
+                return status === "OPEN" || status === "IN_PROGRESS";
+            });
+
+            if (hasOpenConfirmedIssue) {
+                throw new Error("Còn issue đã xác nhận nhưng chưa hoàn tất");
+            }
+
+            const needsMechanicalImage =
+                String(technicalAssessment.movementKind || "").toUpperCase() === "MECHANICAL" &&
+                confirmedIssues.length > 0 &&
+                !String(technicalAssessment.imageFileKey || "").trim();
+
+            if (needsMechanicalImage) {
+                throw new Error("Máy cơ đã hoàn tất issue nhưng vẫn chưa có hình ảnh kỹ thuật.");
+            }
+        }
+
         const completedAt = new Date();
         const updated = await serviceRequestRepo.completeServiceRequestOne(tx as any, {
             id: serviceRequestId,

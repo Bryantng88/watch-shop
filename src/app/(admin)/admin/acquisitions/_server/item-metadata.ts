@@ -179,26 +179,11 @@ export function stringifyAcquisitionItemMeta(input: {
     watchFlags?: WatchFlagsInput | null;
     strapSpec?: StrapSpecInput | null;
     quickSpec?: QuickWatchSpec | null;
+    aiMeta?: any;
 }) {
     const watchFlags = input.watchFlags
         ? {
-            hasStrap: normalizeBool(input.watchFlags.hasStrap),
-            hasClasp: normalizeBool(input.watchFlags.hasClasp),
             needService: normalizeBool(input.watchFlags.needService, true),
-        }
-        : undefined;
-
-    const strapSpec = input.strapSpec
-        ? {
-            material: input.strapSpec.material,
-            lugWidthMM: normalizeNumber(input.strapSpec.lugWidthMM),
-            buckleWidthMM: normalizeNumber(input.strapSpec.buckleWidthMM),
-            color: input.strapSpec.color,
-            quickRelease:
-                input.strapSpec.quickRelease == null
-                    ? undefined
-                    : Boolean(input.strapSpec.quickRelease),
-            sellPrice: normalizeNumber(input.strapSpec.sellPrice),
         }
         : undefined;
 
@@ -230,12 +215,14 @@ export function stringifyAcquisitionItemMeta(input: {
         }
         : undefined;
 
-    if (!watchFlags && !strapSpec && !quickSpec) return null;
+    const aiMeta = input.aiMeta ?? undefined;
+
+    if (!watchFlags && !quickSpec && !aiMeta) return null;
 
     return JSON.stringify({
-        kind: strapSpec ? "strap" : "watch",
+        kind: "watch",
         ...(watchFlags ? { watchFlags } : {}),
-        ...(strapSpec ? { strapSpec } : {}),
         ...(quickSpec ? { quickSpec } : {}),
+        ...(aiMeta ? { aiMeta } : {}),
     });
 }

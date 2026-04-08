@@ -15,7 +15,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
     const permissions = Array.from(new Set(user.permissions ?? []));
 
-    // Có ít nhất 1 quyền thì cho vào admin
     if (permissions.length === 0) {
         redirect("/403");
     }
@@ -23,8 +22,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const notificationCounts = await getSideMenuNotificationCounts();
 
     return (
-        <div className="flex h-screen overflow-hidden">
-            <div className="hidden lg:block w-52 shrink-0 bg-[#11191f]">
+        <div className="flex h-screen overflow-hidden bg-slate-50">
+            <div className="hidden w-52 shrink-0 bg-[#11191f] lg:block">
                 <AdminSidebar
                     user={{ permissions }}
                     notifications={notificationCounts}
@@ -39,13 +38,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 />
             </div>
 
-            <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
                 <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
 
                 <AppToastProvider>
                     <AppDialogProvider>
-                        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto px-4 py-6 lg:px-6 2xl:px-8">
-                            {children}
+                        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50">
+                            <div className="mx-auto w-full max-w-[1680px] px-4 py-6 lg:px-6 2xl:px-8">
+                                {children}
+                            </div>
                         </main>
                     </AppDialogProvider>
                 </AppToastProvider>
