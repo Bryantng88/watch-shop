@@ -7,10 +7,13 @@ import * as acquisitionAiService from "@/app/(admin)/admin/acquisitions/_server/
 
 const BodySchema = z.object({
     imageUrls: z.array(z.string()).min(1),
+    vendorId: z.string().min(1),
     vendorName: z.string().nullish(),
-    cost: z.number().nullish(),
+    cost: z.number(),
+    note: z.string().nullish(),
     titleHint: z.string().nullish(),
     hintText: z.string().nullish(),
+    categoryId: z.string().nullish(),
 });
 
 export async function POST(req: NextRequest) {
@@ -20,19 +23,25 @@ export async function POST(req: NextRequest) {
     try {
         const body = BodySchema.parse(await req.json());
 
-        const result = await acquisitionAiService.generateAcquisitionDraft({
+        const result = await acquisitionAiService.createWithAi({
             origin: req.nextUrl.origin,
             imageUrls: body.imageUrls,
+            vendorId: body.vendorId,
             vendorName: body.vendorName ?? null,
-            cost: body.cost ?? null,
+            cost: body.cost,
+            note: body.note ?? null,
             titleHint: body.titleHint ?? null,
             hintText: body.hintText ?? null,
+            categoryId: body.categoryId ?? null,
         });
 
-        return NextResponse.json(result);
+        return NextResponse.json({
+            success: true,
+            ...result,
+        });
     } catch (e: any) {
         return NextResponse.json(
-            { error: e?.message || "AI draft acquisition failed" },
+            { error: e?.message || "Create acquisition with AI failed" },
             { status: 400 }
         );
     }

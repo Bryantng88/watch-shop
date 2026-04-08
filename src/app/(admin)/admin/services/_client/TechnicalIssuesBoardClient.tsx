@@ -1132,6 +1132,8 @@ export default function TechnicalIssueBoardClient({
                             router.push(`/admin/services/${selectedIssue.serviceRequest.id}`);
                         }
                     }}
+                    onCancelIssue={handleCancelIssue}
+                    cancelingIssueId={cancelingIssueId}
                 />
             )}
         </>
@@ -1148,6 +1150,8 @@ function IssueDrawer({
     onClose,
     onAction,
     onOpenServiceRequest,
+    onCancelIssue,
+    cancelingIssueId,
 }: {
     issue: IssueItem;
     busyId: string | null;
@@ -1162,6 +1166,9 @@ function IssueDrawer({
         rollback?: IssueItem[]
     ) => Promise<void>;
     onOpenServiceRequest: () => void;
+    onCancelIssue: (issueId: string) => Promise<void>;
+    cancelingIssueId: string | null;
+
 }) {
     const sr = issue?.serviceRequest ?? null;
 
@@ -1320,11 +1327,11 @@ function IssueDrawer({
                             {issue.boardColumn !== "DONE" && (
                                 <button
                                     type="button"
-                                    onClick={() => handleCancelIssue(selectedIssue.id)}
-                                    disabled={cancelingIssueId === selectedIssue.id}
+                                    onClick={() => onCancelIssue(issue.id)}
+                                    disabled={cancelingIssueId === issue.id}
                                     className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                                 >
-                                    {cancelingIssueId === selectedIssue.id ? "Đang hủy..." : "Hủy issue"}
+                                    {cancelingIssueId === issue.id ? "Đang hủy..." : "Hủy issue"}
                                 </button>
                             )}
 

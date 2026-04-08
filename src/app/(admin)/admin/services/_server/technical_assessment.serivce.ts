@@ -465,6 +465,7 @@ export async function openTechnicalAssessment(serviceRequestId: string) {
 }
 
 export async function saveTechnicalAssessment(input: any) {
+    await assertServiceRequestEditable(input.serviceRequestId);
     const serviceRequestId = String(input?.serviceRequestId || "").trim();
     if (!serviceRequestId) {
         throw new Error("Missing serviceRequestId");
@@ -671,3 +672,16 @@ export async function getServiceRequestTechnicalSummary(serviceRequestId: string
 }
 
 
+export async function assertServiceRequestEditable(serviceRequestId: string) {
+    const sr = await repo.findServiceRequestStatusById(serviceRequestId);
+
+    if (!sr) {
+        throw new Error("Service request không tồn tại");
+    }
+
+    if (String(sr.status).toUpperCase() === "COMPLETED") {
+        throw new Error("Service request đã hoàn tất, không thể chỉnh sửa nữa");
+    }
+
+    return sr;
+}

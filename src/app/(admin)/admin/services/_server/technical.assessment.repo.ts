@@ -530,3 +530,14 @@ export async function getTechnicalSummaryByServiceRequest(serviceRequestId: stri
         activeAssessment,
     };
 }
+
+
+export async function findServiceRequestStatusById(serviceRequestId: string) {
+    return prisma.serviceRequest.findUnique({
+        where: { id: serviceRequestId },
+        select: {
+            id: true,
+            status: true,
+        },
+    });
+}

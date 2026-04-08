@@ -4,21 +4,24 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
     AlertTriangle,
-    Camera,
-    ExternalLink,
     Plus,
     Trash2,
     Wrench,
     ScanSearch,
     Lock,
-    ArrowRightCircle,
+    ChevronDown,
+    ChevronUp,
+    Image as ImageIcon,
 } from "lucide-react";
 import { useNotify } from "@/components/feedback/AppToastProvider";
+import InlineImagePicker from "@/app/(admin)/admin/products/_components/InlineImagePicker";
+import TechnicalImagePicker from "@/components/media/TechnicalImagePicker";
 
 type Props = {
     serviceRequestId: string;
     panel: any;
     onSaved?: () => void | Promise<void>;
+    readOnly?: boolean;
 };
 
 type MachineType = "MECHANICAL" | "QUARTZ";
@@ -109,7 +112,7 @@ type FormState = {
         crystal: ScoreBlock;
         dial: ScoreBlock;
     };
-    conclusion: string;
+    technicalImageFileKey: string;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -195,7 +198,7 @@ function createInitialFormState(machineType: MachineType): FormState {
             crystal: { issues: [], manualDeduction: "" },
             dial: { issues: [], manualDeduction: "" },
         },
-        conclusion: "",
+        technicalImageFileKey: "",
     };
 }
 
@@ -209,6 +212,53 @@ function calculateAppearanceScore(
     }, 0);
     const manual = Math.max(0, parseNumber(block.manualDeduction));
     return Math.max(0, 100 - issueDeduction - manual);
+}
+
+function buildTechnicalSummaryForSale(params: {
+    machineStatus: HealthStatus;
+    machineIssueTitles: string[];
+    appearanceScore: number;
+    appearanceDefects: string[];
+    afterSpecs?: { rate?: string; amp?: string; err?: string } | null;
+    machineType: MachineType;
+}) {
+    const {
+        machineStatus,
+        machineIssueTitles,
+        appearanceScore,
+        appearanceDefects,
+        afterSpecs,
+        machineType,
+    } = params;
+
+    const machineText =
+        machineStatus === "GOOD" || machineIssueTitles.length === 0
+            ? "Máy: Tốt"
+            : `Máy: Cần thao tác kỹ thuật - ${machineIssueTitles.join(", ")}`;
+
+    const appearanceText =
+        appearanceDefects.length > 0
+            ? `Ngoại hình: ${appearanceScore}/100 • ${appearanceDefects.join(", ")}`
+            : `Ngoại hình: ${appearanceScore}/100 • Không ghi nhận khuyết điểm đáng kể`;
+
+    const rate = String(afterSpecs?.rate || "").trim();
+    const amp = String(afterSpecs?.amp || "").trim();
+    const err = String(afterSpecs?.err || "").trim();
+
+    const measurementText =
+        machineType === "MECHANICAL" && (rate || amp || err)
+            ? `Thông số máy đo: ${[
+                rate ? `Rate ${rate}` : null,
+                amp ? `Amp ${amp}` : null,
+                err ? `Err ${err}` : null,
+            ]
+                .filter(Boolean)
+                .join(" • ")}`
+            : null;
+
+    return [machineText, appearanceText, measurementText]
+        .filter(Boolean)
+        .join("\n");
 }
 
 function Field({
@@ -236,7 +286,7 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
         <input
             {...props}
             className={cx(
-                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400",
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-500",
                 props.className
             )}
         />
@@ -248,19 +298,7 @@ function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
         <select
             {...props}
             className={cx(
-                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400",
-                props.className
-            )}
-        />
-    );
-}
-
-function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-    return (
-        <textarea
-            {...props}
-            className={cx(
-                "min-h-[120px] w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400",
+                "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-500",
                 props.className
             )}
         />
@@ -285,7 +323,7 @@ function Button({
         <button
             {...props}
             className={cx(
-                "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50",
+                "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
                 styles[variant],
                 className
             )}
@@ -342,17 +380,46 @@ function ScorePill({ score }: { score: number }) {
     );
 }
 
+function StaticStatusPill({
+    value,
+    goodText,
+    issueText,
+}: {
+    value: HealthStatus;
+    goodText: string;
+    issueText: string;
+}) {
+    return (
+        <span
+            className={cx(
+                "inline-flex rounded-full border px-3 py-1.5 text-sm font-medium",
+                value === "GOOD"
+                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700"
+            )}
+        >
+            {value === "GOOD" ? goodText : issueText}
+        </span>
+    );
+}
+
 function StatusToggle({
     value,
     onChange,
     goodText,
     issueText,
+    disabled = false,
 }: {
     value: HealthStatus;
     onChange: (value: HealthStatus) => void;
     goodText: string;
     issueText: string;
+    disabled?: boolean;
 }) {
+    if (disabled) {
+        return <StaticStatusPill value={value} goodText={goodText} issueText={issueText} />;
+    }
+
     return (
         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button
@@ -383,6 +450,67 @@ function StatusToggle({
     );
 }
 
+function IssueRow({
+    index,
+    title,
+    modeLabel,
+    costText,
+    boardText,
+    onOpenBoard,
+    readOnly = false,
+}: {
+    index: number;
+    title: string;
+    modeLabel?: string;
+    costText?: string;
+    boardText?: string;
+    onOpenBoard?: () => void;
+    readOnly?: boolean;
+}) {
+    const tone =
+        boardText?.includes("DONE")
+            ? "bg-emerald-400"
+            : boardText?.includes("PROCESS")
+                ? "bg-sky-400"
+                : boardText?.includes("CANCELED")
+                    ? "bg-slate-300"
+                    : "bg-amber-400";
+
+    return (
+        <div className="flex items-center gap-4 px-4 py-3 transition hover:bg-slate-50/60">
+            <div className={cx("w-[3px] self-stretch rounded-full", tone)} />
+
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">#{index}</span>
+                    <span className="truncate text-sm font-semibold text-slate-900">
+                        {title}
+                    </span>
+                </div>
+
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    {modeLabel ? <span>{modeLabel}</span> : null}
+                    {boardText ? <span>{boardText}</span> : null}
+                </div>
+            </div>
+
+            <div className="shrink-0 text-sm font-medium text-slate-700">
+                {costText || "0đ"}
+            </div>
+
+            {!readOnly && onOpenBoard ? (
+                <button
+                    type="button"
+                    onClick={onOpenBoard}
+                    className="shrink-0 text-sm font-medium text-slate-600 hover:text-slate-900"
+                >
+                    Issue Board →
+                </button>
+            ) : null}
+        </div>
+    );
+}
+
 function StaticIssueSummary({
     lineNo,
     summary,
@@ -393,6 +521,7 @@ function StaticIssueSummary({
     partName,
     actionLabel,
     onGoBoard,
+    readOnly = false,
 }: {
     lineNo: number;
     summary?: string;
@@ -403,82 +532,28 @@ function StaticIssueSummary({
     partName?: string;
     actionLabel?: string;
     onGoBoard: () => void;
+    readOnly?: boolean;
 }) {
+    const metaParts = [
+        actionLabel,
+        execution ? (execution === "VENDOR" ? "Vendor" : "Nội bộ") : undefined,
+        vendorName ? `Vendor: ${vendorName}` : undefined,
+        partName ? `Linh kiện: ${partName}` : undefined,
+    ].filter(Boolean) as string[];
+
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <div className="grid gap-3 xl:grid-cols-[160px_minmax(0,1.2fr)_minmax(220px,0.9fr)_auto] xl:items-center">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-slate-500" />
-                        <div className="text-sm font-semibold text-slate-900">
-                            Dòng #{lineNo}
-                        </div>
-                    </div>
-                    <div className="mt-2 h-px w-16 bg-slate-300" />
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
-                            Issue đã tạo
-                        </span>
-
-                        {boardStatus ? (
-                            <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs text-sky-700">
-                                Board: {boardStatus}
-                            </span>
-                        ) : null}
-                    </div>
-                </div>
-
-                <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
-                        {summary || "Issue đã được ghi nhận và đang theo dõi tại Issue Board"}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        {actionLabel ? (
-                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                                {actionLabel}
-                            </span>
-                        ) : null}
-
-                        {execution ? (
-                            <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                                {execution === "VENDOR" ? "Vendor" : "Nội bộ"}
-                            </span>
-                        ) : null}
-                    </div>
-                </div>
-
-                <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2">
-                        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                            Chi phí dự kiến: <span className="ml-1 font-semibold text-slate-900">{cost || "0đ"}</span>
-                        </div>
-
-                        {vendorName ? (
-                            <div className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                                Vendor: <span className="ml-1 font-semibold text-slate-900">{vendorName}</span>
-                            </div>
-                        ) : null}
-
-                        {partName ? (
-                            <div className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                                Linh kiện: <span className="ml-1 font-semibold text-slate-900">{partName}</span>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-
-                <div className="flex items-center xl:justify-end">
-                    <Button type="button" variant="outline" onClick={onGoBoard} className="whitespace-nowrap">
-                        <ArrowRightCircle className="mr-2 h-4 w-4" />
-                        Xem ở Issue Board
-                    </Button>
-                </div>
-            </div>
-        </div>
+        <IssueRow
+            index={lineNo}
+            title={summary || "Issue đã được ghi nhận và đang theo dõi tại Issue Board"}
+            modeLabel={metaParts.join(" • ")}
+            boardText={boardStatus ? `Board: ${boardStatus}` : undefined}
+            costText={cost || "0đ"}
+            onOpenBoard={onGoBoard}
+            readOnly={readOnly || String(boardStatus || "").toUpperCase() === "CANCELED"}
+        />
     );
 }
+
 function QuickIssueCard({
     title,
     open,
@@ -488,6 +563,7 @@ function QuickIssueCard({
     onClose,
     onGoBoard,
     children,
+    isLocked,
 }: {
     title: string;
     open: boolean;
@@ -497,6 +573,7 @@ function QuickIssueCard({
     onClose: () => void;
     onGoBoard: () => void;
     children: React.ReactNode;
+    isLocked: boolean;
 }) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-slate-50/70">
@@ -505,24 +582,26 @@ function QuickIssueCard({
                     <div className="text-sm font-semibold text-slate-900">{title}</div>
                     <div className="mt-1 text-sm text-slate-500">
                         {open
-                            ? issueMeta?.summary || "Issue đã được ghi nhận."
+                            ? issueMeta?.summary || "Đang chuẩn bị ghi nhận issue."
                             : "Không phát sinh issue ở hạng mục này."}
                     </div>
                 </div>
 
-                {!open ? (
-                    <Button type="button" variant="outline" onClick={onOpen}>
-                        Mở issue
-                    </Button>
-                ) : staticView ? (
-                    <Button type="button" variant="outline" onClick={onGoBoard}>
-                        Đi Issue Board
-                    </Button>
-                ) : (
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Bỏ issue
-                    </Button>
-                )}
+                {!isLocked ? (
+                    !open ? (
+                        <Button type="button" variant="outline" onClick={onOpen}>
+                            Mở issue
+                        </Button>
+                    ) : staticView ? (
+                        <Button type="button" variant="outline" onClick={onGoBoard}>
+                            Đi Issue Board
+                        </Button>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Bỏ issue
+                        </Button>
+                    )
+                ) : null}
             </div>
 
             {open ? (
@@ -541,6 +620,7 @@ function QuickIssueCard({
                             vendorName={issueMeta?.vendorName}
                             actionLabel={undefined}
                             onGoBoard={onGoBoard}
+                            readOnly={isLocked}
                         />
                     ) : (
                         children
@@ -550,6 +630,7 @@ function QuickIssueCard({
         </div>
     );
 }
+
 function MovementIssueRow({
     index,
     line,
@@ -560,6 +641,7 @@ function MovementIssueRow({
     onRemove,
     canRemove,
     onGoBoard,
+    isLocked,
 }: {
     index: number;
     line: MovementLine;
@@ -570,6 +652,7 @@ function MovementIssueRow({
     onRemove: () => void;
     canRemove: boolean;
     onGoBoard: () => void;
+    isLocked: boolean;
 }) {
     const isVendor = line.execution === "VENDOR";
     const isReplacePart = line.action === "REPLACE_PART";
@@ -577,150 +660,316 @@ function MovementIssueRow({
     const partName = parts.find((p: any) => p.id === line.partId)?.name ?? "";
 
     if (line.isFromBoard) {
+        const actionLabelMap: Record<string, string> = {
+            SERVICE: "Lau dầu / service máy",
+            REPLACE_PART: "Thay linh kiện",
+            REGULATE: "Chỉnh sai số / dây tóc",
+            WATERPROOF: "Chống nước",
+            REPLACE_MOVEMENT: "Thay máy mới",
+            BATTERY_CHANGE: "Thay pin",
+        };
+
         return (
             <StaticIssueSummary
                 lineNo={index + 1}
-                summary={line.summary || line.action}
+                summary={line.summary || (line.action ? actionLabelMap[line.action] || line.action : undefined)}
                 boardStatus={line.boardStatus}
                 execution={line.execution}
                 cost={formatCurrency(parseMoney(line.cost))}
                 vendorName={vendorName}
                 partName={partName}
-                actionLabel={undefined}
+                actionLabel={line.action ? actionLabelMap[line.action] || line.action : undefined}
                 onGoBoard={onGoBoard}
+                readOnly={isLocked}
             />
         );
     }
+
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="px-4 pt-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <div className="text-sm font-semibold text-slate-900">Dòng #{index + 1}</div>
-                        <div className="mt-2 h-px w-20 bg-slate-300" />
+        <div className="rounded-2xl bg-slate-50/70 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-900">Dòng #{index + 1}</span>
+                        <span className="text-xs text-slate-400">Đang soạn</span>
                     </div>
-
-                    {canRemove ? (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            className="px-2 text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={onRemove}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    ) : (
-                        <div className="h-8 w-8" />
-                    )}
-                </div>
-            </div>
-
-            <div className="space-y-4 p-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Field label="Xử lý">
-                        <SelectInput
-                            value={line.action ?? ""}
-                            onChange={(e) =>
-                                onChange({
-                                    action: e.target.value as MovementAction,
-                                    partId:
-                                        e.target.value === "REPLACE_PART"
-                                            ? line.partId
-                                            : undefined,
-                                })
-                            }
-                        >
-                            <option value="">Chọn xử lý</option>
-                            {machineType === "MECHANICAL" ? (
-                                <>
-                                    <option value="SERVICE">Lau dầu / service máy</option>
-                                    <option value="REPLACE_PART">Thay linh kiện</option>
-                                    <option value="REGULATE">Chỉnh sai số / dây tóc</option>
-                                    <option value="WATERPROOF">Chống nước</option>
-                                    <option value="REPLACE_MOVEMENT">Thay máy mới</option>
-                                </>
-                            ) : (
-                                <>
-                                    <option value="BATTERY_CHANGE">Thay pin</option>
-                                    <option value="REPLACE_PART">Thay linh kiện</option>
-                                    <option value="WATERPROOF">Chống nước</option>
-                                    <option value="REPLACE_MOVEMENT">Thay máy mới</option>
-                                </>
-                            )}
-                        </SelectInput>
-                    </Field>
-
-                    <Field label="Thực hiện">
-                        <SelectInput
-                            value={line.execution ?? "INHOUSE"}
-                            onChange={(e) =>
-                                onChange({
-                                    execution: e.target.value as ExecutionType,
-                                    vendorId:
-                                        e.target.value === "VENDOR"
-                                            ? line.vendorId
-                                            : undefined,
-                                })
-                            }
-                        >
-                            <option value="INHOUSE">Nội bộ</option>
-                            <option value="VENDOR">Vendor</option>
-                        </SelectInput>
-                    </Field>
-
-                    <Field label="Chi phí">
-                        <TextInput
-                            inputMode="numeric"
-                            placeholder="0"
-                            value={line.cost ?? ""}
-                            onChange={(e) => onChange({ cost: e.target.value })}
-                        />
-                    </Field>
                 </div>
 
-                {(isReplacePart || isVendor) ? (
-                    <div className="grid gap-4 md:grid-cols-2">
-                        {isReplacePart ? (
-                            <Field label="Linh kiện">
-                                <SelectInput
-                                    value={line.partId ?? ""}
-                                    onChange={(e) => onChange({ partId: e.target.value })}
-                                >
-                                    <option value="">Chọn linh kiện</option>
-                                    {parts.map((part: any) => (
-                                        <option key={part.id} value={part.id}>
-                                            {part.code ? `${part.code} - ` : ""}{part.name}
-                                        </option>
-                                    ))}
-                                </SelectInput>
-                            </Field>
-                        ) : <div />}
-
-                        {isVendor ? (
-                            <Field label="Vendor">
-                                <SelectInput
-                                    value={line.vendorId ?? ""}
-                                    onChange={(e) => onChange({ vendorId: e.target.value })}
-                                >
-                                    <option value="">Chọn vendor</option>
-                                    {vendors.map((vendor: any) => (
-                                        <option key={vendor.id} value={vendor.id}>
-                                            {vendor.name}
-                                        </option>
-                                    ))}
-                                </SelectInput>
-                            </Field>
-                        ) : <div />}
-                    </div>
+                {canRemove && !isLocked ? (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        className="px-2 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        onClick={onRemove}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 ) : null}
             </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr_180px]">
+                <Field label="Xử lý">
+                    <SelectInput
+                        value={line.action ?? ""}
+                        onChange={(e) =>
+                            onChange({
+                                action: e.target.value as MovementAction,
+                                partId: e.target.value === "REPLACE_PART" ? line.partId : undefined,
+                            })
+                        }
+                        disabled={isLocked}
+                    >
+                        <option value="">Chọn xử lý</option>
+                        {machineType === "MECHANICAL" ? (
+                            <>
+                                <option value="SERVICE">Lau dầu / service máy</option>
+                                <option value="REPLACE_PART">Thay linh kiện</option>
+                                <option value="REGULATE">Chỉnh sai số / dây tóc</option>
+                                <option value="WATERPROOF">Chống nước</option>
+                                <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                            </>
+                        ) : (
+                            <>
+                                <option value="BATTERY_CHANGE">Thay pin</option>
+                                <option value="REPLACE_PART">Thay linh kiện</option>
+                                <option value="WATERPROOF">Chống nước</option>
+                                <option value="REPLACE_MOVEMENT">Thay máy mới</option>
+                            </>
+                        )}
+                    </SelectInput>
+                </Field>
+
+                <Field label="Thực hiện">
+                    <SelectInput
+                        value={line.execution ?? "INHOUSE"}
+                        onChange={(e) =>
+                            onChange({
+                                execution: e.target.value as ExecutionType,
+                                vendorId: e.target.value === "VENDOR" ? line.vendorId : undefined,
+                            })
+                        }
+                        disabled={isLocked}
+                    >
+                        <option value="INHOUSE">Nội bộ</option>
+                        <option value="VENDOR">Vendor</option>
+                    </SelectInput>
+                </Field>
+
+                <Field label="Chi phí">
+                    <TextInput
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={line.cost ?? ""}
+                        onChange={(e) => onChange({ cost: e.target.value })}
+                        disabled={isLocked}
+                    />
+                </Field>
+            </div>
+
+            {(isReplacePart || isVendor) ? (
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    {isReplacePart ? (
+                        <Field label="Linh kiện">
+                            <SelectInput
+                                value={line.partId ?? ""}
+                                onChange={(e) => onChange({ partId: e.target.value })}
+                                disabled={isLocked}
+                            >
+                                <option value="">Chọn linh kiện</option>
+                                {parts.map((part: any) => (
+                                    <option key={part.id} value={part.id}>
+                                        {part.code ? `${part.code} - ` : ""}{part.name}
+                                    </option>
+                                ))}
+                            </SelectInput>
+                        </Field>
+                    ) : <div />}
+
+                    {isVendor ? (
+                        <Field label="Vendor">
+                            <SelectInput
+                                value={line.vendorId ?? ""}
+                                onChange={(e) => onChange({ vendorId: e.target.value })}
+                                disabled={isLocked}
+                            >
+                                <option value="">Chọn vendor</option>
+                                {vendors.map((vendor: any) => (
+                                    <option key={vendor.id} value={vendor.id}>
+                                        {vendor.name}
+                                    </option>
+                                ))}
+                            </SelectInput>
+                        </Field>
+                    ) : <div />}
+                </div>
+            ) : null}
         </div>
     );
 }
+
+function MeasurementCompact({
+    machineType,
+    value,
+    onChange,
+    disabled,
+}: {
+    machineType: MachineType;
+    value: {
+        beforeSpecs: { rate: string; amp: string; err: string };
+        afterSpecs: { rate: string; amp: string; err: string };
+        showBeforeSpecs: boolean;
+    };
+    onChange: (patch: Partial<FormState>) => void;
+    disabled?: boolean;
+}) {
+    const [open, setOpen] = React.useState(false);
+
+    if (machineType !== "MECHANICAL") return null;
+
+    const hasAfter =
+        value.afterSpecs.rate || value.afterSpecs.amp || value.afterSpecs.err;
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <div>
+                    <div className="text-sm font-semibold text-slate-900">Thông số máy đo</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                        Rate / Amp / Err sau xử lý. Có thể mở rộng để nhập thông số trước xử lý nếu cần.
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setOpen((v) => !v)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={disabled}
+                >
+                    {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {open ? "Thu gọn" : hasAfter ? "Sửa thông số" : "Nhập thông số"}
+                </button>
+            </div>
+
+            {!open ? (
+                <div className="grid gap-3 border-t border-slate-100 px-4 py-4 sm:grid-cols-3">
+                    <div className="rounded-xl bg-slate-50 px-3 py-3">
+                        <div className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Rate</div>
+                        <div className="mt-1 text-base font-semibold text-slate-900">
+                            {value.afterSpecs.rate || "-"}
+                        </div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-3">
+                        <div className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Amp</div>
+                        <div className="mt-1 text-base font-semibold text-slate-900">
+                            {value.afterSpecs.amp || "-"}
+                        </div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 px-3 py-3">
+                        <div className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Err</div>
+                        <div className="mt-1 text-base font-semibold text-slate-900">
+                            {value.afterSpecs.err || "-"}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-4 border-t border-slate-100 px-4 py-4">
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <Field label="Rate">
+                            <TextInput
+                                value={value.afterSpecs.rate}
+                                onChange={(e) =>
+                                    onChange({
+                                        afterSpecs: { ...value.afterSpecs, rate: e.target.value },
+                                    } as Partial<FormState>)
+                                }
+                                placeholder="+8"
+                                disabled={disabled}
+                            />
+                        </Field>
+                        <Field label="Amp">
+                            <TextInput
+                                value={value.afterSpecs.amp}
+                                onChange={(e) =>
+                                    onChange({
+                                        afterSpecs: { ...value.afterSpecs, amp: e.target.value },
+                                    } as Partial<FormState>)
+                                }
+                                placeholder="248"
+                                disabled={disabled}
+                            />
+                        </Field>
+                        <Field label="Err">
+                            <TextInput
+                                value={value.afterSpecs.err}
+                                onChange={(e) =>
+                                    onChange({
+                                        afterSpecs: { ...value.afterSpecs, err: e.target.value },
+                                    } as Partial<FormState>)
+                                }
+                                placeholder="0.2"
+                                disabled={disabled}
+                            />
+                        </Field>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <input
+                            type="checkbox"
+                            checked={value.showBeforeSpecs}
+                            onChange={(e) => onChange({ showBeforeSpecs: e.target.checked })}
+                            disabled={disabled}
+                        />
+                        Lưu thêm thông số trước xử lý
+                    </label>
+
+                    {value.showBeforeSpecs ? (
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <Field label="Rate trước xử lý">
+                                <TextInput
+                                    value={value.beforeSpecs.rate}
+                                    onChange={(e) =>
+                                        onChange({
+                                            beforeSpecs: { ...value.beforeSpecs, rate: e.target.value },
+                                        } as Partial<FormState>)
+                                    }
+                                    disabled={disabled}
+                                />
+                            </Field>
+                            <Field label="Amp trước xử lý">
+                                <TextInput
+                                    value={value.beforeSpecs.amp}
+                                    onChange={(e) =>
+                                        onChange({
+                                            beforeSpecs: { ...value.beforeSpecs, amp: e.target.value },
+                                        } as Partial<FormState>)
+                                    }
+                                    disabled={disabled}
+                                />
+                            </Field>
+                            <Field label="Err trước xử lý">
+                                <TextInput
+                                    value={value.beforeSpecs.err}
+                                    onChange={(e) =>
+                                        onChange({
+                                            beforeSpecs: { ...value.beforeSpecs, err: e.target.value },
+                                        } as Partial<FormState>)
+                                    }
+                                    disabled={disabled}
+                                />
+                            </Field>
+                        </div>
+                    ) : null}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function TechnicalAssessmentInlinePanel({
     serviceRequestId,
     panel,
     onSaved,
+    readOnly = false,
 }: Props) {
     const notify = useNotify();
     const router = useRouter();
@@ -730,7 +979,8 @@ export default function TechnicalAssessmentInlinePanel({
     const assessment = panel?.technicalAssessment ?? panel?.assessment ?? null;
     const technicalIssues = panel?.technicalIssues ?? [];
     const movementLabel = sr?.movement ?? null;
-    const productId = sr?.productId ?? panel?.serviceRequest?.productId ?? null;
+    const isCompleted = String(sr?.status || "").toUpperCase() === "COMPLETED";
+    const isLocked = readOnly || isCompleted;
 
     const inheritedMachineType = React.useMemo<MachineType>(
         () => mapMovementSpecLabelToMachineType(movementLabel),
@@ -762,6 +1012,33 @@ export default function TechnicalAssessmentInlinePanel({
             deduction: Number(x.deductionScore ?? 0),
         })) ?? [];
 
+    const caseDefectLabels = form.appearance.case.issues
+        .map((code) => caseDefs.find((x: any) => x.code === code)?.label)
+        .filter(Boolean) as string[];
+
+    const crystalDefectLabels = form.appearance.crystal.issues
+        .map((code) => crystalDefs.find((x: any) => x.code === code)?.label)
+        .filter(Boolean) as string[];
+
+    const dialDefectLabels = form.appearance.dial.issues
+        .map((code) => dialDefs.find((x: any) => x.code === code)?.label)
+        .filter(Boolean) as string[];
+
+    const allAppearanceDefects = [
+        ...caseDefectLabels,
+        ...crystalDefectLabels,
+        ...dialDefectLabels,
+    ];
+
+    const machineIssueTitles = technicalIssues
+        .filter(
+            (x: any) =>
+                String(x.area || "").toUpperCase() === "MOVEMENT" &&
+                String(x.executionStatus || "").toUpperCase() !== "CANCELED"
+        )
+        .map((x: any) => x.summary || x.note || "Issue máy")
+        .filter(Boolean);
+
     React.useEffect(() => {
         const next = createInitialFormState(inheritedMachineType);
 
@@ -781,7 +1058,7 @@ export default function TechnicalAssessmentInlinePanel({
                 amp: assessment.postAmplitude != null ? String(assessment.postAmplitude) : "",
                 err: assessment.postBeatError != null ? String(assessment.postBeatError) : "",
             };
-            next.conclusion = assessment.conclusion ?? "";
+            next.technicalImageFileKey = assessment?.imageFileKey ?? "";
         }
 
         const movementIssues = technicalIssues.filter(
@@ -901,6 +1178,7 @@ export default function TechnicalAssessmentInlinePanel({
     const totalCost = movementCost + crownCost + issueProposalCost;
 
     function addMovementLine() {
+        if (isLocked) return;
         setForm((prev) => ({
             ...prev,
             movementLines: [...prev.movementLines, { id: makeId(), execution: "INHOUSE", cost: "", isFromBoard: false }],
@@ -908,6 +1186,7 @@ export default function TechnicalAssessmentInlinePanel({
     }
 
     function removeMovementLine(id: string) {
+        if (isLocked) return;
         setForm((prev) => ({
             ...prev,
             movementLines: prev.movementLines.filter((line) => line.id !== id),
@@ -915,6 +1194,7 @@ export default function TechnicalAssessmentInlinePanel({
     }
 
     function updateMovementLine(id: string, patch: Partial<MovementLine>) {
+        if (isLocked) return;
         setForm((prev) => ({
             ...prev,
             movementLines: prev.movementLines.map((line) =>
@@ -923,17 +1203,164 @@ export default function TechnicalAssessmentInlinePanel({
         }));
     }
 
-    function markIssueOpened(title: string) {
-        notify.success({
-            title: "Đã ghi nhận issue",
-            message: `${title} đã được mở issue. Phần điều phối tiếp theo sẽ xử lý tại Issue Board.`,
+    function validateBeforeSave() {
+        if (form.movementStatus === "ISSUE") {
+            const editableMovementLines = form.movementLines.filter((x) => !x.isFromBoard);
+
+            for (const [index, line] of editableMovementLines.entries()) {
+                if (!String(line.action || "").trim()) {
+                    throw new Error(`Dòng xử lý máy #${index + 1} chưa chọn phương án xử lý.`);
+                }
+
+                if (
+                    String(line.execution || "").toUpperCase() === "VENDOR" &&
+                    !String(line.vendorId || "").trim()
+                ) {
+                    throw new Error(`Dòng xử lý máy #${index + 1} đang chọn vendor nhưng chưa chọn vendor cụ thể.`);
+                }
+
+                if (
+                    String(line.action || "").toUpperCase() === "REPLACE_PART" &&
+                    !String(line.partId || "").trim()
+                ) {
+                    throw new Error(`Dòng xử lý máy #${index + 1} đang thay linh kiện nhưng chưa chọn linh kiện.`);
+                }
+            }
+        }
+
+        const quickBlocks = [
+            { key: "Vỏ", data: form.caseIssue },
+            { key: "Kính", data: form.crystalIssue },
+            { key: "Mặt số", data: form.dialIssue },
+        ];
+
+        for (const block of quickBlocks) {
+            if (block.data.enabled && !block.data.isFromBoard) {
+                if (!String(block.data.action || "").trim()) {
+                    throw new Error(`${block.key} đã mở issue nhưng chưa chọn phương án xử lý.`);
+                }
+
+                if (
+                    String(block.data.execution || "").toUpperCase() === "VENDOR" &&
+                    !String(block.data.vendorId || "").trim()
+                ) {
+                    throw new Error(`${block.key} đang chọn vendor nhưng chưa chọn vendor cụ thể.`);
+                }
+            }
+        }
+
+        if (form.machineType === "MECHANICAL" && !String(form.technicalImageFileKey || "").trim()) {
+            throw new Error("Máy cơ bắt buộc phải có ít nhất 1 ảnh kỹ thuật.");
+        }
+    }
+
+    function CollapsibleDefects({
+        title,
+        score,
+        defects,
+    }: {
+        title: string;
+        score: number;
+        defects: string[];
+    }) {
+        const [open, setOpen] = React.useState(false);
+
+        return (
+            <div className="rounded-2xl border border-slate-200 bg-white">
+                <button
+                    type="button"
+                    onClick={() => setOpen((v) => !v)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                >
+                    <div>
+                        <div className="text-sm font-semibold text-slate-900">{title}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                            {defects.length > 0 ? `${defects.length} khuyết điểm` : "Không ghi nhận khuyết điểm"}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <ScorePill score={score} />
+                        <span className="text-sm text-slate-400">{open ? "−" : "+"}</span>
+                    </div>
+                </button>
+
+                {open ? (
+                    <div className="border-t border-slate-200 px-4 py-4">
+                        <div className="flex flex-wrap gap-2">
+                            {defects.length > 0 ? (
+                                defects.map((item, index) => (
+                                    <span
+                                        key={`${item}-${index}`}
+                                        className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700"
+                                    >
+                                        {item}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-sm text-slate-500">Không có khuyết điểm được ghi nhận.</span>
+                            )}
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        );
+    }
+
+    function TechnicalFinalSummary({
+        machineIssueTitles,
+        appearanceScore,
+        appearanceDefects,
+        machineStatus,
+        machineType,
+        afterSpecs,
+    }: {
+        machineIssueTitles: string[];
+        appearanceScore: number;
+        appearanceDefects: string[];
+        machineStatus: HealthStatus;
+        machineType: MachineType;
+        afterSpecs: { rate: string; amp: string; err: string };
+    }) {
+        const summaryText = buildTechnicalSummaryForSale({
+            machineStatus,
+            machineIssueTitles,
+            appearanceScore,
+            appearanceDefects,
+            afterSpecs,
+            machineType,
         });
+
+        return (
+            <div className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-sm font-semibold text-slate-900">Kết quả kỹ thuật gửi sale</div>
+
+                    <div className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-700">
+                        {summaryText}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     async function handleSave() {
+        if (isLocked) return;
+
         try {
             setSaving(true);
             setErrorMessage(null);
+
+            validateBeforeSave();
+
+            const generatedConclusion = buildTechnicalSummaryForSale({
+                machineStatus: form.movementStatus,
+                machineIssueTitles,
+                appearanceScore,
+                appearanceDefects: allAppearanceDefects,
+                afterSpecs: form.afterSpecs,
+                machineType: form.machineType,
+            });
 
             const payload = {
                 serviceRequestId,
@@ -1044,7 +1471,8 @@ export default function TechnicalAssessmentInlinePanel({
                     cosmeticProposalCost: issueProposalCost,
                     totalCost,
                 },
-                conclusion: form.conclusion,
+                conclusion: generatedConclusion,
+                imageFileKey: form.technicalImageFileKey || null,
             };
 
             const res = await fetch("/api/admin/service-requests/technical-assessment", {
@@ -1071,60 +1499,11 @@ export default function TechnicalAssessmentInlinePanel({
 
     return (
         <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                            {sr?.primaryImageUrl ? (
-                                <img
-                                    src={`/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`}
-                                    alt={sr?.productTitle || "product"}
-                                    className="h-full w-full object-cover"
-                                />
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                                    No image
-                                </div>
-                            )}
-                            <div className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 shadow-sm">
-                                <Camera className="h-4 w-4 text-slate-600" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="text-xl font-semibold text-slate-900">{sr?.productTitle || "-"}</div>
-                            <div className="text-sm text-slate-500">SKU: {sr?.skuSnapshot || "-"}</div>
-                            <div className="text-sm text-slate-500">Bộ máy theo spec: {sr?.movement || "-"}</div>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                        {productId ? (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => router.push(`/admin/products/${productId}/edit`)}
-                            >
-                                Sửa spec sản phẩm
-                                <ExternalLink className="ml-2 h-4 w-4" />
-                            </Button>
-                        ) : null}
-
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => router.push("/admin/services/issues-board")}
-                        >
-                            Đi tới Issue Board
-                        </Button>
-
-                        <ScorePill score={appearanceScore} />
-                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
-                            Tổng chi phí: {formatCurrency(totalCost)}
-                        </span>
-                    </div>
+            {isLocked ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    Service request đã hoàn tất. Phiếu kỹ thuật hiện ở chế độ chỉ xem.
                 </div>
-            </div>
+            ) : null}
 
             <SectionCard
                 title="Đánh giá bộ máy"
@@ -1158,9 +1537,21 @@ export default function TechnicalAssessmentInlinePanel({
                             onChange={(value) => setForm((prev) => ({ ...prev, movementStatus: value }))}
                             goodText="Chạy tốt"
                             issueText="Cần xử lý"
+                            disabled={isLocked}
                         />
                     </Field>
                 </div>
+
+                <MeasurementCompact
+                    machineType={form.machineType}
+                    value={{
+                        beforeSpecs: form.beforeSpecs,
+                        afterSpecs: form.afterSpecs,
+                        showBeforeSpecs: form.showBeforeSpecs,
+                    }}
+                    onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+                    disabled={isLocked}
+                />
 
                 {form.movementStatus === "ISSUE" ? (
                     <div className="space-y-5">
@@ -1172,7 +1563,7 @@ export default function TechnicalAssessmentInlinePanel({
                                 <div>
                                     <div className="font-medium text-amber-800">Máy cần xử lý kỹ thuật</div>
                                     <div className="mt-1 text-sm text-amber-700/90">
-                                        Ghi nhận nhanh các hạng mục xử lý, Issue Board sẽ điều phối tiếp.
+                                        Ghi nhận nhanh các hạng mục xử lý, Issue Board sẽ điều phối tiếp sau khi lưu phiếu.
                                     </div>
                                 </div>
                             </div>
@@ -1187,10 +1578,12 @@ export default function TechnicalAssessmentInlinePanel({
                                     </div>
                                 </div>
 
-                                <Button type="button" onClick={addMovementLine}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Thêm dòng
-                                </Button>
+                                {!isLocked ? (
+                                    <Button type="button" onClick={addMovementLine}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Thêm dòng
+                                    </Button>
+                                ) : null}
                             </div>
 
                             <div className="space-y-3">
@@ -1208,6 +1601,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         onGoBoard={() =>
                                             router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
                                         }
+                                        isLocked={isLocked}
                                     />
                                 ))}
                             </div>
@@ -1218,7 +1612,7 @@ export default function TechnicalAssessmentInlinePanel({
 
             <SectionCard
                 title="Ghi nhận issue nhanh"
-                subtitle="Issue đã tạo sẽ khóa tại phiếu và chỉ còn hiển thị tổng quát."
+                subtitle="Issue chỉ được ghi nhận thực sự khi phiếu được lưu thành công."
                 icon={<ScanSearch className="h-5 w-5" />}
             >
                 <QuickIssueCard
@@ -1227,18 +1621,19 @@ export default function TechnicalAssessmentInlinePanel({
                     issueMeta={form.caseIssue}
                     staticView={form.caseIssue.isFromBoard}
                     onOpen={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             caseIssue: { ...prev.caseIssue, enabled: true, isFromBoard: false },
                         }));
-                        markIssueOpened("Issue phần vỏ");
                     }}
-                    onClose={() =>
+                    onClose={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             caseIssue: emptyQuickIssue(),
-                        }))
-                    }
+                        }));
+                    }}
                     onGoBoard={() =>
                         router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
                     }
@@ -1256,6 +1651,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="">Chọn phương án</option>
                                 <option value="SPA_CASE">Spa vỏ nhẹ</option>
@@ -1276,6 +1672,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="INHOUSE">Nội bộ</option>
                                 <option value="VENDOR">Vendor</option>
@@ -1294,6 +1691,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             />
                         </Field>
                     </div>
@@ -1305,18 +1703,19 @@ export default function TechnicalAssessmentInlinePanel({
                     issueMeta={form.crystalIssue}
                     staticView={form.crystalIssue.isFromBoard}
                     onOpen={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             crystalIssue: { ...prev.crystalIssue, enabled: true, isFromBoard: false },
                         }));
-                        markIssueOpened("Issue phần kính");
                     }}
-                    onClose={() =>
+                    onClose={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             crystalIssue: emptyQuickIssue(),
-                        }))
-                    }
+                        }));
+                    }}
                     onGoBoard={() =>
                         router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
                     }
@@ -1334,6 +1733,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="">Chọn phương án</option>
                                 <option value="POLISH_GLASS">Đánh bóng kính</option>
@@ -1353,6 +1753,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="INHOUSE">Nội bộ</option>
                                 <option value="VENDOR">Vendor</option>
@@ -1371,6 +1772,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             />
                         </Field>
                     </div>
@@ -1382,18 +1784,19 @@ export default function TechnicalAssessmentInlinePanel({
                     issueMeta={form.dialIssue}
                     staticView={form.dialIssue.isFromBoard}
                     onOpen={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             dialIssue: { ...prev.dialIssue, enabled: true, isFromBoard: false },
                         }));
-                        markIssueOpened("Issue phần mặt số");
                     }}
-                    onClose={() =>
+                    onClose={() => {
+                        if (isLocked) return;
                         setForm((prev) => ({
                             ...prev,
                             dialIssue: emptyQuickIssue(),
-                        }))
-                    }
+                        }));
+                    }}
                     onGoBoard={() =>
                         router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
                     }
@@ -1411,6 +1814,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="">Chọn phương án</option>
                                 <option value="CLEAN_DIAL">Vệ sinh nhẹ</option>
@@ -1430,6 +1834,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             >
                                 <option value="INHOUSE">Nội bộ</option>
                                 <option value="VENDOR">Vendor</option>
@@ -1448,6 +1853,7 @@ export default function TechnicalAssessmentInlinePanel({
                                         },
                                     }))
                                 }
+                                disabled={isLocked}
                             />
                         </Field>
                     </div>
@@ -1456,38 +1862,97 @@ export default function TechnicalAssessmentInlinePanel({
 
             <SectionCard
                 title="Tổng kết kỹ thuật"
-                subtitle="Kết luận cuối cùng của kỹ thuật viên."
+                subtitle="Phần kết quả cuối cùng của kỹ thuật, đồng thời là nội dung sale sẽ nhìn thấy ở chi tiết sản phẩm."
                 icon={<Wrench className="h-5 w-5" />}
-                badge={<ScorePill score={appearanceScore} />}
+                badge={
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
+                        Tổng chi phí: {formatCurrency(totalCost)}
+                    </span>
+                }
             >
-                <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Điểm ngoại hình</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">{appearanceScore}/100</div>
-                    </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Chi phí kỹ thuật</div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalCost)}</div>
-                    </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <CollapsibleDefects
+                        title="Vỏ"
+                        score={caseScore}
+                        defects={caseDefectLabels}
+                    />
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="text-xs uppercase tracking-wide text-slate-500">Trạng thái đóng SR</div>
-                        <div className="mt-2 text-base font-semibold text-slate-900">Sẵn sàng sau khi mọi issue hoàn tất</div>
+                    <CollapsibleDefects
+                        title="Kính"
+                        score={crystalScore}
+                        defects={crystalDefectLabels}
+                    />
+
+                    <CollapsibleDefects
+                        title="Mặt số"
+                        score={dialScore}
+                        defects={dialDefectLabels}
+                    />
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="text-sm font-semibold text-slate-900">Điểm ngoại hình tổng</div>
+                        <div className="mt-2 text-3xl font-semibold text-slate-900">{appearanceScore}/100</div>
+                        <div className="mt-2 text-sm text-slate-500">
+                            Điểm tổng kết cuối cùng cho sản phẩm sau đánh giá kỹ thuật.
+                        </div>
                     </div>
                 </div>
 
-                <Field label="Kết luận kỹ thuật">
-                    <TextArea
-                        value={form.conclusion}
-                        onChange={(e) =>
-                            setForm((prev) => ({
-                                ...prev,
-                                conclusion: e.target.value,
-                            }))
-                        }
-                    />
-                </Field>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="grid gap-4 md:grid-cols-[88px_minmax(0,1fr)] md:items-start">
+                        <div className="flex justify-center md:justify-start">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
+                                <TechnicalImagePicker
+                                    value={form.technicalImageFileKey || null}
+                                    onChange={(fileKey) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            technicalImageFileKey: fileKey,
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                    compact={false}
+                                    className="h-16 w-16 rounded-xl border-0 bg-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="min-w-0 md:border-l md:border-slate-100 md:pl-4">
+                            <div className="flex items-center gap-2">
+                                <div className="text-sm font-semibold text-slate-950">
+                                    Kết quả kỹ thuật gửi sale
+                                </div>
+
+                                {form.technicalImageFileKey ? (
+                                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                                        Có ảnh kỹ thuật
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                                        Chưa có ảnh
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">
+                                {buildTechnicalSummaryForSale({
+                                    machineStatus: form.movementStatus,
+                                    machineIssueTitles,
+                                    appearanceScore,
+                                    appearanceDefects: allAppearanceDefects,
+                                    afterSpecs: form.afterSpecs,
+                                    machineType: form.machineType,
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {isLocked ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        Service request đã hoàn tất. Phiếu kỹ thuật hiện ở chế độ chỉ xem.
+                    </div>
+                ) : null}
 
                 {errorMessage ? (
                     <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1495,18 +1960,20 @@ export default function TechnicalAssessmentInlinePanel({
                     </div>
                 ) : null}
 
-                <div className="flex flex-wrap justify-end gap-3">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => router.push("/admin/services/issues-board")}
-                    >
-                        Đi tới Issue Board
-                    </Button>
-                    <Button type="button" onClick={handleSave} disabled={saving}>
-                        {saving ? "Đang lưu..." : "Lưu đánh giá kỹ thuật"}
-                    </Button>
-                </div>
+                {!isLocked ? (
+                    <div className="flex flex-wrap justify-end gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                        >
+                            Đi tới Issue Board
+                        </Button>
+                        <Button type="button" onClick={handleSave} disabled={saving}>
+                            {saving ? "Đang lưu..." : "Lưu đánh giá kỹ thuật"}
+                        </Button>
+                    </div>
+                ) : null}
             </SectionCard>
         </div>
     );

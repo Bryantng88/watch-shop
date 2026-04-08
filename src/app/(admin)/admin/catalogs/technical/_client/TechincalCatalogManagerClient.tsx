@@ -12,6 +12,7 @@ import {
     ShieldCheck,
     Wrench,
 } from "lucide-react";
+import { useNotify } from "@/components/feedback/AppToastProvider";
 
 type ActionItem = {
     id: string;
@@ -320,7 +321,18 @@ export default function TechnicalCatalogManagerClient({
     const [editingAppearanceId, setEditingAppearanceId] = React.useState<string | null>(null);
 
     const [submitting, setSubmitting] = React.useState<string | null>(null);
+    const notify = useNotify();
 
+    const [form, setForm] = React.useState({
+        id: "",
+        name: "",
+        appliesTo: "MECHANICAL",
+        group: "MOVEMENT",
+        sortOrder: 0,
+        note: "",
+        isActive: true,
+    });
+    const [saving, setSaving] = React.useState(false);
     async function save(
         kind: "action" | "part" | "appearanceIssue",
         body: any
@@ -454,7 +466,75 @@ export default function TechnicalCatalogManagerClient({
             alert(error instanceof Error ? error.message : "Cập nhật thất bại");
         }
     }
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
 
+        if (!form.name.trim()) {
+            notify.error({
+                title: "Thiếu dữ liệu",
+                message: "Vui lòng nhập tên linh kiện.",
+            });
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            const payload = {
+                name: form.name,
+                appliesTo: form.appliesTo,
+                group: form.group,
+                sortOrder: Number(form.sortOrder || 0),
+                note: form.note,
+                isActive: form.isActive,
+            };
+
+            const isEdit = Boolean(form.id);
+            const url = isEdit
+                ? `/api/admin/catalogs/technical/parts/${form.id}`
+                : `/api/admin/catalogs/technical/parts`;
+
+            const method = isEdit ? "PATCH" : "POST";
+
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(json?.error || "Không thể lưu linh kiện");
+            }
+
+            notify.success({
+                title: isEdit ? "Đã cập nhật linh kiện" : "Đã tạo linh kiện",
+                message: isEdit
+                    ? "Thông tin linh kiện đã được cập nhật."
+                    : "Linh kiện mới đã được tạo thành công.",
+            });
+
+            setForm({
+                id: "",
+                name: "",
+                appliesTo: "MECHANICAL",
+                group: "MOVEMENT",
+                sortOrder: 0,
+                note: "",
+                isActive: true,
+            });
+
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Lưu linh kiện thất bại",
+                message: error?.message || "Đã có lỗi xảy ra.",
+            });
+        } finally {
+            setSaving(false);
+        }
+    }
     const activeActionCount = initialData.actions.filter((x) => x.isActive).length;
     const activePartCount = initialData.parts.filter((x) => x.isActive).length;
     const activeIssueCount = initialData.appearanceIssues.filter((x) => x.isActive).length;
@@ -706,14 +786,12 @@ export default function TechnicalCatalogManagerClient({
                     defaultOpen={false}
                 >
                     <div className="grid gap-4 md:grid-cols-4">
-                        <Field label="Code">
-                            <TextInput
-                                value={partForm.code}
-                                onChange={(e) =>
-                                    setPartForm((p) => ({ ...p, code: e.target.value }))
-                                }
-                            />
-                        </Field>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Code</label>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                                Hệ thống tự sinh code
+                            </div>
+                        </div>
 
                         <Field label="Name">
                             <TextInput
