@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   AcquisitionItem: z.boolean().optional(),
+  AcquisitionSpecJob: z.boolean().optional(),
   InvoiceItem: z.boolean().optional(),
   maintenanceRecords: z.boolean().optional(),
   orderItems: z.boolean().optional(),

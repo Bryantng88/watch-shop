@@ -18,6 +18,8 @@ export const ProductGroupByResultSchema = z.array(z.object({
   aiPromptUsed: z.string(),
   aiGeneratedAt: z.date(),
   sku: z.string(),
+  nickname: z.string(),
+  specStatus: z.string(),
   _count: z.object({
     id: z.number(),
     slug: z.number(),
@@ -42,7 +44,10 @@ export const ProductGroupByResultSchema = z.array(z.object({
     aiPromptUsed: z.number(),
     aiGeneratedAt: z.number(),
     sku: z.number(),
+    nickname: z.number(),
+    specStatus: z.number(),
     AcquisitionItem: z.number(),
+    AcquisitionSpecJob: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
     orderItems: z.number(),
@@ -79,7 +84,9 @@ export const ProductGroupByResultSchema = z.array(z.object({
     postContent: z.string().nullable(),
     aiPromptUsed: z.string().nullable(),
     aiGeneratedAt: z.date().nullable(),
-    sku: z.string().nullable()
+    sku: z.string().nullable(),
+    nickname: z.string().nullable(),
+    specStatus: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -98,6 +105,8 @@ export const ProductGroupByResultSchema = z.array(z.object({
     postContent: z.string().nullable(),
     aiPromptUsed: z.string().nullable(),
     aiGeneratedAt: z.date().nullable(),
-    sku: z.string().nullable()
+    sku: z.string().nullable(),
+    nickname: z.string().nullable(),
+    specStatus: z.string().nullable()
   }).nullable().optional()
 }));

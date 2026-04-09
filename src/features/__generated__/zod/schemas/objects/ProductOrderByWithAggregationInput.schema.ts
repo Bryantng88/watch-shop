@@ -32,6 +32,8 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   aiGeneratedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   sku: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  nickname: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  specStatus: SortOrderSchema.optional(),
   _count: z.lazy(() => ProductCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => ProductAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ProductMaxOrderByAggregateInputObjectSchema).optional(),

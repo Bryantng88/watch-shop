@@ -5,7 +5,8 @@ import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.sche
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionCreateNestedOneWithoutAcquisitionItemInput.schema';
 import { OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema as OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './OrderItemCreateNestedOneWithoutAcquisitionItemInput.schema';
-import { ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema as ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './ProductVariantCreateNestedOneWithoutAcquisitionItemInput.schema'
+import { ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema as ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './ProductVariantCreateNestedOneWithoutAcquisitionItemInput.schema';
+import { AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -27,7 +28,8 @@ const makeSchema = () => z.object({
   productTitle: z.string(),
   acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema),
   sourceOrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
+  variant: z.lazy(() => ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemCreateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCreateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCreateWithoutProductInput>;
 export const AcquisitionItemCreateWithoutProductInputObjectZodSchema = makeSchema();

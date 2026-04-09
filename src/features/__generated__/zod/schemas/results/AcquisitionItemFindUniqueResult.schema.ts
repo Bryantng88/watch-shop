@@ -24,5 +24,6 @@ export const AcquisitionItemFindUniqueResultSchema = z.nullable(z.object({
   acquisition: z.unknown(),
   product: z.unknown().optional(),
   sourceOrderItem: z.unknown().optional(),
-  variant: z.unknown().optional()
+  variant: z.unknown().optional(),
+  AcquisitionSpecJob: z.unknown().optional()
 }));

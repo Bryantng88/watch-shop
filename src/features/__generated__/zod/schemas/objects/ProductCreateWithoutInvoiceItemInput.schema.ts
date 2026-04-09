@@ -6,6 +6,7 @@ import { TagSchema } from '../enums/Tag.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema as AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutProductInput.schema';
+import { AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema as AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionSpecJobCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
 import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemCreateNestedManyWithoutProductInput.schema';
 import { BrandCreateNestedOneWithoutProductsInputObjectSchema as BrandCreateNestedOneWithoutProductsInputObjectSchema } from './BrandCreateNestedOneWithoutProductsInput.schema';
@@ -39,7 +40,10 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.string().optional().nullable(),
   aiGeneratedAt: z.coerce.date().optional().nullable(),
   sku: z.string().optional().nullable(),
+  nickname: z.string().optional().nullable(),
+  specStatus: z.string().optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   brand: z.lazy(() => BrandCreateNestedOneWithoutProductsInputObjectSchema).optional(),

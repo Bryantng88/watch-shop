@@ -1,60 +1,120 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { CheckCircle2, FileImage, Save, Wand2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { FileText, Loader2, Save, Sparkles } from 'lucide-react';
 
-export type GeneratedPayload = {
-    specBullets: string[];
-    promoteShort: string;
-    promoteLong: string;
-    facebookCaption: string;
-    instagramCaption: string;
-    titleOptions: string[];
-    hashtags: string[];
-    missingData: string[];
-    safetyNotes: string[];
+import type { GeneratedPayload } from '@/app/(admin)/admin/products/_server/product-ai.type';
+
+type PickedImage = { key: string; url: string };
+type Brand = { id: string; name: string };
+type Category = { id: string; name: string; scope?: string };
+
+type WatchSpecInput = {
+    ref?: string | null;
+    model?: string | null;
+    year?: string | null;
+    caseType?: string | null;
+    gender?: string | null;
+    movement?: string | null;
+    caliber?: string | null;
+    caseMaterial?: string | null;
+    goldKarat?: number | string | null;
+    goldColor?: string | null;
+    width?: number | string | null;
+    length?: number | string | null;
+    thickness?: number | string | null;
+    strap?: string | null;
+    glass?: string | null;
+    dialColor?: string | null;
+    dialCondition?: string | null;
+    boxIncluded?: boolean | null;
+    bookletIncluded?: boolean | null;
+    cardIncluded?: boolean | null;
 };
 
-type TonePreset = 'balanced' | 'refined' | 'collector' | 'sales' | 'listing';
+export type ProductContentPromptMeta = {
+    narrative: string;
+    audience: string;
+    structure: string;
+    tonePreset: string;
+    focusPoints: string[];
+    customBrief: string;
+    bannedPhrases: string;
+    referenceSample: string;
+    forceSections: string[];
+};
 
 type Props = {
     productId: string;
-    previewImageUrl?: string;
-    images: { key?: string; url: string }[];
-    brands?: Array<{ id: string; name: string }>;
-    categories?: Array<{ id: string; name: string }>;
-    title?: string;
-    brandId?: string;
-    categoryId?: string;
-    watchSpec: any;
+    previewImageUrl?: string | null;
+    images: PickedImage[];
+    brands: Brand[];
+    categories: Category[];
+    title: string;
+    brandId: string;
+    categoryId: string;
+    watchSpec: WatchSpecInput;
     initialContent: GeneratedPayload;
     onContentChange: (payload: GeneratedPayload) => void;
-    onSaveContent: (
-        payload: GeneratedPayload,
-        meta: { hint: string; sample: string; tonePreset: string; focusPoints: string[] }
-    ) => Promise<void>;
-    onApplyExtractedSpecs: (patch: any) => void;
+    onSaveContent: (payload: GeneratedPayload, promptMeta: ProductContentPromptMeta) => Promise<void>;
 };
 
+const TONE_PRESETS = [
+    { label: 'Cân bằng', value: 'balanced' },
+    { label: 'Tinh tế', value: 'refined' },
+    { label: 'Người chơi', value: 'collector' },
+    { label: 'Bán hàng', value: 'sales' },
+    { label: 'Minimal Japan', value: 'minimal_japan' },
+    { label: 'Quiet luxury', value: 'quiet_luxury' },
+];
+
+const NARRATIVE_OPTIONS = [
+    { label: 'Vintage feel', value: 'vintage' },
+    { label: 'Dress elegance', value: 'dress' },
+    { label: 'Daily wearable', value: 'daily' },
+    { label: 'Collector piece', value: 'collector' },
+    { label: 'Quiet luxury', value: 'quiet_luxury' },
+    { label: 'Design-first', value: 'design_first' },
+];
+
+const AUDIENCE_OPTIONS = [
+    { label: 'Người mới chơi', value: 'beginner' },
+    { label: 'Người chơi lâu năm', value: 'collector' },
+    { label: 'Khách mua đeo hằng ngày', value: 'daily_buyer' },
+    { label: 'Người thích dress watch', value: 'dress_buyer' },
+    { label: 'Khách cần quà tặng', value: 'gift_buyer' },
+];
+
+const STRUCTURE_OPTIONS = [
+    { label: 'Short listing', value: 'short_listing' },
+    { label: 'Storytelling', value: 'storytelling' },
+    { label: 'Hybrid', value: 'hybrid' },
+    { label: 'Collector note', value: 'collector_note' },
+];
+
 const FOCUS_OPTIONS = [
-    { value: 'dial', label: 'Dial' },
-    { value: 'case', label: 'Case' },
-    { value: 'condition', label: 'Condition' },
-    { value: 'movement', label: 'Movement' },
-    { value: 'wearability', label: 'Độ đeo' },
-    { value: 'rarity', label: 'Tính sưu tầm' },
-    { value: 'accessories', label: 'Phụ kiện' },
+    'Dial',
+    'Case',
+    'Condition',
+    'Movement',
+    'Độ đeo',
+    'Vintage feel',
+    'Collector angle',
+    'Practical daily use',
+    'Finishing',
+    'Tỷ lệ cổ tay',
 ];
 
-const TONE_PRESETS: Array<{ value: TonePreset; label: string }> = [
-    { value: 'balanced', label: 'Cân bằng' },
-    { value: 'refined', label: 'Tinh tế' },
-    { value: 'collector', label: 'Người chơi' },
-    { value: 'sales', label: 'Bán hàng' },
-    { value: 'listing', label: 'Listing' },
+const FORCE_SECTION_OPTIONS = [
+    'Opening hook',
+    'Design insight',
+    'Wearability note',
+    'Practical ownership',
+    'Collector note',
+    'Soft disclaimer',
 ];
 
-const emptyGenerated: GeneratedPayload = {
+const defaultPayload: GeneratedPayload = {
     specBullets: [],
     promoteShort: '',
     promoteLong: '',
@@ -66,497 +126,410 @@ const emptyGenerated: GeneratedPayload = {
     safetyNotes: [],
 };
 
-export default function ProductAiPanel({
-    productId,
-    previewImageUrl,
-    images,
-    brands = [],
-    categories = [],
-    title,
-    brandId,
-    categoryId,
-    watchSpec,
-    initialContent,
-    onContentChange,
-    onSaveContent,
-    onApplyExtractedSpecs,
-}: Props) {
-    const [extracting, setExtracting] = useState(false);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [extractPreview, setExtractPreview] = useState<any | null>(null);
-    const [hint, setHint] = useState('');
-    const [sample, setSample] = useState('');
-    const [tonePreset, setTonePreset] = useState<TonePreset>('balanced');
-    const [focusPoints, setFocusPoints] = useState<string[]>(['dial', 'wearability']);
-    const [localContent, setLocalContent] = useState<GeneratedPayload>(initialContent || emptyGenerated);
-    const [statusMessage, setStatusMessage] = useState('');
-    const [activeTab, setActiveTab] = useState<'spec' | 'promote' | 'social'>('spec');
+function chipClass(active: boolean) {
+    return active
+        ? 'rounded-full bg-indigo-600 px-3 py-2 text-sm font-medium text-white'
+        : 'rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200';
+}
+
+function labelOf<T extends { value: string; label: string }>(options: T[], value: string) {
+    return options.find((item) => item.value === value)?.label ?? value;
+}
+
+function previewCardLine(label: string, value: string) {
+    return value ? `${label}: ${value}` : null;
+}
+
+function FieldLabel({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+    return (
+        <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                {children}
+            </label>
+            {right}
+        </div>
+    );
+}
+
+export default function ProductAiPanel(props: Props) {
+    const {
+        productId,
+        previewImageUrl,
+        images,
+        brands,
+        categories,
+        title,
+        brandId,
+        categoryId,
+        watchSpec,
+        initialContent,
+        onContentChange,
+        onSaveContent,
+    } = props;
+
+    const [content, setContent] = useState<GeneratedPayload>(initialContent ?? defaultPayload);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [narrative, setNarrative] = useState('dress');
+    const [audience, setAudience] = useState('daily_buyer');
+    const [structure, setStructure] = useState('hybrid');
+    const [tonePreset, setTonePreset] = useState('refined');
+    const [focusPoints, setFocusPoints] = useState<string[]>(['Dial', 'Độ đeo']);
+    const [forceSections, setForceSections] = useState<string[]>(['Opening hook', 'Design insight']);
+    const [customBrief, setCustomBrief] = useState('');
+    const [bannedPhrases, setBannedPhrases] = useState(
+        'phù hợp nhiều đối tượng, dễ phối mọi phong cách, hoàn hảo cho mọi dịp, chiếc đồng hồ này rất đẹp'
+    );
+    const [referenceSample, setReferenceSample] = useState('');
+
+    useEffect(() => {
+        setContent(initialContent ?? defaultPayload);
+    }, [initialContent]);
 
     const brandName = useMemo(
-        () => brands.find((b) => String(b.id) === String(brandId))?.name || '—',
+        () => brands.find((b) => b.id === brandId)?.name ?? '',
         [brands, brandId]
     );
-
     const categoryName = useMemo(
-        () => categories.find((c) => String(c.id) === String(categoryId))?.name || '—',
+        () => categories.find((c) => c.id === categoryId)?.name ?? '',
         [categories, categoryId]
     );
 
-    const imageForDisplay = previewImageUrl || images?.[0]?.url || '';
+    const previewFacts = useMemo(() => {
+        return [
+            previewCardLine('Brand', brandName),
+            previewCardLine('Category', categoryName),
+            previewCardLine('Ref', String(watchSpec.ref ?? '').trim()),
+            previewCardLine('Model', String(watchSpec.model ?? '').trim()),
+            previewCardLine('Movement', String(watchSpec.movement ?? '').trim()),
+            previewCardLine('Dial', String(watchSpec.dialColor ?? '').trim()),
+            previewCardLine('Size', String(watchSpec.width ?? '').trim() ? `${watchSpec.width}mm` : ''),
+        ].filter(Boolean) as string[];
+    }, [brandName, categoryName, watchSpec]);
 
-    const toggleFocusPoint = (value: string) => {
-        setFocusPoints((prev) =>
+    const promptPreview = useMemo(() => {
+        return [
+            labelOf(NARRATIVE_OPTIONS, narrative),
+            labelOf(AUDIENCE_OPTIONS, audience),
+            labelOf(STRUCTURE_OPTIONS, structure),
+            labelOf(TONE_PRESETS, tonePreset),
+            focusPoints.length ? `Focus: ${focusPoints.join(', ')}` : null,
+            forceSections.length ? `Section: ${forceSections.join(', ')}` : null,
+        ]
+            .filter(Boolean)
+            .join(' · ');
+    }, [audience, forceSections, focusPoints, narrative, structure, tonePreset]);
+
+    function setAndBubble(next: GeneratedPayload) {
+        setContent(next);
+        onContentChange(next);
+    }
+
+    function toggleFocus(value: string) {
+        setFocusPoints((prev) => {
+            if (prev.includes(value)) return prev.filter((item) => item !== value);
+            if (prev.length >= 3) return prev;
+            return [...prev, value];
+        });
+    }
+
+    function toggleForceSection(value: string) {
+        setForceSections((prev) =>
             prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
         );
-    };
+    }
 
-    const extractSpec = async () => {
-        setStatusMessage('');
-        setExtracting(true);
+    async function handleGenerate() {
+        setIsGenerating(true);
+        setError(null);
+
         try {
-            const res = await fetch(`/api/admin/products/${productId}/spec-extract`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ images }),
-            });
-            const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.error || 'Nhận diện spec thất bại.');
-            setExtractPreview(data?.spec ?? null);
-            setStatusMessage('Đã nhận diện spec từ ảnh. Xem lại trước khi áp vào form.');
-        } catch (e: any) {
-            alert(e?.message || 'Nhận diện spec thất bại.');
-        } finally {
-            setExtracting(false);
-        }
-    };
-
-    const applyExtractedSpec = () => {
-        if (!extractPreview) return;
-        onApplyExtractedSpecs(extractPreview);
-        setStatusMessage('Đã áp spec AI vào form. Bạn có thể chỉnh tay trước khi generate content.');
-    };
-
-    const generateContent = async () => {
-        setStatusMessage('');
-        setGenerating(true);
-        try {
-            const res = await fetch(`/api/admin/products/${productId}/content/generate`, {
+            const res = await fetch(`/api/admin/products/${productId}/generate-content`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    title,
+                    brandName,
+                    categoryName,
                     watchSpec,
-                    promptHint: hint,
-                    toneSample: sample,
-                    tonePreset,
-                    focusPoints,
+                    images,
+                    promptMeta: {
+                        narrative,
+                        audience,
+                        structure,
+                        tonePreset,
+                        focusPoints,
+                        customBrief,
+                        bannedPhrases,
+                        referenceSample,
+                        forceSections,
+                    },
                 }),
             });
-            const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.error || 'Generate content thất bại.');
-            const generated = { ...emptyGenerated, ...(data?.generated ?? {}) };
-            setLocalContent(generated);
-            onContentChange(generated);
-            setStatusMessage(
-                data?.meta?.mode === 'openai'
-                    ? `Đã generate bằng OpenAI${data?.meta?.model ? ` · ${data.meta.model}` : ''}.`
-                    : data?.meta?.message || 'Đã generate bằng fallback rule-based.'
-            );
-        } catch (e: any) {
-            alert(e?.message || 'Generate content thất bại.');
-        } finally {
-            setGenerating(false);
-        }
-    };
 
-    const saveContent = async () => {
-        setSaving(true);
+            const data = await res.json().catch(() => null);
+
+            console.log('[PRODUCT_AI_PANEL][GENERATE_RESPONSE]', data);
+
+            if (!res.ok) {
+                throw new Error(data?.error || 'Generate nội dung thất bại.');
+            }
+
+            const generated = data?.generated ?? data?.payload ?? data?.data ?? null;
+
+            if (!generated) {
+                throw new Error('API generate thành công nhưng không trả về dữ liệu nội dung.');
+            }
+
+            const next: GeneratedPayload = {
+                ...defaultPayload,
+                specBullets: Array.isArray(generated.specBullets) ? generated.specBullets : [],
+                promoteShort: generated.promoteShort ?? '',
+                promoteLong: generated.promoteLong ?? '',
+                facebookCaption: generated.facebookCaption ?? '',
+                instagramCaption: generated.instagramCaption ?? '',
+                titleOptions: Array.isArray(generated.titleOptions) ? generated.titleOptions : [],
+                hashtags: Array.isArray(generated.hashtags) ? generated.hashtags : [],
+                missingData: Array.isArray(generated.missingData) ? generated.missingData : [],
+                safetyNotes: Array.isArray(generated.safetyNotes) ? generated.safetyNotes : [],
+            };
+
+            setAndBubble(next);
+        } catch (e: any) {
+            setError(e?.message || 'Generate nội dung thất bại.');
+        } finally {
+            setIsGenerating(false);
+        }
+    }
+
+    async function handleSave() {
+        setIsSaving(true);
+        setError(null);
         try {
-            await onSaveContent(localContent, {
-                hint,
-                sample,
+            await onSaveContent(content, {
+                narrative,
+                audience,
+                structure,
                 tonePreset,
                 focusPoints,
+                customBrief,
+                bannedPhrases,
+                referenceSample,
+                forceSections,
             });
-            setStatusMessage('Đã lưu ProductContent.');
         } catch (e: any) {
-            alert(e?.message || 'Lưu ProductContent thất bại.');
+            setError(e?.message || 'Lưu ProductContent thất bại.');
         } finally {
-            setSaving(false);
+            setIsSaving(false);
         }
-    };
+    }
 
     return (
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="px-5 py-4">
-                <div className="space-y-1">
-                    <h2 className="text-lg font-semibold tracking-tight text-slate-900">AI workflow</h2>
-                    <p className="text-sm leading-7 text-slate-500">
-                        Bước 1 nhận diện spec từ ảnh, bước 2 áp spec vào form, bước 3 generate nội dung theo tone bạn muốn.
-                    </p>
+            <div className="border-b border-slate-200 px-5 py-4">
+                <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-slate-500">
+                        <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-lg font-semibold tracking-tight text-slate-900">AI content workflow</h2>
+                        <p className="text-sm leading-6 text-slate-500">
+                            Bỏ nhận diện ảnh ở đây. Panel này chỉ tập trung vào hướng kể chuyện và generate nội dung từ spec đã chốt.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div className="space-y-5 px-5 pb-5">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                        Bước 1 · Ảnh hiện tại
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                            {imageForDisplay ? (
-                                <img src={imageForDisplay} alt={title || 'product'} className="h-full w-full object-cover" />
+            <div className="space-y-6 px-5 py-5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Nguồn spec hiện tại</div>
+                    <div className="flex gap-3">
+                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            {previewImageUrl ? (
+                                <img src={previewImageUrl} alt={title || 'preview'} className="h-full w-full object-cover" />
                             ) : (
-                                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                                    No image
-                                </div>
+                                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">No image</div>
                             )}
                         </div>
-
-                        <div className="min-w-0 space-y-1 text-sm">
-                            <div className="line-clamp-2 font-semibold text-slate-900">
-                                {title || 'Chưa có tên sản phẩm'}
-                            </div>
-                            <div className="text-slate-500">Brand: {brandName}</div>
-                            <div className="text-slate-500">Category: {categoryName}</div>
-                            <div className="text-slate-500">
-                                Ảnh dùng cho AI: {images?.length || (imageForDisplay ? 1 : 0)}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={extractSpec}
-                        disabled={extracting || (!imageForDisplay && images.length === 0)}
-                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <FileImage className="h-4 w-4" />
-                        {extracting ? 'Đang phân tích...' : 'Nhận diện spec từ ảnh'}
-                    </button>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                        Bước 2 · Preview spec AI nhận diện
-                    </div>
-
-                    {extractPreview ? (
-                        <>
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                {Object.entries(extractPreview).map(([key, value]) => (
-                                    <div key={key} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                            {key}
-                                        </div>
-                                        <div className="mt-1 text-slate-900">
-                                            {Array.isArray(value) ? value.join(', ') : String(value ?? '—')}
-                                        </div>
-                                    </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-semibold text-slate-900">{title || 'Untitled product'}</div>
+                            <div className="mt-2 space-y-1 text-sm text-slate-500">
+                                {previewFacts.map((line) => (
+                                    <div key={line}>{line}</div>
                                 ))}
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={applyExtractedSpec}
-                                className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                            >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Áp spec vào form
-                            </button>
-                        </>
-                    ) : (
-                        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                            Chưa có preview spec. Hãy bấm “Nhận diện spec từ ảnh” ở bước 1.
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                        Bước 3 · Generate nội dung từ spec
-                    </div>
+                <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Bước 1 · Điều khiển prompt</div>
 
-                    <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Gợi ý cho AI
-                            </label>
-                            <textarea
-                                value={hint}
-                                onChange={(e) => setHint(e.target.value)}
-                                rows={4}
-                                placeholder="Ví dụ: nhấn mạnh dial đẹp, form cổ điển, giọng văn tinh tế, không phô trương..."
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
+                            <FieldLabel>Góc kể chuyện</FieldLabel>
+                            <select value={narrative} onChange={(e) => setNarrative(e.target.value)} className="block h-[42px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100">
+                                {NARRATIVE_OPTIONS.map((item) => (
+                                    <option key={item.value} value={item.value}>{item.label}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Mẫu văn phong tham chiếu
-                            </label>
-                            <textarea
-                                value={sample}
-                                onChange={(e) => setSample(e.target.value)}
-                                rows={4}
-                                placeholder="Dán một đoạn caption mẫu bạn thích để AI học đúng tone viết của shop..."
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
+                            <FieldLabel>Đối tượng người đọc</FieldLabel>
+                            <select value={audience} onChange={(e) => setAudience(e.target.value)} className="block h-[42px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100">
+                                {AUDIENCE_OPTIONS.map((item) => (
+                                    <option key={item.value} value={item.value}>{item.label}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Tone preset
-                            </label>
+                            <FieldLabel>Cấu trúc nội dung</FieldLabel>
+                            <select value={structure} onChange={(e) => setStructure(e.target.value)} className="block h-[42px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100">
+                                {STRUCTURE_OPTIONS.map((item) => (
+                                    <option key={item.value} value={item.value}>{item.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <FieldLabel>Tone preset</FieldLabel>
                             <div className="flex flex-wrap gap-2">
                                 {TONE_PRESETS.map((item) => (
-                                    <button
-                                        key={item.value}
-                                        type="button"
-                                        onClick={() => setTonePreset(item.value)}
-                                        className={[
-                                            'rounded-full px-3 py-2 text-sm transition',
-                                            tonePreset === item.value
-                                                ? 'bg-slate-950 text-white'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-                                        ].join(' ')}
-                                    >
+                                    <button key={item.value} type="button" className={chipClass(tonePreset === item.value)} onClick={() => setTonePreset(item.value)}>
                                         {item.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Điểm cần nhấn
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {FOCUS_OPTIONS.map((item) => (
-                                    <button
-                                        key={item.value}
-                                        type="button"
-                                        onClick={() => toggleFocusPoint(item.value)}
-                                        className={[
-                                            'rounded-full px-3 py-2 text-sm transition',
-                                            focusPoints.includes(item.value)
-                                                ? 'bg-indigo-600 text-white'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-                                        ].join(' ')}
-                                    >
-                                        {item.label}
-                                    </button>
-                                ))}
-                            </div>
+                    <div>
+                        <FieldLabel right={<span className="text-xs text-slate-400">Tối đa 3 mục</span>}>Điểm nhấn chính</FieldLabel>
+                        <div className="flex flex-wrap gap-2">
+                            {FOCUS_OPTIONS.map((item) => (
+                                <button key={item} type="button" className={chipClass(focusPoints.includes(item))} onClick={() => toggleFocus(item)}>
+                                    {item}
+                                </button>
+                            ))}
                         </div>
+                    </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={generateContent}
-                                disabled={generating}
-                                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Wand2 className="h-4 w-4" />
-                                {generating ? 'Đang generate...' : 'Generate nội dung từ spec'}
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={saveContent}
-                                disabled={saving}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Save className="h-4 w-4" />
-                                {saving ? 'Đang lưu...' : 'Lưu ProductContent'}
-                            </button>
+                    <div>
+                        <FieldLabel>Section bắt buộc</FieldLabel>
+                        <div className="flex flex-wrap gap-2">
+                            {FORCE_SECTION_OPTIONS.map((item) => (
+                                <button key={item} type="button" className={chipClass(forceSections.includes(item))} onClick={() => toggleForceSection(item)}>
+                                    {item}
+                                </button>
+                            ))}
                         </div>
+                    </div>
+
+                    <div>
+                        <FieldLabel>Brief thêm cho AI</FieldLabel>
+                        <textarea value={customBrief} onChange={(e) => setCustomBrief(e.target.value)} rows={4} placeholder="Ví dụ: nhấn mạnh cảm giác champagne dial nhẹ, form dress nhưng vẫn đeo daily được; tránh giọng quảng cáo lộ liễu." className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100" />
+                    </div>
+
+                    <div>
+                        <FieldLabel>Các phrase cần tránh</FieldLabel>
+                        <textarea value={bannedPhrases} onChange={(e) => setBannedPhrases(e.target.value)} rows={3} className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100" />
+                    </div>
+
+                    <div>
+                        <FieldLabel>Mẫu văn phong tham chiếu</FieldLabel>
+                        <textarea value={referenceSample} onChange={(e) => setReferenceSample(e.target.value)} rows={4} placeholder="Dán 1 đoạn caption hoặc đoạn mô tả bạn từng viết đúng tone shop để AI bám theo." className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100" />
                     </div>
                 </div>
 
-                {statusMessage ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        {statusMessage}
-                    </div>
-                ) : null}
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                        <div className="mb-2 text-sm font-semibold text-slate-900">Thiếu dữ liệu</div>
-                        <div className="text-sm text-slate-600">
-                            {localContent.missingData?.length
-                                ? localContent.missingData.join(', ')
-                                : 'Hiện đủ dữ liệu nền tảng để generate khá ổn.'}
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-amber-50 p-4">
-                        <div className="mb-2 text-sm font-semibold text-amber-900">Safety notes</div>
-                        <div className="text-sm text-amber-800">
-                            {localContent.safetyNotes?.length
-                                ? localContent.safetyNotes.join(' ')
-                                : 'Không có cảnh báo thêm.'}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-                    {[
-                        ['spec', 'Spec'],
-                        ['promote', 'Promote'],
-                        ['social', 'Social'],
-                    ].map(([key, label]) => (
-                        <button
-                            key={key}
-                            type="button"
-                            onClick={() => setActiveTab(key as any)}
-                            className={[
-                                'rounded-full px-4 py-2 text-sm transition',
-                                activeTab === key
-                                    ? 'bg-slate-950 text-white'
-                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-                            ].join(' ')}
-                        >
-                            {label}
+                <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Bước 2 · Generate nội dung</div>
+                    <div className="flex gap-3">
+                        <button type="button" onClick={handleGenerate} disabled={isGenerating} className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60">
+                            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {isGenerating ? 'Đang generate...' : 'Generate nội dung từ spec'}
                         </button>
-                    ))}
+                        <button type="button" onClick={handleSave} disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Lưu ProductContent
+                        </button>
+                    </div>
+
+                    {error ? (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+                    ) : null}
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        Prompt hiện tại: <span className="font-medium text-slate-800">{promptPreview}</span>
+                    </div>
                 </div>
 
-                {activeTab === 'spec' ? (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Spec bullets
-                            </label>
-                            <textarea
-                                value={(localContent.specBullets ?? []).join('\n')}
-                                onChange={(e) => {
-                                    const next = {
-                                        ...localContent,
-                                        specBullets: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean),
-                                    };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={8}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Tiêu đề gợi ý
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {(localContent.titleOptions ?? []).length ? (
-                                    localContent.titleOptions.map((item, idx) => (
-                                        <div
-                                            key={`${item}-${idx}`}
-                                            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700"
-                                        >
-                                            {item}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <span className="text-sm text-slate-400">Chưa có tiêu đề gợi ý.</span>
-                                )}
-                            </div>
-                        </div>
+                <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        <FileText className="h-4 w-4" />
+                        Bước 3 · Preview output
                     </div>
-                ) : null}
 
-                {activeTab === 'promote' ? (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Promote short
-                            </label>
-                            <textarea
-                                value={localContent.promoteShort ?? ''}
-                                onChange={(e) => {
-                                    const next = { ...localContent, promoteShort: e.target.value };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={5}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Promote long
-                            </label>
-                            <textarea
-                                value={localContent.promoteLong ?? ''}
-                                onChange={(e) => {
-                                    const next = { ...localContent, promoteLong: e.target.value };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={10}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
+                    <PreviewBlock label="Promote short" value={content.promoteShort} />
+                    <PreviewBlock label="Promote long" value={content.promoteLong} multiline />
+                    <PreviewList label="Spec bullets" items={content.specBullets} />
+                    <PreviewBlock label="Facebook caption" value={content.facebookCaption} multiline />
+                    <PreviewBlock label="Instagram caption" value={content.instagramCaption} multiline />
+                    <PreviewList label="Title options" items={content.titleOptions} />
+                    <PreviewList label="Hashtags" items={content.hashtags} inline />
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <PreviewList label="Thiếu dữ liệu" items={content.missingData} tone="muted" />
+                        <PreviewList label="Safety notes" items={content.safetyNotes} tone="warning" />
                     </div>
-                ) : null}
-
-                {activeTab === 'social' ? (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Facebook caption
-                            </label>
-                            <textarea
-                                value={localContent.facebookCaption ?? ''}
-                                onChange={(e) => {
-                                    const next = { ...localContent, facebookCaption: e.target.value };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={7}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Instagram caption
-                            </label>
-                            <textarea
-                                value={localContent.instagramCaption ?? ''}
-                                onChange={(e) => {
-                                    const next = { ...localContent, instagramCaption: e.target.value };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={7}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                                Hashtags
-                            </label>
-                            <textarea
-                                value={(localContent.hashtags ?? []).join(' ')}
-                                onChange={(e) => {
-                                    const next = {
-                                        ...localContent,
-                                        hashtags: e.target.value.split(/\s+/).map((x) => x.trim()).filter(Boolean),
-                                    };
-                                    setLocalContent(next);
-                                    onContentChange(next);
-                                }}
-                                rows={3}
-                                className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-                    </div>
-                ) : null}
+                </div>
             </div>
         </section>
+    );
+}
+
+function PreviewBlock({ label, value, multiline = false }: { label: string; value?: string; multiline?: boolean }) {
+    return (
+        <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
+            <div className={`rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 ${multiline ? 'min-h-[110px]' : ''}`}>
+                {value?.trim() || 'Chưa có nội dung.'}
+            </div>
+        </div>
+    );
+}
+
+function PreviewList({ label, items, inline = false, tone = 'default' }: { label: string; items?: string[]; inline?: boolean; tone?: 'default' | 'muted' | 'warning' }) {
+    const toneClass = tone === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-800'
+        : tone === 'muted'
+            ? 'border-slate-200 bg-slate-50 text-slate-700'
+            : 'border-slate-200 bg-white text-slate-700';
+
+    return (
+        <div>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
+            <div className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${toneClass}`}>
+                {Array.isArray(items) && items.length > 0 ? (
+                    inline ? (
+                        <div className="flex flex-wrap gap-2">
+                            {items.map((item) => (
+                                <span key={item} className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium">{item}</span>
+                            ))}
+                        </div>
+                    ) : (
+                        <ul className="space-y-1.5">
+                            {items.map((item) => (
+                                <li key={item}>• {item}</li>
+                            ))}
+                        </ul>
+                    )
+                ) : (
+                    <span>Chưa có dữ liệu.</span>
+                )}
+            </div>
+        </div>
     );
 }

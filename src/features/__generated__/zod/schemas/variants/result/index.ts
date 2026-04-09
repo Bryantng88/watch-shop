@@ -42,3 +42,4 @@ export { technicalActionCatalogResultSchema } from './technicalActionCatalog.res
 export { technicalAppearanceIssueCatalogResultSchema } from './technicalAppearanceIssueCatalog.result';
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
 export { ProductContentResultSchema } from './ProductContent.result';
+export { AcquisitionSpecJobResultSchema } from './AcquisitionSpecJob.result';

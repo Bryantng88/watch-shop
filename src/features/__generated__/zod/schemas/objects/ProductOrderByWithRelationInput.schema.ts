@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { AcquisitionItemOrderByRelationAggregateInputObjectSchema as AcquisitionItemOrderByRelationAggregateInputObjectSchema } from './AcquisitionItemOrderByRelationAggregateInput.schema';
+import { AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema as AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema } from './AcquisitionSpecJobOrderByRelationAggregateInput.schema';
 import { InvoiceItemOrderByRelationAggregateInputObjectSchema as InvoiceItemOrderByRelationAggregateInputObjectSchema } from './InvoiceItemOrderByRelationAggregateInput.schema';
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
 import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByRelationAggregateInputObjectSchema } from './OrderItemOrderByRelationAggregateInput.schema';
@@ -40,7 +41,10 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   aiGeneratedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   sku: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  nickname: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  specStatus: SortOrderSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),

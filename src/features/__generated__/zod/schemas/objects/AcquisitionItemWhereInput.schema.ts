@@ -21,7 +21,9 @@ import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from '
 import { OrderItemNullableScalarRelationFilterObjectSchema as OrderItemNullableScalarRelationFilterObjectSchema } from './OrderItemNullableScalarRelationFilter.schema';
 import { OrderItemWhereInputObjectSchema as OrderItemWhereInputObjectSchema } from './OrderItemWhereInput.schema';
 import { ProductVariantNullableScalarRelationFilterObjectSchema as ProductVariantNullableScalarRelationFilterObjectSchema } from './ProductVariantNullableScalarRelationFilter.schema';
-import { ProductVariantWhereInputObjectSchema as ProductVariantWhereInputObjectSchema } from './ProductVariantWhereInput.schema'
+import { ProductVariantWhereInputObjectSchema as ProductVariantWhereInputObjectSchema } from './ProductVariantWhereInput.schema';
+import { AcquisitionSpecJobNullableScalarRelationFilterObjectSchema as AcquisitionSpecJobNullableScalarRelationFilterObjectSchema } from './AcquisitionSpecJobNullableScalarRelationFilter.schema';
+import { AcquisitionSpecJobWhereInputObjectSchema as AcquisitionSpecJobWhereInputObjectSchema } from './AcquisitionSpecJobWhereInput.schema'
 
 const acquisitionitemwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionItemWhereInputObjectSchema), z.lazy(() => AcquisitionItemWhereInputObjectSchema).array()]).optional(),
@@ -51,7 +53,8 @@ const acquisitionitemwhereinputSchema = z.object({
   acquisition: z.union([z.lazy(() => AcquisitionScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema)]).optional(),
   product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   sourceOrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
+  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional(),
+  AcquisitionSpecJob: z.union([z.lazy(() => AcquisitionSpecJobNullableScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionSpecJobWhereInputObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionItemWhereInput> = acquisitionitemwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemWhereInput>;
 export const AcquisitionItemWhereInputObjectZodSchema = acquisitionitemwhereinputSchema;

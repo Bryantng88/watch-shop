@@ -29,7 +29,8 @@ export const AcquisitionItemInputSchema = z.object({
     acquisition: z.unknown(),
     product: z.unknown().optional().nullable(),
     sourceOrderItem: z.unknown().optional().nullable(),
-    variant: z.unknown().optional().nullable()
+    variant: z.unknown().optional().nullable(),
+    AcquisitionSpecJob: z.unknown().optional().nullable()
 }).strict();
 
 export type AcquisitionItemInputType = z.infer<typeof AcquisitionItemInputSchema>;

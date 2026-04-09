@@ -657,7 +657,6 @@ export default function ListProducts(props: ProductListPageProps) {
                 onDelete={handleDeleteProduct}
                 onService={handleCreateService}
             />
-
             <Pagination
                 page={props.page}
                 totalPages={props.totalPages}

@@ -1,6 +1,5 @@
 "use client";
 
-import DataTableShell from "@/components/_shared/DataTableShell";
 import ProductListRow from "./ProductListRow";
 import type { ProductRow } from "./types";
 
@@ -9,14 +8,15 @@ type Props = {
   selectedIds: string[];
   canViewCost: boolean;
   canEditPrice: boolean;
-  pendingImageProductId?: string | null;
-
+  onToggleOne: (id: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
-  onToggleOne: (productId: string, checked: boolean) => void;
-  onImageUploaded: (productId: string, fileKey: string) => void;
   onOpenReadiness: (product: ProductRow) => void;
   onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
-
+  onPriceCommit: (
+    productId: string,
+    field: "minPrice" | "salePrice" | "purchasePrice",
+    value: number | null
+  ) => Promise<void>;
   onView: (productId: string) => void;
   onEdit: (productId: string) => void;
   onDelete: (productId: string) => void;
@@ -28,70 +28,89 @@ export default function ProductListTable({
   selectedIds,
   canViewCost,
   canEditPrice,
-  pendingImageProductId = null,
-  onToggleAll,
   onToggleOne,
-  onImageUploaded,
+  onToggleAll,
   onOpenReadiness,
   onPriceSaved,
+  onPriceCommit,
   onView,
   onEdit,
   onDelete,
   onService,
 }: Props) {
-  const allChecked = items.length > 0 && items.every((p) => selectedIds.includes(p.id));
+  const allChecked =
+    items.length > 0 && items.every((item) => selectedIds.includes(item.id));
 
   return (
-    <DataTableShell>
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-slate-500">
-          <tr>
-            <th className="px-4 py-3 text-left">
-              <input
-                type="checkbox"
-                checked={allChecked}
-                onChange={(e) => onToggleAll(e.target.checked)}
-              />
-            </th>
-            <th className="px-4 py-3 text-left">Ảnh</th>
-            <th className="px-4 py-3 text-left">Tên</th>
-            <th className="px-4 py-3 text-left">SKU</th>
-            <th className="px-4 py-3 text-left">Vendor</th>
-            <th className="px-4 py-3 text-left">Trạng thái</th>
-            <th className="px-4 py-3 text-left">Phiếu nhập</th>
-            <th className="px-4 py-3 text-right">Giá bán</th>
-            <th className="px-4 py-3 text-right">Sale</th>
-            {canViewCost ? (
-              <th className="px-4 py-3 text-right">Giá mua</th>
-            ) : null}
-            <th className="px-4 py-3 text-left">Bài đăng</th>
-            <th className="px-4 py-3 text-left">Cập nhật</th>
-            <th className="px-4 py-3 text-left">Tạo lúc</th>
-            <th className="px-4 py-3 text-right">Hành động</th>
-          </tr>
-        </thead>
+    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-semibold text-slate-950">Danh sách dữ liệu</div>
+          <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">
+            {items.length} mục
+          </div>
+        </div>
+      </div>
 
-        <tbody className="bg-white">
-          {items.map((product) => (
-            <ProductListRow
-              key={product.id}
-              product={product}
-              checked={selectedIds.includes(product.id)}
-              canViewCost={canViewCost}
-              canEditPrice={canEditPrice}
-              pendingImage={pendingImageProductId === product.id}
-              onCheckedChange={(checked) => onToggleOne(product.id, checked)}
-              onImageUploaded={onImageUploaded}
-              onOpenReadiness={onOpenReadiness}
-              onPriceSaved={onPriceSaved}
-              onView={onView}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onService={onService}
-            />
-          ))}
-        </tbody>
-      </table>
-    </DataTableShell>
+      <div className="overflow-hidden">
+        <table className="min-w-full table-fixed">
+          <colgroup>
+            <col className="w-12" />
+            <col className="w-[40%]" />
+            <col className="w-[22%]" />
+            <col className="w-[18%]" />
+            <col className="w-[14%]" />
+            <col className="w-[6%]" />
+          </colgroup>
+
+          <thead>
+            <tr className="bg-slate-50/80">
+              <th className="px-4 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  onChange={(e) => onToggleAll(e.target.checked)}
+                />
+              </th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                Sản phẩm
+              </th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                Vận hành
+              </th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                Giá
+              </th>
+              <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                Cập nhật
+              </th>
+              <th className="px-4 py-3 text-right text-[12px] font-semibold text-slate-500">
+                Hành động
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {items.map((product) => (
+              <ProductListRow
+                key={product.id}
+                product={product}
+                checked={selectedIds.includes(product.id)}
+                canViewCost={canViewCost}
+                canEditPrice={canEditPrice}
+                onCheckedChange={(checked) => onToggleOne(product.id, checked)}
+                onOpenReadiness={onOpenReadiness}
+                onPriceSaved={onPriceSaved}
+                onPriceCommit={onPriceCommit}
+                onView={onView}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onService={onService}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

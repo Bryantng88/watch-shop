@@ -25,7 +25,8 @@ export const AcquisitionItemFindManyResultSchema = z.object({
   acquisition: z.unknown(),
   product: z.unknown().optional(),
   sourceOrderItem: z.unknown().optional(),
-  variant: z.unknown().optional()
+  variant: z.unknown().optional(),
+  AcquisitionSpecJob: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

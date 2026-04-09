@@ -1,70 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fmtMoney } from "./helpers";
+import * as React from "react";
+import { Loader2, PencilLine } from "lucide-react";
 
-export default function InlineMoneyEditor({
-  productId,
-  field,
-  value,
-  label,
-  onSaved,
-}: {
-  productId: string;
-  field: "minPrice" | "salePrice";
+type Props = {
   value: number | null | undefined;
   label: string;
-  onSaved: (v: number | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value == null ? "" : String(value));
-  const [saving, setSaving] = useState(false);
+  onSubmit: (nextValue: number | null) => Promise<void>;
+  compact?: boolean;
+  iconOnly?: boolean;
+};
 
-  useEffect(() => {
+export default function InlineMoneyEditor({
+  value,
+  label,
+  onSubmit,
+  compact = false,
+  iconOnly = false,
+}: Props) {
+  const [open, setOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState(value == null ? "" : String(value));
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
     setDraft(value == null ? "" : String(value));
   }, [value]);
 
-  async function save() {
+  async function handleSave() {
     const trimmed = draft.trim();
     const nextValue = trimmed === "" ? null : Number(trimmed);
 
     if (nextValue != null && (!Number.isFinite(nextValue) || nextValue < 0)) {
-      alert(`${label} không hợp lệ`);
+      window.alert("Giá không hợp lệ");
       return;
     }
 
     try {
       setSaving(true);
-      const res = await fetch(`/api/admin/products/${productId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: nextValue }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || `Cập nhật ${label.toLowerCase()} thất bại`);
-      onSaved(nextValue);
-      setEditing(false);
+      await onSubmit(nextValue);
+      setOpen(false);
     } catch (e: any) {
-      alert(e?.message || `Cập nhật ${label.toLowerCase()} thất bại`);
+      window.alert(e?.message || "Cập nhật giá thất bại");
     } finally {
       setSaving(false);
     }
   }
 
-  if (editing) {
+  if (!open) {
+    if (iconOnly) {
+      return (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          title={`Sửa ${label}`}
+        >
+          <PencilLine className="h-3.5 w-3.5" />
+        </button>
+      );
+    }
+
     return (
-      <div className="flex items-center justify-end gap-2">
-        <input type="number" min={0} value={draft} onChange={(e) => setDraft(e.target.value)} className="h-9 w-28 rounded-lg border border-slate-200 px-2 text-right text-sm" />
-        <button type="button" onClick={save} disabled={saving} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs hover:bg-slate-50">{saving ? "..." : "Lưu"}</button>
-        <button type="button" onClick={() => { setEditing(false); setDraft(value == null ? "" : String(value)); }} disabled={saving} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs hover:bg-slate-50">Hủy</button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={[
+          "inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800",
+          compact ? "h-7" : "",
+        ].join(" ")}
+      >
+        <PencilLine className="h-3.5 w-3.5" />
+        {!compact ? <span>sửa</span> : null}
+      </button>
     );
   }
 
   return (
-    <button type="button" onClick={() => setEditing(true)} className="group inline-flex items-center justify-end gap-2 rounded-lg px-2 py-1 hover:bg-slate-50" title={`Chỉnh nhanh ${label.toLowerCase()}`}>
-      <span className={field === "salePrice" ? "font-medium text-emerald-700" : "font-semibold text-slate-900"}>{fmtMoney(value)}</span>
-      <span className="text-xs text-slate-400 opacity-0 transition group-hover:opacity-100">sửa</span>
-    </button>
+    <div className="flex items-center justify-end gap-2">
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="h-8 w-24 rounded-lg border border-slate-200 bg-white px-2 text-right text-sm outline-none focus:border-slate-400"
+        placeholder={label}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+          if (e.key === "Escape") setOpen(false);
+        }}
+      />
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className="inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-2.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+      >
+        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Lưu"}
+      </button>
+    </div>
   );
 }

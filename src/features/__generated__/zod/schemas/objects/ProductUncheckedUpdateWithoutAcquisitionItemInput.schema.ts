@@ -16,6 +16,7 @@ import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumProductStatusFieldUpdateOperationsInputObjectSchema as EnumProductStatusFieldUpdateOperationsInputObjectSchema } from './EnumProductStatusFieldUpdateOperationsInput.schema';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { EnumContentStatusFieldUpdateOperationsInputObjectSchema as EnumContentStatusFieldUpdateOperationsInputObjectSchema } from './EnumContentStatusFieldUpdateOperationsInput.schema';
+import { AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema as AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './InvoiceItemUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutProductNestedInput.schema';
@@ -50,6 +51,9 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   aiGeneratedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   sku: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  nickname: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  specStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),

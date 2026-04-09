@@ -1,7 +1,6 @@
 import type {
     AcquisitionDraftResponse,
     AcquisitionExtractedSpec,
-    AcquisitionGeneratedDraft,
     GenerateAcquisitionDraftInput,
 } from "./acquisition-ai.types";
 import * as repo from "./acquisition-ai.repo";
@@ -13,23 +12,27 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
         ? "Omega"
         : source.includes("seiko")
             ? "Seiko"
-            : source.includes("longines")
-                ? "Longines"
-                : null;
+            : source.includes("orient")
+                ? "Orient"
+                : source.includes("longines")
+                    ? "Longines"
+                    : null;
 
     const movement =
         source.includes("pin") || source.includes("quartz")
             ? "QUARTZ"
             : source.includes("automatic") || source.includes("tự động")
                 ? "AUTOMATIC"
-                : source.includes("lên dây")
+                : source.includes("lên dây") || source.includes("manual")
                     ? "MANUAL"
                     : null;
 
     const caseMaterial =
         source.includes("18k gold") || source.includes("18k") || source.includes("gold")
             ? "GOLD"
-            : null;
+            : source.includes("steel") || source.includes("stainless") || source.includes("thép")
+                ? "STAINLESS_STEEL"
+                : null;
 
     const goldKarat = source.includes("18k") ? "18K" : null;
     const goldColor = caseMaterial === "GOLD" ? "YELLOW_GOLD" : null;
@@ -85,9 +88,7 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
             goldColor: goldColor ? "medium" : "low",
         },
         needsMoreImages: ["caseback", "macro dial text"],
-        confidenceNotes: [
-            "Cần thêm ảnh caseback hoặc macro text để đoán ref/năm chính xác hơn.",
-        ],
+        confidenceNotes: ["Cần thêm ảnh caseback hoặc macro text để đoán ref/năm chính xác hơn."],
         probableVisualFacts: {
             probableBrand: brandName,
             caseType: null,
@@ -96,69 +97,14 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
             dialColor: source.includes("champagne") ? "champagne" : null,
             dialMarkers: null,
             glass: null,
-            caseMaterial: caseMaterial,
-            movement: movement,
+            caseMaterial,
+            movement,
             gender: null,
             sizeClass: null,
             era: null,
             widthEstimateMm: null,
             styleNotes: [],
         },
-    };
-}
-
-function buildFallbackDraft(input: {
-    extractedSpec: AcquisitionExtractedSpec;
-    titleHint?: string | null;
-}) {
-    const s = input.extractedSpec;
-    const brand = s.brandName || "";
-    const model = s.modelFamily || "";
-    const movementText =
-        s.movement === "QUARTZ"
-            ? "pin"
-            : s.movement === "AUTOMATIC"
-                ? "automatic"
-                : s.movement === "MANUAL"
-                    ? "lên dây"
-                    : "";
-
-    const materialText =
-        s.goldKarat && s.caseMaterial === "GOLD"
-            ? `${s.goldKarat} gold`
-            : s.caseMaterial === "GOLD"
-                ? "gold"
-                : "";
-
-    const title =
-        [brand, model, movementText, materialText].filter(Boolean).join(" ").trim() ||
-        input.titleHint ||
-        "Vintage watch";
-
-    return {
-        generatedTitle: title,
-        titleOptions: [title].filter(Boolean),
-        specBullets: [
-            s.widthEstimateMm ? `▪️Kích thước ước lượng: ${s.widthEstimateMm}mm` : null,
-            s.movement ? `▪️Bộ máy: ${movementText}` : null,
-            s.caseMaterial
-                ? `▪️Chất liệu vỏ: ${s.goldKarat ? `${s.goldKarat} ` : ""}${s.caseMaterial}`
-                : null,
-            s.dialColor ? `▪️Dial ${s.dialColor}` : null,
-        ].filter(Boolean) as string[],
-        listingCopy: `${title}. Đây là draft ban đầu để tiếp tục review và hoàn thiện spec.`,
-        socialBalanced: `${title} mang tinh thần vintage rõ rệt, gọn và dễ đeo. Đây là AI draft ban đầu để tiếp tục review sâu hơn.`,
-        storytellingCopy: `${title} là một mẫu đồng hồ gợi cảm giác vintage khá rõ. Đây là draft AI ban đầu để tiếp tục kiểm tra ref, năm và các chi tiết sâu hơn.`,
-        hashtags: [brand ? `#${brand.replace(/\s+/g, "")}` : null, "#vintagewatch"].filter(Boolean) as string[],
-        missingData: [
-            !s.bestRefCandidate ? "reference" : null,
-            !s.yearEstimate ? "year" : null,
-            !s.bestCaliberCandidate ? "caliber" : null,
-        ].filter(Boolean) as string[],
-        safetyNotes: [
-            "Draft AI ban đầu, cần review lại trước khi post.",
-            "Không dùng claim zin/NOS/serviced nếu chưa có xác nhận.",
-        ],
     };
 }
 
@@ -264,13 +210,7 @@ function specSchema() {
                         goldKarat: { type: ["string", "null"] },
                         goldColor: { type: ["string", "null"] },
                     },
-                    required: [
-                        "brandName",
-                        "movement",
-                        "caseMaterial",
-                        "goldKarat",
-                        "goldColor",
-                    ],
+                    required: ["brandName", "movement", "caseMaterial", "goldKarat", "goldColor"],
                 },
                 suggestedFacts: {
                     type: "object",
@@ -281,10 +221,7 @@ function specSchema() {
                         probableCaseMaterial: { type: ["string", "null"] },
                         probableGoldKarat: { type: ["string", "null"] },
                         probableGoldColor: { type: ["string", "null"] },
-                        notes: {
-                            type: "array",
-                            items: { type: "string" },
-                        },
+                        notes: { type: "array", items: { type: "string" } },
                     },
                     required: [
                         "probableBrand",
@@ -305,13 +242,7 @@ function specSchema() {
                         goldKarat: { type: "string", enum: ["high", "medium", "low"] },
                         goldColor: { type: "string", enum: ["high", "medium", "low"] },
                     },
-                    required: [
-                        "brandName",
-                        "movement",
-                        "caseMaterial",
-                        "goldKarat",
-                        "goldColor",
-                    ],
+                    required: ["brandName", "movement", "caseMaterial", "goldKarat", "goldColor"],
                 },
                 needsMoreImages: { type: "array", items: { type: "string" } },
                 confidenceNotes: { type: "array", items: { type: "string" } },
@@ -332,10 +263,7 @@ function specSchema() {
                         sizeClass: { type: ["string", "null"] },
                         era: { type: ["string", "null"] },
                         widthEstimateMm: { type: ["number", "null"] },
-                        styleNotes: {
-                            type: "array",
-                            items: { type: "string" },
-                        },
+                        styleNotes: { type: "array", items: { type: "string" } },
                     },
                     required: [
                         "probableBrand",
@@ -390,202 +318,6 @@ function specSchema() {
     };
 }
 
-function draftSchema() {
-    return {
-        name: "acquisition_draft_generation",
-        schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-                generatedTitle: { type: "string" },
-                titleOptions: { type: "array", items: { type: "string" } },
-                specBullets: { type: "array", items: { type: "string" } },
-                listingCopy: { type: "string" },
-                socialBalanced: { type: "string" },
-                storytellingCopy: { type: "string" },
-                hashtags: { type: "array", items: { type: "string" } },
-                missingData: { type: "array", items: { type: "string" } },
-                safetyNotes: { type: "array", items: { type: "string" } },
-            },
-            required: [
-                "generatedTitle",
-                "titleOptions",
-                "specBullets",
-                "listingCopy",
-                "socialBalanced",
-                "storytellingCopy",
-                "hashtags",
-                "missingData",
-                "safetyNotes",
-            ],
-        },
-    };
-}
-
-export async function generateAcquisitionDraft(
-    input: GenerateAcquisitionDraftInput
-): Promise<AcquisitionDraftResponse> {
-    const fallbackSpec = buildFallbackSpec(input.titleHint || "", input.hintText || "");
-    const fallbackDraft = buildFallbackDraft({
-        extractedSpec: fallbackSpec,
-        titleHint: input.titleHint,
-    });
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_PRODUCT_CONTENT_MODEL || "gpt-5-mini";
-
-    if (!apiKey) {
-        return {
-            extractedSpec: fallbackSpec,
-            generatedDraft: fallbackDraft,
-            meta: {
-                mode: "rule",
-                model: null,
-                message: "Thiếu OPENAI_API_KEY, dùng fallback rule-based.",
-            },
-        };
-    }
-
-    const dataUrls = await Promise.all(
-        input.imageUrls.slice(0, 4).map((u) => repo.fetchImageAsDataUrl(u, input.origin))
-    );
-
-    const extractInput = [
-        {
-            role: "developer",
-            content: [
-                {
-                    type: "input_text",
-                    text: [
-                        "Bạn là chuyên gia nhận diện đồng hồ vintage/pre-owned từ ảnh cho nghiệp vụ nhập hàng nội bộ.",
-                        "Mục tiêu là chuẩn xác tối đa ở các dữ liệu nhận diện mạnh, nhưng vẫn cố gắng trích xuất được partial spec hữu ích từ chỉ 1 ảnh mặt trước khi có thể.",
-                        "Tách rõ 3 lớp thông tin:",
-                        "1) confirmedFacts: chỉ dùng khi có cơ sở khá chắc.",
-                        "2) probableVisualFacts: cho phép suy luận mềm từ hình ảnh trực quan, nhất là khi chỉ có 1 ảnh mặt trước.",
-                        "3) needsMoreImages: nêu rõ cần thêm ảnh gì để xác minh ref, year, caliber hoặc các dữ liệu khó.",
-                        "Không bịa ref, year, caliber nếu không có cơ sở rõ ràng.",
-                        "Nếu không chắc các dữ liệu nhận diện mạnh thì để null.",
-                        "Tuy nhiên, không nên để toàn bộ null nếu ảnh vẫn cho thấy được một số yếu tố trực quan như màu mặt số, kiểu dây/bracelet, kiểu vỏ, chất liệu tone bề mặt, movement probable, kích thước tương đối.",
-                        "Hint người dùng là nguồn thông tin mạnh, nhưng vẫn phải phân biệt confirmedFacts và probableVisualFacts/suggestedFacts.",
-                        "Nếu hint nói 'niềng 18K gold' thì không được tự động suy ra toàn bộ case là vàng khối nếu ảnh không đủ bằng chứng.",
-                        "Nếu cần thêm ảnh để chốt ref/năm/caliber, hãy nêu rõ trong needsMoreImages.",
-                        "Ưu tiên với 1 ảnh mặt trước vẫn cố gắng điền probableVisualFacts cho:",
-                        "- caseType",
-                        "- strapType",
-                        "- dialColor",
-                        "- glass",
-                        "- caseMaterial",
-                        "- movement (nếu chỉ là suy đoán mềm thì để ở probableVisualFacts, confidence thấp)",
-                        "- widthEstimateMm nếu có cơ sở tương đối.",
-                    ].join(" "),
-                },
-            ],
-        },
-        {
-            role: "user",
-            content: [
-                {
-                    type: "input_text",
-                    text: JSON.stringify(
-                        {
-                            vendorName: input.vendorName || null,
-                            cost: input.cost ?? null,
-                            titleHint: input.titleHint || null,
-                            hintText: input.hintText || null,
-                            instructions: {
-                                goal: "Tạo extractedSpec cho bước acquisition",
-                                prioritizeSoftVisualFacts: true,
-                                allowPartialSpecFromSingleFrontImage: true,
-                                doNotInventStrongIdentityFields: true,
-                            },
-                        },
-                        null,
-                        2
-                    ),
-                },
-                ...dataUrls.map((url) => ({
-                    type: "input_image" as const,
-                    image_url: url,
-                })),
-            ],
-        },
-    ];
-
-    let extractedSpec = await repo.callOpenAIJson<AcquisitionExtractedSpec>({
-        apiKey,
-        model,
-        input: extractInput,
-        schema: specSchema(),
-    });
-
-    extractedSpec = normalizeExtractedSpec(extractedSpec, {
-        titleHint: input.titleHint || "",
-        hintText: input.hintText || "",
-    });
-
-    const draftInput = [
-        {
-            role: "developer",
-            content: [
-                {
-                    type: "input_text",
-                    text: [
-                        "Bạn là copywriter nội bộ cho cửa hàng đồng hồ vintage.",
-                        "Viết title và product draft ban đầu cho bước acquisition.",
-                        "Title phải ngắn, tự nhiên, dễ hiểu, nhất quán.",
-                        "Không bịa ref, năm, caliber nếu extractedSpec chưa chắc chắn.",
-                        "Nếu extractedSpec còn yếu, vẫn phải viết draft gọn gàng, có thể hiện đây là bản draft ban đầu để tiếp tục review.",
-                        "Listing copy gọn, social balanced vừa cảm xúc vừa factual, storytelling có chiều sâu hơn một chút nhưng không lố.",
-                        "Nếu titleHint có ích thì ưu tiên dùng để tránh title vô nghĩa như 'Untitled watch'.",
-                    ].join(" "),
-                },
-            ],
-        },
-        {
-            role: "user",
-            content: [
-                {
-                    type: "input_text",
-                    text: JSON.stringify(
-                        {
-                            vendorName: input.vendorName || null,
-                            cost: input.cost ?? null,
-                            titleHint: input.titleHint || null,
-                            hintText: input.hintText || null,
-                            extractedSpec,
-                        },
-                        null,
-                        2
-                    ),
-                },
-            ],
-        },
-    ];
-
-    let generatedDraft = await repo.callOpenAIJson<AcquisitionGeneratedDraft>({
-        apiKey,
-        model,
-        input: draftInput,
-        schema: draftSchema(),
-    });
-
-    generatedDraft = normalizeGeneratedDraft(generatedDraft, {
-        titleHint: input.titleHint || "",
-        hintText: input.hintText || "",
-        extractedSpec,
-    });
-
-    return {
-        extractedSpec,
-        generatedDraft,
-        meta: {
-            mode: "openai",
-            model,
-            message: null,
-        },
-    };
-}
-
 function asNonEmptyString(value: unknown): string | null {
     if (value == null) return null;
     const s = String(value).trim();
@@ -603,120 +335,200 @@ function normalizeExtractedSpec(
     input: { titleHint: string; hintText: string }
 ): AcquisitionExtractedSpec {
     const source = `${input.titleHint} ${input.hintText}`.toLowerCase();
-    const probable = (extracted as any)?.probableVisualFacts ?? {};
+    const probable = { ...(((extracted as any)?.probableVisualFacts ?? {}) as Record<string, unknown>) };
 
-    if (!probable.strapType) {
-        if (
-            source.includes("bracelet") ||
-            source.includes("dây thép") ||
-            source.includes("day thep")
-        ) {
-            probable.strapType = "BRACELET";
-        } else if (source.includes("leather") || source.includes("da")) {
-            probable.strapType = "LEATHER";
+    if (!probable["probableBrand"]) {
+        probable["probableBrand"] =
+            asNonEmptyString((extracted as any)?.suggestedFacts?.probableBrand) ??
+            asNonEmptyString(extracted.brandName);
+    }
+
+    if (!probable["strapType"]) {
+        if (source.includes("bracelet") || source.includes("dây thép") || source.includes("day thep")) {
+            probable["strapType"] = "BRACELET";
+        } else if (source.includes("leather") || source.includes("dây da") || source.includes("day da")) {
+            probable["strapType"] = "LEATHER";
         } else if (source.includes("rubber") || source.includes("cao su")) {
-            probable.strapType = "RUBBER";
+            probable["strapType"] = "RUBBER";
         }
     }
 
-    if (!probable.caseType) {
-        if (
-            source.includes("tank") ||
-            source.includes("rectangular") ||
-            source.includes("chữ nhật") ||
-            source.includes("chu nhat")
-        ) {
-            probable.caseType = "TANK";
-        } else if (
-            source.includes("round") ||
-            source.includes("tròn") ||
-            source.includes("tron")
-        ) {
-            probable.caseType = "ROUND";
-        } else if (
-            source.includes("square") ||
-            source.includes("vuông") ||
-            source.includes("vuong")
-        ) {
-            probable.caseType = "SQUARE";
+    if (!probable["caseType"]) {
+        if (source.includes("tank") || source.includes("rectangular") || source.includes("chữ nhật") || source.includes("chu nhat")) {
+            probable["caseType"] = "RECTANGULAR";
+        } else if (source.includes("round") || source.includes("tròn") || source.includes("tron")) {
+            probable["caseType"] = "ROUND";
+        } else if (source.includes("square") || source.includes("vuông") || source.includes("vuong")) {
+            probable["caseType"] = "SQUARE";
         }
     }
 
-    if (!probable.movement) {
-        if (source.includes("quartz")) probable.movement = "QUARTZ";
-        else if (source.includes("automatic")) probable.movement = "AUTOMATIC";
-        else if (source.includes("manual")) probable.movement = "HAND_WOUND";
-        else if (source.includes("solar")) probable.movement = "SOLAR";
+    if (!probable["movement"]) {
+        if (source.includes("quartz")) probable["movement"] = "QUARTZ";
+        else if (source.includes("automatic")) probable["movement"] = "AUTOMATIC";
+        else if (source.includes("manual") || source.includes("lên dây")) probable["movement"] = "MANUAL";
     }
 
-    if (!probable.caseMaterial) {
-        if (
-            source.includes("steel") ||
-            source.includes("stainless") ||
-            source.includes("thép") ||
-            source.includes("thep")
-        ) {
-            probable.caseMaterial = "STAINLESS_STEEL";
-        } else if (
-            source.includes("gold") ||
-            source.includes("mạ vàng") ||
-            source.includes("ma vang") ||
-            source.includes("vang")
-        ) {
-            probable.caseMaterial = "GOLD";
+    if (!probable["caseMaterial"]) {
+        if (source.includes("steel") || source.includes("stainless") || source.includes("thép") || source.includes("thep")) {
+            probable["caseMaterial"] = "STAINLESS_STEEL";
+        } else if (source.includes("gold") || source.includes("mạ vàng") || source.includes("ma vang") || source.includes("vàng")) {
+            probable["caseMaterial"] = "GOLD";
         } else if (source.includes("two tone") || source.includes("two-tone")) {
-            probable.caseMaterial = "TWO_TONE";
+            probable["caseMaterial"] = "TWO_TONE";
         }
     }
 
     return {
         ...extracted,
         probableVisualFacts: {
-            caseType: asNonEmptyString(probable.caseType),
-            strapType: asNonEmptyString(probable.strapType),
-            dialColor: asNonEmptyString(probable.dialColor),
-            glass: asNonEmptyString(probable.glass),
-            caseMaterial: asNonEmptyString(probable.caseMaterial),
-            movement: asNonEmptyString(probable.movement),
-            widthEstimateMm: asNumberOrNull(probable.widthEstimateMm),
-            styleNotes: Array.isArray(probable.styleNotes) ? probable.styleNotes : [],
+            probableBrand: asNonEmptyString(probable["probableBrand"]),
+            caseType: asNonEmptyString(probable["caseType"]),
+            displayType: asNonEmptyString(probable["displayType"]),
+            strapType: asNonEmptyString(probable["strapType"]),
+            dialColor: asNonEmptyString(probable["dialColor"]),
+            dialMarkers: asNonEmptyString(probable["dialMarkers"]),
+            glass: asNonEmptyString(probable["glass"]),
+            caseMaterial: asNonEmptyString(probable["caseMaterial"]),
+            movement: asNonEmptyString(probable["movement"]),
+            gender: asNonEmptyString(probable["gender"]),
+            sizeClass: asNonEmptyString(probable["sizeClass"]),
+            era: asNonEmptyString(probable["era"]),
+            widthEstimateMm: asNumberOrNull(probable["widthEstimateMm"]),
+            styleNotes: Array.isArray(probable["styleNotes"]) ? (probable["styleNotes"] as string[]) : [],
         },
     } as AcquisitionExtractedSpec;
 }
-function normalizeGeneratedDraft(
-    draft: AcquisitionGeneratedDraft,
-    input: {
-        titleHint: string;
-        hintText: string;
-        extractedSpec: AcquisitionExtractedSpec;
-    }
-): AcquisitionGeneratedDraft {
-    const fallbackTitle =
-        asNonEmptyString(draft?.generatedTitle) ||
-        asNonEmptyString(input.titleHint) ||
-        asNonEmptyString(input.hintText) ||
-        asNonEmptyString(input.extractedSpec?.brandName) ||
-        "Vintage watch draft";
 
-    return {
-        ...draft,
-        generatedTitle: fallbackTitle,
-        titleOptions:
-            Array.isArray(draft?.titleOptions) && draft.titleOptions.length > 0
-                ? draft.titleOptions
-                : [fallbackTitle],
-        specBullets: Array.isArray(draft?.specBullets) ? draft.specBullets : [],
-        listingCopy:
-            asNonEmptyString((draft as any)?.listingCopy) ||
-            `${fallbackTitle}. Đây là draft ban đầu để tiếp tục review và hoàn thiện spec.`,
-        socialBalanced:
-            asNonEmptyString((draft as any)?.socialBalanced) ||
-            `${fallbackTitle} là draft AI ban đầu để tiếp tục review sâu hơn.`,
-        storytellingCopy:
-            asNonEmptyString((draft as any)?.storytellingCopy) ||
-            `${fallbackTitle} là bản draft AI ban đầu để tiếp tục kiểm tra thêm các chi tiết sâu hơn.`,
-        hashtags: Array.isArray(draft?.hashtags) ? draft.hashtags : [],
-        missingData: Array.isArray((draft as any)?.missingData) ? (draft as any).missingData : [],
-        safetyNotes: Array.isArray((draft as any)?.safetyNotes) ? (draft as any).safetyNotes : [],
-    };
+export async function generateAcquisitionDraft(
+    input: GenerateAcquisitionDraftInput
+): Promise<AcquisitionDraftResponse> {
+    const fallbackSpec = buildFallbackSpec(input.titleHint || "", input.hintText || "");
+    const apiKey = process.env.OPENAI_API_KEY;
+    const model = process.env.OPENAI_PRODUCT_CONTENT_MODEL || "gpt-5-mini";
+
+    if (!apiKey) {
+        return {
+            extractedSpec: fallbackSpec,
+            generatedDraft: null,
+            aiVisionRaw: null,
+            meta: {
+                mode: "rule",
+                model: null,
+                message: "Thiếu OPENAI_API_KEY, dùng fallback rule-based.",
+            },
+        };
+    }
+
+    const imageEntries =
+        Array.isArray(input.imageEntries) && input.imageEntries.length > 0
+            ? input.imageEntries
+            : (input.imageUrls ?? []).map((url) => ({ url }));
+
+    const settled = await Promise.allSettled(
+        imageEntries.slice(0, 4).map((entry) => repo.fetchImageEntryAsDataUrl(entry, input.origin))
+    );
+
+    const dataUrls = settled
+        .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled" && Boolean(result.value))
+        .map((result) => result.value);
+
+    if (!dataUrls.length) {
+        return {
+            extractedSpec: fallbackSpec,
+            generatedDraft: null,
+            aiVisionRaw: null,
+            meta: {
+                mode: "rule",
+                model,
+                message: "Không đọc được ảnh từ storage/url, dùng fallback.",
+            },
+        };
+    }
+
+    try {
+        let extractedSpec = await repo.callOpenAIJson<AcquisitionExtractedSpec>({
+            apiKey,
+            model,
+            input: [
+                {
+                    role: "developer",
+                    content: [
+                        {
+                            type: "input_text",
+                            text: [
+                                "Bạn là chuyên gia nhận diện đồng hồ vintage/pre-owned từ ảnh cho nghiệp vụ nhập hàng nội bộ.",
+                                "Mục tiêu ở bước này chỉ là gen spec draft, không viết content bán hàng.",
+                                "Hãy ưu tiên trích xuất những gì nhìn được từ ảnh: brand probable, caseType, movement probable, caseMaterial probable, strapType, dialColor, dial markers, widthEstimateMm, style notes.",
+                                "Nếu brand chưa đủ mạnh để confirm thì để brandName = null nhưng vẫn điền probableBrand khi có cơ sở.",
+                                "Không bịa ref, caliber, year khi không có bằng chứng rõ ràng.",
+                                "Nếu chỉ có một ảnh mặt trước, vẫn phải cố đưa ra partial visual facts hữu ích thay vì để toàn null.",
+                            ].join(" "),
+                        },
+                    ],
+                },
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "input_text",
+                            text: JSON.stringify(
+                                {
+                                    vendorName: input.vendorName || null,
+                                    cost: input.cost ?? null,
+                                    titleHint: input.titleHint || null,
+                                    hintText: input.hintText || null,
+                                    instructions: {
+                                        goal: "Tạo extractedSpec cho bước acquisition",
+                                        onlySpecNoMarketingCopy: true,
+                                        prioritizeSoftVisualFacts: true,
+                                        allowPartialSpecFromSingleFrontImage: true,
+                                        doNotInventStrongIdentityFields: true,
+                                    },
+                                },
+                                null,
+                                2
+                            ),
+                        },
+                        ...dataUrls.map((url) => ({
+                            type: "input_image" as const,
+                            image_url: url,
+                        })),
+                    ],
+                },
+            ],
+            schema: specSchema(),
+        });
+
+        extractedSpec = normalizeExtractedSpec(extractedSpec, {
+            titleHint: input.titleHint || "",
+            hintText: input.hintText || "",
+        });
+
+        return {
+            extractedSpec,
+            generatedDraft: null,
+            aiVisionRaw: null,
+            meta: {
+                mode: "openai",
+                model,
+                message: null,
+            },
+        };
+    } catch (error) {
+        console.error("[ACQ_AI][OPENAI_FAILED]", {
+            error: error instanceof Error ? error.message : error,
+        });
+
+        return {
+            extractedSpec: fallbackSpec,
+            generatedDraft: null,
+            aiVisionRaw: null,
+            meta: {
+                mode: "rule",
+                model,
+                message: "OpenAI/acquisition AI lỗi, dùng fallback từ title/hint.",
+            },
+        };
+    }
 }

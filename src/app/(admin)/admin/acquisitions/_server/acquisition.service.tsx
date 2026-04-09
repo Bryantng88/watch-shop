@@ -23,16 +23,18 @@ type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
 
 type AiDraftPayload = {
     extractedSpec?: any;
-    generatedDraft?: any;
+    generatedDraft?: any | null;
     meta?: any;
 };
 
 type PostedWatchAiBundle = {
     aiMeta: any;
     aiExtracted: any;
-    aiGenerated: any;
+    aiGenerated: any | null;
     aiDraft: AiDraftPayload | null;
 };
+
+type AcquisitionSpecJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
@@ -138,6 +140,105 @@ function getAiImageUrls(aiMeta: ReturnType<typeof getAiMetaFromDescription>) {
     return (aiMeta?.images ?? [])
         .map((x) => String(x?.url ?? "").trim())
         .filter(Boolean);
+}
+
+function capitalizeWord(value: string | null | undefined) {
+    if (!value) return null;
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function movementLabel(value: unknown) {
+    const v = String(value ?? "").trim().toUpperCase();
+    if (!v) return null;
+    if (v === "AUTOMATIC") return "Automatic";
+    if (v === "QUARTZ") return "Quartz";
+    if (v === "MANUAL" || v === "HAND_WOUND") return "Manual";
+    return capitalizeWord(v.replace(/_/g, " "));
+}
+
+function buildProductNickname(input: { aiExtracted: any; aiMeta: any; item: ExistingAcqItem }) {
+    const hint = toStringOrNull(input.aiMeta?.aiHint) ?? toStringOrNull(input.item.productTitle);
+    if (!hint) return null;
+
+    const match = hint.match(/["“](.+?)["”]/) || hint.match(/\(([^)]+)\)/);
+    if (match?.[1]) return toStringOrNull(match[1]);
+
+    const normalized = hint.toLowerCase();
+    const soft = ["tank", "diver", "power reserve", "power-reserve", "chrono", "moonphase"];
+    const found = soft.find((x) => normalized.includes(x));
+    return found ? capitalizeWord(found.replace(/-/g, " ")) : null;
+}
+
+function buildProductTitleFromAi(input: {
+    aiExtracted: any;
+    aiMeta: any;
+    item: ExistingAcqItem;
+}) {
+    const extracted = input.aiExtracted ?? {};
+    const probable = extracted?.probableVisualFacts ?? {};
+    const brand =
+        toStringOrNull(extracted?.confirmedFacts?.brandName) ??
+        toStringOrNull(extracted?.brandName) ??
+        toStringOrNull(extracted?.suggestedFacts?.probableBrand) ??
+        toStringOrNull(probable?.probableBrand);
+
+    const model =
+        toStringOrNull(extracted?.modelFamily) ??
+        toStringOrNull(extracted?.bestRefCandidate);
+
+    const nickname = buildProductNickname(input);
+    const movement = movementLabel(extracted?.movement ?? probable?.movement);
+    const dialColorRaw = toStringOrNull(extracted?.dialColor) ?? toStringOrNull(probable?.dialColor);
+    const dialColor = dialColorRaw ? `${capitalizeWord(dialColorRaw)} Dial` : null;
+
+    const title = [brand, model, nickname ? `"${nickname}"` : null, movement, dialColor]
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return {
+        title: title || toStringOrNull(input.item.productTitle) || "Watch draft",
+        nickname,
+        resolvedBrandName: brand,
+    };
+}
+
+function resolveSpecStatusFromAi(aiExtracted: any): string {
+    const confirmedBrand = toStringOrNull(aiExtracted?.confirmedFacts?.brandName) ?? toStringOrNull(aiExtracted?.brandName);
+    const probableBrand =
+        toStringOrNull(aiExtracted?.suggestedFacts?.probableBrand) ??
+        toStringOrNull(aiExtracted?.probableVisualFacts?.probableBrand);
+
+    if (!aiExtracted) return "FAILED";
+    if (!confirmedBrand && probableBrand) return "REVIEW";
+    return "READY";
+}
+
+async function enqueueAcquisitionSpecJob(
+    tx: DB,
+    input: {
+        acquisitionItemId: string;
+        productId: string;
+    }
+) {
+    await (tx as any).acquisitionSpecJob.upsert({
+        where: { acquisitionItemId: input.acquisitionItemId },
+        update: {
+            productId: input.productId,
+            status: "PENDING",
+            attempts: 0,
+            lastError: null,
+            startedAt: null,
+            finishedAt: null,
+        },
+        create: {
+            acquisitionItemId: input.acquisitionItemId,
+            productId: input.productId,
+            status: "PENDING",
+            attempts: 0,
+        },
+    });
 }
 
 async function persistAiDraftToItem(
@@ -344,64 +445,31 @@ async function preparePostedWatchAiDataOutsideTx(
     let aiGenerated = aiMeta?.ai?.generatedDraft ?? null;
     let aiDraft: AiDraftPayload | null = aiMeta?.ai ?? null;
 
-    console.log("[ACQ_POST][AI_META]", {
-        itemId: item.id,
-        aiMeta,
-        images: aiMeta?.images,
-    });
-
-    if (
-        !aiExtracted &&
-        Array.isArray(aiMeta?.images) &&
-        aiMeta.images.length > 0
-    ) {
-        const imageUrls = (aiMeta?.images ?? [])
-            .map((x: any) => String(x?.url ?? "").trim())
-            .filter(Boolean);
-
-        console.log("[ACQ_POST][AI_INPUT]", {
-            itemId: item.id,
-            imageUrls,
-            hint: aiMeta?.aiHint ?? null,
-        });
-
-        try {
-            const generated = await acquisitionAiService.generateAcquisitionDraft({
-                origin:
-                    process.env.NEXT_PUBLIC_APP_URL ||
-                    process.env.APP_URL ||
-                    "http://localhost:3000",
-                imageUrls,
-                imageEntries: aiMeta?.images ?? [],
-                titleHint: item.productTitle ?? null,
-                hintText: aiMeta?.aiHint ?? null,
-                vendorName: null,
-                cost: Number(item.unitCost ?? 0),
-            });
-
-            aiDraft = generated;
-            aiExtracted = generated?.extractedSpec ?? null;
-            aiGenerated = generated?.generatedDraft ?? null;
-
-            console.log("[ACQ_POST][AI_OUTPUT]", {
-                itemId: item.id,
-                extracted: aiExtracted,
-                generated: aiGenerated,
-            });
-        } catch (e) {
-            console.error("[ACQ_POST][AI_GENERATE_FAILED]", {
-                itemId: item.id,
-                error: e instanceof Error ? e.message : e,
-            });
-        }
+    if (aiExtracted) {
+        return { aiMeta, aiExtracted, aiGenerated, aiDraft };
     }
 
-    return {
-        aiMeta,
-        aiExtracted,
-        aiGenerated,
-        aiDraft,
-    };
+    const imageUrls = getAiImageUrls(aiMeta);
+    if (!imageUrls.length) {
+        return { aiMeta, aiExtracted: null, aiGenerated: null, aiDraft: null };
+    }
+
+    const generated = await acquisitionAiService.generateAcquisitionDraft({
+        origin:
+            process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000",
+        imageUrls,
+        imageEntries: aiMeta?.images ?? [],
+        titleHint: item.productTitle ?? null,
+        hintText: aiMeta?.aiHint ?? null,
+        vendorName: null,
+        cost: Number(item.unitCost ?? 0),
+    });
+
+    aiDraft = generated;
+    aiExtracted = generated?.extractedSpec ?? null;
+    aiGenerated = generated?.generatedDraft ?? null;
+
+    return { aiMeta, aiExtracted, aiGenerated, aiDraft };
 }
 
 async function persistPostedWatchAiData(
@@ -455,12 +523,16 @@ async function createBaseWatchProduct(
         productType: any;
         primaryImageKey?: string | null;
         brandConnect?: { connect: { id: string } };
+        nickname?: string | null;
+        specStatus?: string | null;
     }
 ) {
     return tx.product.create({
         data: {
             title: input.title,
             sku: input.sku,
+            nickname: input.nickname ?? null,
+            specStatus: input.specStatus ?? "PENDING",
             status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
             type: input.productType,
@@ -611,26 +683,48 @@ async function createWatchSpecSafe(
     }
 
     try {
-        await tx.watchSpec.create({
-            data: {
+        await tx.watchSpec.upsert({
+            where: { productId },
+            update: {
+                ref: resolvedRef,
+                model: resolvedModel,
+                year: resolvedYear,
+                caseType: resolvedCaseType ?? undefined,
+                gender: resolvedGender ?? undefined,
+                movement: resolvedMovement ?? undefined,
+                caliber: resolvedCaliber,
+                caseMaterial: resolvedCaseMaterial ?? undefined,
+                goldKarat: resolvedGoldKarat,
+                goldColor: resolvedGoldColor ?? undefined,
+                length: resolvedLength,
+                width: resolvedWidth,
+                thickness: resolvedThickness,
+                strap: resolvedStrap ?? undefined,
+                glass: resolvedGlass ?? undefined,
+                dialColor: resolvedDialColor,
+                boxIncluded: resolvedBoxIncluded ?? false,
+                bookletIncluded: resolvedBookletIncluded ?? false,
+                cardIncluded: resolvedCardIncluded ?? false,
+            },
+            create: {
                 product: {
                     connect: { id: productId },
                 },
                 ref: resolvedRef,
                 model: resolvedModel,
                 year: resolvedYear,
-                caseType: resolvedCaseType,
-                gender: resolvedGender,
-                movement: resolvedMovement,
+                caseType: resolvedCaseType ?? undefined,
+                gender: resolvedGender ?? undefined,
+                movement: resolvedMovement ?? undefined,
                 caliber: resolvedCaliber,
-                caseMaterial: resolvedCaseMaterial,
+                caseMaterial: resolvedCaseMaterial ?? undefined,
                 goldKarat: resolvedGoldKarat,
-                goldColor: resolvedGoldColor,
+                goldColor: resolvedGoldColor ?? undefined,
                 length: resolvedLength,
                 width: resolvedWidth,
                 thickness: resolvedThickness,
-                strap: resolvedStrap,
-                glass: resolvedGlass,
+                strap: resolvedStrap ?? undefined,
+                glass: resolvedGlass ?? undefined,
                 dialColor: resolvedDialColor,
                 boxIncluded: resolvedBoxIncluded ?? false,
                 bookletIncluded: resolvedBookletIncluded ?? false,
@@ -785,47 +879,22 @@ async function createWatchProductForPostedItem(
         preparedAi?: PostedWatchAiBundle | null;
     }
 ) {
-    const { acqId, vendorId, item, preparedAi } = params;
+    const { acqId, vendorId, item } = params;
 
     const watchFlags = getWatchFlagsFromDescription(item.description);
-    const aiMeta = preparedAi?.aiMeta ?? getAiMetaFromDescription(item.description);
-    const aiExtracted = preparedAi?.aiExtracted ?? aiMeta?.ai?.extractedSpec ?? null;
-    const aiGenerated = preparedAi?.aiGenerated ?? aiMeta?.ai?.generatedDraft ?? null;
-
-    await persistPostedWatchAiData(tx, item, preparedAi ?? {
-        aiMeta,
-        aiExtracted,
-        aiGenerated,
-        aiDraft: aiMeta?.ai ?? null,
-    });
-
+    const aiMeta = getAiMetaFromDescription(item.description);
     const productType = (item.productType ?? "WATCH") as any;
     const sku = await genUniqueProductSku(tx as any, productType);
     const primaryImageKey = aiMeta?.images?.[0]?.key ?? null;
 
-    const resolvedBrandName =
-        toStringOrNull(aiExtracted?.brandName) ??
-        toStringOrNull(aiExtracted?.confirmedFacts?.brandName) ??
-        toStringOrNull(aiExtracted?.suggestedFacts?.probableBrand) ??
-        toStringOrNull(aiExtracted?.probableVisualFacts?.probableBrand);
-
-    const brandConnect = await resolveBrandConnectFromAi(
-        tx,
-        resolvedBrandName
-    );
-
-    const generatedTitle =
-        toStringOrNull(aiGenerated?.generatedTitle) ||
-        toStringOrNull(item.productTitle) ||
-        "Untitled draft product";
-
     const createdProduct = await createBaseWatchProduct(tx, {
-        title: generatedTitle,
+        title: toStringOrNull(item.productTitle) || "Processing spec...",
         sku,
         vendorId,
         productType,
         primaryImageKey,
-        brandConnect,
+        nickname: null,
+        specStatus: "PENDING",
     });
 
     const createdVariant = await createBaseVariantForPostedWatch(tx, {
@@ -835,27 +904,17 @@ async function createWatchProductForPostedItem(
         unitCost: Number(item.unitCost ?? 0),
     });
 
-    await createWatchSpecSafe(tx, {
-        productId: createdProduct.id,
-        itemId: item.id,
-        aiExtracted,
-    });
-
-    await createProductContentSafe(tx, {
-        productId: createdProduct.id,
-        itemId: item.id,
-        generatedTitle,
-        aiExtracted,
-        aiGenerated,
-        aiMeta,
-    });
-
     await tx.acquisitionItem.update({
         where: { id: item.id },
         data: {
             productId: createdProduct.id,
             variantId: createdVariant.id,
         },
+    });
+
+    await enqueueAcquisitionSpecJob(tx, {
+        acquisitionItemId: item.id,
+        productId: createdProduct.id,
     });
 
     await maybeCreateTechnicalCheckForPostedWatch(tx, {
@@ -1093,100 +1152,335 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
     });
 }
 
-export async function postAcquisition(acqId: string, vendorName: string) {
-    const acq = await repoAcq.getAcqtById(acqId);
-    if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+export async function postAcquisition(
+    acqId: string,
+    vendorName?: string | null
+) {
+    try {
+        console.log("[ACQ_POST][START]", {
+            acqId,
+            vendorName,
+        });
 
-    const vendorId = await resolveVendorIdForPosting(acq, vendorName);
-    if (!vendorId) {
-        throw new Error("Không tìm thấy vendor để post phiếu");
-    }
+        const acq = await repoAcq.getAcqtById(acqId);
 
-    const items = acq.acquisitionItem ?? [];
-    const newItems = items.filter((item) => !item.productId);
-    const existingItems = items.filter((item) => !!item.productId);
+        console.log("[ACQ_POST][ACQ_LOADED]", {
+            acqId,
+            found: Boolean(acq),
+            itemCount: acq?.acquisitionItem?.length ?? 0,
+        });
 
-    const preparedAiByItemId = new Map<string, PostedWatchAiBundle>();
-    const watchItemsNeedingAi = newItems.filter(
-        (item) => (item.productType ?? "WATCH") !== "WATCH_STRAP"
-    );
+        if (!acq) {
+            throw new Error("Không tìm thấy phiếu nhập");
+        }
 
-    for (const item of watchItemsNeedingAi) {
-        const aiMeta = getAiMetaFromDescription(item.description);
-        const preparedAi = await preparePostedWatchAiDataOutsideTx(item as ExistingAcqItem, aiMeta);
-        preparedAiByItemId.set(item.id, preparedAi);
-    }
+        const vendorId = await resolveVendorIdForPosting(acq, vendorName ?? "");
 
-    const result = await prisma.$transaction(
-        async (tx) => {
-            if (existingItems.length > 0) {
-                const productIds = Array.from(
-                    new Set(existingItems.map((x) => x.productId).filter((v): v is string => !!v))
-                );
+        console.log("[ACQ_POST][VENDOR_RESOLVED]", {
+            acqId,
+            vendorName,
+            vendorId,
+        });
 
-                if (productIds.length) {
-                    const variants = await tx.productVariant.findMany({
-                        where: { productId: { in: productIds } },
-                        orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
-                        select: {
-                            id: true,
-                            productId: true,
-                        },
+        if (!vendorId) {
+            throw new Error("Không tìm thấy vendor để post phiếu");
+        }
+
+        const items = acq.acquisitionItem ?? [];
+        const newItems = items.filter((item) => !item.productId);
+        const existingItems = items.filter((item) => !!item.productId);
+
+        console.log("[ACQ_POST][ITEMS_READY]", {
+            acqId,
+            total: items.length,
+            newItems: newItems.length,
+            existingItems: existingItems.length,
+        });
+
+        let result: any;
+
+        try {
+            result = await prisma.$transaction(
+                async (tx) => {
+                    console.log("[ACQ_POST][TX_BEGIN]", {
+                        acqId,
+                        newItems: newItems.length,
+                        existingItems: existingItems.length,
                     });
 
-                    const variantMap = new Map<string, string>();
-                    for (const row of variants) {
-                        if (!variantMap.has(row.productId)) {
-                            variantMap.set(row.productId, row.id);
+                    if (existingItems.length > 0) {
+                        const productIds = Array.from(
+                            new Set(
+                                existingItems
+                                    .map((x) => x.productId)
+                                    .filter((v): v is string => !!v)
+                            )
+                        );
+
+                        console.log("[ACQ_POST][EXISTING_PRODUCT_IDS]", {
+                            acqId,
+                            productIds,
+                        });
+
+                        if (productIds.length) {
+                            const variants = await tx.productVariant.findMany({
+                                where: { productId: { in: productIds } },
+                                orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                                select: {
+                                    id: true,
+                                    productId: true,
+                                },
+                            });
+
+                            console.log("[ACQ_POST][VARIANTS_FOUND]", {
+                                acqId,
+                                count: variants.length,
+                            });
+
+                            const variantMap = new Map<string, string>();
+                            for (const row of variants) {
+                                if (!variantMap.has(row.productId)) {
+                                    variantMap.set(row.productId, row.id);
+                                }
+                            }
+
+                            for (const row of existingItems) {
+                                if (row.variantId || !row.productId) continue;
+                                const resolvedVariantId = variantMap.get(row.productId);
+                                if (!resolvedVariantId) continue;
+
+                                console.log("[ACQ_POST][LINK_EXISTING_ITEM_BEGIN]", {
+                                    itemId: row.id,
+                                    productId: row.productId,
+                                    resolvedVariantId,
+                                });
+
+                                await tx.acquisitionItem.update({
+                                    where: { id: row.id },
+                                    data: { variantId: resolvedVariantId },
+                                });
+
+                                console.log("[ACQ_POST][LINK_EXISTING_ITEM_DONE]", {
+                                    itemId: row.id,
+                                });
+                            }
                         }
                     }
 
-                    for (const row of existingItems) {
-                        if (row.variantId || !row.productId) continue;
-                        const resolvedVariantId = variantMap.get(row.productId);
-                        if (!resolvedVariantId) continue;
+                    for (const item of newItems) {
+                        console.log("[ACQ_POST][CREATE_PRODUCT_BEGIN]", {
+                            itemId: item.id,
+                            productType: item.productType ?? "WATCH",
+                            title: item.productTitle ?? null,
+                        });
 
-                        await tx.acquisitionItem.update({
-                            where: { id: row.id },
-                            data: { variantId: resolvedVariantId },
+                        await createProductForPostedItem(tx, {
+                            acqId: acq.refNo ?? acq.id,
+                            vendorId,
+                            item: item as ExistingAcqItem,
+                            preparedAi: null,
+                        });
+
+                        console.log("[ACQ_POST][CREATE_PRODUCT_DONE]", {
+                            itemId: item.id,
                         });
                     }
+
+                    console.log("[ACQ_POST][UPDATE_ITEMS_STATUS_BEGIN]", { acqId });
+
+                    await tx.acquisitionItem.updateMany({
+                        where: { acquisitionId: acqId, status: "DRAFT" as any },
+                        data: { status: "SENT" as any },
+                    });
+
+                    console.log("[ACQ_POST][UPDATE_ITEMS_STATUS_DONE]", { acqId });
+
+                    console.log("[ACQ_POST][CHANGE_DRAFT_TO_POST_BEGIN]", { acqId });
+
+                    const posted = await repoAcq.changeDraftToPost(tx, acqId);
+
+                    console.log("[ACQ_POST][CHANGE_DRAFT_TO_POST_DONE]", { acqId });
+
+                    console.log("[ACQ_POST][TX_DONE]", { acqId });
+
+                    return posted;
+                },
+                {
+                    maxWait: 10000,
+                    timeout: 60000,
                 }
-            }
+            );
+        } catch (error) {
+            console.error("[ACQ_POST][TX_FAILED]", {
+                acqId,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : null,
+            });
+            throw error;
+        }
 
-            for (const item of newItems) {
-                await createProductForPostedItem(tx, {
-                    acqId: acq.refNo ?? acq.id,
-                    vendorId,
-                    item: item as ExistingAcqItem,
-                    preparedAi: preparedAiByItemId.get(item.id) ?? null,
+        try {
+            console.log("[ACQ_POST][INVOICE_BEGIN]", { acqId });
+
+            await prisma.$transaction(
+                async (tx) => {
+                    await createInvoiceFromAcquisition(tx as any, acqId);
+                },
+                {
+                    maxWait: 10000,
+                    timeout: 30000,
+                }
+            );
+
+            console.log("[ACQ_POST][INVOICE_DONE]", { acqId });
+        } catch (error) {
+            console.error("[ACQ_POST][INVOICE_FAILED]", {
+                acqId,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : null,
+            });
+            throw error;
+        }
+
+        console.log("[ACQ_POST][AUTO_TRIGGER_BEGIN]", {
+            acqId,
+            limit: Math.max(1, Math.min(newItems.length, 2)),
+        });
+
+        void processQueuedAcquisitionSpecJobs({
+            limit: Math.max(1, Math.min(newItems.length, 2)),
+        })
+            .then(() => {
+                console.log("[ACQ_POST][AUTO_TRIGGER_DONE]", { acqId });
+            })
+            .catch((e) => {
+                console.error("[ACQ_POST][AUTO_TRIGGER_FAILED]", {
+                    acqId,
+                    error: e instanceof Error ? e.message : String(e),
+                    stack: e instanceof Error ? e.stack : null,
                 });
-            }
-
-            await tx.acquisitionItem.updateMany({
-                where: { acquisitionId: acqId, status: "DRAFT" as any },
-                data: { status: "SENT" as any },
             });
 
-            return repoAcq.changeDraftToPost(tx, acqId);
-        },
-        {
-            maxWait: 10000,
-            timeout: 320000,
-        }
-    );
+        console.log("[ACQ_POST][SUCCESS]", { acqId });
 
-    await prisma.$transaction(
-        async (tx) => {
-            await createInvoiceFromAcquisition(tx as any, acqId);
-        },
-        {
-            maxWait: 10000,
-            timeout: 30000,
-        }
-    );
+        return result;
+    } catch (error) {
+        console.error("[ACQ_POST][FAILED]", {
+            acqId,
+            vendorName,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : null,
+        });
+        throw error;
+    }
+}
+export async function processQueuedAcquisitionSpecJobs(input?: { limit?: number }) {
+    const jobs = await (prisma as any).acquisitionSpecJob.findMany({
+        where: { status: { in: ["PENDING", "FAILED"] } },
+        orderBy: [{ createdAt: "asc" }],
+        take: Math.max(2, Math.min(input?.limit ?? 6, 10)),
+    });
 
-    return result;
+    let processed = 0;
+
+    for (const job of jobs) {
+        const claim = await (prisma as any).acquisitionSpecJob.updateMany({
+            where: {
+                id: job.id,
+                status: { in: ["PENDING", "FAILED"] },
+            },
+            data: {
+                status: "RUNNING",
+                startedAt: new Date(),
+                attempts: Number(job.attempts ?? 0) + 1,
+                lastError: null,
+            },
+        });
+
+        if (!claim?.count) continue;
+
+        try {
+            const item = await prisma.acquisitionItem.findUnique({
+                where: { id: job.acquisitionItemId },
+                include: {
+                    product: true,
+                },
+            });
+
+            if (!item?.productId || !item.product) {
+                throw new Error("Thiếu acquisition item hoặc product để gen spec.");
+            }
+
+            const aiMeta = getAiMetaFromDescription(item.description);
+            const preparedAi = await preparePostedWatchAiDataOutsideTx(item as ExistingAcqItem, aiMeta);
+            const aiExtracted = preparedAi.aiExtracted;
+            if (!aiExtracted) {
+                throw new Error("AI không trả về extractedSpec.");
+            }
+
+            const built = buildProductTitleFromAi({
+                aiExtracted,
+                aiMeta: preparedAi.aiMeta,
+                item: item as ExistingAcqItem,
+            });
+
+            await prisma.$transaction(async (tx) => {
+                await persistPostedWatchAiData(tx, item as ExistingAcqItem, preparedAi);
+
+                const brandConnect = await resolveBrandConnectFromAi(tx, built.resolvedBrandName);
+
+                await tx.product.update({
+                    where: { id: item.productId! },
+                    data: {
+                        title: built.title,
+                        nickname: built.nickname,
+                        specStatus: resolveSpecStatusFromAi(aiExtracted),
+                        ...(brandConnect ? { brand: brandConnect } : {}),
+                    },
+                });
+
+                await createWatchSpecSafe(tx, {
+                    productId: item.productId!,
+                    itemId: item.id,
+                    aiExtracted,
+                });
+
+                await (tx as any).acquisitionSpecJob.update({
+                    where: { id: job.id },
+                    data: {
+                        status: "DONE",
+                        finishedAt: new Date(),
+                        lastError: null,
+                    },
+                });
+            });
+
+            processed += 1;
+        } catch (e) {
+            console.error("[ACQ_SPEC_JOB][FAILED]", {
+                jobId: job.id,
+                error: e instanceof Error ? e.message : e,
+            });
+
+            await (prisma as any).acquisitionSpecJob.update({
+                where: { id: job.id },
+                data: {
+                    status: "FAILED",
+                    finishedAt: new Date(),
+                    lastError: e instanceof Error ? e.message : String(e),
+                },
+            });
+
+            if (job.productId) {
+                await prisma.product.updateMany({
+                    where: { id: job.productId },
+                    data: { specStatus: "FAILED" },
+                });
+            }
+        }
+    }
+
+    return { processed };
 }
 
 export async function postMultipleAcquisitions(acquisitionIds: string[]) {

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import MediaPickerInline from "@/components/media/MediaPickerInline";
+import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu"
 import StatusBadge from "@/components/badges/StatusBadge";
 import MiniDotLabel from "@/components/_shared/MiniDotLabel";
 
@@ -26,28 +25,69 @@ type Props = {
   checked: boolean;
   canViewCost: boolean;
   canEditPrice: boolean;
-  pendingImage?: boolean;
   onCheckedChange: (checked: boolean) => void;
-  onImageUploaded: (productId: string, fileKey: string) => void;
   onOpenReadiness: (product: ProductRow) => void;
   onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
-
+  onPriceCommit: (
+    productId: string,
+    field: "minPrice" | "salePrice" | "purchasePrice",
+    value: number | null
+  ) => Promise<void>;
   onView: (productId: string) => void;
   onEdit: (productId: string) => void;
   onDelete: (productId: string) => void;
   onService: (productId: string) => void;
 };
 
+function PriceLine({
+  label,
+  value,
+  valueClassName,
+  extra,
+}: {
+  label: string;
+  value: React.ReactNode;
+  valueClassName?: string;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-3 text-sm">
+      <span className="text-slate-400">{label}</span>
+      <div className="flex items-center justify-end gap-2">
+        <div className={["min-w-[92px] text-right font-medium", valueClassName || "text-slate-900"].join(" ")}>
+          {value}
+        </div>
+        {extra ? <div className="shrink-0">{extra}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+function Thumbnail({ src, alt }: { src?: string | null; alt: string }) {
+  if (!src) {
+    return (
+      <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-100 ring-1 ring-slate-200" />
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200"
+    />
+  );
+}
+
 export default function ProductListRow({
   product,
   checked,
   canViewCost,
   canEditPrice,
-  pendingImage = false,
   onCheckedChange,
-  onImageUploaded,
   onOpenReadiness,
   onPriceSaved,
+  onPriceCommit,
   onView,
   onEdit,
   onDelete,
@@ -55,10 +95,14 @@ export default function ProductListRow({
 }: Props) {
   const service = getServiceLabel(product);
   const readiness = getPostReadinessState(product);
+  const hasMissingImage =
+    !isWomenWatch(product) &&
+    hasMissingCoreReadinessInfo(product) &&
+    hasMissingImageReadiness(product);
 
   return (
-    <tr className="border-t border-slate-100 align-top hover:bg-slate-50/50">
-      <td className="px-4 py-4">
+    <tr className="border-t border-slate-100 transition hover:bg-slate-50/50">
+      <td className="px-4 py-4 align-middle">
         <input
           type="checkbox"
           checked={checked}
@@ -66,136 +110,148 @@ export default function ProductListRow({
         />
       </td>
 
-      <td className="px-4 py-4">
-        <MediaPickerInline
-          value={product.primaryImageUrl ?? null}
-          onChange={(fileKey) => onImageUploaded(product.id, fileKey)}
-          pending={pendingImage}
-          profile="inline"
-          compact
-        />
-      </td>
-
-      <td className="min-w-[240px] px-4 py-4">
-        <div className="font-medium text-slate-900">{product.title || "-"}</div>
-        <div className="mt-1 text-xs text-slate-500">
-          {`${(product.brand || "-").toLowerCase()} · ${(product.type || "-").toLowerCase()}`}
-        </div>
-
-        {service ? (
-          <div className="mt-2">
-            <MiniDotLabel label={service.label} tone={service.tone} />
-          </div>
-        ) : null}
-      </td>
-
-      <td className="px-4 py-4 text-sm text-slate-600">
-        {product.variantSnapshot?.sku || "-"}
-      </td>
-
-      <td className="px-4 py-4 text-sm text-slate-700">
-        {product.vendorName || "-"}
-      </td>
-
-      <td className="px-4 py-4">
-        <span className={getInventoryStatusTextClass(product.status)}>
-          {getProductInventoryStatusText(product.status)}
-        </span>
-      </td>
-
-      <td className="px-4 py-4 text-sm">
-        {product.acquisitionId && product.acquisitionRefNo ? (
-          <Link
-            href={`/admin/acquisitions/${product.acquisitionId}/edit`}
-            className="font-medium text-sky-700 hover:underline"
-          >
-            {product.acquisitionRefNo}
-          </Link>
-        ) : (
-          <span className="text-slate-400">-</span>
-        )}
-      </td>
-
-      <td className="px-4 py-4 text-right text-sm text-slate-900">
-        {canEditPrice ? (
-          <InlineMoneyEditor
-            productId={product.id}
-            field="minPrice"
-            value={product.minPrice}
-            label="Giá bán"
-            onSaved={(v) => onPriceSaved(product.id, { minPrice: v })}
+      <td className="px-4 py-4 align-middle">
+        <div className="flex items-center gap-4">
+          <Thumbnail
+            src={product.primaryImageUrl ?? undefined}
+            alt={product.title || "product"}
           />
-        ) : (
-          fmtMoney(product.minPrice)
-        )}
-      </td>
 
-      <td className="px-4 py-4 text-right text-sm text-emerald-700">
-        {product.salePrice != null ? fmtMoney(product.salePrice) : "-"}
-      </td>
-
-      {canViewCost ? (
-        <td className="px-4 py-4 text-right text-sm text-slate-900">
-          {fmtMoney(product.purchasePrice)}
-        </td>
-      ) : null}
-
-      <td className="px-4 py-4">
-        <div className="flex flex-col items-start gap-1">
-          <div className="flex h-[20px] items-center">
-            <StatusBadge status={getContentStatusBadgeValue(product) as any} />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onOpenReadiness(product)}
-            className="text-left"
-          >
-            <div className="flex flex-col">
-              <MiniDotLabel label={readiness.label} tone={readiness.tone} />
-              {!isWomenWatch(product) &&
-                hasMissingCoreReadinessInfo(product) &&
-                hasMissingImageReadiness(product) ? (
-                <MiniDotLabel
-                  label="Missing Image"
-                  tone="gray"
-                  className="mt-0.5"
-                />
-              ) : null}
+          <div className="min-w-0 flex-1 self-start">
+            <div className="truncate text-[16px] font-medium text-slate-950">
+              {product.title || "-"}
             </div>
-          </button>
+
+            <div className="mt-1 truncate text-xs text-slate-500">
+              {`${(product.brand || "-").toLowerCase()} · ${(product.type || "-").toLowerCase()}`}
+            </div>
+
+            {product.variantSnapshot?.sku ? (
+              <div className="mt-1 text-xs text-slate-400">
+                SKU: {product.variantSnapshot.sku}
+              </div>
+            ) : null}
+
+            {service ? (
+              <div className="mt-2">
+                <MiniDotLabel label={service.label} tone={service.tone} />
+              </div>
+            ) : null}
+          </div>
         </div>
       </td>
 
-      <td className="px-4 py-4 text-sm text-slate-600">
-        {fmtDT(product.updatedAt)}
+      <td className="px-4 py-4 align-middle">
+        <div className="space-y-2">
+          <div className={getInventoryStatusTextClass(product.status)}>
+            {getProductInventoryStatusText(product.status)}
+          </div>
+
+          <div className="text-sm">
+            {product.acquisitionId && product.acquisitionRefNo ? (
+              <Link
+                href={`/admin/acquisitions/${product.acquisitionId}/edit`}
+                className="font-medium text-sky-700 hover:underline"
+              >
+                {product.acquisitionRefNo}
+              </Link>
+            ) : (
+              <span className="text-slate-400">-</span>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <StatusBadge status={getContentStatusBadgeValue(product) as any} />
+            <button
+              type="button"
+              onClick={() => onOpenReadiness(product)}
+              className="block text-left"
+            >
+              <div className="space-y-1">
+                <MiniDotLabel label={readiness.label} tone={readiness.tone} />
+                {hasMissingImage ? (
+                  <MiniDotLabel label="Missing Image" tone="gray" />
+                ) : null}
+              </div>
+            </button>
+          </div>
+        </div>
       </td>
 
-      <td className="px-4 py-4 text-sm text-slate-600">
-        {fmtDT(product.createdAt)}
+      <td className="px-4 py-4 align-middle">
+        <div className="space-y-2 rounded-2xl bg-slate-50/70 px-3 py-3 ring-1 ring-slate-100">
+          <PriceLine
+            label="Bán"
+            value={fmtMoney(product.minPrice)}
+            valueClassName="text-sky-700"
+            extra={
+              canEditPrice ? (
+                <InlineMoneyEditor
+                  value={product.minPrice}
+                  label="Giá bán"
+                  compact
+                  iconOnly
+                  onSubmit={async (v) => {
+                    await onPriceCommit(product.id, "minPrice", v);
+                    onPriceSaved(product.id, { minPrice: v });
+                  }}
+                />
+              ) : null
+            }
+          />
+
+          <PriceLine
+            label="Sale"
+            value={product.salePrice != null ? fmtMoney(product.salePrice) : "-"}
+            valueClassName="text-emerald-700"
+          />
+
+          {canViewCost ? (
+            <PriceLine
+              label="Mua"
+              value={fmtMoney(product.purchasePrice)}
+              valueClassName="text-violet-700"
+            />
+          ) : null}
+        </div>
       </td>
 
-      <td className="px-4 py-4 text-right">
-        <RowActionsMenu
+      <td className="px-4 py-4 align-middle">
+        <div className="space-y-1 text-sm leading-6 text-slate-600">
+          <div>{fmtDT(product.updatedAt)}</div>
+          <div className="text-xs text-slate-400">Tạo: {fmtDT(product.createdAt)}</div>
+          {product.vendorName ? (
+            <div className="pt-1 text-xs text-slate-400">Vendor: {product.vendorName}</div>
+          ) : null}
+        </div>
+      </td>
+
+      <td className="px-4 py-4 text-right align-middle">
+        <RowActionMenu
+          align="right"
           actions={[
             {
               key: "view",
               label: "Xem chi tiết",
+              icon: "view",
               onClick: () => onView(product.id),
             },
             {
               key: "edit",
               label: "Chỉnh sửa",
+              icon: "edit",
               onClick: () => onEdit(product.id),
             },
             {
               key: "service",
               label: "Tạo service request",
+              icon: "service",
               onClick: () => onService(product.id),
             },
             {
               key: "delete",
               label: "Xóa sản phẩm",
+              icon: "delete",
               onClick: () => onDelete(product.id),
               danger: true,
             },

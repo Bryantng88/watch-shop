@@ -17,6 +17,7 @@ import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { EnumContentStatusFilterObjectSchema as EnumContentStatusFilterObjectSchema } from './EnumContentStatusFilter.schema';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
+import { AcquisitionSpecJobListRelationFilterObjectSchema as AcquisitionSpecJobListRelationFilterObjectSchema } from './AcquisitionSpecJobListRelationFilter.schema';
 import { InvoiceItemListRelationFilterObjectSchema as InvoiceItemListRelationFilterObjectSchema } from './InvoiceItemListRelationFilter.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
@@ -62,7 +63,10 @@ const productwhereinputSchema = z.object({
   aiPromptUsed: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   aiGeneratedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   sku: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  nickname: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  specStatus: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   orderItems: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),

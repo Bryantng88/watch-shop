@@ -505,3 +505,16 @@ export { ProductContentDeleteManyResultSchema } from './ProductContentDeleteMany
 export { ProductContentAggregateResultSchema } from './ProductContentAggregateResult.schema';
 export { ProductContentGroupByResultSchema } from './ProductContentGroupByResult.schema';
 export { ProductContentCountResultSchema } from './ProductContentCountResult.schema';
+export { AcquisitionSpecJobFindUniqueResultSchema } from './AcquisitionSpecJobFindUniqueResult.schema';
+export { AcquisitionSpecJobFindFirstResultSchema } from './AcquisitionSpecJobFindFirstResult.schema';
+export { AcquisitionSpecJobFindManyResultSchema } from './AcquisitionSpecJobFindManyResult.schema';
+export { AcquisitionSpecJobCreateResultSchema } from './AcquisitionSpecJobCreateResult.schema';
+export { AcquisitionSpecJobCreateManyResultSchema } from './AcquisitionSpecJobCreateManyResult.schema';
+export { AcquisitionSpecJobUpdateResultSchema } from './AcquisitionSpecJobUpdateResult.schema';
+export { AcquisitionSpecJobUpdateManyResultSchema } from './AcquisitionSpecJobUpdateManyResult.schema';
+export { AcquisitionSpecJobUpsertResultSchema } from './AcquisitionSpecJobUpsertResult.schema';
+export { AcquisitionSpecJobDeleteResultSchema } from './AcquisitionSpecJobDeleteResult.schema';
+export { AcquisitionSpecJobDeleteManyResultSchema } from './AcquisitionSpecJobDeleteManyResult.schema';
+export { AcquisitionSpecJobAggregateResultSchema } from './AcquisitionSpecJobAggregateResult.schema';
+export { AcquisitionSpecJobGroupByResultSchema } from './AcquisitionSpecJobGroupByResult.schema';
+export { AcquisitionSpecJobCountResultSchema } from './AcquisitionSpecJobCountResult.schema';

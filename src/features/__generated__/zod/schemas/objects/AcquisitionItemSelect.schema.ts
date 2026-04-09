@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionArgsObjectSchema as AcquisitionArgsObjectSchema } from './AcquisitionArgs.schema';
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
 import { OrderItemArgsObjectSchema as OrderItemArgsObjectSchema } from './OrderItemArgs.schema';
-import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema'
+import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
+import { AcquisitionSpecJobArgsObjectSchema as AcquisitionSpecJobArgsObjectSchema } from './AcquisitionSpecJobArgs.schema'
 
 const makeSchema = () => z.object({
   id: z.boolean().optional(),
@@ -30,7 +31,8 @@ const makeSchema = () => z.object({
   acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
   product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   sourceOrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
-  variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional()
+  variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
+  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemSelectObjectSchema: z.ZodType<Prisma.AcquisitionItemSelect> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 export const AcquisitionItemSelectObjectZodSchema = makeSchema();

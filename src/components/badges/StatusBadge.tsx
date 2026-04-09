@@ -1,58 +1,75 @@
 "use client";
 
+type StatusValue =
+    | "DRAFT"
+    | "POSTED"
+    | "ARCHIVED"
+    | "SOLD"
+    | "HOLD"
+    | "PENDING"
+    | string;
+
 type Props = {
-    status?: string | null;
+    status: StatusValue;
     className?: string;
 };
 
-function getStatusStyle(status?: string | null) {
-    const s = (status || "").toUpperCase();
+function cx(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
+}
 
-    switch (s) {
-        case "PAID":
+function getMeta(status: StatusValue) {
+    switch ((status || "").toUpperCase()) {
         case "POSTED":
-        case "COMPLETED":
-        case "DELIVERED":
-        case "DONE":
-        case "SOLD":
-            return "bg-emerald-50 text-emerald-700 border-emerald-200";
-
+            return {
+                label: "Posted",
+                tone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+            };
         case "DRAFT":
-        case "UNPAID":
-            return "bg-gray-50 text-gray-700 border-gray-200";
-
-        case "READY":
-        case "PROCESSING":
-        case "IN_PROGRESS":
-        case "SHIPPED":
-        case "DIAGNOSING":
-            return "bg-blue-50 text-blue-700 border-blue-200";
-
+            return {
+                label: "Draft",
+                tone: "bg-slate-100 text-slate-700 ring-slate-200",
+            };
+        case "SOLD":
+            return {
+                label: "Sold",
+                tone: "bg-violet-50 text-violet-700 ring-violet-100",
+            };
         case "HOLD":
-        case "RESERVED":
-        case "WAIT_APPROVAL":
-        case "IN_SERVICE":
-            return "bg-orange-50 text-orange-700 border-orange-200";
-
-        case "CANCELLED":
-        case "CANCELED":
-            return "bg-red-50 text-red-700 border-red-200";
-
+            return {
+                label: "Hold",
+                tone: "bg-amber-50 text-amber-700 ring-amber-100",
+            };
+        case "ARCHIVED":
+            return {
+                label: "Archived",
+                tone: "bg-slate-100 text-slate-500 ring-slate-200",
+            };
+        case "PENDING":
+            return {
+                label: "Pending",
+                tone: "bg-sky-50 text-sky-700 ring-sky-100",
+            };
         default:
-            return "bg-gray-50 text-gray-700 border-gray-200";
+            return {
+                label: status || "-",
+                tone: "bg-slate-100 text-slate-600 ring-slate-200",
+            };
     }
 }
 
 export default function StatusBadge({ status, className }: Props) {
-    const label = (status || "-").toUpperCase();
+    const meta = getMeta(status);
 
     return (
         <span
-            className={`inline-flex items-center px-2.5 py-0.5 border rounded-full text-xs font-medium ${getStatusStyle(
-                status
-            )} ${className || ""}`}
+            className={cx(
+                "inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-medium ring-1",
+                meta.tone,
+                className
+            )}
         >
-            {label}
+            {meta.label}
         </span>
     );
 }

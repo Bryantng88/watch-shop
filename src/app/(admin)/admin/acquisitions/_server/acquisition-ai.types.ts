@@ -93,8 +93,8 @@ export type AcquisitionGeneratedDraft = {
 
 export type AcquisitionDraftResponse = {
     extractedSpec: AcquisitionExtractedSpec;
-    generatedDraft: AcquisitionGeneratedDraft;
-    aiVisionRaw: AcquisitionVisionRaw;
+    generatedDraft: AcquisitionGeneratedDraft | null;
+    aiVisionRaw?: AcquisitionVisionRaw | null;
     meta: {
         mode: "openai" | "rule";
         model: string | null;

@@ -17,6 +17,46 @@ function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
 
+function mapServiceStatusLabel(status?: string | null) {
+    const normalized = String(status || "").toUpperCase();
+    const map: Record<string, string> = {
+        COMPLETED: "Hoàn tất",
+        DELIVERED: "Đã giao",
+        IN_PROGRESS: "Đang xử lý",
+        DIAGNOSING: "Đang đánh giá",
+        WAIT_APPROVAL: "Chờ duyệt",
+        PENDING: "Chờ xử lý",
+        OPEN: "Đang mở",
+        DRAFT: "Nháp",
+        CANCELED: "Đã hủy",
+    };
+    return map[normalized] || normalized || "-";
+}
+
+function mapScopeLabel(scope?: string | null) {
+    const normalized = String(scope || "").toUpperCase();
+    const map: Record<string, string> = {
+        WITH_PURCHASE: "Kèm mua hàng",
+        CUSTOMER_OWNED: "Khách gửi",
+        INTERNAL: "Nội bộ",
+    };
+    return map[normalized] || scope || "-";
+}
+
+function priorityTone(priority?: string | null) {
+    const normalized = String(priority || "").toUpperCase();
+    if (normalized === "URGENT") return "border-rose-200 bg-rose-50 text-rose-700";
+    if (normalized === "HIGH") return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-slate-200 bg-slate-50 text-slate-600";
+}
+
+function priorityLabel(priority?: string | null) {
+    const normalized = String(priority || "").toUpperCase();
+    if (normalized === "URGENT") return "Ưu tiên gấp";
+    if (normalized === "HIGH") return "Ưu tiên cao";
+    return "Ưu tiên thường";
+}
+
 export function formatCurrency(value: number) {
     return `${new Intl.NumberFormat("vi-VN").format(value)}đ`;
 }
@@ -93,7 +133,7 @@ export function StatusBadge({ status }: { status?: string | null }) {
                 map[normalized] || "border-slate-200 bg-slate-50 text-slate-700"
             )}
         >
-            {normalized || "-"}
+            {mapServiceStatusLabel(normalized)}
         </span>
     );
 }
@@ -111,6 +151,7 @@ export function ServiceRequestHeroCompact({
     updatedAt,
     appearanceScore,
     totalCost,
+    priority,
     onEditSpec,
     onOpenIssueBoard,
     hideIssueBoardAction = false,
@@ -127,6 +168,7 @@ export function ServiceRequestHeroCompact({
     updatedAt?: string | null;
     appearanceScore: number;
     totalCost: number;
+    priority?: string | null;
     onEditSpec?: () => void;
     onOpenIssueBoard?: () => void;
     hideIssueBoardAction?: boolean;
@@ -150,7 +192,12 @@ export function ServiceRequestHeroCompact({
                             <StatusBadge status={status} />
                             {scope ? (
                                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
-                                    {scope}
+                                    {mapScopeLabel(scope)}
+                                </span>
+                            ) : null}
+                            {priority ? (
+                                <span className={cx("inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium", priorityTone(priority))}>
+                                    {priorityLabel(priority)}
                                 </span>
                             ) : null}
                         </div>

@@ -25,7 +25,9 @@ const makeSchema = () => z.object({
   postContent: z.literal(true).optional(),
   aiPromptUsed: z.literal(true).optional(),
   aiGeneratedAt: z.literal(true).optional(),
-  sku: z.literal(true).optional()
+  sku: z.literal(true).optional(),
+  nickname: z.literal(true).optional(),
+  specStatus: z.literal(true).optional()
 }).strict();
 export const ProductMaxAggregateInputObjectSchema: z.ZodType<Prisma.ProductMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductMaxAggregateInputType>;
 export const ProductMaxAggregateInputObjectZodSchema = makeSchema();

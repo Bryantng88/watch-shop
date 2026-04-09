@@ -24,7 +24,8 @@ export const AcquisitionItemAggregateResultSchema = z.object({  _count: z.object
     acquisition: z.number(),
     product: z.number(),
     sourceOrderItem: z.number(),
-    variant: z.number()
+    variant: z.number(),
+    AcquisitionSpecJob: z.number()
   }).optional(),
   _sum: z.object({
     quantity: z.number().nullable(),

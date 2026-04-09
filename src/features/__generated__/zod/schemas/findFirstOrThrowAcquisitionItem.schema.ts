@@ -34,7 +34,8 @@ export const AcquisitionItemFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Acqui
     acquisition: z.boolean().optional(),
     product: z.boolean().optional(),
     sourceOrderItem: z.boolean().optional(),
-    variant: z.boolean().optional()
+    variant: z.boolean().optional(),
+    AcquisitionSpecJob: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 
 export const AcquisitionItemFindFirstOrThrowSelectZodSchema = z.object({
@@ -62,7 +63,8 @@ export const AcquisitionItemFindFirstOrThrowSelectZodSchema = z.object({
     acquisition: z.boolean().optional(),
     product: z.boolean().optional(),
     sourceOrderItem: z.boolean().optional(),
-    variant: z.boolean().optional()
+    variant: z.boolean().optional(),
+    AcquisitionSpecJob: z.boolean().optional()
   }).strict();
 
 export const AcquisitionItemFindFirstOrThrowSchema: z.ZodType<Prisma.AcquisitionItemFindFirstOrThrowArgs> = z.object({ select: AcquisitionItemFindFirstOrThrowSelectSchema.optional(), include: AcquisitionItemIncludeObjectSchema.optional(), orderBy: z.union([AcquisitionItemOrderByWithRelationInputObjectSchema, AcquisitionItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionItemWhereInputObjectSchema.optional(), cursor: AcquisitionItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([AcquisitionItemScalarFieldEnumSchema, AcquisitionItemScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemFindFirstOrThrowArgs>;

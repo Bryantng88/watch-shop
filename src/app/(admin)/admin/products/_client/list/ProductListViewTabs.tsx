@@ -42,8 +42,8 @@ export default function ProductListViewTabs({
   onChange,
 }: Props) {
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-flex min-w-max items-center rounded-2xl bg-slate-100 p-1">
+    <div className="border-b border-slate-200">
+      <div className="flex min-w-max items-center gap-6 overflow-x-auto">
         {items.map((item) => {
           const active = item.key === value;
           const count = getCount(counts, item.key);
@@ -54,26 +54,27 @@ export default function ProductListViewTabs({
               type="button"
               onClick={() => onChange(item.key)}
               className={[
-                "inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm transition",
+                "relative inline-flex h-12 shrink-0 items-center whitespace-nowrap text-sm transition",
                 active
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900",
+                  ? "font-semibold text-slate-950"
+                  : "font-medium text-slate-500 hover:text-slate-800",
               ].join(" ")}
             >
-              <span className={active ? "font-semibold" : "font-medium"}>
-                {item.label}
-              </span>
-
+              <span>{item.label}</span>
               <span
                 className={[
-                  "inline-flex min-w-[22px] items-center justify-center rounded-full px-2 py-0.5 text-[11px]",
+                  "ml-2 rounded-full px-2 py-0.5 text-[11px]",
                   active
-                    ? "bg-slate-950 text-white"
-                    : "bg-white/80 text-slate-500",
+                    ? "bg-slate-100 text-slate-700"
+                    : "bg-slate-50 text-slate-400",
                 ].join(" ")}
               >
                 {count}
               </span>
+
+              {active ? (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" />
+              ) : null}
             </button>
           );
         })}

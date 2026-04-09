@@ -29,7 +29,8 @@ export const AcquisitionItemResultSchema = z.object({
     acquisition: z.unknown(),
     product: z.unknown().nullable(),
     sourceOrderItem: z.unknown().nullable(),
-    variant: z.unknown().nullable()
+    variant: z.unknown().nullable(),
+    AcquisitionSpecJob: z.unknown().nullable()
 }).strict();
 
 export type AcquisitionItemResultType = z.infer<typeof AcquisitionItemResultSchema>;

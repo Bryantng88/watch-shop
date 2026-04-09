@@ -6,6 +6,7 @@ import { TagSchema } from '../enums/Tag.schema';
 import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema';
 import { AcquisitionItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutProductInput.schema';
+import { AcquisitionSpecJobUncheckedCreateNestedManyWithoutProductInputObjectSchema as AcquisitionSpecJobUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './AcquisitionSpecJobUncheckedCreateNestedManyWithoutProductInput.schema';
 import { InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemUncheckedCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordUncheckedCreateNestedManyWithoutProductInput.schema';
 import { OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutProductInput.schema';
@@ -39,7 +40,10 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.string().optional().nullable(),
   aiGeneratedAt: z.coerce.date().optional().nullable(),
   sku: z.string().optional().nullable(),
+  nickname: z.string().optional().nullable(),
+  specStatus: z.string().optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutProductInputObjectSchema),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedCreateNestedManyWithoutProductInputObjectSchema),
   InvoiceItem: z.lazy(() => InvoiceItemUncheckedCreateNestedManyWithoutProductInputObjectSchema),
   maintenanceRecords: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutProductInputObjectSchema),
   orderItems: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutProductInputObjectSchema),

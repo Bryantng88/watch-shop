@@ -13,7 +13,8 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
 import { NullableBoolFieldUpdateOperationsInputObjectSchema as NullableBoolFieldUpdateOperationsInputObjectSchema } from './NullableBoolFieldUpdateOperationsInput.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
-import { EnumProductTypeFieldUpdateOperationsInputObjectSchema as EnumProductTypeFieldUpdateOperationsInputObjectSchema } from './EnumProductTypeFieldUpdateOperationsInput.schema'
+import { EnumProductTypeFieldUpdateOperationsInputObjectSchema as EnumProductTypeFieldUpdateOperationsInputObjectSchema } from './EnumProductTypeFieldUpdateOperationsInput.schema';
+import { AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInputObjectSchema as AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInputObjectSchema } from './AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -35,7 +36,8 @@ const makeSchema = () => z.object({
   serviceRequestId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   capitalizeToProduct: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional()
+  productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUncheckedUpdateWithoutSourceOrderItemInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUncheckedUpdateWithoutSourceOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUncheckedUpdateWithoutSourceOrderItemInput>;
 export const AcquisitionItemUncheckedUpdateWithoutSourceOrderItemInputObjectZodSchema = makeSchema();

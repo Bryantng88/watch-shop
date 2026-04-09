@@ -26,6 +26,8 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.literal(true).optional(),
   aiGeneratedAt: z.literal(true).optional(),
   sku: z.literal(true).optional(),
+  nickname: z.literal(true).optional(),
+  specStatus: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ProductCountAggregateInputObjectSchema: z.ZodType<Prisma.ProductCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductCountAggregateInputType>;

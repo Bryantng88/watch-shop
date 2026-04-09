@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Plus, ScanSearch, Wrench } from "lucide-react";
+import { AlertTriangle, Camera, Plus, ScanSearch, Wrench } from "lucide-react";
 import { useNotify } from "@/components/feedback/AppToastProvider";
 import TechnicalImagePicker from "@/components/media/TechnicalImagePicker";
 
@@ -32,7 +32,6 @@ import {
     TextInput,
 } from "./primitives";
 import { MovementIssueRow } from "./issue-rows";
-import { MeasurementCompact } from "./measurement-compact";
 import { QuickIssueCard } from "./quick-issue-card";
 import { CollapsibleDefects, TechnicalFinalSummary } from "./final-summary";
 
@@ -499,7 +498,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
                     </div>
                 }
             >
-                <div className="grid gap-3 md:grid-cols-[220px_220px_1fr]">
+                <div className="grid gap-3 xl:grid-cols-[220px_220px_minmax(220px,260px)_minmax(300px,1fr)] xl:items-start">
                     <Field label="Loại máy">
                         <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
                             {form.machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"}
@@ -536,18 +535,56 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             />
                         </div>
                     </Field>
-                </div>
 
-                <MeasurementCompact
-                    machineType={form.machineType}
-                    value={{
-                        beforeSpecs: form.beforeSpecs,
-                        afterSpecs: form.afterSpecs,
-                        showBeforeSpecs: form.showBeforeSpecs,
-                    }}
-                    onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-                    disabled={isLocked}
-                />
+                    {form.machineType === "MECHANICAL" ? (
+                        <Field
+                            label="Ảnh máy đo thực tế"
+                            hint="Đặt ảnh trước và sau xử lý ngay trong cùng cụm đánh giá bộ máy."
+                        >
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500">
+                                            <Camera className="h-4 w-4" />
+                                            Trước xử lý
+                                        </div>
+                                        <TechnicalImagePicker
+                                            value={(form as any).beforeImageFileKey || ""}
+                                            onChange={(fileKey) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    beforeImageFileKey: fileKey,
+                                                } as any))
+                                            }
+                                            disabled={isLocked}
+                                            compact={false}
+                                            className="h-16 w-16 rounded-xl border-0 bg-transparent"
+                                        />
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500">
+                                            <Camera className="h-4 w-4" />
+                                            Sau xử lý
+                                        </div>
+                                        <TechnicalImagePicker
+                                            value={(form as any).afterImageFileKey || ""}
+                                            onChange={(fileKey) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    afterImageFileKey: fileKey,
+                                                } as any))
+                                            }
+                                            disabled={isLocked}
+                                            compact={false}
+                                            className="h-16 w-16 rounded-xl border-0 bg-transparent"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </Field>
+                    ) : null}
+                </div>
 
                 {form.movementStatus === "ISSUE" ? (
                     <div className="space-y-5">
@@ -610,467 +647,473 @@ export default function TechnicalAssessmentInlinePanelContainer({
                 subtitle="Issue chỉ được ghi nhận thực sự khi phiếu được lưu thành công."
                 icon={<ScanSearch className="h-5 w-5" />}
             >
-                <QuickIssueCard
-                    title="Vỏ"
-                    open={form.caseIssue.enabled}
-                    issueMeta={form.caseIssue}
-                    staticView={form.caseIssue.isFromBoard}
-                    onOpen={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            caseIssue: { ...prev.caseIssue, enabled: true, isFromBoard: false },
-                        }));
-                    }}
-                    onClose={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            caseIssue: emptyQuickIssue(),
-                        }));
-                    }}
-                    onGoBoard={() =>
-                        router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                    }
-                    isLocked={isLocked}
-                >
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Phương án xử lý">
-                            <SelectInput
-                                value={form.caseIssue.action ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        caseIssue: {
-                                            ...prev.caseIssue,
-                                            action: e.target.value as CosmeticAction,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="">Chọn phương án</option>
-                                <option value="SPA_CASE">Spa vỏ nhẹ</option>
-                                <option value="POLISH_CASE">Đánh bóng vỏ</option>
-                                <option value="REPLATE_CASE">Mạ lại vỏ</option>
-                                <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện">
-                            <SelectInput
-                                value={form.caseIssue.execution ?? "INHOUSE"}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        caseIssue: {
-                                            ...prev.caseIssue,
-                                            execution: e.target.value as ExecutionType,
-                                            vendorId:
-                                                e.target.value === "VENDOR"
-                                                    ? prev.caseIssue.vendorId
-                                                    : "",
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí dự kiến">
-                            <TextInput
-                                inputMode="numeric"
-                                value={form.caseIssue.estimatedCost ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        caseIssue: {
-                                            ...prev.caseIssue,
-                                            estimatedCost: e.target.value,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            />
-                        </Field>
-                        {String(form.caseIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                                <Field label="Vendor">
-                                    <SelectInput
-                                        value={form.caseIssue.vendorId ?? ""}
-                                        onChange={(e) =>
-                                            setForm((prev) => ({
-                                                ...prev,
-                                                caseIssue: {
-                                                    ...prev.caseIssue,
-                                                    vendorId: e.target.value,
-                                                },
-                                            }))
-                                        }
-                                        disabled={isLocked}
-                                    >
-                                        <option value="">Chọn vendor</option>
-                                        {vendors.map((vendor: any) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name}
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </Field>
+                <div className="grid gap-4 xl:grid-cols-2">
+                    <QuickIssueCard
+                        title="Vỏ"
+                        area="CASE"
+                        open={form.caseIssue.enabled}
+                        issueMeta={form.caseIssue}
+                        staticView={form.caseIssue.isFromBoard}
+                        onOpen={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                caseIssue: { ...prev.caseIssue, enabled: true, isFromBoard: false },
+                            }));
+                        }}
+                        onClose={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                caseIssue: emptyQuickIssue(),
+                            }));
+                        }}
+                        onGoBoard={() =>
+                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
+                        }
+                        isLocked={isLocked}
+                    >
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Phương án xử lý">
+                                <SelectInput
+                                    value={form.caseIssue.action ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            caseIssue: {
+                                                ...prev.caseIssue,
+                                                action: e.target.value as CosmeticAction,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="">Chọn phương án</option>
+                                    <option value="SPA_CASE">Spa vỏ nhẹ</option>
+                                    <option value="POLISH_CASE">Đánh bóng vỏ</option>
+                                    <option value="REPLATE_CASE">Mạ lại vỏ</option>
+                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Thực hiện">
+                                <SelectInput
+                                    value={form.caseIssue.execution ?? "INHOUSE"}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            caseIssue: {
+                                                ...prev.caseIssue,
+                                                execution: e.target.value as ExecutionType,
+                                                vendorId:
+                                                    e.target.value === "VENDOR"
+                                                        ? prev.caseIssue.vendorId
+                                                        : "",
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Chi phí dự kiến">
+                                <TextInput
+                                    inputMode="numeric"
+                                    value={form.caseIssue.estimatedCost ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            caseIssue: {
+                                                ...prev.caseIssue,
+                                                estimatedCost: e.target.value,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                />
+                            </Field>
+                            {String(form.caseIssue.execution || "").toUpperCase() === "VENDOR" ? (
+                                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                                    <Field label="Vendor">
+                                        <SelectInput
+                                            value={form.caseIssue.vendorId ?? ""}
+                                            onChange={(e) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    caseIssue: {
+                                                        ...prev.caseIssue,
+                                                        vendorId: e.target.value,
+                                                    },
+                                                }))
+                                            }
+                                            disabled={isLocked}
+                                        >
+                                            <option value="">Chọn vendor</option>
+                                            {vendors.map((vendor: any) => (
+                                                <option key={vendor.id} value={vendor.id}>
+                                                    {vendor.name}
+                                                </option>
+                                            ))}
+                                        </SelectInput>
+                                    </Field>
 
-                                {!isLocked ? (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => router.push("/admin/vendors")}
-                                    >
-                                        + Vendor mới
-                                    </Button>
-                                ) : null}
-                            </div>
-                        ) : null}
-                    </div>
-                </QuickIssueCard>
+                                    {!isLocked ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => router.push("/admin/vendors")}
+                                        >
+                                            + Vendor mới
+                                        </Button>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
+                    </QuickIssueCard>
 
-                <QuickIssueCard
-                    title="Kính"
-                    open={form.crystalIssue.enabled}
-                    issueMeta={form.crystalIssue}
-                    staticView={form.crystalIssue.isFromBoard}
-                    onOpen={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            crystalIssue: { ...prev.crystalIssue, enabled: true, isFromBoard: false },
-                        }));
-                    }}
-                    onClose={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            crystalIssue: emptyQuickIssue(),
-                        }));
-                    }}
-                    onGoBoard={() =>
-                        router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                    }
-                    isLocked={isLocked}
-                >
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Phương án xử lý">
-                            <SelectInput
-                                value={form.crystalIssue.action ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crystalIssue: {
-                                            ...prev.crystalIssue,
-                                            action: e.target.value as CosmeticAction,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="">Chọn phương án</option>
-                                <option value="POLISH_GLASS">Đánh bóng kính</option>
-                                <option value="REPLACE_GLASS">Thay kính</option>
-                                <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện">
-                            <SelectInput
-                                value={form.crystalIssue.execution ?? "INHOUSE"}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crystalIssue: {
-                                            ...prev.crystalIssue,
-                                            execution: e.target.value as ExecutionType,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí dự kiến">
-                            <TextInput
-                                inputMode="numeric"
-                                value={form.crystalIssue.estimatedCost ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crystalIssue: {
-                                            ...prev.crystalIssue,
-                                            estimatedCost: e.target.value,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            />
-                        </Field>
-                        {String(form.crystalIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                            <div className="md:col-span-3">
-                                <Field label="Vendor">
-                                    <SelectInput
-                                        value={form.crystalIssue.vendorId ?? ""}
-                                        onChange={(e) =>
-                                            setForm((prev) => ({
-                                                ...prev,
-                                                crystalIssue: {
-                                                    ...prev.crystalIssue,
-                                                    vendorId: e.target.value,
-                                                },
-                                            }))
-                                        }
-                                        disabled={isLocked}
-                                    >
-                                        <option value="">Chọn vendor</option>
-                                        {vendors.map((vendor: any) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name}
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </Field>
-                            </div>
-                        ) : null}
-                    </div>
-                </QuickIssueCard>
+                    <QuickIssueCard
+                        title="Kính"
+                        area="CRYSTAL"
+                        open={form.crystalIssue.enabled}
+                        issueMeta={form.crystalIssue}
+                        staticView={form.crystalIssue.isFromBoard}
+                        onOpen={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                crystalIssue: { ...prev.crystalIssue, enabled: true, isFromBoard: false },
+                            }));
+                        }}
+                        onClose={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                crystalIssue: emptyQuickIssue(),
+                            }));
+                        }}
+                        onGoBoard={() =>
+                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
+                        }
+                        isLocked={isLocked}
+                    >
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Phương án xử lý">
+                                <SelectInput
+                                    value={form.crystalIssue.action ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crystalIssue: {
+                                                ...prev.crystalIssue,
+                                                action: e.target.value as CosmeticAction,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="">Chọn phương án</option>
+                                    <option value="POLISH_GLASS">Đánh bóng kính</option>
+                                    <option value="REPLACE_GLASS">Thay kính</option>
+                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Thực hiện">
+                                <SelectInput
+                                    value={form.crystalIssue.execution ?? "INHOUSE"}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crystalIssue: {
+                                                ...prev.crystalIssue,
+                                                execution: e.target.value as ExecutionType,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Chi phí dự kiến">
+                                <TextInput
+                                    inputMode="numeric"
+                                    value={form.crystalIssue.estimatedCost ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crystalIssue: {
+                                                ...prev.crystalIssue,
+                                                estimatedCost: e.target.value,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                />
+                            </Field>
+                            {String(form.crystalIssue.execution || "").toUpperCase() === "VENDOR" ? (
+                                <div className="md:col-span-3">
+                                    <Field label="Vendor">
+                                        <SelectInput
+                                            value={form.crystalIssue.vendorId ?? ""}
+                                            onChange={(e) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    crystalIssue: {
+                                                        ...prev.crystalIssue,
+                                                        vendorId: e.target.value,
+                                                    },
+                                                }))
+                                            }
+                                            disabled={isLocked}
+                                        >
+                                            <option value="">Chọn vendor</option>
+                                            {vendors.map((vendor: any) => (
+                                                <option key={vendor.id} value={vendor.id}>
+                                                    {vendor.name}
+                                                </option>
+                                            ))}
+                                        </SelectInput>
+                                    </Field>
+                                </div>
+                            ) : null}
+                        </div>
+                    </QuickIssueCard>
 
-                <QuickIssueCard
-                    title="Mặt số"
-                    open={form.dialIssue.enabled}
-                    issueMeta={form.dialIssue}
-                    staticView={form.dialIssue.isFromBoard}
-                    onOpen={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            dialIssue: { ...prev.dialIssue, enabled: true, isFromBoard: false },
-                        }));
-                    }}
-                    onClose={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            dialIssue: emptyQuickIssue(),
-                        }));
-                    }}
-                    onGoBoard={() =>
-                        router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                    }
-                    isLocked={isLocked}
-                >
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Phương án xử lý">
-                            <SelectInput
-                                value={form.dialIssue.action ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        dialIssue: {
-                                            ...prev.dialIssue,
-                                            action: e.target.value as CosmeticAction,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="">Chọn phương án</option>
-                                <option value="CLEAN_DIAL">Vệ sinh nhẹ</option>
-                                <option value="REPLACE_DIAL">Thay mặt số</option>
-                                <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện">
-                            <SelectInput
-                                value={form.dialIssue.execution ?? "INHOUSE"}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        dialIssue: {
-                                            ...prev.dialIssue,
-                                            execution: e.target.value as ExecutionType,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí dự kiến">
-                            <TextInput
-                                inputMode="numeric"
-                                value={form.dialIssue.estimatedCost ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        dialIssue: {
-                                            ...prev.dialIssue,
-                                            estimatedCost: e.target.value,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            />
-                        </Field>
-                        {String(form.dialIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                            <div className="md:col-span-3">
-                                <Field label="Vendor">
-                                    <SelectInput
-                                        value={form.dialIssue.vendorId ?? ""}
-                                        onChange={(e) =>
-                                            setForm((prev) => ({
-                                                ...prev,
-                                                dialIssue: {
-                                                    ...prev.dialIssue,
-                                                    vendorId: e.target.value,
-                                                },
-                                            }))
-                                        }
-                                        disabled={isLocked}
-                                    >
-                                        <option value="">Chọn vendor</option>
-                                        {vendors.map((vendor: any) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name}
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </Field>
-                            </div>
-                        ) : null}
-                    </div>
-                </QuickIssueCard>
+                    <QuickIssueCard
+                        title="Mặt số"
+                        area="DIAL"
+                        open={form.dialIssue.enabled}
+                        issueMeta={form.dialIssue}
+                        staticView={form.dialIssue.isFromBoard}
+                        onOpen={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                dialIssue: { ...prev.dialIssue, enabled: true, isFromBoard: false },
+                            }));
+                        }}
+                        onClose={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                dialIssue: emptyQuickIssue(),
+                            }));
+                        }}
+                        onGoBoard={() =>
+                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
+                        }
+                        isLocked={isLocked}
+                    >
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Phương án xử lý">
+                                <SelectInput
+                                    value={form.dialIssue.action ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            dialIssue: {
+                                                ...prev.dialIssue,
+                                                action: e.target.value as CosmeticAction,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="">Chọn phương án</option>
+                                    <option value="CLEAN_DIAL">Vệ sinh nhẹ</option>
+                                    <option value="REPLACE_DIAL">Thay mặt số</option>
+                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Thực hiện">
+                                <SelectInput
+                                    value={form.dialIssue.execution ?? "INHOUSE"}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            dialIssue: {
+                                                ...prev.dialIssue,
+                                                execution: e.target.value as ExecutionType,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Chi phí dự kiến">
+                                <TextInput
+                                    inputMode="numeric"
+                                    value={form.dialIssue.estimatedCost ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            dialIssue: {
+                                                ...prev.dialIssue,
+                                                estimatedCost: e.target.value,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                />
+                            </Field>
+                            {String(form.dialIssue.execution || "").toUpperCase() === "VENDOR" ? (
+                                <div className="md:col-span-3">
+                                    <Field label="Vendor">
+                                        <SelectInput
+                                            value={form.dialIssue.vendorId ?? ""}
+                                            onChange={(e) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    dialIssue: {
+                                                        ...prev.dialIssue,
+                                                        vendorId: e.target.value,
+                                                    },
+                                                }))
+                                            }
+                                            disabled={isLocked}
+                                        >
+                                            <option value="">Chọn vendor</option>
+                                            {vendors.map((vendor: any) => (
+                                                <option key={vendor.id} value={vendor.id}>
+                                                    {vendor.name}
+                                                </option>
+                                            ))}
+                                        </SelectInput>
+                                    </Field>
+                                </div>
+                            ) : null}
+                        </div>
+                    </QuickIssueCard>
 
-                <QuickIssueCard
-                    title="Núm"
-                    open={form.crownIssue.status === "ISSUE"}
-                    issueMeta={form.crownIssue}
-                    staticView={form.crownIssue.isFromBoard}
-                    onOpen={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            crownIssue: { ...prev.crownIssue, enabled: true, status: "ISSUE", isFromBoard: false },
-                        }));
-                    }}
-                    onClose={() => {
-                        if (isLocked) return;
-                        setForm((prev) => ({
-                            ...prev,
-                            crownIssue: {
-                                ...prev.crownIssue,
-                                enabled: false,
-                                status: "GOOD",
-                                action: undefined,
-                                execution: "INHOUSE",
-                                vendorId: "",
-                                partId: "",
-                                cost: "",
-                                summary: "",
-                                boardStatus: "",
-                                isFromBoard: false,
-                            },
-                        }));
-                    }}
-                    onGoBoard={() =>
-                        router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                    }
-                    isLocked={isLocked}
-                >
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Field label="Phương án xử lý">
-                            <SelectInput
-                                value={form.crownIssue.action ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crownIssue: {
-                                            ...prev.crownIssue,
-                                            action: e.target.value as any,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="">Chọn phương án</option>
-                                <option value="FIX_CROWN">Canh chỉnh / xử lý núm</option>
-                                <option value="RETHREAD">Làm ren / phục hồi ren</option>
-                                <option value="STEM_ADJUST">Canh chỉnh ty</option>
-                                <option value="REPLACE_CROWN">Thay núm mới</option>
-                                <option value="WATERPROOF">Xử lý chống nước</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Thực hiện">
-                            <SelectInput
-                                value={form.crownIssue.execution ?? "INHOUSE"}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crownIssue: {
-                                            ...prev.crownIssue,
-                                            execution: e.target.value as any,
-                                            vendorId: e.target.value === "VENDOR" ? prev.crownIssue.vendorId : "",
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            >
-                                <option value="INHOUSE">Nội bộ</option>
-                                <option value="VENDOR">Vendor</option>
-                            </SelectInput>
-                        </Field>
-                        <Field label="Chi phí dự kiến">
-                            <TextInput
-                                inputMode="numeric"
-                                value={form.crownIssue.cost ?? ""}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        crownIssue: {
-                                            ...prev.crownIssue,
-                                            cost: e.target.value,
-                                        },
-                                    }))
-                                }
-                                disabled={isLocked}
-                            />
-                        </Field>
-                        {String(form.crownIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                            <div className="md:col-span-3">
-                                <Field label="Vendor">
-                                    <SelectInput
-                                        value={form.crownIssue.vendorId ?? ""}
-                                        onChange={(e) =>
-                                            setForm((prev) => ({
-                                                ...prev,
-                                                crownIssue: {
-                                                    ...prev.crownIssue,
-                                                    vendorId: e.target.value,
-                                                },
-                                            }))
-                                        }
-                                        disabled={isLocked}
-                                    >
-                                        <option value="">Chọn vendor</option>
-                                        {vendors.map((vendor: any) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name}
-                                            </option>
-                                        ))}
-                                    </SelectInput>
-                                </Field>
-                            </div>
-                        ) : null}
-                    </div>
-                </QuickIssueCard>
+                    <QuickIssueCard
+                        title="Núm"
+                        area="CROWN"
+                        open={form.crownIssue.status === "ISSUE"}
+                        issueMeta={form.crownIssue}
+                        staticView={form.crownIssue.isFromBoard}
+                        onOpen={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                crownIssue: { ...prev.crownIssue, enabled: true, status: "ISSUE", isFromBoard: false },
+                            }));
+                        }}
+                        onClose={() => {
+                            if (isLocked) return;
+                            setForm((prev) => ({
+                                ...prev,
+                                crownIssue: {
+                                    ...prev.crownIssue,
+                                    enabled: false,
+                                    status: "GOOD",
+                                    action: undefined,
+                                    execution: "INHOUSE",
+                                    vendorId: "",
+                                    partId: "",
+                                    cost: "",
+                                    summary: "",
+                                    boardStatus: "",
+                                    isFromBoard: false,
+                                },
+                            }));
+                        }}
+                        onGoBoard={() =>
+                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
+                        }
+                        isLocked={isLocked}
+                    >
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <Field label="Phương án xử lý">
+                                <SelectInput
+                                    value={form.crownIssue.action ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crownIssue: {
+                                                ...prev.crownIssue,
+                                                action: e.target.value as any,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="">Chọn phương án</option>
+                                    <option value="FIX_CROWN">Canh chỉnh / xử lý núm</option>
+                                    <option value="RETHREAD">Làm ren / phục hồi ren</option>
+                                    <option value="STEM_ADJUST">Canh chỉnh ty</option>
+                                    <option value="REPLACE_CROWN">Thay núm mới</option>
+                                    <option value="WATERPROOF">Xử lý chống nước</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Thực hiện">
+                                <SelectInput
+                                    value={form.crownIssue.execution ?? "INHOUSE"}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crownIssue: {
+                                                ...prev.crownIssue,
+                                                execution: e.target.value as any,
+                                                vendorId: e.target.value === "VENDOR" ? prev.crownIssue.vendorId : "",
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                >
+                                    <option value="INHOUSE">Nội bộ</option>
+                                    <option value="VENDOR">Vendor</option>
+                                </SelectInput>
+                            </Field>
+                            <Field label="Chi phí dự kiến">
+                                <TextInput
+                                    inputMode="numeric"
+                                    value={form.crownIssue.cost ?? ""}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crownIssue: {
+                                                ...prev.crownIssue,
+                                                cost: e.target.value,
+                                            },
+                                        }))
+                                    }
+                                    disabled={isLocked}
+                                />
+                            </Field>
+                            {String(form.crownIssue.execution || "").toUpperCase() === "VENDOR" ? (
+                                <div className="md:col-span-3">
+                                    <Field label="Vendor">
+                                        <SelectInput
+                                            value={form.crownIssue.vendorId ?? ""}
+                                            onChange={(e) =>
+                                                setForm((prev) => ({
+                                                    ...prev,
+                                                    crownIssue: {
+                                                        ...prev.crownIssue,
+                                                        vendorId: e.target.value,
+                                                    },
+                                                }))
+                                            }
+                                            disabled={isLocked}
+                                        >
+                                            <option value="">Chọn vendor</option>
+                                            {vendors.map((vendor: any) => (
+                                                <option key={vendor.id} value={vendor.id}>
+                                                    {vendor.name}
+                                                </option>
+                                            ))}
+                                        </SelectInput>
+                                    </Field>
+                                </div>
+                            ) : null}
+                        </div>
+                    </QuickIssueCard>
+                </div>
             </SectionCard>
 
             <SectionCard

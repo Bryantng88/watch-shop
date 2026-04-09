@@ -122,8 +122,11 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
             String(x.executionStatus || "").toUpperCase() !== "CANCELED"
     ).length;
 
+    const srStatus = String(sr?.status || "").toUpperCase();
+    const isCompleted = srStatus === "COMPLETED" || srStatus === "DELIVERED";
+
     const readyToClose =
-        technical.activeAssessment &&
+        !isCompleted &&
         Number(technical.issueCount ?? 0) > 0 &&
         Number(technical.openIssueCount ?? 0) === 0;
 
@@ -133,7 +136,6 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
 
     const appearanceScore = Number(detail?.appearanceSummary?.score ?? 100);
     const totalCost = Number(detail?.financialSummary?.totalCost ?? 0);
-    const isCompleted = String(sr?.status || "").toUpperCase() === "COMPLETED";
 
     const completedSummaryPoints = React.useMemo(
         () =>
@@ -242,6 +244,7 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 updatedAt={fmtDT(sr.updatedAt)}
                 appearanceScore={appearanceScore}
                 totalCost={totalCost}
+                priority={sr.priority || detail?.serviceRequest?.priority || null}
                 onEditSpec={
                     sr.productId
                         ? () => router.push(`/admin/products/${sr.productId}/spec`)
@@ -265,6 +268,17 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                     doneIssue={doneIssueCount}
                     vendorCount={vendorCount}
                 />
+
+                {isCompleted ? (
+                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-sm font-semibold text-slate-900">
+                            Service Request đã đóng
+                        </div>
+                        <div className="mt-1 text-sm text-slate-600">
+                            Phiếu đã được hoàn tất. Issue Board sẽ hiển thị trạng thái “SR đã đóng” cho các issue thuộc phiếu này.
+                        </div>
+                    </div>
+                ) : null}
 
                 {!isCompleted && readyToClose ? (
                     <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">

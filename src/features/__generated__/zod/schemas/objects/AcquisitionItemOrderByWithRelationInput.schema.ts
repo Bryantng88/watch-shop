@@ -5,7 +5,8 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { AcquisitionOrderByWithRelationInputObjectSchema as AcquisitionOrderByWithRelationInputObjectSchema } from './AcquisitionOrderByWithRelationInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { OrderItemOrderByWithRelationInputObjectSchema as OrderItemOrderByWithRelationInputObjectSchema } from './OrderItemOrderByWithRelationInput.schema';
-import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrderByWithRelationInputObjectSchema } from './ProductVariantOrderByWithRelationInput.schema'
+import { ProductVariantOrderByWithRelationInputObjectSchema as ProductVariantOrderByWithRelationInputObjectSchema } from './ProductVariantOrderByWithRelationInput.schema';
+import { AcquisitionSpecJobOrderByWithRelationInputObjectSchema as AcquisitionSpecJobOrderByWithRelationInputObjectSchema } from './AcquisitionSpecJobOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   sourceOrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
+  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
+  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput>;
 export const AcquisitionItemOrderByWithRelationInputObjectZodSchema = makeSchema();

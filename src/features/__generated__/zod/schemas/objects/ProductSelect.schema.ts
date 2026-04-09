@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionItemFindManySchema as AcquisitionItemFindManySchema } from '../findManyAcquisitionItem.schema';
+import { AcquisitionSpecJobFindManySchema as AcquisitionSpecJobFindManySchema } from '../findManyAcquisitionSpecJob.schema';
 import { InvoiceItemFindManySchema as InvoiceItemFindManySchema } from '../findManyInvoiceItem.schema';
 import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } from '../findManyMaintenanceRecord.schema';
 import { OrderItemFindManySchema as OrderItemFindManySchema } from '../findManyOrderItem.schema';
@@ -39,7 +40,10 @@ const makeSchema = () => z.object({
   aiPromptUsed: z.boolean().optional(),
   aiGeneratedAt: z.boolean().optional(),
   sku: z.boolean().optional(),
+  nickname: z.boolean().optional(),
+  specStatus: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobFindManySchema)]).optional(),
   InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
   maintenanceRecords: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
   orderItems: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),

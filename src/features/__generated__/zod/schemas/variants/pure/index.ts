@@ -42,3 +42,4 @@ export { technicalActionCatalogModelSchema } from './technicalActionCatalog.pure
 export { technicalAppearanceIssueCatalogModelSchema } from './technicalAppearanceIssueCatalog.pure';
 export { technicalPartCatalogModelSchema } from './technicalPartCatalog.pure';
 export { ProductContentModelSchema } from './ProductContent.pure';
+export { AcquisitionSpecJobModelSchema } from './AcquisitionSpecJob.pure';

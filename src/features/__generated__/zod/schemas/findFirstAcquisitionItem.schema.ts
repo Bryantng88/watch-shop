@@ -34,7 +34,8 @@ export const AcquisitionItemFindFirstSelectSchema: z.ZodType<Prisma.AcquisitionI
     acquisition: z.boolean().optional(),
     product: z.boolean().optional(),
     sourceOrderItem: z.boolean().optional(),
-    variant: z.boolean().optional()
+    variant: z.boolean().optional(),
+    AcquisitionSpecJob: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 
 export const AcquisitionItemFindFirstSelectZodSchema = z.object({
@@ -62,7 +63,8 @@ export const AcquisitionItemFindFirstSelectZodSchema = z.object({
     acquisition: z.boolean().optional(),
     product: z.boolean().optional(),
     sourceOrderItem: z.boolean().optional(),
-    variant: z.boolean().optional()
+    variant: z.boolean().optional(),
+    AcquisitionSpecJob: z.boolean().optional()
   }).strict();
 
 export const AcquisitionItemFindFirstSchema: z.ZodType<Prisma.AcquisitionItemFindFirstArgs> = z.object({ select: AcquisitionItemFindFirstSelectSchema.optional(), include: AcquisitionItemIncludeObjectSchema.optional(), orderBy: z.union([AcquisitionItemOrderByWithRelationInputObjectSchema, AcquisitionItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionItemWhereInputObjectSchema.optional(), cursor: AcquisitionItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([AcquisitionItemScalarFieldEnumSchema, AcquisitionItemScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemFindFirstArgs>;
