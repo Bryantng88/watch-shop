@@ -26,9 +26,9 @@ function createEmptyWatchLine(): AcquisitionWatchLine {
         receiveService: true,
         imageKey: null,
         imageUrl: null,
-        aiDraft: null,
     };
 }
+
 export default function NewAcquisitionForm({ vendors }: Props) {
     const [vendorId, setVendorId] = useState("");
     const [createdAt, setCreatedAt] = useState(() => {
@@ -44,11 +44,6 @@ export default function NewAcquisitionForm({ vendors }: Props) {
         createEmptyWatchLine(),
     ]);
     const [submitting, setSubmitting] = useState(false);
-
-    const vendorName = useMemo(
-        () => vendors.find((v) => v.id === vendorId)?.name || null,
-        [vendorId, vendors]
-    );
 
     const totalWatchCost = useMemo(() => {
         return watchLines.reduce((sum, line) => {
@@ -115,7 +110,7 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                     <div className="space-y-1">
                         <h1 className="text-2xl font-semibold text-slate-900">Tạo phiếu nhập</h1>
                         <p className="text-sm text-slate-500">
-                            Giữ nguyên logic hiện tại, thêm inline image picker và AI draft cho từng dòng đồng hồ.
+                            Dòng nhập lưu ảnh + gợi ý AI, còn việc phân tích AI sẽ chỉ chạy khi post phiếu.
                         </p>
                     </div>
 
@@ -209,8 +204,10 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                                             onChange={(e) => setType(e.target.value)}
                                             className="h-[44px] w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                                         >
-                                            <option value="PURCHASE">PURCHASE</option>
-                                            <option value="CONSIGNMENT">CONSIGNMENT</option>
+                                            <option value="PURCHASE">Purchase</option>
+                                            <option value="BUY_BACK">Buy back</option>
+                                            <option value="TRADE_IN">Trade-in</option>
+                                            <option value="CONSIGNMENT">Consignment</option>
                                         </select>
                                     </div>
                                 </div>
@@ -218,143 +215,56 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                         </section>
 
                         <section className="rounded-3xl border border-slate-200 bg-white">
-                            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                                <div className="space-y-1">
+                            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                                <div>
                                     <div className="text-lg font-semibold text-slate-900">Danh sách đồng hồ</div>
                                     <div className="text-sm text-slate-500">
-                                        Mỗi dòng có inline image picker riêng để AI draft title/spec chính xác hơn.
+                                        Ảnh chỉ dùng để AI đọc khi bạn post phiếu nhập.
                                     </div>
                                 </div>
-
                                 <button
                                     type="button"
                                     onClick={addWatchLine}
-                                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    Thêm đồng hồ
+                                    Thêm dòng
                                 </button>
                             </div>
 
-                            <div className="space-y-5 p-5">
-                                {watchLines.map((line, idx) => (
+                            <div className="space-y-4 p-5">
+                                {watchLines.map((line, index) => (
                                     <WatchLineCard
                                         key={line.id}
+                                        index={index}
                                         line={line}
-                                        index={idx}
-                                        vendorName={vendorName}
-                                        onChange={(next) => updateLine(line.id, next)}
+                                        canRemove={watchLines.length > 1}
                                         onRemove={() => removeLine(line.id)}
+                                        onChange={(next) => updateLine(line.id, next)}
                                     />
                                 ))}
-
-                                <div className="flex flex-wrap gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={addWatchLine}
-                                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Thêm đồng hồ
-                                    </button>
-                                </div>
                             </div>
                         </section>
                     </div>
 
-                    <aside className="space-y-6">
-                        <section className="rounded-3xl border border-slate-200 bg-white">
-                            <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4">
-                                <div className="rounded-2xl border border-slate-200 p-2">
-                                    <Box className="h-5 w-5 text-slate-600" />
-                                </div>
-                                <div>
-                                    <div className="text-lg font-semibold text-slate-900">Tổng quan phiếu</div>
-                                    <div className="text-sm text-slate-500">
-                                        Tóm tắt nhanh để đối chiếu trước khi lưu.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3 p-5">
-                                {[
-                                    ["Tổng đồng hồ", `${new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND`],
-                                    ["Tổng dây", "0 VND"],
-                                    ["Tổng giá trị phiếu", `${new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND`],
-                                ].map(([label, value], idx) => (
-                                    <div
-                                        key={label}
-                                        className={idx === 2
-                                            ? "rounded-2xl bg-slate-950 px-4 py-4 text-white"
-                                            : "rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"}
-                                    >
-                                        <div className={idx === 2 ? "text-sm text-slate-200" : "text-sm text-slate-500"}>
-                                            {label}
-                                        </div>
-                                        <div className="mt-1 text-lg font-semibold">{value}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-
-                        <section className="rounded-3xl border border-slate-200 bg-white">
-                            <div className="border-b border-slate-200 px-5 py-4">
-                                <div className="text-lg font-semibold text-slate-900">Hướng dẫn nhập nhanh</div>
-                                <div className="text-sm text-slate-500">
-                                    Dùng hint riêng từng dòng nếu có thông tin mắt thường biết mà AI khó nhìn ra.
-                                </div>
-                            </div>
-
-                            <div className="space-y-5 p-5 text-sm text-slate-700">
-                                <div>
-                                    <div className="mb-2 font-medium text-slate-900">Ví dụ hint tốt</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {[
-                                            "niềng 18K gold",
-                                            "case 18K gold",
-                                            "máy pin",
-                                            "mặt champagne",
-                                            "dây da thay ngoài",
-                                        ].map((item) => (
-                                            <span
-                                                key={item}
-                                                className="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-700"
-                                            >
-                                                {item}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
-                                    Ref và năm sản xuất chỉ nên coi là candidate/estimate nếu chưa có ảnh caseback hoặc macro text.
-                                </div>
+                    <aside className="space-y-4">
+                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="text-sm font-semibold text-slate-900">Hành động</div>
+                            <div className="mt-4 space-y-3">
+                                <button
+                                    type="button"
+                                    disabled={submitting}
+                                    onClick={submit}
+                                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <Save className="h-4 w-4" />
+                                    {submitting ? "Đang lưu..." : "Lưu phiếu nhập"}
+                                </button>
                             </div>
                         </section>
                     </aside>
                 </div>
             </section>
-
-            <div className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
-                <div className="mx-auto flex max-w-[1600px] items-center justify-between">
-                    <div className="text-sm text-slate-500">
-                        Tổng giá trị phiếu{" "}
-                        <span className="ml-2 text-xl font-semibold text-slate-900">
-                            {new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND
-                        </span>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={submit}
-                        disabled={submitting}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <Save className="h-4 w-4" />
-                        {submitting ? "Đang lưu..." : "Lưu phiếu nhập"}
-                    </button>
-                </div>
-            </div>
         </div>
     );
 }

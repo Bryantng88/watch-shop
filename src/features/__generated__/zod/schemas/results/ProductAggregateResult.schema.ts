@@ -22,6 +22,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     postContent: z.number(),
     aiPromptUsed: z.number(),
     aiGeneratedAt: z.number(),
+    sku: z.number(),
     AcquisitionItem: z.number(),
     InvoiceItem: z.number(),
     maintenanceRecords: z.number(),
@@ -58,7 +59,8 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     categoryId: z.string().nullable(),
     postContent: z.string().nullable(),
     aiPromptUsed: z.string().nullable(),
-    aiGeneratedAt: z.date().nullable()
+    aiGeneratedAt: z.date().nullable(),
+    sku: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -76,5 +78,6 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     categoryId: z.string().nullable(),
     postContent: z.string().nullable(),
     aiPromptUsed: z.string().nullable(),
-    aiGeneratedAt: z.date().nullable()
+    aiGeneratedAt: z.date().nullable(),
+    sku: z.string().nullable()
   }).nullable().optional()});

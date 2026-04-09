@@ -1,625 +1,92 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import type { BrandLite, ProductListItem } from "@/features/products/types";
-import DotLabel from "../../__components/DotLabel";
-import SegmentTabs from "@/components/tabs/SegmenTabs";
-import StatusBadge from "@/components/badges/StatusBadge";
-import InlineImagePicker from "../_components/InlineImagePicker";
+import {
+    ProductListBulkBar,
+    ProductListFilters,
+    ProductListTable,
+    ProductListToolbar,
+    ProductListViewTabs,
+    ProductReadinessModal,
+} from "./list";
+import type { CatalogKey, Counts, ProductListPageProps, ProductRow, ViewKey } from "./list/types";
 
-function cx(...classes: Array<string | false | null | undefined>) {
-    return classes.filter(Boolean).join(" ");
-}
-
-type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
-type CatalogKey = "product" | "strap";
-
-type Counts = {
-    all: number;
-    draft: number;
-    posted: number;
-    in_service: number;
-    hold: number;
-    sold: number;
+type FilterState = {
+    q: string;
+    sku: string;
+    type: string;
+    brandId: string;
+    vendorId: string;
+    image: string;
+    sort: string;
 };
 
-type ProductRow = ProductListItem & {
-    slug?: string;
-    brand?: string | null;
-    type?: string | null;
-    vendorName?: string | null;
-    material?: string | null;
-    variantsCount?: number;
-    imagesCount?: number;
-    ordersCount?: number;
-    serviceRequests?: number;
-    reservations?: number;
-    primaryImageUrl?: string | null;
-    brandId?: string | null;
-    category?:
-    | string
-    | {
-        id?: string | null;
-        name?: string | null;
-        code?: string | null;
-        slug?: string | null;
-    }
-    | null;
-    variantSnapshot?: {
-        price?: number | null;
-        availabilityStatus?: string | null;
-        stockQty?: number | null;
-        sku?: string | null;
-    } | null;
-    updatedAt?: string | null;
-    createdAt?: string | null;
-    status?: string | null;
-    contentStatus?: string | null;
-    title?: string | null;
-    minPrice?: number | null;
-    purchasePrice?: number | null;
-    salePrice?: number | null;
-    stockQty?: number | null;
-    strapSpec?: {
-        lugWidthMM?: number | null;
-        buckleWidthMM?: number | null;
-        color?: string | null;
-        material?: string | null;
-        quickRelease?: boolean | null;
-    } | null;
-    isVariantInfoComplete?: boolean;
-    isWatchSpecComplete?: boolean;
-    isInfoComplete?: boolean;
-    missingVariantFields?: string[];
-    missingWatchSpecFields?: string[];
-    hasOpenService?: boolean;
-    openServiceStatus?: string | null;
-    latestServiceStatus?: string | null;
-    acquisitionId?: string | null;
-    acquisitionRefNo?: string | null;
-    isReadyToPublish?: boolean;
-    publishMissing?: string[];
-};
-
-type PageProps = {
-    items: ProductRow[];
-    total: number;
-    counts?: Partial<Counts>;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    rawSearchParams: Record<string, string | string[] | undefined>;
-    brands: BrandLite[];
-    vendors: Array<{ id: string; name: string }>;
-    categories?: Array<{ id: string; name: string; code: string; scope: string }>;
-    productTypes: Array<{ label: string; value: string }>;
-    canViewCost: boolean;
-    canEditPrice: boolean;
-};
-
-function fmtMoney(n?: number | null) {
-    if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(Number(n));
-}
-
-function fmtDT(s?: string | null) {
-    if (!s) return "-";
-    const d = new Date(s);
-    if (!Number.isFinite(d.getTime())) return "-";
-    return d.toLocaleString("vi-VN");
-}
-
-function hasValidPrice(p: ProductRow) {
-    const price = Number(p.minPrice ?? 0);
-    return Number.isFinite(price) && price > 0;
-}
-
-function hasValidImage(p: ProductRow) {
-    const count = Number(p.imagesCount ?? 0);
-    if (Number.isFinite(count) && count > 0) return true;
-
-    const img = p.primaryImageUrl;
-    return typeof img === "string" && img.trim().length > 0;
-}
-
-function hasMissingImageReadiness(p: ProductRow) {
-    if ((p.publishMissing ?? []).includes("images")) return true;
-    return !hasValidImage(p);
-}
-
-function hasMissingCoreReadinessInfo(p: ProductRow) {
-    const missing = new Set(p.publishMissing ?? []);
-    const hasStructuredMissing = missing.size > 0;
-
-    if (hasStructuredMissing) {
-        for (const key of missing) {
-            if (key !== "images") return true;
-        }
-        return false;
-    }
-
-    return !hasValidPrice(p) || !p.isInfoComplete;
-}
-
-function hasMissingReadinessInfo(p: ProductRow) {
-    return hasMissingImageReadiness(p) || hasMissingCoreReadinessInfo(p);
-}
-
-function getQuickFixHints(p: ProductRow) {
-    const hints: string[] = [];
-    const missing = new Set(p.publishMissing ?? []);
-
-    if (missing.has("images") || (!p.publishMissing && !hasValidImage(p))) {
-        hints.push("Bổ sung đủ ảnh sản phẩm ở cột ảnh bên trái hoặc trong trang edit.");
-    }
-    if (missing.has("brandId")) {
-        hints.push("Chọn thương hiệu trong trang chỉnh sửa sản phẩm.");
-    }
-    if (missing.has("variant") || (!p.publishMissing && !hasValidPrice(p))) {
-        hints.push("Cập nhật giá bán, trạng thái kho hoặc tồn kho của variant.");
-    }
-    if ((p.publishMissing ?? []).some((field) => !["images", "brandId", "variant"].includes(field)) || !p.isInfoComplete) {
-        hints.push("Bổ sung đầy đủ watch spec / variant trong trang chỉnh sửa sản phẩm.");
-    }
-
-    return Array.from(new Set(hints));
-}
-
-function isPublishMissing(product: ProductRow, key: string) {
-    return (product.publishMissing ?? []).includes(key);
-}
-
-function getPublishImageRequirement(product: ProductRow) {
-    return product.type === "WATCH_STRAP" ? 1 : 4;
-}
-
-function getDetailedPublishMissing(product: ProductRow) {
-    const known = new Set(["images", "brandId", "variant", "watchSpec"]);
-    return (product.publishMissing ?? []).filter((item) => !known.has(item));
-}
-
-function getProductInventoryStatusText(status?: string | null) {
-    switch (String(status || "").toUpperCase()) {
-        case "AVAILABLE":
-            return "Availalbe";
-        case "HOLD":
-            return "Giữ hàng";
-        case "SOLD":
-            return "Đã bán";
-        case "IN_SERVICE":
-            return "In Service";
-        case "CONSIGNED_TO":
-            return "Gửi đối tác";
-        case "CONSIGNED_FROM":
-            return "Ký gửi";
-        case "DRAFT":
-            return "Nháp";
-        default:
-            return status || "-";
-    }
-}
-
-function getInventoryStatusTextClass(status?: string | null) {
-    const s = String(status || "").toUpperCase();
-
-    switch (s) {
-        case "AVAILABLE":
-            return "text-sm font-medium text-emerald-700";
-        case "IN_SERVICE":
-            return "text-sm font-medium text-amber-700";
-        case "HOLD":
-            return "text-sm font-medium text-slate-600";
-        case "SOLD":
-            return "text-sm font-medium text-rose-700";
-        case "CONSIGNED_TO":
-        case "CONSIGNED_FROM":
-            return "text-sm font-medium text-violet-700";
-        case "DRAFT":
-            return "text-sm font-medium text-slate-500";
-        default:
-            return "text-sm font-medium text-slate-500";
-    }
-}
-
-function getContentStatusBadgeValue(p: ProductRow) {
-    const current = String(p.contentStatus ?? "").toUpperCase();
-    if (current === "PUBLISHED") return "POSTED";
-    if (current === "ARCHIVED") return "ARCHIVED";
-    return "DRAFT";
-}
-
-function getServiceLabel(p: ProductRow) {
-    const current = p.openServiceStatus ?? p.latestServiceStatus ?? null;
-
-    switch (current) {
-        case "DRAFT":
-            return {
-                label: "Cần service",
-                tone: "orange" as const,
-            };
-
-        case "DIAGNOSING":
-        case "WAIT_APPROVAL":
-        case "IN_PROGRESS":
-            return {
-                label: "Đang service",
-                tone: "blue" as const,
-            };
-
-        case "COMPLETED":
-        case "DELIVERED":
-            return {
-                label: "Đã service",
-                tone: "green" as const,
-            };
-
-        case "CANCELED":
-            return {
-                label: "Đã hủy service",
-                tone: "gray" as const,
-            };
-
-        default:
-            return null;
-    }
-}
-
-function StrapSpecText({ p }: { p: ProductRow }) {
-    const s = p.strapSpec;
-    if (!s) return <span>-</span>;
-
-    return (
-        <span>
-            {s.material || "-"} / {s.lugWidthMM || "-"} - {s.buckleWidthMM || "-"} / {s.color || "-"} /{" "}
-            {s.quickRelease ? "QR" : "No QR"}
-        </span>
-    );
-}
-
-function getCategoryKey(product: ProductRow) {
-    const raw =
-        typeof product.category === "string"
-            ? product.category
-            : product.category?.code ?? product.category?.slug ?? product.category?.name ?? null;
-
-    return String(raw || "").trim().toUpperCase();
-}
-
-function isWomenWatch(product: ProductRow) {
-    const key = getCategoryKey(product);
-    return key === "WOMEN_WATCH" || key === "LADIES_WATCH" || key === "NU_WATCH";
-}
-
-function getPostReadinessState(product: ProductRow) {
-    if (isWomenWatch(product)) {
+function buildCounts(input: ProductListPageProps["counts"], total: number, currentView: ViewKey): Counts {
+    if (input && Object.values(input).some((value) => Number(value ?? 0) >= 0)) {
         return {
-            label: "Post thủ công",
-            tone: "orange" as const,
-        };
-    }
-
-    if (hasMissingCoreReadinessInfo(product)) {
-        return {
-            label: "Missing Info",
-            tone: "orange" as const,
-        };
-    }
-
-    if (hasMissingImageReadiness(product)) {
-        return {
-            label: "Missing Image",
-            tone: "orange" as const,
+            all: Number(input.all ?? 0),
+            draft: Number(input.draft ?? 0),
+            posted: Number(input.posted ?? 0),
+            in_service: Number(input.in_service ?? 0),
+            hold: Number(input.hold ?? 0),
+            sold: Number(input.sold ?? 0),
         };
     }
 
     return {
-        label: "Ready to post",
-        tone: "green" as const,
+        all: currentView === "all" ? total : 0,
+        draft: currentView === "draft" ? total : 0,
+        posted: currentView === "posted" ? total : 0,
+        in_service: currentView === "in_service" ? total : 0,
+        hold: currentView === "hold" ? total : 0,
+        sold: currentView === "sold" ? total : 0,
     };
 }
 
-function MiniDotLabel({
-    label,
-    tone,
-    className = "",
-}: {
-    label: string;
-    tone: "orange" | "green" | "blue" | "gray";
-    className?: string;
-}) {
-    const map: Record<string, string> = {
-        orange: "text-orange-600",
-        green: "text-emerald-600",
-        blue: "text-blue-600",
-        gray: "text-slate-500",
-    };
-
-    return (
-        <span className={`inline-flex items-center gap-1 text-[10px] leading-4 font-medium ${map[tone]} ${className}`}>
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === "orange"
-                ? "bg-orange-500"
-                : tone === "green"
-                    ? "bg-emerald-500"
-                    : tone === "blue"
-                        ? "bg-blue-500"
-                        : "bg-slate-400"
-                }`}
-            />
-            <span>{label}</span>
-        </span>
-    );
+function setParam(next: URLSearchParams, key: string, value?: string | null) {
+    if (!value) next.delete(key);
+    else next.set(key, value);
 }
 
-function InlineMoneyEditor({
-    productId,
-    field,
-    value,
-    label,
-    onSaved,
-}: {
-    productId: string;
-    field: "minPrice" | "salePrice";
-    value: number | null | undefined;
-    label: string;
-    onSaved: (v: number | null) => void;
-}) {
-    const [editing, setEditing] = useState(false);
-    const [draft, setDraft] = useState(value == null ? "" : String(value));
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        setDraft(value == null ? "" : String(value));
-    }, [value]);
-
-    async function save() {
-        const trimmed = draft.trim();
-        const nextValue = trimmed === "" ? null : Number(trimmed);
-
-        if (nextValue != null && (!Number.isFinite(nextValue) || nextValue < 0)) {
-            alert(`${label} không hợp lệ`);
-            return;
-        }
-
-        try {
-            setSaving(true);
-
-            const res = await fetch(`/api/admin/products/${productId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    [field]: nextValue,
-                }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.error || `Cập nhật ${label.toLowerCase()} thất bại`);
-            }
-
-            onSaved(nextValue);
-            setEditing(false);
-        } catch (e: any) {
-            alert(e?.message || `Cập nhật ${label.toLowerCase()} thất bại`);
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    if (editing) {
-        return (
-            <div className="flex items-center justify-end gap-2">
-                <input
-                    type="number"
-                    min={0}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    className="w-28 rounded border px-2 py-1 text-right"
-                    placeholder="Để trống = bỏ"
-                />
-                <button
-                    type="button"
-                    onClick={save}
-                    disabled={saving}
-                    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                    {saving ? "..." : "Lưu"}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setEditing(false);
-                        setDraft(value == null ? "" : String(value));
-                    }}
-                    disabled={saving}
-                    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                    Hủy
-                </button>
-            </div>
-        );
-    }
-
-    return (
-        <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="group inline-flex items-center justify-end gap-2 rounded px-2 py-1 hover:bg-gray-50"
-            title={`Chỉnh nhanh ${label.toLowerCase()}`}
-        >
-            <span className={field === "salePrice" ? "text-emerald-700 font-medium" : "font-semibold"}>
-                {fmtMoney(value)}
-            </span>
-            <span className="text-xs text-gray-400 opacity-0 transition group-hover:opacity-100">
-                sửa
-            </span>
-        </button>
-    );
-}
-
-function ReadinessDetailModal({
-    product,
+function BulkPostConfirm({
     open,
+    count,
     onClose,
-    onEdit,
+    onConfirm,
+    loading,
 }: {
-    product: ProductRow | null;
     open: boolean;
+    count: number;
     onClose: () => void;
-    onEdit: (id: string) => void;
+    onConfirm: () => void;
+    loading: boolean;
 }) {
-    if (!open || !product) return null;
-
-    const missingVariantFields = Array.from(new Set(product.missingVariantFields ?? []));
-    const missingWatchSpecFields = Array.from(new Set(product.missingWatchSpecFields ?? []));
-    const detailedPublishMissing = Array.from(new Set(getDetailedPublishMissing(product)));
-    const quickFixHints = getQuickFixHints(product);
+    if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-                    <div>
-                        <div className="text-lg font-semibold text-slate-950">Kiểm tra thông tin sản phẩm</div>
-                        <div className="mt-1 text-sm text-slate-500">{product.title || "-"}</div>
-                    </div>
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="border-b border-slate-100 px-5 py-4">
+                    <h3 className="text-lg font-semibold text-slate-950">Bulk post sản phẩm</h3>
+                    <p className="mt-1 text-sm text-slate-500">Bạn đang chuẩn bị post {count} sản phẩm đã chọn.</p>
+                </div>
+                <div className="flex justify-end gap-3 px-5 py-4">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        disabled={loading}
                     >
-                        Đóng
-                    </button>
-                </div>
-
-                <div className="space-y-4 px-5 py-5 text-sm">
-                    <div className="flex flex-wrap gap-2">
-                        <DotLabel
-                            label={
-                                isPublishMissing(product, "images")
-                                    ? `Thiếu ảnh (cần ${getPublishImageRequirement(product)})`
-                                    : "Ảnh đạt yêu cầu"
-                            }
-                            tone={isPublishMissing(product, "images") ? "orange" : "green"}
-                        />
-                        <DotLabel
-                            label={isPublishMissing(product, "brandId") ? "Thiếu thương hiệu" : "Đã có thương hiệu"}
-                            tone={isPublishMissing(product, "brandId") ? "orange" : "green"}
-                        />
-                        <DotLabel
-                            label={isPublishMissing(product, "variant") ? "Variant chưa đạt" : "Variant đạt"}
-                            tone={isPublishMissing(product, "variant") ? "orange" : "green"}
-                        />
-                        <DotLabel
-                            label={
-                                ((product.publishMissing ?? []).some((item) => !["images", "brandId", "variant"].includes(item)) ||
-                                    !product.isInfoComplete)
-                                    ? "Thiếu spec"
-                                    : "Spec đạt"
-                            }
-                            tone={
-                                ((product.publishMissing ?? []).some((item) => !["images", "brandId", "variant"].includes(item)) ||
-                                    !product.isInfoComplete)
-                                    ? "orange"
-                                    : "green"
-                            }
-                        />
-                        {(() => {
-                            const serviceLabel = getServiceLabel(product);
-                            return serviceLabel ? (
-                                <DotLabel label={serviceLabel.label} tone={serviceLabel.tone} />
-                            ) : null;
-                        })()}
-                    </div>
-
-                    {hasMissingReadinessInfo(product) ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                            <div className="font-medium text-amber-900">Các mục còn thiếu</div>
-
-                            <div className="mt-3 space-y-3 text-amber-900">
-                                {isPublishMissing(product, "images") ? (
-                                    <div>
-                                        • Chưa đủ ảnh hiển thị ({Number(product.imagesCount ?? 0)}/
-                                        {getPublishImageRequirement(product)})
-                                    </div>
-                                ) : null}
-                                {isPublishMissing(product, "brandId") ? <div>• Chưa chọn thương hiệu</div> : null}
-                                {isPublishMissing(product, "variant") ? (
-                                    <div>• Variant chưa đủ điều kiện bán (cần có giá và trạng thái phù hợp)</div>
-                                ) : null}
-
-                                {!!missingVariantFields.length && (
-                                    <div>
-                                        <div className="font-medium">Variant còn thiếu</div>
-                                        <div className="mt-1 text-sm">{missingVariantFields.join(", ")}</div>
-                                    </div>
-                                )}
-
-                                {(isPublishMissing(product, "watchSpec") ||
-                                    !!missingWatchSpecFields.length ||
-                                    !!detailedPublishMissing.length) && (
-                                        <div>
-                                            <div className="font-medium">Watch spec còn thiếu</div>
-                                            <div className="mt-1 text-sm">
-                                                {[...missingWatchSpecFields, ...detailedPublishMissing]
-                                                    .filter(Boolean)
-                                                    .join(", ") || "Thiếu watch spec"}
-                                            </div>
-                                        </div>
-                                    )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
-                            Sản phẩm đã sẵn sàng public.
-                        </div>
-                    )}
-
-                    {isWomenWatch(product) ? (
-                        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
-                            Đồng hồ nữ đi theo luồng quản lý bài đăng thủ công. Có thể giữ trạng thái draft và lên bài thủ công sau.
-                        </div>
-                    ) : null}
-
-                    {quickFixHints.length ? (
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="font-medium text-slate-900">Gợi ý bổ sung nhanh</div>
-                            <div className="mt-2 space-y-1 text-slate-700">
-                                {quickFixHints.map((hint) => (
-                                    <div key={hint}>• {hint}</div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {product.hasOpenService ? (
-                        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
-                            Sản phẩm đang trong quá trình service nên chưa nên bulk post cho đến khi hoàn tất.
-                        </div>
-                    ) : product.latestServiceStatus === "COMPLETED" || product.latestServiceStatus === "DELIVERED" ? (
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
-                            Sản phẩm đã có service hoàn tất gần nhất.
-                        </div>
-                    ) : null}
-                </div>
-
-                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                        Đóng
+                        Hủy
                     </button>
                     <button
                         type="button"
-                        onClick={() => onEdit(product.id)}
-                        className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                        onClick={onConfirm}
+                        className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        disabled={loading}
                     >
-                        Bổ sung ngay
+                        {loading ? "Đang post..." : "Xác nhận post"}
                     </button>
                 </div>
             </div>
@@ -627,238 +94,335 @@ function ReadinessDetailModal({
     );
 }
 
-export default function AdminProductListPageClient(props: PageProps) {
+function BulkSaleModal({
+    open,
+    count,
+    value,
+    saving,
+    onChange,
+    onClose,
+    onConfirm,
+}: {
+    open: boolean;
+    count: number;
+    value: string;
+    saving: boolean;
+    onChange: (value: string) => void;
+    onClose: () => void;
+    onConfirm: () => void;
+}) {
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div className="border-b border-slate-100 px-5 py-4">
+                    <h3 className="text-lg font-semibold text-slate-950">Bulk sale</h3>
+                    <p className="mt-1 text-sm text-slate-500">Áp dụng giá sale cho {count} sản phẩm đã chọn.</p>
+                </div>
+
+                <div className="space-y-2 px-5 py-4">
+                    <label className="space-y-2">
+                        <div className="text-sm font-medium text-slate-800">Giá sale</div>
+                        <input
+                            type="number"
+                            min={0}
+                            value={value}
+                            onChange={(e) => onChange(e.target.value)}
+                            placeholder="Để trống để bỏ sale"
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+                    </label>
+                    <div className="text-xs text-slate-500">Nhập giá sale cố định. Để trống để xóa sale hàng loạt.</div>
+                </div>
+
+                <div className="flex justify-end gap-3 px-5 py-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        disabled={saving}
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        disabled={saving}
+                    >
+                        {saving ? "Đang lưu..." : "Xác nhận"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Pagination({
+    page,
+    totalPages,
+    total,
+    onPage,
+}: {
+    page: number;
+    totalPages: number;
+    total: number;
+    onPage: (page: number) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+            <div>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page <= 1}
+                    onClick={() => onPage(Math.max(1, page - 1))}
+                >
+                    ← Trước
+                </button>
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page >= totalPages}
+                    onClick={() => onPage(Math.min(totalPages, page + 1))}
+                >
+                    Sau →
+                </button>
+            </div>
+        </div>
+    );
+}
+
+export default function ListProducts(props: ProductListPageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
-    const [bulkServiceLoading, setBulkServiceLoading] = useState(false);
 
     const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
-    useEffect(() => setRows(props.items ?? []), [props.items]);
+    const [pendingImageProductId, setPendingImageProductId] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [bulkPostOpen, setBulkPostOpen] = useState(false);
+    const [bulkPostLoading, setBulkPostLoading] = useState(false);
+    const [bulkSaleOpen, setBulkSaleOpen] = useState(false);
+    const [bulkSaleValue, setBulkSaleValue] = useState("");
+    const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
+    const [bulkServiceLoading, setBulkServiceLoading] = useState(false);
+    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(null);
+
+    useEffect(() => {
+        setRows(props.items ?? []);
+    }, [props.items]);
 
     const currentView: ViewKey = useMemo(() => {
-        const v = (sp.get("view") || "draft").toLowerCase();
-        if (v === "draft" || v === "posted" || v === "in_service" || v === "hold" || v === "sold") {
-            return v as ViewKey;
+        const view = (sp.get("view") || "draft").toLowerCase();
+        if (["all", "draft", "posted", "in_service", "hold", "sold"].includes(view)) {
+            return view as ViewKey;
         }
         return "draft";
     }, [sp]);
 
     const currentCatalog: CatalogKey = useMemo(() => {
-        const v = (sp.get("catalog") || "product").toLowerCase();
-        return v === "strap" ? "strap" : "product";
+        const catalog = (sp.get("catalog") || "product").toLowerCase();
+        return catalog === "strap" ? "strap" : "product";
     }, [sp]);
 
     const isStrapCatalog = currentCatalog === "strap";
 
-    function setView(view: string) {
-        const next = new URLSearchParams(sp.toString());
-        if (view === "draft") next.delete("view");
-        else next.set("view", view);
-        next.set("page", "1");
-        router.push(`${pathname}?${next.toString()}`);
-    }
+    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView), [props.counts, props.total, currentView]);
 
-    function setCatalog(catalog: CatalogKey) {
-        const next = new URLSearchParams(sp.toString());
-        if (catalog === "product") next.delete("catalog");
-        else next.set("catalog", "strap");
-        next.delete("type");
-        next.set("page", "1");
-        router.push(`${pathname}?${next.toString()}`);
-    }
+    const [filters, setFilters] = useState<FilterState>({
+        q: sp.get("q") ?? "",
+        sku: sp.get("sku") ?? "",
+        type: sp.get("type") ?? "",
+        brandId: sp.get("brandId") ?? "",
+        vendorId: sp.get("vendorId") ?? "",
+        image: sp.get("hasImages") ?? "",
+        sort: sp.get("sort") ?? "updatedDesc",
+    });
 
-    const q = sp.get("q") ?? "";
-    const sku = sp.get("sku") ?? "";
-    const type = sp.get("type") ?? "";
-    const brandId = sp.get("brandId") ?? "";
-    const vendorId = sp.get("vendorId") ?? "";
-    const hasImages = sp.get("hasImages") ?? "";
-    const sort = sp.get("sort") ?? "updatedDesc";
-
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [showBulkBar, setShowBulkBar] = useState(false);
-    const [showBulkConfirm, setShowBulkConfirm] = useState(false);
-    const [showBulkSaleModal, setShowBulkSaleModal] = useState(false);
-    const [bulkSaleValue, setBulkSaleValue] = useState("");
-    const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
-
-    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(null);
-    const [openReadinessModal, setOpenReadinessModal] = useState(false);
+    useEffect(() => {
+        setFilters({
+            q: sp.get("q") ?? "",
+            sku: sp.get("sku") ?? "",
+            type: sp.get("type") ?? "",
+            brandId: sp.get("brandId") ?? "",
+            vendorId: sp.get("vendorId") ?? "",
+            image: sp.get("hasImages") ?? "",
+            sort: sp.get("sort") ?? "updatedDesc",
+        });
+    }, [sp]);
 
     useEffect(() => {
         setSelectedIds([]);
-        setShowBulkBar(false);
-        setShowBulkConfirm(false);
-        setShowBulkSaleModal(false);
+        setBulkPostOpen(false);
+        setBulkSaleOpen(false);
         setBulkSaleValue("");
-    }, [currentCatalog, currentView, q, sku, type, brandId, vendorId, hasImages, sort, props.page]);
+    }, [currentCatalog, currentView, props.page, props.total]);
 
-    useEffect(() => {
-        setShowBulkBar(selectedIds.length > 0);
-    }, [selectedIds.length]);
-
-    const counts: Counts = useMemo(() => {
-        const server = props.counts;
-        if (server && Object.values(server).some((v) => Number(v ?? 0) >= 0)) {
-            return {
-                all: Number(server.all ?? 0),
-                draft: Number(server.draft ?? 0),
-                posted: Number(server.posted ?? 0),
-                in_service: Number(server.in_service ?? 0),
-                hold: Number(server.hold ?? 0),
-                sold: Number(server.sold ?? 0),
-            };
-        }
-
-        return {
-            all: currentView === "all" ? props.total : 0,
-            draft: currentView === "draft" ? props.total : 0,
-            posted: currentView === "posted" ? props.total : 0,
-            in_service: currentView === "in_service" ? props.total : 0,
-            hold: currentView === "hold" ? props.total : 0,
-            sold: currentView === "sold" ? props.total : 0,
-        };
-    }, [props.counts, props.total, currentView]);
-
-    const selectableIds = useMemo(() => rows.map((x) => x.id), [rows]);
-
-    const allChecked =
-        selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
-
-    const someChecked =
-        selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
-
-    const [formQ, setFormQ] = useState(q);
-    const [formSku, setFormSku] = useState(sku);
-    const [formType, setFormType] = useState(type);
-    const [formBrandId, setFormBrandId] = useState(brandId);
-    const [formVendorId, setFormVendorId] = useState(vendorId);
-    const [formHasImages, setFormHasImages] = useState(hasImages);
-    const [formSort, setFormSort] = useState(sort);
-
-    useEffect(() => setFormQ(q), [q]);
-    useEffect(() => setFormSku(sku), [sku]);
-    useEffect(() => setFormType(type), [type]);
-    useEffect(() => setFormBrandId(brandId), [brandId]);
-    useEffect(() => setFormVendorId(vendorId), [vendorId]);
-    useEffect(() => setFormHasImages(hasImages), [hasImages]);
-    useEffect(() => setFormSort(sort), [sort]);
-
-    function setParam(next: URLSearchParams, key: string, value: string | null) {
-        if (!value) next.delete(key);
-        else next.set(key, value);
+    function pushParams(mutator: (next: URLSearchParams) => void) {
+        const next = new URLSearchParams(sp.toString());
+        mutator(next);
+        router.push(`${pathname}?${next.toString()}`);
     }
 
-    function applyFilters(form: {
-        q: string;
-        sku: string;
-        type: string;
-        brandId: string;
-        vendorId: string;
-        hasImages: string;
-        sort: string;
-    }) {
-        const next = new URLSearchParams(sp.toString());
-        setParam(next, "q", form.q.trim() || null);
-        setParam(next, "sku", form.sku.trim() || null);
+    function handleViewChange(view: ViewKey) {
+        pushParams((next) => {
+            if (view === "draft") next.delete("view");
+            else next.set("view", view);
+            next.set("page", "1");
+        });
+    }
 
-        if (!isStrapCatalog) {
-            setParam(next, "type", form.type || null);
-            setParam(next, "brandId", form.brandId || null);
-        } else {
+    function handleCatalogChange(catalog: CatalogKey) {
+        pushParams((next) => {
+            if (catalog === "product") next.delete("catalog");
+            else next.set("catalog", "strap");
             next.delete("type");
             next.delete("brandId");
+            next.set("page", "1");
+        });
+    }
+
+    function handleApplyFilters() {
+        pushParams((next) => {
+            setParam(next, "q", filters.q.trim() || null);
+            setParam(next, "sku", isStrapCatalog ? null : filters.sku.trim() || null);
+            setParam(next, "type", isStrapCatalog ? null : filters.type || null);
+            setParam(next, "brandId", isStrapCatalog ? null : filters.brandId || null);
+            setParam(next, "vendorId", filters.vendorId || null);
+            setParam(next, "hasImages", filters.image || null);
+            setParam(next, "sort", filters.sort || "updatedDesc");
+            next.set("page", "1");
+        });
+    }
+
+    function handleClearFilters() {
+        setFilters({
+            q: "",
+            sku: "",
+            type: "",
+            brandId: "",
+            vendorId: "",
+            image: "",
+            sort: "updatedDesc",
+        });
+
+        pushParams((next) => {
+            ["q", "sku", "type", "brandId", "vendorId", "hasImages", "sort"].forEach((key) => next.delete(key));
+            next.set("page", "1");
+        });
+    }
+
+    function handlePage(page: number) {
+        pushParams((next) => {
+            next.set("page", String(page));
+        });
+    }
+
+    function handleToggleOne(id: string, checked: boolean) {
+        setSelectedIds((prev) => {
+            if (checked) return Array.from(new Set([...prev, id]));
+            return prev.filter((item) => item !== id);
+        });
+    }
+
+    function handleToggleAll(checked: boolean) {
+        if (checked) {
+            setSelectedIds(rows.map((item) => item.id));
+            return;
         }
-
-        setParam(next, "vendorId", form.vendorId || null);
-        setParam(next, "hasImages", form.hasImages || null);
-        setParam(next, "sort", form.sort || "updatedDesc");
-        next.set("page", "1");
-        router.push(`${pathname}?${next.toString()}`);
-    }
-
-    function clearFilters() {
-        const next = new URLSearchParams(sp.toString());
-        next.delete("q");
-        next.delete("sku");
-        next.delete("type");
-        next.delete("brandId");
-        next.delete("vendorId");
-        next.delete("hasImages");
-        next.delete("sort");
-        next.set("page", "1");
-        router.push(`${pathname}?${next.toString()}`);
-    }
-
-    function goPage(p: number) {
-        const next = new URLSearchParams(sp.toString());
-        next.set("page", String(p));
-        router.push(`${pathname}?${next.toString()}`);
+        setSelectedIds([]);
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) return;
+        if (!window.confirm("Bạn có chắc chắn muốn xoá sản phẩm này?")) return;
 
         const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
         if (!res.ok) {
-            alert("Xoá thất bại!");
+            window.alert("Xoá thất bại");
             return;
         }
+
         router.refresh();
     }
 
-    function openReadinessDetail(product: ProductRow) {
-        setReadinessProduct(product);
-        setOpenReadinessModal(true);
-    }
-
-    async function updateProductImage(productId: string, fileKey: string) {
+    async function handleImageUploaded(productId: string, fileKey: string) {
         try {
+            setPendingImageProductId(productId);
+
             const res = await fetch(`/api/admin/products/${productId}/images`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    files: [{ key: fileKey }],
-                }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ files: [{ key: fileKey }] }),
             });
 
+            const data = await res.json().catch(() => null);
             if (!res.ok) {
-                const msg = await res.text().catch(() => "");
-                alert(msg || "Cập nhật ảnh thất bại");
-                return;
+                throw new Error(data?.error || data?.message || "Cập nhật ảnh thất bại");
             }
 
-            const data = await res.json().catch(() => ({} as any));
             const nextCover = data?.coverImageUrl || fileKey;
-            setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, primaryImageUrl: nextCover } : row)));
+            setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, primaryImageUrl: nextCover, imagesCount: Math.max(Number(row.imagesCount ?? 0), 1) } : row)));
             router.refresh();
-        } catch (error) {
-            console.error(error);
-            alert("Cập nhật ảnh thất bại");
+        } catch (error: any) {
+            window.alert(error?.message || "Cập nhật ảnh thất bại");
+        } finally {
+            setPendingImageProductId(null);
         }
     }
 
-    function patchLocalPrice(id: string, price: number | null) {
-        setRows((prev) =>
-            prev.map((row) => (row.id === id ? { ...row, minPrice: price } : row))
-        );
+    function handlePriceSaved(productId: string, patch: Partial<ProductRow>) {
+        setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, ...patch } : row)));
     }
 
-    function patchLocalSalePrice(id: string, salePrice: number | null) {
-        setRows((prev) =>
-            prev.map((row) => (row.id === id ? { ...row, salePrice } : row))
-        );
+    async function handleBulkPost() {
+        try {
+            setBulkPostLoading(true);
+
+            const res = await fetch("/api/admin/products/bulk-post", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productIds: selectedIds }),
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.message || data?.error || "Bulk post thất bại");
+            }
+
+            if (Array.isArray(data?.failed) && data.failed.length > 0) {
+                const preview = data.failed.slice(0, 3).map((item: any) => {
+                    const title = item?.title || item?.id || "Unknown";
+                    const reasons = Array.isArray(item?.reasons) ? item.reasons.join(" | ") : "";
+                    return `- ${title}: ${reasons}`;
+                });
+
+                window.alert(
+                    `Đã post ${data?.count ?? 0} sản phẩm. Còn ${data.failed.length} sản phẩm chưa đạt điều kiện.\n\n${preview.join("\n")}`
+                );
+            }
+
+            setBulkPostOpen(false);
+            setSelectedIds([]);
+            router.refresh();
+        } catch (error: any) {
+            window.alert(error?.message || "Bulk post thất bại");
+        } finally {
+            setBulkPostLoading(false);
+        }
     }
 
-    async function applyBulkSale() {
+    async function handleBulkSale() {
         const trimmed = bulkSaleValue.trim();
-        const nextSalePrice = trimmed === "" ? null : Number(trimmed);
+        const salePrice = trimmed === "" ? null : Number(trimmed);
 
-        if (nextSalePrice != null && (!Number.isFinite(nextSalePrice) || nextSalePrice < 0)) {
-            alert("Giá sale không hợp lệ");
+        if (salePrice != null && (!Number.isFinite(salePrice) || salePrice < 0)) {
+            window.alert("Giá sale không hợp lệ");
             return;
         }
 
@@ -868,37 +432,27 @@ export default function AdminProductListPageClient(props: PageProps) {
             const res = await fetch("/api/admin/products/bulk-sale", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productIds: selectedIds,
-                    salePrice: nextSalePrice,
-                }),
+                body: JSON.stringify({ productIds: selectedIds, salePrice }),
             });
 
             const data = await res.json().catch(() => null);
             if (!res.ok) {
-                throw new Error(data?.error || "Bulk sale thất bại");
+                throw new Error(data?.error || data?.message || "Bulk sale thất bại");
             }
 
-            setRows((prev) =>
-                prev.map((row) =>
-                    selectedIds.includes(row.id)
-                        ? { ...row, salePrice: nextSalePrice }
-                        : row
-                )
-            );
-
-            setShowBulkSaleModal(false);
+            setRows((prev) => prev.map((row) => (selectedIds.includes(row.id) ? { ...row, salePrice } : row)));
+            setBulkSaleOpen(false);
             setBulkSaleValue("");
             router.refresh();
-        } catch (e: any) {
-            alert(e?.message || "Bulk sale thất bại");
+        } catch (error: any) {
+            window.alert(error?.message || "Bulk sale thất bại");
         } finally {
             setBulkSaleSaving(false);
         }
     }
 
-    async function createTechnicalServiceRequests(productIds: string[]) {
-        const ids = Array.from(new Set((productIds ?? []).filter(Boolean)));
+    async function handleBulkService() {
+        const ids = Array.from(new Set(selectedIds.filter(Boolean)));
         if (!ids.length) return;
 
         try {
@@ -907,82 +461,59 @@ export default function AdminProductListPageClient(props: PageProps) {
             const res = await fetch("/api/admin/service-requests/from-product", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productIds: ids,
-                    scope: "WITH_PURCHASE",
-                }),
+                body: JSON.stringify({ productIds: ids, scope: "WITH_PURCHASE" }),
             });
 
             const data = await res.json().catch(() => null);
-
             if (!res.ok || data?.ok === false) {
                 throw new Error(data?.error || data?.message || "Tạo service request thất bại");
             }
 
-            alert(data?.message || `Đã tạo ${data?.count ?? ids.length} service request`);
+            window.alert(data?.message || `Đã tạo ${data?.count ?? ids.length} service request`);
+            setSelectedIds([]);
             router.refresh();
         } catch (error: any) {
-            alert(error?.message || "Tạo service request thất bại");
+            window.alert(error?.message || "Tạo service request thất bại");
         } finally {
             setBulkServiceLoading(false);
         }
     }
 
-    const segmentTabs = isStrapCatalog
-        ? [
-            { key: "draft", label: "Chờ duyệt", count: counts.draft },
-            { key: "all", label: "Tất cả", count: counts.all },
-            { key: "posted", label: "Đã post", count: counts.posted },
-        ]
-        : [
-            { key: "draft", label: "Chờ duyệt", count: counts.draft },
-            { key: "all", label: "Tất cả", count: counts.all },
-            { key: "posted", label: "Đã post", count: counts.posted },
-            { key: "in_service", label: "Chờ service", count: counts.in_service },
-            { key: "hold", label: "Ký gửi / Giữ hàng", count: counts.hold },
-            { key: "sold", label: "Đã bán", count: counts.sold },
-        ];
+    const typeOptions = isStrapCatalog ? [] : props.productTypes.map((item) => ({ label: item.label, value: item.value }));
+    const brandOptions = isStrapCatalog ? [] : props.brands.map((item) => ({ label: item.name, value: item.id }));
+    const vendorOptions = props.vendors.map((item) => ({ label: item.name, value: item.id }));
 
     return (
-        <div className="space-y-5">
-            <section className="rounded-2xl border border-slate-200 bg-white">
-                <div className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 space-y-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-start">
-                            <div className="inline-flex w-fit rounded-xl border border-slate-200 bg-slate-50 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setCatalog("product")}
-                                    className={cx(
-                                        "rounded-lg px-3.5 py-1.5 text-sm font-medium transition",
-                                        !isStrapCatalog
-                                            ? "bg-white text-slate-950 shadow-sm"
-                                            : "text-slate-600 hover:text-slate-900"
-                                    )}
-                                >
-                                    Sản phẩm
-                                </button>
+        <div className="space-y-6">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-4">
+                        <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                            <button
+                                type="button"
+                                onClick={() => setCatalog("product")}
+                                className={cx(
+                                    "rounded-xl px-4 py-2 text-sm font-medium transition",
+                                    !isStrapCatalog
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                )}
+                            >
+                                Sản phẩm
+                            </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setCatalog("strap")}
-                                    className={cx(
-                                        "rounded-lg px-3.5 py-1.5 text-sm font-medium transition",
-                                        isStrapCatalog
-                                            ? "bg-white text-slate-950 shadow-sm"
-                                            : "text-slate-600 hover:text-slate-900"
-                                    )}
-                                >
-                                    Dây
-                                </button>
-                            </div>
-
-                            {!isStrapCatalog && (
-                                <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm">
-                                    <span className="text-slate-500">Đã chọn</span>
-                                    <span className="font-semibold text-slate-950">{selectedIds.length}</span>
-                                </div>
-                            )}
+                            <button
+                                type="button"
+                                onClick={() => setCatalog("strap")}
+                                className={cx(
+                                    "rounded-xl px-4 py-2 text-sm font-medium transition",
+                                    isStrapCatalog
+                                        ? "bg-slate-900 text-white shadow-sm"
+                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                )}
+                            >
+                                Dây
+                            </button>
                         </div>
 
                         <div>
@@ -990,45 +521,21 @@ export default function AdminProductListPageClient(props: PageProps) {
                                 {isStrapCatalog ? "Quản lý dây" : "Danh sách sản phẩm"}
                             </h1>
                             <p className="mt-1 text-sm text-slate-500">
-                                Giao diện gọn hơn, dồn trọng tâm về filter và bảng dữ liệu.
+                                Đồng bộ phong cách với service request detail: sạch, rõ trạng thái, thao tác nhanh và sẵn sàng production.
                             </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2.5">
-                            {segmentTabs.map((tab) => {
-                                const active = currentView === tab.key;
-                                return (
-                                    <button
-                                        key={tab.key}
-                                        type="button"
-                                        onClick={() => setView(tab.key)}
-                                        className={cx(
-                                            "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition",
-                                            active
-                                                ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                        )}
-                                    >
-                                        <span className={cx("font-medium", active ? "text-white" : "text-slate-700")}>
-                                            {tab.label}
-                                        </span>
-                                        <span
-                                            className={cx(
-                                                "inline-flex min-w-7 items-center justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold",
-                                                active
-                                                    ? "bg-white/15 text-white"
-                                                    : "bg-slate-100 text-slate-700"
-                                            )}
-                                        >
-                                            {tab.count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
                         </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-3">
+                        {!isStrapCatalog && (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+                                <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                                    Đã chọn
+                                </div>
+                                <div className="mt-1 text-xl font-semibold text-slate-950">{selectedIds.length}</div>
+                            </div>
+                        )}
+
                         <Link
                             href={isStrapCatalog ? "/admin/acquisitions/new?focus=strap" : "/admin/products/new"}
                             className="inline-flex items-center rounded-xl border border-slate-900 bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
@@ -1036,6 +543,30 @@ export default function AdminProductListPageClient(props: PageProps) {
                             {isStrapCatalog ? "+ Nhập dây" : "+ Tạo sản phẩm"}
                         </Link>
                     </div>
+                </div>
+
+                <div className="grid gap-3 border-t border-slate-100 px-5 py-4 sm:grid-cols-2 xl:grid-cols-6">
+                    {segmentTabs.map((tab) => {
+                        const active = currentView === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setView(tab.key)}
+                                className={cx(
+                                    "rounded-2xl border px-4 py-3 text-left transition",
+                                    active
+                                        ? "border-slate-900 bg-slate-900 text-white"
+                                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                )}
+                            >
+                                <div className={cx("text-xs font-medium uppercase tracking-[0.14em]", active ? "text-slate-300" : "text-slate-500")}>
+                                    {tab.label}
+                                </div>
+                                <div className="mt-2 text-2xl font-semibold">{tab.count}</div>
+                            </button>
+                        );
+                    })}
                 </div>
             </section>
 

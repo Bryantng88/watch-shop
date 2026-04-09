@@ -29,6 +29,7 @@ export const ProductInputSchema = z.object({
     postContent: z.string().optional().nullable(),
     aiPromptUsed: z.string().optional().nullable(),
     aiGeneratedAt: z.date().optional().nullable(),
+    sku: z.string().optional().nullable(),
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),

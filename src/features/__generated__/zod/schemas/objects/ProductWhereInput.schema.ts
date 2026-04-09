@@ -61,6 +61,7 @@ const productwhereinputSchema = z.object({
   postContent: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   aiPromptUsed: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   aiGeneratedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  sku: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),

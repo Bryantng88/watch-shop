@@ -7,6 +7,12 @@ module.exports = {
         './features/**/*.{js,ts,jsx,tsx,mdx}',  // 👈 bạn đang để code ở đây
         './src/**/*.{js,ts,jsx,tsx,mdx}',
     ],
-    theme: { extend: {} },
+    theme: {
+        extend: {
+            colors: {
+                appBg: "#FFFFFF", // màu bạn muốn
+            },
+        },
+    },
     plugins: [],
 };

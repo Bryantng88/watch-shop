@@ -5,14 +5,6 @@ import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
 
-const AiDraftSchema = z
-    .object({
-        extractedSpec: z.any(),
-        generatedDraft: z.any(),
-        meta: z.any(),
-    })
-    .nullable();
-
 const WatchLineSchema = z.object({
     id: z.string(),
     kind: z.literal("WATCH"),
@@ -23,7 +15,6 @@ const WatchLineSchema = z.object({
     receiveService: z.boolean(),
     imageKey: z.string().nullable(),
     imageUrl: z.string().nullable(),
-    aiDraft: AiDraftSchema.optional().nullable(),
 });
 
 const BodySchema = z.object({
@@ -48,14 +39,10 @@ export async function POST(req: NextRequest) {
             type: body.type as any,
             createdAt: body.createdAt,
             notes: body.notes ?? null,
+            quickVendorName: "",
             items: body.items.map((line, index) => {
-                const aiTitle = String(
-                    line.aiDraft?.generatedDraft?.generatedTitle ?? ""
-                ).trim();
-
                 const quickTitle = String(line.quickInput ?? "").trim();
-
-                const title = aiTitle || quickTitle || `Untitled watch ${index + 1}`;
+                const title = quickTitle || `Untitled watch ${index + 1}`;
 
                 return {
                     id: `tmp-${line.id}`,
@@ -66,14 +53,14 @@ export async function POST(req: NextRequest) {
                     productId: null,
                     variantId: null,
                     watchFlags: {
-                        needService: line.receiveService,
+                        needService: Boolean(line.receiveService),
                     },
                     aiMeta: {
-                        images: line.imageKey
-                            ? [{ key: line.imageKey, url: line.imageUrl }]
-                            : [],
+                        images:
+                            line.imageKey || line.imageUrl
+                                ? [{ key: line.imageKey, url: line.imageUrl }]
+                                : [],
                         aiHint: String(line.aiHint ?? "").trim() || null,
-                        ai: line.aiDraft ?? null,
                     },
                 };
             }),

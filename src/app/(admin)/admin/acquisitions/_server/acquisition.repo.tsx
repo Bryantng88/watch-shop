@@ -1,9 +1,29 @@
-import { Prisma, AcquisitionType, Acquisition, ProductType } from "@prisma/client";
+import { Prisma, AcquisitionType, ProductType } from "@prisma/client";
 import { genRefNo } from "../../__components/AutoGenRef";
-import { buildAcqWhere, buildAcqOrderBy, DEFAULT_PAGE_SIZE } from "./filters";
 import { DB, dbOrTx } from "@/server/db/client";
-//import type { AcquisitionItemInput, ItemInput } from "./acquisition.dto";
 import { stringifyAcquisitionItemMeta } from "./item-metadata";
+
+const acquisitionDetailInclude = {
+    vendor: true,
+    customer: true,
+    acquisitionItem: { include: { product: true, variant: true } },
+    invoice: true,
+} satisfies Prisma.AcquisitionInclude;
+
+function buildItemDescription(item: any) {
+    return stringifyAcquisitionItemMeta({
+        strapSpec: item.strapSpec,
+        watchFlags: item.watchFlags,
+        quickSpec: item.quickSpec,
+        aiMeta: item.aiMeta,
+    });
+}
+
+async function resolveVariantId(tx: DB, productId?: string | null, explicitVariantId?: string | null) {
+    if (explicitVariantId) return explicitVariantId;
+    if (!productId) return null;
+    return resolveVariantIdForProduct(tx, productId);
+}
 
 export async function createDraft(
     tx: DB,
@@ -32,10 +52,8 @@ export async function createDraft(
         select: { id: true },
     });
 }
-export async function resolveVariantIdForProduct(
-    tx: DB,
-    productId?: string | null
-) {
+
+export async function resolveVariantIdForProduct(tx: DB, productId?: string | null) {
     const db = dbOrTx(tx);
     if (!productId) return null;
 
@@ -47,6 +65,7 @@ export async function resolveVariantIdForProduct(
 
     return v?.id ?? null;
 }
+
 export async function updateAcquisitionCost(tx: DB, acqId: string, total: number) {
     const db = dbOrTx(tx);
     return db.acquisition.update({
@@ -96,17 +115,17 @@ export async function getAcqList(
                 type: true,
                 accquisitionStt: true,
                 createdAt: true,
+                updatedAt: true,
                 cost: true,
                 currency: true,
-                updatedAt: true,
                 notes: true,
                 vendor: { select: { id: true, name: true } },
                 acquisitionItem: {
                     select: {
                         id: true,
-                        status: true,
                         quantity: true,
                         unitCost: true,
+                        status: true,
                     },
                 },
                 _count: { select: { invoice: true } },
@@ -114,20 +133,18 @@ export async function getAcqList(
         }),
         db.acquisition.count({ where }),
     ]);
+
     return { rows, total };
 }
+
 export async function getAcqtById(id: string, tx?: DB) {
     const db = dbOrTx(tx);
     return db.acquisition.findUnique({
         where: { id },
-        include: {
-            vendor: true,
-            customer: true,
-            acquisitionItem: { include: { product: true, variant: true } },
-            invoice: true,
-        },
+        include: acquisitionDetailInclude,
     });
 }
+
 export async function findAcqItems(tx: DB, acqId: string) {
     const db = dbOrTx(tx);
     return db.acquisitionItem.findMany({
@@ -135,18 +152,11 @@ export async function findAcqItems(tx: DB, acqId: string) {
     });
 }
 
-
-export async function createAcqItem(
-    tx: DB,
-    acqId: string,
-    item: any
-) {
+export async function createAcqItem(tx: DB, acqId: string, item: any) {
     const db = dbOrTx(tx);
 
     const productId = item.productId ?? null;
-    const variantId =
-        item.variantId ??
-        (productId ? await resolveVariantIdForProduct(tx, productId) : null);
+    const variantId = await resolveVariantId(tx, productId, item.variantId ?? null);
 
     return db.acquisitionItem.create({
         data: {
@@ -157,12 +167,7 @@ export async function createAcqItem(
             productType: item.productType ?? ProductType.WATCH,
             productId,
             variantId,
-            description: stringifyAcquisitionItemMeta({
-                strapSpec: item.strapSpec,
-                watchFlags: item.watchFlags,
-                quickSpec: item.quickSpec,
-                aiMeta: item.aiMeta,
-            }),
+            description: buildItemDescription(item),
         },
     });
 }
@@ -171,9 +176,7 @@ export async function updateAcqItem(tx: DB, it: any) {
     const db = dbOrTx(tx);
 
     const productId = it.productId ?? null;
-    const variantId =
-        it.variantId ??
-        (productId ? await resolveVariantIdForProduct(tx, productId) : null);
+    const variantId = await resolveVariantId(tx, productId, it.variantId ?? null);
 
     return db.acquisitionItem.update({
         where: { id: it.id },
@@ -185,13 +188,8 @@ export async function updateAcqItem(tx: DB, it: any) {
             productId,
             variantId,
             description:
-                it.strapSpec || it.watchFlags || it.quickSpec
-                    ? stringifyAcquisitionItemMeta({
-                        strapSpec: it.strapSpec,
-                        watchFlags: it.watchFlags,
-                        quickSpec: it.quickSpec,
-                        aiMeta: item.aiMeta,
-                    })
+                it.strapSpec || it.watchFlags || it.quickSpec || it.aiMeta
+                    ? buildItemDescription(it)
                     : undefined,
         },
     });
