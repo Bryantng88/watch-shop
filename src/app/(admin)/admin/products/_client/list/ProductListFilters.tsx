@@ -26,7 +26,7 @@ type Props = {
 };
 
 const imageOptions: Option[] = [
-  { label: "(All)", value: "" },
+  { label: "Ảnh: tất cả", value: "" },
   { label: "Có ảnh", value: "yes" },
   { label: "Chưa có ảnh", value: "no" },
 ];
@@ -40,29 +40,26 @@ const sortOptions: Option[] = [
   { label: "Giá bán ↓", value: "priceDesc" },
 ];
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
-      {children}
-    </label>
-  );
-}
-
 function Input({
   value,
   placeholder,
   onChange,
+  className = "",
 }: {
   value: string;
   placeholder?: string;
   onChange: (value: string) => void;
+  className?: string;
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+      className={[
+        "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400",
+        className,
+      ].join(" ")}
     />
   );
 }
@@ -71,19 +68,24 @@ function Select({
   value,
   options,
   onChange,
+  className = "",
 }: {
   value: string;
   options: Option[];
   onChange: (value: string) => void;
+  className?: string;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+      className={[
+        "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400",
+        className,
+      ].join(" ")}
     >
-      {options.map((item) => (
-        <option key={item.value || "__empty"} value={item.value}>
+      {options.map((item, idx) => (
+        <option key={`${item.value}-${idx}`} value={item.value}>
           {item.label}
         </option>
       ))}
@@ -104,10 +106,9 @@ export default function ProductListFilters({
   const hasBrand = brandOptions.length > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <div>
-          <FieldLabel>Tìm kiếm</FieldLabel>
+    <div className="overflow-x-auto">
+      <div className="flex min-w-max items-end gap-3">
+        <div className="w-[260px]">
           <Input
             value={filters.q}
             placeholder="Tên / brand..."
@@ -115,8 +116,7 @@ export default function ProductListFilters({
           />
         </div>
 
-        <div>
-          <FieldLabel>SKU</FieldLabel>
+        <div className="w-[180px]">
           <Input
             value={filters.sku}
             placeholder="SKU..."
@@ -125,49 +125,34 @@ export default function ProductListFilters({
         </div>
 
         {hasType ? (
-          <div>
-            <FieldLabel>Type</FieldLabel>
+          <div className="w-[180px]">
             <Select
               value={filters.type}
-              options={[{ label: "(All)", value: "" }, ...typeOptions]}
+              options={[{ label: "Type: tất cả", value: "" }, ...typeOptions]}
               onChange={(value) => onChange({ type: value })}
             />
           </div>
         ) : null}
 
         {hasBrand ? (
-          <div>
-            <FieldLabel>Brand</FieldLabel>
+          <div className="w-[220px]">
             <Select
               value={filters.brandId}
-              options={[{ label: "(All)", value: "" }, ...brandOptions]}
+              options={[{ label: "Brand: tất cả", value: "" }, ...brandOptions]}
               onChange={(value) => onChange({ brandId: value })}
             />
           </div>
         ) : null}
 
-        <div>
-          <FieldLabel>Vendor</FieldLabel>
+        <div className="w-[220px]">
           <Select
             value={filters.vendorId}
-            options={[{ label: "(All)", value: "" }, ...vendorOptions]}
+            options={[{ label: "Vendor: tất cả", value: "" }, ...vendorOptions]}
             onChange={(value) => onChange({ vendorId: value })}
           />
         </div>
 
-        <div>
-          <FieldLabel>Sắp xếp</FieldLabel>
-          <Select
-            value={filters.sort}
-            options={sortOptions}
-            onChange={(value) => onChange({ sort: value })}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <div className="md:col-span-1 xl:col-span-1">
-          <FieldLabel>Image</FieldLabel>
+        <div className="w-[170px]">
           <Select
             value={filters.image ?? ""}
             options={imageOptions}
@@ -175,23 +160,29 @@ export default function ProductListFilters({
           />
         </div>
 
-        <div className="flex items-end gap-2 md:col-span-2 xl:col-span-2">
-          <button
-            type="button"
-            onClick={onApply}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
-            Lọc
-          </button>
-
-          <button
-            type="button"
-            onClick={onClear}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-          >
-            Clear
-          </button>
+        <div className="w-[180px]">
+          <Select
+            value={filters.sort}
+            options={sortOptions}
+            onChange={(value) => onChange({ sort: value })}
+          />
         </div>
+
+        <button
+          type="button"
+          onClick={onApply}
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
+        >
+          Lọc
+        </button>
+
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          Clear
+        </button>
       </div>
     </div>
   );
