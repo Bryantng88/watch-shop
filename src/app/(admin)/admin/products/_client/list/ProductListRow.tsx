@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import RowActionsMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import StatusBadge from "@/components/badges/StatusBadge";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
-import MiniDotLabel from "@/components/_shared/MiniDotLabel";
 
+import StatusBadge from "@/components/badges/StatusBadge";
+import MiniDotLabel from "@/components/_shared/MiniDotLabel";
 import InlineMoneyEditor from "./InlineMoneyEditor";
 import {
   fmtDT,
@@ -15,6 +15,9 @@ import {
   getPostReadinessState,
   getProductInventoryStatusText,
   getServiceLabel,
+  hasMissingCoreReadinessInfo,
+  hasMissingImageReadiness,
+  isWomenWatch,
 } from "./helpers";
 import type { ProductRow } from "./types";
 
@@ -28,6 +31,10 @@ export default function ProductListRow({
   onImageUploaded,
   onOpenReadiness,
   onPriceSaved,
+  onView,
+  onEdit,
+  onDelete,
+  onService,
 }: {
   product: ProductRow;
   checked: boolean;
@@ -38,6 +45,10 @@ export default function ProductListRow({
   onImageUploaded: (productId: string, fileKey: string) => void;
   onOpenReadiness: (product: ProductRow) => void;
   onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
+  onView: (productId: string) => void;
+  onEdit: (productId: string) => void;
+  onDelete: (productId: string) => void;
+  onService: (productId: string) => void;
 }) {
   const service = getServiceLabel(product);
   const readiness = getPostReadinessState(product);
@@ -60,7 +71,7 @@ export default function ProductListRow({
 
       <td className="min-w-[240px] px-4 py-4">
         <div className="font-medium text-slate-900">{product.title || "-"}</div>
-        <div className="mt-1 text-xs text-slate-500">{product.brand || "-"} · {product.type || "-"}</div>
+        <div className="mt-1 text-xs text-slate-500">{`${(product.brand || "-").toLowerCase()} · ${(product.type || "-").toLowerCase()}`}</div>
         {service ? (
           <div className="mt-2">
             <MiniDotLabel label={service.label} tone={service.tone} />
@@ -74,9 +85,9 @@ export default function ProductListRow({
         <span className={getInventoryStatusTextClass(product.status)}>{getProductInventoryStatusText(product.status)}</span>
       </td>
       <td className="px-4 py-4 text-sm">
-        {product.acquisitionId ? (
-          <Link href={`/admin/acquisitions/${product.acquisitionId}`} className="font-medium text-sky-700 hover:underline">
-            {product.acquisitionRefNo || "-"}
+        {product.acquisitionId && product.acquisitionRefNo ? (
+          <Link href={`/admin/acquisitions/${product.acquisitionId}/edit`} className="font-medium text-sky-700 hover:underline">
+            {product.acquisitionRefNo}
           </Link>
         ) : (
           <span className="text-slate-400">-</span>
@@ -95,20 +106,33 @@ export default function ProductListRow({
           fmtMoney(product.minPrice)
         )}
       </td>
-      <td className="px-4 py-4 text-right text-sm text-emerald-700">{fmtMoney(product.salePrice)}</td>
+      <td className="px-4 py-4 text-right text-sm text-emerald-700">{product.salePrice != null ? fmtMoney(product.salePrice) : "-"}</td>
       {canViewCost ? <td className="px-4 py-4 text-right text-sm text-slate-900">{fmtMoney(product.purchasePrice)}</td> : null}
       <td className="px-4 py-4">
         <div className="flex flex-col items-start gap-1">
-          <StatusBadge value={getContentStatusBadgeValue(product) as any} />
+          <div className="flex h-[20px] items-center">
+            <StatusBadge status={getContentStatusBadgeValue(product) as any} />
+          </div>
+
           <button type="button" onClick={() => onOpenReadiness(product)} className="text-left">
-            <MiniDotLabel label={readiness.label} tone={readiness.tone} />
+            <div className="flex flex-col">
+              <MiniDotLabel label={readiness.label} tone={readiness.tone} />
+              {!isWomenWatch(product) && hasMissingCoreReadinessInfo(product) && hasMissingImageReadiness(product) ? (
+                <MiniDotLabel label="Missing Image" tone="gray" className="mt-0.5" />
+              ) : null}
+            </div>
           </button>
         </div>
       </td>
       <td className="px-4 py-4 text-sm text-slate-600">{fmtDT(product.updatedAt)}</td>
       <td className="px-4 py-4 text-sm text-slate-600">{fmtDT(product.createdAt)}</td>
       <td className="px-4 py-4 text-right">
-        <RowActionsMenu actions={[]} />
+        <RowActionsMenu
+          onView={() => onView(product.id)}
+          onEdit={() => onEdit(product.id)}
+          onDelete={() => onDelete(product.id)}
+          onService={() => onService(product.id)}
+        />
       </td>
     </tr>
   );

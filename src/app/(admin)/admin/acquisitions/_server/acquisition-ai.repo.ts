@@ -1,6 +1,6 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { normalizeKey } from "@/server/lib/product-image-storage";
 import { s3, S3_BUCKET } from "@/server/s3";
+import { normalizeKey } from "@/server/lib/product-image-storage";
 
 function toAbsoluteUrl(input: string, origin: string) {
     if (!input) return "";
@@ -39,20 +39,21 @@ export async function fetchImageEntryAsDataUrl(
 
     if (normalized) {
         try {
-            const obj = await s3.send(
+            const object = await s3.send(
                 new GetObjectCommand({
                     Bucket: S3_BUCKET,
                     Key: normalized,
                 })
             );
 
-            if (!obj.Body) {
+            if (!object.Body) {
                 throw new Error("S3 object body empty");
             }
 
-            const contentType = obj.ContentType || "image/jpeg";
-            const buffer = await streamToBuffer(obj.Body);
-            return `data:${contentType};base64,${buffer.toString("base64")}`;
+            const contentType = object.ContentType || "image/jpeg";
+            const buffer = await streamToBuffer(object.Body);
+            const base64 = buffer.toString("base64");
+            return `data:${contentType};base64,${base64}`;
         } catch (error) {
             console.error("[ACQ_AI][FETCH_BY_KEY_FAILED]", {
                 key: normalized,

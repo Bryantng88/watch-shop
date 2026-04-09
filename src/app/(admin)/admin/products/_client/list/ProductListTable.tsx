@@ -15,6 +15,10 @@ export default function ProductListTable({
   onImageUploaded,
   onOpenReadiness,
   onPriceSaved,
+  onViewProduct,
+  onEditProduct,
+  onDeleteProduct,
+  onCreateService,
 }: {
   items: ProductRow[];
   selectedIds: string[];
@@ -26,6 +30,10 @@ export default function ProductListTable({
   onImageUploaded: (productId: string, fileKey: string) => void;
   onOpenReadiness: (product: ProductRow) => void;
   onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
+  onViewProduct: (productId: string) => void;
+  onEditProduct: (productId: string) => void;
+  onDeleteProduct: (productId: string) => void;
+  onCreateService: (productId: string) => void;
 }) {
   const allChecked = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
 
@@ -63,6 +71,10 @@ export default function ProductListTable({
               onImageUploaded={onImageUploaded}
               onOpenReadiness={onOpenReadiness}
               onPriceSaved={onPriceSaved}
+              onView={onViewProduct}
+              onEdit={onEditProduct}
+              onDelete={onDeleteProduct}
+              onService={onCreateService}
             />
           ))}
         </tbody>

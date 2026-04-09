@@ -69,6 +69,16 @@ export type AcquisitionExtractedSpec = {
     };
 };
 
+export type AcquisitionVisionRaw = {
+    probableBrand: string | null;
+    dialText: string[];
+    logoText: string[];
+    modelHints: string[];
+    visibleFeatures: string[];
+    overallStyle: string | null;
+    notes: string[];
+};
+
 export type AcquisitionGeneratedDraft = {
     generatedTitle: string;
     titleOptions: string[];
@@ -84,6 +94,7 @@ export type AcquisitionGeneratedDraft = {
 export type AcquisitionDraftResponse = {
     extractedSpec: AcquisitionExtractedSpec;
     generatedDraft: AcquisitionGeneratedDraft;
+    aiVisionRaw: AcquisitionVisionRaw;
     meta: {
         mode: "openai" | "rule";
         model: string | null;

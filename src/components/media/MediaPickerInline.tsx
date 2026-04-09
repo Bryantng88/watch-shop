@@ -18,6 +18,18 @@ function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(" ");
 }
 
+function isRenderableUrl(value: string) {
+    return /^(https?:)?\/\//i.test(value) || value.startsWith("/") || value.startsWith("data:") || value.startsWith("blob:");
+}
+
+function resolvePreviewSrc(value: string | null | undefined) {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (isRenderableUrl(trimmed)) return trimmed;
+    return `/api/media/sign?key=${encodeURIComponent(trimmed)}`;
+}
+
 export default function MediaPickerInline({
     value,
     onChange,
@@ -28,10 +40,9 @@ export default function MediaPickerInline({
     className,
 }: Props) {
     const [open, setOpen] = React.useState(false);
+    const previewSrc = React.useMemo(() => resolvePreviewSrc(value), [value]);
 
-    const triggerClass = compact
-        ? "h-14 w-14 rounded-xl"
-        : "h-20 w-20 rounded-2xl";
+    const triggerClass = compact ? "h-14 w-14 rounded-xl" : "h-20 w-20 rounded-2xl";
 
     return (
         <>
@@ -49,24 +60,22 @@ export default function MediaPickerInline({
                 )}
                 title="Chọn ảnh"
             >
-                {value ? (
-                    <img
-                        src={value}
-                        alt="selected"
-                        className="h-full w-full object-cover"
-                    />
+                {previewSrc ? (
+                    <img src={previewSrc} alt="selected" className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-slate-400">
-                        {pending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <ImagePlus className={compact ? "h-4 w-4" : "h-5 w-5"} />
-                        )}
+                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className={compact ? "h-4 w-4" : "h-5 w-5"} />}
                     </div>
                 )}
 
+                {pending ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    </div>
+                ) : null}
+
                 <div className="absolute inset-x-0 bottom-0 bg-black/40 px-2 py-1 text-[10px] text-white opacity-0 transition group-hover:opacity-100">
-                    {value ? "Đổi ảnh" : "Chọn ảnh"}
+                    {previewSrc ? "Đổi ảnh" : "Chọn ảnh"}
                 </div>
             </button>
 

@@ -6,7 +6,6 @@ import type {
 } from "./acquisition-ai.types";
 import * as repo from "./acquisition-ai.repo";
 
-
 function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionExtractedSpec {
     const source = `${titleHint || ""} ${hintText || ""}`.toLowerCase();
 
@@ -70,7 +69,14 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
             goldKarat,
             goldColor,
         },
-        suggestedFacts: {},
+        suggestedFacts: {
+            probableBrand: brandName,
+            probableMovement: movement,
+            probableCaseMaterial: caseMaterial,
+            probableGoldKarat: goldKarat,
+            probableGoldColor: goldColor,
+            //notes: [],
+        },
         confidence: {
             brandName: brandName ? "medium" : "low",
             movement: movement ? "medium" : "low",
@@ -90,8 +96,8 @@ function buildFallbackSpec(titleHint?: string, hintText?: string): AcquisitionEx
             dialColor: source.includes("champagne") ? "champagne" : null,
             dialMarkers: null,
             glass: null,
-            caseMaterial,
-            movement,
+            caseMaterial: caseMaterial,
+            movement: movement,
             gender: null,
             sizeClass: null,
             era: null,
@@ -156,7 +162,6 @@ function buildFallbackDraft(input: {
     };
 }
 
-
 function specSchema() {
     return {
         name: "acquisition_spec_extraction",
@@ -190,10 +195,7 @@ function specSchema() {
                     },
                     required: ["from", "to"],
                 },
-                yearConfidence: {
-                    type: "string",
-                    enum: ["high", "medium", "low"],
-                },
+                yearConfidence: { type: "string", enum: ["high", "medium", "low"] },
                 caseType: {
                     type: ["string", "null"],
                     enum: ["ROUND", "SQUARE", "RECTANGULAR", "TONNEAU", "CUSHION", null],
@@ -254,31 +256,65 @@ function specSchema() {
                 },
                 confirmedFacts: {
                     type: "object",
-                    additionalProperties: {
-                        type: ["string", "number", "boolean", "null"],
+                    additionalProperties: false,
+                    properties: {
+                        brandName: { type: ["string", "null"] },
+                        movement: { type: ["string", "null"] },
+                        caseMaterial: { type: ["string", "null"] },
+                        goldKarat: { type: ["string", "null"] },
+                        goldColor: { type: ["string", "null"] },
                     },
+                    required: [
+                        "brandName",
+                        "movement",
+                        "caseMaterial",
+                        "goldKarat",
+                        "goldColor",
+                    ],
                 },
                 suggestedFacts: {
                     type: "object",
-                    additionalProperties: {
-                        type: ["string", "number", "boolean", "null"],
+                    additionalProperties: false,
+                    properties: {
+                        probableBrand: { type: ["string", "null"] },
+                        probableMovement: { type: ["string", "null"] },
+                        probableCaseMaterial: { type: ["string", "null"] },
+                        probableGoldKarat: { type: ["string", "null"] },
+                        probableGoldColor: { type: ["string", "null"] },
+                        notes: {
+                            type: "array",
+                            items: { type: "string" },
+                        },
                     },
+                    required: [
+                        "probableBrand",
+                        "probableMovement",
+                        "probableCaseMaterial",
+                        "probableGoldKarat",
+                        "probableGoldColor",
+                        "notes",
+                    ],
                 },
                 confidence: {
                     type: "object",
-                    additionalProperties: {
-                        type: "string",
-                        enum: ["high", "medium", "low"],
+                    additionalProperties: false,
+                    properties: {
+                        brandName: { type: "string", enum: ["high", "medium", "low"] },
+                        movement: { type: "string", enum: ["high", "medium", "low"] },
+                        caseMaterial: { type: "string", enum: ["high", "medium", "low"] },
+                        goldKarat: { type: "string", enum: ["high", "medium", "low"] },
+                        goldColor: { type: "string", enum: ["high", "medium", "low"] },
                     },
+                    required: [
+                        "brandName",
+                        "movement",
+                        "caseMaterial",
+                        "goldKarat",
+                        "goldColor",
+                    ],
                 },
-                needsMoreImages: {
-                    type: "array",
-                    items: { type: "string" },
-                },
-                confidenceNotes: {
-                    type: "array",
-                    items: { type: "string" },
-                },
+                needsMoreImages: { type: "array", items: { type: "string" } },
+                confidenceNotes: { type: "array", items: { type: "string" } },
                 probableVisualFacts: {
                     type: "object",
                     additionalProperties: false,
@@ -413,19 +449,6 @@ export async function generateAcquisitionDraft(
     const dataUrls = await Promise.all(
         input.imageUrls.slice(0, 4).map((u) => repo.fetchImageAsDataUrl(u, input.origin))
     );
-
-    if (!dataUrls.length) {
-        return {
-            extractedSpec: fallbackSpec,
-            generatedDraft: fallbackDraft,
-            meta: {
-                mode: "rule",
-                model,
-                message:
-                    "Không đọc được ảnh từ storage/url ở bước acquisition, dùng fallback hiện có.",
-            },
-        };
-    }
 
     const extractInput = [
         {
@@ -649,25 +672,13 @@ function normalizeExtractedSpec(
     return {
         ...extracted,
         probableVisualFacts: {
-            probableBrand:
-                asNonEmptyString(probable.probableBrand) ||
-                asNonEmptyString(extracted.brandName),
             caseType: asNonEmptyString(probable.caseType),
-            displayType: asNonEmptyString(probable.displayType),
             strapType: asNonEmptyString(probable.strapType),
-            dialColor:
-                asNonEmptyString(probable.dialColor) ||
-                asNonEmptyString(extracted.dialColor),
-            dialMarkers: asNonEmptyString(probable.dialMarkers),
+            dialColor: asNonEmptyString(probable.dialColor),
             glass: asNonEmptyString(probable.glass),
             caseMaterial: asNonEmptyString(probable.caseMaterial),
             movement: asNonEmptyString(probable.movement),
-            gender: asNonEmptyString(probable.gender),
-            sizeClass: asNonEmptyString(probable.sizeClass),
-            era: asNonEmptyString(probable.era),
-            widthEstimateMm:
-                asNumberOrNull(probable.widthEstimateMm) ??
-                asNumberOrNull(extracted.widthEstimateMm),
+            widthEstimateMm: asNumberOrNull(probable.widthEstimateMm),
             styleNotes: Array.isArray(probable.styleNotes) ? probable.styleNotes : [],
         },
     } as AcquisitionExtractedSpec;

@@ -27,6 +27,13 @@ type AiDraftPayload = {
     meta?: any;
 };
 
+type PostedWatchAiBundle = {
+    aiMeta: any;
+    aiExtracted: any;
+    aiGenerated: any;
+    aiDraft: AiDraftPayload | null;
+};
+
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
 function asString(v: unknown) {
@@ -181,7 +188,6 @@ async function ensureAiGeneratedForWatchItem(tx: DB, item: ExistingAcqItem) {
             origin:
                 process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000",
             imageUrls,
-            imageEntries: aiMeta?.images ?? [],
             titleHint: item.productTitle ?? null,
             hintText: aiMeta?.aiHint ?? null,
             vendorName: null,
@@ -251,19 +257,7 @@ function mapCaseType(value: unknown): CaseType | null {
     const v = String(value ?? "").trim().toUpperCase();
     if (!v) return null;
 
-    if (v === "RECTANGULAR" || v === "TANK") return CaseType.TANK;
-    if (v === "ROUND" && "ROUND" in CaseType) {
-        return CaseType["ROUND" as keyof typeof CaseType];
-    }
-    if (v === "SQUARE" && "SQUARE" in CaseType) {
-        return CaseType["SQUARE" as keyof typeof CaseType];
-    }
-    if (v === "TONNEAU" && "TONNEAU" in CaseType) {
-        return CaseType["TONNEAU" as keyof typeof CaseType];
-    }
-    if (v === "CUSHION" && "CUSHION" in CaseType) {
-        return CaseType["CUSHION" as keyof typeof CaseType];
-    }
+    if (v === "RECTANGULAR") return CaseType.TANK;
 
     const allowed = new Set(Object.keys(CaseType));
     if (allowed.has(v)) {
@@ -341,18 +335,21 @@ function mapGlass(value: unknown): Glass | null {
     return null;
 }
 
-async function resolvePostedWatchAiData(
-    tx: DB,
+async function preparePostedWatchAiDataOutsideTx(
     item: ExistingAcqItem,
-    aiMeta: any
-) {
+    aiMetaInput?: any
+): Promise<PostedWatchAiBundle> {
+    const aiMeta = aiMetaInput ?? getAiMetaFromDescription(item.description);
     let aiExtracted = aiMeta?.ai?.extractedSpec ?? null;
     let aiGenerated = aiMeta?.ai?.generatedDraft ?? null;
+    let aiDraft: AiDraftPayload | null = aiMeta?.ai ?? null;
+
     console.log("[ACQ_POST][AI_META]", {
         itemId: item.id,
         aiMeta,
         images: aiMeta?.images,
     });
+
     if (
         !aiExtracted &&
         Array.isArray(aiMeta?.images) &&
@@ -367,15 +364,14 @@ async function resolvePostedWatchAiData(
             imageUrls,
             hint: aiMeta?.aiHint ?? null,
         });
+
         try {
-            const aiDraft = await acquisitionAiService.generateAcquisitionDraft({
+            const generated = await acquisitionAiService.generateAcquisitionDraft({
                 origin:
                     process.env.NEXT_PUBLIC_APP_URL ||
                     process.env.APP_URL ||
                     "http://localhost:3000",
-                imageUrls: aiMeta.images
-                    .map((x: any) => String(x?.url ?? "").trim())
-                    .filter(Boolean),
+                imageUrls,
                 imageEntries: aiMeta?.images ?? [],
                 titleHint: item.productTitle ?? null,
                 hintText: aiMeta?.aiHint ?? null,
@@ -383,27 +379,14 @@ async function resolvePostedWatchAiData(
                 cost: Number(item.unitCost ?? 0),
             });
 
-            aiExtracted = aiDraft?.extractedSpec ?? null;
-            aiGenerated = aiDraft?.generatedDraft ?? null;
+            aiDraft = generated;
+            aiExtracted = generated?.extractedSpec ?? null;
+            aiGenerated = generated?.generatedDraft ?? null;
+
             console.log("[ACQ_POST][AI_OUTPUT]", {
                 itemId: item.id,
-                extracted: aiDraft?.extractedSpec ?? null,
-                generated: aiDraft?.generatedDraft ?? null,
-            });
-            const currentMeta = safeJsonParse<Record<string, any>>(item.description) ?? {};
-            await tx.acquisitionItem.update({
-                where: { id: item.id },
-                data: {
-                    description: JSON.stringify({
-                        ...currentMeta,
-                        aiMeta: {
-                            ...(aiMeta ?? {}),
-                            aiHint: aiMeta?.aiHint ?? null,
-                            images: aiMeta?.images ?? [],
-                            ai: aiDraft,
-                        },
-                    }),
-                },
+                extracted: aiExtracted,
+                generated: aiGenerated,
             });
         } catch (e) {
             console.error("[ACQ_POST][AI_GENERATE_FAILED]", {
@@ -413,7 +396,36 @@ async function resolvePostedWatchAiData(
         }
     }
 
-    return { aiExtracted, aiGenerated };
+    return {
+        aiMeta,
+        aiExtracted,
+        aiGenerated,
+        aiDraft,
+    };
+}
+
+async function persistPostedWatchAiData(
+    tx: DB,
+    item: ExistingAcqItem,
+    bundle: PostedWatchAiBundle
+) {
+    if (!bundle.aiDraft) return;
+
+    const currentMeta = safeJsonParse<Record<string, any>>(item.description) ?? {};
+    await tx.acquisitionItem.update({
+        where: { id: item.id },
+        data: {
+            description: JSON.stringify({
+                ...currentMeta,
+                aiMeta: {
+                    ...(bundle.aiMeta ?? {}),
+                    aiHint: bundle.aiMeta?.aiHint ?? null,
+                    images: bundle.aiMeta?.images ?? [],
+                    ai: bundle.aiDraft,
+                },
+            }),
+        },
+    });
 }
 
 async function resolveBrandConnectFromAi(tx: DB, brandName: unknown) {
@@ -719,7 +731,7 @@ async function createStrapProductForPostedItem(
     const created = await tx.product.create({
         data: {
             title: item.productTitle,
-            sku,
+            //sku,
             status: ProductStatus.AVAILABLE,
             contentStatus: ContentStatus.DRAFT,
             type: "WATCH_STRAP" as any,
@@ -770,18 +782,22 @@ async function createWatchProductForPostedItem(
         acqId: string;
         vendorId: string;
         item: ExistingAcqItem;
+        preparedAi?: PostedWatchAiBundle | null;
     }
 ) {
-    const { acqId, vendorId, item } = params;
+    const { acqId, vendorId, item, preparedAi } = params;
 
     const watchFlags = getWatchFlagsFromDescription(item.description);
-    const aiMeta = getAiMetaFromDescription(item.description);
+    const aiMeta = preparedAi?.aiMeta ?? getAiMetaFromDescription(item.description);
+    const aiExtracted = preparedAi?.aiExtracted ?? aiMeta?.ai?.extractedSpec ?? null;
+    const aiGenerated = preparedAi?.aiGenerated ?? aiMeta?.ai?.generatedDraft ?? null;
 
-    const { aiExtracted, aiGenerated } = await resolvePostedWatchAiData(
-        tx,
-        item,
-        aiMeta
-    );
+    await persistPostedWatchAiData(tx, item, preparedAi ?? {
+        aiMeta,
+        aiExtracted,
+        aiGenerated,
+        aiDraft: aiMeta?.ai ?? null,
+    });
 
     const productType = (item.productType ?? "WATCH") as any;
     const sku = await genUniqueProductSku(tx as any, productType);
@@ -853,6 +869,7 @@ async function createProductForPostedItem(
         acqId: string;
         vendorId: string;
         item: ExistingAcqItem;
+        preparedAi?: PostedWatchAiBundle | null;
     }
 ) {
     if (params.item.productType === "WATCH_STRAP") {
@@ -1083,6 +1100,17 @@ export async function postAcquisition(acqId: string, vendorName: string) {
     const newItems = items.filter((item) => !item.productId);
     const existingItems = items.filter((item) => !!item.productId);
 
+    const preparedAiByItemId = new Map<string, PostedWatchAiBundle>();
+    const watchItemsNeedingAi = newItems.filter(
+        (item) => (item.productType ?? "WATCH") !== "WATCH_STRAP"
+    );
+
+    for (const item of watchItemsNeedingAi) {
+        const aiMeta = getAiMetaFromDescription(item.description);
+        const preparedAi = await preparePostedWatchAiDataOutsideTx(item as ExistingAcqItem, aiMeta);
+        preparedAiByItemId.set(item.id, preparedAi);
+    }
+
     const result = await prisma.$transaction(
         async (tx) => {
             if (existingItems.length > 0) {
@@ -1125,6 +1153,7 @@ export async function postAcquisition(acqId: string, vendorName: string) {
                     acqId: acq.refNo ?? acq.id,
                     vendorId,
                     item: item as ExistingAcqItem,
+                    preparedAi: preparedAiByItemId.get(item.id) ?? null,
                 });
             }
 
