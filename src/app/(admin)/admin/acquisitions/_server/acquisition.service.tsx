@@ -1166,7 +1166,7 @@ export async function postAcquisition(acqId: string, vendorName: string) {
         },
         {
             maxWait: 10000,
-            timeout: 60000,
+            timeout: 320000,
         }
     );
 
