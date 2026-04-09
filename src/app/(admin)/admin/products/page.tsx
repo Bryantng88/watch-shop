@@ -1,7 +1,6 @@
-//import ProductListClient from "./_client/ListProductsOld";
 import { getAdminProductList } from "./_server/product.service";
-
 import ListProducts from "./_client/ListProducts";
+//import AdminProductListPageClient from "./_client/ListProductsOld";
 
 import { parseProductListSearchParams } from "./helpers/search-params";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";

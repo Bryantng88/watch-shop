@@ -4,77 +4,90 @@ import DataTableShell from "@/components/_shared/DataTableShell";
 import ProductListRow from "./ProductListRow";
 import type { ProductRow } from "./types";
 
-export default function ProductListTable({
-  items,
-  selectedIds,
-  pendingImageProductId,
-  canViewCost,
-  canEditPrice,
-  onToggleOne,
-  onToggleAll,
-  onImageUploaded,
-  onOpenReadiness,
-  onPriceSaved,
-  onViewProduct,
-  onEditProduct,
-  onDeleteProduct,
-  onCreateService,
-}: {
+type Props = {
   items: ProductRow[];
   selectedIds: string[];
-  pendingImageProductId?: string | null;
   canViewCost: boolean;
   canEditPrice: boolean;
-  onToggleOne: (id: string, checked: boolean) => void;
+  pendingImageProductId?: string | null;
+
   onToggleAll: (checked: boolean) => void;
+  onToggleOne: (productId: string, checked: boolean) => void;
   onImageUploaded: (productId: string, fileKey: string) => void;
   onOpenReadiness: (product: ProductRow) => void;
   onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
-  onViewProduct: (productId: string) => void;
-  onEditProduct: (productId: string) => void;
-  onDeleteProduct: (productId: string) => void;
-  onCreateService: (productId: string) => void;
-}) {
-  const allChecked = items.length > 0 && items.every((item) => selectedIds.includes(item.id));
+
+  onView: (productId: string) => void;
+  onEdit: (productId: string) => void;
+  onDelete: (productId: string) => void;
+  onService: (productId: string) => void;
+};
+
+export default function ProductListTable({
+  items,
+  selectedIds,
+  canViewCost,
+  canEditPrice,
+  pendingImageProductId = null,
+  onToggleAll,
+  onToggleOne,
+  onImageUploaded,
+  onOpenReadiness,
+  onPriceSaved,
+  onView,
+  onEdit,
+  onDelete,
+  onService,
+}: Props) {
+  const allChecked = items.length > 0 && items.every((p) => selectedIds.includes(p.id));
 
   return (
     <DataTableShell>
-      <table className="min-w-full">
-        <thead className="bg-slate-50 text-left">
-          <tr className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            <th className="px-4 py-4"><input type="checkbox" checked={allChecked} onChange={(e) => onToggleAll(e.target.checked)} /></th>
-            <th className="px-4 py-4">Ảnh</th>
-            <th className="px-4 py-4">Tên</th>
-            <th className="px-4 py-4">SKU</th>
-            <th className="px-4 py-4">Vendor</th>
-            <th className="px-4 py-4">Trạng thái</th>
-            <th className="px-4 py-4">Phiếu nhập</th>
-            <th className="px-4 py-4 text-right">Giá bán</th>
-            <th className="px-4 py-4 text-right">Sale</th>
-            {canViewCost ? <th className="px-4 py-4 text-right">Giá mua</th> : null}
-            <th className="px-4 py-4">Bài đăng</th>
-            <th className="px-4 py-4">Cập nhật</th>
-            <th className="px-4 py-4">Tạo lúc</th>
-            <th className="px-4 py-4 text-right">Hành động</th>
+      <table className="min-w-full text-sm">
+        <thead className="bg-slate-50 text-slate-500">
+          <tr>
+            <th className="px-4 py-3 text-left">
+              <input
+                type="checkbox"
+                checked={allChecked}
+                onChange={(e) => onToggleAll(e.target.checked)}
+              />
+            </th>
+            <th className="px-4 py-3 text-left">Ảnh</th>
+            <th className="px-4 py-3 text-left">Tên</th>
+            <th className="px-4 py-3 text-left">SKU</th>
+            <th className="px-4 py-3 text-left">Vendor</th>
+            <th className="px-4 py-3 text-left">Trạng thái</th>
+            <th className="px-4 py-3 text-left">Phiếu nhập</th>
+            <th className="px-4 py-3 text-right">Giá bán</th>
+            <th className="px-4 py-3 text-right">Sale</th>
+            {canViewCost ? (
+              <th className="px-4 py-3 text-right">Giá mua</th>
+            ) : null}
+            <th className="px-4 py-3 text-left">Bài đăng</th>
+            <th className="px-4 py-3 text-left">Cập nhật</th>
+            <th className="px-4 py-3 text-left">Tạo lúc</th>
+            <th className="px-4 py-3 text-right">Hành động</th>
           </tr>
         </thead>
-        <tbody>
+
+        <tbody className="bg-white">
           {items.map((product) => (
             <ProductListRow
               key={product.id}
               product={product}
               checked={selectedIds.includes(product.id)}
-              pendingImage={pendingImageProductId === product.id}
               canViewCost={canViewCost}
               canEditPrice={canEditPrice}
+              pendingImage={pendingImageProductId === product.id}
               onCheckedChange={(checked) => onToggleOne(product.id, checked)}
               onImageUploaded={onImageUploaded}
               onOpenReadiness={onOpenReadiness}
               onPriceSaved={onPriceSaved}
-              onView={onViewProduct}
-              onEdit={onEditProduct}
-              onDelete={onDeleteProduct}
-              onService={onCreateService}
+              onView={onView}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onService={onService}
             />
           ))}
         </tbody>

@@ -1,18 +1,95 @@
 "use client";
 
-import SectionCard from "@/components/_shared/SectionCard";
+type Option = {
+  label: string;
+  value: string;
+};
 
-type Option = { label: string; value: string };
-
-type FilterState = {
+type Filters = {
   q: string;
   sku: string;
   type: string;
   brandId: string;
   vendorId: string;
-  image: string;
+  image?: string;
   sort: string;
 };
+
+type Props = {
+  filters: Filters;
+  typeOptions: Option[];
+  brandOptions: Option[];
+  vendorOptions: Option[];
+  onChange: (patch: Partial<Filters>) => void;
+  onApply: () => void;
+  onClear: () => void;
+};
+
+const imageOptions: Option[] = [
+  { label: "(All)", value: "" },
+  { label: "Có ảnh", value: "yes" },
+  { label: "Chưa có ảnh", value: "no" },
+];
+
+const sortOptions: Option[] = [
+  { label: "Cập nhật ↓", value: "updatedDesc" },
+  { label: "Cập nhật ↑", value: "updatedAsc" },
+  { label: "Tạo mới ↓", value: "createdDesc" },
+  { label: "Tạo mới ↑", value: "createdAsc" },
+  { label: "Giá bán ↑", value: "priceAsc" },
+  { label: "Giá bán ↓", value: "priceDesc" },
+];
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+      {children}
+    </label>
+  );
+}
+
+function Input({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+    />
+  );
+}
+
+function Select({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: Option[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+    >
+      {options.map((item) => (
+        <option key={item.value || "__empty"} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function ProductListFilters({
   filters,
@@ -22,66 +99,100 @@ export default function ProductListFilters({
   onChange,
   onApply,
   onClear,
-}: {
-  filters: FilterState;
-  typeOptions: Option[];
-  brandOptions: Option[];
-  vendorOptions: Option[];
-  onChange: (patch: Partial<FilterState>) => void;
-  onApply: () => void;
-  onClear: () => void;
-}) {
+}: Props) {
+  const hasType = typeOptions.length > 0;
+  const hasBrand = brandOptions.length > 0;
+
   return (
-    <SectionCard title="Bộ lọc" contentClassName="p-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <Field label="Tìm kiếm">
-          <input value={filters.q} onChange={(e) => onChange({ q: e.target.value })} placeholder="Tên / brand..." className={inputCls} />
-        </Field>
-        <Field label="SKU">
-          <input value={filters.sku} onChange={(e) => onChange({ sku: e.target.value })} placeholder="SKU..." className={inputCls} />
-        </Field>
-        <Field label="Type">
-          <select value={filters.type} onChange={(e) => onChange({ type: e.target.value })} className={inputCls}>
-            <option value="">(All)</option>
-            {typeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Brand">
-          <select value={filters.brandId} onChange={(e) => onChange({ brandId: e.target.value })} className={inputCls}>
-            <option value="">(All)</option>
-            {brandOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Vendor">
-          <select value={filters.vendorId} onChange={(e) => onChange({ vendorId: e.target.value })} className={inputCls}>
-            <option value="">(All)</option>
-            {vendorOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Sắp xếp">
-          <select value={filters.sort} onChange={(e) => onChange({ sort: e.target.value })} className={inputCls}>
-            <option value="updated_desc">Cập nhật ↓</option>
-            <option value="updated_asc">Cập nhật ↑</option>
-            <option value="created_desc">Tạo mới ↓</option>
-            <option value="created_asc">Tạo mới ↑</option>
-          </select>
-        </Field>
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div>
+          <FieldLabel>Tìm kiếm</FieldLabel>
+          <Input
+            value={filters.q}
+            placeholder="Tên / brand..."
+            onChange={(value) => onChange({ q: value })}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>SKU</FieldLabel>
+          <Input
+            value={filters.sku}
+            placeholder="SKU..."
+            onChange={(value) => onChange({ sku: value })}
+          />
+        </div>
+
+        {hasType ? (
+          <div>
+            <FieldLabel>Type</FieldLabel>
+            <Select
+              value={filters.type}
+              options={[{ label: "(All)", value: "" }, ...typeOptions]}
+              onChange={(value) => onChange({ type: value })}
+            />
+          </div>
+        ) : null}
+
+        {hasBrand ? (
+          <div>
+            <FieldLabel>Brand</FieldLabel>
+            <Select
+              value={filters.brandId}
+              options={[{ label: "(All)", value: "" }, ...brandOptions]}
+              onChange={(value) => onChange({ brandId: value })}
+            />
+          </div>
+        ) : null}
+
+        <div>
+          <FieldLabel>Vendor</FieldLabel>
+          <Select
+            value={filters.vendorId}
+            options={[{ label: "(All)", value: "" }, ...vendorOptions]}
+            onChange={(value) => onChange({ vendorId: value })}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>Sắp xếp</FieldLabel>
+          <Select
+            value={filters.sort}
+            options={sortOptions}
+            onChange={(value) => onChange({ sort: value })}
+          />
+        </div>
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button type="button" onClick={onApply} className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Lọc</button>
-        <button type="button" onClick={onClear} className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear</button>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="md:col-span-1 xl:col-span-1">
+          <FieldLabel>Image</FieldLabel>
+          <Select
+            value={filters.image ?? ""}
+            options={imageOptions}
+            onChange={(value) => onChange({ image: value })}
+          />
+        </div>
+
+        <div className="flex items-end gap-2 md:col-span-2 xl:col-span-2">
+          <button
+            type="button"
+            onClick={onApply}
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Lọc
+          </button>
+
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+          >
+            Clear
+          </button>
+        </div>
       </div>
-    </SectionCard>
+    </div>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
-      {children}
-    </label>
-  );
-}
-
-const inputCls = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400";

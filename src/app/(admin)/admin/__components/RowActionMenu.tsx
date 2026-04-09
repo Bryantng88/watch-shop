@@ -1,108 +1,125 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import * as React from "react";
 import { MoreVertical } from "lucide-react";
 
-type Props = {
-    onView?: () => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-    onService?: () => void;
+export type RowActionItem = {
+    key: string;
+    label: string;
+    onClick?: () => void;
+    href?: string;
+    disabled?: boolean;
+    danger?: boolean;
+    hidden?: boolean;
 };
 
-export default function RowActionsMenu({
-    onView,
-    onEdit,
-    onDelete,
-    onService,
-}: Props) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
+function cx(...classes: Array<string | false | null | undefined>) {
+    return classes.filter(Boolean).join(" ");
+}
 
-    // ==========================
-    // CLICK OUTSIDE TO CLOSE
-    // ==========================
-    useEffect(() => {
+export default function RowActionsMenu({
+    actions,
+    align = "right",
+}: {
+    actions: RowActionItem[];
+    align?: "left" | "right";
+}) {
+    const [open, setOpen] = React.useState(false);
+    const wrapRef = React.useRef<HTMLDivElement | null>(null);
+
+    React.useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
+            if (!wrapRef.current) return;
+            if (!wrapRef.current.contains(e.target as Node)) {
                 setOpen(false);
             }
         }
+
+        function handleEsc(e: KeyboardEvent) {
+            if (e.key === "Escape") setOpen(false);
+        }
+
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEsc);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEsc);
+        };
     }, []);
 
+    const visibleActions = actions.filter((item) => !item.hidden);
+
+    if (!visibleActions.length) return null;
+
     return (
-        <div ref={ref} className="relative inline-block text-left">
-            {/* TRIGGER */}
+        <div ref={wrapRef} className="relative inline-flex">
             <button
                 type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => setOpen((prev) => !prev)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                aria-haspopup="menu"
+                aria-expanded={open}
             >
-                <MoreVertical size={16} />
+                <MoreVertical className="h-4 w-4" />
             </button>
 
-            {/* MENU */}
-            {open && (
-                <div className="absolute right-0 z-50 mt-1 w-36 rounded-md border bg-white shadow-lg">
-                    <ul className="py-1 text-sm">
-                        {onView && (
-                            <li>
-                                <button
-                                    onClick={() => {
-                                        setOpen(false);
-                                        onView();
-                                    }}
-                                    className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                                >
-                                    Xem
-                                </button>
-                            </li>
-                        )}
-                        {onService && (
-                            <button
-                                type="button"
-                                className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                                onClick={() => {
-                                    setOpen(false);
-                                    onService();
-                                }}
+            {open ? (
+                <div
+                    className={cx(
+                        "absolute top-10 z-50 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-xl",
+                        align === "right" ? "right-0" : "left-0"
+                    )}
+                    role="menu"
+                >
+                    {visibleActions.map((item) => {
+                        const content = (
+                            <span
+                                className={cx(
+                                    "block w-full rounded-xl px-3 py-2 text-left text-sm transition",
+                                    item.disabled
+                                        ? "cursor-not-allowed text-slate-300"
+                                        : item.danger
+                                            ? "text-red-600 hover:bg-red-50"
+                                            : "text-slate-700 hover:bg-slate-50"
+                                )}
                             >
-                                Tạo service
+                                {item.label}
+                            </span>
+                        );
+
+                        if (item.href && !item.disabled) {
+                            return (
+                                <a
+                                    key={item.key}
+                                    href={item.href}
+                                    className="block"
+                                    onClick={() => setOpen(false)}
+                                    role="menuitem"
+                                >
+                                    {content}
+                                </a>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={item.key}
+                                type="button"
+                                disabled={item.disabled}
+                                className="block w-full text-left"
+                                onClick={() => {
+                                    if (item.disabled) return;
+                                    setOpen(false);
+                                    item.onClick?.();
+                                }}
+                                role="menuitem"
+                            >
+                                {content}
                             </button>
-                        )}
-
-                        {onEdit && (
-                            <li>
-                                <button
-                                    onClick={() => {
-                                        setOpen(false);
-                                        onEdit();
-                                    }}
-                                    className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                                >
-                                    Chỉnh sửa
-                                </button>
-                            </li>
-                        )}
-
-                        {onDelete && (
-                            <li>
-                                <button
-                                    onClick={() => {
-                                        setOpen(false);
-                                        onDelete();
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-red-600 hover:bg-red-50"
-                                >
-                                    Xóa
-                                </button>
-                            </li>
-                        )}
-                    </ul>
+                        );
+                    })}
                 </div>
-            )}
+            ) : null}
         </div>
     );
 }

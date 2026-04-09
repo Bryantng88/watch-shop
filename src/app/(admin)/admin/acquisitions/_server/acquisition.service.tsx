@@ -803,9 +803,15 @@ async function createWatchProductForPostedItem(
     const sku = await genUniqueProductSku(tx as any, productType);
     const primaryImageKey = aiMeta?.images?.[0]?.key ?? null;
 
+    const resolvedBrandName =
+        toStringOrNull(aiExtracted?.brandName) ??
+        toStringOrNull(aiExtracted?.confirmedFacts?.brandName) ??
+        toStringOrNull(aiExtracted?.suggestedFacts?.probableBrand) ??
+        toStringOrNull(aiExtracted?.probableVisualFacts?.probableBrand);
+
     const brandConnect = await resolveBrandConnectFromAi(
         tx,
-        aiExtracted?.brandName
+        resolvedBrandName
     );
 
     const generatedTitle =
@@ -1166,7 +1172,7 @@ export async function postAcquisition(acqId: string, vendorName: string) {
         },
         {
             maxWait: 10000,
-            timeout: 60000,
+            timeout: 320000,
         }
     );
 

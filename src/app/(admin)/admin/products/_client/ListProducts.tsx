@@ -10,7 +10,13 @@ import {
     ProductListViewTabs,
     ProductReadinessModal,
 } from "./list";
-import type { CatalogKey, Counts, ProductListPageProps, ProductRow, ViewKey } from "./list/types";
+import type {
+    CatalogKey,
+    Counts,
+    ProductListPageProps,
+    ProductRow,
+    ViewKey,
+} from "./list/types";
 
 type FilterState = {
     q: string;
@@ -22,7 +28,11 @@ type FilterState = {
     sort: string;
 };
 
-function buildCounts(input: ProductListPageProps["counts"], total: number, currentView: ViewKey): Counts {
+function buildCounts(
+    input: ProductListPageProps["counts"],
+    total: number,
+    currentView: ViewKey
+): Counts {
     if (input && Object.values(input).some((value) => Number(value ?? 0) >= 0)) {
         return {
             all: Number(input.all ?? 0),
@@ -68,8 +78,12 @@ function BulkPostConfirm({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
                 <div className="border-b border-slate-100 px-5 py-4">
-                    <h3 className="text-lg font-semibold text-slate-950">Bulk post sản phẩm</h3>
-                    <p className="mt-1 text-sm text-slate-500">Bạn đang chuẩn bị post {count} sản phẩm đã chọn.</p>
+                    <h3 className="text-lg font-semibold text-slate-950">
+                        Bulk post sản phẩm
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Bạn đang chuẩn bị post {count} sản phẩm đã chọn.
+                    </p>
                 </div>
                 <div className="flex justify-end gap-3 px-5 py-4">
                     <button
@@ -118,7 +132,9 @@ function BulkSaleModal({
             <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
                 <div className="border-b border-slate-100 px-5 py-4">
                     <h3 className="text-lg font-semibold text-slate-950">Bulk sale</h3>
-                    <p className="mt-1 text-sm text-slate-500">Áp dụng giá sale cho {count} sản phẩm đã chọn.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Áp dụng giá sale cho {count} sản phẩm đã chọn.
+                    </p>
                 </div>
 
                 <div className="space-y-2 px-5 py-4">
@@ -133,7 +149,9 @@ function BulkSaleModal({
                             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                         />
                     </label>
-                    <div className="text-xs text-slate-500">Nhập giá sale cố định. Để trống để xóa sale hàng loạt.</div>
+                    <div className="text-xs text-slate-500">
+                        Nhập giá sale cố định. Để trống để xóa sale hàng loạt.
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-3 px-5 py-4">
@@ -173,7 +191,10 @@ function Pagination({
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
             <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
+                Tổng:{" "}
+                <span className="font-semibold text-slate-950">{total}</span> • Trang{" "}
+                <span className="font-semibold text-slate-950">{page}</span>/
+                <span className="font-semibold text-slate-950">{totalPages}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -233,7 +254,10 @@ export default function ListProducts(props: ProductListPageProps) {
 
     const isStrapCatalog = currentCatalog === "strap";
 
-    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView), [props.counts, props.total, currentView]);
+    const counts = useMemo(
+        () => buildCounts(props.counts, props.total, currentView),
+        [props.counts, props.total, currentView]
+    );
 
     const [filters, setFilters] = useState<FilterState>({
         q: sp.get("q") ?? "",
@@ -313,7 +337,9 @@ export default function ListProducts(props: ProductListPageProps) {
         });
 
         pushParams((next) => {
-            ["q", "sku", "type", "brandId", "vendorId", "hasImages", "sort"].forEach((key) => next.delete(key));
+            ["q", "sku", "type", "brandId", "vendorId", "hasImages", "sort"].forEach((key) =>
+                next.delete(key)
+            );
             next.set("page", "1");
         });
     }
@@ -366,8 +392,23 @@ export default function ListProducts(props: ProductListPageProps) {
                 throw new Error(data?.error || data?.message || "Cập nhật ảnh thất bại");
             }
 
-            const nextCover = data?.coverImageUrl || fileKey;
-            setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, primaryImageUrl: nextCover, imagesCount: Math.max(Number(row.imagesCount ?? 0), 1) } : row)));
+            const nextCover =
+                data?.coverImageUrl ||
+                (fileKey ? `/api/media/sign?key=${encodeURIComponent(fileKey)}` : null);
+
+            setRows((prev) =>
+                prev.map((row) =>
+                    row.id === productId
+                        ? {
+                            ...row,
+                            primaryImageKey: fileKey,
+                            primaryImageUrl: nextCover,
+                            imagesCount: Math.max(Number(row.imagesCount ?? 0), 1),
+                        }
+                        : row
+                )
+            );
+
             router.refresh();
         } catch (error: any) {
             window.alert(error?.message || "Cập nhật ảnh thất bại");
@@ -377,7 +418,9 @@ export default function ListProducts(props: ProductListPageProps) {
     }
 
     function handlePriceSaved(productId: string, patch: Partial<ProductRow>) {
-        setRows((prev) => prev.map((row) => (row.id === productId ? { ...row, ...patch } : row)));
+        setRows((prev) =>
+            prev.map((row) => (row.id === productId ? { ...row, ...patch } : row))
+        );
     }
 
     async function handleBulkPost() {
@@ -398,12 +441,16 @@ export default function ListProducts(props: ProductListPageProps) {
             if (Array.isArray(data?.failed) && data.failed.length > 0) {
                 const preview = data.failed.slice(0, 3).map((item: any) => {
                     const title = item?.title || item?.id || "Unknown";
-                    const reasons = Array.isArray(item?.reasons) ? item.reasons.join(" | ") : "";
+                    const reasons = Array.isArray(item?.reasons)
+                        ? item.reasons.join(" | ")
+                        : "";
                     return `- ${title}: ${reasons}`;
                 });
 
                 window.alert(
-                    `Đã post ${data?.count ?? 0} sản phẩm. Còn ${data.failed.length} sản phẩm chưa đạt điều kiện.\n\n${preview.join("\n")}`
+                    `Đã post ${data?.count ?? 0} sản phẩm. Còn ${data.failed.length} sản phẩm chưa đạt điều kiện.\n\n${preview.join(
+                        "\n"
+                    )}`
                 );
             }
 
@@ -440,7 +487,9 @@ export default function ListProducts(props: ProductListPageProps) {
                 throw new Error(data?.error || data?.message || "Bulk sale thất bại");
             }
 
-            setRows((prev) => prev.map((row) => (selectedIds.includes(row.id) ? { ...row, salePrice } : row)));
+            setRows((prev) =>
+                prev.map((row) => (selectedIds.includes(row.id) ? { ...row, salePrice } : row))
+            );
             setBulkSaleOpen(false);
             setBulkSaleValue("");
             router.refresh();
@@ -479,9 +528,60 @@ export default function ListProducts(props: ProductListPageProps) {
         }
     }
 
-    const typeOptions = isStrapCatalog ? [] : props.productTypes.map((item) => ({ label: item.label, value: item.value }));
-    const brandOptions = isStrapCatalog ? [] : props.brands.map((item) => ({ label: item.name, value: item.id }));
-    const vendorOptions = props.vendors.map((item) => ({ label: item.name, value: item.id }));
+    const handleViewProduct = (id: string) => {
+        router.push(`/admin/products/${id}`);
+    };
+
+    const handleEditProduct = (id: string) => {
+        router.push(`/admin/products/${id}/edit`);
+    };
+
+    const handleDeleteProduct = (id: string) => {
+        handleDelete(id);
+    };
+
+    const handleCreateService = async (id: string) => {
+        try {
+            const res = await fetch("/api/admin/service-requests/from-product", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productIds: [id],
+                    scope: "WITH_PURCHASE",
+                }),
+            });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok || data?.ok === false) {
+                throw new Error(data?.error || data?.message || "Tạo service request thất bại");
+            }
+
+            window.alert(data?.message || "Đã tạo service request");
+            router.refresh();
+        } catch (e: any) {
+            window.alert(e?.message || "Tạo service request thất bại");
+        }
+    };
+
+    const typeOptions = isStrapCatalog
+        ? []
+        : props.productTypes.map((item) => ({
+            label: item.label,
+            value: item.value,
+        }));
+
+    const brandOptions = isStrapCatalog
+        ? []
+        : props.brands.map((item) => ({
+            label: item.name,
+            value: item.id,
+        }));
+
+    const vendorOptions = props.vendors.map((item) => ({
+        label: item.name,
+        value: item.id,
+    }));
 
     return (
         <div className="space-y-4">
@@ -552,6 +652,10 @@ export default function ListProducts(props: ProductListPageProps) {
                 onImageUploaded={handleImageUploaded}
                 onOpenReadiness={(product) => setReadinessProduct(product)}
                 onPriceSaved={handlePriceSaved}
+                onView={handleViewProduct}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+                onService={handleCreateService}
             />
 
             <Pagination
