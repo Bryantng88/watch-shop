@@ -1,4 +1,4 @@
-import ProductListClient from "./_client/ListProducts";
+import ProductListClient from "./_client/ListProductsOld";
 import { getAdminProductList } from "./_server/product.service";
 
 import { parseProductListSearchParams } from "./helpers/search-params";

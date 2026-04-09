@@ -38,6 +38,7 @@ const makeSchema = () => z.object({
   postContent: z.boolean().optional(),
   aiPromptUsed: z.boolean().optional(),
   aiGeneratedAt: z.boolean().optional(),
+  sku: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
   maintenanceRecords: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),

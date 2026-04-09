@@ -1,8 +1,6 @@
 import type { QuickWatchSpec } from "../_shared/quick-watch-rule";
 
 export type WatchFlagsInput = {
-    hasStrap?: boolean;
-    hasClasp?: boolean;
     needService?: boolean;
 };
 
@@ -15,11 +13,22 @@ export type StrapSpecInput = {
     sellPrice?: number;
 };
 
+export type AcquisitionAiMeta = {
+    images?: Array<{ key?: string | null; url?: string | null }>;
+    aiHint?: string | null;
+    ai?: {
+        extractedSpec?: any;
+        generatedDraft?: any;
+        meta?: any;
+    } | null;
+};
+
 export type AcquisitionItemMeta = {
     kind?: "watch" | "strap";
     watchFlags?: WatchFlagsInput;
     strapSpec?: StrapSpecInput;
     quickSpec?: QuickWatchSpec;
+    aiMeta?: AcquisitionAiMeta;
 };
 
 const normalizeBool = (value: unknown, fallback = false) =>
@@ -74,15 +83,9 @@ function normalizeWatchFlags(value: unknown): WatchFlagsInput | undefined {
     const obj = value as Record<string, any>;
 
     return {
-        hasStrap: normalizeBool(obj.hasStrap),
-        hasClasp: normalizeBool(obj.hasClasp),
-
-        // đọc tương thích dữ liệu cũ, nhưng chuẩn nội bộ chỉ giữ 1 field duy nhất
         needService: normalizeBool(
-            obj.needService ??
-            obj.needsService ??
-            obj.service ??
-            obj.isServiced
+            obj.needService ?? obj.needsService ?? obj.service ?? obj.isServiced,
+            true
         ),
     };
 }
@@ -102,6 +105,36 @@ function normalizeStrapSpec(value: unknown): StrapSpecInput | undefined {
     };
 }
 
+function normalizeAiMeta(value: unknown): AcquisitionAiMeta | undefined {
+    if (!value || typeof value !== "object") return undefined;
+
+    const obj = value as Record<string, any>;
+    const rawImages = Array.isArray(obj.images) ? obj.images : [];
+    const images = rawImages
+        .map((entry) => {
+            if (!entry || typeof entry !== "object") return null;
+            const image = entry as Record<string, any>;
+            const key = image.key == null ? null : String(image.key);
+            const url = image.url == null ? null : String(image.url);
+            if (!key && !url) return null;
+            return { key, url };
+        })
+        .filter(Boolean) as Array<{ key?: string | null; url?: string | null }>;
+
+    return {
+        images,
+        aiHint: obj.aiHint == null ? null : String(obj.aiHint),
+        ai:
+            obj.ai && typeof obj.ai === "object"
+                ? {
+                    extractedSpec: (obj.ai as any).extractedSpec ?? null,
+                    generatedDraft: (obj.ai as any).generatedDraft ?? null,
+                    meta: (obj.ai as any).meta ?? null,
+                }
+                : null,
+    };
+}
+
 function isLegacyStrapSpecObject(obj: Record<string, any>) {
     return (
         "material" in obj ||
@@ -115,8 +148,6 @@ function isLegacyStrapSpecObject(obj: Record<string, any>) {
 
 export function getDefaultWatchFlags(): Required<WatchFlagsInput> {
     return {
-        hasStrap: false,
-        hasClasp: false,
         needService: true,
     };
 }
@@ -130,7 +161,7 @@ export function parseAcquisitionItemMeta(description?: string | null): Acquisiti
 
         const obj = parsed as Record<string, any>;
 
-        if (obj.watchFlags || obj.strapSpec || obj.kind || obj.quickSpec) {
+        if (obj.watchFlags || obj.strapSpec || obj.kind || obj.quickSpec || obj.aiMeta) {
             return {
                 kind:
                     obj.kind === "strap"
@@ -141,6 +172,7 @@ export function parseAcquisitionItemMeta(description?: string | null): Acquisiti
                 watchFlags: normalizeWatchFlags(obj.watchFlags),
                 strapSpec: normalizeStrapSpec(obj.strapSpec),
                 quickSpec: normalizeQuickSpec(obj.quickSpec),
+                aiMeta: normalizeAiMeta(obj.aiMeta),
             };
         }
 
@@ -161,8 +193,6 @@ export function getWatchFlagsFromDescription(description?: string | null): Requi
     const flags = parseAcquisitionItemMeta(description).watchFlags;
 
     return {
-        hasStrap: normalizeBool(flags?.hasStrap),
-        hasClasp: normalizeBool(flags?.hasClasp),
         needService: normalizeBool(flags?.needService, true),
     };
 }
@@ -175,11 +205,15 @@ export function getQuickSpecFromDescription(description?: string | null): QuickW
     return parseAcquisitionItemMeta(description).quickSpec ?? null;
 }
 
+export function getAiMetaFromDescription(description?: string | null): AcquisitionAiMeta | null {
+    return parseAcquisitionItemMeta(description).aiMeta ?? null;
+}
+
 export function stringifyAcquisitionItemMeta(input: {
     watchFlags?: WatchFlagsInput | null;
     strapSpec?: StrapSpecInput | null;
     quickSpec?: QuickWatchSpec | null;
-    aiMeta?: any;
+    aiMeta?: AcquisitionAiMeta | null;
 }) {
     const watchFlags = input.watchFlags
         ? {
@@ -215,13 +249,14 @@ export function stringifyAcquisitionItemMeta(input: {
         }
         : undefined;
 
-    const aiMeta = input.aiMeta ?? undefined;
+    const aiMeta = normalizeAiMeta(input.aiMeta);
 
-    if (!watchFlags && !quickSpec && !aiMeta) return null;
+    if (!watchFlags && !input.strapSpec && !quickSpec && !aiMeta) return null;
 
     return JSON.stringify({
-        kind: "watch",
+        kind: input.strapSpec ? "strap" : "watch",
         ...(watchFlags ? { watchFlags } : {}),
+        ...(input.strapSpec ? { strapSpec: input.strapSpec } : {}),
         ...(quickSpec ? { quickSpec } : {}),
         ...(aiMeta ? { aiMeta } : {}),
     });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AcquisitionType, ProductType } from "@prisma/client";
 import type { QuickWatchSpec } from "../_shared/quick-watch-rule";
+import type { AcquisitionAiMeta } from "./item-metadata";
 
 export const adminAcqSort = z.enum([
     "updatedDesc",
@@ -55,10 +56,7 @@ export type StrapSpecInput = {
 };
 
 export type WatchFlagsInput = {
-    hasStrap?: boolean;
-    hasClasp?: boolean;
     needService?: boolean;
-
 };
 
 export type CreateAcquisitionInput = {
@@ -77,6 +75,7 @@ export type CreateAcquisitionInput = {
         strapSpec?: StrapSpecInput;
         watchFlags?: WatchFlagsInput;
         quickSpec?: QuickWatchSpec | null;
+        aiMeta?: AcquisitionAiMeta | null;
     }[];
     quickVendorName: string;
 };
@@ -111,9 +110,7 @@ export const ItemDTO = z.object({
         .optional(),
     watchFlags: z
         .object({
-            hasStrap: z.boolean().optional(),
             needService: z.boolean().optional(),
-            hasClasp: z.boolean().optional(),
         })
         .optional(),
     quickSpec: z
@@ -141,6 +138,20 @@ export const ItemDTO = z.object({
             styleCategoryLabel: z.string().nullable().optional(),
             hourMarkerStyle: z.string().nullable().optional(),
             hourMarkerStyleLabel: z.string().nullable().optional(),
+        })
+        .optional(),
+    aiMeta: z
+        .object({
+            images: z
+                .array(
+                    z.object({
+                        key: z.string().nullable().optional(),
+                        url: z.string().nullable().optional(),
+                    })
+                )
+                .optional(),
+            aiHint: z.string().nullable().optional(),
+            ai: z.any().nullable().optional(),
         })
         .optional(),
 });

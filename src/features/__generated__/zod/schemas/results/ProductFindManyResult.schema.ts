@@ -23,6 +23,7 @@ export const ProductFindManyResultSchema = z.object({
   postContent: z.string().optional(),
   aiPromptUsed: z.string().optional(),
   aiGeneratedAt: z.date().optional(),
+  sku: z.string().optional(),
   AcquisitionItem: z.array(z.unknown()),
   InvoiceItem: z.array(z.unknown()),
   maintenanceRecords: z.array(z.unknown()),

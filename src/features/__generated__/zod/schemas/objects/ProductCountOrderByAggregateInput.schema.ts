@@ -24,7 +24,8 @@ const makeSchema = () => z.object({
   contentStatus: SortOrderSchema.optional(),
   postContent: SortOrderSchema.optional(),
   aiPromptUsed: SortOrderSchema.optional(),
-  aiGeneratedAt: SortOrderSchema.optional()
+  aiGeneratedAt: SortOrderSchema.optional(),
+  sku: SortOrderSchema.optional()
 }).strict();
 export const ProductCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ProductCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCountOrderByAggregateInput>;
 export const ProductCountOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -50,6 +50,23 @@ export type AcquisitionExtractedSpec = {
     confidence: Record<string, ConfidenceLevel>;
     needsMoreImages: string[];
     confidenceNotes: string[];
+
+    probableVisualFacts: {
+        probableBrand: string | null;
+        caseType: string | null;
+        displayType: string | null;
+        strapType: string | null;
+        dialColor: string | null;
+        dialMarkers: string | null;
+        glass: string | null;
+        caseMaterial: string | null;
+        movement: string | null;
+        gender: string | null;
+        sizeClass: string | null;
+        era: string | null;
+        widthEstimateMm: number | null;
+        styleNotes: string[];
+    };
 };
 
 export type AcquisitionGeneratedDraft = {
@@ -77,6 +94,10 @@ export type AcquisitionDraftResponse = {
 export type GenerateAcquisitionDraftInput = {
     origin: string;
     imageUrls: string[];
+    imageEntries?: Array<{
+        key?: string | null;
+        url?: string | null;
+    }>;
     vendorName?: string | null;
     cost?: number | null;
     titleHint?: string | null;

@@ -29,6 +29,7 @@ export const ProductModelSchema = z.object({
     postContent: z.string().nullable(),
     aiPromptUsed: z.string().nullable(),
     aiGeneratedAt: z.date().nullable(),
+    sku: z.string().nullable(),
     AcquisitionItem: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),
     maintenanceRecords: z.array(z.unknown()),

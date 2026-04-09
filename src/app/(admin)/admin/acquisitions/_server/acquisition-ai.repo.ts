@@ -1,8 +1,20 @@
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { normalizeKey } from "@/server/lib/product-image-storage";
+import { s3, S3_BUCKET } from "@/server/s3";
+
 function toAbsoluteUrl(input: string, origin: string) {
     if (!input) return "";
     if (/^https?:\/\//i.test(input) || input.startsWith("data:")) return input;
     if (input.startsWith("/")) return `${origin}${input}`;
     return `${origin}/${input.replace(/^\/+/, "")}`;
+}
+
+async function streamToBuffer(body: any): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of body as any) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
 }
 
 export async function fetchImageAsDataUrl(imageUrl: string, origin: string) {
@@ -17,6 +29,44 @@ export async function fetchImageAsDataUrl(imageUrl: string, origin: string) {
     const arrayBuffer = await res.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
     return `data:${contentType};base64,${base64}`;
+}
+
+export async function fetchImageEntryAsDataUrl(
+    entry: { key?: string | null; url?: string | null },
+    origin: string
+) {
+    const normalized = normalizeKey(entry?.key);
+
+    if (normalized) {
+        try {
+            const obj = await s3.send(
+                new GetObjectCommand({
+                    Bucket: S3_BUCKET,
+                    Key: normalized,
+                })
+            );
+
+            if (!obj.Body) {
+                throw new Error("S3 object body empty");
+            }
+
+            const contentType = obj.ContentType || "image/jpeg";
+            const buffer = await streamToBuffer(obj.Body);
+            return `data:${contentType};base64,${buffer.toString("base64")}`;
+        } catch (error) {
+            console.error("[ACQ_AI][FETCH_BY_KEY_FAILED]", {
+                key: normalized,
+                error: error instanceof Error ? error.message : error,
+            });
+        }
+    }
+
+    const rawUrl = String(entry?.url ?? "").trim();
+    if (!rawUrl) {
+        throw new Error("Image entry không có key/url hợp lệ.");
+    }
+
+    return fetchImageAsDataUrl(rawUrl, origin);
 }
 
 export async function callOpenAIJson<T>({
