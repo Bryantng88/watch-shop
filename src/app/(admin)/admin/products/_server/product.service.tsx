@@ -6,6 +6,7 @@ import { computeEffectivePrice } from "../helpers/price";
 import { MIN_IMAGES, getRequiredWatchSpecFields, hasValue as hasRuleValue } from "./rules";
 
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
+export type ProductPricingField = "minPrice" | "salePrice" | "purchasePrice";
 
 const asDate = (v: unknown) => {
     const raw = firstValue(v);
@@ -661,4 +662,25 @@ export async function detail(id: string) {
         serviceHistory,
         tradeHistory,
     };
+}
+
+
+
+
+
+export async function updateProductPricing(input: {
+    productId: string;
+    field: ProductPricingField;
+    value: number | null;
+}) {
+    const existing = await prodRepo.findProductPricingById(input.productId);
+    if (!existing) {
+        throw new Error("PRODUCT_NOT_FOUND");
+    }
+
+    const patch: Partial<Record<ProductPricingField, number | null>> = {
+        [input.field]: input.value,
+    };
+
+    return prodRepo.updateProductPricing(input.productId, patch);
 }

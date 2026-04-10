@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Camera, Plus, ScanSearch, Wrench } from "lucide-react";
+import { AlertTriangle, Plus, ScanSearch, Wrench } from "lucide-react";
 import { useNotify } from "@/components/feedback/AppToastProvider";
 import TechnicalImagePicker from "@/components/media/TechnicalImagePicker";
+import { ImagePlus } from "lucide-react";
 
 import {
     FormState,
@@ -31,9 +32,249 @@ import {
     StatusToggle,
     TextInput,
 } from "./primitives";
-import { MovementIssueRow } from "./issue-rows";
-import { QuickIssueCard } from "./quick-issue-card";
+import { MovementIssueRow, StaticIssueSummary } from "./issue-rows";
+
+import QuickIssueCard from "./quick-issue-card";
 import { CollapsibleDefects, TechnicalFinalSummary } from "./final-summary";
+
+
+
+const QUICK_PANEL_HEIGHT = "h-[340px]";
+
+function cosmeticActionLabel(action?: CosmeticAction) {
+    const map: Record<string, string> = {
+        SPA_CASE: "Spa vỏ",
+        POLISH_CASE: "Đánh bóng vỏ",
+        REPLATE_CASE: "Mạ lại vỏ",
+        POLISH_GLASS: "Đánh bóng kính",
+        REPLACE_GLASS: "Thay kính",
+        CLEAN_DIAL: "Vệ sinh mặt số",
+        REPLACE_DIAL: "Thay mặt số",
+        KEEP_ORIGINAL: "Giữ nguyên",
+    };
+    return action ? map[action] || action : undefined;
+}
+
+function crownActionLabel(action?: string) {
+    const map: Record<string, string> = {
+        FIX_CROWN: "Sửa núm",
+        REPLACE_CROWN: "Thay núm",
+        RETHREAD: "Làm ren",
+        STEM_ADJUST: "Chỉnh ty",
+        WATERPROOF: "Chống nước",
+    };
+    return action ? map[action] || action : undefined;
+}
+
+function QuickIssueDraftEditor({
+    title,
+    value,
+    vendors,
+    disabled,
+    actionOptions,
+    onChange,
+    onGoBoard,
+}: {
+    title: string;
+    value: FormState["caseIssue"] | FormState["crystalIssue"] | FormState["dialIssue"];
+    vendors: any[];
+    disabled: boolean;
+    actionOptions: Array<{ value: CosmeticAction; label: string }>;
+    onChange: (patch: Partial<FormState["caseIssue"]>) => void;
+    onGoBoard: () => void;
+}) {
+    if (value.isFromBoard) {
+        return (
+            <StaticIssueSummary
+                lineNo={1}
+                summary={value.summary || `${title} đã được ghi nhận tại Issue Board`}
+                boardStatus={value.boardStatus}
+                execution={value.execution}
+                cost={formatCurrency(parseMoney(value.estimatedCost))}
+                vendorName={value.vendorName || vendors.find((v: any) => v.id === value.vendorId)?.name}
+                actionLabel={cosmeticActionLabel(value.action)}
+                onGoBoard={onGoBoard}
+                readOnly={disabled}
+            />
+        );
+    }
+
+    const isVendor = value.execution === "VENDOR";
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-4 md:grid-cols-12">
+                <div className="md:col-span-5">
+                    <Field label={`${title} - phương án xử lý`}>
+                        <SelectInput
+                            value={value.action ?? ""}
+                            onChange={(e) => onChange({ action: e.target.value as CosmeticAction })}
+                            disabled={disabled}
+                        >
+                            <option value="">Chọn phương án</option>
+                            {actionOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+                </div>
+
+                <div className="md:col-span-4">
+                    <Field label="Thực hiện">
+                        <SelectInput
+                            value={value.execution ?? "INHOUSE"}
+                            onChange={(e) =>
+                                onChange({
+                                    execution: e.target.value as ExecutionType,
+                                    vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined,
+                                })
+                            }
+                            disabled={disabled}
+                        >
+                            <option value="INHOUSE">Nội bộ</option>
+                            <option value="VENDOR">Vendor</option>
+                        </SelectInput>
+                    </Field>
+                </div>
+
+                <div className="md:col-span-3">
+                    <Field label="Chi phí dự kiến">
+                        <TextInput
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={value.estimatedCost ?? ""}
+                            onChange={(e) => onChange({ estimatedCost: e.target.value })}
+                            disabled={disabled}
+                        />
+                    </Field>
+                </div>
+            </div>
+
+            {isVendor ? (
+                <div className="mt-4">
+                    <Field label="Vendor">
+                        <SelectInput
+                            value={value.vendorId ?? ""}
+                            onChange={(e) => onChange({ vendorId: e.target.value })}
+                            disabled={disabled}
+                        >
+                            <option value="">Chọn vendor</option>
+                            {vendors.map((vendor: any) => (
+                                <option key={vendor.id} value={vendor.id}>
+                                    {vendor.name}
+                                </option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function CrownIssueDraftEditor({
+    value,
+    vendors,
+    disabled,
+    onChange,
+    onGoBoard,
+}: {
+    value: FormState["crownIssue"];
+    vendors: any[];
+    disabled: boolean;
+    onChange: (patch: Partial<FormState["crownIssue"]>) => void;
+    onGoBoard: () => void;
+}) {
+    if (value.isFromBoard) {
+        return (
+            <StaticIssueSummary
+                lineNo={1}
+                summary={value.summary || "Núm đã được ghi nhận tại Issue Board"}
+                boardStatus={value.boardStatus}
+                execution={value.execution}
+                cost={formatCurrency(parseMoney(value.cost))}
+                vendorName={value.vendorName || vendors.find((v: any) => v.id === value.vendorId)?.name}
+                actionLabel={crownActionLabel(value.action)}
+                onGoBoard={onGoBoard}
+                readOnly={disabled}
+            />
+        );
+    }
+
+    const isVendor = value.execution === "VENDOR";
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-4 md:grid-cols-12">
+                <div className="md:col-span-5">
+                    <Field label="Núm - phương án xử lý">
+                        <SelectInput
+                            value={value.action ?? ""}
+                            onChange={(e) => onChange({ action: e.target.value as any })}
+                            disabled={disabled}
+                        >
+                            <option value="">Chọn phương án</option>
+                            <option value="FIX_CROWN">Sửa núm</option>
+                            <option value="REPLACE_CROWN">Thay núm</option>
+                            <option value="RETHREAD">Làm ren</option>
+                            <option value="STEM_ADJUST">Chỉnh ty</option>
+                            <option value="WATERPROOF">Chống nước</option>
+                        </SelectInput>
+                    </Field>
+                </div>
+
+                <div className="md:col-span-4">
+                    <Field label="Thực hiện">
+                        <SelectInput
+                            value={value.execution ?? "INHOUSE"}
+                            onChange={(e) =>
+                                onChange({
+                                    execution: e.target.value as ExecutionType,
+                                    vendorId: e.target.value === "VENDOR" ? value.vendorId : undefined,
+                                })
+                            }
+                            disabled={disabled}
+                        >
+                            <option value="INHOUSE">Nội bộ</option>
+                            <option value="VENDOR">Vendor</option>
+                        </SelectInput>
+                    </Field>
+                </div>
+
+                <div className="md:col-span-3">
+                    <Field label="Chi phí dự kiến">
+                        <TextInput
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={value.cost ?? ""}
+                            onChange={(e) => onChange({ cost: e.target.value })}
+                            disabled={disabled}
+                        />
+                    </Field>
+                </div>
+            </div>
+
+            {isVendor ? (
+                <div className="mt-4">
+                    <Field label="Vendor">
+                        <SelectInput
+                            value={value.vendorId ?? ""}
+                            onChange={(e) => onChange({ vendorId: e.target.value })}
+                            disabled={disabled}
+                        >
+                            <option value="">Chọn vendor</option>
+                            {vendors.map((vendor: any) => (
+                                <option key={vendor.id} value={vendor.id}>
+                                    {vendor.name}
+                                </option>
+                            ))}
+                        </SelectInput>
+                    </Field>
+                </div>
+            ) : null}
+        </div>
+    );
+}
 
 export default function TechnicalAssessmentInlinePanelContainer({
     serviceRequestId,
@@ -244,7 +485,29 @@ export default function TechnicalAssessmentInlinePanelContainer({
         parseMoney(form.dialIssue.enabled ? form.dialIssue.estimatedCost : "") +
         parseMoney(form.crownIssue.status === "ISSUE" ? form.crownIssue.cost : "");
     const totalCost = movementCost + issueProposalCost;
+    const openQuickIssueCount = [
+        form.caseIssue?.enabled,
+        form.crystalIssue?.enabled,
+        form.dialIssue?.enabled,
+        form.crownIssue?.enabled,
+    ].filter(Boolean).length;
+    const quickIssueSummary = {
+        caseIssue: form.caseIssue?.enabled
+            ? form.caseIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+            : "Không phát sinh issue ở hạng mục này.",
 
+        crystalIssue: form.crystalIssue?.enabled
+            ? form.crystalIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+            : "Không phát sinh issue ở hạng mục này.",
+
+        dialIssue: form.dialIssue?.enabled
+            ? form.dialIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+            : "Không phát sinh issue ở hạng mục này.",
+
+        crownIssue: form.crownIssue?.enabled
+            ? form.crownIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+            : "Không phát sinh issue ở hạng mục này.",
+    };
     function addMovementLine() {
         if (isLocked) return;
         setForm((prev) => ({
@@ -498,7 +761,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
                     </div>
                 }
             >
-                <div className="grid gap-3 xl:grid-cols-[220px_220px_minmax(220px,260px)_minmax(300px,1fr)] xl:items-start">
+                <div className="grid gap-3 xl:grid-cols-[220px_240px_220px]">
                     <Field label="Loại máy">
                         <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
                             {form.machineType === "MECHANICAL" ? "Máy cơ" : "Máy pin"}
@@ -535,56 +798,8 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             />
                         </div>
                     </Field>
-
-                    {form.machineType === "MECHANICAL" ? (
-                        <Field
-                            label="Ảnh máy đo thực tế"
-                            hint="Đặt ảnh trước và sau xử lý ngay trong cùng cụm đánh giá bộ máy."
-                        >
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500">
-                                            <Camera className="h-4 w-4" />
-                                            Trước xử lý
-                                        </div>
-                                        <TechnicalImagePicker
-                                            value={(form as any).beforeImageFileKey || ""}
-                                            onChange={(fileKey) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    beforeImageFileKey: fileKey,
-                                                } as any))
-                                            }
-                                            disabled={isLocked}
-                                            compact={false}
-                                            className="h-16 w-16 rounded-xl border-0 bg-transparent"
-                                        />
-                                    </div>
-
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-500">
-                                            <Camera className="h-4 w-4" />
-                                            Sau xử lý
-                                        </div>
-                                        <TechnicalImagePicker
-                                            value={(form as any).afterImageFileKey || ""}
-                                            onChange={(fileKey) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    afterImageFileKey: fileKey,
-                                                } as any))
-                                            }
-                                            disabled={isLocked}
-                                            compact={false}
-                                            className="h-16 w-16 rounded-xl border-0 bg-transparent"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </Field>
-                    ) : null}
                 </div>
+
 
                 {form.movementStatus === "ISSUE" ? (
                     <div className="space-y-5">
@@ -642,479 +857,221 @@ export default function TechnicalAssessmentInlinePanelContainer({
                 ) : null}
             </SectionCard>
 
-            <SectionCard
-                title="Ghi nhận issue nhanh"
-                subtitle="Issue chỉ được ghi nhận thực sự khi phiếu được lưu thành công."
-                icon={<ScanSearch className="h-5 w-5" />}
-            >
-                <div className="grid gap-4 xl:grid-cols-2">
-                    <QuickIssueCard
-                        title="Vỏ"
-                        area="CASE"
-                        open={form.caseIssue.enabled}
-                        issueMeta={form.caseIssue}
-                        staticView={form.caseIssue.isFromBoard}
-                        onOpen={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                caseIssue: { ...prev.caseIssue, enabled: true, isFromBoard: false },
-                            }));
-                        }}
-                        onClose={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                caseIssue: emptyQuickIssue(),
-                            }));
-                        }}
-                        onGoBoard={() =>
-                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                        }
-                        isLocked={isLocked}
-                    >
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Field label="Phương án xử lý">
-                                <SelectInput
-                                    value={form.caseIssue.action ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            caseIssue: {
-                                                ...prev.caseIssue,
-                                                action: e.target.value as CosmeticAction,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="">Chọn phương án</option>
-                                    <option value="SPA_CASE">Spa vỏ nhẹ</option>
-                                    <option value="POLISH_CASE">Đánh bóng vỏ</option>
-                                    <option value="REPLATE_CASE">Mạ lại vỏ</option>
-                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Thực hiện">
-                                <SelectInput
-                                    value={form.caseIssue.execution ?? "INHOUSE"}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            caseIssue: {
-                                                ...prev.caseIssue,
-                                                execution: e.target.value as ExecutionType,
-                                                vendorId:
-                                                    e.target.value === "VENDOR"
-                                                        ? prev.caseIssue.vendorId
-                                                        : "",
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="INHOUSE">Nội bộ</option>
-                                    <option value="VENDOR">Vendor</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Chi phí dự kiến">
-                                <TextInput
-                                    inputMode="numeric"
-                                    value={form.caseIssue.estimatedCost ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            caseIssue: {
-                                                ...prev.caseIssue,
-                                                estimatedCost: e.target.value,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                />
-                            </Field>
-                            {String(form.caseIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                                    <Field label="Vendor">
-                                        <SelectInput
-                                            value={form.caseIssue.vendorId ?? ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    caseIssue: {
-                                                        ...prev.caseIssue,
-                                                        vendorId: e.target.value,
-                                                    },
-                                                }))
-                                            }
-                                            disabled={isLocked}
-                                        >
-                                            <option value="">Chọn vendor</option>
-                                            {vendors.map((vendor: any) => (
-                                                <option key={vendor.id} value={vendor.id}>
-                                                    {vendor.name}
-                                                </option>
-                                            ))}
-                                        </SelectInput>
-                                    </Field>
+            <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
+                <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 px-5 py-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+                                <ScanSearch className="h-5 w-5 text-slate-600" />
+                            </div>
 
-                                    {!isLocked ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => router.push("/admin/vendors")}
-                                        >
-                                            + Vendor mới
-                                        </Button>
-                                    ) : null}
-                                </div>
-                            ) : null}
+                            <div className="min-w-0">
+                                <h3 className="text-base font-semibold text-slate-900">Ghi nhận issue nhanh</h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Mở nhanh từng hạng mục và cấu hình chi tiết ngay bên dưới trong cùng block.
+                                </p>
+                            </div>
                         </div>
-                    </QuickIssueCard>
+                    </div>
 
-                    <QuickIssueCard
-                        title="Kính"
-                        area="CRYSTAL"
-                        open={form.crystalIssue.enabled}
-                        issueMeta={form.crystalIssue}
-                        staticView={form.crystalIssue.isFromBoard}
-                        onOpen={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                crystalIssue: { ...prev.crystalIssue, enabled: true, isFromBoard: false },
-                            }));
-                        }}
-                        onClose={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                crystalIssue: emptyQuickIssue(),
-                            }));
-                        }}
-                        onGoBoard={() =>
-                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                        }
-                        isLocked={isLocked}
-                    >
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Field label="Phương án xử lý">
-                                <SelectInput
-                                    value={form.crystalIssue.action ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crystalIssue: {
-                                                ...prev.crystalIssue,
-                                                action: e.target.value as CosmeticAction,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="">Chọn phương án</option>
-                                    <option value="POLISH_GLASS">Đánh bóng kính</option>
-                                    <option value="REPLACE_GLASS">Thay kính</option>
-                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Thực hiện">
-                                <SelectInput
-                                    value={form.crystalIssue.execution ?? "INHOUSE"}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crystalIssue: {
-                                                ...prev.crystalIssue,
-                                                execution: e.target.value as ExecutionType,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="INHOUSE">Nội bộ</option>
-                                    <option value="VENDOR">Vendor</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Chi phí dự kiến">
-                                <TextInput
-                                    inputMode="numeric"
-                                    value={form.crystalIssue.estimatedCost ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crystalIssue: {
-                                                ...prev.crystalIssue,
-                                                estimatedCost: e.target.value,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                />
-                            </Field>
-                            {String(form.crystalIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                                <div className="md:col-span-3">
-                                    <Field label="Vendor">
-                                        <SelectInput
-                                            value={form.crystalIssue.vendorId ?? ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    crystalIssue: {
-                                                        ...prev.crystalIssue,
-                                                        vendorId: e.target.value,
-                                                    },
-                                                }))
-                                            }
-                                            disabled={isLocked}
-                                        >
-                                            <option value="">Chọn vendor</option>
-                                            {vendors.map((vendor: any) => (
-                                                <option key={vendor.id} value={vendor.id}>
-                                                    {vendor.name}
-                                                </option>
-                                            ))}
-                                        </SelectInput>
-                                    </Field>
+                    <div className={`${QUICK_PANEL_HEIGHT} overflow-y-auto px-5 py-5`}>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <div className="text-sm font-semibold text-slate-900">Danh sách issue nhanh</div>
+                                <div className="mt-1 text-sm text-slate-500">
+                                    Block này cuộn nội bộ để vẫn giữ UI gọn nhưng không mất dòng issue chi tiết.
                                 </div>
-                            ) : null}
-                        </div>
-                    </QuickIssueCard>
+                            </div>
 
-                    <QuickIssueCard
-                        title="Mặt số"
-                        area="DIAL"
-                        open={form.dialIssue.enabled}
-                        issueMeta={form.dialIssue}
-                        staticView={form.dialIssue.isFromBoard}
-                        onOpen={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                dialIssue: { ...prev.dialIssue, enabled: true, isFromBoard: false },
-                            }));
-                        }}
-                        onClose={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                dialIssue: emptyQuickIssue(),
-                            }));
-                        }}
-                        onGoBoard={() =>
-                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                        }
-                        isLocked={isLocked}
-                    >
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Field label="Phương án xử lý">
-                                <SelectInput
-                                    value={form.dialIssue.action ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            dialIssue: {
-                                                ...prev.dialIssue,
-                                                action: e.target.value as CosmeticAction,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="">Chọn phương án</option>
-                                    <option value="CLEAN_DIAL">Vệ sinh nhẹ</option>
-                                    <option value="REPLACE_DIAL">Thay mặt số</option>
-                                    <option value="KEEP_ORIGINAL">Giữ nguyên</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Thực hiện">
-                                <SelectInput
-                                    value={form.dialIssue.execution ?? "INHOUSE"}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            dialIssue: {
-                                                ...prev.dialIssue,
-                                                execution: e.target.value as ExecutionType,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="INHOUSE">Nội bộ</option>
-                                    <option value="VENDOR">Vendor</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Chi phí dự kiến">
-                                <TextInput
-                                    inputMode="numeric"
-                                    value={form.dialIssue.estimatedCost ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            dialIssue: {
-                                                ...prev.dialIssue,
-                                                estimatedCost: e.target.value,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                />
-                            </Field>
-                            {String(form.dialIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                                <div className="md:col-span-3">
-                                    <Field label="Vendor">
-                                        <SelectInput
-                                            value={form.dialIssue.vendorId ?? ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    dialIssue: {
-                                                        ...prev.dialIssue,
-                                                        vendorId: e.target.value,
-                                                    },
-                                                }))
-                                            }
-                                            disabled={isLocked}
-                                        >
-                                            <option value="">Chọn vendor</option>
-                                            {vendors.map((vendor: any) => (
-                                                <option key={vendor.id} value={vendor.id}>
-                                                    {vendor.name}
-                                                </option>
-                                            ))}
-                                        </SelectInput>
-                                    </Field>
-                                </div>
-                            ) : null}
+                            <div className="shrink-0 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600">
+                                {openQuickIssueCount} issue mở
+                            </div>
                         </div>
-                    </QuickIssueCard>
 
-                    <QuickIssueCard
-                        title="Núm"
-                        area="CROWN"
-                        open={form.crownIssue.status === "ISSUE"}
-                        issueMeta={form.crownIssue}
-                        staticView={form.crownIssue.isFromBoard}
-                        onOpen={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                crownIssue: { ...prev.crownIssue, enabled: true, status: "ISSUE", isFromBoard: false },
-                            }));
-                        }}
-                        onClose={() => {
-                            if (isLocked) return;
-                            setForm((prev) => ({
-                                ...prev,
-                                crownIssue: {
-                                    ...prev.crownIssue,
-                                    enabled: false,
-                                    status: "GOOD",
-                                    action: undefined,
-                                    execution: "INHOUSE",
-                                    vendorId: "",
-                                    partId: "",
-                                    cost: "",
-                                    summary: "",
-                                    boardStatus: "",
-                                    isFromBoard: false,
-                                },
-                            }));
-                        }}
-                        onGoBoard={() =>
-                            router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)
-                        }
-                        isLocked={isLocked}
-                    >
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Field label="Phương án xử lý">
-                                <SelectInput
-                                    value={form.crownIssue.action ?? ""}
-                                    onChange={(e) =>
+                        <div className="space-y-4">
+                            <div className="space-y-3">
+                                <QuickIssueCard
+                                    title="Vỏ"
+                                    description={quickIssueSummary.caseIssue}
+                                    isOpen={Boolean(form.caseIssue.enabled)}
+                                    disabled={isLocked}
+                                    onToggle={() =>
                                         setForm((prev) => ({
                                             ...prev,
-                                            crownIssue: {
-                                                ...prev.crownIssue,
-                                                action: e.target.value as any,
-                                            },
+                                            caseIssue: prev.caseIssue.enabled
+                                                ? emptyQuickIssue()
+                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.caseIssue.execution || "INHOUSE" },
                                         }))
                                     }
-                                    disabled={isLocked}
-                                >
-                                    <option value="">Chọn phương án</option>
-                                    <option value="FIX_CROWN">Canh chỉnh / xử lý núm</option>
-                                    <option value="RETHREAD">Làm ren / phục hồi ren</option>
-                                    <option value="STEM_ADJUST">Canh chỉnh ty</option>
-                                    <option value="REPLACE_CROWN">Thay núm mới</option>
-                                    <option value="WATERPROOF">Xử lý chống nước</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Thực hiện">
-                                <SelectInput
-                                    value={form.crownIssue.execution ?? "INHOUSE"}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crownIssue: {
-                                                ...prev.crownIssue,
-                                                execution: e.target.value as any,
-                                                vendorId: e.target.value === "VENDOR" ? prev.crownIssue.vendorId : "",
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
-                                >
-                                    <option value="INHOUSE">Nội bộ</option>
-                                    <option value="VENDOR">Vendor</option>
-                                </SelectInput>
-                            </Field>
-                            <Field label="Chi phí dự kiến">
-                                <TextInput
-                                    inputMode="numeric"
-                                    value={form.crownIssue.cost ?? ""}
-                                    onChange={(e) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crownIssue: {
-                                                ...prev.crownIssue,
-                                                cost: e.target.value,
-                                            },
-                                        }))
-                                    }
-                                    disabled={isLocked}
                                 />
-                            </Field>
-                            {String(form.crownIssue.execution || "").toUpperCase() === "VENDOR" ? (
-                                <div className="md:col-span-3">
-                                    <Field label="Vendor">
-                                        <SelectInput
-                                            value={form.crownIssue.vendorId ?? ""}
-                                            onChange={(e) =>
-                                                setForm((prev) => ({
-                                                    ...prev,
-                                                    crownIssue: {
-                                                        ...prev.crownIssue,
-                                                        vendorId: e.target.value,
-                                                    },
-                                                }))
-                                            }
-                                            disabled={isLocked}
-                                        >
-                                            <option value="">Chọn vendor</option>
-                                            {vendors.map((vendor: any) => (
-                                                <option key={vendor.id} value={vendor.id}>
-                                                    {vendor.name}
-                                                </option>
-                                            ))}
-                                        </SelectInput>
-                                    </Field>
-                                </div>
-                            ) : null}
+
+                                {form.caseIssue.enabled ? (
+                                    <QuickIssueDraftEditor
+                                        title="Vỏ"
+                                        value={form.caseIssue}
+                                        vendors={vendors}
+                                        disabled={isLocked}
+                                        actionOptions={[
+                                            { value: "SPA_CASE", label: "Spa vỏ" },
+                                            { value: "POLISH_CASE", label: "Đánh bóng vỏ" },
+                                            { value: "REPLATE_CASE", label: "Mạ lại vỏ" },
+                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                        ]}
+                                        onChange={(patch) =>
+                                            setForm((prev) => ({ ...prev, caseIssue: { ...prev.caseIssue, ...patch } }))
+                                        }
+                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                    />
+                                ) : null}
+                            </div>
+
+                            <div className="space-y-3">
+                                <QuickIssueCard
+                                    title="Kính"
+                                    description={quickIssueSummary.crystalIssue}
+                                    isOpen={Boolean(form.crystalIssue.enabled)}
+                                    disabled={isLocked}
+                                    onToggle={() =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crystalIssue: prev.crystalIssue.enabled
+                                                ? emptyQuickIssue()
+                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.crystalIssue.execution || "INHOUSE" },
+                                        }))
+                                    }
+                                />
+
+                                {form.crystalIssue.enabled ? (
+                                    <QuickIssueDraftEditor
+                                        title="Kính"
+                                        value={form.crystalIssue}
+                                        vendors={vendors}
+                                        disabled={isLocked}
+                                        actionOptions={[
+                                            { value: "POLISH_GLASS", label: "Đánh bóng kính" },
+                                            { value: "REPLACE_GLASS", label: "Thay kính" },
+                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                        ]}
+                                        onChange={(patch) =>
+                                            setForm((prev) => ({ ...prev, crystalIssue: { ...prev.crystalIssue, ...patch } }))
+                                        }
+                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                    />
+                                ) : null}
+                            </div>
+
+                            <div className="space-y-3">
+                                <QuickIssueCard
+                                    title="Mặt số"
+                                    description={quickIssueSummary.dialIssue}
+                                    isOpen={Boolean(form.dialIssue.enabled)}
+                                    disabled={isLocked}
+                                    onToggle={() =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            dialIssue: prev.dialIssue.enabled
+                                                ? emptyQuickIssue()
+                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.dialIssue.execution || "INHOUSE" },
+                                        }))
+                                    }
+                                />
+
+                                {form.dialIssue.enabled ? (
+                                    <QuickIssueDraftEditor
+                                        title="Mặt số"
+                                        value={form.dialIssue}
+                                        vendors={vendors}
+                                        disabled={isLocked}
+                                        actionOptions={[
+                                            { value: "CLEAN_DIAL", label: "Vệ sinh mặt số" },
+                                            { value: "REPLACE_DIAL", label: "Thay mặt số" },
+                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                        ]}
+                                        onChange={(patch) =>
+                                            setForm((prev) => ({ ...prev, dialIssue: { ...prev.dialIssue, ...patch } }))
+                                        }
+                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                    />
+                                ) : null}
+                            </div>
+
+                            <div className="space-y-3">
+                                <QuickIssueCard
+                                    title="Núm"
+                                    description={quickIssueSummary.crownIssue}
+                                    isOpen={Boolean(form.crownIssue.status === "ISSUE")}
+                                    disabled={isLocked}
+                                    onToggle={() =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crownIssue: prev.crownIssue.status === "ISSUE"
+                                                ? { ...prev.crownIssue, enabled: false, status: "GOOD", action: undefined, vendorId: undefined, cost: "", execution: "INHOUSE", isFromBoard: false, sourceIssueId: undefined, summary: "", boardStatus: "", vendorName: undefined }
+                                                : { ...prev.crownIssue, enabled: true, status: "ISSUE", execution: prev.crownIssue.execution || "INHOUSE" },
+                                        }))
+                                    }
+                                />
+
+                                {form.crownIssue.status === "ISSUE" ? (
+                                    <CrownIssueDraftEditor
+                                        value={form.crownIssue}
+                                        vendors={vendors}
+                                        disabled={isLocked}
+                                        onChange={(patch) =>
+                                            setForm((prev) => ({ ...prev, crownIssue: { ...prev.crownIssue, ...patch, status: "ISSUE", enabled: true } }))
+                                        }
+                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                    />
+                                ) : null}
+                            </div>
                         </div>
-                    </QuickIssueCard>
-                </div>
-            </SectionCard>
+                    </div>
+                </section>
+
+                <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 px-5 py-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+                                <ImagePlus className="h-5 w-5 text-slate-600" />
+                            </div>
+
+                            <div className="min-w-0">
+                                <h3 className="text-base font-semibold text-slate-900">Ảnh máy đo thực tế</h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Block này luôn cố định ở đây để kỹ thuật đối chiếu nhanh.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={`${QUICK_PANEL_HEIGHT} px-5 py-5`}>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <TechnicalImagePicker
+                                value={form.technicalImageFileKey || null}
+                                onChange={(fileKey) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        technicalImageFileKey: fileKey || "",
+                                    }))
+                                }
+                                disabled={isLocked}
+                                compact={false}
+                            />
+                        </div>
+
+                        <div className="mt-4 flex items-center gap-2">
+                            {form.technicalImageFileKey ? (
+                                <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                                    Có ảnh kỹ thuật
+                                </span>
+                            ) : (
+                                <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                                    Chưa có ảnh
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            </div>
 
             <SectionCard
                 title="Tổng kết kỹ thuật"
@@ -1149,7 +1106,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
                                     onChange={(fileKey) =>
                                         setForm((prev) => ({
                                             ...prev,
-                                            technicalImageFileKey: fileKey,
+                                            technicalImageFileKey: fileKey || "",
                                         }))
                                     }
                                     disabled={isLocked}

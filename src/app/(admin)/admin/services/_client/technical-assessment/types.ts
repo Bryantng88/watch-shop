@@ -92,6 +92,8 @@ export type FormState = {
         dial: ScoreBlock;
     };
     technicalImageFileKey: string;
+    beforeImageFileKey?: string;
+    afterImageFileKey?: string;
 };
 
 export type TechnicalAssessmentPanelProps = {

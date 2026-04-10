@@ -39,6 +39,20 @@ type Props = {
   onService: (productId: string) => void;
 };
 
+function resolveImageSrc(input?: string | null) {
+  if (!input) return null;
+  if (
+    input.startsWith("http://") ||
+    input.startsWith("https://") ||
+    input.startsWith("data:") ||
+    input.startsWith("/api/") ||
+    input.startsWith("/")
+  ) {
+    return input;
+  }
+  return `/api/media/sign?key=${encodeURIComponent(input)}`;
+}
+
 function PriceLine({
   label,
   value,
@@ -64,17 +78,19 @@ function PriceLine({
 }
 
 function Thumbnail({ src, alt }: { src?: string | null; alt: string }) {
-  if (!src) {
+  const resolved = resolveImageSrc(src);
+
+  if (!resolved) {
     return (
-      <div className="h-14 w-14 shrink-0 rounded-2xl bg-slate-100 ring-1 ring-slate-200" />
+      <div className="h-16 w-16 shrink-0 rounded-2xl bg-slate-100 ring-1 ring-slate-200" />
     );
   }
 
   return (
     <img
-      src={src}
+      src={resolved}
       alt={alt}
-      className="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200"
+      className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200"
     />
   );
 }
@@ -100,6 +116,11 @@ export default function ProductListRow({
     hasMissingCoreReadinessInfo(product) &&
     hasMissingImageReadiness(product);
 
+  const thumbnailSrc =
+    product.primaryImageUrl ??
+    product.primaryImageKey ??
+    null;
+
   return (
     <tr className="border-t border-slate-100 transition hover:bg-slate-50/50">
       <td className="px-4 py-4 align-middle">
@@ -113,7 +134,7 @@ export default function ProductListRow({
       <td className="px-4 py-4 align-middle">
         <div className="flex items-center gap-4">
           <Thumbnail
-            src={product.primaryImageUrl ?? undefined}
+            src={thumbnailSrc}
             alt={product.title || "product"}
           />
 
@@ -183,7 +204,7 @@ export default function ProductListRow({
           <PriceLine
             label="Bán"
             value={fmtMoney(product.minPrice)}
-            valueClassName="text-sky-700"
+            valueClassName="text-orange-600"
             extra={
               canEditPrice ? (
                 <InlineMoneyEditor
@@ -210,7 +231,7 @@ export default function ProductListRow({
             <PriceLine
               label="Mua"
               value={fmtMoney(product.purchasePrice)}
-              valueClassName="text-violet-700"
+              valueClassName="text-slate-400"
             />
           ) : null}
         </div>

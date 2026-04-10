@@ -56,7 +56,6 @@ type IssueItem = {
         movement?: string | null;
         model?: string | null;
         ref?: string | null;
-        priority?: string | null;
     } | null;
     assessment?: {
         id: string;
@@ -114,28 +113,6 @@ function areaLabel(area?: string | null) {
     if (raw === "DIAL") return "Mặt số";
     if (raw === "CROWN") return "Núm";
     return raw || "-";
-}
-
-function scopeLabel(scope?: string | null) {
-    const raw = String(scope || "").toUpperCase();
-    if (raw === "WITH_PURCHASE") return "Kèm mua hàng";
-    if (raw === "CUSTOMER_OWNED") return "Khách gửi";
-    if (raw === "INTERNAL") return "Nội bộ";
-    return scope || "-";
-}
-
-function priorityLabel(priority?: string | null) {
-    const raw = String(priority || "").toUpperCase();
-    if (raw === "URGENT") return "Ưu tiên gấp";
-    if (raw === "HIGH") return "Ưu tiên cao";
-    return "";
-}
-
-function priorityTone(priority?: string | null) {
-    const raw = String(priority || "").toUpperCase();
-    if (raw === "URGENT") return "border-rose-200 bg-rose-50 text-rose-700";
-    if (raw === "HIGH") return "border-amber-200 bg-amber-50 text-amber-700";
-    return "border-stone-200 bg-stone-50 text-stone-600";
 }
 
 function actionModeLabel(mode?: string | null) {
@@ -317,18 +294,18 @@ function FilterChip({
     );
 }
 
-function ServiceRequestStateBadge({
-    closed,
-}: {
-    closed?: boolean;
-}) {
-    return closed ? (
-        <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-            SR đã đóng
-        </span>
-    ) : (
+function ReadyToCloseBadge() {
+    return (
         <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
             SR sẵn sàng đóng
+        </span>
+    );
+}
+
+function ClosedSrBadge() {
+    return (
+        <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+            SR đã đóng
         </span>
     );
 }
@@ -347,7 +324,6 @@ function IssueCard({
     dragHandleProps?: Record<string, any>;
 }) {
     const sr = item?.serviceRequest ?? null;
-    const srClosed = ["COMPLETED", "DELIVERED"].includes(String(sr?.status || "").toUpperCase());
     const accent = getAreaAccent(item.area);
 
     const imageSrc = sr?.primaryImageUrl
@@ -420,17 +396,7 @@ function IssueCard({
                         <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-700">
                             {statusLabel(item.executionStatus)}
                         </span>
-                        {sr?.scope ? (
-                            <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-700">
-                                {scopeLabel(sr.scope)}
-                            </span>
-                        ) : null}
-                        {sr?.priority ? (
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${priorityTone(sr.priority)}`}>
-                                {priorityLabel(sr.priority)}
-                            </span>
-                        ) : null}
-                        {srClosed ? <ServiceRequestStateBadge closed /> : item.serviceRequestReadyToClose ? <ServiceRequestStateBadge /> : null}
+                        {item.serviceRequestClosed ? <ClosedSrBadge /> : item.serviceRequestReadyToClose ? <ReadyToCloseBadge /> : null}
                     </div>
 
                     <div className="rounded-xl bg-stone-50 px-3 py-3">
@@ -460,14 +426,6 @@ function IssueCard({
                                         No image
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div className="text-xs uppercase tracking-wide text-slate-600">
-                                SR đã đóng
-                            </div>
-                            <div className="mt-1 text-xl font-semibold text-slate-900">
-                                {filteredCounts.closedSrCount}
                             </div>
                         </div>
                     </div>
@@ -740,13 +698,6 @@ export default function TechnicalIssueBoardClient({
                     .map((x) => x.serviceRequest!.id)
             )
         );
-        const closedSrIds = Array.from(
-            new Set(
-                filteredItems
-                    .filter((x) => ["COMPLETED", "DELIVERED"].includes(String(x?.serviceRequest?.status || "").toUpperCase()) && x?.serviceRequest?.id)
-                    .map((x) => x.serviceRequest!.id)
-            )
-        );
 
         return {
             pendingConfirm: grouped.raw.PENDING_CONFIRM.length,
@@ -754,7 +705,6 @@ export default function TechnicalIssueBoardClient({
             inProgress: grouped.raw.IN_PROGRESS.length,
             done: grouped.raw.DONE.length,
             readyToCloseSrCount: readyToCloseSrIds.length,
-            closedSrCount: closedSrIds.length,
         };
     }, [grouped, filteredItems]);
 
@@ -997,7 +947,7 @@ export default function TechnicalIssueBoardClient({
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-amber-700">
                                 Chờ xác nhận
@@ -1244,9 +1194,9 @@ function IssueDrawer({
                             <div className="mt-1 text-sm text-stone-500">
                                 {sr?.productTitle || "-"} • {sr?.refNo || "-"}
                             </div>
-                            {(["COMPLETED", "DELIVERED"].includes(String(issue.serviceRequest?.status || "").toUpperCase()) || issue.serviceRequestReadyToClose) ? (
+                            {issue.serviceRequestReadyToClose ? (
                                 <div className="mt-2">
-                                    <ServiceRequestStateBadge closed={["COMPLETED", "DELIVERED"].includes(String(issue.serviceRequest?.status || "").toUpperCase())} />
+                                    <ReadyToCloseBadge />
                                 </div>
                             ) : null}
                         </div>

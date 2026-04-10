@@ -349,7 +349,25 @@ export default function ListProducts(props: ProductListPageProps) {
             next.set("page", String(page));
         });
     }
+    async function handlePriceCommit(
+        productId: string,
+        field: "minPrice" | "salePrice" | "purchasePrice",
+        value: number | null
+    ) {
+        const res = await fetch(`/api/admin/products/${productId}/price`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ field, value }),
+        });
 
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+            throw new Error(data?.error || data?.message || "Cập nhật giá thất bại");
+        }
+
+        router.refresh();
+    }
     function handleToggleOne(id: string, checked: boolean) {
         setSelectedIds((prev) => {
             if (checked) return Array.from(new Set([...prev, id]));
@@ -644,14 +662,13 @@ export default function ListProducts(props: ProductListPageProps) {
             <ProductListTable
                 items={rows}
                 selectedIds={selectedIds}
-                pendingImageProductId={pendingImageProductId}
                 canViewCost={props.canViewCost}
                 canEditPrice={props.canEditPrice}
                 onToggleOne={handleToggleOne}
                 onToggleAll={handleToggleAll}
-                onImageUploaded={handleImageUploaded}
                 onOpenReadiness={(product) => setReadinessProduct(product)}
                 onPriceSaved={handlePriceSaved}
+                onPriceCommit={handlePriceCommit}
                 onView={handleViewProduct}
                 onEdit={handleEditProduct}
                 onDelete={handleDeleteProduct}
