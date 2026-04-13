@@ -16,6 +16,8 @@ import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
    TYPES
 ================================ */
 
+export type OrderFlowType = "STANDARD" | "QUICK_ORDER";
+
 export type CreateOrderRow = {
     customerId: string | null;
     customerName: string;
@@ -30,11 +32,13 @@ export type CreateOrderRow = {
     createdAt: Date;
     status: OrderStatus;
     source: OrderSource;
-
     verificationStatus: OrderVerificationStatus;
     reserveType: ReserveType | null;
     depositRequired: number | null;
     reserveUntil: Date | null;
+
+    quickFromProductId?: string | null;
+    quickFlowType?: OrderFlowType | null;
 };
 
 function normalizeReserve(data: CreateOrderRow) {
@@ -66,7 +70,10 @@ export type CreateOrderItemRow = {
     unitPriceAgreed: number;
     taxRate?: number;
     customerItemNote: string;
+
+    createdFromFlow?: OrderFlowType | null;
 };
+
 
 export type OrderViewKey =
     | "all"
@@ -379,6 +386,7 @@ export async function getOrdList(
 export async function createOrder(tx: DB, data: CreateOrderRow) {
     const db = dbOrTx(tx);
     const reserve = normalizeReserve(data);
+
     return db.order.create({
         data: {
             customer: data.customerId
@@ -394,7 +402,7 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             paymentMethod: data.paymentMethod,
             hasShipment: data.hasShipment,
             notes: data.notes,
-            createdAt: data.createdAt, // ✅ đúng kiểu
+            createdAt: data.createdAt,
             status: data.status,
             subtotal: 0,
             source: data.source,
@@ -403,7 +411,10 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
                 ? (data.reserveType as ReserveType)
                 : null,
             depositRequired: reserve.depositRequired,
-            reserveUntil: reserve.reserveUntil
+            reserveUntil: reserve.reserveUntil,
+
+            quickFromProductId: data.quickFromProductId ?? null,
+            quickFlowType: (data.quickFlowType ?? "STANDARD") as any,
         },
         select: {
             id: true,
@@ -418,7 +429,6 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             paymentMethod: true,
             notes: true,
             createdAt: true,
-
             updatedAt: true,
         },
     });
@@ -428,7 +438,6 @@ export async function createOrderItems(
     tx: DB,
     orderId: string,
     items: CreateOrderItemRow[],
-
 ) {
     const db = dbOrTx(tx);
     if (!items.length) return [];
@@ -436,6 +445,7 @@ export async function createOrderItems(
     const rows = items.map((i) => {
         const quantity = Number(i.quantity) || 1;
         const subtotal = i.unitPriceAgreed * quantity;
+
         return {
             orderId,
             productId: i.productId ?? null,
@@ -450,7 +460,8 @@ export async function createOrderItems(
             quantity,
             subtotal,
             taxRate: i.taxRate ?? null,
-            customerItemNote: i.customerItemNote
+            customerItemNote: i.customerItemNote,
+            createdFromFlow: (i.createdFromFlow ?? "STANDARD") as any,
         };
     });
 

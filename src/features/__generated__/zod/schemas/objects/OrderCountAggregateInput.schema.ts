@@ -27,6 +27,9 @@ const makeSchema = () => z.object({
   depositPaid: z.literal(true).optional(),
   source: z.literal(true).optional(),
   verificationStatus: z.literal(true).optional(),
+  quick_from_product_id: z.literal(true).optional(),
+  quickFromProductId: z.literal(true).optional(),
+  quickFlowType: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const OrderCountAggregateInputObjectSchema: z.ZodType<Prisma.OrderCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderCountAggregateInputType>;

@@ -69,7 +69,7 @@ export function buildProductTitleFromAi(input: {
     toStringOrNull(extracted?.dialColor) ?? toStringOrNull(probable?.dialColor);
   const dialColor = dialColorRaw ? `${capitalizeWord(dialColorRaw)} Dial` : null;
 
-  const title = [brand, model, nickname ? `"${nickname}"` : null, movement, dialColor]
+  const title = [brand, model, movement, dialColor]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
@@ -81,7 +81,6 @@ export function buildProductTitleFromAi(input: {
     resolvedBrandName: brand,
   };
 }
-
 export function resolveSpecStatusFromAi(aiExtracted: any): string {
   const confirmedBrand =
     toStringOrNull(aiExtracted?.confirmedFacts?.brandName) ??

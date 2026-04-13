@@ -5,7 +5,8 @@ import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
-import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema'
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -31,7 +32,10 @@ const makeSchema = () => z.object({
   depositRequired: z.number().optional().nullable(),
   depositPaid: z.number().optional().nullable(),
   source: OrderSourceSchema.optional(),
-  verificationStatus: OrderVerificationStatusSchema.optional()
+  verificationStatus: OrderVerificationStatusSchema.optional(),
+  quick_from_product_id: z.string().optional().nullable(),
+  quickFromProductId: z.string().optional().nullable(),
+  quickFlowType: orderflowtypeSchema.optional()
 }).strict();
 export const OrderCreateManyInputObjectSchema: z.ZodType<Prisma.OrderCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateManyInput>;
 export const OrderCreateManyInputObjectZodSchema = makeSchema();

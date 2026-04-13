@@ -310,3 +310,68 @@ export async function completeServiceRequestOne(
     },
   });
 }
+
+export async function findOpenPriorityCandidateByProductId(tx: DB, productId: string) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.findFirst({
+    where: {
+      productId,
+      status: {
+        in: [
+          ServiceRequestStatus.DRAFT,
+          ServiceRequestStatus.DIAGNOSING,
+          ServiceRequestStatus.WAIT_APPROVAL,
+          ServiceRequestStatus.IN_PROGRESS,
+        ],
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      productId: true,
+      status: true,
+      priority: true,
+      priorityReason: true,
+      prioritySource: true,
+      priorityMarkedAt: true,
+      variantId: true,
+      skuSnapshot: true,
+      primaryImageUrlSnapshot: true,
+      brandSnapshot: true,
+      modelSnapshot: true,
+      refSnapshot: true,
+    } as any,
+  });
+}
+
+export async function updatePriority(
+  tx: DB,
+  input: {
+    id: string;
+    priority: "NORMAL" | "HIGH" | "URGENT";
+    priorityReason?: string | null;
+    prioritySource?: string | null;
+    priorityMarkedAt?: Date | null;
+  }
+) {
+  const db = dbOrTx(tx);
+
+  return db.serviceRequest.update({
+    where: { id: input.id },
+    data: {
+      priority: input.priority as any,
+      priorityReason: input.priorityReason ?? null,
+      prioritySource: input.prioritySource ?? null,
+      priorityMarkedAt: input.priorityMarkedAt ?? new Date(),
+      updatedAt: new Date(),
+    } as any,
+    select: {
+      id: true,
+      priority: true,
+      priorityReason: true,
+      prioritySource: true,
+      priorityMarkedAt: true,
+    } as any,
+  });
+}

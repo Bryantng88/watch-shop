@@ -30,7 +30,14 @@ const makeSchema = () => z.object({
   technicianNameSnap: SortOrderSchema.optional(),
   skuSnapshot: SortOrderSchema.optional(),
   primaryImageUrlSnapshot: SortOrderSchema.optional(),
-  dummy_technical_rel: SortOrderSchema.optional()
+  dummy_technical_rel: SortOrderSchema.optional(),
+  priority: SortOrderSchema.optional(),
+  priority_reason: SortOrderSchema.optional(),
+  priority_source: SortOrderSchema.optional(),
+  priority_marked_at: SortOrderSchema.optional(),
+  priorityReason: SortOrderSchema.optional(),
+  prioritySource: SortOrderSchema.optional(),
+  priorityMarkedAt: SortOrderSchema.optional()
 }).strict();
 export const ServiceRequestCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountOrderByAggregateInput>;
 export const ServiceRequestCountOrderByAggregateInputObjectZodSchema = makeSchema();

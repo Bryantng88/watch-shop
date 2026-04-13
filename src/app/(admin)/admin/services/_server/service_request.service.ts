@@ -563,3 +563,113 @@ export async function getServiceRequestDetailRepo(serviceRequestId: string) {
         },
     });
 }
+export async function bumpPriorityForProductOrder(input: {
+    productId: string;
+    reason?: string | null;
+    source?: string | null;
+}) {
+    const productId = String(input.productId || "").trim();
+    if (!productId) throw new Error("Missing productId");
+
+    return prisma.$transaction(async (tx) => {
+        const existingRequest = (await serviceRequestRepo.findOpenPriorityCandidateByProductId(
+            tx as any,
+            productId
+        )) as
+            | {
+                id: string;
+                productId: string | null;
+                status: string;
+                priority?: string | null;
+                priorityReason?: string | null;
+                prioritySource?: string | null;
+                priorityMarkedAt?: Date | null;
+            }
+            | null;
+
+        if (!existingRequest?.id) return null;
+
+        return serviceRequestRepo.updatePriority(tx as any, {
+            id: existingRequest.id,
+            priority: "URGENT",
+            priorityReason: input.reason ?? "Sản phẩm đã có đơn hàng",
+            prioritySource: input.source ?? "QUICK_ORDER",
+            priorityMarkedAt: new Date(),
+        });
+    });
+}
+
+export async function ensurePriorityTechnicalCheckForBuyBack(input: {
+    productId: string;
+    reason?: string | null;
+    source?: string | null;
+}) {
+    const productId = String(input.productId || "").trim();
+    if (!productId) throw new Error("Missing productId");
+
+    return prisma.$transaction(async (tx) => {
+        const existingRequest = (await serviceRequestRepo.findOpenPriorityCandidateByProductId(
+            tx as any,
+            productId
+        )) as
+            | {
+                id: string;
+                productId: string | null;
+                status: string;
+            }
+            | null;
+
+        if (existingRequest?.id) {
+            return serviceRequestRepo.updatePriority(tx as any, {
+                id: existingRequest.id,
+                priority: "HIGH",
+                priorityReason: input.reason ?? "Buy back cần kiểm tra lại",
+                prioritySource: input.source ?? "BUY_BACK",
+                priorityMarkedAt: new Date(),
+            });
+        }
+
+        const product = await serviceRequestRepo.findProductForService(tx as any, productId);
+        if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+        const tech = await resolveDefaultTechnicianTx(tx);
+        const variant = product.variants?.[0] ?? null;
+
+        const refNo = await genRefNo(tx as any, {
+            model: (tx as any).serviceRequest,
+            prefix: "SR",
+            field: "refNo",
+            padding: 6,
+        });
+
+        const created = await serviceRequestRepo.createTechnicalCheckRequest(tx as any, {
+            refNo,
+            productId,
+            variantId: variant?.id ?? null,
+            skuSnapshot: variant?.sku ?? null,
+            primaryImageUrlSnapshot: product.primaryImageUrl ?? null,
+            notes: input.reason ?? "Buy back cần kiểm tra lại",
+            billable: false,
+            type: ServiceType.PAID,
+            scope: ServiceScope.WITH_PURCHASE,
+            status: ServiceRequestStatus.DRAFT,
+            brandSnapshot: product.brand?.name ?? null,
+            modelSnapshot: product.watchSpec?.model ?? product.title ?? null,
+            refSnapshot: product.watchSpec?.ref ?? null,
+            technicianId: tech?.id ?? null,
+            technicianNameSnap: tech?.name ?? tech?.email ?? null,
+        });
+
+        await serviceRequestRepo.markProductInService(tx as any, productId);
+
+        await serviceRequestRepo.updatePriority(tx as any, {
+            id: created.id,
+            priority: "HIGH",
+            priorityReason: input.reason ?? "Buy back cần kiểm tra lại",
+            prioritySource: input.source ?? "BUY_BACK",
+            priorityMarkedAt: new Date(),
+        });
+
+        return created;
+    });
+}

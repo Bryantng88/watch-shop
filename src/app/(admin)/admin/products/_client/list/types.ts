@@ -13,6 +13,7 @@ export type Counts = {
 };
 
 export type ProductRow = ProductListItem & {
+  sku?: string;
   slug?: string;
   brand?: string | null;
   type?: string | null;

@@ -14,6 +14,8 @@ import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumOrderItemKindFieldUpdateOperationsInputObjectSchema as EnumOrderItemKindFieldUpdateOperationsInputObjectSchema } from './EnumOrderItemKindFieldUpdateOperationsInput.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
+import { EnumorderflowtypeFieldUpdateOperationsInputObjectSchema as EnumorderflowtypeFieldUpdateOperationsInputObjectSchema } from './EnumorderflowtypeFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInput.schema';
 import { ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInput.schema'
 
@@ -38,6 +40,7 @@ const makeSchema = () => z.object({
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdFromFlow: z.union([orderflowtypeSchema, z.lazy(() => EnumorderflowtypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutSourceOrderItemNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema).optional()
 }).strict();

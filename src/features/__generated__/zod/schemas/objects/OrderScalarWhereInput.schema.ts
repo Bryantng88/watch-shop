@@ -18,7 +18,9 @@ import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchem
 import { EnumOrderSourceFilterObjectSchema as EnumOrderSourceFilterObjectSchema } from './EnumOrderSourceFilter.schema';
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { EnumOrderVerificationStatusFilterObjectSchema as EnumOrderVerificationStatusFilterObjectSchema } from './EnumOrderVerificationStatusFilter.schema';
-import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema'
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { EnumorderflowtypeFilterObjectSchema as EnumorderflowtypeFilterObjectSchema } from './EnumorderflowtypeFilter.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema'
 
 const orderscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderScalarWhereInputObjectSchema), z.lazy(() => OrderScalarWhereInputObjectSchema).array()]).optional(),
@@ -47,7 +49,10 @@ const orderscalarwhereinputSchema = z.object({
   depositRequired: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   depositPaid: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   source: z.union([z.lazy(() => EnumOrderSourceFilterObjectSchema), OrderSourceSchema]).optional(),
-  verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusFilterObjectSchema), OrderVerificationStatusSchema]).optional()
+  verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusFilterObjectSchema), OrderVerificationStatusSchema]).optional(),
+  quick_from_product_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  quickFromProductId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  quickFlowType: z.union([z.lazy(() => EnumorderflowtypeFilterObjectSchema), orderflowtypeSchema]).optional()
 }).strict();
 export const OrderScalarWhereInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereInput> = orderscalarwhereinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereInput>;
 export const OrderScalarWhereInputObjectZodSchema = orderscalarwhereinputSchema;

@@ -30,7 +30,7 @@ import {
 } from "../ai/acquisition-spec-job.service";
 import { createInvoiceFromAcquisition } from "../../../invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "../../../services/_server/service_request.service";
-import { genUniqueProductSku } from "../../../products/_server/helper";
+import { genUniqueProductSku } from "../../../products/_server/shared/helper";
 
 type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
 
@@ -112,12 +112,11 @@ async function createProductForPostedItem(
     const watchFlags = getWatchFlagsFromDescription(item.description);
     const aiMeta = getAiMetaFromDescription(item.description);
     const productType = item.productType ?? "WATCH";
-    const sku = await genUniqueProductSku(tx as any, productType);
     const primaryImageUrl = aiMeta?.images?.[0]?.key ?? null;
 
     const createdProduct = await repoAcq.createWatchProduct(tx, {
         title: toNonEmptyString(item.productTitle, "Processing spec..."),
-        sku,
+        sku: null,
         vendorId,
         productType,
         primaryImageUrl,
@@ -127,11 +126,10 @@ async function createProductForPostedItem(
 
     const createdVariant = await repoAcq.createWatchVariant(tx, {
         productId: createdProduct.id,
-        sku,
+        sku: null,
         quantity: Number(item.quantity ?? 1),
         unitCost: Number(item.unitCost ?? 0),
     });
-
     await repoAcq.linkAcquisitionItemToProduct(tx, {
         itemId: item.id,
         productId: createdProduct.id,
@@ -592,5 +590,143 @@ export async function updateAcquisitionWithItems(
 
         const updated = await repoAcq.getAcqtById(acqId, tx);
         return { success: true, id: acqId, acquisition: updated };
+    });
+}
+
+export async function createBuyBackFromProduct(input: {
+    productId: string;
+    unitCost: number;
+    notes?: string | null;
+    customerId?: string | null;
+    needService?: boolean;
+}) {
+    return prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+            where: { id: input.productId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                type: true,
+                variants: {
+                    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                        id: true,
+                        stockQty: true,
+                    },
+                },
+            },
+        });
+
+        if (!product) throw new Error("Không tìm thấy sản phẩm");
+        if (product.status !== "SOLD" as any) {
+            throw new Error("Chỉ sản phẩm SOLD mới được buy back");
+        }
+
+        const variant = product.variants?.[0] ?? null;
+        const nextProductStatus = input.needService ? "IN_SERVICE" : "AVAILABLE";
+
+        const acq = await repoAcq.createInternalAcquisition(tx, {
+            customerId: input.customerId ?? null,
+            type: AcquisitionType.BUY_BACK,
+            notes: input.notes ?? null,
+            cost: Number(input.unitCost ?? 0),
+            accquisitionStt: "POSTED",
+        });
+
+        const item = await repoAcq.createLinkedAcquisitionItem(tx, {
+            acquisitionId: acq.id,
+            productId: product.id,
+            variantId: variant?.id ?? null,
+            productTitle: product.title ?? "Untitled watch",
+            quantity: 1,
+            unitCost: Number(input.unitCost ?? 0),
+            productType: product.type,
+            description: "[BUY_BACK] linked existing product",
+        });
+
+        await repoAcq.updateProductStatusAfterBuyBack(tx, {
+            productId: product.id,
+            status: nextProductStatus as any,
+        });
+
+        await repoAcq.updateVariantAvailabilityForBuyBack(tx, {
+            productId: product.id,
+            availabilityStatus: input.needService ? "HIDDEN" : "ACTIVE",
+            stockQty: 1,
+        });
+
+        return {
+            success: true,
+            acquisitionId: acq.id,
+            itemId: item.id,
+            productId: product.id,
+            nextProductStatus,
+        };
+    });
+}
+
+export async function createConsignToFromProduct(input: {
+    productId: string;
+    vendorId: string;
+    notes?: string | null;
+}) {
+    return prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+            where: { id: input.productId },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                type: true,
+                variants: {
+                    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: { id: true },
+                },
+            },
+        });
+
+        if (!product) throw new Error("Không tìm thấy sản phẩm");
+        if (String(product.status || "").toUpperCase() === "SOLD") {
+            throw new Error("Sản phẩm đã SOLD, không thể consign to");
+        }
+
+        const acq = await repoAcq.createInternalAcquisition(tx, {
+            vendorId: input.vendorId,
+            type: AcquisitionType.CONSIGNMENT,
+            notes: input.notes ?? null,
+            cost: 0,
+            accquisitionStt: "POSTED",
+        });
+
+        const variant = product.variants?.[0] ?? null;
+
+        const item = await repoAcq.createLinkedAcquisitionItem(tx, {
+            acquisitionId: acq.id,
+            productId: product.id,
+            variantId: variant?.id ?? null,
+            productTitle: product.title ?? "Untitled watch",
+            quantity: 1,
+            unitCost: 0,
+            productType: product.type,
+            description: "[CONSIGN_TO] linked existing product",
+        });
+
+        await repoAcq.updateProductStatusAfterConsignTo(tx, {
+            productId: product.id,
+            status: "CONSIGNED_TO" as any,
+        });
+
+        await repoAcq.hideVariantForConsignTo(tx, product.id);
+
+        return {
+            success: true,
+            acquisitionId: acq.id,
+            itemId: item.id,
+            productId: product.id,
+            nextProductStatus: "CONSIGNED_TO",
+        };
     });
 }

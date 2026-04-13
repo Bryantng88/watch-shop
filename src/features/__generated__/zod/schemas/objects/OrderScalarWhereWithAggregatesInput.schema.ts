@@ -18,7 +18,9 @@ import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWit
 import { EnumOrderSourceWithAggregatesFilterObjectSchema as EnumOrderSourceWithAggregatesFilterObjectSchema } from './EnumOrderSourceWithAggregatesFilter.schema';
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { EnumOrderVerificationStatusWithAggregatesFilterObjectSchema as EnumOrderVerificationStatusWithAggregatesFilterObjectSchema } from './EnumOrderVerificationStatusWithAggregatesFilter.schema';
-import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema'
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { EnumorderflowtypeWithAggregatesFilterObjectSchema as EnumorderflowtypeWithAggregatesFilterObjectSchema } from './EnumorderflowtypeWithAggregatesFilter.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema'
 
 const orderscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => OrderScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -47,7 +49,10 @@ const orderscalarwherewithaggregatesinputSchema = z.object({
   depositRequired: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
   depositPaid: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
   source: z.union([z.lazy(() => EnumOrderSourceWithAggregatesFilterObjectSchema), OrderSourceSchema]).optional(),
-  verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusWithAggregatesFilterObjectSchema), OrderVerificationStatusSchema]).optional()
+  verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusWithAggregatesFilterObjectSchema), OrderVerificationStatusSchema]).optional(),
+  quick_from_product_id: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  quickFromProductId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  quickFlowType: z.union([z.lazy(() => EnumorderflowtypeWithAggregatesFilterObjectSchema), orderflowtypeSchema]).optional()
 }).strict();
 export const OrderScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderScalarWhereWithAggregatesInput> = orderscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderScalarWhereWithAggregatesInput>;
 export const OrderScalarWhereWithAggregatesInputObjectZodSchema = orderscalarwherewithaggregatesinputSchema;

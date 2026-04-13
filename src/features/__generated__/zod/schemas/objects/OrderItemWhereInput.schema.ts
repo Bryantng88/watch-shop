@@ -14,6 +14,8 @@ import { EnumOrderItemKindFilterObjectSchema as EnumOrderItemKindFilterObjectSch
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumServiceScopeNullableFilterObjectSchema as EnumServiceScopeNullableFilterObjectSchema } from './EnumServiceScopeNullableFilter.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
+import { EnumorderflowtypeFilterObjectSchema as EnumorderflowtypeFilterObjectSchema } from './EnumorderflowtypeFilter.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { OrderItemNullableScalarRelationFilterObjectSchema as OrderItemNullableScalarRelationFilterObjectSchema } from './OrderItemNullableScalarRelationFilter.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
@@ -49,6 +51,7 @@ const orderitemwhereinputSchema = z.object({
   serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerItemNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  createdFromFlow: z.union([z.lazy(() => EnumorderflowtypeFilterObjectSchema), orderflowtypeSchema]).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
   other_OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),

@@ -13,13 +13,12 @@ import * as paymentService from "../../payments/_server/payment.service"
 import { OrderDraftInput } from "./order.type";
 import { genRefNo } from "../../__components/AutoGenRef";
 import * as serviceRequestRepo from "../../services/_server/service_request.repo"
-
+import * as productRepo from "../../products/_server/core/product.repo"
 
 /* ================================
    TYPES
 ================================ */
 const prisma = new PrismaClient();
-
 
 export type CreateOrderItemInput = {
   productId?: string;
@@ -29,14 +28,17 @@ export type CreateOrderItemInput = {
 
   quantity: number;
   listPrice: number;
+  unitPriceAgreed?: number; // thêm dòng này
+
   kind: OrderItemKind;
   discountType?: "PERCENT" | "AMOUNT";
   discountValue?: number;
   serviceCatalogId: string;
   taxRate?: number;
+  createdFromFlow?: "STANDARD" | "QUICK_ORDER";
 };
 type ReserveInput = {
-  type: ReserveType;     // HOLD | COD
+  type: ReserveType;
   amount?: number;
   expiresAt?: Date | null;
 };
@@ -45,6 +47,28 @@ type RawProductItem = {
   productId: string;
   quantity: number;
 };
+
+export type CreateOrderInput = {
+  shipPhone?: string | null;
+  customerId?: string | null;
+  customerName: string;
+  reserve?: ReserveInput | null;
+  hasShipment: boolean;
+  shipAddress: string;
+  shipCity: string;
+  shipDistrict: string;
+  shipWard: string;
+  paymentMethod: PaymentMethod;
+  notes: string | null;
+  orderDate: Date;
+  status: OrderStatus;
+  items: CreateOrderItemInput[];
+  source: OrderSource;
+  verificationStatus: OrderVerificationStatus;
+  quickFromProductId?: string | null;
+  quickFlowType?: "STANDARD" | "QUICK_ORDER" | null;
+};
+
 
 export type ResolvedOrderItem = {
   kind: "PRODUCT";
@@ -98,24 +122,8 @@ function assertValidQty(productId: string, quantity: number) {
   return q;
 }
 
-export type CreateOrderInput = {
-  shipPhone?: string | null;
-  customerId?: string | null;
-  customerName: string;
-  reserve?: ReserveInput | null;
-  hasShipment: boolean;
-  shipAddress: string;
-  shipCity: string;
-  shipDistrict: string;
-  shipWard: string;
-  paymentMethod: PaymentMethod;
-  notes: string | null;
-  orderDate: Date;
-  status: OrderStatus;
-  items: CreateOrderItemInput[];
-  source: OrderSource;
-  verificationStatus: OrderVerificationStatus;
-};
+
+
 
 
 function resolveReserve(
@@ -385,160 +393,7 @@ export async function getAdminOrderDetail(id: string) {
    COMMAND
 ================================ */
 
-export async function createOrderWithItems(raw: any) {
-  const input: CreateOrderInput = {
-    shipPhone: raw.shipPhone ?? null,
-    customerId: raw.customerId ?? null,
-    customerName: raw.customerName,
-    reserve: raw.reserve
-      ? {
-        type: raw.reserve.type as ReserveType,
-        amount: Number(raw.reserve.amount || 0),
-        expiresAt: raw.reserve.expiresAt
-          ? new Date(raw.reserve.expiresAt)
-          : null,
-      }
-      : null,
-    status: (raw.status as OrderStatus) ?? OrderStatus.DRAFT,
-    shipAddress: raw.shipAddress ?? null,
-    shipCity: raw.shipCity ?? null,
-    shipDistrict: raw.shipDistrict ?? null,
-    hasShipment: Boolean(raw.hasShipment),
-    shipWard: raw.shipWard ?? null,
-    source: raw.source as OrderSource,
-    verificationStatus: raw.verificationStatus as OrderVerificationStatus,
-    paymentMethod: (raw.paymentMethod as PaymentMethod) ?? PaymentMethod.BANK_TRANSFER,
-    notes: raw.notes ?? null,
-    orderDate:
-      raw.createdAt
-        ? new Date(raw.createdAt)
-        : raw.orderDate instanceof Date
-          ? raw.orderDate
-          : new Date(),
-    items: (raw.items ?? []).map((i: any) => ({
-      productId: i.productId ?? null,
-      variantId: i.variantId ?? null,
-      title: i.title ?? "",
-      img: i.img ?? null,
-      quantity: Number(i.quantity ?? 1),
-      listPrice: Number(i.listPrice ?? 0),
-      kind: i.kind ?? "PRODUCT",
-      discountType: i.discountType ?? null,
-      discountValue: i.discountValue ?? null,
-      serviceCatalogId: i.serviceCatalogId ?? null,
-      taxRate: i.taxRate ?? null,
-      serviceScope: i.serviceScope ?? null,
-      linkedOrderItemId: i.linkedOrderItemId ?? null,
-      customerItemNote: i.customerItemNote ?? null,
-      unitPriceAgreed: Number(i.unitPriceAgreed ?? i.listPrice ?? 0),
-    })) as any,
-  };
 
-  return prisma.$transaction(async (tx) => {
-    const resolvedCustomerId = await resolveCustomer(tx, input);
-    const reserveData = resolveReserve(input.paymentMethod, input.reserve);
-
-    const rawProductItems = input.items
-      .filter((i: any) => i.kind === "PRODUCT" && i.productId)
-      .map((i: any) => ({
-        productId: i.productId as string,
-        quantity: Number(i.quantity ?? 1),
-        taxRate: i.taxRate ?? null,
-      }));
-
-    const resolvedProductItems = await resolveItemsFromDb(tx, rawProductItems);
-
-    for (const item of resolvedProductItems) {
-      if (item.kind !== "PRODUCT") continue;
-
-      await updateProductVariantStt(tx, {
-        productId: item.productId!,
-        status: "RESERVED",
-        fromStatuses: ["ACTIVE"],
-      });
-    }
-
-    const order = await orderRepo.createOrder(tx, {
-      customerId: resolvedCustomerId,
-      customerName: input.customerName,
-      shipPhone: input.shipPhone ?? "",
-      shipAddress: input.shipAddress,
-      shipCity: input.shipCity,
-      shipDistrict: input.shipDistrict,
-      shipWard: input.shipWard,
-      paymentMethod: input.paymentMethod!,
-      hasShipment: input.hasShipment,
-      notes: input.notes,
-      createdAt: input.orderDate,
-      status: input.status,
-      source: input.source,
-      verificationStatus: input.verificationStatus,
-      reserveType: reserveData?.reserveType ?? null,
-      depositRequired: reserveData?.depositRequired ?? null,
-      reserveUntil: reserveData?.reserveUntil ?? null,
-    });
-
-    const productOrderItemsPayload = resolvedProductItems.map((i) => {
-      const unitPriceAgreed = calcUnitPriceAgreed({
-        listPrice: i.listPrice,
-        discountType: null,
-        discountValue: null,
-      });
-
-      return {
-        kind: "PRODUCT" as const,
-        productId: i.productId,
-        variantId: i.variantId,
-        title: i.title,
-        img: i.primaryImageUrl ?? null,
-        quantity: i.quantity,
-        listPrice: i.listPrice,
-        unitPriceAgreed,
-        serviceCatalogId: null as any,
-        serviceScope: null as any,
-        taxRate: null,
-        customerItemNote: null,
-      };
-    });
-
-    const serviceOrderItemsPayload = (input.items as any[])
-      .filter((i) => i.kind === "SERVICE")
-      .map((i) => ({
-        kind: "SERVICE" as const,
-        productId: null,
-        variantId: null,
-        title: i.title,
-        img: i.img ?? null,
-        quantity: Number(i.quantity ?? 1),
-        listPrice: Number(i.listPrice ?? 0),
-        unitPriceAgreed: Number(i.unitPriceAgreed ?? i.listPrice ?? 0),
-        serviceCatalogId: i.serviceCatalogId ?? null,
-        serviceScope: i.serviceScope ?? "CUSTOMER_ITEM",
-        taxRate: i.taxRate ?? null,
-        customerItemNote: i.customerItemNote ?? null,
-      }));
-
-    const orderItemsPayload = [
-      ...productOrderItemsPayload,
-      ...serviceOrderItemsPayload,
-    ];
-
-    const createdItems = await orderRepo.createOrderItems(
-      tx,
-      order.id,
-      orderItemsPayload as any
-    );
-
-    const subtotal = createdItems.reduce(
-      (sum, i: any) => sum + Number(i.subtotal ?? 0),
-      0
-    );
-
-    await orderRepo.updateSubtotal(tx, order.id, subtotal);
-
-    return orderRepo.getOrderLite(tx, order.id);
-  });
-}
 export async function getOrderDetail(id: string) {
   return orderRepo.getOrderDetail(id, prisma);
 
@@ -686,4 +541,245 @@ export async function getServiceCatalogOptions(opts?: { isActive?: boolean }) {
       item.defaultPrice == null ? null : Number(item.defaultPrice),
     isActive: item.isActive,
   }));
+}
+
+export async function createOrderWithItems(raw: any) {
+  const input: CreateOrderInput = {
+    shipPhone: raw.shipPhone ?? null,
+    customerId: raw.customerId ?? null,
+    customerName: raw.customerName,
+    reserve: raw.reserve
+      ? {
+        type: raw.reserve.type as ReserveType,
+        amount: Number(raw.reserve.amount || 0),
+        expiresAt: raw.reserve.expiresAt
+          ? new Date(raw.reserve.expiresAt)
+          : null,
+      }
+      : null,
+    status: (raw.status as OrderStatus) ?? OrderStatus.DRAFT,
+    shipAddress: raw.shipAddress ?? null,
+    shipCity: raw.shipCity ?? null,
+    shipDistrict: raw.shipDistrict ?? null,
+    hasShipment: Boolean(raw.hasShipment),
+    shipWard: raw.shipWard ?? null,
+    source: raw.source as OrderSource,
+    verificationStatus: raw.verificationStatus as OrderVerificationStatus,
+    paymentMethod:
+      (raw.paymentMethod as PaymentMethod) ?? PaymentMethod.BANK_TRANSFER,
+    notes: raw.notes ?? null,
+    orderDate:
+      raw.createdAt
+        ? new Date(raw.createdAt)
+        : raw.orderDate instanceof Date
+          ? raw.orderDate
+          : new Date(),
+    quickFromProductId: raw.quickFromProductId ?? null,
+    quickFlowType: raw.quickFlowType ?? "STANDARD",
+    items: (raw.items ?? []).map((i: any) => ({
+      productId: i.productId ?? null,
+      variantId: i.variantId ?? null,
+      title: i.title ?? "",
+      img: i.img ?? null,
+      quantity: Number(i.quantity ?? 1),
+      listPrice: Number(i.listPrice ?? 0),
+      kind: i.kind ?? "PRODUCT",
+      discountType: i.discountType ?? null,
+      discountValue: i.discountValue ?? null,
+      serviceCatalogId: i.serviceCatalogId ?? null,
+      taxRate: i.taxRate ?? null,
+      serviceScope: i.serviceScope ?? null,
+      linkedOrderItemId: i.linkedOrderItemId ?? null,
+      customerItemNote: i.customerItemNote ?? null,
+      unitPriceAgreed: Number(i.unitPriceAgreed ?? i.listPrice ?? 0),
+      createdFromFlow: i.createdFromFlow ?? raw.quickFlowType ?? "STANDARD",
+    })) as any,
+  };
+
+  return prisma.$transaction(async (tx) => {
+    const resolvedCustomerId = await resolveCustomer(tx, input);
+    const reserveData = resolveReserve(input.paymentMethod, input.reserve);
+
+    const rawProductItems = input.items
+      .filter((i: any) => i.kind === "PRODUCT" && i.productId)
+      .map((i: any) => ({
+        productId: i.productId as string,
+        quantity: Number(i.quantity ?? 1),
+        taxRate: i.taxRate ?? null,
+      }));
+
+    const resolvedProductItems = await resolveItemsFromDb(tx, rawProductItems);
+
+    for (const item of resolvedProductItems) {
+      if (item.kind !== "PRODUCT") continue;
+
+      await updateProductVariantStt(tx, {
+        productId: item.productId!,
+        status: "RESERVED",
+        fromStatuses: ["ACTIVE"],
+      });
+    }
+
+    const order = await orderRepo.createOrder(tx, {
+      customerId: resolvedCustomerId,
+      customerName: input.customerName,
+      shipPhone: input.shipPhone ?? "",
+      shipAddress: input.shipAddress,
+      shipCity: input.shipCity,
+      shipDistrict: input.shipDistrict,
+      shipWard: input.shipWard,
+      paymentMethod: input.paymentMethod!,
+      hasShipment: input.hasShipment,
+      notes: input.notes,
+      createdAt: input.orderDate,
+      status: input.status,
+      source: input.source,
+      verificationStatus: input.verificationStatus,
+      reserveType: reserveData?.reserveType ?? null,
+      depositRequired: reserveData?.depositRequired ?? null,
+      reserveUntil: reserveData?.reserveUntil ?? null,
+      quickFromProductId: input.quickFromProductId ?? null,
+      quickFlowType: input.quickFlowType ?? "STANDARD",
+    });
+
+    const productOrderItemsPayload = resolvedProductItems.map((i) => {
+      const inputMatched = input.items.find(
+        (x: any) => x.kind === "PRODUCT" && x.productId === i.productId
+      );
+
+      const manualPrice =
+        inputMatched?.listPrice != null && Number(inputMatched.listPrice) > 0
+          ? Number(inputMatched.listPrice)
+          : i.listPrice;
+
+      const unitPriceAgreed =
+        inputMatched?.unitPriceAgreed != null &&
+          Number(inputMatched.unitPriceAgreed) > 0
+          ? Number(inputMatched.unitPriceAgreed)
+          : calcUnitPriceAgreed({
+            listPrice: manualPrice,
+            discountType: null,
+            discountValue: null,
+          });
+
+      return {
+        kind: "PRODUCT" as const,
+        productId: i.productId,
+        variantId: i.variantId,
+        title: i.title,
+        img: i.primaryImageUrl ?? null,
+        quantity: i.quantity,
+        listPrice: manualPrice,
+        unitPriceAgreed,
+        serviceCatalogId: null as any,
+        serviceScope: null as any,
+        taxRate: null,
+        customerItemNote: null,
+        createdFromFlow:
+          inputMatched?.createdFromFlow ?? input.quickFlowType ?? "STANDARD",
+      };
+    });
+
+    const serviceOrderItemsPayload = (input.items as any[])
+      .filter((i) => i.kind === "SERVICE")
+      .map((i) => ({
+        kind: "SERVICE" as const,
+        productId: null,
+        variantId: null,
+        title: i.title,
+        img: i.img ?? null,
+        quantity: Number(i.quantity ?? 1),
+        listPrice: Number(i.listPrice ?? 0),
+        unitPriceAgreed: Number(i.unitPriceAgreed ?? i.listPrice ?? 0),
+        serviceCatalogId: i.serviceCatalogId ?? null,
+        serviceScope: i.serviceScope ?? "CUSTOMER_ITEM",
+        taxRate: i.taxRate ?? null,
+        customerItemNote: i.customerItemNote ?? null,
+        createdFromFlow: i.createdFromFlow ?? input.quickFlowType ?? "STANDARD",
+      }));
+
+    const orderItemsPayload = [
+      ...productOrderItemsPayload,
+      ...serviceOrderItemsPayload,
+    ];
+
+    const createdItems = await orderRepo.createOrderItems(
+      tx,
+      order.id,
+      orderItemsPayload as any
+    );
+
+    const subtotal = createdItems.reduce(
+      (sum, i: any) => sum + Number(i.subtotal ?? 0),
+      0
+    );
+
+    await orderRepo.updateSubtotal(tx, order.id, subtotal);
+
+    return orderRepo.getOrderLite(tx, order.id);
+  });
+}
+
+export async function createQuickOrderFromProduct(input: {
+  productId: string;
+  customerName: string;
+  customerId?: string | null;
+  listPrice?: number | null;
+  unitPriceAgreed?: number | null;
+  notes?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const product = await productRepo.getAdminProductRow(tx as any, input.productId);
+    if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+    if (String(product.status || "").toUpperCase() === "SOLD") {
+      throw new Error("Sản phẩm đã SOLD, không thể tạo quick order");
+    }
+
+    if (String(product.status || "").toUpperCase() === "CONSIGNED_TO") {
+      throw new Error("Sản phẩm đang consign đi, không thể tạo quick order");
+    }
+
+    const order = await createOrderWithItems({
+      customerName: input.customerName,
+      customerId: input.customerId ?? null,
+      hasShipment: false,
+      shipAddress: "",
+      shipCity: "",
+      shipDistrict: "",
+      shipWard: "",
+      paymentMethod: "BANK_TRANSFER",
+      notes: input.notes ?? null,
+      status: "DRAFT",
+      source: "ADMIN",
+      verificationStatus: "VERIFIED",
+      quickFromProductId: input.productId,
+      quickFlowType: "QUICK_ORDER",
+      items: [
+        {
+          productId: input.productId,
+          quantity: 1,
+          title: product.title ?? "",
+          listPrice:
+            input.listPrice != null
+              ? Number(input.listPrice)
+              : Number(product.minPrice ?? 0),
+          unitPriceAgreed:
+            input.unitPriceAgreed != null
+              ? Number(input.unitPriceAgreed)
+              : Number(input.listPrice ?? product.minPrice ?? 0),
+          kind: "PRODUCT",
+          createdFromFlow: "QUICK_ORDER",
+        },
+      ],
+    });
+
+    await serviceReqtService.bumpPriorityForProductOrder({
+      productId: input.productId,
+      reason: "Sản phẩm đã có đơn hàng",
+      source: "QUICK_ORDER",
+    });
+
+    return order;
+  });
 }

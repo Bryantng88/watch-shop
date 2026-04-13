@@ -31,6 +31,13 @@ const makeSchema = () => z.object({
   skuSnapshot: z.literal(true).optional(),
   primaryImageUrlSnapshot: z.literal(true).optional(),
   dummy_technical_rel: z.literal(true).optional(),
+  priority: z.literal(true).optional(),
+  priority_reason: z.literal(true).optional(),
+  priority_source: z.literal(true).optional(),
+  priority_marked_at: z.literal(true).optional(),
+  priorityReason: z.literal(true).optional(),
+  prioritySource: z.literal(true).optional(),
+  priorityMarkedAt: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ServiceRequestCountAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountAggregateInputType>;

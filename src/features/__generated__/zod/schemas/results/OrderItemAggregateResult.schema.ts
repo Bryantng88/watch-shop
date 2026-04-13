@@ -20,6 +20,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     serviceScope: z.number(),
     linkedOrderItemId: z.number(),
     customerItemNote: z.number(),
+    createdFromFlow: z.number(),
     acquisitionItem: z.number(),
     OrderItem: z.number(),
     other_OrderItem: z.number(),

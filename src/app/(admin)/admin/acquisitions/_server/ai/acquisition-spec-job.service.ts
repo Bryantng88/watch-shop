@@ -24,6 +24,7 @@ import {
   toInt,
   toStringOrNull,
 } from "../shared/helper";
+import { genUniqueProductSku } from "../../../products/_server/shared/helper";
 
 type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
 
@@ -380,6 +381,21 @@ export async function processQueuedAcquisitionSpecJobs(input?: {
 
         const brandConnect = await resolveBrandConnectFromAi(tx, built.resolvedBrandName);
 
+        const shouldRefreshSku =
+          item.product?.type === "WATCH" &&
+          Boolean(built.resolvedBrandName) &&
+          (
+            !item.product?.sku ||
+            /^WAT-\d{4}-\d{4}$/i.test(String(item.product.sku)) ||
+            /^PRD-\d{4}-\d{4}$/i.test(String(item.product.sku))
+          );
+
+        const nextSku = shouldRefreshSku
+          ? await genUniqueProductSku(tx, {
+            type: item.product?.type,
+            brandName: built.resolvedBrandName,
+          })
+          : undefined;
         await tx.product.update({
           where: { id: item.productId! },
           data: {
@@ -387,6 +403,7 @@ export async function processQueuedAcquisitionSpecJobs(input?: {
             nickname: built.nickname,
             specStatus: resolveSpecStatusFromAi(aiExtracted),
             ...(brandConnect ? { brand: brandConnect } : {}),
+            ...(nextSku ? { sku: nextSku } : {}),
           },
         });
 

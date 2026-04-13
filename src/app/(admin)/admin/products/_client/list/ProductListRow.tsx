@@ -39,6 +39,29 @@ type Props = {
   onService: (productId: string) => void;
 };
 
+async function callApi(url: string, body: any) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || "Action failed");
+
+  return data;
+}
+type ProductRowAction = "quick_order" | "buy_back" | "consign_to";
+
+function getProductRowActions(status?: string | null): ProductRowAction[] {
+  const s = String(status || "").toUpperCase();
+
+  if (s === "SOLD") return ["buy_back"];
+  if (s === "CONSIGNED_TO") return [];
+
+  return ["quick_order", "consign_to"];
+}
+
 function resolveImageSrc(input?: string | null) {
   if (!input) return null;
   if (
@@ -94,7 +117,18 @@ function Thumbnail({ src, alt }: { src?: string | null; alt: string }) {
     />
   );
 }
+function buildQuickOrderHref(product: ProductRow) {
+  const params = new URLSearchParams();
 
+  params.set("mode", "quick");
+  params.set("productId", product.id);
+
+  if (product.title) params.set("title", product.title);
+  if (product.minPrice != null) params.set("listPrice", String(product.minPrice));
+  if (product.variantSnapshot?.sku) params.set("sku", product.variantSnapshot.sku);
+
+  return `/admin/orders/new?${params.toString()}`;
+}
 export default function ProductListRow({
   product,
   checked,
@@ -109,6 +143,34 @@ export default function ProductListRow({
   onDelete,
   onService,
 }: Props) {
+
+  const actions = getProductRowActions(product.status);
+
+
+
+  const handleBuyBack = async () => {
+    const price = Number(prompt("Giá mua lại?") || 0);
+    if (!price) return;
+
+    await callApi(`/api/admin/products/${product.id}/buy-back`, {
+      unitCost: price,
+      needService: true,
+    });
+
+    window.location.reload();
+  };
+
+  const handleConsign = async () => {
+    const vendorId = prompt("Vendor ID?");
+    if (!vendorId) return;
+
+    await callApi(`/api/admin/products/${product.id}/consign-to`, {
+      vendorId,
+    });
+
+    window.location.reload();
+  };
+
   const service = getServiceLabel(product);
   const readiness = getPostReadinessState(product);
   const hasMissingImage =
@@ -139,8 +201,11 @@ export default function ProductListRow({
           />
 
           <div className="min-w-0 flex-1 self-start">
-            <div className="truncate text-[16px] font-medium text-slate-950">
-              {product.title || "-"}
+
+            <div className="text-[14px] font-medium text-slate-900">
+              <span className="line-clamp-2 break-words">
+                {product.title || "-"}
+              </span>
             </div>
 
             <div className="mt-1 truncate text-xs text-slate-500">
@@ -149,7 +214,7 @@ export default function ProductListRow({
 
             {product.variantSnapshot?.sku ? (
               <div className="mt-1 text-xs text-slate-400">
-                SKU: {product.variantSnapshot.sku}
+                SKU: {product.variantSnapshot.sku || product.sku}
               </div>
             ) : null}
 
@@ -246,7 +311,6 @@ export default function ProductListRow({
           ) : null}
         </div>
       </td>
-
       <td className="px-4 py-4 text-right align-middle">
         <RowActionMenu
           align="right"
@@ -269,6 +333,36 @@ export default function ProductListRow({
               icon: "service",
               onClick: () => onService(product.id),
             },
+
+            /* ===== NEW ACTION ===== */
+
+            {
+              key: "quick",
+              label:
+                String(product.status).toUpperCase() === "IN_SERVICE"
+                  ? "Tạo đơn nhanh • ưu tiên kỹ thuật"
+                  : "Tạo đơn nhanh",
+              icon: "product",
+              href: buildQuickOrderHref(product),
+              hidden: !actions.includes("quick_order"),
+            },
+
+            {
+              key: "buyback",
+              label: "Buy back",
+              icon: "move",
+              onClick: handleBuyBack,
+              hidden: !actions.includes("buy_back"),
+            },
+
+            {
+              key: "consign",
+              label: "Consign to",
+              icon: "archive",
+              onClick: handleConsign,
+              hidden: !actions.includes("consign_to"),
+            },
+
             {
               key: "delete",
               label: "Xóa sản phẩm",

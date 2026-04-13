@@ -35,6 +35,13 @@ const makeSchema = () => z.object({
   skuSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   primaryImageUrlSnapshot: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   dummy_technical_rel: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority_reason: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority_source: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority_marked_at: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priorityReason: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  prioritySource: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priorityMarkedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ServiceRequestCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ServiceRequestMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => ServiceRequestMinOrderByAggregateInputObjectSchema).optional()

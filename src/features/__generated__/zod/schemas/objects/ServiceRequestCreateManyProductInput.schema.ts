@@ -31,7 +31,14 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.string().optional().nullable(),
   skuSnapshot: z.string().optional().nullable(),
   primaryImageUrlSnapshot: z.string().optional().nullable(),
-  dummy_technical_rel: z.string().optional().nullable()
+  dummy_technical_rel: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  priority_reason: z.string().optional().nullable(),
+  priority_source: z.string().optional().nullable(),
+  priority_marked_at: z.coerce.date().optional().nullable(),
+  priorityReason: z.string().optional().nullable(),
+  prioritySource: z.string().optional().nullable(),
+  priorityMarkedAt: z.coerce.date().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyProductInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyProductInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyProductInput>;
 export const ServiceRequestCreateManyProductInputObjectZodSchema = makeSchema();

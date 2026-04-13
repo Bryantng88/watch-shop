@@ -273,7 +273,7 @@ export async function changeDraftToPost(tx: DB, acqId: string) {
 
 export async function createWatchProduct(tx: DB, input: {
     title: string;
-    sku: string;
+    sku?: string | null;
     vendorId: string;
     productType: any;
     primaryImageUrl?: string | null;
@@ -306,7 +306,7 @@ export async function createWatchProduct(tx: DB, input: {
 
 export async function createWatchVariant(tx: DB, input: {
     productId: string;
-    sku: string;
+    sku?: string | null;
     quantity?: number | null;
     unitCost?: number | null;
 }) {
@@ -485,4 +485,144 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
             },
         });
     }
+}
+
+export async function createInternalAcquisition(
+    tx: DB,
+    input: {
+        vendorId?: string | null;
+        customerId?: string | null;
+        currency?: string | null;
+        type: AcquisitionType;
+        notes?: string | null;
+        createdAt?: Date | null;
+        cost?: number | null;
+        accquisitionStt?: "DRAFT" | "POSTED";
+    }
+) {
+    const db = getDb(tx);
+
+    return db.acquisition.create({
+        data: {
+            vendorId: input.vendorId ?? null,
+            customerId: input.customerId ?? null,
+            acquiredAt: input.createdAt ?? new Date(),
+            currency: input.currency ?? "VND",
+            accquisitionStt: (input.accquisitionStt ?? "POSTED") as any,
+            type: input.type,
+            notes: input.notes ?? null,
+            cost: new Prisma.Decimal(Number(input.cost ?? 0)),
+        },
+        select: {
+            id: true,
+            refNo: true,
+            type: true,
+            accquisitionStt: true,
+            cost: true,
+        },
+    });
+}
+
+export async function createLinkedAcquisitionItem(
+    tx: DB,
+    input: {
+        acquisitionId: string;
+        productId: string;
+        variantId?: string | null;
+        productTitle: string;
+        quantity?: number | null;
+        unitCost?: number | null;
+        productType?: ProductType | string | null;
+        description?: string | null;
+    }
+) {
+    const db = getDb(tx);
+
+    return db.acquisitionItem.create({
+        data: {
+            acquisitionId: input.acquisitionId,
+            productId: input.productId,
+            variantId: input.variantId ?? null,
+            productTitle: input.productTitle,
+            quantity: Number(input.quantity ?? 1),
+            unitCost: Number(input.unitCost ?? 0),
+            productType: (input.productType ?? ProductType.WATCH) as ProductType,
+            description: input.description ?? null,
+            status: "SENT" as any,
+        },
+        select: {
+            id: true,
+            acquisitionId: true,
+            productId: true,
+            variantId: true,
+        },
+    });
+}
+
+export async function updateProductStatusAfterBuyBack(
+    tx: DB,
+    input: {
+        productId: string;
+        status: ProductStatus;
+    }
+) {
+    const db = getDb(tx);
+
+    return db.product.update({
+        where: { id: input.productId },
+        data: {
+            status: input.status,
+            updatedAt: new Date(),
+        },
+        select: { id: true, status: true },
+    });
+}
+
+export async function updateVariantAvailabilityForBuyBack(
+    tx: DB,
+    input: {
+        productId: string;
+        availabilityStatus: "ACTIVE" | "HIDDEN" | "RESERVED" | "SOLD";
+        stockQty?: number | null;
+    }
+) {
+    const db = getDb(tx);
+
+    return db.productVariant.updateMany({
+        where: { productId: input.productId },
+        data: {
+            availabilityStatus: input.availabilityStatus as any,
+            ...(input.stockQty !== undefined ? { stockQty: Number(input.stockQty ?? 1) } : {}),
+        },
+    });
+}
+
+export async function updateProductStatusAfterConsignTo(
+    tx: DB,
+    input: {
+        productId: string;
+        status: ProductStatus;
+    }
+) {
+    const db = getDb(tx);
+
+    return db.product.update({
+        where: { id: input.productId },
+        data: {
+            status: input.status,
+            updatedAt: new Date(),
+        },
+        select: { id: true, status: true },
+    });
+}
+
+export async function hideVariantForConsignTo(tx: DB, productId: string) {
+    const db = getDb(tx);
+
+    return db.productVariant.updateMany({
+        where: { productId },
+        data: {
+            availabilityStatus: "HIDDEN" as any,
+        },
+    });
 }

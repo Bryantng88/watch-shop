@@ -18,7 +18,9 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { EnumOrderSourceFieldUpdateOperationsInputObjectSchema as EnumOrderSourceFieldUpdateOperationsInputObjectSchema } from './EnumOrderSourceFieldUpdateOperationsInput.schema';
 import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
-import { EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema as EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema } from './EnumOrderVerificationStatusFieldUpdateOperationsInput.schema'
+import { EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema as EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema } from './EnumOrderVerificationStatusFieldUpdateOperationsInput.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
+import { EnumorderflowtypeFieldUpdateOperationsInputObjectSchema as EnumorderflowtypeFieldUpdateOperationsInputObjectSchema } from './EnumorderflowtypeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -44,7 +46,10 @@ const makeSchema = () => z.object({
   depositRequired: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   depositPaid: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   source: z.union([OrderSourceSchema, z.lazy(() => EnumOrderSourceFieldUpdateOperationsInputObjectSchema)]).optional(),
-  verificationStatus: z.union([OrderVerificationStatusSchema, z.lazy(() => EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema)]).optional()
+  verificationStatus: z.union([OrderVerificationStatusSchema, z.lazy(() => EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  quick_from_product_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  quickFromProductId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  quickFlowType: z.union([orderflowtypeSchema, z.lazy(() => EnumorderflowtypeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const OrderUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateManyInput>;
 export const OrderUncheckedUpdateManyInputObjectZodSchema = makeSchema();

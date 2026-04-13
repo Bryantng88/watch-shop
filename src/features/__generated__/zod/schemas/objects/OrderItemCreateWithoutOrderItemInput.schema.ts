@@ -4,6 +4,7 @@ import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
 import { AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema as AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutSourceOrderItemInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderItemInput.schema';
 import { OrderCreateNestedOneWithoutItemsInputObjectSchema as OrderCreateNestedOneWithoutItemsInputObjectSchema } from './OrderCreateNestedOneWithoutItemsInput.schema';
@@ -28,6 +29,7 @@ const makeSchema = () => z.object({
   kind: OrderItemKindSchema,
   serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
+  createdFromFlow: orderflowtypeSchema.optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutItemsInputObjectSchema),

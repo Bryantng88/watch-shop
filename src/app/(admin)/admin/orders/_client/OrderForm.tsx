@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type ServiceOption = {
     id: string;
@@ -74,6 +75,31 @@ function normalizeInitialItems(initialData: any): FormItem[] {
     }));
 }
 
+function buildQuickPrefillItem(searchParams: URLSearchParams): FormItem | null {
+    const mode = String(searchParams.get("mode") || "").trim().toLowerCase();
+    const productId = String(searchParams.get("productId") || "").trim();
+
+    if (mode !== "quick" || !productId) return null;
+
+    const title = String(searchParams.get("title") || "").trim();
+    const listPriceRaw = Number(searchParams.get("listPrice") || 0);
+
+    return {
+        kind: "PRODUCT",
+        productId,
+        variantId: null,
+        title: title || "Sản phẩm",
+        quantity: 1,
+        listPrice: Number.isFinite(listPriceRaw) ? listPriceRaw : 0,
+        unitPriceAgreed: Number.isFinite(listPriceRaw) ? listPriceRaw : 0,
+        img: null,
+        serviceCatalogId: null,
+        serviceScope: null,
+        linkedOrderItemId: null,
+        customerItemNote: null,
+    };
+}
+
 export default function OrderFormClient({
     mode,
     orderId,
@@ -83,6 +109,8 @@ export default function OrderFormClient({
     backLabel = "← Quay lại",
 }: Props) {
     const isEdit = mode === "edit";
+    const searchParams = useSearchParams();
+    const quickPrefillAppliedRef = useRef(false);
 
     const [customerName, setCustomerName] = useState(initialData?.customerName ?? "");
     const [shipPhone, setShipPhone] = useState(initialData?.shipPhone ?? "");
@@ -125,6 +153,31 @@ export default function OrderFormClient({
     const [isSearching, setIsSearching] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const quickMode = !isEdit && String(searchParams.get("mode") || "").toLowerCase() === "quick";
+    const quickSku = searchParams.get("sku");
+    const quickTitle = searchParams.get("title");
+
+    useEffect(() => {
+        if (isEdit) return;
+        if (quickPrefillAppliedRef.current) return;
+
+        const quickItem = buildQuickPrefillItem(searchParams);
+        if (!quickItem) return;
+
+        setItems((prev) => {
+            const existed = prev.some(
+                (it) =>
+                    it.kind === "PRODUCT" &&
+                    String(it.productId || "").trim() === String(quickItem.productId || "").trim()
+            );
+
+            if (existed) return prev;
+            return [...prev, quickItem];
+        });
+
+        quickPrefillAppliedRef.current = true;
+    }, [isEdit, searchParams]);
 
     useEffect(() => {
         const q = productQuery.trim();
@@ -241,6 +294,18 @@ export default function OrderFormClient({
                 throw new Error("Đơn hàng phải có ít nhất 1 dòng");
             }
 
+            if (hasShipment) {
+                if (!shipPhone.trim()) {
+                    throw new Error("Vui lòng nhập số điện thoại khi có giao hàng");
+                }
+                if (!shipAddress.trim()) {
+                    throw new Error("Vui lòng nhập địa chỉ giao hàng");
+                }
+                if (!shipCity.trim()) {
+                    throw new Error("Vui lòng nhập thành phố / tỉnh");
+                }
+            }
+
             const payload = {
                 customerName: customerName.trim(),
                 shipPhone: shipPhone.trim(),
@@ -320,11 +385,21 @@ export default function OrderFormClient({
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-neutral-900">
-                        {isEdit ? "Chỉnh sửa đơn hàng" : "Tạo đơn hàng"}
+                        {isEdit ? "Chỉnh sửa đơn hàng" : quickMode ? "Tạo đơn nhanh" : "Tạo đơn hàng"}
                     </h1>
                     <p className="mt-1 text-sm text-neutral-500">
-                        Đồng bộ layout với phiếu nhập, gọn và dễ thao tác hơn.
+                        {quickMode
+                            ? "Đã thêm sẵn sản phẩm từ danh sách. Hãy điền đầy đủ thông tin khách hàng và giao hàng."
+                            : "Đồng bộ layout với phiếu nhập, gọn và dễ thao tác hơn."}
                     </p>
+
+                    {quickMode ? (
+                        <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">
+                            <span className="font-medium">Quick order</span>
+                            {quickTitle ? <span>• {quickTitle}</span> : null}
+                            {quickSku ? <span>• SKU: {quickSku}</span> : null}
+                        </div>
+                    ) : null}
                 </div>
 
                 <div className="flex items-center gap-2">

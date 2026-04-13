@@ -37,6 +37,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     serviceScope: z.number(),
     linkedOrderItemId: z.number(),
     customerItemNote: z.number(),
+    createdFromFlow: z.number(),
     acquisitionItem: z.number(),
     OrderItem: z.number(),
     other_OrderItem: z.number(),

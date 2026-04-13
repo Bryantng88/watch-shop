@@ -2,6 +2,7 @@ import prisma from "@/server/db/client";
 
 type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
 
+
 function toNumber(v: unknown): number | null {
     if (v == null) return null;
     const n = Number(v);
@@ -38,6 +39,20 @@ function normalizeAssessments(
     return [];
 }
 
+function priorityWeight(priority?: string | null) {
+    const p = String(priority || "NORMAL").toUpperCase();
+    if (p === "URGENT") return 3;
+    if (p === "HIGH") return 2;
+    return 1;
+}
+
+function boardWeight(col: BoardColumnKey) {
+    if (col === "IN_PROGRESS") return 4;
+    if (col === "READY") return 3;
+    if (col === "PENDING_CONFIRM") return 2;
+    return 1;
+}
+
 export async function getTechnicalIssueBoardData() {
     const rows = await prisma.technicalIssue.findMany({
         where: {
@@ -55,6 +70,10 @@ export async function getTechnicalIssueBoardData() {
                     scope: true,
                     technicianNameSnap: true,
                     vendorNameSnap: true,
+                    priority: true,
+                    priorityReason: true,
+                    prioritySource: true,
+                    priorityMarkedAt: true,
                     technicalAssessment: {
                         select: {
                             id: true,
@@ -89,7 +108,7 @@ export async function getTechnicalIssueBoardData() {
                             },
                         },
                     },
-                },
+                } as any,
             },
             Vendor: {
                 select: { id: true, name: true },
@@ -130,6 +149,7 @@ export async function getTechnicalIssueBoardData() {
                 null;
 
             const activeIssues = activeAssessment?.TechnicalIssue ?? [];
+            const productWatchSpec = (sr.product as any)?.watchSpec ?? null;
 
             const hasOpenIssue = activeIssues.some((i) => {
                 const status = String(i.executionStatus || "").toUpperCase();
@@ -138,6 +158,11 @@ export async function getTechnicalIssueBoardData() {
 
             const serviceRequestReadyToClose =
                 activeIssues.length > 0 && !hasOpenIssue;
+
+            const boardColumn = normalizeBoardColumn({
+                executionStatus: x.executionStatus,
+                isConfirmed: (x as any).isConfirmed ?? false,
+            });
 
             return {
                 id: x.id,
@@ -158,10 +183,7 @@ export async function getTechnicalIssueBoardData() {
                 resolutionNote: x.resolutionNote ?? "",
                 vendorId: x.vendorId ?? null,
                 vendorNameSnap: x.vendorNameSnap ?? x.Vendor?.name ?? null,
-                boardColumn: normalizeBoardColumn({
-                    executionStatus: x.executionStatus,
-                    isConfirmed: (x as any).isConfirmed ?? false,
-                }),
+                boardColumn,
                 serviceRequestReadyToClose,
                 isLastDoneIssueOfServiceRequest:
                     serviceRequestReadyToClose &&
@@ -176,9 +198,13 @@ export async function getTechnicalIssueBoardData() {
                     vendorNameSnap: sr.vendorNameSnap ?? null,
                     productTitle: sr.product?.title ?? null,
                     primaryImageUrl: sr.product?.primaryImageUrl ?? null,
-                    movement: sr.product?.watchSpec?.movement ?? null,
-                    model: sr.product?.watchSpec?.model ?? null,
-                    ref: sr.product?.watchSpec?.ref ?? null,
+                    movement: productWatchSpec?.movement ?? null,
+                    model: productWatchSpec?.model ?? null,
+                    ref: productWatchSpec?.ref ?? null,
+                    priority: (sr as any).priority ?? "NORMAL",
+                    priorityReason: (sr as any).priorityReason ?? null,
+                    prioritySource: (sr as any).prioritySource ?? null,
+                    priorityMarkedAt: (sr as any).priorityMarkedAt ?? null,
                 },
 
                 assessment: x.TechnicalAssessment
@@ -213,7 +239,19 @@ export async function getTechnicalIssueBoardData() {
                     : null,
             };
         })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+        .filter((x): x is NonNullable<typeof x> => Boolean(x))
+        .sort((a, b) => {
+            const p = priorityWeight(b.serviceRequest.priority) - priorityWeight(a.serviceRequest.priority);
+            if (p !== 0) return p;
+
+            const c = boardWeight(b.boardColumn) - boardWeight(a.boardColumn);
+            if (c !== 0) return c;
+
+            return (
+                new Date(b.openedAt ?? 0).getTime() -
+                new Date(a.openedAt ?? 0).getTime()
+            );
+        });
 
     const readyToCloseSrIds = Array.from(
         new Set(
@@ -234,3 +272,8 @@ export async function getTechnicalIssueBoardData() {
 
     return { items, counts };
 }
+
+
+
+
+

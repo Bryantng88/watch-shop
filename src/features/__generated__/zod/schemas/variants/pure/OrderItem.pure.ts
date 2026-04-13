@@ -4,6 +4,7 @@ import { DiscountTypeSchema } from '../../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../../enums/ServiceScope.schema';
+import { orderflowtypeSchema } from '../../enums/orderflowtype.schema';
 // prettier-ignore
 export const OrderItemModelSchema = z.object({
     id: z.string(),
@@ -26,6 +27,7 @@ export const OrderItemModelSchema = z.object({
     serviceScope: ServiceScopeSchema.nullable(),
     linkedOrderItemId: z.string().nullable(),
     customerItemNote: z.string().nullable(),
+    createdFromFlow: orderflowtypeSchema,
     acquisitionItem: z.array(z.unknown()),
     OrderItem: z.unknown().nullable(),
     other_OrderItem: z.array(z.unknown()),

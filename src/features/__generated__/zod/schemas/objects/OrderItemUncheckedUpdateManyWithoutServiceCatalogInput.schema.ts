@@ -13,7 +13,9 @@ import { NullableEnumProductTypeFieldUpdateOperationsInputObjectSchema as Nullab
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumOrderItemKindFieldUpdateOperationsInputObjectSchema as EnumOrderItemKindFieldUpdateOperationsInputObjectSchema } from './EnumOrderItemKindFieldUpdateOperationsInput.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema'
+import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
+import { EnumorderflowtypeFieldUpdateOperationsInputObjectSchema as EnumorderflowtypeFieldUpdateOperationsInputObjectSchema } from './EnumorderflowtypeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -34,7 +36,8 @@ const makeSchema = () => z.object({
   kind: z.union([OrderItemKindSchema, z.lazy(() => EnumOrderItemKindFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdFromFlow: z.union([orderflowtypeSchema, z.lazy(() => EnumorderflowtypeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const OrderItemUncheckedUpdateManyWithoutServiceCatalogInputObjectSchema: z.ZodType<Prisma.OrderItemUncheckedUpdateManyWithoutServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUncheckedUpdateManyWithoutServiceCatalogInput>;
 export const OrderItemUncheckedUpdateManyWithoutServiceCatalogInputObjectZodSchema = makeSchema();

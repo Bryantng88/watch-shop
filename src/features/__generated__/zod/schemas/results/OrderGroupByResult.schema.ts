@@ -18,6 +18,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
   reserveUntil: z.date(),
   depositRequired: z.number(),
   depositPaid: z.number(),
+  quick_from_product_id: z.string(),
+  quickFromProductId: z.string(),
   _count: z.object({
     id: z.number(),
     refNo: z.number(),
@@ -43,6 +45,9 @@ export const OrderGroupByResultSchema = z.array(z.object({
     depositPaid: z.number(),
     source: z.number(),
     verificationStatus: z.number(),
+    quick_from_product_id: z.number(),
+    quickFromProductId: z.number(),
+    quickFlowType: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number(),
@@ -77,7 +82,9 @@ export const OrderGroupByResultSchema = z.array(z.object({
     shipDistrict: z.string().nullable(),
     reserveUntil: z.date().nullable(),
     depositRequired: z.number().nullable(),
-    depositPaid: z.number().nullable()
+    depositPaid: z.number().nullable(),
+    quick_from_product_id: z.string().nullable(),
+    quickFromProductId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -96,6 +103,8 @@ export const OrderGroupByResultSchema = z.array(z.object({
     shipDistrict: z.string().nullable(),
     reserveUntil: z.date().nullable(),
     depositRequired: z.number().nullable(),
-    depositPaid: z.number().nullable()
+    depositPaid: z.number().nullable(),
+    quick_from_product_id: z.string().nullable(),
+    quickFromProductId: z.string().nullable()
   }).nullable().optional()
 }));

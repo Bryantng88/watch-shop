@@ -6,6 +6,7 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { ReserveTypeSchema } from '../enums/ReserveType.schema';
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
 import { InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutOrderInput.schema';
 import { ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema as ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema } from './ShipmentUncheckedCreateNestedOneWithoutOrderInput.schema'
 
@@ -34,6 +35,9 @@ const makeSchema = () => z.object({
   depositPaid: z.number().optional().nullable(),
   source: OrderSourceSchema.optional(),
   verificationStatus: OrderVerificationStatusSchema.optional(),
+  quick_from_product_id: z.string().optional().nullable(),
+  quickFromProductId: z.string().optional().nullable(),
+  quickFlowType: orderflowtypeSchema.optional(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   Shipment: z.lazy(() => ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema).optional()
 }).strict();

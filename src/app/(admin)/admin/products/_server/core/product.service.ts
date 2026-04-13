@@ -8,6 +8,11 @@ import { computeEffectivePrice } from "../../helpers/price";
 import { MIN_IMAGES, getRequiredWatchSpecFields, hasValue as hasRuleValue } from "../shared/rules";
 import { buildSpecBulletsFromProductABC, buildHashtagsFromProduct } from "../shared/helper";
 
+import * as orderService from "../../../orders/_servers/order.service"
+import * as acquisitionService from "../../../acquisitions/_server/core/acquisition.service";
+import * as serviceRequestService from "../../../services/_server/service_request.service";
+
+
 const firstValue = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 
 const asDate = (v: unknown) => {
@@ -733,7 +738,76 @@ export async function detail(id: string) {
     };
 }
 
+export async function quickOrderProduct(input: {
+    productId: string;
+    customerName: string;
+    customerId?: string | null;
+    listPrice?: number | null;
+    unitPriceAgreed?: number | null;
+    notes?: string | null;
+}) {
+    return prisma.$transaction(async (tx) => {
+        const product = await prodRepo.getAdminProductRow(tx as any, input.productId);
+        if (!product) throw new Error("Không tìm thấy sản phẩm");
 
+        const status = String(product.status || "").toUpperCase();
+        if (status === "SOLD") {
+            throw new Error("Sản phẩm đã SOLD, không thể tạo quick order");
+        }
+        if (status === "CONSIGNED_TO") {
+            throw new Error("Sản phẩm đang consign đi, không thể tạo quick order");
+        }
+
+        const order = await orderService.createQuickOrderFromProduct({
+            productId: input.productId,
+            customerName: input.customerName,
+            customerId: input.customerId ?? null,
+            listPrice: input.listPrice ?? null,
+            unitPriceAgreed: input.unitPriceAgreed ?? null,
+            notes: input.notes ?? null,
+        });
+
+        return order;
+    });
+}
+
+export async function buyBackProduct(input: {
+    productId: string;
+    unitCost: number;
+    notes?: string | null;
+    customerId?: string | null;
+    needService?: boolean;
+}) {
+    const result = await acquisitionService.createBuyBackFromProduct({
+        productId: input.productId,
+        unitCost: Number(input.unitCost ?? 0),
+        notes: input.notes ?? null,
+        customerId: input.customerId ?? null,
+        needService: Boolean(input.needService),
+    });
+
+    if (input.needService) {
+        await serviceRequestService.ensurePriorityTechnicalCheckForBuyBack({
+            productId: input.productId,
+            reason: "Buy back cần kiểm tra lại",
+            source: "BUY_BACK",
+        });
+    }
+
+    return result;
+}
+
+export async function consignToProduct(input: {
+    productId: string;
+    vendorId: string;
+    notes?: string | null;
+}) {
+    return acquisitionService.createConsignToFromProduct({
+        productId: input.productId,
+        vendorId: input.vendorId,
+        notes: input.notes ?? null,
+    });
+}
 
 
 

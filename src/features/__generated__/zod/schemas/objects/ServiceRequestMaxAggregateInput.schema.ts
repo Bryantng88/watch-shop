@@ -30,7 +30,14 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.literal(true).optional(),
   skuSnapshot: z.literal(true).optional(),
   primaryImageUrlSnapshot: z.literal(true).optional(),
-  dummy_technical_rel: z.literal(true).optional()
+  dummy_technical_rel: z.literal(true).optional(),
+  priority: z.literal(true).optional(),
+  priority_reason: z.literal(true).optional(),
+  priority_source: z.literal(true).optional(),
+  priority_marked_at: z.literal(true).optional(),
+  priorityReason: z.literal(true).optional(),
+  prioritySource: z.literal(true).optional(),
+  priorityMarkedAt: z.literal(true).optional()
 }).strict();
 export const ServiceRequestMaxAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestMaxAggregateInputType>;
 export const ServiceRequestMaxAggregateInputObjectZodSchema = makeSchema();

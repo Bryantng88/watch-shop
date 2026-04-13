@@ -20,6 +20,7 @@ export const OrderItemDeleteResultSchema = z.nullable(z.object({
   serviceScope: z.unknown().optional(),
   linkedOrderItemId: z.string().optional(),
   customerItemNote: z.string().optional(),
+  createdFromFlow: z.unknown(),
   acquisitionItem: z.array(z.unknown()),
   OrderItem: z.unknown().optional(),
   other_OrderItem: z.array(z.unknown()),

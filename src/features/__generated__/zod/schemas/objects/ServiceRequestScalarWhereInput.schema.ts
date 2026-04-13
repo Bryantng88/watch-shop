@@ -43,7 +43,14 @@ const servicerequestscalarwhereinputSchema = z.object({
   technicianNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   skuSnapshot: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   primaryImageUrlSnapshot: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  dummy_technical_rel: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  dummy_technical_rel: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priority: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priority_reason: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priority_source: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priority_marked_at: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  priorityReason: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  prioritySource: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
 }).strict();
 export const ServiceRequestScalarWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestScalarWhereInput> = servicerequestscalarwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestScalarWhereInput>;
 export const ServiceRequestScalarWhereInputObjectZodSchema = servicerequestscalarwhereinputSchema;

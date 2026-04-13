@@ -161,83 +161,68 @@ export function buildOrderBy(sort: AdminSort | undefined): Prisma.ProductOrderBy
 export function getProductSkuPrefix(type?: ProductType | string | null) {
     switch (String(type ?? "WATCH").toUpperCase()) {
         case "WATCH":
-            return "W";
+            return "WAT";
         case "WATCH_STRAP":
-            return "ST";
+            return "STR";
         case "BOX":
-            return "BX";
+            return "BOX";
         case "ACCESSORIES":
-            return "AC";
+            return "ACC";
         case "PARTS":
-            return "PT";
+            return "PAR";
         case "SERVICE":
-            return "SV";
+            return "SER";
         default:
-            return "PR";
+            return "PRD";
     }
 }
 
-function pad2(n: number) {
-    return String(n).padStart(2, "0");
+function normalizeSkuHead(input: string | null | undefined, fallback: string) {
+    const raw = String(input ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase();
+
+    if (!raw) return fallback;
+    return raw.slice(0, 3).padEnd(3, "X");
 }
 
 export async function genUniqueProductSku(
     db: Tx,
-    type?: ProductType | string | null,
-    date?: Date
+    input: {
+        type?: ProductType | string | null;
+        brandName?: string | null;
+        date?: Date;
+    }
 ) {
-    const now = date ?? new Date();
+    const now = input.date ?? new Date();
     const yy = String(now.getFullYear()).slice(-2);
-    const mm = pad2(now.getMonth() + 1);
-    const prefix = getProductSkuPrefix(type);
-    const startsWith = `${prefix}-${yy}${mm}-`;
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+
+    const type = String(input.type ?? "WATCH").toUpperCase();
+    const head =
+        type === "WATCH"
+            ? normalizeSkuHead(input.brandName, "WAT")
+            : normalizeSkuHead(getProductSkuPrefix(type), "PRD");
+
+    const startsWith = `${head}-${yy}${mm}-`;
 
     const last = await db.product.findFirst({
-        where: {
-            sku: {
-                startsWith,
-            },
-        },
-        orderBy: {
-            sku: "desc",
-        },
-        select: {
-            sku: true,
-        },
+        where: { sku: { startsWith } },
+        orderBy: { sku: "desc" },
+        select: { sku: true },
     });
 
     let nextNum = 1;
-
     if (last?.sku) {
         const match = String(last.sku).match(/-(\d+)$/);
-        if (match?.[1]) {
-            nextNum = Number(match[1]) + 1;
-        }
+        if (match?.[1]) nextNum = Number(match[1]) + 1;
     }
 
     return `${startsWith}${String(nextNum).padStart(4, "0")}`;
 }
 
-export function buildSpecBulletsFromProductABC(product: any): string[] {
-    const ws = product?.watchSpecSnapshot ?? product?.watchSpec ?? null;
-    const bullets: string[] = [];
-
-    if (ws?.movement) bullets.push(`Bộ máy ${String(ws.movement).toLowerCase()}.`);
-    if (ws?.caliber) bullets.push(`Caliber ${ws.caliber}.`);
-
-    const sizeParts = [ws?.width ? `${ws.width}mm` : null, ws?.thickness ? `dày ${ws.thickness}mm` : null]
-        .filter(Boolean)
-        .join(', ');
-    if (sizeParts) bullets.push(`Kích thước ${sizeParts}.`);
-
-    if (ws?.caseMaterial) bullets.push(`Vỏ ${String(ws.caseMaterial).toLowerCase()}.`);
-    if (ws?.glass) bullets.push(`Kính ${String(ws.glass).toLowerCase()}.`);
-    if (ws?.dialColor) bullets.push(`Mặt số ${ws.dialColor}.`);
-    if (ws?.dialCondition) bullets.push(`Tình trạng dial: ${ws.dialCondition}.`);
-    if (ws?.strap) bullets.push(`Dây ${String(ws.strap).toLowerCase()}.`);
-
-    return bullets;
-}
 
 export function buildHashtagsFromProduct(product: any): string[] {
     const tags = new Set<string>();
@@ -257,4 +242,26 @@ export function buildHashtagsFromProduct(product: any): string[] {
     tags.add('#vintagewatch');
 
     return Array.from(tags);
+}
+
+
+export function buildSpecBulletsFromProductABC(product: any): string[] {
+    const ws = product?.watchSpecSnapshot ?? product?.watchSpec ?? null;
+    const bullets: string[] = [];
+
+    if (ws?.movement) bullets.push(`Bộ máy ${String(ws.movement).toLowerCase()}.`);
+    if (ws?.caliber) bullets.push(`Caliber ${ws.caliber}.`);
+
+    const sizeParts = [ws?.width ? `${ws.width}mm` : null, ws?.thickness ? `dày ${ws.thickness}mm` : null]
+        .filter(Boolean)
+        .join(', ');
+    if (sizeParts) bullets.push(`Kích thước ${sizeParts}.`);
+
+    if (ws?.caseMaterial) bullets.push(`Vỏ ${String(ws.caseMaterial).toLowerCase()}.`);
+    if (ws?.glass) bullets.push(`Kính ${String(ws.glass).toLowerCase()}.`);
+    if (ws?.dialColor) bullets.push(`Mặt số ${ws.dialColor}.`);
+    if (ws?.dialCondition) bullets.push(`Tình trạng dial: ${ws.dialCondition}.`);
+    if (ws?.strap) bullets.push(`Dây ${String(ws.strap).toLowerCase()}.`);
+
+    return bullets
 }

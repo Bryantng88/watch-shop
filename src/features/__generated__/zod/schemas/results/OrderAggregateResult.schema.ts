@@ -24,6 +24,9 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     depositPaid: z.number(),
     source: z.number(),
     verificationStatus: z.number(),
+    quick_from_product_id: z.number(),
+    quickFromProductId: z.number(),
+    quickFlowType: z.number(),
     Invoice: z.number(),
     customer: z.number(),
     items: z.number(),
@@ -58,7 +61,9 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     shipDistrict: z.string().nullable(),
     reserveUntil: z.date().nullable(),
     depositRequired: z.number().nullable(),
-    depositPaid: z.number().nullable()
+    depositPaid: z.number().nullable(),
+    quick_from_product_id: z.string().nullable(),
+    quickFromProductId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -77,5 +82,7 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     shipDistrict: z.string().nullable(),
     reserveUntil: z.date().nullable(),
     depositRequired: z.number().nullable(),
-    depositPaid: z.number().nullable()
+    depositPaid: z.number().nullable(),
+    quick_from_product_id: z.string().nullable(),
+    quickFromProductId: z.string().nullable()
   }).nullable().optional()});

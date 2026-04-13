@@ -210,40 +210,45 @@ model StrapVariantSpec {
 }
 
 model Order {
-  id                 String                  @id @default(cuid())
-  refNo              String?                 @unique(map: "Order_orderCode_key")
-  customerId         String?
-  shipPhone          String
-  shipAddress        String
-  shipWard           String?
-  shipCity           String
-  subtotal           Decimal                 @db.Decimal(12, 2)
-  shippingFee        Decimal?                @db.Decimal(12, 2)
-  status             OrderStatus             @default(DRAFT)
-  paymentStatus      PaymentStatus           @default(UNPAID)
-  paymentMethod      PaymentMethod?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  customerName       String?
-  notes              String?
-  shipDistrict       String?
-  hasShipment        Boolean
-  reserveType        ReserveType?
-  reserveUntil       DateTime?               @db.Timestamptz(6)
-  depositRequired    Decimal?                @db.Decimal(12, 2)
-  depositPaid        Decimal?                @db.Decimal(12, 2)
-  source             OrderSource             @default(ADMIN)
-  verificationStatus OrderVerificationStatus @default(VERIFIED)
-  Invoice            Invoice[]
-  customer           Customer?               @relation(fields: [customerId], references: [id])
-  items              OrderItem[]
-  Shipment           Shipment?
+  id                    String                  @id @default(cuid())
+  refNo                 String?                 @unique(map: "Order_orderCode_key")
+  customerId            String?
+  shipPhone             String
+  shipAddress           String
+  shipWard              String?
+  shipCity              String
+  subtotal              Decimal                 @db.Decimal(12, 2)
+  shippingFee           Decimal?                @db.Decimal(12, 2)
+  status                OrderStatus             @default(DRAFT)
+  paymentStatus         PaymentStatus           @default(UNPAID)
+  paymentMethod         PaymentMethod?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  customerName          String?
+  notes                 String?
+  shipDistrict          String?
+  hasShipment           Boolean
+  reserveType           ReserveType?
+  reserveUntil          DateTime?               @db.Timestamptz(6)
+  depositRequired       Decimal?                @db.Decimal(12, 2)
+  depositPaid           Decimal?                @db.Decimal(12, 2)
+  source                OrderSource             @default(ADMIN)
+  verificationStatus    OrderVerificationStatus @default(VERIFIED)
+  quick_from_product_id String?
+  quickFromProductId    String?
+  quickFlowType         orderflowtype           @default(STANDARD)
+  Invoice               Invoice[]
+  customer              Customer?               @relation(fields: [customerId], references: [id])
+  items                 OrderItem[]
+  Shipment              Shipment?
 
   @@index([customerId])
   @@index([status])
   @@index([createdAt])
   @@index([source])
   @@index([verificationStatus])
+  @@index([quickFlowType], map: "idx_order_quickFlowType")
+  @@index([quickFromProductId], map: "idx_order_quickFromProductId")
 }
 
 model OrderItem {
@@ -267,6 +272,7 @@ model OrderItem {
   serviceScope      ServiceScope?
   linkedOrderItemId String?
   customerItemNote  String?
+  createdFromFlow   orderflowtype     @default(STANDARD)
   acquisitionItem   AcquisitionItem[]
   OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
   other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
@@ -281,6 +287,7 @@ model OrderItem {
   @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
   @@index([linkedOrderItemId], map: "idx_orderitem_linked_order_item")
   @@index([serviceScope], map: "idx_orderitem_service_scope")
+  @@index([createdFromFlow], map: "idx_orderItem_createdFromFlow")
 }
 
 model Reservation {
@@ -351,6 +358,13 @@ model ServiceRequest {
   skuSnapshot             String?
   primaryImageUrlSnapshot String?
   dummy_technical_rel     String?
+  priority                String?              @default("NORMAL")
+  priority_reason         String?
+  priority_source         String?
+  priority_marked_at      DateTime?            @db.Timestamptz(6)
+  priorityReason          String?
+  prioritySource          String?
+  priorityMarkedAt        DateTime?            @db.Timestamptz(6)
   invoice                 Invoice[]
   maintenance             MaintenanceRecord[]
   customer                Customer?            @relation(fields: [customerId], references: [id])
@@ -372,6 +386,7 @@ model ServiceRequest {
   @@index([vendorId], map: "idx_service_request_vendor_id")
   @@index([technicianId])
   @@index([technicianId], map: "idx_service_request_technician_id")
+  @@index([priority, priorityMarkedAt(sort: Desc)], map: "idx_serviceRequest_priority")
 }
 
 model MaintenanceRecord {
@@ -991,24 +1006,6 @@ model AcquisitionSpecJob {
   @@index([runAfter], map: "idx_acq_spec_job_run_after")
 }
 
-model acquisition_spec_job {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  acquisition_item_id String    @unique
-  product_id          String
-  status              String    @default("PENDING")
-  attempts            Int       @default(0)
-  last_error          String?
-  priority            Int       @default(100)
-  run_after           DateTime  @default(now()) @db.Timestamptz(6)
-  started_at          DateTime? @db.Timestamptz(6)
-  finished_at         DateTime? @db.Timestamptz(6)
-  created_at          DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
-
-  @@index([product_id], map: "idx_acquisition_spec_job_product_id")
-  @@index([status, run_after, created_at], map: "idx_acquisition_spec_job_status_run_after_created_at")
-}
-
 model system_job_control {
   key           String   @id
   label         String
@@ -1456,4 +1453,15 @@ enum TechnicalIssueExecutionStatus {
   IN_PROGRESS
   DONE
   CANCELED
+}
+
+enum orderflowtype {
+  STANDARD
+  QUICK_ORDER
+}
+
+enum serviceprioritylevel {
+  NORMAL
+  HIGH
+  URGENT
 }

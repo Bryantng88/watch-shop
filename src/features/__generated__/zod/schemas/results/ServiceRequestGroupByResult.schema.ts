@@ -25,6 +25,13 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
   skuSnapshot: z.string(),
   primaryImageUrlSnapshot: z.string(),
   dummy_technical_rel: z.string(),
+  priority: z.string(),
+  priority_reason: z.string(),
+  priority_source: z.string(),
+  priority_marked_at: z.date(),
+  priorityReason: z.string(),
+  prioritySource: z.string(),
+  priorityMarkedAt: z.date(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -54,6 +61,13 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     skuSnapshot: z.number(),
     primaryImageUrlSnapshot: z.number(),
     dummy_technical_rel: z.number(),
+    priority: z.number(),
+    priority_reason: z.number(),
+    priority_source: z.number(),
+    priority_marked_at: z.number(),
+    priorityReason: z.number(),
+    prioritySource: z.number(),
+    priorityMarkedAt: z.number(),
     invoice: z.number(),
     maintenance: z.number(),
     customer: z.number(),
@@ -90,7 +104,14 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     technicianNameSnap: z.string().nullable(),
     skuSnapshot: z.string().nullable(),
     primaryImageUrlSnapshot: z.string().nullable(),
-    dummy_technical_rel: z.string().nullable()
+    dummy_technical_rel: z.string().nullable(),
+    priority: z.string().nullable(),
+    priority_reason: z.string().nullable(),
+    priority_source: z.string().nullable(),
+    priority_marked_at: z.date().nullable(),
+    priorityReason: z.string().nullable(),
+    prioritySource: z.string().nullable(),
+    priorityMarkedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -116,6 +137,13 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     technicianNameSnap: z.string().nullable(),
     skuSnapshot: z.string().nullable(),
     primaryImageUrlSnapshot: z.string().nullable(),
-    dummy_technical_rel: z.string().nullable()
+    dummy_technical_rel: z.string().nullable(),
+    priority: z.string().nullable(),
+    priority_reason: z.string().nullable(),
+    priority_source: z.string().nullable(),
+    priority_marked_at: z.date().nullable(),
+    priorityReason: z.string().nullable(),
+    prioritySource: z.string().nullable(),
+    priorityMarkedAt: z.date().nullable()
   }).nullable().optional()
 }));
