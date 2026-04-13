@@ -84,7 +84,10 @@ export default function RowActionsMenu({
     buttonClassName,
 }: Props) {
     const [open, setOpen] = React.useState(false);
+    const [openUp, setOpenUp] = React.useState(false);
+
     const wrapRef = React.useRef<HTMLDivElement | null>(null);
+    const buttonRef = React.useRef<HTMLButtonElement | null>(null);
 
     React.useEffect(() => {
         function handlePointerDown(e: MouseEvent) {
@@ -109,6 +112,24 @@ export default function RowActionsMenu({
 
     const visibleActions = actions.filter((item) => !item.hidden);
 
+    function toggleMenu() {
+        if (!open && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+
+            // Ước lượng chiều cao menu. Mỗi item ~ 50px + padding
+            const estimatedMenuHeight =
+                Math.min(Math.max(visibleActions.length, 1), 6) * 52 + 16;
+
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+
+            // Nếu dưới không đủ chỗ và trên có chỗ hơn thì bung lên
+            setOpenUp(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
+        }
+
+        setOpen((prev) => !prev);
+    }
+
     if (!visibleActions.length) {
         return (
             <button
@@ -122,10 +143,11 @@ export default function RowActionsMenu({
     }
 
     return (
-        <div ref={wrapRef} className="relative inline-flex">
+        <div ref={wrapRef} className="relative inline-flex overflow-visible">
             <button
+                ref={buttonRef}
                 type="button"
-                onClick={() => setOpen((prev) => !prev)}
+                onClick={toggleMenu}
                 className={cx(
                     "inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700",
                     open && "bg-slate-100 text-slate-700",
@@ -140,7 +162,8 @@ export default function RowActionsMenu({
             {open ? (
                 <div
                     className={cx(
-                        "absolute top-11 z-[60] min-w-[210px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]",
+                        "absolute z-[80] min-w-[210px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_16px_40px_rgba(15,23,42,0.12)]",
+                        openUp ? "bottom-11" : "top-11",
                         align === "right" ? "right-0" : "left-0"
                     )}
                     role="menu"

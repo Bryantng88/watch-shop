@@ -42,7 +42,7 @@ export default function ProductListTable({
     items.length > 0 && items.every((item) => selectedIds.includes(item.id));
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+    <div className="rounded-[24px] border border-slate-200 bg-white">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="text-sm font-semibold text-slate-950">Danh sách dữ liệu</div>
@@ -52,7 +52,7 @@ export default function ProductListTable({
         </div>
       </div>
 
-      <div className="overflow-hidden">
+      <div className="overflow-x-auto overflow-y-visible">
         <table className="min-w-full table-fixed">
           <colgroup>
             <col className="w-12" />

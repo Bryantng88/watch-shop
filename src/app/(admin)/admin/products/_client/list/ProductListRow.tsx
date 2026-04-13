@@ -311,7 +311,7 @@ export default function ProductListRow({
           ) : null}
         </div>
       </td>
-      <td className="px-4 py-4 text-right align-middle">
+      <td className="relative px-4 py-4 text-right align-middle overflow-visible">
         <RowActionMenu
           align="right"
           actions={[
