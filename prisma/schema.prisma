@@ -96,6 +96,7 @@ model Product {
   sku                String?              @unique
   nickname           String?
   specStatus         String               @default("PENDING")
+  storefrontImageKey String?
   AcquisitionItem    AcquisitionItem[]
   AcquisitionSpecJob AcquisitionSpecJob[]
   InvoiceItem        InvoiceItem[]

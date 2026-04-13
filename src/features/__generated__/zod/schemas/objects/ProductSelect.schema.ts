@@ -42,6 +42,7 @@ const makeSchema = () => z.object({
   sku: z.boolean().optional(),
   nickname: z.boolean().optional(),
   specStatus: z.boolean().optional(),
+  storefrontImageKey: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobFindManySchema)]).optional(),
   InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),

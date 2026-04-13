@@ -45,7 +45,8 @@ const productscalarwhereinputSchema = z.object({
   aiGeneratedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   sku: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   nickname: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  specStatus: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional()
+  specStatus: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  storefrontImageKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ProductScalarWhereInputObjectSchema: z.ZodType<Prisma.ProductScalarWhereInput> = productscalarwhereinputSchema as unknown as z.ZodType<Prisma.ProductScalarWhereInput>;
 export const ProductScalarWhereInputObjectZodSchema = productscalarwhereinputSchema;

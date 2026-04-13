@@ -34,6 +34,7 @@ const makeSchema = () => z.object({
   sku: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   nickname: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   specStatus: SortOrderSchema.optional(),
+  storefrontImageKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ProductCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => ProductAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ProductMaxOrderByAggregateInputObjectSchema).optional(),

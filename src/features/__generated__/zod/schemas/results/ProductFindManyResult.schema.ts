@@ -26,6 +26,7 @@ export const ProductFindManyResultSchema = z.object({
   sku: z.string().optional(),
   nickname: z.string().optional(),
   specStatus: z.string(),
+  storefrontImageKey: z.string().optional(),
   AcquisitionItem: z.array(z.unknown()),
   AcquisitionSpecJob: z.array(z.unknown()),
   InvoiceItem: z.array(z.unknown()),

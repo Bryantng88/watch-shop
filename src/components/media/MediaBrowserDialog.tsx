@@ -3,7 +3,13 @@
 import * as React from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
 
-export type SharedMediaProfile = "inline" | "edit" | "sold" | "technical-inline";
+export type SharedMediaProfile =
+    | "inline"
+    | "edit"
+    | "sold"
+    | "technical-inline"
+    | "storefront-active"
+    | "storefront-chosen";
 
 export type SharedMediaItem = {
     key: string;
@@ -42,7 +48,11 @@ export default function MediaBrowserDialog({
                 ? "Thư mục ảnh edit"
                 : profile === "sold"
                     ? "Thư mục ảnh sold"
-                    : "Thư mục ảnh inline";
+                    : profile === "storefront-active"
+                        ? "Thư mục: product/storefront/active"
+                        : profile === "storefront-chosen"
+                            ? "Thư mục: product/storefront/chosen"
+                            : "Thư mục ảnh inline";
 
     const loadItems = React.useCallback(async () => {
         try {

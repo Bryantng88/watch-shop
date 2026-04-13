@@ -48,6 +48,7 @@ import {
     sanitizeDeep,
     toNullableNumber,
 } from './ProductEditHelpers';
+import MediaPickerInline from '@/components/media/MediaPickerInline';
 
 type Picked = { key: string; url: string };
 
@@ -310,6 +311,7 @@ export default function EditProductForm({
         normalizedInitial.postContent ??
         ''
     );
+    const [storefrontSaving, setStorefrontSaving] = useState(false);
 
     useEffect(() => {
         setFormData(normalizedInitial);
@@ -398,21 +400,24 @@ export default function EditProductForm({
     const previewImageUrl = useMemo(
         () =>
             buildDisplayImageUrl({
+                storefrontImageKey:
+                    formData.storefrontImageKey ?? normalizedInitial.storefrontImageKey ?? '',
                 primaryImageUrl:
                     formData.primaryImageUrl ?? normalizedInitial.primaryImageUrl ?? '',
                 image: formData.image ?? normalizedInitial.image ?? [],
                 images: formData.images ?? normalizedInitial.images ?? [],
             }),
         [
+            formData.storefrontImageKey,
             formData.primaryImageUrl,
             formData.image,
             formData.images,
+            normalizedInitial.storefrontImageKey,
             normalizedInitial.primaryImageUrl,
             normalizedInitial.image,
             normalizedInitial.images,
         ]
     );
-
     const aiImages = useMemo(() => {
         if (Array.isArray(images) && images.length > 0) return images;
         if (previewImageUrl) return [{ key: 'primary', url: previewImageUrl }];
@@ -496,7 +501,60 @@ export default function EditProductForm({
             })),
         }));
     }
+    async function handlePickStorefrontImage(fileKey: string) {
+        if (!fileKey) return;
 
+        try {
+            setStorefrontSaving(true);
+            setErr(null);
+
+            const res = await fetch(`/api/admin/products/${id}/storefront-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileKey }),
+            });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                throw new Error(data?.error || 'Không cập nhật được ảnh đại diện bán hàng');
+            }
+
+            const nextKey = data?.storefrontImageKey ?? fileKey;
+
+            setFormData((prev) => ({
+                ...prev,
+                storefrontImageKey: nextKey,
+                storefrontImageUrl:
+                    data?.storefrontImageUrl ??
+                    `/api/media/sign?key=${encodeURIComponent(nextKey)}`,
+            }));
+
+            snapshotRef.current = {
+                ...snapshotRef.current,
+                storefrontImageKey: nextKey,
+                storefrontImageUrl:
+                    data?.storefrontImageUrl ??
+                    `/api/media/sign?key=${encodeURIComponent(nextKey)}`,
+            };
+
+            notify.success({
+                title: 'Đã cập nhật ảnh đại diện',
+                message: 'Ảnh storefront đã được chọn và lưu.',
+            });
+
+            router.refresh();
+        } catch (e: any) {
+            const message = e?.message || 'Không cập nhật được ảnh đại diện bán hàng';
+            setErr(message);
+            notify.error({
+                title: 'Cập nhật thất bại',
+                message,
+            });
+        } finally {
+            setStorefrontSaving(false);
+        }
+    }
     function handleStrapModeChange(mode: 'INCLUDED' | 'INVENTORY') {
         setFormData((prev) => ({
             ...prev,
@@ -1067,6 +1125,45 @@ export default function EditProductForm({
                         defaultOpen
                     >
                         <div className="space-y-6">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-semibold text-slate-900">
+                                            Ảnh đại diện bán hàng
+                                        </div>
+                                        <div className="mt-1 text-sm leading-6 text-slate-500">
+                                            Chọn riêng 1 ảnh cho web bán hàng. Ảnh sẽ lấy từ thư mục{" "}
+                                            <span className="font-medium text-slate-700">
+                                                product/storefront/active
+                                            </span>{" "}
+                                            và khi chọn xong sẽ được chuyển sang{" "}
+                                            <span className="font-medium text-slate-700">
+                                                product/storefront/chosen
+                                            </span>.
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <MediaPickerInline
+                                            value={formData.storefrontImageKey ?? ''}
+                                            onChange={handlePickStorefrontImage}
+                                            pending={storefrontSaving}
+                                            profile="storefront-active"
+                                            className="h-24 w-24 rounded-2xl"
+                                        />
+                                    </div>
+                                </div>
+
+                                {formData.storefrontImageKey ? (
+                                    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                                        Đang dùng ảnh storefront: {formData.storefrontImageKey}
+                                    </div>
+                                ) : (
+                                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                        Chưa chọn ảnh đại diện bán hàng riêng.
+                                    </div>
+                                )}
+                            </div>
                             <div className="max-w-full">
                                 <ImagePicker value={images} onChange={onImagesChange} />
                             </div>
@@ -1305,8 +1402,8 @@ export default function EditProductForm({
                                         </div>
                                         <div
                                             className={`mt-1 font-medium ${priceGapVsCost != null && priceGapVsCost < 0
-                                                    ? 'text-rose-600'
-                                                    : 'text-slate-900'
+                                                ? 'text-rose-600'
+                                                : 'text-slate-900'
                                                 }`}
                                         >
                                             {priceGapVsCost == null

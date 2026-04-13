@@ -13,7 +13,10 @@ export const dynamic = "force-dynamic";
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
 
 function getProfile(value: string | null): MediaProfile {
-    if (value === "edit" || value === "sold") return value;
+    if (value === "edit") return "edit";
+    if (value === "sold") return "sold";
+    if (value === "storefront-active") return "storefront-active";
+    if (value === "storefront-chosen") return "storefront-chosen";
     return "inline";
 }
 

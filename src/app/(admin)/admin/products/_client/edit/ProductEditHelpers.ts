@@ -35,6 +35,7 @@ export const PRODUCT_KEYS = [
     'description',
     'categoryId',
     'primaryImageUrl',
+    'storefrontImageKey',
     'seoDescription',
     'tag',
     'nickname',
@@ -120,43 +121,54 @@ export function mergeCurrentValueOption(options: Option[] | undefined, value: an
     return [{ label: strValue, value: strValue }, ...base];
 }
 
-export function toNullableNumber(value: any) {
+export function toNullableNumber(value: any): number | null {
     if (value === '' || value === null || value === undefined) return null;
-    const num = Number(value);
-    return Number.isFinite(num) ? num : null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
 }
 
-export function parseStoredStrapAttachment(raw: any) {
+export function parseStoredStrapAttachment(raw: unknown) {
     if (typeof raw !== 'string' || !raw.startsWith(STRAP_ATTACHMENT_PREFIX)) return null;
+
     try {
         const parsed = JSON.parse(raw.slice(STRAP_ATTACHMENT_PREFIX.length));
-        return parsed && typeof parsed === 'object' ? parsed : null;
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (!(parsed as any).variantId || !(parsed as any).productId) return null;
+        return parsed as {
+            productId: string;
+            variantId: string;
+            title?: string | null;
+            vendorName?: string | null;
+            costPrice?: number | null;
+            price?: number | null;
+            strapSpec?: {
+                lugWidthMM?: number | null;
+                buckleWidthMM?: number | null;
+                color?: string | null;
+                material?: string | null;
+                quickRelease?: boolean | null;
+            } | null;
+            baseName?: string | null;
+        };
     } catch {
         return null;
     }
 }
 
-export function signedImageUrl(key?: string | null) {
-    if (!key) return '';
-    return `/api/media/sign?key=${encodeURIComponent(key)}`;
-}
-
-export function isAbsoluteUrl(value?: string | null) {
-    if (!value) return false;
+function isAbsoluteUrl(value: string) {
     return /^https?:\/\//i.test(value) || value.startsWith('data:');
 }
 
-export function looksLikeStorageKey(value?: string | null) {
-    if (!value) return false;
-    const v = String(value).trim();
-
+function looksLikeStorageKey(value: string) {
     return (
-        v.startsWith('products/') ||
-        v.startsWith('/products/') ||
-        v.startsWith('inline/') ||
-        v.startsWith('/inline/') ||
-        v.includes('/chosen/')
+        value.includes('/') &&
+        !value.startsWith('/api/') &&
+        !value.startsWith('/')
     );
+}
+
+export function signedImageUrl(key: string) {
+    return `/api/media/sign?key=${encodeURIComponent(key)}`;
 }
 
 export function normalizeRenderableImageUrl(value?: string | null) {
@@ -178,10 +190,14 @@ export function normalizeRenderableImageUrl(value?: string | null) {
 }
 
 export function buildDisplayImageUrl(input?: {
+    storefrontImageKey?: string | null;
     primaryImageUrl?: string | null;
     image?: Array<{ fileKey?: string | null; url?: string | null }>;
     images?: Array<{ fileKey?: string | null; url?: string | null }>;
 }) {
+    const storefrontKey = String(input?.storefrontImageKey ?? '').trim();
+    if (storefrontKey) return signedImageUrl(storefrontKey);
+
     const firstFromImage = input?.image?.[0];
     const firstFromImages = input?.images?.[0];
 
@@ -253,6 +269,10 @@ export function normalizeInitial(initial: any): NormalizedEditProductState {
         images,
         nickname: initial?.nickname ?? '',
         primaryImageUrl: normalizeRenderableImageUrl(initial?.primaryImageUrl ?? ''),
+        storefrontImageKey: initial?.storefrontImageKey ?? '',
+        storefrontImageUrl: initial?.storefrontImageKey
+            ? signedImageUrl(initial.storefrontImageKey)
+            : '',
         tag: initial?.tag ?? '',
         strapMode: storedStrapAttachment?.variantId ? 'INVENTORY' : 'INCLUDED',
         linkedStrapProductId: storedStrapAttachment?.productId ?? '',

@@ -39,7 +39,8 @@ const makeSchema = () => z.object({
   aiGeneratedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   sku: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   nickname: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  specStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional()
+  specStatus: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  storefrontImageKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const ProductUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.ProductUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductUpdateManyMutationInput>;
 export const ProductUpdateManyMutationInputObjectZodSchema = makeSchema();

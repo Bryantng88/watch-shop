@@ -30,7 +30,8 @@ const makeSchema = () => z.object({
   aiGeneratedAt: z.coerce.date().optional().nullable(),
   sku: z.string().optional().nullable(),
   nickname: z.string().optional().nullable(),
-  specStatus: z.string().optional()
+  specStatus: z.string().optional(),
+  storefrontImageKey: z.string().optional().nullable()
 }).strict();
 export const ProductCreateManyVendorInputObjectSchema: z.ZodType<Prisma.ProductCreateManyVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateManyVendorInput>;
 export const ProductCreateManyVendorInputObjectZodSchema = makeSchema();

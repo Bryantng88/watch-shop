@@ -42,6 +42,7 @@ const makeSchema = () => z.object({
   sku: z.string().optional().nullable(),
   nickname: z.string().optional().nullable(),
   specStatus: z.string().optional(),
+  storefrontImageKey: z.string().optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema).optional(),
   maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema).optional(),

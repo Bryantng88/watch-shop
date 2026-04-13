@@ -32,6 +32,7 @@ export const ProductInputSchema = z.object({
     sku: z.string().optional().nullable(),
     nickname: z.string().optional().nullable(),
     specStatus: z.string(),
+    storefrontImageKey: z.string().optional().nullable(),
     AcquisitionItem: z.array(z.unknown()),
     AcquisitionSpecJob: z.array(z.unknown()),
     InvoiceItem: z.array(z.unknown()),

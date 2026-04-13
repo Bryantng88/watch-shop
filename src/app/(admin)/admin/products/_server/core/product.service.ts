@@ -4,6 +4,7 @@ import * as prodRepo from "./product.repo";
 import { generateRuleBasedProductContent } from "../content/product-content.generator";
 import { z } from "zod";
 import { computeEffectivePrice } from "../../helpers/price";
+import { moveMediaObject } from "@/server/lib/media-storage";
 
 import { MIN_IMAGES, getRequiredWatchSpecFields, hasValue as hasRuleValue } from "../shared/rules";
 import { buildSpecBulletsFromProductABC, buildHashtagsFromProduct } from "../shared/helper";
@@ -810,4 +811,42 @@ export async function consignToProduct(input: {
 }
 
 
+export async function setStorefrontImage(productId: string, fileKey: string) {
+    const rawKey = String(fileKey ?? "").trim();
+    if (!rawKey) {
+        throw new Error("Thiếu fileKey ảnh đại diện bán hàng.");
+    }
 
+    return prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+            where: { id: productId },
+            select: { id: true, storefrontImageKey: true },
+        });
+
+        if (!product) {
+            throw new Error("Không tìm thấy sản phẩm.");
+        }
+
+        let finalKey = rawKey;
+
+        if (rawKey.startsWith("product/storefront/active/")) {
+            const moved = await moveMediaObject({
+                fromKey: rawKey,
+                toPrefix: "product/storefront/chosen",
+                deleteSource: true,
+                overwrite: false,
+            });
+
+            finalKey = moved.key;
+        }
+
+        const saved = await prodRepo.setProductStorefrontImage(tx, productId, finalKey);
+
+        return {
+            ...saved,
+            storefrontImageUrl: finalKey
+                ? `/api/media/sign?key=${encodeURIComponent(finalKey)}`
+                : null,
+        };
+    });
+}

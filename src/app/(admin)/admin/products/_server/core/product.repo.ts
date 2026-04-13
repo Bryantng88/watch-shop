@@ -63,6 +63,7 @@ export const productForBulkPostArgs = Prisma.validator<Prisma.ProductDefaultArgs
         brandId: true,
         categoryId: true,
         primaryImageUrl: true,
+        storefrontImageKey: true,
         image: {
             where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } },
             select: { id: true },
@@ -653,7 +654,8 @@ export async function listAdminProducts(
             contentStatus: p.contentStatus,
 
             categoryId: p.categoryId ?? null,
-            primaryImageUrl: p.image?.[0]?.fileKey ?? p.primaryImageUrl,
+            storefrontImageKey: p.storefrontImageKey ?? null,
+            primaryImageUrl: p.storefrontImageKey ?? p.image?.[0]?.fileKey ?? p.primaryImageUrl,
             minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
             salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
             variantId: latestVariant?.id ?? null,
@@ -952,6 +954,7 @@ export async function getAdminProductRow(tx: DB, id: string) {
             contentStatus: true,
             categoryId: true,
             primaryImageUrl: true,
+            storefrontImageKey: true,
             createdAt: true,
             updatedAt: true,
             brand: { select: { id: true, name: true } },
@@ -997,6 +1000,7 @@ export async function getAdminProductRow(tx: DB, id: string) {
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
         brand: p.brand?.name ?? null,
+        storefrontImageKey: p.storefrontImageKey ?? null,
         brandId: p.brand?.id ?? null,
         vendorName: p.vendor?.name ?? null,
         vendorId: p.vendor?.id ?? null,
@@ -1359,7 +1363,9 @@ export async function replaceProductImages(
         },
     });
 
-    const normalized = images.filter((img) => !!String(img.fileKey ?? "").trim()).slice(0, 4);
+    const normalized = images
+        .filter((img) => !!String(img.fileKey ?? "").trim())
+        .slice(0, 4);
 
     if (normalized.length) {
         await db.productImage.createMany({
@@ -1375,11 +1381,16 @@ export async function replaceProductImages(
 
     return db.product.update({
         where: { id: productId },
-        data: { primaryImageUrl: normalized[0]?.fileKey ?? null },
-        select: { id: true, primaryImageUrl: true },
+        data: {
+            primaryImageUrl: normalized[0]?.fileKey ?? null,
+        },
+        select: {
+            id: true,
+            primaryImageUrl: true,
+            storefrontImageKey: true,
+        },
     });
 }
-
 export async function upsertWatchSpecForAdmin(
     tx: DB,
     productId: string,
@@ -1856,3 +1867,24 @@ export async function getProductServiceHistory(tx: DB, productId: string) {
 }
 
 
+export async function setProductStorefrontImage(
+    tx: DB,
+    productId: string,
+    storefrontImageKey: string | null
+) {
+    const db = dbOrTx(tx);
+
+    return db.product.update({
+        where: { id: productId },
+        data: {
+            storefrontImageKey: storefrontImageKey?.trim() || null,
+        },
+        select: {
+            id: true,
+            title: true,
+            primaryImageUrl: true,
+            storefrontImageKey: true,
+            updatedAt: true,
+        },
+    });
+}

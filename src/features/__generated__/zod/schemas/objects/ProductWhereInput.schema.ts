@@ -65,6 +65,7 @@ const productwhereinputSchema = z.object({
   sku: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   nickname: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   specStatus: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  storefrontImageKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),

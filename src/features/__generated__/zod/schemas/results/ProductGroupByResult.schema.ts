@@ -20,6 +20,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
   sku: z.string(),
   nickname: z.string(),
   specStatus: z.string(),
+  storefrontImageKey: z.string(),
   _count: z.object({
     id: z.number(),
     slug: z.number(),
@@ -46,6 +47,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
     sku: z.number(),
     nickname: z.number(),
     specStatus: z.number(),
+    storefrontImageKey: z.number(),
     AcquisitionItem: z.number(),
     AcquisitionSpecJob: z.number(),
     InvoiceItem: z.number(),
@@ -86,7 +88,8 @@ export const ProductGroupByResultSchema = z.array(z.object({
     aiGeneratedAt: z.date().nullable(),
     sku: z.string().nullable(),
     nickname: z.string().nullable(),
-    specStatus: z.string().nullable()
+    specStatus: z.string().nullable(),
+    storefrontImageKey: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -107,6 +110,7 @@ export const ProductGroupByResultSchema = z.array(z.object({
     aiGeneratedAt: z.date().nullable(),
     sku: z.string().nullable(),
     nickname: z.string().nullable(),
-    specStatus: z.string().nullable()
+    specStatus: z.string().nullable(),
+    storefrontImageKey: z.string().nullable()
   }).nullable().optional()
 }));

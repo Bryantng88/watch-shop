@@ -25,6 +25,7 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     sku: z.number(),
     nickname: z.number(),
     specStatus: z.number(),
+    storefrontImageKey: z.number(),
     AcquisitionItem: z.number(),
     AcquisitionSpecJob: z.number(),
     InvoiceItem: z.number(),
@@ -65,7 +66,8 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     aiGeneratedAt: z.date().nullable(),
     sku: z.string().nullable(),
     nickname: z.string().nullable(),
-    specStatus: z.string().nullable()
+    specStatus: z.string().nullable(),
+    storefrontImageKey: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -86,5 +88,6 @@ export const ProductAggregateResultSchema = z.object({  _count: z.object({
     aiGeneratedAt: z.date().nullable(),
     sku: z.string().nullable(),
     nickname: z.string().nullable(),
-    specStatus: z.string().nullable()
+    specStatus: z.string().nullable(),
+    storefrontImageKey: z.string().nullable()
   }).nullable().optional()});

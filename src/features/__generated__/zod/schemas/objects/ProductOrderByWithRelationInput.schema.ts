@@ -43,6 +43,7 @@ const makeSchema = () => z.object({
   sku: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   nickname: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   specStatus: SortOrderSchema.optional(),
+  storefrontImageKey: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
