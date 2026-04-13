@@ -6,7 +6,7 @@ import * as orderRepo from "./order.repo";
 import { calcUnitPriceAgreed } from "../utils/calculate-price-agreed";
 import { ServiceScope, PaymentMethod, Prisma, OrderItemKind, ReserveType, OrderStatus, OrderSource, OrderVerificationStatus, PrismaClient } from "@prisma/client";
 import * as customerRepo from "@/app/(admin)/admin/customers/_server/customer.repo"
-import { updateProductVariantStt } from "../../products/_server/product.repo";
+import { updateProductVariantStt } from "../../products/_server/core/product.repo";
 import * as serviceReqtService from "../../services/_server/service_request.service";
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service"

@@ -16,6 +16,8 @@ const makeSchema = () => z.object({
   finishedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  runAfter: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority: SortOrderSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional()
 }).strict();

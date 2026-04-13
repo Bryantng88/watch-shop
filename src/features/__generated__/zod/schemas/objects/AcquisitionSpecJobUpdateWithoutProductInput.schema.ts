@@ -16,6 +16,8 @@ const makeSchema = () => z.object({
   finishedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  runAfter: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionSpecJobUpdateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobUpdateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobUpdateWithoutProductInput>;

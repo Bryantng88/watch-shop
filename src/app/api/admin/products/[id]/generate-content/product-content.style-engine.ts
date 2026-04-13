@@ -1,4 +1,4 @@
-import type { GeneratedPayload } from "@/app/(admin)/admin/products/_server/product-ai.type";
+import type { GeneratedPayload } from "@/app/(admin)/admin/products/_server/ai/product-ai.type";
 
 export type StyleEngineCheck = {
     score: number;

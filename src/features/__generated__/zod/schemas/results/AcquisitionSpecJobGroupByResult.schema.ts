@@ -10,6 +10,8 @@ export const AcquisitionSpecJobGroupByResultSchema = z.array(z.object({
   finishedAt: z.date(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  runAfter: z.date(),
+  priority: z.number().int(),
   _count: z.object({
     id: z.number(),
     acquisitionItemId: z.number(),
@@ -21,14 +23,18 @@ export const AcquisitionSpecJobGroupByResultSchema = z.array(z.object({
     finishedAt: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    runAfter: z.number(),
+    priority: z.number(),
     AcquisitionItem: z.number(),
     Product: z.number()
   }).optional(),
   _sum: z.object({
-    attempts: z.number().nullable()
+    attempts: z.number().nullable(),
+    priority: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    attempts: z.number().nullable()
+    attempts: z.number().nullable(),
+    priority: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -40,7 +46,9 @@ export const AcquisitionSpecJobGroupByResultSchema = z.array(z.object({
     startedAt: z.date().nullable(),
     finishedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    runAfter: z.date().nullable(),
+    priority: z.number().int().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -52,6 +60,8 @@ export const AcquisitionSpecJobGroupByResultSchema = z.array(z.object({
     startedAt: z.date().nullable(),
     finishedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    runAfter: z.date().nullable(),
+    priority: z.number().int().nullable()
   }).nullable().optional()
 }));

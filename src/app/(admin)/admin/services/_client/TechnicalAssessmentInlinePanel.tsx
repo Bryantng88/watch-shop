@@ -1,1 +1,0 @@
-export { default } from "./technical-assessment/inline-panel";

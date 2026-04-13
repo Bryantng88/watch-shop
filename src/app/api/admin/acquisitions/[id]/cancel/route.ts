@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cancelAcquisition } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import { cancelAcquisition } from "@/old_files/Acquisition_server/acquisition.service";
 
 export async function POST(
     _req: Request,

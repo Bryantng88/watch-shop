@@ -1,0 +1,19 @@
+import * as z from 'zod';
+
+// prettier-ignore
+export const acquisition_spec_jobInputSchema = z.object({
+    id: z.string(),
+    acquisition_item_id: z.string(),
+    product_id: z.string(),
+    status: z.string(),
+    attempts: z.number().int(),
+    last_error: z.string().optional().nullable(),
+    priority: z.number().int(),
+    run_after: z.date(),
+    started_at: z.date().optional().nullable(),
+    finished_at: z.date().optional().nullable(),
+    created_at: z.date(),
+    updated_at: z.date()
+}).strict();
+
+export type acquisition_spec_jobInputType = z.infer<typeof acquisition_spec_jobInputSchema>;

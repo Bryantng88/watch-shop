@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service"
 
 function serializeError(error: unknown) {
     if (error instanceof Error) {

@@ -208,6 +208,32 @@ export default function ProductDetailClient({
     const [activeImage, setActiveImage] = useState<string>(gallery[0] ?? "");
     const [content, setContent] = useState(product?.content?.generatedContent ?? product?.postContent ?? "");
     const [promptNote, setPromptNote] = useState(product?.content?.promptNote ?? product?.aiPromptUsed ?? "");
+    const [specBullets, setSpecBullets] = useState<string[]>(
+        Array.isArray(product?.content?.specBullets) ? product.content.specBullets : []
+    );
+    const [hashtags, setHashtags] = useState<string[]>(
+        Array.isArray(product?.content?.hashtags) ? product.content.hashtags : []
+    );
+
+    const bulletText = useMemo(() => {
+        return (specBullets ?? [])
+            .filter(Boolean)
+            .map((item) => `▪️ ${String(item).trim()}`)
+            .join("\n");
+    }, [specBullets]);
+
+    const hashtagText = useMemo(() => {
+        return (hashtags ?? [])
+            .filter(Boolean)
+            .map((tag) => String(tag).trim())
+            .join(" ");
+    }, [hashtags]);
+
+    const fullPostText = useMemo(() => {
+        return [content?.trim(), bulletText, hashtagText]
+            .filter((part) => part && String(part).trim().length > 0)
+            .join("\n\n");
+    }, [content, bulletText, hashtagText]);
     const [saving, setSaving] = useState(false);
     const [contentStatus, setContentStatus] = useState<string | null>(product?.contentStatus ?? null);
     const [generatedAt, setGeneratedAt] = useState<string | null>(
@@ -292,6 +318,8 @@ export default function ProductDetailClient({
 
             setContentStatus(json?.product?.contentStatus ?? "DRAFT");
             setGeneratedAt(json?.content?.generatedAt ?? new Date().toISOString());
+            setSpecBullets(Array.isArray(json?.content?.specBullets) ? json.content.specBullets : []);
+            setHashtags(Array.isArray(json?.content?.hashtags) ? json.content.hashtags : []);
 
             notify.success({
                 title: "Đã lưu",
@@ -306,7 +334,35 @@ export default function ProductDetailClient({
             setSaving(false);
         }
     }
+    async function handleCopyFullPost() {
+        try {
+            await navigator.clipboard.writeText(fullPostText || "");
+            notify.success({
+                title: "Đã copy",
+                message: "Đã copy toàn bộ bài đăng.",
+            });
+        } catch {
+            notify.error({
+                title: "Copy thất bại",
+                message: "Không copy được toàn bộ bài đăng.",
+            });
+        }
+    }
 
+    async function handleCopyHashtags() {
+        try {
+            await navigator.clipboard.writeText(hashtagText || "");
+            notify.success({
+                title: "Đã copy",
+                message: "Đã copy hashtags.",
+            });
+        } catch {
+            notify.error({
+                title: "Copy thất bại",
+                message: "Không copy được hashtags.",
+            });
+        }
+    }
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -495,33 +551,88 @@ export default function ProductDetailClient({
                             </div>
                         }
                     >
-                        <div className="space-y-4">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Nội dung
-                                </label>
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows={14}
-                                    placeholder="Dán nội dung bài đăng tại đây..."
-                                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
-                                />
-                            </div>
+                        <div className="space-y-5">
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Prompt / ghi chú
-                                </label>
-                                <textarea
-                                    value={promptNote}
-                                    onChange={(e) => setPromptNote(e.target.value)}
-                                    rows={4}
-                                    placeholder="Ví dụ: nhấn mạnh case tank, mặt đá, hàng NOS..."
-                                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900"
-                                />
-                            </div>
 
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">
+                                            Preview bài đăng hoàn chỉnh
+                                        </div>
+                                        <div className="mt-1 text-xs text-slate-500">
+                                            Ghép sẵn nội dung + bullet spec + hashtag để copy đăng Facebook / Instagram nhanh.
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyHashtags}
+                                            className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                                        >
+                                            Copy hashtags
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyFullPost}
+                                            className="inline-flex items-center rounded-2xl border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800"
+                                        >
+                                            Copy full post
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <textarea
+                                    value={fullPostText}
+                                    readOnly
+                                    rows={16}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none"
+                                />
+
+                                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            Bullet spec
+                                        </div>
+                                        {specBullets.length ? (
+                                            <div className="space-y-2">
+                                                {specBullets.map((item, idx) => (
+                                                    <div
+                                                        key={`${item}-${idx}`}
+                                                        className="text-sm leading-6 text-slate-700"
+                                                    >
+                                                        ▪️ {item}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-slate-500">Chưa có bullet spec.</div>
+                                        )}
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            Hashtags
+                                        </div>
+                                        {hashtags.length ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {hashtags.map((tag, idx) => (
+                                                    <span
+                                                        key={`${tag}-${idx}`}
+                                                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700"
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-slate-500">Chưa có hashtag.</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                                     <span>Content status: <b className="text-slate-700">{contentStatus || "-"}</b></span>

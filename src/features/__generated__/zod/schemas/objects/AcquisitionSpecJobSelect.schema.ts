@@ -14,6 +14,8 @@ const makeSchema = () => z.object({
   finishedAt: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  runAfter: z.boolean().optional(),
+  priority: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemArgsObjectSchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();

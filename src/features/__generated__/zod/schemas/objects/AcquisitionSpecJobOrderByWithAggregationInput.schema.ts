@@ -19,6 +19,8 @@ const makeSchema = () => z.object({
   finishedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  runAfter: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  priority: SortOrderSchema.optional(),
   _count: z.lazy(() => AcquisitionSpecJobCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => AcquisitionSpecJobAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => AcquisitionSpecJobMaxOrderByAggregateInputObjectSchema).optional(),

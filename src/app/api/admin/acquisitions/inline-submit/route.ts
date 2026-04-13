@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
 
 const WatchLineSchema = z.object({
     id: z.string(),

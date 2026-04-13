@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Plus, ScanSearch, Wrench } from "lucide-react";
+import { AlertTriangle, ImagePlus, Plus, ScanSearch, Wrench } from "lucide-react";
 import { useNotify } from "@/components/feedback/AppToastProvider";
 import TechnicalImagePicker from "@/components/media/TechnicalImagePicker";
-import { ImagePlus } from "lucide-react";
 
 import {
     FormState,
@@ -26,20 +25,16 @@ import {
 import {
     Button,
     Field,
-    ScorePill,
     SectionCard,
     SelectInput,
     StatusToggle,
     TextInput,
 } from "./primitives";
 import { MovementIssueRow, StaticIssueSummary } from "./issue-rows";
-
 import QuickIssueCard from "./quick-issue-card";
-import { CollapsibleDefects, TechnicalFinalSummary } from "./final-summary";
+import { CollapsibleDefects } from "./final-summary";
 
-
-
-const QUICK_PANEL_HEIGHT = "h-[340px]";
+const QUICK_PANEL_HEIGHT = "h-[190px]";
 
 function cosmeticActionLabel(action?: CosmeticAction) {
     const map: Record<string, string> = {
@@ -64,6 +59,42 @@ function crownActionLabel(action?: string) {
         WATERPROOF: "Chống nước",
     };
     return action ? map[action] || action : undefined;
+}
+
+function QuickIssueRowCard({
+    title,
+    subtitle,
+    executionLabel,
+    costText,
+    children,
+}: {
+    title: string;
+    subtitle?: string;
+    executionLabel?: string;
+    costText?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100/70 shadow-inner">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white/60 px-5 py-4">
+                <div>
+                    <div className="text-sm font-semibold text-slate-900">{title}</div>
+                    <div className="mt-1 text-sm text-sky-700">{subtitle || "Đang soạn"}</div>
+                </div>
+
+                <div className="text-right">
+                    <div className="text-sm font-semibold text-slate-900">
+                        {executionLabel || "Nội bộ"}
+                    </div>
+                    <div className="mt-1 text-sm text-slate-500">
+                        Chi phí dự kiến {costText || "0đ"}
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-5 py-5">{children}</div>
+        </div>
+    );
 }
 
 function QuickIssueDraftEditor({
@@ -100,8 +131,9 @@ function QuickIssueDraftEditor({
     }
 
     const isVendor = value.execution === "VENDOR";
+
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="grid gap-4 md:grid-cols-12">
                 <div className="md:col-span-5">
                     <Field label={`${title} - phương án xử lý`}>
@@ -203,8 +235,9 @@ function CrownIssueDraftEditor({
     }
 
     const isVendor = value.execution === "VENDOR";
+
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="grid gap-4 md:grid-cols-12">
                 <div className="md:col-span-5">
                     <Field label="Núm - phương án xử lý">
@@ -444,7 +477,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
         }
 
         setForm(next);
-    }, [assessment, inheritedMachineType, technicalIssues]);
+    }, [assessment, inheritedMachineType, panel?.serviceRequest?.movementCalibre, technicalIssues]);
 
     const caseDefectLabels = form.appearance.case.issues
         .map((code) => caseDefs.find((x: any) => x.code === code)?.label)
@@ -485,36 +518,41 @@ export default function TechnicalAssessmentInlinePanelContainer({
         parseMoney(form.dialIssue.enabled ? form.dialIssue.estimatedCost : "") +
         parseMoney(form.crownIssue.status === "ISSUE" ? form.crownIssue.cost : "");
     const totalCost = movementCost + issueProposalCost;
+
     const openQuickIssueCount = [
-        form.caseIssue?.enabled,
-        form.crystalIssue?.enabled,
-        form.dialIssue?.enabled,
-        form.crownIssue?.enabled,
+        form.caseIssue.enabled,
+        form.crystalIssue.enabled,
+        form.dialIssue.enabled,
+        form.crownIssue.status === "ISSUE",
     ].filter(Boolean).length;
+
     const quickIssueSummary = {
-        caseIssue: form.caseIssue?.enabled
-            ? form.caseIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+        caseIssue: form.caseIssue.enabled
+            ? form.caseIssue.summary || "Đang chuẩn bị ghi nhận issue."
             : "Không phát sinh issue ở hạng mục này.",
-
-        crystalIssue: form.crystalIssue?.enabled
-            ? form.crystalIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+        crystalIssue: form.crystalIssue.enabled
+            ? form.crystalIssue.summary || "Đang chuẩn bị ghi nhận issue."
             : "Không phát sinh issue ở hạng mục này.",
-
-        dialIssue: form.dialIssue?.enabled
-            ? form.dialIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+        dialIssue: form.dialIssue.enabled
+            ? form.dialIssue.summary || "Đang chuẩn bị ghi nhận issue."
             : "Không phát sinh issue ở hạng mục này.",
-
-        crownIssue: form.crownIssue?.enabled
-            ? form.crownIssue?.summary || "Đang chuẩn bị ghi nhận issue."
+        crownIssue: form.crownIssue.status === "ISSUE"
+            ? form.crownIssue.summary || "Đang chuẩn bị ghi nhận issue."
             : "Không phát sinh issue ở hạng mục này.",
     };
+
     function addMovementLine() {
         if (isLocked) return;
         setForm((prev) => ({
             ...prev,
             movementLines: [
                 ...prev.movementLines,
-                { id: crypto.randomUUID?.() || String(Math.random()), execution: "INHOUSE", cost: "", isFromBoard: false },
+                {
+                    id: crypto.randomUUID?.() || String(Math.random()),
+                    execution: "INHOUSE",
+                    cost: "",
+                    isFromBoard: false,
+                },
             ],
         }));
     }
@@ -583,8 +621,6 @@ export default function TechnicalAssessmentInlinePanelContainer({
                 }
             }
         }
-
-
     }
 
     async function handleSave() {
@@ -800,7 +836,6 @@ export default function TechnicalAssessmentInlinePanelContainer({
                     </Field>
                 </div>
 
-
                 {form.movementStatus === "ISSUE" ? (
                     <div className="space-y-5">
                         <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
@@ -817,21 +852,22 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-slate-200 bg-slate-100/70 p-4 shadow-inner">                            <div className="mb-4 flex items-center justify-between">
-                            <div>
-                                <div className="text-sm font-semibold text-slate-900">Các dòng xử lý máy</div>
-                                <div className="text-sm text-slate-500">
-                                    Dòng đã tạo issue sẽ khóa lại để chỉ hiển thị tổng quát. Dòng mới vẫn có thể chỉnh sửa.
+                        <div className="rounded-2xl border border-slate-200 bg-slate-100/70 p-4 shadow-inner">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-900">Các dòng xử lý máy</div>
+                                    <div className="text-sm text-slate-500">
+                                        Dòng đã tạo issue sẽ khóa lại để chỉ hiển thị tổng quát. Dòng mới vẫn có thể chỉnh sửa.
+                                    </div>
                                 </div>
-                            </div>
 
-                            {!isLocked ? (
-                                <Button type="button" onClick={addMovementLine}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Thêm dòng
-                                </Button>
-                            ) : null}
-                        </div>
+                                {!isLocked ? (
+                                    <Button type="button" onClick={addMovementLine}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Thêm dòng
+                                    </Button>
+                                ) : null}
+                            </div>
 
                             <div className="space-y-4">
                                 {form.movementLines.map((line, index) => (
@@ -868,18 +904,18 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             <div className="min-w-0">
                                 <h3 className="text-base font-semibold text-slate-900">Ghi nhận issue nhanh</h3>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Mở nhanh từng hạng mục và cấu hình chi tiết ngay bên dưới trong cùng block.
+                                    Mở nhanh từng hạng mục, phần cấu hình chi tiết nằm riêng ở phía dưới.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className={`${QUICK_PANEL_HEIGHT} overflow-y-auto px-5 py-5`}>
+                    <div className={`${QUICK_PANEL_HEIGHT} overflow-y-auto px-5 py-4`}>
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <div className="text-sm font-semibold text-slate-900">Danh sách issue nhanh</div>
                                 <div className="mt-1 text-sm text-slate-500">
-                                    Block này cuộn nội bộ để vẫn giữ UI gọn nhưng không mất dòng issue chi tiết.
+                                    Chỉ giữ launcher gọn ở đây để thao tác nhanh.
                                 </div>
                             </div>
 
@@ -888,141 +924,84 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="space-y-3">
-                                <QuickIssueCard
-                                    title="Vỏ"
-                                    description={quickIssueSummary.caseIssue}
-                                    isOpen={Boolean(form.caseIssue.enabled)}
-                                    disabled={isLocked}
-                                    onToggle={() =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            caseIssue: prev.caseIssue.enabled
-                                                ? emptyQuickIssue()
-                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.caseIssue.execution || "INHOUSE" },
-                                        }))
-                                    }
-                                />
+                        <div className="space-y-3">
+                            <QuickIssueCard
+                                title="Vỏ"
+                                description={quickIssueSummary.caseIssue}
+                                isOpen={Boolean(form.caseIssue.enabled)}
+                                disabled={isLocked}
+                                onToggle={() =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        caseIssue: prev.caseIssue.enabled
+                                            ? emptyQuickIssue()
+                                            : { ...emptyQuickIssue(), enabled: true, execution: prev.caseIssue.execution || "INHOUSE" },
+                                    }))
+                                }
+                            />
 
-                                {form.caseIssue.enabled ? (
-                                    <QuickIssueDraftEditor
-                                        title="Vỏ"
-                                        value={form.caseIssue}
-                                        vendors={vendors}
-                                        disabled={isLocked}
-                                        actionOptions={[
-                                            { value: "SPA_CASE", label: "Spa vỏ" },
-                                            { value: "POLISH_CASE", label: "Đánh bóng vỏ" },
-                                            { value: "REPLATE_CASE", label: "Mạ lại vỏ" },
-                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
-                                        ]}
-                                        onChange={(patch) =>
-                                            setForm((prev) => ({ ...prev, caseIssue: { ...prev.caseIssue, ...patch } }))
-                                        }
-                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
-                                    />
-                                ) : null}
-                            </div>
+                            <QuickIssueCard
+                                title="Kính"
+                                description={quickIssueSummary.crystalIssue}
+                                isOpen={Boolean(form.crystalIssue.enabled)}
+                                disabled={isLocked}
+                                onToggle={() =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        crystalIssue: prev.crystalIssue.enabled
+                                            ? emptyQuickIssue()
+                                            : { ...emptyQuickIssue(), enabled: true, execution: prev.crystalIssue.execution || "INHOUSE" },
+                                    }))
+                                }
+                            />
 
-                            <div className="space-y-3">
-                                <QuickIssueCard
-                                    title="Kính"
-                                    description={quickIssueSummary.crystalIssue}
-                                    isOpen={Boolean(form.crystalIssue.enabled)}
-                                    disabled={isLocked}
-                                    onToggle={() =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crystalIssue: prev.crystalIssue.enabled
-                                                ? emptyQuickIssue()
-                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.crystalIssue.execution || "INHOUSE" },
-                                        }))
-                                    }
-                                />
+                            <QuickIssueCard
+                                title="Mặt số"
+                                description={quickIssueSummary.dialIssue}
+                                isOpen={Boolean(form.dialIssue.enabled)}
+                                disabled={isLocked}
+                                onToggle={() =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        dialIssue: prev.dialIssue.enabled
+                                            ? emptyQuickIssue()
+                                            : { ...emptyQuickIssue(), enabled: true, execution: prev.dialIssue.execution || "INHOUSE" },
+                                    }))
+                                }
+                            />
 
-                                {form.crystalIssue.enabled ? (
-                                    <QuickIssueDraftEditor
-                                        title="Kính"
-                                        value={form.crystalIssue}
-                                        vendors={vendors}
-                                        disabled={isLocked}
-                                        actionOptions={[
-                                            { value: "POLISH_GLASS", label: "Đánh bóng kính" },
-                                            { value: "REPLACE_GLASS", label: "Thay kính" },
-                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
-                                        ]}
-                                        onChange={(patch) =>
-                                            setForm((prev) => ({ ...prev, crystalIssue: { ...prev.crystalIssue, ...patch } }))
-                                        }
-                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
-                                    />
-                                ) : null}
-                            </div>
-
-                            <div className="space-y-3">
-                                <QuickIssueCard
-                                    title="Mặt số"
-                                    description={quickIssueSummary.dialIssue}
-                                    isOpen={Boolean(form.dialIssue.enabled)}
-                                    disabled={isLocked}
-                                    onToggle={() =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            dialIssue: prev.dialIssue.enabled
-                                                ? emptyQuickIssue()
-                                                : { ...emptyQuickIssue(), enabled: true, execution: prev.dialIssue.execution || "INHOUSE" },
-                                        }))
-                                    }
-                                />
-
-                                {form.dialIssue.enabled ? (
-                                    <QuickIssueDraftEditor
-                                        title="Mặt số"
-                                        value={form.dialIssue}
-                                        vendors={vendors}
-                                        disabled={isLocked}
-                                        actionOptions={[
-                                            { value: "CLEAN_DIAL", label: "Vệ sinh mặt số" },
-                                            { value: "REPLACE_DIAL", label: "Thay mặt số" },
-                                            { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
-                                        ]}
-                                        onChange={(patch) =>
-                                            setForm((prev) => ({ ...prev, dialIssue: { ...prev.dialIssue, ...patch } }))
-                                        }
-                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
-                                    />
-                                ) : null}
-                            </div>
-
-                            <div className="space-y-3">
-                                <QuickIssueCard
-                                    title="Núm"
-                                    description={quickIssueSummary.crownIssue}
-                                    isOpen={Boolean(form.crownIssue.status === "ISSUE")}
-                                    disabled={isLocked}
-                                    onToggle={() =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            crownIssue: prev.crownIssue.status === "ISSUE"
-                                                ? { ...prev.crownIssue, enabled: false, status: "GOOD", action: undefined, vendorId: undefined, cost: "", execution: "INHOUSE", isFromBoard: false, sourceIssueId: undefined, summary: "", boardStatus: "", vendorName: undefined }
-                                                : { ...prev.crownIssue, enabled: true, status: "ISSUE", execution: prev.crownIssue.execution || "INHOUSE" },
-                                        }))
-                                    }
-                                />
-
-                                {form.crownIssue.status === "ISSUE" ? (
-                                    <CrownIssueDraftEditor
-                                        value={form.crownIssue}
-                                        vendors={vendors}
-                                        disabled={isLocked}
-                                        onChange={(patch) =>
-                                            setForm((prev) => ({ ...prev, crownIssue: { ...prev.crownIssue, ...patch, status: "ISSUE", enabled: true } }))
-                                        }
-                                        onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
-                                    />
-                                ) : null}
-                            </div>
+                            <QuickIssueCard
+                                title="Núm"
+                                description={quickIssueSummary.crownIssue}
+                                isOpen={Boolean(form.crownIssue.status === "ISSUE")}
+                                disabled={isLocked}
+                                onToggle={() =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        crownIssue: prev.crownIssue.status === "ISSUE"
+                                            ? {
+                                                ...prev.crownIssue,
+                                                enabled: false,
+                                                status: "GOOD",
+                                                action: undefined,
+                                                vendorId: undefined,
+                                                cost: "",
+                                                execution: "INHOUSE",
+                                                isFromBoard: false,
+                                                sourceIssueId: undefined,
+                                                summary: "",
+                                                boardStatus: "",
+                                                vendorName: undefined,
+                                            }
+                                            : {
+                                                ...prev.crownIssue,
+                                                enabled: true,
+                                                status: "ISSUE",
+                                                execution: prev.crownIssue.execution || "INHOUSE",
+                                            },
+                                    }))
+                                }
+                            />
                         </div>
                     </div>
                 </section>
@@ -1043,7 +1022,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
                         </div>
                     </div>
 
-                    <div className={`${QUICK_PANEL_HEIGHT} px-5 py-5`}>
+                    <div className={`${QUICK_PANEL_HEIGHT} px-5 py-4`}>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <TechnicalImagePicker
                                 value={form.technicalImageFileKey || null}
@@ -1058,7 +1037,7 @@ export default function TechnicalAssessmentInlinePanelContainer({
                             />
                         </div>
 
-                        <div className="mt-4 flex items-center gap-2">
+                        <div className="mt-3 flex items-center gap-2">
                             {form.technicalImageFileKey ? (
                                 <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
                                     Có ảnh kỹ thuật
@@ -1072,6 +1051,119 @@ export default function TechnicalAssessmentInlinePanelContainer({
                     </div>
                 </section>
             </div>
+
+            {openQuickIssueCount > 0 ? (
+                <SectionCard
+                    title="Các dòng issue nhanh"
+                    subtitle="Các hạng mục mở nhanh được cấu hình chi tiết tại đây, tách riêng khỏi launcher phía trên."
+                    icon={<Wrench className="h-5 w-5" />}
+                    badge={
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
+                            {openQuickIssueCount} issue mở
+                        </span>
+                    }
+                >
+                    <div className="space-y-4">
+                        {form.caseIssue.enabled ? (
+                            <QuickIssueRowCard
+                                title="Issue vỏ"
+                                subtitle={form.caseIssue.isFromBoard ? "Đã ghi nhận từ Issue Board" : "Đang soạn"}
+                                executionLabel={form.caseIssue.execution === "VENDOR" ? "Vendor" : "Nội bộ"}
+                                costText={formatCurrency(parseMoney(form.caseIssue.estimatedCost))}
+                            >
+                                <QuickIssueDraftEditor
+                                    title="Vỏ"
+                                    value={form.caseIssue}
+                                    vendors={vendors}
+                                    disabled={isLocked}
+                                    actionOptions={[
+                                        { value: "SPA_CASE", label: "Spa vỏ" },
+                                        { value: "POLISH_CASE", label: "Đánh bóng vỏ" },
+                                        { value: "REPLATE_CASE", label: "Mạ lại vỏ" },
+                                        { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                    ]}
+                                    onChange={(patch) =>
+                                        setForm((prev) => ({ ...prev, caseIssue: { ...prev.caseIssue, ...patch } }))
+                                    }
+                                    onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                />
+                            </QuickIssueRowCard>
+                        ) : null}
+
+                        {form.crystalIssue.enabled ? (
+                            <QuickIssueRowCard
+                                title="Issue kính"
+                                subtitle={form.crystalIssue.isFromBoard ? "Đã ghi nhận từ Issue Board" : "Đang soạn"}
+                                executionLabel={form.crystalIssue.execution === "VENDOR" ? "Vendor" : "Nội bộ"}
+                                costText={formatCurrency(parseMoney(form.crystalIssue.estimatedCost))}
+                            >
+                                <QuickIssueDraftEditor
+                                    title="Kính"
+                                    value={form.crystalIssue}
+                                    vendors={vendors}
+                                    disabled={isLocked}
+                                    actionOptions={[
+                                        { value: "POLISH_GLASS", label: "Đánh bóng kính" },
+                                        { value: "REPLACE_GLASS", label: "Thay kính" },
+                                        { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                    ]}
+                                    onChange={(patch) =>
+                                        setForm((prev) => ({ ...prev, crystalIssue: { ...prev.crystalIssue, ...patch } }))
+                                    }
+                                    onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                />
+                            </QuickIssueRowCard>
+                        ) : null}
+
+                        {form.dialIssue.enabled ? (
+                            <QuickIssueRowCard
+                                title="Issue mặt số"
+                                subtitle={form.dialIssue.isFromBoard ? "Đã ghi nhận từ Issue Board" : "Đang soạn"}
+                                executionLabel={form.dialIssue.execution === "VENDOR" ? "Vendor" : "Nội bộ"}
+                                costText={formatCurrency(parseMoney(form.dialIssue.estimatedCost))}
+                            >
+                                <QuickIssueDraftEditor
+                                    title="Mặt số"
+                                    value={form.dialIssue}
+                                    vendors={vendors}
+                                    disabled={isLocked}
+                                    actionOptions={[
+                                        { value: "CLEAN_DIAL", label: "Vệ sinh mặt số" },
+                                        { value: "REPLACE_DIAL", label: "Thay mặt số" },
+                                        { value: "KEEP_ORIGINAL", label: "Giữ nguyên" },
+                                    ]}
+                                    onChange={(patch) =>
+                                        setForm((prev) => ({ ...prev, dialIssue: { ...prev.dialIssue, ...patch } }))
+                                    }
+                                    onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                />
+                            </QuickIssueRowCard>
+                        ) : null}
+
+                        {form.crownIssue.status === "ISSUE" ? (
+                            <QuickIssueRowCard
+                                title="Issue núm"
+                                subtitle={form.crownIssue.isFromBoard ? "Đã ghi nhận từ Issue Board" : "Đang soạn"}
+                                executionLabel={form.crownIssue.execution === "VENDOR" ? "Vendor" : "Nội bộ"}
+                                costText={formatCurrency(parseMoney(form.crownIssue.cost))}
+                            >
+                                <CrownIssueDraftEditor
+                                    value={form.crownIssue}
+                                    vendors={vendors}
+                                    disabled={isLocked}
+                                    onChange={(patch) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            crownIssue: { ...prev.crownIssue, ...patch, status: "ISSUE", enabled: true },
+                                        }))
+                                    }
+                                    onGoBoard={() => router.push(`/admin/services/issues-board?serviceRequestId=${serviceRequestId}`)}
+                                />
+                            </QuickIssueRowCard>
+                        ) : null}
+                    </div>
+                </SectionCard>
+            ) : null}
 
             <SectionCard
                 title="Tổng kết kỹ thuật"

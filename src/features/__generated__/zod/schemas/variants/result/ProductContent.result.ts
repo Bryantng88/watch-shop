@@ -17,6 +17,8 @@ export const ProductContentResultSchema = z.object({
     generatedAt: z.date().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    specBullets: z.array(z.string()),
+    hashtags: z.array(z.string()),
     Product: z.unknown()
 }).strict();
 

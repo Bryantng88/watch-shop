@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { postAcquisition } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import { postAcquisition } from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
 
 export async function POST(
     _req: Request,

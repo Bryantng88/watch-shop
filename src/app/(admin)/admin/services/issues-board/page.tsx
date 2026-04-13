@@ -1,4 +1,4 @@
-import TechnicalIssueBoardClient from "../_client/TechnicalIssuesBoardClient";
+import TechnicalIssueBoardClient from "../_client/technical-issues-board/TechnicalIssuesBoardClient";
 
 import { getTechnicalIssueBoardData } from "../_server/technical-issue-board.service";
 

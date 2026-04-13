@@ -5,12 +5,9 @@ import {
     FileText,
     Image as ImageIcon,
     Loader2,
-    Save,
     Sparkles,
     Wand2,
 } from 'lucide-react';
-
-import type { GeneratedPayload } from '@/app/(admin)/admin/products/_server/product-ai.type';
 
 type PickedImage = {
     key: string;
@@ -30,6 +27,13 @@ export type ProductContentPromptMeta = {
     bannedPhrases: string;
     referenceSample: string;
     forceSections: string[];
+    knowledgeHints: string;
+};
+
+export type GeneratedLongformPayload = {
+    promoteLong: string;
+    missingData: string[];
+    safetyNotes: string[];
 };
 
 type Props = {
@@ -42,22 +46,16 @@ type Props = {
     brandId?: string | null;
     categoryId?: string | null;
     watchSpec: Record<string, any>;
-    initialContent: GeneratedPayload;
-    onContentChange?: (next: GeneratedPayload) => void;
+    initialContent: GeneratedLongformPayload;
+    onContentChange?: (next: GeneratedLongformPayload) => void;
     onSaveContent?: (
-        nextContent: GeneratedPayload,
+        nextContent: GeneratedLongformPayload,
         promptMeta: ProductContentPromptMeta
     ) => Promise<void>;
 };
 
-const defaultPayload: GeneratedPayload = {
-    specBullets: [],
-    promoteShort: '',
+const defaultPayload: GeneratedLongformPayload = {
     promoteLong: '',
-    facebookCaption: '',
-    instagramCaption: '',
-    titleOptions: [],
-    hashtags: [],
     missingData: [],
     safetyNotes: [],
 };
@@ -76,7 +74,7 @@ const audienceOptions = [
 ];
 
 const structureOptions = [
-    { label: 'Short listing', value: 'short' },
+    { label: 'Editorial bullets', value: 'editorial_bullets' },
     { label: 'Storytelling', value: 'story' },
     { label: 'Hybrid', value: 'hybrid' },
 ];
@@ -85,32 +83,39 @@ const toneOptions = [
     { label: 'Cân bằng', value: 'balanced' },
     { label: 'Tinh tế', value: 'refined' },
     { label: 'Người chơi', value: 'collector' },
-    { label: 'Bán hàng', value: 'sales' },
-    { label: 'Minimal Japan', value: 'minimal_japan' },
     { label: 'Quiet luxury', value: 'quiet_luxury' },
 ];
 
 const focusPointOptions = [
     'Dial',
     'Case',
-    'Condition',
-    'Movement',
-    'Độ đeo',
+    'Layout',
+    'Wearability',
     'Vintage feel',
-    'Collector angle',
-    'Practical daily use',
-    'Finishing',
-    'Tỷ lệ cổ tay',
+    'Contrast',
+    'Texture',
+    'Dress character',
+    'Mid-size feel',
+    'Daily flexibility',
 ];
 
 const forceSectionOptions = [
     'Opening hook',
     'Design insight',
     'Wearability note',
-    'Practical ownership',
-    'Collector note',
-    'Soft disclaimer',
+    'Closing insight',
+    'Missing data note',
 ];
+
+const DEFAULT_REFERENCE_SAMPLE = `▪️Có những chiếc dress giữ sự tĩnh tuyệt đối, nhưng cũng có những chiếc thêm vào một chút chuyển động để tạo cảm xúc – open heart luôn là kiểu như vậy
+
+▪️Phần lộ cơ ở góc dial không quá lớn, vừa đủ để nhìn thấy nhịp chuyển động của bộ máy mà không làm mất đi sự gọn gàng tổng thể
+
+▪️Dial đen kết hợp cọc số La Mã tạo nên độ tương phản tốt, vừa cổ điển vừa có chiều sâu thị giác
+
+▪️Khi đeo thực tế, điểm open heart sẽ là thứ thu hút ánh nhìn đầu tiên – không phô trương nhưng rất “có chuyện để nhìn”
+
+▪️Dây thép giúp chiếc đồng hồ trở nên linh hoạt hơn, không quá formal như dây da nhưng vẫn giữ được chất dress. Điểm đặc biệt ở chiếc Open heart mid-size này là bộ dây thép được làm mềm đi hẳn, mang đậm tinh thần dress watch hơn là sport. Size 35mm cho bản này thực sự đã mang open heart đến gần hơn cho người đeo để có thể đeo được hàng ngày.`;
 
 function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(' ');
@@ -121,7 +126,7 @@ function inputClassName() {
 }
 
 function textareaClassName() {
-    return 'block min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100';
+    return 'block min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100';
 }
 
 function FieldLabel({ label, hint }: { label: string; hint?: string }) {
@@ -197,7 +202,7 @@ function MultiToggle({
     );
 }
 
-function PromptSummary(meta: ProductContentPromptMeta) {
+function buildPromptSummary(meta: ProductContentPromptMeta) {
     const parts = [
         meta.narrative ? narrativeOptions.find((x) => x.value === meta.narrative)?.label : null,
         meta.audience ? audienceOptions.find((x) => x.value === meta.audience)?.label : null,
@@ -205,15 +210,8 @@ function PromptSummary(meta: ProductContentPromptMeta) {
         meta.tonePreset ? toneOptions.find((x) => x.value === meta.tonePreset)?.label : null,
     ].filter(Boolean);
 
-    const focus = meta.focusPoints.length
-        ? `Focus: ${meta.focusPoints.join(', ')}`
-        : null;
-
-    const sections = meta.forceSections.length
-        ? `Section: ${meta.forceSections.join(', ')}`
-        : null;
-
-    return [parts.join(' · '), focus, sections].filter(Boolean).join(' · ');
+    const focus = meta.focusPoints.length ? `Focus: ${meta.focusPoints.join(', ')}` : null;
+    return [parts.join(' · '), focus].filter(Boolean).join(' · ');
 }
 
 export default function ProductAiPanel({
@@ -232,26 +230,28 @@ export default function ProductAiPanel({
 }: Props) {
     const [narrative, setNarrative] = useState('dress');
     const [audience, setAudience] = useState('daily');
-    const [structure, setStructure] = useState('hybrid');
-    const [tonePreset, setTonePreset] = useState('balanced');
-    const [focusPoints, setFocusPoints] = useState<string[]>(['Dial', 'Case']);
+    const [structure, setStructure] = useState('editorial_bullets');
+    const [tonePreset, setTonePreset] = useState('refined');
+    const [focusPoints, setFocusPoints] = useState<string[]>(['Dial', 'Wearability', 'Dress character']);
     const [forceSections, setForceSections] = useState<string[]>([
         'Opening hook',
         'Design insight',
         'Wearability note',
+        'Closing insight',
     ]);
     const [customBrief, setCustomBrief] = useState(
-        'Nhấn mạnh cảm giác vintage, dễ đeo. Chia ra khoảng 3–4 đoạn, mỗi đoạn đi 1 ý rõ ràng.'
+        'Viết theo style editorial bullet như mẫu. Mỗi bullet một ý rõ, mềm, có nhịp. Không brochure, không quá đời, không generic.'
     );
     const [bannedPhrases, setBannedPhrases] = useState(
-        'phù hợp nhiều đối tượng, dễ phối mọi phong cách, hoàn hảo cho mọi dịp, chiếc đồng hồ này rất đẹp'
+        'lựa chọn đáng cân nhắc, phù hợp với nhiều đối tượng, hoàn hảo cho, bán hàng lộ'
     );
-    const [referenceSample, setReferenceSample] = useState('');
-    const [content, setContent] = useState<GeneratedPayload>(initialContent ?? defaultPayload);
+    const [referenceSample, setReferenceSample] = useState(DEFAULT_REFERENCE_SAMPLE);
+    const [content, setContent] = useState<GeneratedLongformPayload>(initialContent ?? defaultPayload);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    const [knowledgeHints, setKnowledgeHints] = useState(
+        'Ví dụ: Ultra-Chron line, cushion case, chronometer wording, technical identity'
+    );
     useEffect(() => {
         setContent(initialContent ?? defaultPayload);
     }, [initialContent]);
@@ -277,6 +277,7 @@ export default function ProductAiPanel({
             bannedPhrases,
             referenceSample,
             forceSections,
+            knowledgeHints,
         }),
         [
             narrative,
@@ -288,6 +289,7 @@ export default function ProductAiPanel({
             bannedPhrases,
             referenceSample,
             forceSections,
+            knowledgeHints,
         ]
     );
 
@@ -297,7 +299,7 @@ export default function ProductAiPanel({
         return [];
     }, [images, previewImageUrl]);
 
-    function setAndBubble(next: GeneratedPayload) {
+    function setAndBubble(next: GeneratedLongformPayload) {
         setContent(next);
         onContentChange?.(next);
     }
@@ -352,15 +354,8 @@ export default function ProductAiPanel({
                 throw new Error('API generate thành công nhưng không trả về generated.');
             }
 
-            const next: GeneratedPayload = {
-                ...defaultPayload,
-                specBullets: Array.isArray(generated.specBullets) ? generated.specBullets : [],
-                promoteShort: generated.promoteShort ?? '',
+            const next: GeneratedLongformPayload = {
                 promoteLong: generated.promoteLong ?? '',
-                facebookCaption: generated.facebookCaption ?? '',
-                instagramCaption: generated.instagramCaption ?? '',
-                titleOptions: Array.isArray(generated.titleOptions) ? generated.titleOptions : [],
-                hashtags: Array.isArray(generated.hashtags) ? generated.hashtags : [],
                 missingData: Array.isArray(generated.missingData) ? generated.missingData : [],
                 safetyNotes: Array.isArray(generated.safetyNotes) ? generated.safetyNotes : [],
             };
@@ -370,20 +365,6 @@ export default function ProductAiPanel({
             setError(e?.message || 'Generate nội dung thất bại.');
         } finally {
             setIsGenerating(false);
-        }
-    }
-
-    async function handleSave() {
-        if (!onSaveContent) return;
-        setIsSaving(true);
-        setError(null);
-
-        try {
-            await onSaveContent(content, promptMeta);
-        } catch (e: any) {
-            setError(e?.message || 'Lưu ProductContent thất bại.');
-        } finally {
-            setIsSaving(false);
         }
     }
 
@@ -399,8 +380,7 @@ export default function ProductAiPanel({
                             AI content workflow
                         </h2>
                         <p className="text-sm leading-6 text-slate-500">
-                            Bỏ nhận diện ảnh ở đây. Panel này chỉ tập trung vào hướng kể chuyện và
-                            generate nội dung từ spec đã chốt.
+                            Tập trung duy nhất vào promote long theo style editorial bullet có gu.
                         </p>
                     </div>
                 </div>
@@ -409,11 +389,12 @@ export default function ProductAiPanel({
             <div className="space-y-6 px-5 py-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-                        Nguồn spec hiện tại
+                        Nguồn dữ liệu hiện tại
                     </div>
                     <div className="space-y-1 text-sm text-slate-700">
                         <div className="font-medium text-slate-900">{title || '—'}</div>
                         <div>Brand: {brandName || '—'}</div>
+                        <div>Category: {categoryName || '—'}</div>
                         <div>Movement: {watchSpec?.movement || '—'}</div>
                         <div>Dial: {watchSpec?.dialColor || '—'}</div>
                         <div>
@@ -514,7 +495,7 @@ export default function ProductAiPanel({
                         </div>
 
                         <div>
-                            <FieldLabel label="Section bắt buộc" />
+                            <FieldLabel label="Section gợi ý" />
                             <MultiToggle
                                 options={forceSectionOptions}
                                 values={forceSections}
@@ -530,7 +511,15 @@ export default function ProductAiPanel({
                                 className={textareaClassName()}
                             />
                         </div>
-
+                        <div>
+                            <FieldLabel label="Knowledge hints" />
+                            <textarea
+                                value={knowledgeHints}
+                                onChange={(e) => setKnowledgeHints(e.target.value)}
+                                className={textareaClassName()}
+                                placeholder="Ví dụ: Ultra-Chron line, cushion case, technical identity..."
+                            />
+                        </div>
                         <div>
                             <FieldLabel label="Các phrase cần tránh" />
                             <textarea
@@ -546,7 +535,6 @@ export default function ProductAiPanel({
                                 value={referenceSample}
                                 onChange={(e) => setReferenceSample(e.target.value)}
                                 className={textareaClassName()}
-                                placeholder="Dán 1 đoạn tham chiếu để AI học nhịp viết..."
                             />
                         </div>
                     </div>
@@ -555,11 +543,11 @@ export default function ProductAiPanel({
                 <div className="space-y-4 rounded-2xl border border-slate-200 p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                         <ImageIcon className="h-4 w-4" />
-                        Bước 2 · Generate nội dung
+                        Bước 2 · Generate promote long
                     </div>
 
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        Prompt hiện tại: {PromptSummary(promptMeta) || '—'}
+                        Prompt hiện tại: {buildPromptSummary(promptMeta) || '—'}
                     </div>
 
                     {safeImages.length > 0 ? (
@@ -593,22 +581,24 @@ export default function ProductAiPanel({
                             ) : (
                                 <Sparkles className="h-4 w-4" />
                             )}
-                            {isGenerating ? 'Đang generate...' : 'Generate nội dung từ spec'}
+                            {isGenerating ? 'Đang generate...' : 'Generate promote long'}
                         </button>
-
-                        <button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={isSaving || !onSaveContent}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {isSaving ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Save className="h-4 w-4" />
-                            )}
-                            {isSaving ? 'Đang lưu...' : 'Lưu ProductContent'}
-                        </button>
+                        {onSaveContent ? (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setError(null);
+                                    try {
+                                        await onSaveContent(content, promptMeta);
+                                    } catch (e: any) {
+                                        setError(e?.message || 'Lưu ProductContent thất bại.');
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Lưu ProductContent
+                            </button>
+                        ) : null}
                     </div>
 
                     {error ? (
@@ -624,76 +614,11 @@ export default function ProductAiPanel({
                         Bước 3 · Preview output
                     </div>
 
-                    <PreviewBlock title="Promote short">
-                        {content.promoteShort ? (
-                            <p>{content.promoteShort}</p>
-                        ) : (
-                            <span className="text-slate-400">Chưa có nội dung</span>
-                        )}
-                    </PreviewBlock>
-
                     <PreviewBlock title="Promote long">
                         {content.promoteLong ? (
                             <div className="whitespace-pre-line">{content.promoteLong}</div>
                         ) : (
                             <span className="text-slate-400">Chưa có nội dung</span>
-                        )}
-                    </PreviewBlock>
-
-                    <PreviewBlock title="Spec bullets">
-                        {content.specBullets.length ? (
-                            <ul className="space-y-2">
-                                {content.specBullets.map((item, idx) => (
-                                    <li key={`${item}-${idx}`}>• {item}</li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <span className="text-slate-400">Chưa có dữ liệu</span>
-                        )}
-                    </PreviewBlock>
-
-                    <PreviewBlock title="Facebook caption">
-                        {content.facebookCaption ? (
-                            <p>{content.facebookCaption}</p>
-                        ) : (
-                            <span className="text-slate-400">Chưa có dữ liệu</span>
-                        )}
-                    </PreviewBlock>
-
-                    <PreviewBlock title="Instagram caption">
-                        {content.instagramCaption ? (
-                            <p>{content.instagramCaption}</p>
-                        ) : (
-                            <span className="text-slate-400">Chưa có dữ liệu</span>
-                        )}
-                    </PreviewBlock>
-
-                    <PreviewBlock title="Title options">
-                        {content.titleOptions.length ? (
-                            <ul className="space-y-2">
-                                {content.titleOptions.map((item, idx) => (
-                                    <li key={`${item}-${idx}`}>• {item}</li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <span className="text-slate-400">Chưa có dữ liệu</span>
-                        )}
-                    </PreviewBlock>
-
-                    <PreviewBlock title="Hashtags">
-                        {content.hashtags.length ? (
-                            <div className="flex flex-wrap gap-2">
-                                {content.hashtags.map((tag, idx) => (
-                                    <span
-                                        key={`${tag}-${idx}`}
-                                        className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700"
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <span className="text-slate-400">Chưa có dữ liệu</span>
                         )}
                     </PreviewBlock>
 

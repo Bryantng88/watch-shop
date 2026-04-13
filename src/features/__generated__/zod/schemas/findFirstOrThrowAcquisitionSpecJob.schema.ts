@@ -20,6 +20,8 @@ export const AcquisitionSpecJobFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Ac
     finishedAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    runAfter: z.boolean().optional(),
+    priority: z.boolean().optional(),
     AcquisitionItem: z.boolean().optional(),
     Product: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionSpecJobSelect>;
@@ -35,6 +37,8 @@ export const AcquisitionSpecJobFindFirstOrThrowSelectZodSchema = z.object({
     finishedAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
+    runAfter: z.boolean().optional(),
+    priority: z.boolean().optional(),
     AcquisitionItem: z.boolean().optional(),
     Product: z.boolean().optional()
   }).strict();

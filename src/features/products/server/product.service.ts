@@ -8,7 +8,7 @@ import { CreateProductWithAcqSchema, CreateProductWithAcqInput, UpdateProductWit
 import { Prisma } from "@prisma/client";
 import prisma from "@/server/db/client";
 import { upsertSupplierByNameRoleTx } from "@/features/vendors/server/vendor.repo";
-import { acquisitionRepo } from "@/app/(admin)/admin/acquisitions/_server/acquisition.repo";
+import { acquisitionRepo } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition.repo";
 import { genUniqueSlug, buildVariants, buildWatchSpec } from "@/features/ultis/helpers";
 import { toPublicUrl } from "@/features/ultis/helpers";
 import { CreateProductWithAcqDTO, UpdateProductWithAcqDTO } from "../schemas/product.schema";

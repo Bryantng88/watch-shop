@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAcquisitionWithItem } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import { createAcquisitionWithItem } from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
 import { title } from "process";
 // app/api/admin/acquisitions/route.ts
 

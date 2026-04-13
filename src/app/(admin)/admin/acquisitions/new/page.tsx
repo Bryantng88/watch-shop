@@ -1,7 +1,7 @@
 // app/(admin)/admin/acquisitions/new/page.tsx
 
 import { getVendorList } from "../../vendors/_server/vendor.service";
-import NewAcqForm from "../_client/NewAcqForm";
+//import NewAcqForm from "../_client/NewAcqForm";
 import NewAcquisitionForm from "../_client/NewAcquisitionForm";
 
 

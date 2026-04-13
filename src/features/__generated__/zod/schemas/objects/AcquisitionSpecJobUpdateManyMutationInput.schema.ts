@@ -14,7 +14,9 @@ const makeSchema = () => z.object({
   startedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   finishedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  runAfter: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const AcquisitionSpecJobUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobUpdateManyMutationInput>;
 export const AcquisitionSpecJobUpdateManyMutationInputObjectZodSchema = makeSchema();

@@ -12,7 +12,9 @@ const makeSchema = () => z.object({
   startedAt: SortOrderSchema.optional(),
   finishedAt: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  runAfter: SortOrderSchema.optional(),
+  priority: SortOrderSchema.optional()
 }).strict();
 export const AcquisitionSpecJobMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobMaxOrderByAggregateInput>;
 export const AcquisitionSpecJobMaxOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -1,7 +1,7 @@
 import { ProductType } from "@prisma/client";
 
 import EditAcqForm from "../../_client/EditAcqForm";
-import * as service from "../../_server/acquisition.service";
+import * as service from "../../_server/core/acquisition.service"
 import { getVendorList } from "../../../vendors/_server/vendor.service";
 
 type WatchFlags = {

@@ -1,5 +1,5 @@
 import prisma from "@/server/db/client";
-import * as serviceAqc from "@/app/(admin)/admin/acquisitions/_server/acquisition.service"
+import * as serviceAqc from "@/old_files/Acquisition_server/acquisition.service"
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
     const { id: acqId } = await context.params;

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { PERMISSIONS } from "@/constants/permissions";
-import * as adminProductService from "@/app/(admin)/admin/products/_server/product.service";
+import * as adminProductService from "@/app/(admin)/admin/products/_server/core/product.service";
 
 import ProductDetailClient from "./_client/ProductDetailClient";
 

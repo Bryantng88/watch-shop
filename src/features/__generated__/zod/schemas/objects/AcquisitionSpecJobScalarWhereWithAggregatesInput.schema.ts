@@ -19,7 +19,9 @@ const acquisitionspecjobscalarwherewithaggregatesinputSchema = z.object({
   startedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   finishedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  runAfter: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  priority: z.union([z.lazy(() => IntWithAggregatesFilterObjectSchema), z.number().int()]).optional()
 }).strict();
 export const AcquisitionSpecJobScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobScalarWhereWithAggregatesInput> = acquisitionspecjobscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.AcquisitionSpecJobScalarWhereWithAggregatesInput>;
 export const AcquisitionSpecJobScalarWhereWithAggregatesInputObjectZodSchema = acquisitionspecjobscalarwherewithaggregatesinputSchema;
