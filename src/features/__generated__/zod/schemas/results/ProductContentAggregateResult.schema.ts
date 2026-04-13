@@ -15,6 +15,8 @@ export const ProductContentAggregateResultSchema = z.object({  _count: z.object(
     generatedAt: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    specBullets: z.number(),
+    hashtags: z.number(),
     Product: z.number()
   }).optional(),
   _min: z.object({
@@ -32,7 +34,9 @@ export const ProductContentAggregateResultSchema = z.object({  _count: z.object(
     promptNote: z.string().nullable(),
     generatedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    specBullets: z.array(z.string()).nullable(),
+    hashtags: z.array(z.string()).nullable()
   }).nullable().optional(),
   _max: z.object({
     productId: z.string().nullable(),
@@ -49,5 +53,7 @@ export const ProductContentAggregateResultSchema = z.object({  _count: z.object(
     promptNote: z.string().nullable(),
     generatedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    specBullets: z.array(z.string()).nullable(),
+    hashtags: z.array(z.string()).nullable()
   }).nullable().optional()});

@@ -15,6 +15,8 @@ export const ProductContentGroupByResultSchema = z.array(z.object({
   generatedAt: z.date(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  specBullets: z.array(z.string()),
+  hashtags: z.array(z.string()),
   _count: z.object({
     productId: z.number(),
     titleSnapshot: z.number(),
@@ -31,6 +33,8 @@ export const ProductContentGroupByResultSchema = z.array(z.object({
     generatedAt: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    specBullets: z.number(),
+    hashtags: z.number(),
     Product: z.number()
   }).optional(),
   _min: z.object({
@@ -48,7 +52,9 @@ export const ProductContentGroupByResultSchema = z.array(z.object({
     promptNote: z.string().nullable(),
     generatedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    specBullets: z.array(z.string()).nullable(),
+    hashtags: z.array(z.string()).nullable()
   }).nullable().optional(),
   _max: z.object({
     productId: z.string().nullable(),
@@ -65,6 +71,8 @@ export const ProductContentGroupByResultSchema = z.array(z.object({
     promptNote: z.string().nullable(),
     generatedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    specBullets: z.array(z.string()).nullable(),
+    hashtags: z.array(z.string()).nullable()
   }).nullable().optional()
 }));

@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Box, Plus, Save } from "lucide-react";
 import WatchLineCard from "./WatchLineCard";
-import type { AcquisitionWatchLine } from "../_server/acquisition-line.types";
+import AcquisitionBulkImagePicker from "./AcquisitionBulkImagePicker";
+import type { AcquisitionWatchLine } from "../_server/shared/acquisition-line.types";
 
 type Vendor = { id: string; name: string };
 
@@ -11,7 +12,14 @@ type Props = {
     vendors: Vendor[];
 };
 
+type PreparedImage = {
+    key: string;
+    url: string;
+    fromKey?: string;
+};
+
 function uid() {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
     return Math.random().toString(36).slice(2, 10);
 }
 
@@ -27,6 +35,32 @@ function createEmptyWatchLine(): AcquisitionWatchLine {
         imageKey: null,
         imageUrl: null,
     };
+}
+
+function createWatchLineFromPreparedImage(image: PreparedImage): AcquisitionWatchLine {
+    return {
+        id: uid(),
+        kind: "WATCH",
+        quickInput: "",
+        aiHint: "",
+        quantity: 1,
+        cost: "",
+        receiveService: true,
+        imageKey: image.key ?? null,
+        imageUrl: image.url ?? null,
+    };
+}
+
+function isBlankWatchLine(line: AcquisitionWatchLine) {
+    return (
+        !line.quickInput?.trim() &&
+        !line.aiHint?.trim() &&
+        (line.cost === "" || Number(line.cost || 0) === 0) &&
+        Number(line.quantity || 1) === 1 &&
+        line.receiveService === true &&
+        !line.imageKey &&
+        !line.imageUrl
+    );
 }
 
 export default function NewAcquisitionForm({ vendors }: Props) {
@@ -63,6 +97,32 @@ export default function NewAcquisitionForm({ vendors }: Props) {
 
     const addWatchLine = () => {
         setWatchLines((prev) => [...prev, createEmptyWatchLine()]);
+    };
+
+    const importPreparedImages = (images: PreparedImage[]) => {
+        if (!images.length) return;
+
+        setWatchLines((prev) => {
+            const nextLines = [...prev];
+            const mappedLines = images.map(createWatchLineFromPreparedImage);
+
+            if (nextLines.length === 1 && isBlankWatchLine(nextLines[0])) {
+                nextLines[0] = {
+                    ...nextLines[0],
+                    ...mappedLines[0],
+                    id: nextLines[0].id,
+                };
+
+                if (mappedLines.length > 1) {
+                    nextLines.push(...mappedLines.slice(1));
+                }
+
+                return nextLines;
+            }
+
+            nextLines.push(...mappedLines);
+            return nextLines;
+        });
     };
 
     const submit = async () => {
@@ -119,14 +179,21 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                             ["Trạng thái", "DRAFT"],
                             ["Tổng đồng hồ", String(watchLines.length)],
                             ["Tổng dây", "0"],
-                            ["Tổng giá trị", `${new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND`],
+                            [
+                                "Tổng giá trị",
+                                `${new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND`,
+                            ],
                         ].map(([label, value]) => (
                             <div
                                 key={label}
                                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
                             >
-                                <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-                                <div className="mt-1 text-base font-semibold text-slate-900">{value}</div>
+                                <div className="text-xs uppercase tracking-wide text-slate-500">
+                                    {label}
+                                </div>
+                                <div className="mt-1 text-base font-semibold text-slate-900">
+                                    {value}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -140,7 +207,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                                     <Box className="h-5 w-5 text-slate-600" />
                                 </div>
                                 <div>
-                                    <div className="text-lg font-semibold text-slate-900">Thông tin phiếu</div>
+                                    <div className="text-lg font-semibold text-slate-900">
+                                        Thông tin phiếu
+                                    </div>
                                     <div className="text-sm text-slate-500">
                                         Vendor, thời gian tiếp nhận, loại phiếu và ghi chú chung.
                                     </div>
@@ -149,7 +218,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
 
                             <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-800">Vendor</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-800">
+                                        Vendor
+                                    </label>
                                     <select
                                         value={vendorId}
                                         onChange={(e) => setVendorId(e.target.value)}
@@ -165,7 +236,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-800">Ngày nhập</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-800">
+                                        Ngày nhập
+                                    </label>
                                     <input
                                         type="datetime-local"
                                         value={createdAt}
@@ -175,7 +248,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-800">Ghi chú</label>
+                                    <label className="mb-2 block text-sm font-medium text-slate-800">
+                                        Ghi chú
+                                    </label>
                                     <textarea
                                         value={notes}
                                         onChange={(e) => setNotes(e.target.value)}
@@ -186,7 +261,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
 
                                 <div className="space-y-5">
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-800">Tiền tệ</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-800">
+                                            Tiền tệ
+                                        </label>
                                         <select
                                             value={currency}
                                             onChange={(e) => setCurrency(e.target.value)}
@@ -198,7 +275,9 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                                     </div>
 
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-slate-800">Loại phiếu</label>
+                                        <label className="mb-2 block text-sm font-medium text-slate-800">
+                                            Loại phiếu
+                                        </label>
                                         <select
                                             value={type}
                                             onChange={(e) => setType(e.target.value)}
@@ -217,19 +296,30 @@ export default function NewAcquisitionForm({ vendors }: Props) {
                         <section className="rounded-3xl border border-slate-200 bg-white">
                             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                                 <div>
-                                    <div className="text-lg font-semibold text-slate-900">Danh sách đồng hồ</div>
+                                    <div className="text-lg font-semibold text-slate-900">
+                                        Danh sách đồng hồ
+                                    </div>
                                     <div className="text-sm text-slate-500">
-                                        Ảnh chỉ dùng để AI đọc khi bạn post phiếu nhập.
+                                        Có thể chọn từng ảnh như cũ, hoặc chọn nhiều ảnh từ NAS để
+                                        tự tạo nhiều dòng cùng lúc.
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={addWatchLine}
-                                    className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Thêm dòng
-                                </button>
+
+                                <div className="flex items-center gap-2">
+                                    <AcquisitionBulkImagePicker
+                                        onImport={importPreparedImages}
+                                        disabled={submitting}
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={addWatchLine}
+                                        className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Thêm dòng
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-4 p-5">

@@ -12,6 +12,8 @@ export const AcquisitionSpecJobInputSchema = z.object({
     finishedAt: z.date().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    runAfter: z.date().optional().nullable(),
+    priority: z.number().int(),
     AcquisitionItem: z.unknown(),
     Product: z.unknown()
 }).strict();

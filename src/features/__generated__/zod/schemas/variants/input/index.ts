@@ -43,3 +43,6 @@ export { technicalAppearanceIssueCatalogInputSchema } from './technicalAppearanc
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
 export { ProductContentInputSchema } from './ProductContent.input';
 export { AcquisitionSpecJobInputSchema } from './AcquisitionSpecJob.input';
+export { acquisition_spec_jobInputSchema } from './acquisition_spec_job.input';
+export { system_job_controlInputSchema } from './system_job_control.input';
+export { system_job_run_logInputSchema } from './system_job_run_log.input';

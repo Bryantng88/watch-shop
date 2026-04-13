@@ -1,28 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { NextResponse } from "next/server";
+import { saveContent } from "@/app/(admin)/admin/products/_server/core/product.service";
 
-import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
-import { PERMISSIONS } from "@/constants/permissions";
-import * as productService from "@/app/(admin)/admin/products/_server/product.service";
-
-type Ctx = { params: Promise<{ id: string }> };
-
-const BodySchema = z.object({
-    generatedContent: z.string().nullish().optional(),
-    promptNote: z.string().nullish().optional(),
-    syncSnapshot: z.boolean().optional(),
-});
-
-export async function POST(req: NextRequest, ctx: Ctx) {
-    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
-    if (auth instanceof Response) return auth;
-
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const { id } = await ctx.params;
-        const body = BodySchema.parse(await req.json());
-        const result = await productService.saveContent(id, body);
-        return NextResponse.json(result, { status: 200 });
-    } catch (err: any) {
-        return NextResponse.json({ error: err?.message ?? "Lưu content thất bại." }, { status: 400 });
+        const { id } = await params;
+        if (!id) {
+            return NextResponse.json({ error: "Missing id" }, { status: 400 });
+        }
+
+        const body = await req.json().catch(() => ({}));
+
+        const result = await saveContent(id, {
+            generatedContent:
+                typeof body?.generatedContent === "string" ? body.generatedContent : null,
+            promptNote: typeof body?.promptNote === "string" ? body.promptNote : null,
+            syncSnapshot: body?.syncSnapshot !== false,
+        });
+
+        return NextResponse.json(result);
+    } catch (error: any) {
+        return NextResponse.json(
+            { error: error?.message || "Save product content failed" },
+            { status: 500 }
+        );
     }
 }

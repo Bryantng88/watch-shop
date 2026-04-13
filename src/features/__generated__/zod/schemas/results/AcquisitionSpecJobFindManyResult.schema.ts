@@ -11,6 +11,8 @@ export const AcquisitionSpecJobFindManyResultSchema = z.object({
   finishedAt: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  runAfter: z.date().optional(),
+  priority: z.number().int(),
   AcquisitionItem: z.unknown(),
   Product: z.unknown()
 })),

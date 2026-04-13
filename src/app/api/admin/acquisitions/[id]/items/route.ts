@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
     getAcquisitionDetail,
     createAcquisitionWithItem,
-} from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+} from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service"
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
     const { id } = await ctx.params;

@@ -1,4 +1,4 @@
-import { getAdminAcquisitionList } from "./_server/acquisition.service";
+import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
 import AcquisitionListClient from "./_client/ListAcq";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

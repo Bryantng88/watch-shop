@@ -1,4 +1,4 @@
-import type { GeneratedPayload } from '@/app/(admin)/admin/products/_server/product-ai.type';
+import type { GeneratedPayload } from '@/app/(admin)/admin/products/_server/ai/product-ai.type';
 
 export type PickedImage = { key: string; url: string };
 export type Option = { label: string; value: string };
@@ -262,7 +262,7 @@ export function normalizeInitial(initial: any): NormalizedEditProductState {
         generatedContent: {
             specBullets: initial?.content?.specBullets ?? [],
             promoteShort: initial?.content?.promoteShort ?? '',
-            promoteLong: initial?.content?.promoteLong ?? initial?.content?.generatedContent ?? '',
+            promoteLong: initial?.content?.promoteLong ?? initial?.content?.generatedContent ?? initial?.postContent ?? '',
             facebookCaption: initial?.content?.facebookCaption ?? '',
             instagramCaption: initial?.content?.instagramCaption ?? '',
             titleOptions: initial?.content?.titleOptions ?? [],

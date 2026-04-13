@@ -11,7 +11,9 @@ const makeSchema = () => z.object({
   startedAt: z.coerce.date().optional().nullable(),
   finishedAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  runAfter: z.coerce.date().optional().nullable(),
+  priority: z.number().int().optional()
 }).strict();
 export const AcquisitionSpecJobUncheckedCreateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobUncheckedCreateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobUncheckedCreateWithoutProductInput>;
 export const AcquisitionSpecJobUncheckedCreateWithoutProductInputObjectZodSchema = makeSchema();

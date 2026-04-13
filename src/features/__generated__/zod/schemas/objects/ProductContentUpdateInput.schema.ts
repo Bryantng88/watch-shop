@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { ProductContentUpdatespecBulletsInputObjectSchema as ProductContentUpdatespecBulletsInputObjectSchema } from './ProductContentUpdatespecBulletsInput.schema';
+import { ProductContentUpdatehashtagsInputObjectSchema as ProductContentUpdatehashtagsInputObjectSchema } from './ProductContentUpdatehashtagsInput.schema';
 import { ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema as ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutContentNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -20,6 +22,8 @@ const makeSchema = () => z.object({
   generatedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  specBullets: z.union([z.lazy(() => ProductContentUpdatespecBulletsInputObjectSchema), z.string().array()]).optional(),
+  hashtags: z.union([z.lazy(() => ProductContentUpdatehashtagsInputObjectSchema), z.string().array()]).optional(),
   Product: z.lazy(() => ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema).optional()
 }).strict();
 export const ProductContentUpdateInputObjectSchema: z.ZodType<Prisma.ProductContentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductContentUpdateInput>;

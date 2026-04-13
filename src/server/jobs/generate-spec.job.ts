@@ -1,6 +1,6 @@
 import prisma from "../db/client";
 
-import * as acquisitionAiService from "@/app/(admin)/admin/acquisitions/_server/acquisition-ai.service";
+import * as acquisitionAiService from "@/app/(admin)/admin/acquisitions/_serverOld/acquisition-ai.service";
 import { buildProductTitleFromSpec } from "../lib/product-title.builder";
 
 

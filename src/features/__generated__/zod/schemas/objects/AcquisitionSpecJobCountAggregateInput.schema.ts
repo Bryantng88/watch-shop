@@ -13,6 +13,8 @@ const makeSchema = () => z.object({
   finishedAt: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  runAfter: z.literal(true).optional(),
+  priority: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const AcquisitionSpecJobCountAggregateInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobCountAggregateInputType>;

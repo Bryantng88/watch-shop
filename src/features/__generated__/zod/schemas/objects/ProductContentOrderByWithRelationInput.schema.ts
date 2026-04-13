@@ -20,6 +20,8 @@ const makeSchema = () => z.object({
   generatedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  specBullets: SortOrderSchema.optional(),
+  hashtags: SortOrderSchema.optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ProductContentOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductContentOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductContentOrderByWithRelationInput>;

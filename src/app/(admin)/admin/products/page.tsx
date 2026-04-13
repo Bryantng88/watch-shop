@@ -1,4 +1,4 @@
-import { getAdminProductList } from "./_server/product.service";
+import { getAdminProductList } from "./_server/core/product.service"
 import ListProducts from "./_client/ListProducts";
 //import AdminProductListPageClient from "./_client/ListProductsOld";
 

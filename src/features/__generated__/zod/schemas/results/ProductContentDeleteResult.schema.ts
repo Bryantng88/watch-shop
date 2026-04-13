@@ -15,5 +15,7 @@ export const ProductContentDeleteResultSchema = z.nullable(z.object({
   generatedAt: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  specBullets: z.array(z.string()),
+  hashtags: z.array(z.string()),
   Product: z.unknown()
 }));

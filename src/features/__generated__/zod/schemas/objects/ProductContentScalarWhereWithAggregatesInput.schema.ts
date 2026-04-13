@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
-import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { StringNullableListFilterObjectSchema as StringNullableListFilterObjectSchema } from './StringNullableListFilter.schema'
 
 const productcontentscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductContentScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ProductContentScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -23,7 +24,9 @@ const productcontentscalarwherewithaggregatesinputSchema = z.object({
   promptNote: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   generatedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  specBullets: z.lazy(() => StringNullableListFilterObjectSchema).optional(),
+  hashtags: z.lazy(() => StringNullableListFilterObjectSchema).optional()
 }).strict();
 export const ProductContentScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductContentScalarWhereWithAggregatesInput> = productcontentscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductContentScalarWhereWithAggregatesInput>;
 export const ProductContentScalarWhereWithAggregatesInputObjectZodSchema = productcontentscalarwherewithaggregatesinputSchema;

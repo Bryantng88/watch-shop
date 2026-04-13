@@ -1,7 +1,7 @@
 // useAcqItems.ts
 "use client";
 import { useEffect, useState } from "react";
-import { getAcqItems, isAcqItemsCached } from "../_server/acqItems.cache";
+import { getAcqItems, isAcqItemsCached } from "../../../../../old_files/Acquisition_server/acqItems.cache";
 
 export function useAcqItems(acqId: string, enabled: boolean) {
     const [data, setData] = useState<any[] | null>(null);

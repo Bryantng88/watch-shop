@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { postAcquisition } from "@/app/(admin)/admin/acquisitions/_server/acquisition.service";
+import { postAcquisition } from "@/old_files/Acquisition_server/acquisition.service";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     let body;

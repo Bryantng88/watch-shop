@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import EditProductForm from '../../_client/EditProductForm';
-import { detail } from '../../_server/product.service';
-import * as prodRepo from '../../_server/product.repo';
+import EditProductForm from '../../_client/edit/EditProductForm';
+import { detail } from '../../_server/core/product.service'
+import * as prodRepo from '../../_server/core/product.repo'
 import { getOptions } from '../../_components/options';
 
 import { prisma } from '@/server/db/client';

@@ -18,6 +18,8 @@ const makeSchema = () => z.object({
   generatedAt: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  specBullets: z.boolean().optional(),
+  hashtags: z.boolean().optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();
 export const ProductContentSelectObjectSchema: z.ZodType<Prisma.ProductContentSelect> = makeSchema() as unknown as z.ZodType<Prisma.ProductContentSelect>;

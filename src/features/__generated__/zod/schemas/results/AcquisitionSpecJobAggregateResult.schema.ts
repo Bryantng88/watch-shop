@@ -10,14 +10,18 @@ export const AcquisitionSpecJobAggregateResultSchema = z.object({  _count: z.obj
     finishedAt: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    runAfter: z.number(),
+    priority: z.number(),
     AcquisitionItem: z.number(),
     Product: z.number()
   }).optional(),
   _sum: z.object({
-    attempts: z.number().nullable()
+    attempts: z.number().nullable(),
+    priority: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    attempts: z.number().nullable()
+    attempts: z.number().nullable(),
+    priority: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -29,7 +33,9 @@ export const AcquisitionSpecJobAggregateResultSchema = z.object({  _count: z.obj
     startedAt: z.date().nullable(),
     finishedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    runAfter: z.date().nullable(),
+    priority: z.number().int().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -41,5 +47,7 @@ export const AcquisitionSpecJobAggregateResultSchema = z.object({  _count: z.obj
     startedAt: z.date().nullable(),
     finishedAt: z.date().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    runAfter: z.date().nullable(),
+    priority: z.number().int().nullable()
   }).nullable().optional()});

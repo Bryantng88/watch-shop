@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import * as acquisitionAiService from "@/app/(admin)/admin/acquisitions/_server/acquisition-ai.service";
+import * as acquisitionAiService from "@/app/(admin)/admin/acquisitions/_serverOld/acquisition-ai.service";
 
 const BodySchema = z.object({
     imageUrls: z.array(z.string()).min(1),
