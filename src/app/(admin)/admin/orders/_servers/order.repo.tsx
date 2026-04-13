@@ -70,10 +70,8 @@ export type CreateOrderItemRow = {
     unitPriceAgreed: number;
     taxRate?: number;
     customerItemNote: string;
-
     createdFromFlow?: OrderFlowType | null;
 };
-
 
 export type OrderViewKey =
     | "all"
@@ -406,6 +404,7 @@ export async function createOrder(tx: DB, data: CreateOrderRow) {
             status: data.status,
             subtotal: 0,
             source: data.source,
+
             verificationStatus: data.verificationStatus,
             reserveType: data.reserveType
                 ? (data.reserveType as ReserveType)
@@ -796,5 +795,94 @@ export async function getOrderDetail(id: string, tx: DB) {
                 linkedProductTitle: item.OrderItem?.title ?? null,
             })),
         };
+    });
+}
+
+export type OrderProductResolutionRow = {
+    id: string;
+    title: string | null;
+    primaryImageUrl: string | null;
+    type: string | null;
+    status: string | null;
+    variants: Array<{
+        id: string;
+        availabilityStatus: string | null;
+        price: number | null;
+        stockQty: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+};
+
+export async function getProductsForOrderResolution(
+    tx: DB,
+    productIds: string[]
+): Promise<OrderProductResolutionRow[]> {
+    const db = dbOrTx(tx);
+
+    return db.product.findMany({
+        where: {
+            id: { in: productIds },
+            contentStatus: {
+                not: "ARCHIVED" as any,
+            },
+        },
+        select: {
+            id: true,
+            title: true,
+            primaryImageUrl: true,
+            type: true,
+            status: true,
+            variants: {
+                orderBy: [
+                    { updatedAt: "desc" },
+                    { createdAt: "asc" },
+                ],
+                select: {
+                    id: true,
+                    availabilityStatus: true,
+                    price: true,
+                    stockQty: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            },
+        },
+    }) as any;
+}
+
+export async function reserveVariantIdsForOrder(
+    tx: DB,
+    input: {
+        variantIds: string[];
+        strictActiveOnly?: boolean;
+    }
+) {
+    const db = dbOrTx(tx);
+
+    if (!input.variantIds.length) return { count: 0 };
+
+    if (input.strictActiveOnly !== false) {
+        return db.productVariant.updateMany({
+            where: {
+                id: { in: input.variantIds },
+                availabilityStatus: "ACTIVE" as any,
+            },
+            data: {
+                availabilityStatus: "RESERVED" as any,
+            },
+        });
+    }
+
+    return db.productVariant.updateMany({
+        where: {
+            id: { in: input.variantIds },
+            availabilityStatus: {
+                in: ["ACTIVE", "HIDDEN"] as any,
+            },
+        },
+        data: {
+            availabilityStatus: "RESERVED" as any,
+        },
     });
 }

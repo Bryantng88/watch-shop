@@ -126,6 +126,7 @@ function buildQuickOrderHref(product: ProductRow) {
   if (product.title) params.set("title", product.title);
   if (product.minPrice != null) params.set("listPrice", String(product.minPrice));
   if (product.variantSnapshot?.sku) params.set("sku", product.variantSnapshot.sku);
+  if (product.primaryImageUrl) params.set("img", product.primaryImageUrl);
 
   return `/admin/orders/new?${params.toString()}`;
 }

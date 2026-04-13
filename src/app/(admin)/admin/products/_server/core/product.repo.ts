@@ -783,15 +783,20 @@ export async function searchProductsRepo(tx: DB, q: string) {
             OR: [
                 { title: { contains: q, mode: "insensitive" } },
                 { sku: { contains: q, mode: "insensitive" } },
+                { variants: { some: { sku: { contains: q, mode: "insensitive" } } } },
             ],
-            status: ProductStatus.AVAILABLE,
+            status: {
+                in: [
+                    ProductStatus.AVAILABLE,
+                    ProductStatus.IN_SERVICE,
+                    ProductStatus.HOLD,
+                ],
+            },
             contentStatus: {
-                in: [ContentStatus.DRAFT, ContentStatus.PUBLISHED],
+                not: ContentStatus.ARCHIVED,
             },
             variants: {
-                some: {
-                    availabilityStatus: AvailabilityStatus.ACTIVE,
-                },
+                some: {},
             },
         },
         select: {
@@ -801,19 +806,17 @@ export async function searchProductsRepo(tx: DB, q: string) {
             type: true,
             primaryImageUrl: true,
             variants: {
-                where: {
-                    availabilityStatus: AvailabilityStatus.ACTIVE,
-                },
+                orderBy: [
+                    { updatedAt: "desc" },
+                    { createdAt: "asc" },
+                ],
+                take: 1,
                 select: {
                     id: true,
                     price: true,
                     availabilityStatus: true,
                     sku: true,
                 },
-                orderBy: {
-                    updatedAt: "desc",
-                },
-                take: 1,
             },
             vendor: {
                 select: {
@@ -833,9 +836,10 @@ export async function searchProductsRepo(tx: DB, q: string) {
         title: p.title,
         type: p.type,
         primaryImageUrl: p.primaryImageUrl ?? null,
-        price: p.variants[0] ? Number(p.variants[0].price) : 0,
+        price: p.variants[0] ? Number(p.variants[0].price ?? 0) : 0,
         variantId: p.variants[0]?.id ?? null,
         vendorName: p.vendor?.name ?? null,
+        availabilityStatus: p.variants[0]?.availabilityStatus ?? null,
     }));
 }
 export async function updateProduct(

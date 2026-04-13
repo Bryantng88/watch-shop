@@ -55,13 +55,20 @@ export async function POST(req: NextRequest) {
         source: "ADMIN",
         verificationStatus: "VERIFIED",
         status: body.status ?? "DRAFT",
+        quickFromProductId: body.quickFromProductId ?? null,
+        quickFlowType: body.quickFlowType ?? "STANDARD",
     };
 
     try {
         const order = await createOrderWithItems(payload);
         return NextResponse.json(order, { status: 201 });
     } catch (err: any) {
-        console.error("Create order failed:", err);
+        console.error("[ORDER_CREATE_ROUTE][ERROR]", {
+            name: err?.name,
+            message: err?.message,
+            stack: err?.stack,
+        });
+
         return NextResponse.json(
             { error: err?.message || "Lỗi hệ thống" },
             { status: 400 }

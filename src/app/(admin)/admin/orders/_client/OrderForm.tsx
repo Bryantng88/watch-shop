@@ -174,7 +174,7 @@ export default function OrderFormClient({
     const [shipCity, setShipCity] = useState(initialData?.shipCity ?? "");
     const [shipDistrict, setShipDistrict] = useState(initialData?.shipDistrict ?? "");
     const [shipWard, setShipWard] = useState(initialData?.shipWard ?? "");
-    const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod ?? "BANK");
+    const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod ?? "BANK_TRANSFER");
     const [notes, setNotes] = useState(initialData?.notes ?? "");
     const [createdAt, setCreatedAt] = useState(() => {
         const raw = initialData?.createdAt ? new Date(initialData.createdAt) : new Date();
@@ -275,7 +275,21 @@ export default function OrderFormClient({
             return next;
         });
     }
+    function resolveImageSrc(input?: string | null) {
+        if (!input) return null;
 
+        if (
+            input.startsWith("http://") ||
+            input.startsWith("https://") ||
+            input.startsWith("data:") ||
+            input.startsWith("/api/") ||
+            input.startsWith("/")
+        ) {
+            return input;
+        }
+
+        return `/api/media/sign?key=${encodeURIComponent(input)}`;
+    }
     function addProduct(row: ProductSearchItem) {
         setItems((prev) => [
             ...prev,
@@ -528,7 +542,7 @@ export default function OrderFormClient({
                                     className="h-11 w-full rounded-2xl border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-400"
                                     disabled={!canEdit}
                                 >
-                                    <option value="BANK">Chuyển khoản</option>
+                                    <option value="BANK_TRANSFER">Chuyển khoản</option>
                                     <option value="CASH">Tiền mặt</option>
                                     <option value="COD">COD</option>
                                 </select>
@@ -733,19 +747,28 @@ export default function OrderFormClient({
                                             >
                                                 <div className="flex flex-wrap items-start gap-4">
                                                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-                                                        {it.img ? (
-                                                            <Image
-                                                                src={it.img}
-                                                                alt={it.title}
-                                                                fill
-                                                                className="object-cover"
-                                                                sizes="64px"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
-                                                                {it.kind}
-                                                            </div>
-                                                        )}
+                                                        {(() => {
+                                                            const resolvedImg = resolveImageSrc(it.img);
+
+                                                            return resolvedImg ? (
+                                                                <Image
+                                                                    src={resolvedImg}
+                                                                    alt={it.title}
+                                                                    fill
+                                                                    className="object-cover"
+                                                                    sizes="64px"
+                                                                    unoptimized
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
+                                                                    {it.kind}
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                        <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
+                                                            {it.kind}
+                                                        </div>
+
                                                     </div>
 
                                                     <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 md:grid-cols-12">

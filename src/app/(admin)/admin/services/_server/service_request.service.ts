@@ -673,3 +673,147 @@ export async function ensurePriorityTechnicalCheckForBuyBack(input: {
         return created;
     });
 }
+
+export async function createFromOrderTx(
+    tx: DB,
+    order: {
+        id: string;
+        refNo?: string | null;
+        customerName?: string | null;
+        items: Array<{
+            id: string;
+            kind?: string | null;
+            title?: string | null;
+            serviceScope?: string | null;
+            customerItemNote?: string | null;
+            linkedOrderItemId?: string | null;
+            serviceCatalogId?: string | null;
+            productId?: string | null;
+            variantId?: string | null;
+        }>;
+    }
+) {
+    if (!order?.id) throw new Error("Missing order.id");
+
+    const serviceItems = Array.isArray(order.items)
+        ? order.items.filter((item) => String(item.kind || "").toUpperCase() === "SERVICE")
+        : [];
+
+    if (!serviceItems.length) {
+        return { created: 0, skipped: 0, ids: [] as string[] };
+    }
+
+    const technician = await serviceRequestRepo.findDefaultTechnician(tx);
+
+    const createdIds: string[] = [];
+    let skipped = 0;
+
+    for (const item of serviceItems) {
+        if (!item?.id) {
+            skipped += 1;
+            continue;
+        }
+
+        const existed = await (tx as any).serviceRequest.findFirst({
+            where: {
+                orderItemId: item.id,
+            },
+            select: { id: true },
+        });
+
+        if (existed?.id) {
+            skipped += 1;
+            continue;
+        }
+
+        const scopeRaw = String(item.serviceScope || "CUSTOMER_ITEM").toUpperCase();
+        const scope =
+            scopeRaw === "WITH_PURCHASE"
+                ? ServiceScope.WITH_PURCHASE
+                : ServiceScope.CUSTOMER_OWNED;
+
+        let linkedProduct: Awaited<ReturnType<typeof serviceRequestRepo.findProductForService>> | null =
+            null;
+
+        if (scope === ServiceScope.WITH_PURCHASE && item.productId) {
+            linkedProduct = await serviceRequestRepo.findProductForService(tx, item.productId);
+        }
+
+        const variant = linkedProduct?.variants?.[0] ?? null;
+
+        const refNo = await genRefNo(tx as any, {
+            model: (tx as any).serviceRequest,
+            prefix: "SR",
+            field: "refNo",
+            padding: 6,
+        });
+
+        const titleParts = [
+            item.title?.trim() || null,
+            order.refNo ? `Đơn ${order.refNo}` : null,
+        ].filter(Boolean);
+
+        const noteParts = [
+            titleParts.length ? titleParts.join(" • ") : null,
+            order.customerName ? `Khách: ${order.customerName}` : null,
+            scope === ServiceScope.CUSTOMER_OWNED
+                ? item.customerItemNote?.trim() || null
+                : null,
+        ].filter(Boolean);
+
+        const created = await serviceRequestRepo.createOne(tx, {
+            refNo,
+            type: ServiceType.PAID,
+            billable: true,
+
+            scope,
+            status: ServiceRequestStatus.DRAFT,
+
+            notes: noteParts.length ? noteParts.join("\n") : null,
+
+            orderItem: {
+                connect: { id: item.id },
+            },
+
+            serviceCatalog: item.serviceCatalogId
+                ? {
+                    connect: { id: item.serviceCatalogId },
+                }
+                : undefined,
+
+            product: linkedProduct?.id
+                ? {
+                    connect: { id: linkedProduct.id },
+                }
+                : undefined,
+
+            variant: variant?.id
+                ? {
+                    connect: { id: variant.id },
+                }
+                : undefined,
+
+            skuSnapshot: variant?.sku ?? null,
+            primaryImageUrlSnapshot: linkedProduct?.primaryImageUrl ?? null,
+            brandSnapshot: linkedProduct?.brand?.name ?? null,
+            modelSnapshot: linkedProduct?.watchSpec?.model ?? linkedProduct?.title ?? null,
+            refSnapshot: linkedProduct?.watchSpec?.ref ?? null,
+
+            technicianId: technician?.id ?? null,
+            technicianNameSnap:
+                technician?.name?.trim() || technician?.email || null,
+        } as any);
+
+        if (linkedProduct?.id) {
+            await serviceRequestRepo.markProductInService(tx, linkedProduct.id);
+        }
+
+        createdIds.push(created.id);
+    }
+
+    return {
+        created: createdIds.length,
+        skipped,
+        ids: createdIds,
+    };
+}
