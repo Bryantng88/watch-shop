@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
-import MediaBrowserDialog, { type SharedMediaProfile } from "./MediaBrowserDialog";
+import MediaBrowserDialog, { SharedMediaProfile } from "./MediaBrowserDialog";
 
 type Props = {
-    value?: string | null;
+    value: string | null;
     onChange: (fileKey: string) => void;
     pending?: boolean;
     disabled?: boolean;
@@ -19,17 +19,12 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 function isRenderableUrl(value: string) {
-    return (
-        value.startsWith("http://") ||
-        value.startsWith("https://") ||
-        value.startsWith("data:") ||
-        value.startsWith("/api/") ||
-        value.startsWith("/")
-    );
+    return /^(https?:)?\/\//i.test(value) || value.startsWith("/") || value.startsWith("data:") || value.startsWith("blob:");
 }
 
-function resolvePreviewSrc(input?: string | null) {
-    const trimmed = String(input ?? "").trim();
+function resolvePreviewSrc(value: string | null | undefined) {
+    if (!value) return null;
+    const trimmed = value.trim();
     if (!trimmed) return null;
     if (isRenderableUrl(trimmed)) return trimmed;
     return `/api/media/sign?key=${encodeURIComponent(trimmed)}`;
@@ -90,6 +85,7 @@ export default function MediaPickerInline({
                 onSelect={onChange}
                 profile={profile}
                 selectedKey={value}
+                selectionMode="single"
             />
         </>
     );

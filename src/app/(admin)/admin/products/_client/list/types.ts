@@ -61,6 +61,7 @@ export type ProductRow = ProductListItem & {
   acquisitionRefNo?: string | null;
   isReadyToPublish?: boolean;
   publishMissing?: string[];
+  storefrontImageKey?: string | null;
 };
 
 export type ProductListPageProps = {
