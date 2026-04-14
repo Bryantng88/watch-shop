@@ -316,3 +316,297 @@ export function collectSoftWarnings(input: {
 export function getAutoSpecJobLimit(newItemsCount: number) {
     return Math.max(2, Math.min(newItemsCount, 6));
 }
+
+export type ClosingLineTone = "playful" | "standard";
+
+export type BuildClosingLineInput = {
+    brand?: string | null;
+    movement?: string | null;
+    caseType?: string | null;
+    condition?: string | null;
+    dialColor?: string | null; // 👈 thêm dòng này
+    price?: number | null;
+    tone?: ClosingLineTone;
+};
+
+function cleanText(value?: string | null) {
+    return String(value ?? "").trim();
+}
+
+function sentenceCase(value: string) {
+    const raw = cleanText(value);
+    if (!raw) return "";
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function normalizeMovement(value?: string | null) {
+    const raw = cleanText(value).toLowerCase();
+    if (!raw) return "";
+
+    if (raw.includes("automatic")) return "Automatic";
+    if (raw.includes("auto")) return "Automatic";
+    if (raw.includes("quartz")) return "Quartz";
+    if (raw.includes("manual")) return "máy tay";
+    if (raw.includes("handwind")) return "máy tay";
+    if (raw.includes("hand-wind")) return "máy tay";
+
+    return cleanText(value);
+}
+
+function normalizeCaseType(value?: string | null) {
+    const raw = cleanText(value);
+    if (!raw) return "";
+    return raw.toLowerCase();
+}
+
+function normalizeCondition(value?: string | null) {
+    const raw = cleanText(value);
+    if (!raw) return "";
+    return raw.toLowerCase();
+}
+function normalizeDialColor(value?: string | null) {
+    const raw = cleanText(value).toLowerCase();
+    if (!raw) return "";
+
+    // normalize một số màu phổ biến cho đẹp câu chữ
+    if (raw.includes("black")) return "đen";
+    if (raw.includes("white")) return "trắng";
+    if (raw.includes("silver")) return "silver";
+    if (raw.includes("gold")) return "gold";
+    if (raw.includes("champagne")) return "champagne";
+    if (raw.includes("blue")) return "xanh";
+    if (raw.includes("navy")) return "xanh navy";
+    if (raw.includes("brown")) return "nâu";
+    if (raw.includes("green")) return "xanh lá";
+    if (raw.includes("linen")) return "linen";
+
+    return raw;
+}
+
+
+
+export function buildPricePhrase(
+    price?: number | null,
+    tone: ClosingLineTone = "playful"
+) {
+    if (price == null || !Number.isFinite(price) || price <= 0) return null;
+
+
+
+    const million = price / 1_000_000;
+
+    if (tone === "playful") {
+        if (million < 5) {
+            return `Tiệm có giá chỉ x triệu tiểu học`;
+        }
+
+        if (million < 10) {
+            return `Tiệm có giá chỉ X triệu vừa phải`;
+        }
+
+        if (million < 20) {
+            return `Tiệm có giá loanh quanh 1x triệu cho một chiếc đồng hồ có giá trị sưu tầm rõ ràng`;
+        }
+
+        return `Inbox Tiệm để lấy giá cho một chiếc đồng hồ giá trị sưu tầm cao`;
+    }
+
+    if (million < 5) {
+        return `Tiệm có chỉ x triệu rất dễ tiếp cận`;
+    }
+
+    if (million < 10) {
+        return `Tiệm có X triệu khá hợp lý`;
+    }
+
+    if (million < 20) {
+        return `Tiệm có 1x triệu cho một chiếc đồng hồ có giá trị sưu tầm rõ ràng`;
+    }
+
+    return `Inbox Tiệm để lấy giá cho một chiếc đồng hồ giá trị sưu tầm caoo`;
+}
+
+function buildBrandPhrase(brand?: string | null) {
+    const raw = cleanText(brand);
+    return raw || "chiếc đồng hồ này";
+}
+
+function buildMovementPhrase(movement?: string | null) {
+    const raw = normalizeMovement(movement);
+    return raw || "";
+}
+
+function buildCasePhrase(caseType?: string | null) {
+    const raw = normalizeCaseType(caseType);
+    if (!raw) return "";
+    return `form ${raw}`;
+}
+
+function buildConditionPhrase(condition?: string | null) {
+    const raw = normalizeCondition(condition);
+    if (!raw) return "";
+    return `tình trạng ${raw}`;
+}
+export function buildDialColorPhrase(dialColor?: string | null) {
+    const raw = normalizeDialColor(dialColor);
+    if (!raw) return "";
+
+    // 2 kiểu phrasing để đỡ lặp
+    const templates = [
+        `dial ${raw}`,
+        `mặt ${raw}`,
+    ];
+
+    // deterministic chọn template để không nhảy lung tung
+    const idx = raw.length % templates.length;
+
+    return templates[idx];
+}
+function joinParts(parts: Array<string | null | undefined>) {
+    return parts
+        .map((part) => cleanText(part))
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getDeterministicTemplateIndex(input: BuildClosingLineInput) {
+    const seed = [
+        cleanText(input.brand),
+        cleanText(input.movement),
+        cleanText(input.caseType),
+        cleanText(input.condition),
+        String(input.price ?? ""),
+    ].join("|");
+
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+        hash = (hash * 31 + seed.charCodeAt(i)) % 1000000007;
+    }
+
+    return Math.abs(hash) % 3;
+}
+
+export function shouldGenerateClosingLine(input: BuildClosingLineInput) {
+    const brand = cleanText(input.brand);
+    const movement = cleanText(input.movement);
+    const caseType = cleanText(input.caseType);
+    const condition = cleanText(input.condition);
+    const price = input.price;
+
+    if (price == null || !Number.isFinite(price) || price <= 0) return false;
+    if (!brand) return false;
+
+    const enoughSpec =
+        Boolean(movement) ||
+        Boolean(caseType) ||
+        Boolean(condition) ||
+        Boolean(input.dialColor);
+
+    return enoughSpec;
+}
+
+export function buildClosingLine(input: BuildClosingLineInput) {
+    if (!shouldGenerateClosingLine(input)) return null;
+
+    const tone = input.tone ?? "playful";
+    const pricePhrase = buildPricePhrase(input.price, tone);
+    if (!pricePhrase) return null;
+
+    const brand = buildBrandPhrase(input.brand);
+    const movement = buildMovementPhrase(input.movement);
+    const casePhrase = buildCasePhrase(input.caseType);
+    const dialPhrase = buildDialColorPhrase(input.dialColor);
+
+    const conditionPhrase = buildConditionPhrase(input.condition);
+
+    const subjectFull = joinParts([
+        brand,
+        movement,
+        casePhrase,
+        dialPhrase,
+        conditionPhrase,
+    ]);
+
+    const subjectCompact = joinParts([
+        brand,
+        casePhrase,
+        dialPhrase,
+        movement,
+        conditionPhrase,
+    ]);
+
+    const subjectValue = joinParts([
+        brand,
+        casePhrase,
+        dialPhrase,
+        "nằm ở cả thiết kế lẫn giá trị sử dụng",
+        conditionPhrase,
+    ]);
+    const templates = [
+        `${pricePhrase}, rất hợp lý cho một chiếc ${subjectFull}.`,
+        `${pricePhrase}, mức giá khá đẹp cho một chiếc ${subjectCompact}.`,
+        `${pricePhrase}, đủ để thấy sức hút của một chiếc ${subjectValue}.`,
+    ];
+
+    return sentenceCase(templates[getDeterministicTemplateIndex(input)]);
+}
+
+export function appendClosingLineToContent(
+    content: string,
+    input: BuildClosingLineInput
+) {
+    const closingLine = buildClosingLine(input);
+    const base = String(content ?? "").trim();
+
+    if (!closingLine) return base;
+
+    const normalizedBase = base.toLowerCase();
+    const normalizedClosing = closingLine.toLowerCase();
+
+    if (normalizedBase.includes(normalizedClosing)) {
+        return base;
+    }
+
+    if (!base) return closingLine;
+
+    return `${base}\n\n${closingLine}`;
+}
+
+export function replaceTrailingClosingLine(
+    content: string,
+    input: BuildClosingLineInput
+) {
+    const base = String(content ?? "").trim();
+    const nextClosingLine = buildClosingLine(input);
+
+    if (!nextClosingLine) return base;
+
+    const paragraphs = base
+        .split(/\n{2,}/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    if (paragraphs.length === 0) {
+        return nextClosingLine;
+    }
+
+    const last = paragraphs[paragraphs.length - 1].toLowerCase();
+    const looksLikeClosingLine =
+        last.includes("tiệm có") &&
+        (
+            last.includes("rất hợp lý") ||
+            last.includes("khá hợp lý") ||
+            last.includes("giá trị sưu tầm") ||
+            last.includes("mức giá khá đẹp") ||
+            last.includes("đủ để thấy sức hút")
+        );
+
+    if (looksLikeClosingLine) {
+        paragraphs[paragraphs.length - 1] = nextClosingLine;
+        return paragraphs.join("\n\n");
+    }
+
+    return `${base}\n\n${nextClosingLine}`;
+}

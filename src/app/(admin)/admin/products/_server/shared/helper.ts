@@ -218,27 +218,220 @@ export async function genUniqueProductSku(
     return `${startsWith}${String(nextNum).padStart(4, "0")}`;
 }
 
+function toText(value: unknown) {
+    if (value == null) return "";
+    return String(value).trim();
+}
+
+function normalizeKey(value: unknown) {
+    return toText(value).toUpperCase().replace(/\s+/g, "_");
+}
+
+function sentenceCase(value: string) {
+    const raw = toText(value);
+    if (!raw) return "";
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function mapCaseMaterialLabel(value: unknown) {
+    const key = normalizeKey(value);
+
+    switch (key) {
+        case "STAINLESS_STEEL":
+        case "STEEL":
+            return "Thép";
+        case "GOLD":
+            return "Vàng";
+        case "GOLD_PLATED":
+        case "PLAQUE":
+        case "PLATED":
+            return "Mạ vàng";
+        case "TWO_TONE":
+        case "STEEL_GOLD":
+            return "Thép demi";
+        case "TITANIUM":
+            return "Titanium";
+        case "SILVER":
+            return "Bạc";
+        case "BRONZE":
+            return "Đồng";
+        default:
+            return sentenceCase(toText(value).toLowerCase().replace(/_/g, " "));
+    }
+}
+
+function mapGlassLabel(value: unknown) {
+    const raw = toText(value);
+    const key = normalizeKey(value);
+
+    switch (key) {
+        case "SAPPHIRE":
+            return "sapphire";
+        case "MINERAL":
+            return "mineral";
+        case "ACRYLIC":
+        case "PLEXI":
+        case "PLEXIGLASS":
+            return "acrylic";
+        default:
+            return raw ? raw.toLowerCase().replace(/_/g, " ") : "";
+    }
+}
+
+function mapStrapMaterialLabel(value: unknown) {
+    const key = normalizeKey(value);
+
+    switch (key) {
+        case "LEATHER":
+            return "da";
+        case "STEEL":
+        case "STAINLESS_STEEL":
+            return "thép";
+        case "RUBBER":
+            return "cao su";
+        case "FABRIC":
+        case "CANVAS":
+        case "NYLON":
+            return "vải";
+        case "ALLIGATOR":
+        case "CROCODILE":
+            return "da cá sấu";
+        default:
+            return toText(value).toLowerCase().replace(/_/g, " ");
+    }
+}
+
+function mapMovementLabel(value: unknown) {
+    const raw = toText(value);
+    const key = normalizeKey(value);
+
+    switch (key) {
+        case "AUTOMATIC":
+        case "AUTO":
+            return "automatic";
+        case "QUARTZ":
+            return "quartz";
+        case "MANUAL":
+        case "HANDWIND":
+        case "HAND_WIND":
+            return "lên cót tay";
+        default:
+            return raw ? raw.toLowerCase().replace(/_/g, " ") : "";
+    }
+}
+
+function inferOriginalStrapAndClasp(product: any) {
+    const ws = product?.watchSpecSnapshot ?? product?.watchSpec ?? null;
+    const strapText = normalizeKey(ws?.strap);
+
+    const hasStrap =
+        ws?.hasStrap === true ||
+        strapText.includes("ORIGINAL") ||
+        strapText.includes("ZIN");
+
+    const hasClasp =
+        ws?.hasClasp === true ||
+        strapText.includes("CLASP_ORIGINAL") ||
+        strapText.includes("KHOA_ZIN") ||
+        strapText.includes("ZIN");
+
+    return {
+        hasStrap,
+        hasClasp,
+    };
+}
+
+function inferInventoryStrap(product: any) {
+    const firstVariant = product?.variants?.[0] ?? null;
+    const variantName = toText(firstVariant?.name);
+
+    if (variantName.startsWith("__STRAP_LINK__:")) {
+        return true;
+    }
+
+    if (product?.linkedStrapVariantId || product?.linkedStrapProductId) {
+        return true;
+    }
+
+    return false;
+}
+
 export function buildSpecBulletsFromProductABC(product: any): string[] {
     const ws = product?.watchSpecSnapshot ?? product?.watchSpec ?? null;
     const bullets: string[] = [];
 
-    if (ws?.movement) bullets.push(`Bộ máy ${String(ws.movement).toLowerCase()}.`);
-    if (ws?.caliber) bullets.push(`Caliber ${ws.caliber}.`);
+    const brand =
+        toText(product?.brand?.name) ||
+        toText(product?.brandSnapshot) ||
+        toText(product?.brand);
 
-    const sizeParts = [ws?.width ? `${ws.width}mm` : null, ws?.thickness ? `dày ${ws.thickness}mm` : null]
+    const movementText = mapMovementLabel(ws?.movement);
+    const caliber = toText(ws?.caliber);
+    const caseMaterialText = mapCaseMaterialLabel(ws?.caseMaterial);
+    const glassText = mapGlassLabel(ws?.glass);
+    const dialColorText = toText(ws?.dialColor);
+    const strapMaterialText = mapStrapMaterialLabel(ws?.strap);
+
+    const { hasStrap, hasClasp } = inferOriginalStrapAndClasp(product);
+    const isInventoryStrap = inferInventoryStrap(product);
+
+    if (movementText) {
+        if (brand && caliber) {
+            bullets.push(
+                `Bộ máy ${movementText} chính hãng ${brand} (Caliber ${caliber}).`
+            );
+        } else if (brand) {
+            bullets.push(`Bộ máy ${movementText} chính hãng ${brand}.`);
+        } else if (caliber) {
+            bullets.push(`Bộ máy ${movementText} (Caliber ${caliber}).`);
+        } else {
+            bullets.push(`Bộ máy ${movementText}.`);
+        }
+    } else if (caliber) {
+        bullets.push(`Caliber ${caliber}.`);
+    }
+
+    const sizeParts = [
+        ws?.width ? `${ws.width}mm` : null,
+        ws?.thickness ? `dày ${ws.thickness}mm` : null,
+    ]
         .filter(Boolean)
-        .join(', ');
-    if (sizeParts) bullets.push(`Kích thước ${sizeParts}.`);
+        .join(", ");
 
-    if (ws?.caseMaterial) bullets.push(`Vỏ ${String(ws.caseMaterial).toLowerCase()}.`);
-    if (ws?.glass) bullets.push(`Kính ${String(ws.glass).toLowerCase()}.`);
-    if (ws?.dialColor) bullets.push(`Mặt số ${ws.dialColor}.`);
-    if (ws?.dialCondition) bullets.push(`Tình trạng dial: ${ws.dialCondition}.`);
-    if (ws?.strap) bullets.push(`Dây ${String(ws.strap).toLowerCase()}.`);
+    if (sizeParts) {
+        bullets.push(`Kích thước ${sizeParts}.`);
+    }
+
+    if (caseMaterialText) {
+        bullets.push(`Vỏ ${caseMaterialText}.`);
+    }
+
+    if (glassText) {
+        bullets.push(`Kính ${glassText}.`);
+    }
+
+    if (dialColorText) {
+        bullets.push(`Mặt số ${dialColorText}.`);
+    }
+
+    if (ws?.dialCondition) {
+        bullets.push(`Tình trạng mặt số ${toText(ws.dialCondition)}.`);
+    }
+
+    if (strapMaterialText) {
+        if (isInventoryStrap) {
+            bullets.push(`Dây khóa ${strapMaterialText} thay mới từ kho.`);
+        } else if (hasStrap && hasClasp) {
+            bullets.push(`Dây khóa ${strapMaterialText} zin theo đồng hồ.`);
+        } else if (hasStrap) {
+            bullets.push(`Dây ${strapMaterialText} zin theo đồng hồ.`);
+        } else {
+            bullets.push(`Dây ${strapMaterialText}.`);
+        }
+    }
 
     return bullets;
 }
-
 export function buildHashtagsFromProduct(product: any): string[] {
     const tags = new Set<string>();
 

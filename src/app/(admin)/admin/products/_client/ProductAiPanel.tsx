@@ -34,6 +34,7 @@ export type GeneratedLongformPayload = {
     promoteLong: string;
     missingData: string[];
     safetyNotes: string[];
+    specBullets: string[]
 };
 
 type Props = {

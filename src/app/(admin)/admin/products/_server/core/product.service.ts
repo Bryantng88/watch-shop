@@ -46,15 +46,15 @@ function normalizeView(v: unknown) {
     const raw = String(firstValue(v) ?? "all").toLowerCase();
     if (
         raw === "all" ||
-        raw === "draft" ||
-        raw === "posted" ||
+        raw === "not_ready" ||
+        raw === "ready_to_post" ||
+        raw === "live" ||
         raw === "in_service" ||
-        raw === "hold" ||
         raw === "sold"
     ) {
         return raw;
     }
-    return "draft";
+    return "all";
 }
 
 function normalizeCatalog(v: unknown): "product" | "strap" {
@@ -67,7 +67,14 @@ const AdminListQuerySchema = z.object({
     pageSize: z.coerce.number().min(1).max(200).default(50),
     q: z.string().optional(),
     sort: z
-        .enum(["updatedDesc", "updatedAsc", "createdDesc", "createdAsc", "titleAsc", "titleDesc"])
+        .enum([
+            "updatedDesc",
+            "updatedAsc",
+            "createdDesc",
+            "createdAsc",
+            "titleAsc",
+            "titleDesc",
+        ])
         .optional(),
     type: z.array(z.string()).optional(),
     brandIds: z.array(z.string()).optional(),
@@ -77,6 +84,15 @@ const AdminListQuerySchema = z.object({
     sku: z.string().optional(),
     updatedFrom: z.date().optional(),
     updatedTo: z.date().optional(),
+    saleStage: z
+        .enum(["NOT_READY", "READY_TO_POST", "LIVE", "HOLD", "SOLD"])
+        .optional(),
+    opsStage: z
+        .enum(["NORMAL", "IN_SERVICE", "BLOCKED", "SOLD"])
+        .optional(),
+    missing: z
+        .enum(["images", "content", "price"])
+        .optional(),
 });
 
 const OPEN_SERVICE_REQUEST_STATUSES = [
@@ -326,6 +342,9 @@ export async function getAdminProductList(
         sku: asString(raw.sku),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
+        saleStage: asString(raw.saleStage),
+        opsStage: asString(raw.opsStage),
+        missing: asString(raw.missing),
     });
 
     const parsed = parsedResult.success
@@ -343,6 +362,9 @@ export async function getAdminProductList(
             sku: undefined,
             updatedFrom: undefined,
             updatedTo: undefined,
+            saleStage: undefined,
+            opsStage: undefined,
+            missing: undefined,
         };
 
     const catalog = normalizeCatalog(raw.catalog);
@@ -362,9 +384,14 @@ export async function getAdminProductList(
         hasImages: parsed.hasImages,
         catalog,
         includeCost: !!opts?.canViewCost,
+        saleStage: parsed.saleStage,
+        opsStage: parsed.opsStage,
+        missing: parsed.missing,
     } as any);
 
-    const itemIds = (result.items ?? []).map((item: any) => item.id).filter(Boolean);
+    const itemIds = (result.items ?? [])
+        .map((item: any) => item.id)
+        .filter(Boolean);
 
     const latestServices = itemIds.length
         ? await prisma.serviceRequest.findMany({
@@ -381,11 +408,14 @@ export async function getAdminProductList(
 
     const latestServiceMap = new Map<string, string>();
     const openServiceMap = new Map<string, string>();
+
     for (const row of latestServices) {
         if (!row.productId) continue;
+
         if (!latestServiceMap.has(row.productId)) {
             latestServiceMap.set(row.productId, String(row.status));
         }
+
         if (
             !openServiceMap.has(row.productId) &&
             OPEN_SERVICE_REQUEST_STATUSES.includes(row.status as any)
@@ -408,7 +438,7 @@ export async function getAdminProductList(
         const openServiceStatus = openServiceMap.get(item.id) ?? null;
         const latestServiceStatus = latestServiceMap.get(item.id) ?? null;
 
-        const imageCount = Number(item?.imagesCount ?? item?._count?.image ?? 0);
+        const imageCount = Number(item?.imagesCount ?? 0);
 
         const basePrice = Number(
             item?.salePrice ??
@@ -450,6 +480,7 @@ export async function getAdminProductList(
             computed,
         };
     });
+
     return {
         ...result,
         items,
@@ -457,7 +488,6 @@ export async function getAdminProductList(
         pageSize: parsed.pageSize,
     };
 }
-
 export async function updateProduct(
     id: string,
     patch: {

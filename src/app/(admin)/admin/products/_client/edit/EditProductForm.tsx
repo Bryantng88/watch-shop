@@ -47,6 +47,9 @@ import {
     pickKeys,
     sanitizeDeep,
     toNullableNumber,
+    buildClosingLine,
+    replaceTrailingClosingLine,
+    shouldGenerateClosingLine,
 } from './ProductEditHelpers';
 import MediaPickerMulti, {
     type PickedMediaItem,
@@ -283,7 +286,7 @@ export default function EditProductForm({
     complicationOptions = [],
     categoryOptions = [],
     strapInventoryOptions = [],
-    canEditPricing = true,
+    canEditPricing = false,
 }: Props) {
     const router = useRouter();
     const notify = useNotify();
@@ -323,7 +326,10 @@ export default function EditProductForm({
         ''
     );
     const [storefrontSaving, setStorefrontSaving] = useState(false);
-
+    const selectedBrand = useMemo(
+        () => brands.find((item) => item.id === formData.brandId) ?? null,
+        [brands, formData.brandId]
+    );
     useEffect(() => {
         const nextImages = (normalizedInitial.images ?? []).map((img: any) => ({
             key: img.fileKey,
@@ -349,6 +355,36 @@ export default function EditProductForm({
         );
         snapshotRef.current = normalizedInitial;
     }, [normalizedInitial]);
+
+    useEffect(() => {
+        if (!shouldGenerateClosingLine({
+            brand: selectedBrand?.name ?? formData.brandName ?? "",
+            movement: formData.movement,
+            caseType: formData.caseType,
+            condition: formData.dialCondition,
+            price: toNullableNumber(formData.variantPrice),
+        })) {
+            return;
+        }
+
+        setManualContent((prev) =>
+            replaceTrailingClosingLine(prev, {
+                brand: selectedBrand?.name ?? formData.brandName ?? "",
+                movement: formData.movement,
+                caseType: formData.caseType,
+                condition: formData.dialCondition,
+                price: toNullableNumber(formData.variantPrice),
+                tone: "playful",
+            })
+        );
+    }, [
+        selectedBrand?.name,
+        formData.brandName,
+        formData.movement,
+        formData.caseType,
+        formData.dialCondition,
+        formData.variantPrice,
+    ]);
     const safeCategoryOptions = useMemo(() => {
         const selectedType = String(formData.type ?? '').toUpperCase();
         const shouldFilter = selectedType === 'WATCH' || selectedType === 'WATCH_STRAP';
@@ -399,15 +435,31 @@ export default function EditProductForm({
         [strapInventoryOptions]
     );
 
-    const selectedBrand = useMemo(
-        () => brands.find((item) => item.id === formData.brandId) ?? null,
-        [brands, formData.brandId]
-    );
+
     const selectedCategory = useMemo(
         () => categoryOptions.find((item) => item.id === formData.categoryId) ?? null,
         [categoryOptions, formData.categoryId]
     );
-
+    const autoClosingLine = useMemo(
+        () =>
+            buildClosingLine({
+                brand: selectedBrand?.name ?? "",
+                movement: formData.movement,
+                caseType: formData.caseType,
+                condition: formData.dialCondition,
+                dialColor: formData.dialColor, // 👈 thêm
+                price: toNullableNumber(formData.variantPrice),
+                tone: "playful",
+            }),
+        [
+            selectedBrand?.name,
+            formData.movement,
+            formData.caseType,
+            formData.dialCondition,
+            formData.dialColor,
+            formData.variantPrice,
+        ]
+    );
     const previewImageUrl = useMemo(
         () =>
             buildDisplayImageUrl({
@@ -488,7 +540,18 @@ export default function EditProductForm({
             return next;
         });
     }
-
+    function handleInsertClosingLine() {
+        setManualContent((prev) =>
+            replaceTrailingClosingLine(prev, {
+                brand: selectedBrand?.name ?? formData.brandName ?? "",
+                movement: formData.movement,
+                caseType: formData.caseType,
+                condition: formData.dialCondition,
+                price: toNullableNumber(formData.variantPrice),
+                tone: "playful",
+            })
+        );
+    }
     function toggleComp(cid: string) {
         setErr(null);
         setFormData((prev) => {
@@ -913,6 +976,7 @@ export default function EditProductForm({
                         Paste nội dung bạn muốn lưu cho product. Khi lưu sẽ tự dựng
                         spec bullet từ spec hiện có và tự thêm hashtag có SKU.
                     </p>
+
                 </div>
 
                 <textarea
@@ -922,6 +986,23 @@ export default function EditProductForm({
                     className="block min-h-[220px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
                     placeholder="Dán nội dung thủ công vào đây..."
                 />
+                {autoClosingLine ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Câu chốt tự động
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-slate-800">
+                            {autoClosingLine}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleInsertClosingLine}
+                            className="mt-3 inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                            Chèn vào nội dung
+                        </button>
+                    </div>
+                ) : null}
             </div>
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">

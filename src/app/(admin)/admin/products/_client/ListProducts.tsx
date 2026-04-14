@@ -26,30 +26,52 @@ type FilterState = {
     vendorId: string;
     image: string;
     sort: string;
+    saleStage: string;
+    opsStage: string;
+    missing: string;
 };
+
+function normalizeView(value: string | null | undefined): ViewKey {
+    const view = String(value ?? "").toLowerCase();
+
+    if (
+        [
+            "all",
+            "not_ready",
+            "ready_to_post",
+            "live",
+            "in_service",
+            "sold",
+        ].includes(view)
+    ) {
+        return view as ViewKey;
+    }
+
+    return "all";
+}
 
 function buildCounts(
     input: ProductListPageProps["counts"],
     total: number,
     currentView: ViewKey
 ): Counts {
-    if (input && Object.values(input).some((value) => Number(value ?? 0) >= 0)) {
+    if (input && Object.keys(input).length > 0) {
         return {
             all: Number(input.all ?? 0),
-            draft: Number(input.draft ?? 0),
-            posted: Number(input.posted ?? 0),
+            not_ready: Number(input.not_ready ?? input.draft ?? 0),
+            ready_to_post: Number(input.ready_to_post ?? 0),
+            live: Number(input.live ?? input.posted ?? 0),
             in_service: Number(input.in_service ?? 0),
-            hold: Number(input.hold ?? 0),
             sold: Number(input.sold ?? 0),
         };
     }
 
     return {
         all: currentView === "all" ? total : 0,
-        draft: currentView === "draft" ? total : 0,
-        posted: currentView === "posted" ? total : 0,
+        not_ready: currentView === "not_ready" ? total : 0,
+        ready_to_post: currentView === "ready_to_post" ? total : 0,
+        live: currentView === "live" ? total : 0,
         in_service: currentView === "in_service" ? total : 0,
-        hold: currentView === "hold" ? total : 0,
         sold: currentView === "sold" ? total : 0,
     };
 }
@@ -191,9 +213,8 @@ function Pagination({
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
             <div>
-                Tổng:{" "}
-                <span className="font-semibold text-slate-950">{total}</span> • Trang{" "}
-                <span className="font-semibold text-slate-950">{page}</span>/
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> •
+                Trang <span className="font-semibold text-slate-950">{page}</span>/
                 <span className="font-semibold text-slate-950">{totalPages}</span>
             </div>
 
@@ -219,13 +240,57 @@ function Pagination({
     );
 }
 
+function SummaryCard({
+    label,
+    value,
+    tone = "slate",
+    active = false,
+    onClick,
+}: {
+    label: string;
+    value: number;
+    tone?: "slate" | "amber" | "emerald" | "blue" | "rose";
+    active?: boolean;
+    onClick?: () => void;
+}) {
+    const toneClass =
+        tone === "amber"
+            ? "border-amber-200 bg-amber-50 text-amber-900"
+            : tone === "emerald"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : tone === "blue"
+                    ? "border-sky-200 bg-sky-50 text-sky-900"
+                    : tone === "rose"
+                        ? "border-rose-200 bg-rose-50 text-rose-900"
+                        : "border-slate-200 bg-white text-slate-900";
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={[
+                "rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow",
+                toneClass,
+                active ? "ring-2 ring-slate-900/10" : "",
+            ].join(" ")}
+        >
+            <div className="text-xs font-medium uppercase tracking-wide opacity-70">
+                {label}
+            </div>
+            <div className="mt-1 text-2xl font-semibold">{value}</div>
+        </button>
+    );
+}
+
 export default function ListProducts(props: ProductListPageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
 
     const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
-    const [pendingImageProductId, setPendingImageProductId] = useState<string | null>(null);
+    const [pendingImageProductId, setPendingImageProductId] = useState<
+        string | null
+    >(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [bulkPostOpen, setBulkPostOpen] = useState(false);
     const [bulkPostLoading, setBulkPostLoading] = useState(false);
@@ -233,18 +298,16 @@ export default function ListProducts(props: ProductListPageProps) {
     const [bulkSaleValue, setBulkSaleValue] = useState("");
     const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
     const [bulkServiceLoading, setBulkServiceLoading] = useState(false);
-    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(null);
+    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(
+        null
+    );
 
     useEffect(() => {
         setRows(props.items ?? []);
     }, [props.items]);
 
-    const currentView: ViewKey = useMemo(() => {
-        const view = (sp.get("view") || "draft").toLowerCase();
-        if (["all", "draft", "posted", "in_service", "hold", "sold"].includes(view)) {
-            return view as ViewKey;
-        }
-        return "draft";
+    const currentView = useMemo<ViewKey>(() => {
+        return normalizeView(sp.get("view"));
     }, [sp]);
 
     const currentCatalog: CatalogKey = useMemo(() => {
@@ -267,6 +330,9 @@ export default function ListProducts(props: ProductListPageProps) {
         vendorId: sp.get("vendorId") ?? "",
         image: sp.get("hasImages") ?? "",
         sort: sp.get("sort") ?? "updatedDesc",
+        saleStage: sp.get("saleStage") ?? "",
+        opsStage: sp.get("opsStage") ?? "",
+        missing: sp.get("missing") ?? "",
     });
 
     useEffect(() => {
@@ -278,6 +344,9 @@ export default function ListProducts(props: ProductListPageProps) {
             vendorId: sp.get("vendorId") ?? "",
             image: sp.get("hasImages") ?? "",
             sort: sp.get("sort") ?? "updatedDesc",
+            saleStage: sp.get("saleStage") ?? "",
+            opsStage: sp.get("opsStage") ?? "",
+            missing: sp.get("missing") ?? "",
         });
     }, [sp]);
 
@@ -296,7 +365,7 @@ export default function ListProducts(props: ProductListPageProps) {
 
     function handleViewChange(view: ViewKey) {
         pushParams((next) => {
-            if (view === "draft") next.delete("view");
+            if (view === "all") next.delete("view");
             else next.set("view", view);
             next.set("page", "1");
         });
@@ -306,8 +375,12 @@ export default function ListProducts(props: ProductListPageProps) {
         pushParams((next) => {
             if (catalog === "product") next.delete("catalog");
             else next.set("catalog", "strap");
+
             next.delete("type");
             next.delete("brandId");
+            next.delete("saleStage");
+            next.delete("opsStage");
+            next.delete("missing");
             next.set("page", "1");
         });
     }
@@ -321,6 +394,9 @@ export default function ListProducts(props: ProductListPageProps) {
             setParam(next, "vendorId", filters.vendorId || null);
             setParam(next, "hasImages", filters.image || null);
             setParam(next, "sort", filters.sort || "updatedDesc");
+            setParam(next, "saleStage", isStrapCatalog ? null : filters.saleStage || null);
+            setParam(next, "opsStage", isStrapCatalog ? null : filters.opsStage || null);
+            setParam(next, "missing", isStrapCatalog ? null : filters.missing || null);
             next.set("page", "1");
         });
     }
@@ -334,12 +410,24 @@ export default function ListProducts(props: ProductListPageProps) {
             vendorId: "",
             image: "",
             sort: "updatedDesc",
+            saleStage: "",
+            opsStage: "",
+            missing: "",
         });
 
         pushParams((next) => {
-            ["q", "sku", "type", "brandId", "vendorId", "hasImages", "sort"].forEach((key) =>
-                next.delete(key)
-            );
+            [
+                "q",
+                "sku",
+                "type",
+                "brandId",
+                "vendorId",
+                "hasImages",
+                "sort",
+                "saleStage",
+                "opsStage",
+                "missing",
+            ].forEach((key) => next.delete(key));
             next.set("page", "1");
         });
     }
@@ -349,6 +437,7 @@ export default function ListProducts(props: ProductListPageProps) {
             next.set("page", String(page));
         });
     }
+
     async function handlePriceCommit(
         productId: string,
         field: "minPrice" | "salePrice" | "purchasePrice",
@@ -368,6 +457,7 @@ export default function ListProducts(props: ProductListPageProps) {
 
         router.refresh();
     }
+
     function handleToggleOne(id: string, checked: boolean) {
         setSelectedIds((prev) => {
             if (checked) return Array.from(new Set([...prev, id]));
@@ -506,7 +596,9 @@ export default function ListProducts(props: ProductListPageProps) {
             }
 
             setRows((prev) =>
-                prev.map((row) => (selectedIds.includes(row.id) ? { ...row, salePrice } : row))
+                prev.map((row) =>
+                    selectedIds.includes(row.id) ? { ...row, salePrice } : row
+                )
             );
             setBulkSaleOpen(false);
             setBulkSaleValue("");
@@ -601,6 +693,32 @@ export default function ListProducts(props: ProductListPageProps) {
         value: item.id,
     }));
 
+    const saleStageOptions = isStrapCatalog
+        ? []
+        : [
+            { label: "Chưa sẵn sàng", value: "NOT_READY" },
+            { label: "Có thể đăng", value: "READY_TO_POST" },
+            { label: "Đang bán", value: "LIVE" },
+            { label: "Đã bán", value: "SOLD" },
+        ];
+
+    const opsStageOptions = isStrapCatalog
+        ? []
+        : [
+            { label: "Bình thường", value: "NORMAL" },
+            { label: "Đang service", value: "IN_SERVICE" },
+            { label: "Blocked", value: "BLOCKED" },
+            { label: "Đã bán", value: "SOLD" },
+        ];
+
+    const missingOptions = isStrapCatalog
+        ? []
+        : [
+            { label: "Thiếu ảnh", value: "images" },
+            { label: "Thiếu nội dung", value: "content" },
+            { label: "Thiếu giá", value: "price" },
+        ];
+
     return (
         <div className="space-y-4">
             <ProductListToolbar
@@ -608,6 +726,51 @@ export default function ListProducts(props: ProductListPageProps) {
                 catalog={currentCatalog}
                 onCatalogChange={handleCatalogChange}
             />
+
+            {!isStrapCatalog ? (
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+                    <SummaryCard
+                        label="Tất cả"
+                        value={counts.all}
+                        active={currentView === "all"}
+                        onClick={() => handleViewChange("all")}
+                    />
+                    <SummaryCard
+                        label="Chưa sẵn sàng"
+                        value={counts.not_ready}
+                        tone="amber"
+                        active={currentView === "not_ready"}
+                        onClick={() => handleViewChange("not_ready")}
+                    />
+                    <SummaryCard
+                        label="Có thể đăng"
+                        value={counts.ready_to_post}
+                        tone="emerald"
+                        active={currentView === "ready_to_post"}
+                        onClick={() => handleViewChange("ready_to_post")}
+                    />
+                    <SummaryCard
+                        label="Đang bán"
+                        value={counts.live}
+                        tone="blue"
+                        active={currentView === "live"}
+                        onClick={() => handleViewChange("live")}
+                    />
+                    <SummaryCard
+                        label="Đang service"
+                        value={counts.in_service}
+                        tone="rose"
+                        active={currentView === "in_service"}
+                        onClick={() => handleViewChange("in_service")}
+                    />
+                    <SummaryCard
+                        label="Đã bán"
+                        value={counts.sold}
+                        active={currentView === "sold"}
+                        onClick={() => handleViewChange("sold")}
+                    />
+                </div>
+            ) : null}
 
             <ProductListViewTabs
                 value={currentView}
@@ -620,6 +783,9 @@ export default function ListProducts(props: ProductListPageProps) {
                 typeOptions={typeOptions}
                 brandOptions={brandOptions}
                 vendorOptions={vendorOptions}
+                saleStageOptions={saleStageOptions}
+                opsStageOptions={opsStageOptions}
+                missingOptions={missingOptions}
                 onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
@@ -674,6 +840,7 @@ export default function ListProducts(props: ProductListPageProps) {
                 onDelete={handleDeleteProduct}
                 onService={handleCreateService}
             />
+
             <Pagination
                 page={props.page}
                 totalPages={props.totalPages}

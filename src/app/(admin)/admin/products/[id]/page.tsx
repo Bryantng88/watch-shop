@@ -26,6 +26,21 @@ function hasAdminRole(user: {
     );
 }
 
+
+function canViewTradeFinancials(user: {
+    roles?: string[] | null;
+    permissions?: string[] | null;
+} | null) {
+    const roles = (user?.roles ?? []).map((x) => String(x).trim().toUpperCase());
+    const permissions = (user?.permissions ?? []).map((x) => String(x).trim());
+
+    return (
+        roles.includes("ADMIN") ||
+        permissions.includes("ADMIN") ||
+        permissions.includes("PRODUCT_COST_VIEW")
+    );
+}
+
 export default async function ProductDetailPage({
     params,
 }: {
@@ -34,7 +49,7 @@ export default async function ProductDetailPage({
     await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
     const user = await getCurrentUser();
-    const canViewTradeFinancials = hasAdminRole(user);
+    const canViewTradeFinancialsValue = canViewTradeFinancials(user);
 
     const { id } = await params;
     const data = await adminProductService.detail(id);
@@ -47,8 +62,7 @@ export default async function ProductDetailPage({
         <div className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6">
             <ProductDetailClient
                 data={data}
-                canViewTradeFinancials={canViewTradeFinancials}
-            />
+                canViewTradeFinancials={canViewTradeFinancialsValue} />
         </div>
     );
 }

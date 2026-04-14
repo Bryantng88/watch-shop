@@ -1,4 +1,4 @@
-import { ProductStatus, ContentStatus } from "@prisma/client";
+import { ContentStatus, ProductStatus } from "@prisma/client";
 
 export type OpsStage =
     | "NORMAL"
@@ -53,7 +53,7 @@ export type BuildProductListComputedInput = {
     hasUrgentOrder?: boolean;
 };
 
-const MIN_SALE_IMAGES = 1;
+const MIN_SALE_IMAGES = 3;
 
 const HOLD_STATUSES = new Set<string>([
     ProductStatus.HOLD,

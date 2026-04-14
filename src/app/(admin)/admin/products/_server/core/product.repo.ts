@@ -24,8 +24,13 @@ const OPEN_SERVICE_REQUEST_STATUSES = [
     ServiceRequestStatus.IN_PROGRESS,
 ];
 
-type ProductViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
-
+type ProductViewKey =
+    | "all"
+    | "not_ready"
+    | "ready_to_post"
+    | "live"
+    | "in_service"
+    | "sold";
 type AdminProductListRepoInput = ProductListInput & {
     page?: number;
     pageSize?: number;
