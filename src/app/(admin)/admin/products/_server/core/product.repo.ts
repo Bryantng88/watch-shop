@@ -1365,7 +1365,6 @@ export async function replaceProductImages(
 
     const normalized = images
         .filter((img) => !!String(img.fileKey ?? "").trim())
-        .slice(0, 4);
 
     if (normalized.length) {
         await db.productImage.createMany({

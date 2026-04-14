@@ -1,14 +1,54 @@
 import type { BrandLite, ProductListItem } from "@/features/products/types";
+export type OpsStage =
+  | "NORMAL"
+  | "IN_SERVICE"
+  | "BLOCKED"
+  | "SOLD";
 
-export type ViewKey = "all" | "draft" | "posted" | "in_service" | "hold" | "sold";
+export type SaleStage =
+  | "NOT_READY"
+  | "READY_TO_POST"
+  | "LIVE"
+  | "HOLD"
+  | "SOLD";
+
+export type SaleMissingKey =
+  | "images"
+  | "content"
+  | "price";
+
+export type OpsFlag =
+  | "OPEN_SERVICE"
+  | "NEED_SERVICE"
+  | "URGENT_ORDER"
+  | "MISSING_TECH_INFO";
+
+export type PriorityLevel =
+  | "NORMAL"
+  | "HIGH"
+  | "URGENT";
+
+export type ViewKey =
+  | "all"
+  | "not_ready"
+  | "ready_to_post"
+  | "live"
+  | "in_service"
+  | "sold";
+
 export type CatalogKey = "product" | "strap";
+
+export type MissingKey =
+  | "images"
+  | "content"
+  | "price";
 
 export type Counts = {
   all: number;
-  draft: number;
-  posted: number;
+  not_ready: number;
+  ready_to_post: number;
+  live: number;
   in_service: number;
-  hold: number;
   sold: number;
 };
 
@@ -49,6 +89,16 @@ export type ProductRow = ProductListItem & {
     material?: string | null;
     quickRelease?: boolean | null;
   } | null;
+  computed?: {
+    opsStage: OpsStage;
+    saleStage: SaleStage;
+    saleMissing: SaleMissingKey[];
+    opsFlags: OpsFlag[];
+    priorityLevel: PriorityLevel;
+    isReadyForSale: boolean;
+    isBlockedForSale: boolean;
+    canPostNow: boolean;
+  };
   isVariantInfoComplete?: boolean;
   isWatchSpecComplete?: boolean;
   isInfoComplete?: boolean;

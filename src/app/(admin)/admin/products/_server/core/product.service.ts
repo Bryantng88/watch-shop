@@ -5,7 +5,7 @@ import { generateRuleBasedProductContent } from "../content/product-content.gene
 import { z } from "zod";
 import { computeEffectivePrice } from "../../helpers/price";
 import { moveMediaObject } from "@/server/lib/media-storage";
-
+import { buildProductListComputed } from "./product-list-computed";
 import { MIN_IMAGES, getRequiredWatchSpecFields, hasValue as hasRuleValue } from "../shared/rules";
 import { buildSpecBulletsFromProductABC, buildHashtagsFromProduct } from "../shared/helper";
 
@@ -397,25 +397,59 @@ export async function getAdminProductList(
     const items = (result.items ?? []).map((item: any) => {
         const missingVariantFields = computeMissingVariantFields(item);
         const missingWatchSpecFields = computeMissingWatchSpecFields(item);
+
         const isVariantInfoComplete = missingVariantFields.length === 0;
         const isWatchSpecComplete = missingWatchSpecFields.length === 0;
+        const isInfoComplete = isVariantInfoComplete && isWatchSpecComplete;
+
         const publishReadiness = computePublishReadiness(item);
+
+        const hasOpenService = openServiceMap.has(item.id);
+        const openServiceStatus = openServiceMap.get(item.id) ?? null;
+        const latestServiceStatus = latestServiceMap.get(item.id) ?? null;
+
+        const imageCount = Number(item?.imagesCount ?? item?._count?.image ?? 0);
+
+        const basePrice = Number(
+            item?.salePrice ??
+            item?.minPrice ??
+            item?.variantSnapshot?.salePrice ??
+            item?.variantSnapshot?.price ??
+            0
+        );
+
+        const hasPostContent =
+            Boolean(String(item?.postContent ?? "").trim()) ||
+            String(item?.contentStatus ?? "").toUpperCase() === "PUBLISHED";
+
+        const computed = buildProductListComputed({
+            productStatus: item?.status,
+            contentStatus: item?.contentStatus,
+            imageCount,
+            salePrice: basePrice,
+            basePrice,
+            hasPostContent,
+            hasOpenService,
+            needService: hasOpenService || !isInfoComplete,
+            hasHeavyMissingTechInfo: !isInfoComplete,
+            hasUrgentOrder: false,
+        });
 
         return {
             ...item,
-            hasOpenService: openServiceMap.has(item.id),
-            openServiceStatus: openServiceMap.get(item.id) ?? null,
-            latestServiceStatus: latestServiceMap.get(item.id) ?? null,
+            hasOpenService,
+            openServiceStatus,
+            latestServiceStatus,
             missingVariantFields,
             missingWatchSpecFields,
             isVariantInfoComplete,
             isWatchSpecComplete,
-            isInfoComplete: isVariantInfoComplete && isWatchSpecComplete,
+            isInfoComplete,
             isReadyToPublish: publishReadiness.isReadyToPublish,
             publishMissing: publishReadiness.publishMissing,
+            computed,
         };
     });
-
     return {
         ...result,
         items,

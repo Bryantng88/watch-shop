@@ -1287,76 +1287,76 @@ export default function EditProductForm({
                             }}
                         />
                     </CollapsibleSection>
-
-                    <CollapsibleSection
-                        title="Pricing"
-                        subtitle={
-                            canEditPricing
-                                ? 'Khối này chỉ hiện cho Admin / người có quyền giá.'
-                                : 'Bạn không có quyền chỉnh giá.'
-                        }
-                        icon={<BadgeDollarSign className="h-5 w-5" />}
-                        defaultOpen
-                        compact
-                    >
-                        {canEditPricing ? (
-                            <div className="space-y-4">
-                                <InputField
-                                    label="Giá bán"
-                                    name="variantPrice"
-                                    value={formData.variantPrice}
-                                    onChange={handleChange as any}
-                                    type="number"
-                                />
-                                <div className="grid gap-3 text-sm">
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="text-slate-500">Giá vốn gốc</div>
-                                        <div className="mt-1 font-medium text-slate-900">
-                                            {formatMoney(baseVariantCostPrice)}
+                    {canEditPricing && (
+                        <CollapsibleSection
+                            title="Pricing"
+                            subtitle={
+                                canEditPricing
+                                    ? 'Khối này chỉ hiện cho Admin / người có quyền giá.'
+                                    : 'Bạn không có quyền chỉnh giá.'
+                            }
+                            icon={<BadgeDollarSign className="h-5 w-5" />}
+                            defaultOpen
+                            compact
+                        >
+                            {canEditPricing ? (
+                                <div className="space-y-4">
+                                    <InputField
+                                        label="Giá bán"
+                                        name="variantPrice"
+                                        value={formData.variantPrice}
+                                        onChange={handleChange as any}
+                                        type="number"
+                                    />
+                                    <div className="grid gap-3 text-sm">
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="text-slate-500">Giá vốn gốc</div>
+                                            <div className="mt-1 font-medium text-slate-900">
+                                                {formatMoney(baseVariantCostPrice)}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="text-slate-500">
-                                            Chi phí dây cộng thêm
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="text-slate-500">
+                                                Chi phí dây cộng thêm
+                                            </div>
+                                            <div className="mt-1 font-medium text-slate-900">
+                                                {formatMoney(strapAddedCost)}
+                                            </div>
                                         </div>
-                                        <div className="mt-1 font-medium text-slate-900">
-                                            {formatMoney(strapAddedCost)}
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="text-slate-500">
+                                                Giá vốn sau khi ghép dây
+                                            </div>
+                                            <div className="mt-1 font-medium text-slate-900">
+                                                {formatMoney(effectiveVariantCostPrice)}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="text-slate-500">
-                                            Giá vốn sau khi ghép dây
-                                        </div>
-                                        <div className="mt-1 font-medium text-slate-900">
-                                            {formatMoney(effectiveVariantCostPrice)}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="text-slate-500">
-                                            Chênh lệch giá bán so với giá vốn
-                                        </div>
-                                        <div
-                                            className={`mt-1 font-medium ${priceGapVsCost != null && priceGapVsCost < 0
-                                                ? 'text-rose-600'
-                                                : 'text-slate-900'
-                                                }`}
-                                        >
-                                            {priceGapVsCost == null
-                                                ? '—'
-                                                : `${priceGapVsCost >= 0 ? '+' : ''}${new Intl.NumberFormat(
-                                                    'vi-VN'
-                                                ).format(priceGapVsCost)}`}
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="text-slate-500">
+                                                Chênh lệch giá bán so với giá vốn
+                                            </div>
+                                            <div
+                                                className={`mt-1 font-medium ${priceGapVsCost != null && priceGapVsCost < 0
+                                                    ? 'text-rose-600'
+                                                    : 'text-slate-900'
+                                                    }`}
+                                            >
+                                                {priceGapVsCost == null
+                                                    ? '—'
+                                                    : `${priceGapVsCost >= 0 ? '+' : ''}${new Intl.NumberFormat(
+                                                        'vi-VN'
+                                                    ).format(priceGapVsCost)}`}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                Pricing đang được ẩn ở UI cho tài khoản không có quyền giá.
-                            </div>
-                        )}
-                    </CollapsibleSection>
-
+                            ) : (
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                    Pricing đang được ẩn ở UI cho tài khoản không có quyền giá.
+                                </div>
+                            )}
+                        </CollapsibleSection>
+                    )}
                     <CollapsibleSection
                         title="Tag"
                         subtitle="Nhập tag ngắn gọn để dễ nhóm và lọc sản phẩm."

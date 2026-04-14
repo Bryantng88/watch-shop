@@ -15,6 +15,7 @@ type Filters = {
   brandId: string;
   vendorId: string;
   image?: string;
+  missing?: string;
   sort: string;
 };
 
@@ -34,13 +35,20 @@ const imageOptions: Option[] = [
   { label: "Chưa có ảnh", value: "no" },
 ];
 
+const missingOptions: Option[] = [
+  { label: "Không lọc thiếu dữ liệu", value: "" },
+  { label: "Thiếu ảnh", value: "images" },
+  { label: "Thiếu content", value: "content" },
+  { label: "Thiếu giá", value: "price" },
+];
+
 const sortOptions: Option[] = [
   { label: "Cập nhật ↓", value: "updatedDesc" },
   { label: "Cập nhật ↑", value: "updatedAsc" },
   { label: "Tạo mới ↓", value: "createdDesc" },
   { label: "Tạo mới ↑", value: "createdAsc" },
-  { label: "Giá bán ↑", value: "priceAsc" },
-  { label: "Giá bán ↓", value: "priceDesc" },
+  { label: "Tiêu đề A→Z", value: "titleAsc" },
+  { label: "Tiêu đề Z→A", value: "titleDesc" },
 ];
 
 function Input({
@@ -113,7 +121,8 @@ export default function ProductListFilters({
   const advancedCount =
     Number(Boolean(filters.sku)) +
     Number(Boolean(filters.type)) +
-    Number(Boolean(filters.image));
+    Number(Boolean(filters.image)) +
+    Number(Boolean(filters.missing));
 
   return (
     <div className="space-y-3">
@@ -191,7 +200,7 @@ export default function ProductListFilters({
 
       {advancedOpen ? (
         <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div>
               <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
                 SKU
@@ -224,6 +233,17 @@ export default function ProductListFilters({
                 value={filters.image ?? ""}
                 options={imageOptions}
                 onChange={(value) => onChange({ image: value })}
+              />
+            </div>
+
+            <div>
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                Thiếu dữ liệu
+              </div>
+              <Select
+                value={filters.missing ?? ""}
+                options={missingOptions}
+                onChange={(value) => onChange({ missing: value })}
               />
             </div>
           </div>

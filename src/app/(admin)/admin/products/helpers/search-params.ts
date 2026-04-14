@@ -8,13 +8,18 @@ export type ProductListSort =
 
 export type ProductViewKey =
     | "all"
-    | "draft"
-    | "posted"
+    | "not_ready"
+    | "ready_to_post"
+    | "live"
     | "in_service"
-    | "hold"
     | "sold";
 
 export type ProductCatalogKey = "product" | "strap";
+
+export type ProductMissingKey =
+    | "images"
+    | "content"
+    | "price";
 
 export type ProductListInput = {
     q?: string;
@@ -24,6 +29,7 @@ export type ProductListInput = {
     sku?: string;
     categoryId?: string;
     hasImages?: string;
+    missing?: ProductMissingKey;
     view?: ProductViewKey;
     sort?: ProductListSort;
     page?: number;
@@ -49,7 +55,8 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
     const hasImages = toStr(sp.get("hasImages"));
     const vendorId = toStr(sp.get("vendorId"));
     const sku = toStr(sp.get("sku"));
-    const view = (toStr(sp.get("view")) || "draft") as ProductViewKey;
+    const missing = toStr(sp.get("missing")) as ProductMissingKey;
+    const view = (toStr(sp.get("view")) || "not_ready") as ProductViewKey;
     const sort = (toStr(sp.get("sort")) as ProductListSort) || "updatedDesc";
     const page = toInt(sp.get("page"), 1);
     const pageSize = toInt(sp.get("pageSize"), 20);
@@ -63,6 +70,7 @@ export function parseProductListSearchParams(sp: URLSearchParams): ProductListIn
         sku: sku || undefined,
         categoryId: categoryId || undefined,
         hasImages: hasImages || undefined,
+        missing: missing || undefined,
         view,
         sort,
         page,

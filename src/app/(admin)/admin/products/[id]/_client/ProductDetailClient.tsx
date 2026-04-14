@@ -234,6 +234,7 @@ export default function ProductDetailClient({
             .filter((part) => part && String(part).trim().length > 0)
             .join("\n\n");
     }, [content, bulletText, hashtagText]);
+
     const [saving, setSaving] = useState(false);
     const [contentStatus, setContentStatus] = useState<string | null>(product?.contentStatus ?? null);
     const [generatedAt, setGeneratedAt] = useState<string | null>(
@@ -249,6 +250,8 @@ export default function ProductDetailClient({
             : latestAcqItem?.unitCost != null
                 ? Number(latestAcqItem.unitCost)
                 : null;
+
+    const salePrice = latestVariant?.salePrice ?? latestVariant?.price ?? null;
 
     const openService = (data.serviceHistory ?? []).find((x) =>
         !["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"].includes(String(x.status ?? "").toUpperCase())
@@ -334,6 +337,7 @@ export default function ProductDetailClient({
             setSaving(false);
         }
     }
+
     async function handleCopyFullPost() {
         try {
             await navigator.clipboard.writeText(fullPostText || "");
@@ -363,6 +367,7 @@ export default function ProductDetailClient({
             });
         }
     }
+
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -463,22 +468,37 @@ export default function ProductDetailClient({
                             </div>
 
                             <div className="p-5">
-                                <div className={cls("grid grid-cols-1 gap-3", canViewTradeFinancials ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
-                                    <TinyStat
-                                        label="Giá bán"
-                                        value={fmtMoney(latestVariant?.salePrice ?? latestVariant?.price, "VND")}
-                                    />
+                                <div className="space-y-4">
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                                        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                            Giá bán
+                                        </div>
+                                        <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+                                            {fmtMoney(salePrice, "VND")}
+                                        </div>
+                                    </div>
 
-                                    {canViewTradeFinancials ? (
-                                        <TinyStat
-                                            label="Giá vốn"
-                                            value={fmtMoney(baseCostPrice, "VND")}
-                                            hint={latestVariant?.costPrice != null ? "Lấy từ variant.costPrice" : "Fallback từ acquisition gần nhất"}
-                                        />
-                                    ) : null}
+                                    <div
+                                        className={cls(
+                                            "grid grid-cols-1 gap-3",
+                                            canViewTradeFinancials ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                                        )}
+                                    >
+                                        {canViewTradeFinancials ? (
+                                            <TinyStat
+                                                label="Giá vốn"
+                                                value={fmtMoney(baseCostPrice, "VND")}
+                                                hint={
+                                                    latestVariant?.costPrice != null
+                                                        ? "Lấy từ variant.costPrice"
+                                                        : "Fallback từ acquisition gần nhất"
+                                                }
+                                            />
+                                        ) : null}
 
-                                    <TinyStat label="SKU" value={latestVariant?.sku || "-"} />
-                                    <TinyStat label="Tồn kho" value={latestVariant?.stockQty ?? 0} />
+                                        <TinyStat label="SKU" value={latestVariant?.sku || "-"} />
+                                        <TinyStat label="Tồn kho" value={latestVariant?.stockQty ?? 0} />
+                                    </div>
                                 </div>
 
                                 <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -552,8 +572,6 @@ export default function ProductDetailClient({
                         }
                     >
                         <div className="space-y-5">
-
-
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                                     <div>
@@ -633,6 +651,7 @@ export default function ProductDetailClient({
                                     </div>
                                 </div>
                             </div>
+
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                                     <span>Content status: <b className="text-slate-700">{contentStatus || "-"}</b></span>
