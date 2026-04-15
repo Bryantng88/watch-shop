@@ -35,47 +35,38 @@ function normalizeView(value: string | null | undefined): ViewKey {
     const view = String(value ?? "").toLowerCase();
 
     if (
-        [
-            "all",
-            "not_ready",
-            "ready_to_post",
-            "live",
-            "in_service",
-            "sold",
-        ].includes(view)
+        ["draft", "processing", "ready", "hold", "sold", "all"].includes(view)
     ) {
         return view as ViewKey;
     }
 
-    return "all";
+    return "draft";
 }
-
 function buildCounts(
     input: ProductListPageProps["counts"],
     total: number,
     currentView: ViewKey
 ): Counts {
-    if (input && Object.keys(input).length > 0) {
+    if (input && Object.values(input).some((value) => Number(value ?? 0) >= 0)) {
         return {
-            all: Number(input.all ?? 0),
-            not_ready: Number(input.not_ready ?? input.draft ?? 0),
-            ready_to_post: Number(input.ready_to_post ?? 0),
-            live: Number(input.live ?? input.posted ?? 0),
-            in_service: Number(input.in_service ?? 0),
+            draft: Number(input.draft ?? 0),
+            processing: Number(input.processing ?? 0),
+            ready: Number(input.ready ?? 0),
+            hold: Number(input.hold ?? 0),
             sold: Number(input.sold ?? 0),
+            all: Number(input.all ?? 0),
         };
     }
 
     return {
-        all: currentView === "all" ? total : 0,
-        not_ready: currentView === "not_ready" ? total : 0,
-        ready_to_post: currentView === "ready_to_post" ? total : 0,
-        live: currentView === "live" ? total : 0,
-        in_service: currentView === "in_service" ? total : 0,
+        draft: currentView === "draft" ? total : 0,
+        processing: currentView === "processing" ? total : 0,
+        ready: currentView === "ready" ? total : 0,
+        hold: currentView === "hold" ? total : 0,
         sold: currentView === "sold" ? total : 0,
+        all: currentView === "all" ? total : 0,
     };
 }
-
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
     if (!value) next.delete(key);
     else next.set(key, value);
@@ -240,47 +231,6 @@ function Pagination({
     );
 }
 
-function SummaryCard({
-    label,
-    value,
-    tone = "slate",
-    active = false,
-    onClick,
-}: {
-    label: string;
-    value: number;
-    tone?: "slate" | "amber" | "emerald" | "blue" | "rose";
-    active?: boolean;
-    onClick?: () => void;
-}) {
-    const toneClass =
-        tone === "amber"
-            ? "border-amber-200 bg-amber-50 text-amber-900"
-            : tone === "emerald"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : tone === "blue"
-                    ? "border-sky-200 bg-sky-50 text-sky-900"
-                    : tone === "rose"
-                        ? "border-rose-200 bg-rose-50 text-rose-900"
-                        : "border-slate-200 bg-white text-slate-900";
-
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={[
-                "rounded-2xl border px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow",
-                toneClass,
-                active ? "ring-2 ring-slate-900/10" : "",
-            ].join(" ")}
-        >
-            <div className="text-xs font-medium uppercase tracking-wide opacity-70">
-                {label}
-            </div>
-            <div className="mt-1 text-2xl font-semibold">{value}</div>
-        </button>
-    );
-}
 
 export default function ListProducts(props: ProductListPageProps) {
     const router = useRouter();
@@ -727,50 +677,7 @@ export default function ListProducts(props: ProductListPageProps) {
                 onCatalogChange={handleCatalogChange}
             />
 
-            {!isStrapCatalog ? (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-                    <SummaryCard
-                        label="Tất cả"
-                        value={counts.all}
-                        active={currentView === "all"}
-                        onClick={() => handleViewChange("all")}
-                    />
-                    <SummaryCard
-                        label="Chưa sẵn sàng"
-                        value={counts.not_ready}
-                        tone="amber"
-                        active={currentView === "not_ready"}
-                        onClick={() => handleViewChange("not_ready")}
-                    />
-                    <SummaryCard
-                        label="Có thể đăng"
-                        value={counts.ready_to_post}
-                        tone="emerald"
-                        active={currentView === "ready_to_post"}
-                        onClick={() => handleViewChange("ready_to_post")}
-                    />
-                    <SummaryCard
-                        label="Đang bán"
-                        value={counts.live}
-                        tone="blue"
-                        active={currentView === "live"}
-                        onClick={() => handleViewChange("live")}
-                    />
-                    <SummaryCard
-                        label="Đang service"
-                        value={counts.in_service}
-                        tone="rose"
-                        active={currentView === "in_service"}
-                        onClick={() => handleViewChange("in_service")}
-                    />
-                    <SummaryCard
-                        label="Đã bán"
-                        value={counts.sold}
-                        active={currentView === "sold"}
-                        onClick={() => handleViewChange("sold")}
-                    />
-                </div>
-            ) : null}
+
 
             <ProductListViewTabs
                 value={currentView}

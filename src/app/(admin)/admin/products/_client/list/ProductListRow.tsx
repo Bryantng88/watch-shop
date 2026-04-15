@@ -1,23 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu"
-import StatusBadge from "@/components/badges/StatusBadge";
-import MiniDotLabel from "@/components/_shared/MiniDotLabel";
-
+import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import InlineMoneyEditor from "./InlineMoneyEditor";
-import {
-  fmtDT,
-  fmtMoney,
-  getContentStatusBadgeValue,
-  getInventoryStatusTextClass,
-  getPostReadinessState,
-  getProductInventoryStatusText,
-  getServiceLabel,
-  hasMissingCoreReadinessInfo,
-  hasMissingImageReadiness,
-  isWomenWatch,
-} from "./helpers";
 import type { ProductRow } from "./types";
 
 type Props = {
@@ -46,11 +31,12 @@ async function callApi(url: string, body: any) {
     body: JSON.stringify(body),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || "Action failed");
 
   return data;
 }
+
 type ProductRowAction = "quick_order" | "buy_back" | "consign_to";
 
 function getProductRowActions(status?: string | null): ProductRowAction[] {
@@ -76,28 +62,16 @@ function resolveImageSrc(input?: string | null) {
   return `/api/media/sign?key=${encodeURIComponent(input)}`;
 }
 
-function PriceLine({
-  label,
-  value,
-  valueClassName,
-  extra,
-}: {
-  label: string;
-  value: React.ReactNode;
-  valueClassName?: string;
-  extra?: React.ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-3 text-sm">
-      <span className="text-slate-400">{label}</span>
-      <div className="flex items-center justify-end gap-2">
-        <div className={["min-w-[92px] text-right font-medium", valueClassName || "text-slate-900"].join(" ")}>
-          {value}
-        </div>
-        {extra ? <div className="shrink-0">{extra}</div> : null}
-      </div>
-    </div>
-  );
+function fmtMoney(value?: number | null) {
+  if (value == null || !Number.isFinite(Number(value))) return "-";
+  return Number(value).toLocaleString("vi-VN");
+}
+
+function fmtDT(value?: string | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("vi-VN");
 }
 
 function Thumbnail({ src, alt }: { src?: string | null; alt: string }) {
@@ -117,6 +91,7 @@ function Thumbnail({ src, alt }: { src?: string | null; alt: string }) {
     />
   );
 }
+
 function buildQuickOrderHref(product: ProductRow) {
   const params = new URLSearchParams();
 
@@ -130,13 +105,96 @@ function buildQuickOrderHref(product: ProductRow) {
 
   return `/admin/orders/new?${params.toString()}`;
 }
+
+function Dot({ tone }: { tone: "green" | "amber" | "red" | "slate" }) {
+  const cls =
+    tone === "green"
+      ? "bg-emerald-500"
+      : tone === "amber"
+        ? "bg-amber-500"
+        : tone === "red"
+          ? "bg-rose-500"
+          : "bg-slate-400";
+
+  return <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${cls}`} />;
+}
+
+function ReadinessItem({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "green" | "amber" | "red" | "slate";
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <Dot tone={tone} />
+      <div className="text-sm leading-5">
+        <span className="text-slate-500">{label}: </span>
+        <span className="font-medium text-slate-800">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function getServiceMeta(serviceState?: string) {
+  switch (serviceState) {
+    case "DONE":
+      return { label: "Đã sửa xong", tone: "green" as const };
+    case "IN_PROGRESS":
+      return { label: "Đang service", tone: "amber" as const };
+    case "PENDING":
+      return { label: "Chờ xử lý", tone: "red" as const };
+    default:
+      return { label: "Không cần service", tone: "slate" as const };
+  }
+}
+
+function getReadinessLabel(stage?: string) {
+  switch (stage) {
+    case "READY":
+      return "Sẵn sàng bán";
+    case "PROCESSING":
+      return "Đang hoàn thiện";
+    case "HOLD":
+      return "Đang hold";
+    case "SOLD":
+      return "Đã bán";
+    default:
+      return "Chưa bắt đầu";
+  }
+}
+
+function PriceRow({
+  label,
+  value,
+  valueClassName,
+  editor,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+  editor?: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[48px_minmax(0,1fr)_20px] items-center gap-2 text-sm">
+      <div className="text-slate-400">{label}</div>
+      <div className={["truncate text-right font-medium", valueClassName || "text-slate-900"].join(" ")}>
+        {value}
+      </div>
+      <div className="flex justify-end">{editor}</div>
+    </div>
+  );
+}
+
 export default function ProductListRow({
   product,
   checked,
   canViewCost,
   canEditPrice,
   onCheckedChange,
-  onOpenReadiness,
   onPriceSaved,
   onPriceCommit,
   onView,
@@ -144,10 +202,7 @@ export default function ProductListRow({
   onDelete,
   onService,
 }: Props) {
-
   const actions = getProductRowActions(product.status);
-
-
 
   const handleBuyBack = async () => {
     const price = Number(prompt("Giá mua lại?") || 0);
@@ -172,17 +227,13 @@ export default function ProductListRow({
     window.location.reload();
   };
 
-  const service = getServiceLabel(product);
-  const readiness = getPostReadinessState(product);
-  const hasMissingImage =
-    !isWomenWatch(product) &&
-    hasMissingCoreReadinessInfo(product) &&
-    hasMissingImageReadiness(product);
+  const thumbnailSrc = product.primaryImageUrl ?? product.primaryImageKey ?? null;
 
-  const thumbnailSrc =
-    product.primaryImageUrl ??
-    product.primaryImageKey ??
-    null;
+  const hasContent = Boolean(product.computed?.hasContent);
+  const hasImages = Boolean(product.computed?.hasImages);
+  const hasSellPrice = Boolean(product.computed?.hasSellPrice);
+  const serviceMeta = getServiceMeta(product.computed?.serviceState);
+  const readinessLabel = getReadinessLabel(product.computed?.readinessStage);
 
   return (
     <tr className="border-t border-slate-100 transition hover:bg-slate-50/50">
@@ -196,17 +247,11 @@ export default function ProductListRow({
 
       <td className="px-4 py-4 align-middle">
         <div className="flex items-center gap-4">
-          <Thumbnail
-            src={thumbnailSrc}
-            alt={product.title || "product"}
-          />
+          <Thumbnail src={thumbnailSrc} alt={product.title || "product"} />
 
           <div className="min-w-0 flex-1 self-start">
-
             <div className="text-[14px] font-medium text-slate-900">
-              <span className="line-clamp-2 break-words">
-                {product.title || "-"}
-              </span>
+              <span className="line-clamp-2 break-words">{product.title || "-"}</span>
             </div>
 
             <div className="mt-1 truncate text-xs text-slate-500">
@@ -219,100 +264,124 @@ export default function ProductListRow({
               </div>
             ) : null}
 
-            {service ? (
-              <div className="mt-2">
-                <MiniDotLabel label={service.label} tone={service.tone} />
-              </div>
+            <div className="mt-2 text-xs font-medium text-slate-500">
+              {readinessLabel}
+            </div>
+          </div>
+        </div>
+      </td>
+
+      <td className="px-4 py-4 align-middle">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="space-y-2">
+            <ReadinessItem
+              label="Content"
+              value={hasContent ? "Đã có" : "Chưa có"}
+              tone={hasContent ? "green" : "red"}
+            />
+            <ReadinessItem
+              label="Image"
+              value={hasImages ? "Đã có" : "Chưa có"}
+              tone={hasImages ? "green" : "red"}
+            />
+            <ReadinessItem
+              label="Service"
+              value={serviceMeta.label}
+              tone={serviceMeta.tone}
+            />
+          </div>
+        </div>
+      </td>
+
+      <td className="px-4 py-4 align-middle">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="space-y-2">
+            <PriceRow
+              label="Bán"
+              value={fmtMoney(product.minPrice)}
+              valueClassName="text-orange-600"
+              editor={
+                canEditPrice ? (
+                  <InlineMoneyEditor
+                    value={product.minPrice}
+                    label="Giá bán"
+                    compact
+                    iconOnly
+                    onSubmit={async (v) => {
+                      await onPriceCommit(product.id, "minPrice", v);
+                      onPriceSaved(product.id, { minPrice: v });
+                    }}
+                  />
+                ) : null
+              }
+            />
+
+            <PriceRow
+              label="Sale"
+              value={fmtMoney(product.salePrice)}
+              valueClassName="text-emerald-700"
+              editor={
+                canEditPrice ? (
+                  <InlineMoneyEditor
+                    value={product.salePrice}
+                    label="Giá sale"
+                    compact
+                    iconOnly
+                    onSubmit={async (v) => {
+                      await onPriceCommit(product.id, "salePrice", v);
+                      onPriceSaved(product.id, { salePrice: v });
+                    }}
+                  />
+                ) : null
+              }
+            />
+
+            {canViewCost ? (
+              <PriceRow
+                label="Mua"
+                value={fmtMoney(product.purchasePrice)}
+                valueClassName="text-slate-400"
+                editor={
+                  canEditPrice ? (
+                    <InlineMoneyEditor
+                      value={product.purchasePrice}
+                      label="Giá mua"
+                      compact
+                      iconOnly
+                      onSubmit={async (v) => {
+                        await onPriceCommit(product.id, "purchasePrice", v);
+                        onPriceSaved(product.id, { purchasePrice: v });
+                      }}
+                    />
+                  ) : null
+                }
+              />
             ) : null}
           </div>
-        </div>
-      </td>
 
-      <td className="px-4 py-4 align-middle">
-        <div className="space-y-2">
-          <div className={getInventoryStatusTextClass(product.status)}>
-            {getProductInventoryStatusText(product.status)}
-          </div>
-
-          <div className="text-sm">
-            {product.acquisitionId && product.acquisitionRefNo ? (
-              <Link
-                href={`/admin/acquisitions/${product.acquisitionId}/edit`}
-                className="font-medium text-sky-700 hover:underline"
-              >
-                {product.acquisitionRefNo}
-              </Link>
+          <div className="mt-3 border-t border-slate-100 pt-2 text-xs font-medium">
+            {hasSellPrice ? (
+              <span className="text-emerald-700">Đã có giá bán</span>
             ) : (
-              <span className="text-slate-400">-</span>
+              <span className="text-rose-600">Thiếu giá bán</span>
             )}
           </div>
-
-          <div className="space-y-1">
-            <StatusBadge status={getContentStatusBadgeValue(product) as any} />
-            <button
-              type="button"
-              onClick={() => onOpenReadiness(product)}
-              className="block text-left"
-            >
-              <div className="space-y-1">
-                <MiniDotLabel label={readiness.label} tone={readiness.tone} />
-                {hasMissingImage ? (
-                  <MiniDotLabel label="Missing Image" tone="gray" />
-                ) : null}
-              </div>
-            </button>
-          </div>
-        </div>
-      </td>
-
-      <td className="px-4 py-4 align-middle">
-        <div className="space-y-2 rounded-2xl bg-slate-50/70 px-3 py-3 ring-1 ring-slate-100">
-          <PriceLine
-            label="Bán"
-            value={fmtMoney(product.minPrice)}
-            valueClassName="text-orange-600"
-            extra={
-              canEditPrice ? (
-                <InlineMoneyEditor
-                  value={product.minPrice}
-                  label="Giá bán"
-                  compact
-                  iconOnly
-                  onSubmit={async (v) => {
-                    await onPriceCommit(product.id, "minPrice", v);
-                    onPriceSaved(product.id, { minPrice: v });
-                  }}
-                />
-              ) : null
-            }
-          />
-
-          <PriceLine
-            label="Sale"
-            value={product.salePrice != null ? fmtMoney(product.salePrice) : "-"}
-            valueClassName="text-emerald-700"
-          />
-
-          {canViewCost ? (
-            <PriceLine
-              label="Mua"
-              value={fmtMoney(product.purchasePrice)}
-              valueClassName="text-slate-400"
-            />
-          ) : null}
         </div>
       </td>
 
       <td className="px-4 py-4 align-middle">
         <div className="space-y-1 text-sm leading-6 text-slate-600">
           <div>{fmtDT(product.updatedAt)}</div>
-          <div className="text-xs text-slate-400">Tạo: {fmtDT(product.createdAt)}</div>
+          <div className="text-xs text-slate-400">
+            Tạo: {fmtDT(product.createdAt)}
+          </div>
           {product.vendorName ? (
             <div className="pt-1 text-xs text-slate-400">Vendor: {product.vendorName}</div>
           ) : null}
         </div>
       </td>
-      <td className="relative px-4 py-4 text-right align-middle overflow-visible">
+
+      <td className="relative overflow-visible px-4 py-4 text-right align-middle">
         <RowActionMenu
           align="right"
           actions={[
@@ -334,9 +403,6 @@ export default function ProductListRow({
               icon: "service",
               onClick: () => onService(product.id),
             },
-
-            /* ===== NEW ACTION ===== */
-
             {
               key: "quick",
               label:
@@ -347,7 +413,6 @@ export default function ProductListRow({
               href: buildQuickOrderHref(product),
               hidden: !actions.includes("quick_order"),
             },
-
             {
               key: "buyback",
               label: "Buy back",
@@ -355,7 +420,6 @@ export default function ProductListRow({
               onClick: handleBuyBack,
               hidden: !actions.includes("buy_back"),
             },
-
             {
               key: "consign",
               label: "Consign to",
@@ -363,7 +427,6 @@ export default function ProductListRow({
               onClick: handleConsign,
               hidden: !actions.includes("consign_to"),
             },
-
             {
               key: "delete",
               label: "Xóa sản phẩm",

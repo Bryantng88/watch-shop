@@ -7,12 +7,12 @@ export type ProductListSort =
     | "titleDesc";
 
 export type ProductViewKey =
-    | "all"
-    | "not_ready"
-    | "ready_to_post"
-    | "live"
-    | "in_service"
-    | "sold";
+    | "draft"
+    | "processing"
+    | "ready"
+    | "hold"
+    | "sold"
+    | "all";
 
 export type ProductCatalogKey = "product" | "strap";
 
@@ -63,18 +63,17 @@ function toInt(v: any, fallback: number) {
 function toView(value: string): ProductViewKey {
     const raw = (value || "").toLowerCase();
     if (
-        raw === "all" ||
-        raw === "not_ready" ||
-        raw === "ready_to_post" ||
-        raw === "live" ||
-        raw === "in_service" ||
-        raw === "sold"
+        raw === "draft" ||
+        raw === "processing" ||
+        raw === "ready" ||
+        raw === "hold" ||
+        raw === "sold" ||
+        raw === "all"
     ) {
         return raw;
     }
-    return "all";
+    return "draft";
 }
-
 function toSaleStage(value: string): ProductSaleStageFilter | undefined {
     const raw = (value || "").toUpperCase();
     if (

@@ -425,20 +425,11 @@ export async function getAdminProductList(
     }
 
     const items = (result.items ?? []).map((item: any) => {
-        const missingVariantFields = computeMissingVariantFields(item);
-        const missingWatchSpecFields = computeMissingWatchSpecFields(item);
-
-        const isVariantInfoComplete = missingVariantFields.length === 0;
-        const isWatchSpecComplete = missingWatchSpecFields.length === 0;
-        const isInfoComplete = isVariantInfoComplete && isWatchSpecComplete;
-
-        const publishReadiness = computePublishReadiness(item);
-
         const hasOpenService = openServiceMap.has(item.id);
         const openServiceStatus = openServiceMap.get(item.id) ?? null;
         const latestServiceStatus = latestServiceMap.get(item.id) ?? null;
 
-        const imageCount = Number(item?.imagesCount ?? 0);
+        const imageCount = Number(item?.imagesCount ?? item?._count?.image ?? 0);
 
         const basePrice = Number(
             item?.salePrice ??
@@ -448,21 +439,18 @@ export async function getAdminProductList(
             0
         );
 
-        const hasPostContent =
-            Boolean(String(item?.postContent ?? "").trim()) ||
-            String(item?.contentStatus ?? "").toUpperCase() === "PUBLISHED";
-
         const computed = buildProductListComputed({
             productStatus: item?.status,
             contentStatus: item?.contentStatus,
+            postContent: item?.postContent,
             imageCount,
-            salePrice: basePrice,
+            salePrice: item?.salePrice,
             basePrice,
-            hasPostContent,
             hasOpenService,
-            needService: hasOpenService || !isInfoComplete,
-            hasHeavyMissingTechInfo: !isInfoComplete,
-            hasUrgentOrder: false,
+            latestServiceStatus,
+            needService:
+                item?.status === ProductStatus.NEED_SERVICE ||
+                item?.status === ProductStatus.IN_SERVICE,
         });
 
         return {
@@ -470,17 +458,9 @@ export async function getAdminProductList(
             hasOpenService,
             openServiceStatus,
             latestServiceStatus,
-            missingVariantFields,
-            missingWatchSpecFields,
-            isVariantInfoComplete,
-            isWatchSpecComplete,
-            isInfoComplete,
-            isReadyToPublish: publishReadiness.isReadyToPublish,
-            publishMissing: publishReadiness.publishMissing,
             computed,
         };
     });
-
     return {
         ...result,
         items,

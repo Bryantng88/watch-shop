@@ -56,8 +56,8 @@ export default function ProductListTable({
         <table className="min-w-full table-fixed">
           <colgroup>
             <col className="w-12" />
-            <col className="w-[32%]" />
-            <col className="w-[18%]" />
+            <col className="w-[36%]" />
+            <col className="w-[22%]" />
             <col className="w-[16%]" />
             <col className="w-[18%]" />
             <col className="w-[8%]" />
@@ -76,10 +76,10 @@ export default function ProductListTable({
                 Sản phẩm
               </th>
               <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                Vận hành
+                Post readiness
               </th>
               <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                Giá
+                Pricing
               </th>
               <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
                 Cập nhật

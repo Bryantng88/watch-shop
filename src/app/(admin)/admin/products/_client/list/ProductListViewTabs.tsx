@@ -3,12 +3,12 @@
 import type { Counts, ViewKey } from "./types";
 
 const items: Array<{ key: ViewKey; label: string }> = [
-  { key: "not_ready", label: "Chưa sẵn sàng" },
-  { key: "ready_to_post", label: "Có thể đăng" },
-  { key: "live", label: "Đang bán" },
-  { key: "in_service", label: "Đang service" },
-  { key: "sold", label: "Đã bán" },
-  { key: "all", label: "Tất cả" },
+  { key: "draft", label: "Draft" },
+  { key: "processing", label: "Processing" },
+  { key: "ready", label: "Ready" },
+  { key: "hold", label: "Hold" },
+  { key: "sold", label: "Sold" },
+  { key: "all", label: "All" },
 ];
 
 type Props = {
@@ -19,20 +19,19 @@ type Props = {
 
 function getCount(counts: Counts, key: ViewKey) {
   switch (key) {
-    case "all":
-      return counts.all;
-    case "not_ready":
-      return counts.not_ready;
-    case "ready_to_post":
-      return counts.ready_to_post;
-    case "live":
-      return counts.live;
-    case "in_service":
-      return counts.in_service;
+    case "draft":
+      return counts.draft;
+    case "processing":
+      return counts.processing;
+    case "ready":
+      return counts.ready;
+    case "hold":
+      return counts.hold;
     case "sold":
       return counts.sold;
+    case "all":
     default:
-      return 0;
+      return counts.all;
   }
 }
 

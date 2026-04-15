@@ -1,56 +1,40 @@
 import type { BrandLite, ProductListItem } from "@/features/products/types";
-export type OpsStage =
-  | "NORMAL"
-  | "IN_SERVICE"
-  | "BLOCKED"
-  | "SOLD";
-
-export type SaleStage =
-  | "NOT_READY"
-  | "READY_TO_POST"
-  | "LIVE"
-  | "HOLD"
-  | "SOLD";
-
-export type SaleMissingKey =
-  | "images"
-  | "content"
-  | "price";
-
-export type OpsFlag =
-  | "OPEN_SERVICE"
-  | "NEED_SERVICE"
-  | "URGENT_ORDER"
-  | "MISSING_TECH_INFO";
-
-export type PriorityLevel =
-  | "NORMAL"
-  | "HIGH"
-  | "URGENT";
 
 export type ViewKey =
-  | "all"
-  | "not_ready"
-  | "ready_to_post"
-  | "live"
-  | "in_service"
-  | "sold";
+  | "draft"
+  | "processing"
+  | "ready"
+  | "hold"
+  | "sold"
+  | "all";
 
 export type CatalogKey = "product" | "strap";
 
-export type MissingKey =
-  | "images"
-  | "content"
-  | "price";
-
 export type Counts = {
-  all: number;
-  not_ready: number;
-  ready_to_post: number;
-  live: number;
-  in_service: number;
+  draft: number;
+  processing: number;
+  ready: number;
+  hold: number;
   sold: number;
+  all: number;
 };
+
+export type ProductServiceState =
+  | "DONE"
+  | "IN_PROGRESS"
+  | "PENDING"
+  | "NOT_REQUIRED";
+
+export type ProductReadinessStage =
+  | "DRAFT"
+  | "PROCESSING"
+  | "READY"
+  | "HOLD"
+  | "SOLD";
+
+export type ProductPricingState =
+  | "READY_PRICE"
+  | "MISSING_PRICE";
 
 export type ProductRow = ProductListItem & {
   sku?: string;
@@ -58,21 +42,11 @@ export type ProductRow = ProductListItem & {
   brand?: string | null;
   type?: string | null;
   vendorName?: string | null;
-  material?: string | null;
   variantsCount?: number;
   imagesCount?: number;
-  ordersCount?: number;
-  serviceRequests?: number;
-  reservations?: number;
   primaryImageUrl?: string | null;
+  primaryImageKey?: string | null;
   brandId?: string | null;
-  category?: string | { id?: string | null; name?: string | null; code?: string | null; slug?: string | null } | null;
-  variantSnapshot?: {
-    price?: number | null;
-    availabilityStatus?: string | null;
-    stockQty?: number | null;
-    sku?: string | null;
-  } | null;
   updatedAt?: string | null;
   createdAt?: string | null;
   status?: string | null;
@@ -81,37 +55,29 @@ export type ProductRow = ProductListItem & {
   minPrice?: number | null;
   purchasePrice?: number | null;
   salePrice?: number | null;
-  stockQty?: number | null;
-  strapSpec?: {
-    lugWidthMM?: number | null;
-    buckleWidthMM?: number | null;
-    color?: string | null;
-    material?: string | null;
-    quickRelease?: boolean | null;
-  } | null;
-  computed?: {
-    opsStage: OpsStage;
-    saleStage: SaleStage;
-    saleMissing: SaleMissingKey[];
-    opsFlags: OpsFlag[];
-    priorityLevel: PriorityLevel;
-    isReadyForSale: boolean;
-    isBlockedForSale: boolean;
-    canPostNow: boolean;
-  };
-  isVariantInfoComplete?: boolean;
-  isWatchSpecComplete?: boolean;
-  isInfoComplete?: boolean;
-  missingVariantFields?: string[];
-  missingWatchSpecFields?: string[];
+  postContent?: string | null;
+
   hasOpenService?: boolean;
   openServiceStatus?: string | null;
   latestServiceStatus?: string | null;
-  acquisitionId?: string | null;
-  acquisitionRefNo?: string | null;
-  isReadyToPublish?: boolean;
-  publishMissing?: string[];
-  storefrontImageKey?: string | null;
+
+  variantSnapshot?: {
+    id?: string | null;
+    sku?: string | null;
+    price?: number | null;
+    salePrice?: number | null;
+    stockQty?: number | null;
+    availabilityStatus?: string | null;
+  } | null;
+
+  computed?: {
+    hasContent: boolean;
+    hasImages: boolean;
+    hasSellPrice: boolean;
+    serviceState: ProductServiceState;
+    readinessStage: ProductReadinessStage;
+    pricingState: ProductPricingState;
+  };
 };
 
 export type ProductListPageProps = {

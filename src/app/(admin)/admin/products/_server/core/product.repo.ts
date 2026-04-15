@@ -12,7 +12,7 @@ import type {
     ProductListInput,
     ProductListSort,
     ProductCatalogKey,
-} from "../helpers/search-params";
+} from "../../helpers/search-params"
 import { genUniqueProductSku } from "../shared/helper";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -25,12 +25,13 @@ const OPEN_SERVICE_REQUEST_STATUSES = [
 ];
 
 type ProductViewKey =
-    | "all"
-    | "not_ready"
-    | "ready_to_post"
-    | "live"
-    | "in_service"
-    | "sold";
+    | "draft"
+    | "processing"
+    | "ready"
+    | "hold"
+    | "sold"
+    | "all";
+
 type AdminProductListRepoInput = ProductListInput & {
     page?: number;
     pageSize?: number;
@@ -133,7 +134,17 @@ function endOfDay(date: Date) {
     d.setHours(23, 59, 59, 999);
     return d;
 }
-
+function buildHoldWhere(): Prisma.ProductWhereInput {
+    return {
+        status: {
+            in: [
+                ProductStatus.HOLD,
+                ProductStatus.CONSIGNED_FROM,
+                ProductStatus.CONSIGNED_TO,
+            ],
+        },
+    };
+}
 
 function toPlainText(value: unknown): string | null {
     if (value == null) return null;
@@ -207,6 +218,104 @@ function buildOrderBy(sort?: ProductListSort): Prisma.ProductOrderByWithRelation
         default:
             return { updatedAt: "desc" };
     }
+}
+
+function buildHasImageWhere(): Prisma.ProductWhereInput {
+    return {
+        OR: [
+            {
+                NOT: {
+                    OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
+                },
+            },
+            {
+                image: {
+                    some: {
+                        role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY, ImageRole.COVER] },
+                    },
+                },
+            },
+        ],
+    };
+}
+
+function buildMissingImageWhere(): Prisma.ProductWhereInput {
+    return { NOT: buildHasImageWhere() };
+}
+
+function buildHasContentWhere(): Prisma.ProductWhereInput {
+    return {
+        OR: [
+            { contentStatus: ContentStatus.PUBLISHED },
+            {
+                NOT: {
+                    OR: [{ postContent: null }, { postContent: "" }],
+                },
+            },
+        ],
+    };
+}
+
+function buildMissingContentWhere(): Prisma.ProductWhereInput {
+    return { NOT: buildHasContentWhere() };
+}
+
+function buildHasSellPriceWhere(): Prisma.ProductWhereInput {
+    return {
+        variants: {
+            some: {
+                OR: [{ salePrice: { gt: 0 } }, { price: { gt: 0 } }],
+            },
+        },
+    };
+}
+
+function buildMissingSellPriceWhere(): Prisma.ProductWhereInput {
+    return { NOT: buildHasSellPriceWhere() };
+}
+
+function buildDraftWhere(): Prisma.ProductWhereInput {
+    return {
+        AND: [
+            { status: { not: ProductStatus.SOLD } },
+            { NOT: buildHoldWhere() },
+            buildMissingContentWhere(),
+            buildMissingImageWhere(),
+        ],
+    };
+}
+
+function buildProcessingWhere(): Prisma.ProductWhereInput {
+    return {
+        AND: [
+            { status: { not: ProductStatus.SOLD } },
+            { NOT: buildHoldWhere() },
+            {
+                OR: [
+                    {
+                        AND: [buildHasContentWhere(), buildMissingImageWhere()],
+                    },
+                    {
+                        AND: [buildMissingContentWhere(), buildHasImageWhere()],
+                    },
+                ],
+            },
+        ],
+    };
+}
+function buildReadyWhere(): Prisma.ProductWhereInput {
+    return {
+        AND: [
+            { status: { not: ProductStatus.SOLD } },
+            { NOT: buildHoldWhere() },
+            buildHasContentWhere(),
+            buildHasImageWhere(),
+        ],
+    };
+}
+
+function buildSoldWhere(): Prisma.ProductWhereInput {
+    return { status: ProductStatus.SOLD };
 }
 
 function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereInput {
@@ -283,6 +392,56 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
             },
         });
     }
+    if ((input as any)?.hasContent === "yes") {
+        and.push(buildHasContentWhere());
+    }
+    if ((input as any)?.hasContent === "no") {
+        and.push(buildMissingContentWhere());
+    }
+
+    if (input?.hasImages === "yes") {
+        and.push(buildHasImageWhere());
+    }
+    if (input?.hasImages === "no") {
+        and.push(buildMissingImageWhere());
+    }
+
+    if ((input as any)?.hasSellPrice === "yes") {
+        and.push(buildHasSellPriceWhere());
+    }
+    if ((input as any)?.hasSellPrice === "no") {
+        and.push(buildMissingSellPriceWhere());
+    }
+
+    if ((input as any)?.serviceState === "IN_PROGRESS") {
+        and.push({ status: ProductStatus.IN_SERVICE });
+    }
+    if ((input as any)?.serviceState === "DONE") {
+        and.push({
+            AND: [
+                { status: { not: ProductStatus.IN_SERVICE } },
+                {
+                    ServiceRequest: {
+                        some: {},
+                    },
+                },
+            ],
+        });
+    }
+    if ((input as any)?.serviceState === "PENDING") {
+        and.push({
+            status: {
+                in: [ProductStatus.NEED_SERVICE],
+            },
+        });
+    }
+    if ((input as any)?.serviceState === "NOT_REQUIRED") {
+        and.push({
+            status: {
+                notIn: [ProductStatus.IN_SERVICE, ProductStatus.NEED_SERVICE],
+            },
+        });
+    }
 
     return and.length ? { AND: and } : {};
 }
@@ -293,34 +452,20 @@ function buildWhereForView(
 ): Prisma.ProductWhereInput {
     switch (view) {
         case "draft":
-            return { AND: [whereBase, { contentStatus: ContentStatus.DRAFT }] };
-        case "posted":
-            return { AND: [whereBase, { contentStatus: ContentStatus.PUBLISHED }] };
-        case "in_service":
-            return { AND: [whereBase, { status: ProductStatus.IN_SERVICE }] };
+            return { AND: [whereBase, buildDraftWhere()] };
+        case "processing":
+            return { AND: [whereBase, buildProcessingWhere()] };
+        case "ready":
+            return { AND: [whereBase, buildReadyWhere()] };
         case "hold":
-            return {
-                AND: [
-                    whereBase,
-                    {
-                        status: {
-                            in: [
-                                ProductStatus.HOLD,
-                                ProductStatus.CONSIGNED_FROM,
-                                ProductStatus.CONSIGNED_TO,
-                            ],
-                        },
-                    },
-                ],
-            };
+            return { AND: [whereBase, buildHoldWhere()] };
         case "sold":
-            return { AND: [whereBase, { status: ProductStatus.SOLD }] };
+            return { AND: [whereBase, buildSoldWhere()] };
         case "all":
         default:
             return whereBase;
     }
 }
-
 
 
 async function runReadBatch<T extends unknown[]>(
@@ -412,6 +557,7 @@ export async function listAdminProducts(
         contentStatus: true,
         categoryId: true,
         primaryImageUrl: true,
+        content: true,
         createdAt: true,
         updatedAt: true,
         brand: { select: { id: true, name: true } },
@@ -455,42 +601,14 @@ export async function listAdminProducts(
             : {}),
     };
 
+
     const batchFactories: Array<ReadBatchFactory<any>> = [
-        () =>
-            db.product.groupBy({
-                by: ["contentStatus"],
-                where: baseWhere,
-                _count: { _all: true },
-            }),
-        () =>
-            db.product.count({
-                where: {
-                    AND: [baseWhere, { status: ProductStatus.IN_SERVICE }],
-                },
-            }),
-        () =>
-            db.product.count({
-                where: {
-                    AND: [
-                        baseWhere,
-                        {
-                            status: {
-                                in: [
-                                    ProductStatus.HOLD,
-                                    ProductStatus.CONSIGNED_FROM,
-                                    ProductStatus.CONSIGNED_TO,
-                                ],
-                            },
-                        },
-                    ],
-                },
-            }),
-        () =>
-            db.product.count({
-                where: {
-                    AND: [baseWhere, { status: ProductStatus.SOLD }],
-                },
-            }),
+        () => db.product.count({ where: { AND: [baseWhere, buildDraftWhere()] } }),
+        () => db.product.count({ where: { AND: [baseWhere, buildProcessingWhere()] } }),
+        () => db.product.count({ where: { AND: [baseWhere, buildReadyWhere()] } }),
+        () => db.product.count({ where: { AND: [baseWhere, buildHoldWhere()] } }),
+        () => db.product.count({ where: { AND: [baseWhere, buildSoldWhere()] } }),
+        () => db.product.count({ where: baseWhere }),
         () => db.product.count({ where: whereList }),
         () =>
             db.product.findMany({
@@ -511,21 +629,20 @@ export async function listAdminProducts(
         );
     }
 
-    const batchResults = await runReadBatch<any[]>(batchFactories as any);
+    const batchResults = await runReadBatch(batchFactories);
+
     const [
-        contentStatusGroups,
-        cInService,
+        cDraft,
+        cProcessing,
+        cReady,
         cHold,
         cSold,
+        cAll,
         total,
         rows,
         brands = [],
     ] = batchResults;
 
-    const groupedContentStatusCounts = new Map<string, number>();
-    for (const row of contentStatusGroups ?? []) {
-        groupedContentStatusCounts.set(String(row.contentStatus), Number(row._count?._all ?? 0));
-    }
 
     const openServiceStatusMap = new Map<string, string>();
     if (!isStrapCatalog && (rows?.length ?? 0) > 0) {
@@ -549,12 +666,7 @@ export async function listAdminProducts(
         }
     }
 
-    const totalAll = Array.from(groupedContentStatusCounts.values()).reduce(
-        (sum, count) => sum + count,
-        0
-    );
-    const cDraft = groupedContentStatusCounts.get(ContentStatus.DRAFT) ?? 0;
-    const cPosted = groupedContentStatusCounts.get(ContentStatus.PUBLISHED) ?? 0;
+
 
     const strapVariantIdsInPage = isStrapCatalog
         ? (rows ?? [])
@@ -629,13 +741,21 @@ export async function listAdminProducts(
         const latestAcqItem = latestVariant?.acquisitionItem?.[0] ?? null;
         const attachedStrap = parseStoredStrapAttachment(latestVariant?.name ?? null);
 
+
+        const salePrice =
+            latestVariant?.salePrice != null
+                ? Number(latestVariant.salePrice)
+                : null;
+
+        const minPrice =
+            latestVariant?.price != null
+                ? Number(latestVariant.price)
+                : null;
+
         const purchasePrice =
             latestVariant?.costPrice != null
                 ? Number(latestVariant.costPrice)
-                : latestAcqItem?.unitCost != null
-                    ? Number(latestAcqItem.unitCost)
-                    : null;
-
+                : null;
         const strapAddedCost = attachedStrap?.costPrice != null ? Number(attachedStrap.costPrice) : 0;
         const basePurchasePrice =
             purchasePrice != null ? Math.max(Number(purchasePrice) - Number(strapAddedCost || 0), 0) : null;
@@ -661,11 +781,11 @@ export async function listAdminProducts(
             categoryId: p.categoryId ?? null,
             storefrontImageKey: p.storefrontImageKey ?? null,
             primaryImageUrl: p.storefrontImageKey ?? p.image?.[0]?.fileKey ?? p.primaryImageUrl,
-            minPrice: latestVariant?.price != null ? Number(latestVariant.price) : null,
-            salePrice: latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null,
-            variantId: latestVariant?.id ?? null,
+
             purchasePrice,
             basePurchasePrice,
+            minPrice,
+            salePrice,
             strapAddedCost,
 
             acquisitionId: latestAcqItem?.acquisition?.id ?? null,
@@ -740,12 +860,12 @@ export async function listAdminProducts(
         items,
         total,
         counts: {
-            all: totalAll,
             draft: cDraft,
-            posted: cPosted,
-            in_service: cInService,
+            processing: cProcessing,
+            ready: cReady,
             hold: cHold,
             sold: cSold,
+            all: cAll,
         },
         brands,
         productTypes,

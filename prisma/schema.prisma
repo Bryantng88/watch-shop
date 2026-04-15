@@ -1283,6 +1283,7 @@ enum ContentStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+  PROCESSING
 }
 
 enum PriceVisibility {
@@ -1368,6 +1369,7 @@ enum ProductStatus {
   CONSIGNED_TO
   HOLD
   SOLD
+  NEED_SERVICE
 }
 
 enum MaintenanceEventType {
@@ -1465,4 +1467,25 @@ enum serviceprioritylevel {
   NORMAL
   HIGH
   URGENT
+}
+
+enum ProductOpsStage {
+  NORMAL
+  IN_SERVICE
+  BLOCKED
+  SOLD
+}
+
+enum ProductPriorityLevel {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ProductSaleStage {
+  NOT_READY
+  READY_TO_POST
+  LIVE
+  HOLD
+  SOLD
 }
