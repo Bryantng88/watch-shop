@@ -1,38 +1,80 @@
 "use client";
 
 import ProductListRow from "./ProductListRow";
-import type { ProductRow } from "./types";
+import type { Counts, ProductRow } from "./types";
+
+type QuickFilterKey = "hasContent" | "hasImages";
 
 type Props = {
   items: ProductRow[];
   selectedIds: string[];
   canViewCost: boolean;
-  canEditPrice: boolean;
+  counts?: Counts;
+  activeQuickFilters?: {
+    hasContent?: boolean;
+    hasImages?: boolean;
+  };
+  onQuickFilterClick?: (key: QuickFilterKey) => void;
   onToggleOne: (id: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
-  onOpenReadiness: (product: ProductRow) => void;
-  onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
-  onPriceCommit: (
-    productId: string,
-    field: "minPrice" | "salePrice" | "purchasePrice",
-    value: number | null
-  ) => Promise<void>;
   onView: (productId: string) => void;
   onEdit: (productId: string) => void;
   onDelete: (productId: string) => void;
   onService: (productId: string) => void;
 };
 
+function HeaderStatButton({
+  value,
+  label,
+  tone = "default",
+  active = false,
+  onClick,
+}: {
+  value: number;
+  label: string;
+  tone?: "default" | "content" | "image";
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const toneClass =
+    tone === "content"
+      ? active
+        ? "text-emerald-800"
+        : "text-emerald-700"
+      : tone === "image"
+        ? active
+          ? "text-sky-800"
+          : "text-sky-700"
+        : active
+          ? "text-slate-800"
+          : "text-slate-500";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition",
+        active ? "bg-slate-100" : "hover:bg-slate-50",
+      ].join(" ")}
+    >
+      <span className={`font-semibold ${toneClass}`}>{value}</span>
+      <span className={active ? "text-slate-600" : "text-slate-400"}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export default function ProductListTable({
   items,
   selectedIds,
   canViewCost,
-  canEditPrice,
+  counts,
+  activeQuickFilters,
+  onQuickFilterClick,
   onToggleOne,
   onToggleAll,
-  onOpenReadiness,
-  onPriceSaved,
-  onPriceCommit,
   onView,
   onEdit,
   onDelete,
@@ -44,11 +86,36 @@ export default function ProductListTable({
   return (
     <div className="rounded-[24px] border border-slate-200 bg-white">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div className="text-sm font-semibold text-slate-950">Danh sách dữ liệu</div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-sm font-semibold text-slate-950">
+            Danh sách dữ liệu
+          </div>
+
           <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">
             {items.length} mục
           </div>
+
+          {counts ? (
+            <>
+              <div className="h-3.5 w-px bg-slate-200" />
+
+              <HeaderStatButton
+                value={counts.hasContent ?? 0}
+                label="có content"
+                tone="content"
+                active={Boolean(activeQuickFilters?.hasContent)}
+                onClick={() => onQuickFilterClick?.("hasContent")}
+              />
+
+              <HeaderStatButton
+                value={counts.hasImages ?? 0}
+                label="có image"
+                tone="image"
+                active={Boolean(activeQuickFilters?.hasImages)}
+                onClick={() => onQuickFilterClick?.("hasImages")}
+              />
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -56,10 +123,10 @@ export default function ProductListTable({
         <table className="min-w-full table-fixed">
           <colgroup>
             <col className="w-12" />
-            <col className="w-[36%]" />
+            <col className="w-[34%]" />
             <col className="w-[22%]" />
             <col className="w-[16%]" />
-            <col className="w-[18%]" />
+            <col className="w-[20%]" />
             <col className="w-[8%]" />
           </colgroup>
 
@@ -97,11 +164,7 @@ export default function ProductListTable({
                 product={product}
                 checked={selectedIds.includes(product.id)}
                 canViewCost={canViewCost}
-                canEditPrice={canEditPrice}
                 onCheckedChange={(checked) => onToggleOne(product.id, checked)}
-                onOpenReadiness={onOpenReadiness}
-                onPriceSaved={onPriceSaved}
-                onPriceCommit={onPriceCommit}
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}

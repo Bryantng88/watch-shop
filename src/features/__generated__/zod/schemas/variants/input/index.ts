@@ -45,3 +45,4 @@ export { ProductContentInputSchema } from './ProductContent.input';
 export { AcquisitionSpecJobInputSchema } from './AcquisitionSpecJob.input';
 export { system_job_controlInputSchema } from './system_job_control.input';
 export { system_job_run_logInputSchema } from './system_job_run_log.input';
+export { NotificationInputSchema } from './Notification.input';

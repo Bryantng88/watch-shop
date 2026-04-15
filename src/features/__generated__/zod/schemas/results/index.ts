@@ -544,3 +544,16 @@ export { system_job_run_logDeleteManyResultSchema } from './system_job_run_logDe
 export { system_job_run_logAggregateResultSchema } from './system_job_run_logAggregateResult.schema';
 export { system_job_run_logGroupByResultSchema } from './system_job_run_logGroupByResult.schema';
 export { system_job_run_logCountResultSchema } from './system_job_run_logCountResult.schema';
+export { NotificationFindUniqueResultSchema } from './NotificationFindUniqueResult.schema';
+export { NotificationFindFirstResultSchema } from './NotificationFindFirstResult.schema';
+export { NotificationFindManyResultSchema } from './NotificationFindManyResult.schema';
+export { NotificationCreateResultSchema } from './NotificationCreateResult.schema';
+export { NotificationCreateManyResultSchema } from './NotificationCreateManyResult.schema';
+export { NotificationUpdateResultSchema } from './NotificationUpdateResult.schema';
+export { NotificationUpdateManyResultSchema } from './NotificationUpdateManyResult.schema';
+export { NotificationUpsertResultSchema } from './NotificationUpsertResult.schema';
+export { NotificationDeleteResultSchema } from './NotificationDeleteResult.schema';
+export { NotificationDeleteManyResultSchema } from './NotificationDeleteManyResult.schema';
+export { NotificationAggregateResultSchema } from './NotificationAggregateResult.schema';
+export { NotificationGroupByResultSchema } from './NotificationGroupByResult.schema';
+export { NotificationCountResultSchema } from './NotificationCountResult.schema';

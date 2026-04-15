@@ -5,6 +5,7 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema';
+import { NotificationUpdateManyWithoutUserNestedInputObjectSchema as NotificationUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUpdateManyWithoutUserNestedInput.schema';
 import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
 import { TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutUserNestedInput.schema';
 import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
@@ -20,6 +21,7 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional(),
+  Notification: z.lazy(() => NotificationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()

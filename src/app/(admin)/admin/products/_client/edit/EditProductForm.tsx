@@ -326,6 +326,23 @@ export default function EditProductForm({
         ''
     );
     const [storefrontSaving, setStorefrontSaving] = useState(false);
+    const [pricing, setPricing] = useState({
+        salePrice:
+            initial?.salePrice != null && Number.isFinite(Number(initial.salePrice))
+                ? Number(initial.salePrice)
+                : '',
+        minPrice:
+            initial?.minPrice != null && Number.isFinite(Number(initial.minPrice))
+                ? Number(initial.minPrice)
+                : '',
+        purchasePrice:
+            initial?.purchasePrice != null && Number.isFinite(Number(initial.purchasePrice))
+                ? Number(initial.purchasePrice)
+                : '',
+    });
+
+    const [savingPricing, setSavingPricing] = useState(false);
+
     const selectedBrand = useMemo(
         () => brands.find((item) => item.id === formData.brandId) ?? null,
         [brands, formData.brandId]
@@ -552,6 +569,13 @@ export default function EditProductForm({
             })
         );
     }
+    function handlePricingChange(e: ChangeEvent<HTMLInputElement>) {
+        const { name, value } = e.target;
+        setPricing((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    }
     function toggleComp(cid: string) {
         setErr(null);
         setFormData((prev) => {
@@ -696,7 +720,64 @@ export default function EditProductForm({
         }
         return warnings;
     }
+    async function savePricingChanges() {
+        if (!canEditPricing) return;
 
+        setSavingPricing(true);
+
+        try {
+            const pricingEntries = [
+                { field: 'salePrice', value: pricing.salePrice },
+                { field: 'minPrice', value: pricing.minPrice },
+                { field: 'purchasePrice', value: pricing.purchasePrice },
+            ] as const;
+
+            for (const item of pricingEntries) {
+                const nextValue =
+                    item.value === '' || item.value === null || item.value === undefined
+                        ? null
+                        : Number(item.value);
+
+                const initialValue =
+                    initial?.[item.field] === null || initial?.[item.field] === undefined
+                        ? null
+                        : Number(initial[item.field]);
+
+                if (Number(initialValue ?? -1) === Number(nextValue ?? -1)) {
+                    continue;
+                }
+
+                const res = await fetch(`/api/admin/products/${id}/pricing`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        field: item.field,
+                        value: nextValue,
+                    }),
+                });
+
+                const data = await res.json().catch(() => null);
+
+                if (!res.ok) {
+                    throw new Error(data?.error || `Cập nhật ${item.field} thất bại`);
+                }
+            }
+
+            notify.success({
+                title: 'Đã lưu giá',
+                message: 'Pricing đã được cập nhật',
+            });
+
+            router.refresh();
+        } catch (e: any) {
+            notify.error({
+                title: 'Lưu giá thất bại',
+                message: e?.message || 'Không thể cập nhật pricing',
+            });
+        } finally {
+            setSavingPricing(false);
+        }
+    }
     async function submit(e: FormEvent) {
         e.preventDefault();
         setErr(null);
@@ -767,14 +848,7 @@ export default function EditProductForm({
                     changed.images !== undefined ? formData.images ?? [] : undefined,
             };
 
-            if (canEditPricing) {
-                body.variant = sanitizeDeep(
-                    sanitizeDeep(variantRaw)
-                        ? { id: formData.variantId, price: variantRaw.variantPrice }
-                        : undefined
-                );
-                body.baseVariantCostPrice = baseVariantCostPrice ?? undefined;
-            }
+
 
             const res = await fetch(`/api/admin/products/${id}`, {
                 method: 'PATCH',
@@ -786,7 +860,9 @@ export default function EditProductForm({
             if (!res.ok) {
                 throw new Error(data?.error || 'Cập nhật sản phẩm thất bại');
             }
-
+            if (canEditPricing) {
+                await savePricingChanges();
+            }
             const contentRes = await fetch(`/api/admin/products/${id}/content`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -1382,13 +1458,61 @@ export default function EditProductForm({
                         >
                             {canEditPricing ? (
                                 <div className="space-y-4">
-                                    <InputField
-                                        label="Giá bán"
-                                        name="variantPrice"
-                                        value={formData.variantPrice}
-                                        onChange={handleChange as any}
-                                        type="number"
-                                    />
+                                    <div className="space-y-4">
+                                        <InputField
+                                            label="Giá bán"
+                                            name="salePrice"
+                                            value={pricing.salePrice}
+                                            onChange={handlePricingChange}
+                                            type="number"
+                                        />
+                                        <InputField
+                                            label="Giá sale"
+                                            name="minPrice"
+                                            value={pricing.minPrice}
+                                            onChange={handlePricingChange}
+                                            type="number"
+                                        />
+                                        <InputField
+                                            label="Giá vốn gốc"
+                                            name="purchasePrice"
+                                            value={pricing.purchasePrice}
+                                            onChange={handlePricingChange}
+                                            type="number"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={savePricingChanges}
+                                            disabled={savingPricing}
+                                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                                        >
+                                            {savingPricing ? 'Đang lưu giá...' : 'Lưu pricing'}
+                                        </button>
+
+                                        <div className="grid gap-3 text-sm">
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div className="text-slate-500">Giá vốn từ variant/acquisition</div>
+                                                <div className="mt-1 font-medium text-slate-900">
+                                                    {formatMoney(baseVariantCostPrice)}
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div className="text-slate-500">Chi phí dây cộng thêm</div>
+                                                <div className="mt-1 font-medium text-slate-900">
+                                                    {formatMoney(strapAddedCost)}
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div className="text-slate-500">Giá vốn sau khi ghép dây</div>
+                                                <div className="mt-1 font-medium text-slate-900">
+                                                    {formatMoney(effectiveVariantCostPrice)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div className="grid gap-3 text-sm">
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                             <div className="text-slate-500">Giá vốn gốc</div>

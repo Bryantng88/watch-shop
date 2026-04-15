@@ -7,6 +7,7 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
+import { NotificationListRelationFilterObjectSchema as NotificationListRelationFilterObjectSchema } from './NotificationListRelationFilter.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
 import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
 import { RoleListRelationFilterObjectSchema as RoleListRelationFilterObjectSchema } from './RoleListRelationFilter.schema'
@@ -26,6 +27,7 @@ const userwhereinputSchema = z.object({
   roleId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  Notification: z.lazy(() => NotificationListRelationFilterObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
   roles: z.lazy(() => RoleListRelationFilterObjectSchema).optional()

@@ -7,15 +7,8 @@ type Props = {
   product: ProductRow;
   checked: boolean;
   canViewCost: boolean;
-  canEditPrice: boolean;
   onCheckedChange: (checked: boolean) => void;
-  onOpenReadiness: (product: ProductRow) => void;
-  onPriceSaved: (productId: string, patch: Partial<ProductRow>) => void;
-  onPriceCommit: (
-    productId: string,
-    field: "minPrice" | "salePrice" | "purchasePrice",
-    value: number | null
-  ) => Promise<void>;
+
   onView: (productId: string) => void;
   onEdit: (productId: string) => void;
   onDelete: (productId: string) => void;

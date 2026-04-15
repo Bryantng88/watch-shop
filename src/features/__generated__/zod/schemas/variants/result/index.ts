@@ -45,3 +45,4 @@ export { ProductContentResultSchema } from './ProductContent.result';
 export { AcquisitionSpecJobResultSchema } from './AcquisitionSpecJob.result';
 export { system_job_controlResultSchema } from './system_job_control.result';
 export { system_job_run_logResultSchema } from './system_job_run_log.result';
+export { NotificationResultSchema } from './Notification.result';

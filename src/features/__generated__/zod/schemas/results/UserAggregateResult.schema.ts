@@ -11,6 +11,7 @@ export const UserAggregateResultSchema = z.object({  _count: z.object({
     roleId: z.number(),
     customer: z.number(),
     MaintenanceRecord: z.number(),
+    Notification: z.number(),
     ServiceRequest: z.number(),
     TechnicalIssue: z.number(),
     roles: z.number()

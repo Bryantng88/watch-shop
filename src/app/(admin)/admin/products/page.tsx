@@ -1,7 +1,5 @@
-import { getAdminProductList } from "./_server/core/product.service"
+import { getAdminProductList } from "./_server/core/product.service";
 import ListProducts from "./_client/ListProducts";
-//import AdminProductListPageClient from "./_client/ListProductsOld";
-
 import { parseProductListSearchParams } from "./helpers/search-params";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -66,9 +64,6 @@ export default async function ProductListPage({
     const canViewCost =
         isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
 
-    const canEditPrice =
-        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_UPDATE);
-
     const [result, vendors] = await Promise.all([
         getAdminProductList(input, { canViewCost }),
         listVendor(),
@@ -99,7 +94,6 @@ export default async function ProductListPage({
             vendors={serialize(vendors)}
             productTypes={serialize(productTypes)}
             canViewCost={canViewCost}
-            canEditPrice={canEditPrice}
         />
     );
 }

@@ -6,6 +6,7 @@ import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperations
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema';
 import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
+import { NotificationUpdateManyWithoutUserNestedInputObjectSchema as NotificationUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUpdateManyWithoutUserNestedInput.schema';
 import { TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutUserNestedInput.schema';
 import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
 
@@ -21,6 +22,7 @@ const makeSchema = () => z.object({
   roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  Notification: z.lazy(() => NotificationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()
 }).strict();

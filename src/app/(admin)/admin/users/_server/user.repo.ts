@@ -116,3 +116,40 @@ export async function getAllPermissionsRepo() {
         },
     });
 }
+export async function findUsersByRoleNames(roleNames: string[]) {
+    const normalized = Array.from(
+        new Set(
+            (roleNames ?? [])
+                .map((x) => String(x).trim().toUpperCase())
+                .filter(Boolean)
+        )
+    );
+
+    if (!normalized.length) return [];
+
+    return prisma.user.findMany({
+        where: {
+            isActive: true,
+            roles: {
+                some: {
+                    name: {
+                        in: normalized,
+                    },
+                },
+            },
+        },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+            roles: {
+                select: {
+                    name: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+    });
+}

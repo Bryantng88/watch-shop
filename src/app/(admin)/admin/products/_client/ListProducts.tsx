@@ -8,7 +8,6 @@ import {
     ProductListTable,
     ProductListToolbar,
     ProductListViewTabs,
-    ProductReadinessModal,
 } from "./list";
 import type {
     CatalogKey,
@@ -20,28 +19,25 @@ import type {
 
 type FilterState = {
     q: string;
-    sku: string;
-    type: string;
     brandId: string;
     vendorId: string;
-    image: string;
+    hasContent: string;
+    hasImages: string;
+    serviceState: string;
+    hasSellPrice: string;
     sort: string;
-    saleStage: string;
-    opsStage: string;
-    missing: string;
 };
 
 function normalizeView(value: string | null | undefined): ViewKey {
     const view = String(value ?? "").toLowerCase();
 
-    if (
-        ["draft", "processing", "ready", "hold", "sold", "all"].includes(view)
-    ) {
+    if (["draft", "processing", "ready", "hold", "sold", "all"].includes(view)) {
         return view as ViewKey;
     }
 
     return "draft";
 }
+
 function buildCounts(
     input: ProductListPageProps["counts"],
     total: number,
@@ -55,6 +51,8 @@ function buildCounts(
             hold: Number(input.hold ?? 0),
             sold: Number(input.sold ?? 0),
             all: Number(input.all ?? 0),
+            hasContent: Number(input.hasContent ?? 0),
+            hasImages: Number(input.hasImages ?? 0),
         };
     }
 
@@ -65,57 +63,52 @@ function buildCounts(
         hold: currentView === "hold" ? total : 0,
         sold: currentView === "sold" ? total : 0,
         all: currentView === "all" ? total : 0,
+        hasContent: 0,
+        hasImages: 0,
     };
 }
+
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
     if (!value) next.delete(key);
     else next.set(key, value);
 }
 
-function BulkPostConfirm({
-    open,
-    count,
-    onClose,
-    onConfirm,
-    loading,
+function Pagination({
+    page,
+    totalPages,
+    total,
+    onPage,
 }: {
-    open: boolean;
-    count: number;
-    onClose: () => void;
-    onConfirm: () => void;
-    loading: boolean;
+    page: number;
+    totalPages: number;
+    total: number;
+    onPage: (page: number) => void;
 }) {
-    if (!open) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                <div className="border-b border-slate-100 px-5 py-4">
-                    <h3 className="text-lg font-semibold text-slate-950">
-                        Bulk post sản phẩm
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Bạn đang chuẩn bị post {count} sản phẩm đã chọn.
-                    </p>
-                </div>
-                <div className="flex justify-end gap-3 px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        disabled={loading}
-                    >
-                        Hủy
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onConfirm}
-                        className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                        disabled={loading}
-                    >
-                        {loading ? "Đang post..." : "Xác nhận post"}
-                    </button>
-                </div>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+            <div>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> •
+                Trang <span className="font-semibold text-slate-950">{page}</span>/
+                <span className="font-semibold text-slate-950">{totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page <= 1}
+                    onClick={() => onPage(Math.max(1, page - 1))}
+                >
+                    ← Trước
+                </button>
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page >= totalPages}
+                    onClick={() => onPage(Math.min(totalPages, page + 1))}
+                >
+                    Sau →
+                </button>
             </div>
         </div>
     );
@@ -190,67 +183,17 @@ function BulkSaleModal({
     );
 }
 
-function Pagination({
-    page,
-    totalPages,
-    total,
-    onPage,
-}: {
-    page: number;
-    totalPages: number;
-    total: number;
-    onPage: (page: number) => void;
-}) {
-    return (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-            <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> •
-                Trang <span className="font-semibold text-slate-950">{page}</span>/
-                <span className="font-semibold text-slate-950">{totalPages}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page <= 1}
-                    onClick={() => onPage(Math.max(1, page - 1))}
-                >
-                    ← Trước
-                </button>
-                <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page >= totalPages}
-                    onClick={() => onPage(Math.min(totalPages, page + 1))}
-                >
-                    Sau →
-                </button>
-            </div>
-        </div>
-    );
-}
-
-
 export default function ListProducts(props: ProductListPageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
 
     const [rows, setRows] = useState<ProductRow[]>(props.items ?? []);
-    const [pendingImageProductId, setPendingImageProductId] = useState<
-        string | null
-    >(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [bulkPostOpen, setBulkPostOpen] = useState(false);
-    const [bulkPostLoading, setBulkPostLoading] = useState(false);
     const [bulkSaleOpen, setBulkSaleOpen] = useState(false);
     const [bulkSaleValue, setBulkSaleValue] = useState("");
     const [bulkSaleSaving, setBulkSaleSaving] = useState(false);
     const [bulkServiceLoading, setBulkServiceLoading] = useState(false);
-    const [readinessProduct, setReadinessProduct] = useState<ProductRow | null>(
-        null
-    );
 
     useEffect(() => {
         setRows(props.items ?? []);
@@ -274,35 +217,36 @@ export default function ListProducts(props: ProductListPageProps) {
 
     const [filters, setFilters] = useState<FilterState>({
         q: sp.get("q") ?? "",
-        sku: sp.get("sku") ?? "",
-        type: sp.get("type") ?? "",
         brandId: sp.get("brandId") ?? "",
         vendorId: sp.get("vendorId") ?? "",
-        image: sp.get("hasImages") ?? "",
+        hasContent: sp.get("hasContent") ?? "",
+        hasImages: sp.get("hasImages") ?? "",
+        serviceState: sp.get("serviceState") ?? "",
+        hasSellPrice: sp.get("hasSellPrice") ?? "",
         sort: sp.get("sort") ?? "updatedDesc",
-        saleStage: sp.get("saleStage") ?? "",
-        opsStage: sp.get("opsStage") ?? "",
-        missing: sp.get("missing") ?? "",
     });
-
+    const activeQuickFilters = useMemo(
+        () => ({
+            hasContent: filters.hasContent === "yes",
+            hasImages: filters.hasImages === "yes",
+        }),
+        [filters.hasContent, filters.hasImages]
+    );
     useEffect(() => {
         setFilters({
             q: sp.get("q") ?? "",
-            sku: sp.get("sku") ?? "",
-            type: sp.get("type") ?? "",
             brandId: sp.get("brandId") ?? "",
             vendorId: sp.get("vendorId") ?? "",
-            image: sp.get("hasImages") ?? "",
+            hasContent: sp.get("hasContent") ?? "",
+            hasImages: sp.get("hasImages") ?? "",
+            serviceState: sp.get("serviceState") ?? "",
+            hasSellPrice: sp.get("hasSellPrice") ?? "",
             sort: sp.get("sort") ?? "updatedDesc",
-            saleStage: sp.get("saleStage") ?? "",
-            opsStage: sp.get("opsStage") ?? "",
-            missing: sp.get("missing") ?? "",
         });
     }, [sp]);
 
     useEffect(() => {
         setSelectedIds([]);
-        setBulkPostOpen(false);
         setBulkSaleOpen(false);
         setBulkSaleValue("");
     }, [currentCatalog, currentView, props.page, props.total]);
@@ -315,7 +259,7 @@ export default function ListProducts(props: ProductListPageProps) {
 
     function handleViewChange(view: ViewKey) {
         pushParams((next) => {
-            if (view === "all") next.delete("view");
+            if (view === "draft") next.delete("view");
             else next.set("view", view);
             next.set("page", "1");
         });
@@ -325,12 +269,6 @@ export default function ListProducts(props: ProductListPageProps) {
         pushParams((next) => {
             if (catalog === "product") next.delete("catalog");
             else next.set("catalog", "strap");
-
-            next.delete("type");
-            next.delete("brandId");
-            next.delete("saleStage");
-            next.delete("opsStage");
-            next.delete("missing");
             next.set("page", "1");
         });
     }
@@ -338,45 +276,51 @@ export default function ListProducts(props: ProductListPageProps) {
     function handleApplyFilters() {
         pushParams((next) => {
             setParam(next, "q", filters.q.trim() || null);
-            setParam(next, "sku", isStrapCatalog ? null : filters.sku.trim() || null);
-            setParam(next, "type", isStrapCatalog ? null : filters.type || null);
             setParam(next, "brandId", isStrapCatalog ? null : filters.brandId || null);
             setParam(next, "vendorId", filters.vendorId || null);
-            setParam(next, "hasImages", filters.image || null);
+            setParam(next, "hasContent", filters.hasContent || null);
+            setParam(next, "hasImages", filters.hasImages || null);
+            setParam(next, "serviceState", filters.serviceState || null);
+            setParam(next, "hasSellPrice", filters.hasSellPrice || null);
             setParam(next, "sort", filters.sort || "updatedDesc");
-            setParam(next, "saleStage", isStrapCatalog ? null : filters.saleStage || null);
-            setParam(next, "opsStage", isStrapCatalog ? null : filters.opsStage || null);
-            setParam(next, "missing", isStrapCatalog ? null : filters.missing || null);
             next.set("page", "1");
         });
     }
+    function handleQuickFilterClick(key: "hasContent" | "hasImages") {
+        pushParams((next) => {
+            const current = sp.get(key);
 
+            if (current === "yes") {
+                next.delete(key);
+            } else {
+                next.set(key, "yes");
+            }
+
+            next.set("page", "1");
+        });
+    }
     function handleClearFilters() {
         setFilters({
             q: "",
-            sku: "",
-            type: "",
             brandId: "",
             vendorId: "",
-            image: "",
+            hasContent: "",
+            hasImages: "",
+            serviceState: "",
+            hasSellPrice: "",
             sort: "updatedDesc",
-            saleStage: "",
-            opsStage: "",
-            missing: "",
         });
 
         pushParams((next) => {
             [
                 "q",
-                "sku",
-                "type",
                 "brandId",
                 "vendorId",
+                "hasContent",
                 "hasImages",
+                "serviceState",
+                "hasSellPrice",
                 "sort",
-                "saleStage",
-                "opsStage",
-                "missing",
             ].forEach((key) => next.delete(key));
             next.set("page", "1");
         });
@@ -386,26 +330,6 @@ export default function ListProducts(props: ProductListPageProps) {
         pushParams((next) => {
             next.set("page", String(page));
         });
-    }
-
-    async function handlePriceCommit(
-        productId: string,
-        field: "minPrice" | "salePrice" | "purchasePrice",
-        value: number | null
-    ) {
-        const res = await fetch(`/api/admin/products/${productId}/price`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ field, value }),
-        });
-
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok) {
-            throw new Error(data?.error || data?.message || "Cập nhật giá thất bại");
-        }
-
-        router.refresh();
     }
 
     function handleToggleOne(id: string, checked: boolean) {
@@ -433,93 +357,6 @@ export default function ListProducts(props: ProductListPageProps) {
         }
 
         router.refresh();
-    }
-
-    async function handleImageUploaded(productId: string, fileKey: string) {
-        try {
-            setPendingImageProductId(productId);
-
-            const res = await fetch(`/api/admin/products/${productId}/images`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ files: [{ key: fileKey }] }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.error || data?.message || "Cập nhật ảnh thất bại");
-            }
-
-            const nextCover =
-                data?.coverImageUrl ||
-                (fileKey ? `/api/media/sign?key=${encodeURIComponent(fileKey)}` : null);
-
-            setRows((prev) =>
-                prev.map((row) =>
-                    row.id === productId
-                        ? {
-                            ...row,
-                            primaryImageKey: fileKey,
-                            primaryImageUrl: nextCover,
-                            imagesCount: Math.max(Number(row.imagesCount ?? 0), 1),
-                        }
-                        : row
-                )
-            );
-
-            router.refresh();
-        } catch (error: any) {
-            window.alert(error?.message || "Cập nhật ảnh thất bại");
-        } finally {
-            setPendingImageProductId(null);
-        }
-    }
-
-    function handlePriceSaved(productId: string, patch: Partial<ProductRow>) {
-        setRows((prev) =>
-            prev.map((row) => (row.id === productId ? { ...row, ...patch } : row))
-        );
-    }
-
-    async function handleBulkPost() {
-        try {
-            setBulkPostLoading(true);
-
-            const res = await fetch("/api/admin/products/bulk-post", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productIds: selectedIds }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.message || data?.error || "Bulk post thất bại");
-            }
-
-            if (Array.isArray(data?.failed) && data.failed.length > 0) {
-                const preview = data.failed.slice(0, 3).map((item: any) => {
-                    const title = item?.title || item?.id || "Unknown";
-                    const reasons = Array.isArray(item?.reasons)
-                        ? item.reasons.join(" | ")
-                        : "";
-                    return `- ${title}: ${reasons}`;
-                });
-
-                window.alert(
-                    `Đã post ${data?.count ?? 0} sản phẩm. Còn ${data.failed.length} sản phẩm chưa đạt điều kiện.\n\n${preview.join(
-                        "\n"
-                    )}`
-                );
-            }
-
-            setBulkPostOpen(false);
-            setSelectedIds([]);
-            router.refresh();
-        } catch (error: any) {
-            window.alert(error?.message || "Bulk post thất bại");
-        } finally {
-            setBulkPostLoading(false);
-        }
     }
 
     async function handleBulkSale() {
@@ -624,50 +461,15 @@ export default function ListProducts(props: ProductListPageProps) {
         }
     };
 
-    const typeOptions = isStrapCatalog
-        ? []
-        : props.productTypes.map((item) => ({
-            label: item.label,
-            value: item.value,
-        }));
-
-    const brandOptions = isStrapCatalog
-        ? []
-        : props.brands.map((item) => ({
-            label: item.name,
-            value: item.id,
-        }));
+    const brandOptions = props.brands.map((item) => ({
+        label: item.name,
+        value: item.id,
+    }));
 
     const vendorOptions = props.vendors.map((item) => ({
         label: item.name,
         value: item.id,
     }));
-
-    const saleStageOptions = isStrapCatalog
-        ? []
-        : [
-            { label: "Chưa sẵn sàng", value: "NOT_READY" },
-            { label: "Có thể đăng", value: "READY_TO_POST" },
-            { label: "Đang bán", value: "LIVE" },
-            { label: "Đã bán", value: "SOLD" },
-        ];
-
-    const opsStageOptions = isStrapCatalog
-        ? []
-        : [
-            { label: "Bình thường", value: "NORMAL" },
-            { label: "Đang service", value: "IN_SERVICE" },
-            { label: "Blocked", value: "BLOCKED" },
-            { label: "Đã bán", value: "SOLD" },
-        ];
-
-    const missingOptions = isStrapCatalog
-        ? []
-        : [
-            { label: "Thiếu ảnh", value: "images" },
-            { label: "Thiếu nội dung", value: "content" },
-            { label: "Thiếu giá", value: "price" },
-        ];
 
     return (
         <div className="space-y-4">
@@ -677,8 +479,6 @@ export default function ListProducts(props: ProductListPageProps) {
                 onCatalogChange={handleCatalogChange}
             />
 
-
-
             <ProductListViewTabs
                 value={currentView}
                 counts={counts}
@@ -687,12 +487,8 @@ export default function ListProducts(props: ProductListPageProps) {
 
             <ProductListFilters
                 filters={filters}
-                typeOptions={typeOptions}
                 brandOptions={brandOptions}
                 vendorOptions={vendorOptions}
-                saleStageOptions={saleStageOptions}
-                opsStageOptions={opsStageOptions}
-                missingOptions={missingOptions}
                 onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
@@ -700,13 +496,6 @@ export default function ListProducts(props: ProductListPageProps) {
 
             {!isStrapCatalog ? (
                 <ProductListBulkBar selectedCount={selectedIds.length}>
-                    <button
-                        type="button"
-                        onClick={() => setBulkPostOpen(true)}
-                        className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                        Bulk post
-                    </button>
                     <button
                         type="button"
                         onClick={() => setBulkSaleOpen(true)}
@@ -736,12 +525,11 @@ export default function ListProducts(props: ProductListPageProps) {
                 items={rows}
                 selectedIds={selectedIds}
                 canViewCost={props.canViewCost}
-                canEditPrice={props.canEditPrice}
+                counts={counts}
+                activeQuickFilters={activeQuickFilters}
+                onQuickFilterClick={handleQuickFilterClick}
                 onToggleOne={handleToggleOne}
                 onToggleAll={handleToggleAll}
-                onOpenReadiness={(product) => setReadinessProduct(product)}
-                onPriceSaved={handlePriceSaved}
-                onPriceCommit={handlePriceCommit}
                 onView={handleViewProduct}
                 onEdit={handleEditProduct}
                 onDelete={handleDeleteProduct}
@@ -755,14 +543,6 @@ export default function ListProducts(props: ProductListPageProps) {
                 onPage={handlePage}
             />
 
-            <BulkPostConfirm
-                open={bulkPostOpen}
-                count={selectedIds.length}
-                onClose={() => setBulkPostOpen(false)}
-                onConfirm={handleBulkPost}
-                loading={bulkPostLoading}
-            />
-
             <BulkSaleModal
                 open={bulkSaleOpen}
                 count={selectedIds.length}
@@ -774,13 +554,6 @@ export default function ListProducts(props: ProductListPageProps) {
                     setBulkSaleValue("");
                 }}
                 onConfirm={handleBulkSale}
-            />
-
-            <ProductReadinessModal
-                open={!!readinessProduct}
-                product={readinessProduct}
-                onClose={() => setReadinessProduct(null)}
-                onEdit={(id) => router.push(`/admin/products/${id}/edit`)}
             />
         </div>
     );

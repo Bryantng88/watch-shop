@@ -13,6 +13,7 @@ export const UserResultSchema = z.object({
     roleId: z.string().nullable(),
     customer: z.unknown().nullable(),
     MaintenanceRecord: z.array(z.unknown()),
+    Notification: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
     TechnicalIssue: z.array(z.unknown()),
     roles: z.array(z.unknown())

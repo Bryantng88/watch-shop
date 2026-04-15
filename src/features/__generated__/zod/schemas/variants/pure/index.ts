@@ -45,3 +45,4 @@ export { ProductContentModelSchema } from './ProductContent.pure';
 export { AcquisitionSpecJobModelSchema } from './AcquisitionSpecJob.pure';
 export { system_job_controlModelSchema } from './system_job_control.pure';
 export { system_job_run_logModelSchema } from './system_job_run_log.pure';
+export { NotificationModelSchema } from './Notification.pure';
