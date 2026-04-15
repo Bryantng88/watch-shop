@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import InlineMoneyEditor from "./InlineMoneyEditor";
 import type { ProductRow } from "./types";
 
 type Props = {
@@ -33,7 +31,6 @@ async function callApi(url: string, body: any) {
 
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || "Action failed");
-
   return data;
 }
 
@@ -106,49 +103,16 @@ function buildQuickOrderHref(product: ProductRow) {
   return `/admin/orders/new?${params.toString()}`;
 }
 
-function Dot({ tone }: { tone: "green" | "amber" | "red" | "slate" }) {
-  const cls =
-    tone === "green"
-      ? "bg-emerald-500"
-      : tone === "amber"
-        ? "bg-amber-500"
-        : tone === "red"
-          ? "bg-rose-500"
-          : "bg-slate-400";
-
-  return <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${cls}`} />;
-}
-
-function ReadinessItem({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "green" | "amber" | "red" | "slate";
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Dot tone={tone} />
-      <div className="text-sm leading-5">
-        <span className="text-slate-500">{label}: </span>
-        <span className="font-medium text-slate-800">{value}</span>
-      </div>
-    </div>
-  );
-}
-
 function getServiceMeta(serviceState?: string) {
   switch (serviceState) {
     case "DONE":
-      return { label: "Đã sửa xong", tone: "green" as const };
+      return { label: "Đã sửa xong", tone: "success" as const };
     case "IN_PROGRESS":
-      return { label: "Đang service", tone: "amber" as const };
+      return { label: "Đang service", tone: "warning" as const };
     case "PENDING":
-      return { label: "Chờ xử lý", tone: "red" as const };
+      return { label: "Chờ xử lý", tone: "danger" as const };
     default:
-      return { label: "Không cần service", tone: "slate" as const };
+      return { label: "Không cần service", tone: "muted" as const };
   }
 }
 
@@ -167,24 +131,37 @@ function getReadinessLabel(stage?: string) {
   }
 }
 
-function PriceRow({
+function toneClass(tone?: "success" | "warning" | "danger" | "muted" | "accent") {
+  switch (tone) {
+    case "success":
+      return "text-emerald-700";
+    case "warning":
+      return "text-amber-700";
+    case "danger":
+      return "text-rose-600";
+    case "accent":
+      return "text-orange-600";
+    case "muted":
+    default:
+      return "text-slate-700";
+  }
+}
+
+function MetaRow({
   label,
   value,
-  valueClassName,
-  editor,
+  tone = "muted",
 }: {
   label: string;
   value: string;
-  valueClassName?: string;
-  editor?: React.ReactNode;
+  tone?: "success" | "warning" | "danger" | "muted" | "accent";
 }) {
   return (
-    <div className="grid grid-cols-[48px_minmax(0,1fr)_20px] items-center gap-2 text-sm">
-      <div className="text-slate-400">{label}</div>
-      <div className={["truncate text-right font-medium", valueClassName || "text-slate-900"].join(" ")}>
+    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
+      <div className="text-[13px] leading-8 text-slate-400">{label}</div>
+      <div className={["min-w-0 truncate text-[14px] font-medium leading-8", toneClass(tone)].join(" ")}>
         {value}
       </div>
-      <div className="flex justify-end">{editor}</div>
     </div>
   );
 }
@@ -193,10 +170,7 @@ export default function ProductListRow({
   product,
   checked,
   canViewCost,
-  canEditPrice,
   onCheckedChange,
-  onPriceSaved,
-  onPriceCommit,
   onView,
   onEdit,
   onDelete,
@@ -227,17 +201,16 @@ export default function ProductListRow({
     window.location.reload();
   };
 
-  const thumbnailSrc = product.primaryImageUrl ?? product.primaryImageKey ?? null;
+  const thumbnailSrc = product.primaryImageUrl ?? null;
 
   const hasContent = Boolean(product.computed?.hasContent);
   const hasImages = Boolean(product.computed?.hasImages);
-  const hasSellPrice = Boolean(product.computed?.hasSellPrice);
   const serviceMeta = getServiceMeta(product.computed?.serviceState);
   const readinessLabel = getReadinessLabel(product.computed?.readinessStage);
 
   return (
-    <tr className="border-t border-slate-100 transition hover:bg-slate-50/50">
-      <td className="px-4 py-4 align-middle">
+    <tr className="border-t border-slate-100 transition hover:bg-slate-50/40">
+      <td className="px-4 py-5 align-middle">
         <input
           type="checkbox"
           checked={checked}
@@ -245,12 +218,12 @@ export default function ProductListRow({
         />
       </td>
 
-      <td className="px-4 py-4 align-middle">
+      <td className="px-4 py-5 align-middle">
         <div className="flex items-center gap-4">
           <Thumbnail src={thumbnailSrc} alt={product.title || "product"} />
 
-          <div className="min-w-0 flex-1 self-start">
-            <div className="text-[14px] font-medium text-slate-900">
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-medium leading-6 text-slate-900">
               <span className="line-clamp-2 break-words">{product.title || "-"}</span>
             </div>
 
@@ -271,117 +244,63 @@ export default function ProductListRow({
         </div>
       </td>
 
-      <td className="px-4 py-4 align-middle">
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="space-y-2">
-            <ReadinessItem
-              label="Content"
-              value={hasContent ? "Đã có" : "Chưa có"}
-              tone={hasContent ? "green" : "red"}
-            />
-            <ReadinessItem
-              label="Image"
-              value={hasImages ? "Đã có" : "Chưa có"}
-              tone={hasImages ? "green" : "red"}
-            />
-            <ReadinessItem
-              label="Service"
-              value={serviceMeta.label}
-              tone={serviceMeta.tone}
-            />
-          </div>
+      <td className="px-4 py-5 align-middle">
+        <div className="space-y-0">
+          <MetaRow
+            label="Content"
+            value={hasContent ? "Đã có" : "Chưa có"}
+            tone={hasContent ? "success" : "danger"}
+          />
+          <MetaRow
+            label="Image"
+            value={hasImages ? "Đã có" : "Chưa có"}
+            tone={hasImages ? "success" : "danger"}
+          />
+          <MetaRow
+            label="Service"
+            value={serviceMeta.label}
+            tone={serviceMeta.tone}
+          />
         </div>
       </td>
 
-      <td className="px-4 py-4 align-middle">
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="space-y-2">
-            <PriceRow
-              label="Bán"
-              value={fmtMoney(product.minPrice)}
-              valueClassName="text-orange-600"
-              editor={
-                canEditPrice ? (
-                  <InlineMoneyEditor
-                    value={product.minPrice}
-                    label="Giá bán"
-                    compact
-                    iconOnly
-                    onSubmit={async (v) => {
-                      await onPriceCommit(product.id, "minPrice", v);
-                      onPriceSaved(product.id, { minPrice: v });
-                    }}
-                  />
-                ) : null
-              }
+      <td className="px-4 py-5 align-middle">
+        <div className="space-y-0">
+          <MetaRow
+            label="Bán"
+            value={fmtMoney(product.minPrice)}
+            tone="accent"
+          />
+          <MetaRow
+            label="Sale"
+            value={fmtMoney(product.salePrice)}
+            tone="muted"
+          />
+          {canViewCost ? (
+            <MetaRow
+              label="Mua"
+              value={fmtMoney(product.purchasePrice)}
+              tone="muted"
             />
-
-            <PriceRow
-              label="Sale"
-              value={fmtMoney(product.salePrice)}
-              valueClassName="text-emerald-700"
-              editor={
-                canEditPrice ? (
-                  <InlineMoneyEditor
-                    value={product.salePrice}
-                    label="Giá sale"
-                    compact
-                    iconOnly
-                    onSubmit={async (v) => {
-                      await onPriceCommit(product.id, "salePrice", v);
-                      onPriceSaved(product.id, { salePrice: v });
-                    }}
-                  />
-                ) : null
-              }
-            />
-
-            {canViewCost ? (
-              <PriceRow
-                label="Mua"
-                value={fmtMoney(product.purchasePrice)}
-                valueClassName="text-slate-400"
-                editor={
-                  canEditPrice ? (
-                    <InlineMoneyEditor
-                      value={product.purchasePrice}
-                      label="Giá mua"
-                      compact
-                      iconOnly
-                      onSubmit={async (v) => {
-                        await onPriceCommit(product.id, "purchasePrice", v);
-                        onPriceSaved(product.id, { purchasePrice: v });
-                      }}
-                    />
-                  ) : null
-                }
-              />
-            ) : null}
-          </div>
-
-          <div className="mt-3 border-t border-slate-100 pt-2 text-xs font-medium">
-            {hasSellPrice ? (
-              <span className="text-emerald-700">Đã có giá bán</span>
-            ) : (
-              <span className="text-rose-600">Thiếu giá bán</span>
-            )}
-          </div>
+          ) : null}
         </div>
       </td>
 
-      <td className="px-4 py-4 align-middle">
+      <td className="px-4 py-5 align-middle">
         <div className="space-y-1 text-sm leading-6 text-slate-600">
           <div>{fmtDT(product.updatedAt)}</div>
           <div className="text-xs text-slate-400">
             Tạo: {fmtDT(product.createdAt)}
           </div>
           {product.vendorName ? (
-            <div className="pt-1 text-xs text-slate-400">Vendor: {product.vendorName}</div>
+            <div className="pt-1 text-xs text-slate-400">
+              Vendor: {product.vendorName}
+            </div>
           ) : null}
         </div>
       </td>
 
-      <td className="relative overflow-visible px-4 py-4 text-right align-middle">
+      <td className="relative overflow-visible px-4 py-5 text-right align-middle">
         <RowActionMenu
           align="right"
           actions={[

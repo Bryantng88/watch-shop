@@ -43,18 +43,20 @@ const arrayify = (v: unknown): string[] => {
 };
 
 function normalizeView(v: unknown) {
-    const raw = String(firstValue(v) ?? "all").toLowerCase();
+    const raw = String(firstValue(v) ?? "draft").toLowerCase();
+
     if (
-        raw === "all" ||
-        raw === "not_ready" ||
-        raw === "ready_to_post" ||
-        raw === "live" ||
-        raw === "in_service" ||
-        raw === "sold"
+        raw === "draft" ||
+        raw === "processing" ||
+        raw === "ready" ||
+        raw === "hold" ||
+        raw === "sold" ||
+        raw === "all"
     ) {
         return raw;
     }
-    return "all";
+
+    return "draft";
 }
 
 function normalizeCatalog(v: unknown): "product" | "strap" {
@@ -80,19 +82,15 @@ const AdminListQuerySchema = z.object({
     brandIds: z.array(z.string()).optional(),
     categoryIds: z.array(z.string()).optional(),
     hasImages: z.enum(["yes", "no"]).optional(),
+    hasContent: z.enum(["yes", "no"]).optional(),
+    hasSellPrice: z.enum(["yes", "no"]).optional(),
+    serviceState: z
+        .enum(["DONE", "IN_PROGRESS", "PENDING", "NOT_REQUIRED"])
+        .optional(),
     vendorId: z.string().optional(),
     sku: z.string().optional(),
     updatedFrom: z.date().optional(),
     updatedTo: z.date().optional(),
-    saleStage: z
-        .enum(["NOT_READY", "READY_TO_POST", "LIVE", "HOLD", "SOLD"])
-        .optional(),
-    opsStage: z
-        .enum(["NORMAL", "IN_SERVICE", "BLOCKED", "SOLD"])
-        .optional(),
-    missing: z
-        .enum(["images", "content", "price"])
-        .optional(),
 });
 
 const OPEN_SERVICE_REQUEST_STATUSES = [
@@ -338,15 +336,14 @@ export async function getAdminProductList(
         brandIds: arrayify(raw.brandIds ?? raw.brandId),
         categoryIds: arrayify(raw.categoryIds ?? raw.categoryId),
         hasImages: asString(raw.hasImages),
+        hasContent: asString(raw.hasContent),
+        hasSellPrice: asString(raw.hasSellPrice),
+        serviceState: asString(raw.serviceState),
         vendorId: asString(raw.vendorId),
         sku: asString(raw.sku),
         updatedFrom: asDate(raw.updatedFrom),
         updatedTo: asDate(raw.updatedTo),
-        saleStage: asString(raw.saleStage),
-        opsStage: asString(raw.opsStage),
-        missing: asString(raw.missing),
     });
-
     const parsed = parsedResult.success
         ? parsedResult.data
         : {
@@ -358,15 +355,14 @@ export async function getAdminProductList(
             brandIds: undefined,
             categoryIds: undefined,
             hasImages: undefined,
+            hasContent: undefined,
+            hasSellPrice: undefined,
+            serviceState: undefined,
             vendorId: undefined,
             sku: undefined,
             updatedFrom: undefined,
             updatedTo: undefined,
-            saleStage: undefined,
-            opsStage: undefined,
-            missing: undefined,
         };
-
     const catalog = normalizeCatalog(raw.catalog);
     const view = normalizeView(raw.view);
 
@@ -382,12 +378,12 @@ export async function getAdminProductList(
         vendorId: parsed.vendorId,
         sku: parsed.sku,
         hasImages: parsed.hasImages,
+        hasContent: parsed.hasContent,
+        hasSellPrice: parsed.hasSellPrice,
+        serviceState: parsed.serviceState,
         catalog,
         includeCost: !!opts?.canViewCost,
-        saleStage: parsed.saleStage,
-        opsStage: parsed.opsStage,
-        missing: parsed.missing,
-    } as any);
+    });
 
     const itemIds = (result.items ?? [])
         .map((item: any) => item.id)

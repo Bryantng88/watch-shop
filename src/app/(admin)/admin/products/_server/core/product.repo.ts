@@ -38,6 +38,7 @@ type AdminProductListRepoInput = ProductListInput & {
     updatedFrom?: Date;
     updatedTo?: Date;
     catalog?: ProductCatalogKey;
+    includeCost?: boolean;
 };
 
 const STRAP_ATTACHMENT_PREFIX = "__STRAP_LINK__:";
@@ -222,43 +223,37 @@ function buildOrderBy(sort?: ProductListSort): Prisma.ProductOrderByWithRelation
 
 function buildHasImageWhere(): Prisma.ProductWhereInput {
     return {
-        OR: [
-            {
-                NOT: {
-                    OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
+        image: {
+            some: {
+                role: {
+                    in: [ImageRole.PRIMARY, ImageRole.GALLERY, ImageRole.COVER],
                 },
             },
-            {
-                image: {
-                    some: {
-                        role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY, ImageRole.COVER] },
-                    },
-                },
-            },
-        ],
+        },
     };
 }
 
 function buildMissingImageWhere(): Prisma.ProductWhereInput {
-    return { NOT: buildHasImageWhere() };
+    return {
+        NOT: buildHasImageWhere(),
+    };
 }
+
 
 function buildHasContentWhere(): Prisma.ProductWhereInput {
     return {
-        OR: [
-            { contentStatus: ContentStatus.PUBLISHED },
-            {
-                NOT: {
-                    OR: [{ postContent: null }, { postContent: "" }],
-                },
-            },
-        ],
+        NOT: {
+            OR: [{ postContent: null }, { postContent: "" }],
+        },
     };
 }
 
 function buildMissingContentWhere(): Prisma.ProductWhereInput {
-    return { NOT: buildHasContentWhere() };
+    return {
+        OR: [{ postContent: null }, { postContent: "" }],
+    };
 }
+
 
 function buildHasSellPriceWhere(): Prisma.ProductWhereInput {
     return {
@@ -320,7 +315,6 @@ function buildSoldWhere(): Prisma.ProductWhereInput {
 
 function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereInput {
     const q = (input?.q || "").trim();
-    const sku = String((input as any)?.sku || "").trim();
     const and: Prisma.ProductWhereInput[] = [];
 
     if (input?.catalog === "strap") {
@@ -344,44 +338,12 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
         });
     }
 
-    if (sku) {
-        and.push({
-            variants: {
-                some: {
-                    sku: { contains: sku, mode: "insensitive" },
-                },
-            },
-        });
-    }
-
-    if (input?.type) {
-        and.push({ type: input.type as any });
-    }
-
     if (input?.brandId) {
         and.push({ brandId: input.brandId });
     }
 
-    if (input?.categoryId) {
-        and.push({ categoryId: input.categoryId });
-    }
-
-    if ((input as any)?.vendorId) {
-        and.push({ vendorId: (input as any).vendorId });
-    }
-
-    if (input?.hasImages === "yes") {
-        and.push({
-            NOT: {
-                OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
-            },
-        });
-    }
-
-    if (input?.hasImages === "no") {
-        and.push({
-            OR: [{ primaryImageUrl: null }, { primaryImageUrl: "" }],
-        });
+    if (input?.vendorId) {
+        and.push({ vendorId: input.vendorId });
     }
 
     if (input?.updatedFrom || input?.updatedTo) {
@@ -392,10 +354,11 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
             },
         });
     }
-    if ((input as any)?.hasContent === "yes") {
+
+    if (input?.hasContent === "yes") {
         and.push(buildHasContentWhere());
     }
-    if ((input as any)?.hasContent === "no") {
+    if (input?.hasContent === "no") {
         and.push(buildMissingContentWhere());
     }
 
@@ -406,17 +369,30 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
         and.push(buildMissingImageWhere());
     }
 
-    if ((input as any)?.hasSellPrice === "yes") {
+    if (input?.hasSellPrice === "yes") {
         and.push(buildHasSellPriceWhere());
     }
-    if ((input as any)?.hasSellPrice === "no") {
+    if (input?.hasSellPrice === "no") {
         and.push(buildMissingSellPriceWhere());
     }
 
-    if ((input as any)?.serviceState === "IN_PROGRESS") {
+    if (input?.serviceState === "IN_PROGRESS") {
         and.push({ status: ProductStatus.IN_SERVICE });
     }
-    if ((input as any)?.serviceState === "DONE") {
+
+    if (input?.serviceState === "PENDING") {
+        and.push({ status: ProductStatus.NEED_SERVICE });
+    }
+
+    if (input?.serviceState === "NOT_REQUIRED") {
+        and.push({
+            status: {
+                notIn: [ProductStatus.IN_SERVICE, ProductStatus.NEED_SERVICE],
+            },
+        });
+    }
+
+    if (input?.serviceState === "DONE") {
         and.push({
             AND: [
                 { status: { not: ProductStatus.IN_SERVICE } },
@@ -426,20 +402,6 @@ function buildWhereBase(input?: AdminProductListRepoInput): Prisma.ProductWhereI
                     },
                 },
             ],
-        });
-    }
-    if ((input as any)?.serviceState === "PENDING") {
-        and.push({
-            status: {
-                in: [ProductStatus.NEED_SERVICE],
-            },
-        });
-    }
-    if ((input as any)?.serviceState === "NOT_REQUIRED") {
-        and.push({
-            status: {
-                notIn: [ProductStatus.IN_SERVICE, ProductStatus.NEED_SERVICE],
-            },
         });
     }
 
@@ -473,7 +435,6 @@ async function runReadBatch<T extends unknown[]>(
 ): Promise<T> {
     return (await Promise.all(factories.map((factory) => factory()))) as T;
 }
-
 export async function listAdminProducts(
     tx: DB,
     input?: ProductListInput & {
@@ -487,26 +448,27 @@ export async function listAdminProducts(
 
     const safeInput = {
         q: input?.q,
-        type: input?.type,
         brandId: input?.brandId,
-        vendorId: (input as any)?.vendorId,
-        categoryId: (input as any)?.categoryId,
+        vendorId: input?.vendorId,
+        hasContent: input?.hasContent,
         hasImages: input?.hasImages,
-        view: (input?.view ?? "all") as ProductViewKey,
+        hasSellPrice: input?.hasSellPrice,
+        serviceState: input?.serviceState,
+        view: (input?.view ?? "draft") as ProductViewKey,
         sort: (input?.sort ?? "updatedDesc") as ProductListSort,
         page: Math.max(1, Number(input?.page ?? 1)),
-        pageSize: Math.max(1, Math.min(MAX_PAGE_SIZE, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE))),
+        pageSize: Math.max(
+            1,
+            Math.min(MAX_PAGE_SIZE, Number(input?.pageSize ?? DEFAULT_PAGE_SIZE))
+        ),
         catalog: input?.catalog ?? "product",
         includeCost: input?.includeCost !== false,
     };
 
     const isStrapCatalog = safeInput.catalog === "strap";
-    const baseWhere = buildWhereBase({
-        ...safeInput,
-        type: isStrapCatalog ? ("WATCH_STRAP" as any) : safeInput.type,
-    } as any);
-
+    const baseWhere = buildWhereBase(safeInput as any);
     const whereList = buildWhereForView(baseWhere, safeInput.view);
+
     const skip = (safeInput.page - 1) * safeInput.pageSize;
     const take = safeInput.pageSize;
     const orderBy = buildOrderBy(safeInput.sort);
@@ -520,6 +482,8 @@ export async function listAdminProducts(
         price: true,
         salePrice: true,
         costPrice: safeInput.includeCost,
+        updatedAt: true,
+        createdAt: true,
         acquisitionItem: {
             orderBy: [{ createdAt: "desc" }],
             take: 1,
@@ -555,9 +519,9 @@ export async function listAdminProducts(
         type: true,
         status: true,
         contentStatus: true,
-        categoryId: true,
+        postContent: true,
         primaryImageUrl: true,
-        content: true,
+        storefrontImageKey: true,
         createdAt: true,
         updatedAt: true,
         brand: { select: { id: true, name: true } },
@@ -569,14 +533,18 @@ export async function listAdminProducts(
         },
         _count: {
             select: {
-                image: { where: { role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY] } } } as any,
+                image: {
+                    where: {
+                        role: { in: [ImageRole.PRIMARY, ImageRole.GALLERY, ImageRole.COVER] },
+                    },
+                } as any,
             },
         },
         image: {
-            where: { role: ImageRole.COVER },
+            where: { role: { in: [ImageRole.COVER, ImageRole.PRIMARY, ImageRole.GALLERY] } },
             orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
             take: 1,
-            select: { fileKey: true },
+            select: { fileKey: true, role: true },
         },
         ...(!isStrapCatalog
             ? {
@@ -600,7 +568,6 @@ export async function listAdminProducts(
             }
             : {}),
     };
-
 
     const batchFactories: Array<ReadBatchFactory<any>> = [
         () => db.product.count({ where: { AND: [baseWhere, buildDraftWhere()] } }),
@@ -643,33 +610,38 @@ export async function listAdminProducts(
         brands = [],
     ] = batchResults;
 
+    const productRows = Array.isArray(rows) ? rows : [];
+    const brandRows = Array.isArray(brands) ? brands : [];
 
     const openServiceStatusMap = new Map<string, string>();
-    if (!isStrapCatalog && (rows?.length ?? 0) > 0) {
-        const pageProductIds = (rows ?? []).map((row: any) => row.id).filter(Boolean);
 
-        const openServices = await db.serviceRequest.findMany({
-            where: {
-                productId: { in: pageProductIds },
-                status: { in: OPEN_SERVICE_REQUEST_STATUSES as any },
-            },
-            orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-            select: {
-                productId: true,
-                status: true,
-            },
-        });
+    if (!isStrapCatalog && productRows.length > 0) {
+        const pageProductIds = productRows
+            .map((row: any) => row?.id)
+            .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
 
-        for (const row of openServices ?? []) {
-            if (!row?.productId || openServiceStatusMap.has(row.productId)) continue;
-            openServiceStatusMap.set(row.productId, String(row.status));
+        if (pageProductIds.length > 0) {
+            const openServices = await db.serviceRequest.findMany({
+                where: {
+                    productId: { in: pageProductIds },
+                    status: { in: OPEN_SERVICE_REQUEST_STATUSES as any },
+                },
+                orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+                select: {
+                    productId: true,
+                    status: true,
+                },
+            });
+
+            for (const row of openServices ?? []) {
+                if (!row?.productId || openServiceStatusMap.has(row.productId)) continue;
+                openServiceStatusMap.set(row.productId, String(row.status));
+            }
         }
     }
 
-
-
     const strapVariantIdsInPage = isStrapCatalog
-        ? (rows ?? [])
+        ? productRows
             .map((row: any) => row.variants?.[0]?.id)
             .filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
         : [];
@@ -684,6 +656,7 @@ export async function listAdminProducts(
 
     if (strapVariantIdsInPage.length) {
         const attachedVariantIdSet = new Set(strapVariantIdsInPage);
+
         const attachedRows = await db.productVariant.findMany({
             where: {
                 AND: [
@@ -709,7 +682,6 @@ export async function listAdminProducts(
                         id: true,
                         title: true,
                         status: true,
-                        contentStatus: true,
                     },
                 },
             },
@@ -736,51 +708,56 @@ export async function listAdminProducts(
         }
     }
 
-    const items = (rows ?? []).map((p: any) => {
+    const items = productRows.map((p: any) => {
         const latestVariant = p.variants?.[0] ?? null;
         const latestAcqItem = latestVariant?.acquisitionItem?.[0] ?? null;
         const attachedStrap = parseStoredStrapAttachment(latestVariant?.name ?? null);
 
-
         const salePrice =
-            latestVariant?.salePrice != null
-                ? Number(latestVariant.salePrice)
-                : null;
+            latestVariant?.salePrice != null ? Number(latestVariant.salePrice) : null;
 
         const minPrice =
-            latestVariant?.price != null
-                ? Number(latestVariant.price)
-                : null;
+            latestVariant?.price != null ? Number(latestVariant.price) : null;
 
         const purchasePrice =
-            latestVariant?.costPrice != null
-                ? Number(latestVariant.costPrice)
-                : null;
-        const strapAddedCost = attachedStrap?.costPrice != null ? Number(attachedStrap.costPrice) : 0;
-        const basePurchasePrice =
-            purchasePrice != null ? Math.max(Number(purchasePrice) - Number(strapAddedCost || 0), 0) : null;
+            latestVariant?.costPrice != null ? Number(latestVariant.costPrice) : null;
 
-        const strapUsage = latestVariant?.id ? strapAttachmentUsageMap.get(latestVariant.id) : undefined;
+        const strapAddedCost =
+            attachedStrap?.costPrice != null ? Number(attachedStrap.costPrice) : 0;
+
+        const basePurchasePrice =
+            purchasePrice != null
+                ? Math.max(Number(purchasePrice) - Number(strapAddedCost || 0), 0)
+                : null;
+
+        const strapUsage = latestVariant?.id
+            ? strapAttachmentUsageMap.get(latestVariant.id)
+            : undefined;
+
         const attachedCount = Number(strapUsage?.count ?? 0);
         const availableStockQty = Number(latestVariant?.stockQty ?? 0);
         const totalSystemStockQty = availableStockQty + attachedCount;
-        const openServiceStatus = !isStrapCatalog ? openServiceStatusMap.get(p.id) ?? null : null;
+        const openServiceStatus = !isStrapCatalog
+            ? openServiceStatusMap.get(p.id) ?? null
+            : null;
+
+        const thumbnailKey =
+            p.storefrontImageKey ??
+            p.image?.[0]?.fileKey ??
+            p.primaryImageUrl ??
+            null;
 
         return {
             id: p.id,
             title: p.title,
             slug: p.slug,
             type: p.type,
-
-            // service/inventory status
             status: p.status,
-
-            // publish/content status
             contentStatus: p.contentStatus,
+            postContent: p.postContent ?? null,
 
-            categoryId: p.categoryId ?? null,
+            primaryImageUrl: thumbnailKey,
             storefrontImageKey: p.storefrontImageKey ?? null,
-            primaryImageUrl: p.storefrontImageKey ?? p.image?.[0]?.fileKey ?? p.primaryImageUrl,
 
             purchasePrice,
             basePurchasePrice,
@@ -834,16 +811,21 @@ export async function listAdminProducts(
             brandId: p.brand?.id ?? null,
             vendorName: p.vendor?.name ?? null,
             vendorId: p.vendor?.id ?? null,
+
             variantSnapshot: latestVariant
                 ? {
+                    id: latestVariant.id,
+                    sku: latestVariant.sku ?? null,
                     price: latestVariant.price != null ? Number(latestVariant.price) : null,
+                    salePrice:
+                        latestVariant.salePrice != null ? Number(latestVariant.salePrice) : null,
                     availabilityStatus: latestVariant.availabilityStatus ?? null,
                     stockQty: latestVariant.stockQty != null ? Number(latestVariant.stockQty) : 0,
-                    sku: latestVariant.sku ?? null,
                 }
                 : null,
+
             watchSpecSnapshot: p.watchSpec ?? null,
-            imagesCount: p._count?.image ?? 0,
+            imagesCount: Number(p._count?.image ?? 0),
             openServiceStatus,
         };
     });
@@ -867,7 +849,7 @@ export async function listAdminProducts(
             sold: cSold,
             all: cAll,
         },
-        brands,
+        brands: brandRows,
         productTypes,
     };
 }
@@ -888,7 +870,7 @@ export async function createProductDraft(
             sku,
             vendorId: vendorId ?? undefined,
             status: ProductStatus.AVAILABLE,
-            contentStatus: ContentStatus.DRAFT,
+            contentStatus: ContentStatus.PUBLISHED,
             type,
             variants: {
                 create: [
@@ -1904,7 +1886,7 @@ export async function saveProductContent(
             postContent: generatedContent,
             aiPromptUsed: promptNote,
             aiGeneratedAt: generatedAt,
-            contentStatus: ContentStatus.DRAFT,
+            contentStatus: ContentStatus.PUBLISHED,
         },
         select: { id: true },
     });

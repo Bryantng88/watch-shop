@@ -76,10 +76,7 @@ function resolveReadinessStage(input: {
 export function buildProductListComputed(
     input: BuildProductListComputedInput
 ): ProductListComputed {
-    const hasContent =
-        Boolean(String(input.postContent ?? "").trim()) ||
-        normalize(input.contentStatus) === "PUBLISHED";
-
+    const hasContent = Boolean(String(input.postContent ?? "").trim());
     const hasImages = Number(input.imageCount ?? 0) > 0;
 
     const sellPrice = Number(input.salePrice ?? input.basePrice ?? 0);
