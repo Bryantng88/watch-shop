@@ -8,7 +8,7 @@ import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOn
 import { NotificationUpdateManyWithoutUserNestedInputObjectSchema as NotificationUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUpdateManyWithoutUserNestedInput.schema';
 import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
 import { TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutUserNestedInput.schema';
-import { RoleUpdateManyWithoutUserNestedInputObjectSchema as RoleUpdateManyWithoutUserNestedInputObjectSchema } from './RoleUpdateManyWithoutUserNestedInput.schema'
+import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   Notification: z.lazy(() => NotificationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema).optional(),
-  roles: z.lazy(() => RoleUpdateManyWithoutUserNestedInputObjectSchema).optional()
+  roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutMaintenanceRecordInput>;
 export const UserUpdateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { InvoiceItemWhereInputObjectSchema as InvoiceItemWhereInputObjectSchema } from './objects/InvoiceItemWhereInput.schema';
+import { InvoiceItemOrderByWithAggregationInputObjectSchema as InvoiceItemOrderByWithAggregationInputObjectSchema } from './objects/InvoiceItemOrderByWithAggregationInput.schema';
+import { InvoiceItemScalarWhereWithAggregatesInputObjectSchema as InvoiceItemScalarWhereWithAggregatesInputObjectSchema } from './objects/InvoiceItemScalarWhereWithAggregatesInput.schema';
+import { InvoiceItemScalarFieldEnumSchema } from './enums/InvoiceItemScalarFieldEnum.schema';
+import { InvoiceItemCountAggregateInputObjectSchema as InvoiceItemCountAggregateInputObjectSchema } from './objects/InvoiceItemCountAggregateInput.schema';
+import { InvoiceItemMinAggregateInputObjectSchema as InvoiceItemMinAggregateInputObjectSchema } from './objects/InvoiceItemMinAggregateInput.schema';
+import { InvoiceItemMaxAggregateInputObjectSchema as InvoiceItemMaxAggregateInputObjectSchema } from './objects/InvoiceItemMaxAggregateInput.schema';
+import { InvoiceItemAvgAggregateInputObjectSchema as InvoiceItemAvgAggregateInputObjectSchema } from './objects/InvoiceItemAvgAggregateInput.schema';
+import { InvoiceItemSumAggregateInputObjectSchema as InvoiceItemSumAggregateInputObjectSchema } from './objects/InvoiceItemSumAggregateInput.schema';
+
+export const InvoiceItemGroupBySchema: z.ZodType<Prisma.InvoiceItemGroupByArgs> = z.object({ where: InvoiceItemWhereInputObjectSchema.optional(), orderBy: z.union([InvoiceItemOrderByWithAggregationInputObjectSchema, InvoiceItemOrderByWithAggregationInputObjectSchema.array()]).optional(), having: InvoiceItemScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(InvoiceItemScalarFieldEnumSchema), _count: z.union([ z.literal(true), InvoiceItemCountAggregateInputObjectSchema ]).optional(), _min: InvoiceItemMinAggregateInputObjectSchema.optional(), _max: InvoiceItemMaxAggregateInputObjectSchema.optional(), _avg: InvoiceItemAvgAggregateInputObjectSchema.optional(), _sum: InvoiceItemSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.InvoiceItemGroupByArgs>;
+
+export const InvoiceItemGroupByZodSchema = z.object({ where: InvoiceItemWhereInputObjectSchema.optional(), orderBy: z.union([InvoiceItemOrderByWithAggregationInputObjectSchema, InvoiceItemOrderByWithAggregationInputObjectSchema.array()]).optional(), having: InvoiceItemScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(InvoiceItemScalarFieldEnumSchema), _count: z.union([ z.literal(true), InvoiceItemCountAggregateInputObjectSchema ]).optional(), _min: InvoiceItemMinAggregateInputObjectSchema.optional(), _max: InvoiceItemMaxAggregateInputObjectSchema.optional(), _avg: InvoiceItemAvgAggregateInputObjectSchema.optional(), _sum: InvoiceItemSumAggregateInputObjectSchema.optional() }).strict();

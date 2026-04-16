@@ -1,0 +1,47 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
+import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
+import { DecimalWithAggregatesFilterObjectSchema as DecimalWithAggregatesFilterObjectSchema } from './DecimalWithAggregatesFilter.schema';
+import { EnumDiscountTypeNullableWithAggregatesFilterObjectSchema as EnumDiscountTypeNullableWithAggregatesFilterObjectSchema } from './EnumDiscountTypeNullableWithAggregatesFilter.schema';
+import { DiscountTypeSchema } from '../enums/DiscountType.schema';
+import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
+import { IntWithAggregatesFilterObjectSchema as IntWithAggregatesFilterObjectSchema } from './IntWithAggregatesFilter.schema';
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { EnumProductTypeNullableWithAggregatesFilterObjectSchema as EnumProductTypeNullableWithAggregatesFilterObjectSchema } from './EnumProductTypeNullableWithAggregatesFilter.schema';
+import { ProductTypeSchema } from '../enums/ProductType.schema';
+import { EnumOrderItemKindWithAggregatesFilterObjectSchema as EnumOrderItemKindWithAggregatesFilterObjectSchema } from './EnumOrderItemKindWithAggregatesFilter.schema';
+import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
+import { EnumServiceScopeNullableWithAggregatesFilterObjectSchema as EnumServiceScopeNullableWithAggregatesFilterObjectSchema } from './EnumServiceScopeNullableWithAggregatesFilter.schema';
+import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
+import { EnumorderflowtypeWithAggregatesFilterObjectSchema as EnumorderflowtypeWithAggregatesFilterObjectSchema } from './EnumorderflowtypeWithAggregatesFilter.schema';
+import { orderflowtypeSchema } from '../enums/orderflowtype.schema'
+
+const orderitemscalarwherewithaggregatesinputSchema = z.object({
+  AND: z.union([z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  OR: z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema).array().optional(),
+  NOT: z.union([z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
+  id: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  orderId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  productId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  variantId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  title: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
+  listPrice: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
+  discountType: z.union([z.lazy(() => EnumDiscountTypeNullableWithAggregatesFilterObjectSchema), DiscountTypeSchema]).optional().nullable(),
+  discountValue: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  unitPriceAgreed: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
+  taxRate: z.union([z.lazy(() => DecimalNullableWithAggregatesFilterObjectSchema), z.number()]).optional().nullable(),
+  quantity: z.union([z.lazy(() => IntWithAggregatesFilterObjectSchema), z.number().int()]).optional(),
+  subtotal: z.union([z.lazy(() => DecimalWithAggregatesFilterObjectSchema), z.number()]).optional(),
+  img: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  productType: z.union([z.lazy(() => EnumProductTypeNullableWithAggregatesFilterObjectSchema), ProductTypeSchema]).optional().nullable(),
+  kind: z.union([z.lazy(() => EnumOrderItemKindWithAggregatesFilterObjectSchema), OrderItemKindSchema]).optional(),
+  serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableWithAggregatesFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
+  linkedOrderItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  customerItemNote: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  createdFromFlow: z.union([z.lazy(() => EnumorderflowtypeWithAggregatesFilterObjectSchema), orderflowtypeSchema]).optional()
+}).strict();
+export const OrderItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput> = orderitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput>;
+export const OrderItemScalarWhereWithAggregatesInputObjectZodSchema = orderitemscalarwherewithaggregatesinputSchema;

@@ -49,7 +49,7 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   }
 
   if (input.view === "draft") {
-    productIs.status = "DRAFT";
+    productIs.contentStatus = "DRAFT";
   } else if (input.view === "sold") {
     productIs.status = "SOLD";
   }

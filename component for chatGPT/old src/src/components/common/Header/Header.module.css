@@ -1,0 +1,89 @@
+.header{
+    color: #fff;
+    font-size: 14px;
+    font-family: sans-serif;
+}
+
+.topbar {
+    background: #FFFFFF;
+    padding: 8px 0;
+  }
+  
+  .slogan {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #444;
+  }
+  
+  .topRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .iconBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .cart {
+    font-size: 14px;
+  }
+  
+  .cartBox {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    border-radius: 50%;
+    padding: 2px 6px;
+    margin-left: 4px;
+  }
+  .navbar .container {
+    display: flex;
+    justify-content: center;   /* căn giữa ngang */
+    align-items: center;       /* căn giữa dọc */
+  }
+  .navbar {
+    background:#3f4d58; /* hoặc màu bạn đang dùng */
+
+    display: flex;
+    justify-content: center;
+    /* căn giữa theo chiều ngang */
+    align-items: center;
+    /* căn giữa theo chiều dọc */
+    /* hoặc màu nền bạn chọn */
+    padding: 0.5rem 0;
+  }
+  
+  .menu {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+    font-weight: 550;
+    align-items: center;
+    justify-content: center;   /* căn giữa ngang */
+
+   
+}
+
+.menu li {
+    cursor: pointer;
+}
+  .breadscrumBar {
+    background: #f5f5f5;      /* cùng nền với phần nội dung */
+   
+    padding: 10px 0;
+  }
+  .breadcrumb {
+    font-size: 14px;
+    color: #333;
+    padding: 15px 0;
+    
+    
+  }
+  

@@ -1,0 +1,45 @@
+import * as z from 'zod';
+
+import { OrderStatusSchema } from '../../enums/OrderStatus.schema';
+import { PaymentStatusSchema } from '../../enums/PaymentStatus.schema';
+import { PaymentMethodSchema } from '../../enums/PaymentMethod.schema';
+import { ReserveTypeSchema } from '../../enums/ReserveType.schema';
+import { OrderSourceSchema } from '../../enums/OrderSource.schema';
+import { OrderVerificationStatusSchema } from '../../enums/OrderVerificationStatus.schema';
+import { orderflowtypeSchema } from '../../enums/orderflowtype.schema';
+// prettier-ignore
+export const OrderInputSchema = z.object({
+    id: z.string(),
+    refNo: z.string().optional().nullable(),
+    customerId: z.string().optional().nullable(),
+    shipPhone: z.string(),
+    shipAddress: z.string(),
+    shipWard: z.string().optional().nullable(),
+    shipCity: z.string(),
+    subtotal: z.number(),
+    shippingFee: z.number().optional().nullable(),
+    status: OrderStatusSchema,
+    paymentStatus: PaymentStatusSchema,
+    paymentMethod: PaymentMethodSchema.optional().nullable(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+    customerName: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    shipDistrict: z.string().optional().nullable(),
+    hasShipment: z.boolean(),
+    reserveType: ReserveTypeSchema.optional().nullable(),
+    reserveUntil: z.date().optional().nullable(),
+    depositRequired: z.number().optional().nullable(),
+    depositPaid: z.number().optional().nullable(),
+    source: OrderSourceSchema,
+    verificationStatus: OrderVerificationStatusSchema,
+    quick_from_product_id: z.string().optional().nullable(),
+    quickFromProductId: z.string().optional().nullable(),
+    quickFlowType: orderflowtypeSchema,
+    Invoice: z.array(z.unknown()),
+    customer: z.unknown().optional().nullable(),
+    items: z.array(z.unknown()),
+    Shipment: z.unknown().optional().nullable()
+}).strict();
+
+export type OrderInputType = z.infer<typeof OrderInputSchema>;

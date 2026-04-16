@@ -15,7 +15,7 @@ export default function WatchListToolbar({ selectedCount }: Props) {
                 </div>
 
                 <p className="mt-2 text-sm text-slate-500">
-                    Quản lý watch theo domain mới, giữ UI gọn và thao tác nhanh như product.
+                    Quản lý domain watch riêng, nhưng giữ đúng cảm giác thao tác nhanh như list sản phẩm cũ.
                 </p>
             </div>
 

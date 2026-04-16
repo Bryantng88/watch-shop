@@ -1,0 +1,92 @@
+/* src/components/common/PromoBanner.module.css */
+.promo {
+    background:
+        radial-gradient(1200px 300px at 10% 0%, #dbeafe 0%, transparent 50%),
+        radial-gradient(1000px 260px at 90% 0%, #fde68a 0%, transparent 50%),
+        linear-gradient(90deg, #0f172a 0%, #111827 100%);
+    color: #fff;
+    padding: 18px 0;
+}
+
+.promoInner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.promoText {
+    max-width: 900px;
+}
+
+.title {
+    margin: 0;
+    font-size: clamp(16px, 2.2vw, 22px);
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+
+.desc {
+    margin: 6px 0 0;
+    opacity: .9;
+    font-size: 14px;
+}
+
+.badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0b1220;
+    background: #fbbf24;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-bottom: 6px;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.cta {
+    display: inline-block;
+    padding: 10px 14px;
+    background: #fbbf24;
+    color: #111;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform .12s ease, box-shadow .12s ease;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+}
+
+.cta:hover {
+    transform: translateY(-1px);
+}
+
+.ghost {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ghost:hover {
+    background: rgba(255, 255, 255, .18);
+}
+
+/* Mobile stack */
+@media (max-width: 768px) {
+    .promoInner {
+        align-items: flex-start;
+    }
+
+    .actions {
+        width: 100%;
+    }
+}

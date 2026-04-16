@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ShipmentOrderByWithRelationInputObjectSchema as ShipmentOrderByWithRelationInputObjectSchema } from './objects/ShipmentOrderByWithRelationInput.schema';
+import { ShipmentWhereInputObjectSchema as ShipmentWhereInputObjectSchema } from './objects/ShipmentWhereInput.schema';
+import { ShipmentWhereUniqueInputObjectSchema as ShipmentWhereUniqueInputObjectSchema } from './objects/ShipmentWhereUniqueInput.schema';
+import { ShipmentCountAggregateInputObjectSchema as ShipmentCountAggregateInputObjectSchema } from './objects/ShipmentCountAggregateInput.schema';
+import { ShipmentMinAggregateInputObjectSchema as ShipmentMinAggregateInputObjectSchema } from './objects/ShipmentMinAggregateInput.schema';
+import { ShipmentMaxAggregateInputObjectSchema as ShipmentMaxAggregateInputObjectSchema } from './objects/ShipmentMaxAggregateInput.schema';
+import { ShipmentAvgAggregateInputObjectSchema as ShipmentAvgAggregateInputObjectSchema } from './objects/ShipmentAvgAggregateInput.schema';
+import { ShipmentSumAggregateInputObjectSchema as ShipmentSumAggregateInputObjectSchema } from './objects/ShipmentSumAggregateInput.schema';
+
+export const ShipmentAggregateSchema: z.ZodType<Prisma.ShipmentAggregateArgs> = z.object({ orderBy: z.union([ShipmentOrderByWithRelationInputObjectSchema, ShipmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ShipmentWhereInputObjectSchema.optional(), cursor: ShipmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ShipmentCountAggregateInputObjectSchema ]).optional(), _min: ShipmentMinAggregateInputObjectSchema.optional(), _max: ShipmentMaxAggregateInputObjectSchema.optional(), _avg: ShipmentAvgAggregateInputObjectSchema.optional(), _sum: ShipmentSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ShipmentAggregateArgs>;
+
+export const ShipmentAggregateZodSchema = z.object({ orderBy: z.union([ShipmentOrderByWithRelationInputObjectSchema, ShipmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ShipmentWhereInputObjectSchema.optional(), cursor: ShipmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ShipmentCountAggregateInputObjectSchema ]).optional(), _min: ShipmentMinAggregateInputObjectSchema.optional(), _max: ShipmentMaxAggregateInputObjectSchema.optional(), _avg: ShipmentAvgAggregateInputObjectSchema.optional(), _sum: ShipmentSumAggregateInputObjectSchema.optional() }).strict();

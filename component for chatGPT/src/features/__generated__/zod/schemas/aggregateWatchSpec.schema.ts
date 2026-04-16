@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './objects/WatchSpecOrderByWithRelationInput.schema';
+import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './objects/WatchSpecWhereInput.schema';
+import { WatchSpecWhereUniqueInputObjectSchema as WatchSpecWhereUniqueInputObjectSchema } from './objects/WatchSpecWhereUniqueInput.schema';
+import { WatchSpecCountAggregateInputObjectSchema as WatchSpecCountAggregateInputObjectSchema } from './objects/WatchSpecCountAggregateInput.schema';
+import { WatchSpecMinAggregateInputObjectSchema as WatchSpecMinAggregateInputObjectSchema } from './objects/WatchSpecMinAggregateInput.schema';
+import { WatchSpecMaxAggregateInputObjectSchema as WatchSpecMaxAggregateInputObjectSchema } from './objects/WatchSpecMaxAggregateInput.schema';
+import { WatchSpecAvgAggregateInputObjectSchema as WatchSpecAvgAggregateInputObjectSchema } from './objects/WatchSpecAvgAggregateInput.schema';
+import { WatchSpecSumAggregateInputObjectSchema as WatchSpecSumAggregateInputObjectSchema } from './objects/WatchSpecSumAggregateInput.schema';
+
+export const WatchSpecAggregateSchema: z.ZodType<Prisma.WatchSpecAggregateArgs> = z.object({ orderBy: z.union([WatchSpecOrderByWithRelationInputObjectSchema, WatchSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchSpecWhereInputObjectSchema.optional(), cursor: WatchSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchSpecCountAggregateInputObjectSchema ]).optional(), _min: WatchSpecMinAggregateInputObjectSchema.optional(), _max: WatchSpecMaxAggregateInputObjectSchema.optional(), _avg: WatchSpecAvgAggregateInputObjectSchema.optional(), _sum: WatchSpecSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchSpecAggregateArgs>;
+
+export const WatchSpecAggregateZodSchema = z.object({ orderBy: z.union([WatchSpecOrderByWithRelationInputObjectSchema, WatchSpecOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchSpecWhereInputObjectSchema.optional(), cursor: WatchSpecWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchSpecCountAggregateInputObjectSchema ]).optional(), _min: WatchSpecMinAggregateInputObjectSchema.optional(), _max: WatchSpecMaxAggregateInputObjectSchema.optional(), _avg: WatchSpecAvgAggregateInputObjectSchema.optional(), _sum: WatchSpecSumAggregateInputObjectSchema.optional() }).strict();

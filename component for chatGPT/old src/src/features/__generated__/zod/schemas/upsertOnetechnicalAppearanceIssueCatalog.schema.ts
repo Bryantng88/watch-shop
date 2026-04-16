@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { technicalAppearanceIssueCatalogSelectObjectSchema as technicalAppearanceIssueCatalogSelectObjectSchema } from './objects/technicalAppearanceIssueCatalogSelect.schema';
+import { technicalAppearanceIssueCatalogWhereUniqueInputObjectSchema as technicalAppearanceIssueCatalogWhereUniqueInputObjectSchema } from './objects/technicalAppearanceIssueCatalogWhereUniqueInput.schema';
+import { technicalAppearanceIssueCatalogCreateInputObjectSchema as technicalAppearanceIssueCatalogCreateInputObjectSchema } from './objects/technicalAppearanceIssueCatalogCreateInput.schema';
+import { technicalAppearanceIssueCatalogUncheckedCreateInputObjectSchema as technicalAppearanceIssueCatalogUncheckedCreateInputObjectSchema } from './objects/technicalAppearanceIssueCatalogUncheckedCreateInput.schema';
+import { technicalAppearanceIssueCatalogUpdateInputObjectSchema as technicalAppearanceIssueCatalogUpdateInputObjectSchema } from './objects/technicalAppearanceIssueCatalogUpdateInput.schema';
+import { technicalAppearanceIssueCatalogUncheckedUpdateInputObjectSchema as technicalAppearanceIssueCatalogUncheckedUpdateInputObjectSchema } from './objects/technicalAppearanceIssueCatalogUncheckedUpdateInput.schema';
+
+export const technicalAppearanceIssueCatalogUpsertOneSchema: z.ZodType<Prisma.technicalAppearanceIssueCatalogUpsertArgs> = z.object({ select: technicalAppearanceIssueCatalogSelectObjectSchema.optional(),  where: technicalAppearanceIssueCatalogWhereUniqueInputObjectSchema, create: z.union([ technicalAppearanceIssueCatalogCreateInputObjectSchema, technicalAppearanceIssueCatalogUncheckedCreateInputObjectSchema ]), update: z.union([ technicalAppearanceIssueCatalogUpdateInputObjectSchema, technicalAppearanceIssueCatalogUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.technicalAppearanceIssueCatalogUpsertArgs>;
+
+export const technicalAppearanceIssueCatalogUpsertOneZodSchema = z.object({ select: technicalAppearanceIssueCatalogSelectObjectSchema.optional(),  where: technicalAppearanceIssueCatalogWhereUniqueInputObjectSchema, create: z.union([ technicalAppearanceIssueCatalogCreateInputObjectSchema, technicalAppearanceIssueCatalogUncheckedCreateInputObjectSchema ]), update: z.union([ technicalAppearanceIssueCatalogUpdateInputObjectSchema, technicalAppearanceIssueCatalogUncheckedUpdateInputObjectSchema ]) }).strict();

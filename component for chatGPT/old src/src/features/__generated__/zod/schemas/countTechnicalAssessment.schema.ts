@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TechnicalAssessmentOrderByWithRelationInputObjectSchema as TechnicalAssessmentOrderByWithRelationInputObjectSchema } from './objects/TechnicalAssessmentOrderByWithRelationInput.schema';
+import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereInputObjectSchema } from './objects/TechnicalAssessmentWhereInput.schema';
+import { TechnicalAssessmentWhereUniqueInputObjectSchema as TechnicalAssessmentWhereUniqueInputObjectSchema } from './objects/TechnicalAssessmentWhereUniqueInput.schema';
+import { TechnicalAssessmentCountAggregateInputObjectSchema as TechnicalAssessmentCountAggregateInputObjectSchema } from './objects/TechnicalAssessmentCountAggregateInput.schema';
+
+export const TechnicalAssessmentCountSchema: z.ZodType<Prisma.TechnicalAssessmentCountArgs> = z.object({ orderBy: z.union([TechnicalAssessmentOrderByWithRelationInputObjectSchema, TechnicalAssessmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalAssessmentWhereInputObjectSchema.optional(), cursor: TechnicalAssessmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TechnicalAssessmentCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalAssessmentCountArgs>;
+
+export const TechnicalAssessmentCountZodSchema = z.object({ orderBy: z.union([TechnicalAssessmentOrderByWithRelationInputObjectSchema, TechnicalAssessmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalAssessmentWhereInputObjectSchema.optional(), cursor: TechnicalAssessmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TechnicalAssessmentCountAggregateInputObjectSchema ]).optional() }).strict();

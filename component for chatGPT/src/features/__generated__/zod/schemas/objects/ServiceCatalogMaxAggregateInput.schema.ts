@@ -1,0 +1,24 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+
+
+const makeSchema = () => z.object({
+  id: z.literal(true).optional(),
+  code: z.literal(true).optional(),
+  name: z.literal(true).optional(),
+  description: z.literal(true).optional(),
+  defaultPrice: z.literal(true).optional(),
+  durationMin: z.literal(true).optional(),
+  isActive: z.literal(true).optional(),
+  createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
+  detail: z.literal(true).optional(),
+  vendorPrice: z.literal(true).optional(),
+  customerPrice: z.literal(true).optional(),
+  internalCost: z.literal(true).optional(),
+  note: z.literal(true).optional(),
+  categoryKey: z.literal(true).optional(),
+  sortOrder: z.literal(true).optional()
+}).strict();
+export const ServiceCatalogMaxAggregateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogMaxAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogMaxAggregateInputType>;
+export const ServiceCatalogMaxAggregateInputObjectZodSchema = makeSchema();

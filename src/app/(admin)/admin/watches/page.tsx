@@ -4,7 +4,7 @@ import { parseProductListSearchParams } from "@/app/(admin)/admin/products/helpe
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
+import { getListVendors } from "../vendors/_server/vendor.repo";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -70,7 +70,7 @@ export default async function WatchesPage({
 
     const [result, vendors] = await Promise.all([
         getAdminWatchList(input as any),
-        listVendor(),
+        getListVendors(),
     ]);
 
     const { items, total, page, pageSize, totalPages } = result;

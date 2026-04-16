@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProductImageOrderByWithRelationInputObjectSchema as ProductImageOrderByWithRelationInputObjectSchema } from './objects/ProductImageOrderByWithRelationInput.schema';
+import { ProductImageWhereInputObjectSchema as ProductImageWhereInputObjectSchema } from './objects/ProductImageWhereInput.schema';
+import { ProductImageWhereUniqueInputObjectSchema as ProductImageWhereUniqueInputObjectSchema } from './objects/ProductImageWhereUniqueInput.schema';
+import { ProductImageCountAggregateInputObjectSchema as ProductImageCountAggregateInputObjectSchema } from './objects/ProductImageCountAggregateInput.schema';
+import { ProductImageMinAggregateInputObjectSchema as ProductImageMinAggregateInputObjectSchema } from './objects/ProductImageMinAggregateInput.schema';
+import { ProductImageMaxAggregateInputObjectSchema as ProductImageMaxAggregateInputObjectSchema } from './objects/ProductImageMaxAggregateInput.schema';
+import { ProductImageAvgAggregateInputObjectSchema as ProductImageAvgAggregateInputObjectSchema } from './objects/ProductImageAvgAggregateInput.schema';
+import { ProductImageSumAggregateInputObjectSchema as ProductImageSumAggregateInputObjectSchema } from './objects/ProductImageSumAggregateInput.schema';
+
+export const ProductImageAggregateSchema: z.ZodType<Prisma.ProductImageAggregateArgs> = z.object({ orderBy: z.union([ProductImageOrderByWithRelationInputObjectSchema, ProductImageOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductImageWhereInputObjectSchema.optional(), cursor: ProductImageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductImageCountAggregateInputObjectSchema ]).optional(), _min: ProductImageMinAggregateInputObjectSchema.optional(), _max: ProductImageMaxAggregateInputObjectSchema.optional(), _avg: ProductImageAvgAggregateInputObjectSchema.optional(), _sum: ProductImageSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ProductImageAggregateArgs>;
+
+export const ProductImageAggregateZodSchema = z.object({ orderBy: z.union([ProductImageOrderByWithRelationInputObjectSchema, ProductImageOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductImageWhereInputObjectSchema.optional(), cursor: ProductImageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductImageCountAggregateInputObjectSchema ]).optional(), _min: ProductImageMinAggregateInputObjectSchema.optional(), _max: ProductImageMaxAggregateInputObjectSchema.optional(), _avg: ProductImageAvgAggregateInputObjectSchema.optional(), _sum: ProductImageSumAggregateInputObjectSchema.optional() }).strict();

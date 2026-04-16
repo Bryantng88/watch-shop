@@ -1,0 +1,43 @@
+.meta {
+    margin-top: 24px;
+    font-size: 14px;
+    color: #444;
+}
+
+.label {
+    font-weight: 600;
+}
+
+.categories a,
+.tags a {
+    color: #2b4d8c;
+    text-decoration: none;
+}
+
+.categories a:hover,
+.tags a:hover {
+    text-decoration: underline;
+}
+
+.share {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.share a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    color: #555;
+    transition: all 0.2s ease;
+}
+
+.share a:hover {
+    background: #f5f5f5;
+    border-color: #888;
+}

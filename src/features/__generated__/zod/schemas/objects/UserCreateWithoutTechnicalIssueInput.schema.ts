@@ -4,7 +4,7 @@ import { CustomerCreateNestedOneWithoutUserInputObjectSchema as CustomerCreateNe
 import { MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutUserInput.schema';
 import { NotificationCreateNestedManyWithoutUserInputObjectSchema as NotificationCreateNestedManyWithoutUserInputObjectSchema } from './NotificationCreateNestedManyWithoutUserInput.schema';
 import { ServiceRequestCreateNestedManyWithoutUserInputObjectSchema as ServiceRequestCreateNestedManyWithoutUserInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutUserInput.schema';
-import { RoleCreateNestedManyWithoutUserInputObjectSchema as RoleCreateNestedManyWithoutUserInputObjectSchema } from './RoleCreateNestedManyWithoutUserInput.schema'
+import { RoleCreateNestedManyWithoutUsersInputObjectSchema as RoleCreateNestedManyWithoutUsersInputObjectSchema } from './RoleCreateNestedManyWithoutUsersInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string(),
@@ -20,7 +20,7 @@ const makeSchema = () => z.object({
   MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutUserInputObjectSchema).optional(),
   Notification: z.lazy(() => NotificationCreateNestedManyWithoutUserInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutUserInputObjectSchema).optional(),
-  roles: z.lazy(() => RoleCreateNestedManyWithoutUserInputObjectSchema).optional()
+  roles: z.lazy(() => RoleCreateNestedManyWithoutUsersInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutTechnicalIssueInput>;
 export const UserCreateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

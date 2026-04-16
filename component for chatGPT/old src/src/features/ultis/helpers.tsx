@@ -1,0 +1,143 @@
+// src/features/products/admin/server/_helpers.ts
+import {
+    Prisma,
+    CaseType,
+    Gender,
+    MovementType,
+    Strap,
+    DiscountType
+} from "@prisma/client";
+import slugify from "slugify";
+import { computeEffectivePrice } from "@/app/(admin)/admin/products/helpers/price";
+import { Tx } from "@/server/db/client";
+
+export async function genUniqueSlug(db: Tx, title: string) {
+    const base = slugify(title, { lower: true, strict: true });
+    let slug = base;
+    let i = 1;
+    while (await db.product.findUnique({ where: { slug } })) {
+        slug = `${base}-${i++}`;
+    }
+    return slug;
+}
+
+export function buildSizeCategory(
+    caseType: CaseType,
+    length?: number | null,
+    width?: number | null
+) {
+    const L = Number(length ?? NaN);
+    const W = Number(width ?? NaN);
+    const isRound = caseType === "ROUND";
+
+    if (isRound && Number.isFinite(L)) {
+        if (L < 33) return "Small";
+        if (L < 39) return "Medium";
+        return "Large";
+    }
+    if (!isRound && Number.isFinite(L)) {
+        if (L < 33) return "Small";
+        if (L < 35) return "Medium";
+        return "Large";
+    }
+    return undefined;
+}
+
+export function buildWatchSpec(dto: any) {
+    if ((dto.type ?? "WATCH").toUpperCase() !== "WATCH") return undefined;
+
+    const caseType: CaseType = (dto.caseType as CaseType) ?? CaseType.ROUND;
+    const compIds: string[] = Array.isArray(dto.complicationIds)
+        ? dto.complicationIds
+        : Array.isArray(dto.complications)
+            ? dto.complications
+            : [];
+    const length = dto.length != null ? Number(dto.length) : 46.5;
+    const width = dto.width != null ? Number(dto.width) : 39.7;
+    const thickness = dto.thickness != null ? Number(dto.thickness) : 12.0;
+    const gender: Gender = (dto.gender as Gender) ?? Gender.MEN;
+    const movement: MovementType =
+        (dto.movement as MovementType) ?? MovementType.AUTOMATIC;
+
+    return {
+        create: {
+            caseType,
+            length,
+            width,
+            gender,
+            movement,
+            complication: compIds.length
+                ? {
+                    connect: compIds.map((id: string) => ({ id })),
+                }
+                : undefined,
+            thickness,
+            sizeCategory: buildSizeCategory(caseType, length, width),
+        },
+    } satisfies Prisma.WatchSpecCreateNestedOneWithoutProductInput;
+}
+
+export function buildVariants(dto: any, skuBase: string) {
+    const listPrice = dto.listPrice != null ? Number(dto.listPrice) : dto.price != null ? Number(dto.price) : 0;
+    const stockQty = dto.stockQty != null ? Number(dto.stockQty) : 1;
+    const type = String(dto.type ?? "WATCH").toUpperCase();
+
+    const discountType = dto.discountType ? (String(dto.discountType).toUpperCase() as DiscountType) : undefined;
+    const discountValue = dto.discountValue != null ? Number(dto.discountValue) : undefined;
+    const salePrice = dto.salePrice != null ? Number(dto.salePrice) : undefined;
+    const saleStartsAt = dto.saleStartsAt ? new Date(dto.saleStartsAt) : undefined;
+    const saleEndsAt = dto.saleEndsAt ? new Date(dto.saleEndsAt) : undefined;
+    const costPrice = dto.purchasePrice != null ? Number(dto.purchasePrice) : undefined;
+
+    const effectivePrice = computeEffectivePrice({
+        listPrice,
+        discountType,
+        discountValue,
+        salePrice,
+        saleStartsAt,
+        saleEndsAt,
+        fallbackPrice: listPrice,
+    });
+
+    const rawMaterial = String(dto.material ?? dto.strap ?? "").toUpperCase();
+    const strapMaterial = Object.values(Strap).includes(rawMaterial as Strap)
+        ? (rawMaterial as Strap)
+        : undefined;
+
+    return {
+        create: [
+            {
+                price: effectivePrice,
+                listPrice,
+                discountType,
+                discountValue,
+                salePrice,
+                saleStartsAt,
+                saleEndsAt,
+                costPrice,
+                stockQty,
+                availabilityStatus: "HIDDEN",
+                sku: skuBase,
+                ...(type === "WATCH_STRAP"
+                    ? {
+                        strapSpec: {
+                            create: {
+                                widthMM: Number(dto.widthMM ?? 20),
+                                material: strapMaterial,
+                            },
+                        },
+                    }
+                    : {}),
+            },
+        ],
+    } satisfies Prisma.ProductVariantCreateNestedManyWithoutProductInput;
+}
+export function toPublicUrl(key?: string | null): string | undefined {
+    if (!key) return undefined;
+    const base = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE;
+    if (!base) return undefined;
+
+    const cleaned = String(key).replace(/^\/+/, "");
+    return `${base.replace(/\/$/, "")}/${encodeURI(cleaned)}`;
+}
+

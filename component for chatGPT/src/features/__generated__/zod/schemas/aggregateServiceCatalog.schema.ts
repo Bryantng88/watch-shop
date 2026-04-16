@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ServiceCatalogOrderByWithRelationInputObjectSchema as ServiceCatalogOrderByWithRelationInputObjectSchema } from './objects/ServiceCatalogOrderByWithRelationInput.schema';
+import { ServiceCatalogWhereInputObjectSchema as ServiceCatalogWhereInputObjectSchema } from './objects/ServiceCatalogWhereInput.schema';
+import { ServiceCatalogWhereUniqueInputObjectSchema as ServiceCatalogWhereUniqueInputObjectSchema } from './objects/ServiceCatalogWhereUniqueInput.schema';
+import { ServiceCatalogCountAggregateInputObjectSchema as ServiceCatalogCountAggregateInputObjectSchema } from './objects/ServiceCatalogCountAggregateInput.schema';
+import { ServiceCatalogMinAggregateInputObjectSchema as ServiceCatalogMinAggregateInputObjectSchema } from './objects/ServiceCatalogMinAggregateInput.schema';
+import { ServiceCatalogMaxAggregateInputObjectSchema as ServiceCatalogMaxAggregateInputObjectSchema } from './objects/ServiceCatalogMaxAggregateInput.schema';
+import { ServiceCatalogAvgAggregateInputObjectSchema as ServiceCatalogAvgAggregateInputObjectSchema } from './objects/ServiceCatalogAvgAggregateInput.schema';
+import { ServiceCatalogSumAggregateInputObjectSchema as ServiceCatalogSumAggregateInputObjectSchema } from './objects/ServiceCatalogSumAggregateInput.schema';
+
+export const ServiceCatalogAggregateSchema: z.ZodType<Prisma.ServiceCatalogAggregateArgs> = z.object({ orderBy: z.union([ServiceCatalogOrderByWithRelationInputObjectSchema, ServiceCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceCatalogWhereInputObjectSchema.optional(), cursor: ServiceCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ServiceCatalogCountAggregateInputObjectSchema ]).optional(), _min: ServiceCatalogMinAggregateInputObjectSchema.optional(), _max: ServiceCatalogMaxAggregateInputObjectSchema.optional(), _avg: ServiceCatalogAvgAggregateInputObjectSchema.optional(), _sum: ServiceCatalogSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogAggregateArgs>;
+
+export const ServiceCatalogAggregateZodSchema = z.object({ orderBy: z.union([ServiceCatalogOrderByWithRelationInputObjectSchema, ServiceCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: ServiceCatalogWhereInputObjectSchema.optional(), cursor: ServiceCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ServiceCatalogCountAggregateInputObjectSchema ]).optional(), _min: ServiceCatalogMinAggregateInputObjectSchema.optional(), _max: ServiceCatalogMaxAggregateInputObjectSchema.optional(), _avg: ServiceCatalogAvgAggregateInputObjectSchema.optional(), _sum: ServiceCatalogSumAggregateInputObjectSchema.optional() }).strict();

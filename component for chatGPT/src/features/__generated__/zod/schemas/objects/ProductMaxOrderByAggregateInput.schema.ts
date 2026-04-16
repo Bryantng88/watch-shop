@@ -1,0 +1,34 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { SortOrderSchema } from '../enums/SortOrder.schema'
+
+const makeSchema = () => z.object({
+  id: SortOrderSchema.optional(),
+  slug: SortOrderSchema.optional(),
+  title: SortOrderSchema.optional(),
+  primaryImageUrl: SortOrderSchema.optional(),
+  type: SortOrderSchema.optional(),
+  priceVisibility: SortOrderSchema.optional(),
+  brandId: SortOrderSchema.optional(),
+  seoTitle: SortOrderSchema.optional(),
+  seoDescription: SortOrderSchema.optional(),
+  isStockManaged: SortOrderSchema.optional(),
+  maxQtyPerOrder: SortOrderSchema.optional(),
+  publishedAt: SortOrderSchema.optional(),
+  vendorId: SortOrderSchema.optional(),
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional(),
+  tag: SortOrderSchema.optional(),
+  status: SortOrderSchema.optional(),
+  categoryId: SortOrderSchema.optional(),
+  contentStatus: SortOrderSchema.optional(),
+  postContent: SortOrderSchema.optional(),
+  aiPromptUsed: SortOrderSchema.optional(),
+  aiGeneratedAt: SortOrderSchema.optional(),
+  sku: SortOrderSchema.optional(),
+  nickname: SortOrderSchema.optional(),
+  specStatus: SortOrderSchema.optional(),
+  storefrontImageKey: SortOrderSchema.optional()
+}).strict();
+export const ProductMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ProductMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductMaxOrderByAggregateInput>;
+export const ProductMaxOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -101,7 +101,6 @@ export async function getWatchServiceHistory(db: DB, productId: string) {
     },
     include: {
       vendor: true,
-      serviceType: true,
     },
   });
 }

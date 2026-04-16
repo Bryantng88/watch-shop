@@ -1,0 +1,66 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { InvoiceFindManySchema as InvoiceFindManySchema } from '../findManyInvoice.schema';
+import { MaintenanceRecordFindManySchema as MaintenanceRecordFindManySchema } from '../findManyMaintenanceRecord.schema';
+import { CustomerArgsObjectSchema as CustomerArgsObjectSchema } from './CustomerArgs.schema';
+import { OrderItemArgsObjectSchema as OrderItemArgsObjectSchema } from './OrderItemArgs.schema';
+import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
+import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
+import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
+import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
+import { ServiceCatalogArgsObjectSchema as ServiceCatalogArgsObjectSchema } from './ServiceCatalogArgs.schema';
+import { TechnicalAssessmentArgsObjectSchema as TechnicalAssessmentArgsObjectSchema } from './TechnicalAssessmentArgs.schema';
+import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
+import { ServiceRequestCountOutputTypeArgsObjectSchema as ServiceRequestCountOutputTypeArgsObjectSchema } from './ServiceRequestCountOutputTypeArgs.schema'
+
+const makeSchema = () => z.object({
+  id: z.boolean().optional(),
+  type: z.boolean().optional(),
+  billable: z.boolean().optional(),
+  orderItemId: z.boolean().optional(),
+  customerId: z.boolean().optional(),
+  productId: z.boolean().optional(),
+  variantId: z.boolean().optional(),
+  brandSnapshot: z.boolean().optional(),
+  modelSnapshot: z.boolean().optional(),
+  refSnapshot: z.boolean().optional(),
+  serialSnapshot: z.boolean().optional(),
+  appointmentAt: z.boolean().optional(),
+  status: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  warrantyUntil: z.boolean().optional(),
+  warrantyPolicy: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  servicecatalogid: z.boolean().optional(),
+  refNo: z.boolean().optional(),
+  scope: z.boolean().optional(),
+  vendorId: z.boolean().optional(),
+  vendorNameSnap: z.boolean().optional(),
+  technicianId: z.boolean().optional(),
+  technicianNameSnap: z.boolean().optional(),
+  skuSnapshot: z.boolean().optional(),
+  primaryImageUrlSnapshot: z.boolean().optional(),
+  dummy_technical_rel: z.boolean().optional(),
+  priority: z.boolean().optional(),
+  priority_reason: z.boolean().optional(),
+  priority_source: z.boolean().optional(),
+  priority_marked_at: z.boolean().optional(),
+  priorityReason: z.boolean().optional(),
+  prioritySource: z.boolean().optional(),
+  priorityMarkedAt: z.boolean().optional(),
+  invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
+  maintenance: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
+  customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  variant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
+  vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  serviceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
+  technicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentArgsObjectSchema)]).optional(),
+  TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => ServiceRequestCountOutputTypeArgsObjectSchema)]).optional()
+}).strict();
+export const ServiceRequestSelectObjectSchema: z.ZodType<Prisma.ServiceRequestSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;
+export const ServiceRequestSelectObjectZodSchema = makeSchema();

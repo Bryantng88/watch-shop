@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MarketSegmentWhereInputObjectSchema as MarketSegmentWhereInputObjectSchema } from './objects/MarketSegmentWhereInput.schema';
+import { MarketSegmentOrderByWithAggregationInputObjectSchema as MarketSegmentOrderByWithAggregationInputObjectSchema } from './objects/MarketSegmentOrderByWithAggregationInput.schema';
+import { MarketSegmentScalarWhereWithAggregatesInputObjectSchema as MarketSegmentScalarWhereWithAggregatesInputObjectSchema } from './objects/MarketSegmentScalarWhereWithAggregatesInput.schema';
+import { MarketSegmentScalarFieldEnumSchema } from './enums/MarketSegmentScalarFieldEnum.schema';
+import { MarketSegmentCountAggregateInputObjectSchema as MarketSegmentCountAggregateInputObjectSchema } from './objects/MarketSegmentCountAggregateInput.schema';
+import { MarketSegmentMinAggregateInputObjectSchema as MarketSegmentMinAggregateInputObjectSchema } from './objects/MarketSegmentMinAggregateInput.schema';
+import { MarketSegmentMaxAggregateInputObjectSchema as MarketSegmentMaxAggregateInputObjectSchema } from './objects/MarketSegmentMaxAggregateInput.schema';
+
+export const MarketSegmentGroupBySchema: z.ZodType<Prisma.MarketSegmentGroupByArgs> = z.object({ where: MarketSegmentWhereInputObjectSchema.optional(), orderBy: z.union([MarketSegmentOrderByWithAggregationInputObjectSchema, MarketSegmentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: MarketSegmentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(MarketSegmentScalarFieldEnumSchema), _count: z.union([ z.literal(true), MarketSegmentCountAggregateInputObjectSchema ]).optional(), _min: MarketSegmentMinAggregateInputObjectSchema.optional(), _max: MarketSegmentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.MarketSegmentGroupByArgs>;
+
+export const MarketSegmentGroupByZodSchema = z.object({ where: MarketSegmentWhereInputObjectSchema.optional(), orderBy: z.union([MarketSegmentOrderByWithAggregationInputObjectSchema, MarketSegmentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: MarketSegmentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(MarketSegmentScalarFieldEnumSchema), _count: z.union([ z.literal(true), MarketSegmentCountAggregateInputObjectSchema ]).optional(), _min: MarketSegmentMinAggregateInputObjectSchema.optional(), _max: MarketSegmentMaxAggregateInputObjectSchema.optional() }).strict();

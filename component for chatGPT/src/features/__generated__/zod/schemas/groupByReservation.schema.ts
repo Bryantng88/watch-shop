@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ReservationWhereInputObjectSchema as ReservationWhereInputObjectSchema } from './objects/ReservationWhereInput.schema';
+import { ReservationOrderByWithAggregationInputObjectSchema as ReservationOrderByWithAggregationInputObjectSchema } from './objects/ReservationOrderByWithAggregationInput.schema';
+import { ReservationScalarWhereWithAggregatesInputObjectSchema as ReservationScalarWhereWithAggregatesInputObjectSchema } from './objects/ReservationScalarWhereWithAggregatesInput.schema';
+import { ReservationScalarFieldEnumSchema } from './enums/ReservationScalarFieldEnum.schema';
+import { ReservationCountAggregateInputObjectSchema as ReservationCountAggregateInputObjectSchema } from './objects/ReservationCountAggregateInput.schema';
+import { ReservationMinAggregateInputObjectSchema as ReservationMinAggregateInputObjectSchema } from './objects/ReservationMinAggregateInput.schema';
+import { ReservationMaxAggregateInputObjectSchema as ReservationMaxAggregateInputObjectSchema } from './objects/ReservationMaxAggregateInput.schema';
+import { ReservationAvgAggregateInputObjectSchema as ReservationAvgAggregateInputObjectSchema } from './objects/ReservationAvgAggregateInput.schema';
+import { ReservationSumAggregateInputObjectSchema as ReservationSumAggregateInputObjectSchema } from './objects/ReservationSumAggregateInput.schema';
+
+export const ReservationGroupBySchema: z.ZodType<Prisma.ReservationGroupByArgs> = z.object({ where: ReservationWhereInputObjectSchema.optional(), orderBy: z.union([ReservationOrderByWithAggregationInputObjectSchema, ReservationOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ReservationScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ReservationScalarFieldEnumSchema), _count: z.union([ z.literal(true), ReservationCountAggregateInputObjectSchema ]).optional(), _min: ReservationMinAggregateInputObjectSchema.optional(), _max: ReservationMaxAggregateInputObjectSchema.optional(), _avg: ReservationAvgAggregateInputObjectSchema.optional(), _sum: ReservationSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ReservationGroupByArgs>;
+
+export const ReservationGroupByZodSchema = z.object({ where: ReservationWhereInputObjectSchema.optional(), orderBy: z.union([ReservationOrderByWithAggregationInputObjectSchema, ReservationOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ReservationScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ReservationScalarFieldEnumSchema), _count: z.union([ z.literal(true), ReservationCountAggregateInputObjectSchema ]).optional(), _min: ReservationMinAggregateInputObjectSchema.optional(), _max: ReservationMaxAggregateInputObjectSchema.optional(), _avg: ReservationAvgAggregateInputObjectSchema.optional(), _sum: ReservationSumAggregateInputObjectSchema.optional() }).strict();

@@ -1,128 +1,210 @@
 "use client";
 
-import type { WatchRow } from "./types";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import WatchListToolbar from "./WatchListToolBar";
+import WatchListViewTabs from "./WatchListViewTabs";
+import WatchListFilters from "./WatchListFilters";
+import WatchListTable from "./WatchListTable";
+import { buildCounts } from "./helpers";
+import type { ViewKey, WatchListPageProps, WatchRow } from "./types";
 
-type Props = {
-    product: WatchRow;
-    checked: boolean;
-    canViewCost: boolean;
-    canEditPrice: boolean;
-    onCheckedChange: (checked: boolean) => void;
-    onOpenReadiness: (product: WatchRow) => void;
-    onPriceSaved: (productId: string, patch: Partial<WatchRow>) => void;
-    onPriceCommit: (
-        productId: string,
-        field: "minPrice" | "salePrice" | "purchasePrice",
-        value: number | null
-    ) => Promise<void>;
-    onView: (productId: string) => void;
-    onEdit: (productId: string) => void;
-    onDelete: (productId: string) => void;
-    onService: (productId: string) => void;
-};
-
-function fmt(v?: number | string | null) {
-    if (v == null || v === "") return "—";
-    const n = Number(v);
-    return Number.isFinite(n) ? new Intl.NumberFormat("vi-VN").format(n) : String(v);
+function normalizeView(value: string | null | undefined): ViewKey {
+    const view = String(value ?? "").toLowerCase();
+    if (["draft", "processing", "ready", "hold", "sold", "all"].includes(view)) {
+        return view as ViewKey;
+    }
+    return "draft";
 }
 
-export default function WatchListRow({
-    product,
-    checked,
-    canViewCost,
-    canEditPrice,
-    onCheckedChange,
-    onOpenReadiness,
-    onPriceSaved,
-    onPriceCommit,
-    onView,
-    onEdit,
-    onDelete,
-    onService,
-}: Props) {
+function setParam(next: URLSearchParams, key: string, value?: string | null) {
+    if (!value) next.delete(key);
+    else next.set(key, value);
+}
+
+function Pagination({ page, totalPages, total, onPage }: { page: number; totalPages: number; total: number; onPage: (page: number) => void }) {
     return (
-        <tr className="border-t border-slate-100 align-top">
-            <td className="px-4 py-3">
-                <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => onCheckedChange(e.target.checked)}
-                />
-            </td>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+            <div>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
+            </div>
 
-            <td className="px-4 py-3">
-                <div className="flex gap-3">
-                    <img
-                        src={product.primaryImageUrl || "/placeholder.png"}
-                        className="h-14 w-14 rounded-xl border border-slate-200 object-cover"
-                    />
-                    <div className="min-w-0 space-y-1">
-                        <div className="line-clamp-2 text-sm font-medium text-slate-950">
-                            {product.title ?? "Untitled"}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                            {product.brand ?? "—"} • {product.sku ?? "No SKU"}
-                        </div>
-                    </div>
-                </div>
-            </td>
-
-            <td className="px-4 py-3">
-                <button
-                    type="button"
-                    onClick={() => onOpenReadiness(product)}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs hover:bg-slate-50"
-                >
-                    {product.isReadyToPublish ? "Sẵn sàng" : "Xem readiness"}
+            <div className="flex items-center gap-2">
+                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))}>
+                    ← Trước
                 </button>
-            </td>
+                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))}>
+                    Sau →
+                </button>
+            </div>
+        </div>
+    );
+}
 
-            <td className="px-4 py-3">
-                <div className="space-y-2 text-xs">
-                    {canViewCost ? <div>Cost: {fmt(product.costPrice)}</div> : null}
-                    <div className="flex items-center gap-2">
-                        <span>Sale:</span>
+export default function WatchListClient(props: WatchListPageProps) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const sp = useSearchParams();
 
-                        <span>{fmt(product.salePrice)}</span>
+    const [rows, setRows] = useState<WatchRow[]>(props.items ?? []);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [readinessProduct, setReadinessProduct] = useState<WatchRow | null>(null);
+    const [filters, setFilters] = useState({
+        q: sp.get("q") ?? "",
+        sku: sp.get("sku") ?? "",
+        brandId: sp.get("brandId") ?? "",
+        vendorId: sp.get("vendorId") ?? "",
+        hasContent: sp.get("hasContent") ?? "",
+        hasImages: sp.get("hasImages") ?? "",
+        saleStage: sp.get("saleStage") ?? "",
+        opsStage: sp.get("opsStage") ?? "",
+        sort: sp.get("sort") ?? "updatedDesc",
+    });
 
-                    </div>
-                </div>
-            </td>
+    useEffect(() => { setRows(props.items ?? []); }, [props.items]);
+    useEffect(() => {
+        setFilters({
+            q: sp.get("q") ?? "",
+            sku: sp.get("sku") ?? "",
+            brandId: sp.get("brandId") ?? "",
+            vendorId: sp.get("vendorId") ?? "",
+            hasContent: sp.get("hasContent") ?? "",
+            hasImages: sp.get("hasImages") ?? "",
+            saleStage: sp.get("saleStage") ?? "",
+            opsStage: sp.get("opsStage") ?? "",
+            sort: sp.get("sort") ?? "updatedDesc",
+        });
+    }, [sp]);
 
-            <td className="px-4 py-3">
-                <div className="space-y-1 text-xs">
-                    <div>{product.status ?? "—"}</div>
-                    <div className="text-slate-500">{product.saleState ?? "—"}</div>
-                    <div className="text-slate-400">{product.serviceState ?? "—"}</div>
-                </div>
-            </td>
+    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
+    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView, rows), [props.counts, props.total, currentView, rows]);
+    const activeQuickFilters = useMemo(() => ({ hasContent: filters.hasContent === "yes", hasImages: filters.hasImages === "yes" }), [filters.hasContent, filters.hasImages]);
 
-            <td className="px-4 py-3">
-                <div className="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={() => onView(product.productId)}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-50"
-                    >
-                        Xem
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onEdit(product.productId)}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-50"
-                    >
-                        Sửa
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onService(product.productId)}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-50"
-                    >
-                        Service
-                    </button>
-                </div>
-            </td>
-        </tr>
+    function pushParams(mutator: (next: URLSearchParams) => void) {
+        const next = new URLSearchParams(sp.toString());
+        mutator(next);
+        router.push(`${pathname}?${next.toString()}`);
+    }
+
+    function handleViewChange(view: ViewKey) {
+        pushParams((next) => {
+            setParam(next, "view", view === "all" ? null : view);
+            setParam(next, "page", "1");
+        });
+    }
+
+    function handleApplyFilters() {
+        pushParams((next) => {
+            setParam(next, "q", filters.q);
+            setParam(next, "sku", filters.sku);
+            setParam(next, "brandId", filters.brandId);
+            setParam(next, "vendorId", filters.vendorId);
+            setParam(next, "hasContent", filters.hasContent);
+            setParam(next, "hasImages", filters.hasImages);
+            setParam(next, "saleStage", filters.saleStage);
+            setParam(next, "opsStage", filters.opsStage);
+            setParam(next, "sort", filters.sort);
+            setParam(next, "page", "1");
+        });
+    }
+
+    function handleClearFilters() {
+        setFilters({ q: "", sku: "", brandId: "", vendorId: "", hasContent: "", hasImages: "", saleStage: "", opsStage: "", sort: "updatedDesc" });
+        pushParams((next) => {
+            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) => next.delete(key));
+            setParam(next, "sort", "updatedDesc");
+            setParam(next, "page", "1");
+        });
+    }
+
+    function handleQuickFilterClick(key: "hasContent" | "hasImages") {
+        const nextValue = filters[key] === "yes" ? "" : "yes";
+        setFilters((prev) => ({ ...prev, [key]: nextValue }));
+        pushParams((next) => {
+            setParam(next, key, nextValue || null);
+            setParam(next, "page", "1");
+        });
+    }
+
+    function handlePage(page: number) {
+        pushParams((next) => setParam(next, "page", String(page)));
+    }
+
+    function onToggleOne(productId: string, checked: boolean) {
+        setSelectedIds((prev) => checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId));
+    }
+
+    function onToggleAll(checked: boolean) {
+        if (!checked) return setSelectedIds([]);
+        setSelectedIds(rows.map((x) => x.productId));
+    }
+
+    function onView(productId: string) { router.push(`/admin/watches/${productId}`); }
+    function onEdit(productId: string) { router.push(`/admin/watches/${productId}/edit`); }
+    function onDelete(productId: string) { console.log("TODO delete watch", productId); }
+    function onService(productId: string) { router.push(`/admin/services/new?productId=${productId}`); }
+
+    async function onPriceCommit(productId: string, field: "minPrice" | "salePrice" | "purchasePrice", value: number | null) {
+        const payload = field === "purchasePrice" ? { costPrice: value } : { [field]: value };
+        const res = await fetch(`/api/admin/watches/${productId}/pricing`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ field, value, ...payload }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error || "Update pricing failed");
+
+        onPriceSaved(productId, {
+            ...(field === "purchasePrice" ? { purchasePrice: value, costPrice: value } : { [field]: value }),
+        });
+    }
+
+    function onPriceSaved(productId: string, patch: Partial<WatchRow>) {
+        setRows((prev) => prev.map((row) => row.productId === productId ? { ...row, ...patch } : row));
+    }
+
+    const brandOptions = (props.brands ?? []).map((brand) => ({ label: brand.name, value: brand.id }));
+    const vendorOptions = (props.vendors ?? []).map((vendor) => ({
+        label: vendor.name,
+        value: vendor.id,
+    }));
+    return (
+        <div className="space-y-5">
+            <WatchListToolbar selectedCount={selectedIds.length} />
+
+            <WatchListViewTabs value={currentView} counts={counts} onChange={handleViewChange} />
+
+            <WatchListFilters
+                filters={filters}
+                brandOptions={brandOptions}
+                vendorOptions={vendorOptions}
+                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+            />
+
+            <WatchListTable
+                items={rows}
+                selectedIds={selectedIds}
+                canViewCost={props.canViewCost}
+                canEditPrice={props.canEditPrice}
+                counts={counts}
+                activeQuickFilters={activeQuickFilters}
+                onQuickFilterClick={handleQuickFilterClick}
+                onToggleOne={onToggleOne}
+                onToggleAll={onToggleAll}
+                onOpenReadiness={setReadinessProduct}
+                onPriceSaved={onPriceSaved}
+                onPriceCommit={onPriceCommit}
+                onView={onView}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onService={onService}
+            />
+
+            <Pagination page={props.page} totalPages={props.totalPages} total={props.total} onPage={handlePage} />
+
+        </div>
     );
 }

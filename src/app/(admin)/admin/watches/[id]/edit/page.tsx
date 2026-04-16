@@ -4,8 +4,8 @@ import WatchFormClient from "@/domains/watch/client/WatchFormClient";
 import { getWatchEditDetail } from "@/domains/watch/server";
 
 import { prisma } from "@/server/db/client";
-import { listBrands } from "@/features/catalog/server/brands.repo";
-import { listVendor } from "@/features/vendors/server/vendor.repo";
+import { getListBrands } from "../../../vendors/_server/vendor.repo";
+import { getListVendors } from "../../../vendors/_server/vendor.repo";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -53,8 +53,8 @@ export default async function EditWatchPage({
     const [detail, brands, vendors, opts, categoryOptions, strapInventoryOptions] =
         await Promise.all([
             getWatchEditDetail(id),
-            listBrands(),
-            listVendor(),
+            getListBrands(),
+            getListVendors(),
             getOptions(),
             prodRepo.listActiveProductCategories(prisma),
             prodRepo.listAvailableStrapInventory(prisma),

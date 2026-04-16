@@ -19,10 +19,12 @@ export type BrandOption = { id: string; name: string };
 
 // Lấy danh sách vendor (có thể phân trang/filter nếu cần)
 export async function getListVendors(
-    tx: DB,
+    tx?: DB,
     opts?: { q?: string; take?: number; skip?: number }
 ) {
-    return tx.vendor.findMany({
+    const client = dbOrTx(tx);
+
+    return client.vendor.findMany({
         where: opts?.q
             ? { name: { contains: opts.q, mode: "insensitive" } }
             : undefined,

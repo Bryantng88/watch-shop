@@ -1,0 +1,1386 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+generator zod {
+  provider         = "prisma-zod-generator"
+  output           = "../src/features/__generated__/zod"
+  aggregateTypes   = "false"
+  createInputTypes = "true"
+  modelSchema      = "true"
+  relationModel    = "true"
+  updateInputTypes = "true"
+  whereInputTypes  = "false"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model MarketSegment {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  watchSpecs WatchSpec[] @relation("MarketSegmentToWatchSpec")
+}
+
+model Complication {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  watchSpecs WatchSpec[] @relation("ComplicationToWatchSpec")
+}
+
+model Brand {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  slug         String      @unique
+  country      String?
+  foundedYear  Int?
+  website      String?
+  logoUrl      String?
+  isAuthorized Boolean     @default(false)
+  status       BrandStatus @default(ACTIVE)
+  description  String?
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  products     Product[]
+
+  @@index([country])
+  @@index([status, sortOrder])
+}
+
+model ProductImage {
+  id          String    @id @default(cuid())
+  productId   String
+  fileKey     String
+  role        ImageRole @default(GALLERY)
+  alt         String?
+  width       Int?
+  height      Int?
+  mime        String?
+  sizeBytes   Int?
+  sortOrder   Int       @default(0)
+  dominantHex String?
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  slug               String?             @unique
+  title              String
+  primaryImageUrl    String?
+  type               ProductType
+  priceVisibility    PriceVisibility     @default(SHOW)
+  brandId            String?
+  seoTitle           String?
+  seoDescription     String?
+  isStockManaged     Boolean             @default(true)
+  maxQtyPerOrder     Int                 @default(1)
+  publishedAt        DateTime?
+  vendorId           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tag                Tag                 @default(PRE_OWNED)
+  status             ProductStatus       @default(AVAILABLE)
+  categoryId         String?
+  contentStatus      ContentStatus       @default(DRAFT)
+  postContent        String?
+  aiPromptUsed       String?
+  aiGeneratedAt      DateTime?
+  sku                String?             @unique
+  AcquisitionItem    AcquisitionItem[]
+  InvoiceItem        InvoiceItem[]
+  maintenanceRecords MaintenanceRecord[]
+  orderItems         OrderItem[]
+  brand              Brand?              @relation(fields: [brandId], references: [id])
+  ProductCategory    ProductCategory?    @relation(fields: [categoryId], references: [id])
+  vendor             Vendor?             @relation(fields: [vendorId], references: [id])
+  content            ProductContent?
+  image              ProductImage[]
+  variants           ProductVariant[]
+  Reservation        Reservation[]
+  ServiceRequest     ServiceRequest[]
+  watchSpec          WatchSpec?
+
+  @@index([brandId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([categoryId])
+}
+
+model ProductVariant {
+  id                 String              @id @default(cuid())
+  productId          String
+  sku                String?             @unique
+  name               String?
+  price              Decimal?            @db.Decimal(12, 2)
+  stockQty           Int                 @default(0)
+  isStockManaged     Boolean?            @default(true)
+  maxQtyPerOrder     Int                 @default(99)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  availabilityStatus AvailabilityStatus  @default(HIDDEN)
+  listPrice          Decimal?            @db.Decimal(18, 2)
+  discountType       DiscountType?
+  discountValue      Decimal?            @db.Decimal(18, 2)
+  salePrice          Decimal?            @db.Decimal(18, 2)
+  saleStartsAt       DateTime?           @db.Timestamptz(6)
+  saleEndsAt         DateTime?           @db.Timestamptz(6)
+  costPrice          Decimal?            @db.Decimal(18, 2)
+  acquisitionItem    AcquisitionItem[]
+  invoiceItem        InvoiceItem[]
+  maintenancePart    MaintenancePart[]
+  maintenanceRecord  MaintenanceRecord[]
+  partSpec           PartVariantSpec?
+  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  serviceRequest     ServiceRequest[]
+  strapSpec          StrapVariantSpec?
+
+  @@index([productId])
+  @@index([availabilityStatus])
+  @@index([saleStartsAt, saleEndsAt])
+}
+
+model PartVariantSpec {
+  variantId String         @id
+  partType  PartType
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model WatchSpec {
+  productId       String          @id
+  model           String?
+  year            String?
+  caseType        CaseType?       @default(ROUND)
+  category        Category[]
+  gender          Gender?         @default(MEN)
+  length          Decimal?        @db.Decimal(12, 2)
+  width           Decimal?        @db.Decimal(12, 2)
+  thickness       Decimal?        @db.Decimal(12, 2)
+  movement        MovementType?   @default(AUTOMATIC)
+  caliber         String?
+  caseMaterial    CaseMaterial    @default(STAINLESS_STEEL)
+  goldKarat       Int?
+  goldColor       GoldColor?
+  caseSize        String?
+  dialColor       String?
+  marketSegmentId String?
+  strap           Strap?          @default(LEATHER)
+  glass           Glass?          @default(MINERAL)
+  boxIncluded     Boolean         @default(false)
+  bookletIncluded Boolean         @default(false)
+  cardIncluded    Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  sizeCategory    String?
+  ref             String?
+  hasStrap        Boolean         @default(false)
+  isServiced      Boolean         @default(false)
+  hasClasp        Boolean         @default(false)
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  complication    Complication[]  @relation("ComplicationToWatchSpec")
+  marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
+}
+
+model StrapVariantSpec {
+  variantId     String         @id
+  color         String?
+  material      Strap          @default(LEATHER)
+  quickRelease  Boolean?       @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lugWidthMM    Int
+  buckleWidthMM Int?
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([material])
+  @@index([buckleWidthMM])
+  @@index([lugWidthMM])
+}
+
+model Order {
+  id                 String                  @id @default(cuid())
+  refNo              String?                 @unique(map: "Order_orderCode_key")
+  customerId         String?
+  shipPhone          String
+  shipAddress        String
+  shipWard           String?
+  shipCity           String
+  subtotal           Decimal                 @db.Decimal(12, 2)
+  shippingFee        Decimal?                @db.Decimal(12, 2)
+  status             OrderStatus             @default(DRAFT)
+  paymentStatus      PaymentStatus           @default(UNPAID)
+  paymentMethod      PaymentMethod?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  customerName       String?
+  notes              String?
+  shipDistrict       String?
+  hasShipment        Boolean
+  reserveType        ReserveType?
+  reserveUntil       DateTime?               @db.Timestamptz(6)
+  depositRequired    Decimal?                @db.Decimal(12, 2)
+  depositPaid        Decimal?                @db.Decimal(12, 2)
+  source             OrderSource             @default(ADMIN)
+  verificationStatus OrderVerificationStatus @default(VERIFIED)
+  Invoice            Invoice[]
+  customer           Customer?               @relation(fields: [customerId], references: [id])
+  items              OrderItem[]
+  Shipment           Shipment?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([source])
+  @@index([verificationStatus])
+}
+
+model OrderItem {
+  id                String            @id @default(cuid())
+  orderId           String
+  productId         String?
+  variantId         String?
+  title             String
+  listPrice         Decimal           @db.Decimal(12, 2)
+  discountType      DiscountType?
+  discountValue     Decimal?          @db.Decimal(12, 2)
+  unitPriceAgreed   Decimal           @db.Decimal(12, 2)
+  taxRate           Decimal?          @db.Decimal(12, 2)
+  quantity          Int
+  subtotal          Decimal           @db.Decimal(12, 2)
+  img               String?
+  createdAt         DateTime          @default(now())
+  productType       ProductType?
+  kind              OrderItemKind
+  serviceCatalogId  String?
+  serviceScope      ServiceScope?
+  linkedOrderItemId String?
+  customerItemNote  String?
+  acquisitionItem   AcquisitionItem[]
+  OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
+  other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product           Product?          @relation(fields: [productId], references: [id])
+  ServiceCatalog    ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
+  serviceRequest    ServiceRequest[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([kind], map: "idx_order_item_kind")
+  @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
+  @@index([linkedOrderItemId], map: "idx_orderitem_linked_order_item")
+  @@index([serviceScope], map: "idx_orderitem_service_scope")
+}
+
+model Reservation {
+  id         String            @id @default(cuid())
+  productId  String?
+  orderId    String?
+  status     ReservationStatus @default(ACTIVE)
+  depositAmt Decimal?          @db.Decimal(12, 2)
+  expiresAt  DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  product    Product?          @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+model ServiceCatalog {
+  id                String              @id @default(cuid())
+  code              String              @unique
+  name              String
+  description       String?
+  defaultPrice      Decimal?            @db.Decimal(12, 2)
+  durationMin       Int?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  detail            ServiceDetail
+  vendorPrice       Decimal?            @db.Decimal(12, 2)
+  customerPrice     Decimal?            @db.Decimal(12, 2)
+  internalCost      Decimal?            @db.Decimal(12, 2)
+  note              String?
+  categoryKey       String?
+  sortOrder         Int                 @default(0)
+  MaintenanceRecord MaintenanceRecord[]
+  OrderItem         OrderItem[]
+  ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
+
+  @@index([detail], map: "idx_service_catalog_detail")
+}
+
+model ServiceRequest {
+  id                      String               @id @default(cuid())
+  type                    ServiceType          @default(PAID)
+  billable                Boolean              @default(true)
+  orderItemId             String?
+  customerId              String?
+  productId               String?
+  variantId               String?
+  brandSnapshot           String?
+  modelSnapshot           String?
+  refSnapshot             String?
+  serialSnapshot          String?
+  appointmentAt           DateTime?
+  status                  ServiceRequestStatus @default(DRAFT)
+  notes                   String?
+  warrantyUntil           DateTime?
+  warrantyPolicy          String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  servicecatalogid        String?
+  refNo                   String?
+  scope                   ServiceScope?
+  vendorId                String?
+  vendorNameSnap          String?
+  technicianId            String?
+  technicianNameSnap      String?
+  skuSnapshot             String?
+  primaryImageUrlSnapshot String?
+  dummy_technical_rel     String?
+  invoice                 Invoice[]
+  maintenance             MaintenanceRecord[]
+  customer                Customer?            @relation(fields: [customerId], references: [id])
+  orderItem               OrderItem?           @relation(fields: [orderItemId], references: [id])
+  product                 Product?             @relation(fields: [productId], references: [id])
+  user                    User?                @relation(fields: [technicianId], references: [id])
+  variant                 ProductVariant?      @relation(fields: [variantId], references: [id])
+  vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
+  serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
+  technicalAssessment     TechnicalAssessment?
+  TechnicalIssue          TechnicalIssue[]
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([orderItemId])
+  @@index([status])
+  @@index([orderItemId], map: "idx_service_request_order_item_id")
+  @@index([vendorId], map: "idx_service_request_vendor_id")
+  @@index([technicianId])
+  @@index([technicianId], map: "idx_service_request_technician_id")
+}
+
+model MaintenanceRecord {
+  id                 String               @id @default(cuid())
+  type               ServiceType          @default(PAID)
+  billable           Boolean              @default(true)
+  serviceRequestId   String?
+  productId          String?
+  variantId          String?
+  brandSnapshot      String?
+  modelSnapshot      String?
+  refSnapshot        String?
+  serialSnapshot     String?
+  vendorId           String?
+  servicedByName     String?
+  vendorName         String?
+  servicedAt         DateTime?
+  notes              String?
+  totalCost          Decimal?             @db.Decimal(12, 2)
+  billed             Boolean              @default(false)
+  invoiceId          String?
+  revenueAmount      Decimal?             @db.Decimal(12, 2)
+  currency           String               @default("VND")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @default(now())
+  eventType          MaintenanceEventType @default(NOTE)
+  prevVendorId       String?
+  prevVendorName     String?
+  paymentId          String?
+  paidAmount         Decimal?             @db.Decimal(12, 2)
+  paidAt             DateTime?            @db.Timestamptz(6)
+  technicianId       String?
+  technicianNameSnap String?
+  diagnosis          String?
+  workSummary        String?
+  serviceCatalogId   String?
+  processingMode     String?
+  imageFileKey       String?
+  technicalIssueId   String?
+  parts              MaintenancePart[]
+  Payment            Payment?             @relation(fields: [paymentId], references: [id])
+  product            Product?             @relation(fields: [productId], references: [id])
+  ServiceCatalog     ServiceCatalog?      @relation(fields: [serviceCatalogId], references: [id])
+  serviceRequest     ServiceRequest?      @relation(fields: [serviceRequestId], references: [id])
+  TechnicalIssue     TechnicalIssue?      @relation(fields: [technicalIssueId], references: [id])
+  User               User?                @relation(fields: [technicianId], references: [id])
+  variant            ProductVariant?      @relation(fields: [variantId], references: [id])
+  vendor             Vendor?              @relation(fields: [vendorId], references: [id])
+
+  @@index([serviceRequestId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([vendorId])
+  @@index([eventType], map: "idx_maintenance_record_event_type")
+  @@index([paymentId], map: "idx_maintenance_record_payment_id")
+  @@index([technicianId])
+  @@index([technicianId], map: "idx_maintenance_record_technician_id")
+  @@index([technicalIssueId])
+  @@index([serviceCatalogId])
+}
+
+model MaintenancePart {
+  id        String            @id @default(cuid())
+  recordId  String
+  variantId String?
+  name      String
+  quantity  Int               @default(1)
+  unitCost  Decimal?          @db.Decimal(12, 2)
+  notes     String?
+  record    MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  variant   ProductVariant?   @relation(fields: [variantId], references: [id])
+}
+
+model Vendor {
+  id                  String                @id @default(cuid())
+  name                String                @unique
+  role                VendorRole            @default(SUPPLIER)
+  isAuthorized        Boolean               @default(false)
+  email               String?
+  phone               String?
+  address             String?
+  note                String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  bankName            String?
+  bankAcc             String?
+  isActive            Boolean               @default(true)
+  acquisitions        Acquisition[]
+  invoice             Invoice[]
+  services            MaintenanceRecord[]
+  Product             Product[]
+  ServiceRequest      ServiceRequest[]
+  TechnicalAssessment TechnicalAssessment[]
+  TechnicalIssue      TechnicalIssue[]
+  Bank                Bank?                 @relation(fields: [bankName], references: [bankName], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([name, role])
+  @@index([role])
+}
+
+model Acquisition {
+  id              String            @id @default(cuid())
+  vendorId        String?
+  customerId      String?
+  type            AcquisitionType   @default(PURCHASE)
+  acquiredAt      DateTime
+  cost            Decimal?          @db.Decimal(12, 2)
+  currency        String?
+  payoutStatus    String?
+  accquisitionStt AcquisitionStatus @default(DRAFT)
+  refNo           String?
+  notes           String?
+  condition       String?
+  warrantyUntil   DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  sentAt          DateTime?         @db.Timestamp(6)
+  returnedAt      DateTime?         @db.Timestamp(6)
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
+  acquisitionItem AcquisitionItem[]
+  invoice         Invoice[]
+
+  @@index([vendorId, acquiredAt])
+  @@index([customerId, acquiredAt])
+  @@index([returnedAt], map: "acquisition_returned_idx")
+  @@index([sentAt], map: "acquisition_sent_idx")
+}
+
+model AcquisitionItem {
+  id                  String                 @id @default(cuid())
+  acquisitionId       String
+  productId           String?
+  variantId           String?
+  quantity            Int                    @default(1)
+  unitCost            Decimal?               @db.Decimal(12, 2)
+  currency            String?
+  notes               String?
+  sourceOrderItemId   String?
+  createdAt           DateTime               @default(now())
+  kind                AcquisitionItemKind?   @default(PRODUCT)
+  status              AcquisitionItemStatus? @default(DRAFT)
+  description         String?
+  expectedReturnAt    DateTime?              @db.Timestamp(6)
+  returnedAt          DateTime?              @db.Timestamp(6)
+  vendorRmaNo         String?
+  warrantyMonths      Int?
+  serviceRequestId    String?
+  capitalizeToProduct Boolean?               @default(true)
+  productType         ProductType            @default(WATCH)
+  productTitle        String
+  acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
+  product             Product?               @relation(fields: [productId], references: [id])
+  sourceOrderItem     OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])
+  variant             ProductVariant?        @relation(fields: [variantId], references: [id])
+
+  @@index([acquisitionId])
+  @@index([variantId])
+  @@index([serviceRequestId], map: "acqitem_serviceRequest_idx")
+  @@index([status], map: "acqitem_status_idx")
+}
+
+model User {
+  id                String              @id @default(cuid())
+  email             String              @unique
+  passwordHash      String?
+  name              String?
+  avatarUrl         String?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  roleId            String?
+  customer          Customer?
+  MaintenanceRecord MaintenanceRecord[]
+  ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
+  roles             Role[]              @relation("UserRoles")
+
+  @@index([isActive])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]       @relation("UserRoles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  description String?
+  roles       Role[]  @relation("RolePermissions")
+}
+
+model Customer {
+  id             String           @id @default(cuid())
+  name           String
+  email          String?          @unique
+  phone          String?          @db.VarChar(32)
+  ward           String?
+  city           String?
+  userId         String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  address        String?
+  district       String?
+  Acquisition    Acquisition[]
+  user           User?            @relation(fields: [userId], references: [id])
+  Invoice        Invoice[]
+  orders         Order[]
+  ServiceRequest ServiceRequest[]
+
+  @@index([phone])
+}
+
+model Invoice {
+  id               String          @id @default(cuid())
+  code             String?         @unique
+  type             InvoiceType
+  status           InvoiceStatus   @default(DRAFT)
+  customerId       String?
+  vendorId         String?
+  orderId          String?
+  acquisitionId    String?
+  serviceRequestId String?
+  currency         String
+  subTotal         Decimal         @db.Decimal(12, 2)
+  taxTotal         Decimal         @default(0) @db.Decimal(12, 2)
+  discountTotal    Decimal         @default(0) @db.Decimal(12, 2)
+  grandTotal       Decimal         @db.Decimal(12, 2)
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  acquisition      Acquisition?    @relation(fields: [acquisitionId], references: [id])
+  customer         Customer?       @relation(fields: [customerId], references: [id])
+  order            Order?          @relation(fields: [orderId], references: [id])
+  serviceReq       ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  vendor           Vendor?         @relation(fields: [vendorId], references: [id])
+  items            InvoiceItem[]
+
+  @@index([type, status])
+  @@index([customerId])
+  @@index([vendorId])
+  @@index([issuedAt])
+  @@index([orderId])
+  @@index([acquisitionId])
+  @@index([serviceRequestId])
+}
+
+model InvoiceItem {
+  id          String          @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  variantId   String?
+  title       String
+  description String?
+  quantity    Decimal         @default(1) @db.Decimal(12, 2)
+  unitPrice   Decimal         @db.Decimal(12, 2)
+  discount    Decimal         @default(0) @db.Decimal(12, 2)
+  taxRate     Decimal         @default(0) @db.Decimal(5, 2)
+  lineTotal   Decimal         @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product?        @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([invoiceId])
+  @@index([variantId])
+}
+
+model Payment {
+  id                 String              @id @default(cuid())
+  method             PaymentMethod
+  amount             Decimal             @db.Decimal(12, 2)
+  currency           String
+  paidAt             DateTime?           @default(now())
+  reference          String?
+  note               String?
+  createdAt          DateTime            @default(now())
+  direction          PaymentDirection?
+  order_id           String?
+  service_request_id String?
+  vendor_id          String?
+  acquisition_id     String?
+  status             PaymentStatus       @default(UNPAID)
+  purpose            PaymentPurpose      @default(ORDER_FULL)
+  shipment_id        String?
+  type               PaymentType         @default(ORDER)
+  refNo              String?             @unique @db.VarChar(30)
+  MaintenanceRecord  MaintenanceRecord[]
+
+  @@index([direction], map: "idx_payment_direction")
+  @@index([order_id], map: "idx_payment_order")
+  @@index([paidAt], map: "idx_payment_paidat")
+  @@index([service_request_id], map: "idx_payment_service_request")
+  @@index([vendor_id], map: "idx_payment_vendor")
+  @@index([acquisition_id], map: "idx_payment_acquisition")
+  @@index([type], map: "idx_payment_type")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Bank {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  bankName   String   @unique
+  Vendor     Vendor[]
+}
+
+model Shipment {
+  id           String         @id(map: "shipment_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId      String         @unique(map: "shipment_orderid_key")
+  shipPhone    String?
+  shipAddress  String?
+  shipCity     String?
+  shipDistrict String?
+  shipWard     String?
+  carrier      String?
+  trackingCode String?
+  shippingFee  Decimal        @default(0) @db.Decimal(14, 2)
+  currency     String         @default("VND") @db.VarChar(10)
+  shippedAt    DateTime?      @db.Timestamp(6)
+  deliveredAt  DateTime?      @db.Timestamp(6)
+  notes        String?
+  createdAt    DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime       @default(now()) @db.Timestamp(6)
+  status       ShipmentStatus @default(DRAFT)
+  refNo        String?
+  orderRefNo   String?
+  customerName String?
+  Order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
+}
+
+model ProductCategory {
+  id        String               @id
+  code      String               @unique
+  name      String
+  scope     ProductCategoryScope @default(ALL)
+  isActive  Boolean              @default(true)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime             @default(now()) @db.Timestamptz(6)
+  Product   Product[]
+
+  @@index([scope, isActive, sortOrder], map: "ProductCategory_scope_isActive_sort_idx")
+}
+
+model SupplyCatalog {
+  id             String           @id
+  code           String           @unique
+  name           String
+  category       String
+  unit           String?          @default("pcs")
+  defaultCost    Decimal?         @db.Decimal(12, 2)
+  note           String?
+  isActive       Boolean          @default(true)
+  sortOrder      Int              @default(0)
+  createdAt      DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime         @default(now()) @db.Timestamp(6)
+  TechnicalIssue TechnicalIssue[]
+}
+
+model TechnicalAssessment {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()"))
+  serviceRequestId    String                    @unique
+  movementKind        TechnicalMovementKind     @default(UNKNOWN)
+  preRate             Int?
+  preAmplitude        Int?
+  preBeatError        Decimal?                  @db.Decimal(8, 2)
+  postRate            Int?
+  postAmplitude       Int?
+  postBeatError       Decimal?                  @db.Decimal(8, 2)
+  actionMode          TechnicalActionMode       @default(NONE)
+  vendorId            String?
+  vendorNameSnap      String?
+  conclusion          String?
+  imageFileKey        String?
+  status              TechnicalAssessmentStatus @default(DRAFT)
+  evaluatedById       String?
+  evaluatedByNameSnap String?
+  createdAt           DateTime                  @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime                  @default(now()) @db.Timestamp(6)
+  movementStatus      TechnicalSectionStatus    @default(GOOD)
+  caseStatus          TechnicalSectionStatus    @default(GOOD)
+  crystalStatus       TechnicalSectionStatus    @default(GOOD)
+  crownStatus         TechnicalSectionStatus    @default(GOOD)
+  payloadJson         Json?
+  ServiceRequest      ServiceRequest            @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  Vendor              Vendor?                   @relation(fields: [vendorId], references: [id])
+  TechnicalIssue      TechnicalIssue[]
+}
+
+model TechnicalIssue {
+  id                      String                        @id @default(dbgenerated("gen_random_uuid()"))
+  assessmentId            String
+  area                    String?
+  issueType               TechnicalIssueType            @default(CHECK)
+  actionMode              TechnicalActionMode           @default(INTERNAL)
+  serviceCatalogId        String?
+  supplyCatalogId         String?
+  note                    String?
+  estimatedCost           Decimal?                      @db.Decimal(12, 2)
+  sortOrder               Int                           @default(0)
+  createdAt               DateTime                      @default(now()) @db.Timestamp(6)
+  updatedAt               DateTime                      @default(now()) @db.Timestamp(6)
+  vendorId                String?
+  vendorNameSnap          String?
+  mechanicalPartCatalogId String?
+  serviceRequestId        String
+  executionStatus         TechnicalIssueExecutionStatus @default(OPEN)
+  openedAt                DateTime
+  startedAt               DateTime?
+  completedAt             DateTime?
+  canceledAt              DateTime?
+  actualCost              Decimal?                      @db.Decimal(18, 2)
+  technicianId            String?
+  summary                 String?
+  resolutionNote          String?
+  completedByNameSnap     String?
+  isConfirmed             Boolean                       @default(false)
+  confirmedAt             DateTime?                     @db.Timestamp(6)
+  confirmedById           String?
+  confirmedByNameSnap     String?
+  MaintenanceRecord       MaintenanceRecord[]
+  TechnicalAssessment     TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  MechanicalPartCatalog   MechanicalPartCatalog?        @relation(fields: [mechanicalPartCatalogId], references: [id])
+  ServiceCatalog          ServiceCatalog?               @relation(fields: [serviceCatalogId], references: [id])
+  ServiceRequest          ServiceRequest                @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  SupplyCatalog           SupplyCatalog?                @relation(fields: [supplyCatalogId], references: [id])
+  User                    User?                         @relation(fields: [technicianId], references: [id])
+  Vendor                  Vendor?                       @relation(fields: [vendorId], references: [id])
+
+  @@index([assessmentId])
+  @@index([mechanicalPartCatalogId])
+  @@index([executionStatus])
+  @@index([serviceRequestId])
+  @@index([technicianId])
+  @@index([vendorId])
+  @@index([isConfirmed])
+}
+
+model MechanicalPartCatalog {
+  id             String              @id
+  code           String              @unique
+  name           String
+  group          MechanicalPartGroup @default(OTHER)
+  defaultCost    Decimal?            @db.Decimal(12, 2)
+  note           String?
+  isActive       Boolean             @default(true)
+  sortOrder      Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @default(now())
+  TechnicalIssue TechnicalIssue[]
+
+  @@index([group, sortOrder])
+  @@index([isActive, sortOrder])
+}
+
+model approvalRequests {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                  String
+  sourceModule          String?
+  serviceRequestId      String?
+  technicalAssessmentId String?               @db.Uuid
+  title                 String
+  summary               String?
+  status                String                @default("PENDING")
+  autoApproved          Boolean               @default(false)
+  payloadJson           Json?
+  reviewNote            String?
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @db.Timestamptz(6)
+  technicalAssessments  technicalAssessments? @relation(fields: [technicalAssessmentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_approvalrequests_ta")
+
+  @@index([serviceRequestId], map: "idx_approvalrequests_servicerequestid")
+  @@index([technicalAssessmentId], map: "idx_approvalrequests_taid")
+}
+
+model technicalAssessments {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceRequestId     String             @unique
+  machineType          String?
+  movementStatus       String?
+  beforeRate           String?
+  beforeAmp            String?
+  beforeErr            String?
+  afterRate            String?
+  afterAmp             String?
+  afterErr             String?
+  appearanceScore      Int                @default(0)
+  caseScore            Int                @default(0)
+  glassScore           Int                @default(0)
+  dialScore            Int                @default(0)
+  caseIssues           Json?
+  glassIssues          Json?
+  dialIssues           Json?
+  caseManualDeduction  Int                @default(0)
+  glassManualDeduction Int                @default(0)
+  dialManualDeduction  Int                @default(0)
+  caseNote             String?
+  glassNote            String?
+  dialNote             String?
+  crownStatus          String?
+  crownAction          String?
+  crownExecution       String?
+  crownVendorId        String?
+  crownPartId          String?
+  crownCost            Int                @default(0)
+  crownNote            String?
+  movementCost         Int                @default(0)
+  crownCostTotal       Int                @default(0)
+  cosmeticProposalCost Int                @default(0)
+  totalCost            Int                @default(0)
+  conclusion           String?
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @default(now()) @db.Timestamptz(6)
+  approvalRequests     approvalRequests[]
+
+  @@index([serviceRequestId], map: "idx_technicalassessments_servicerequestid")
+}
+
+model technicalActionCatalog {
+  id                   String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code                 String   @unique
+  name                 String
+  appliesTo            String   @default("BOTH")
+  groupKey             String   @default("MOVEMENT")
+  requiresPart         Boolean  @default(false)
+  defaultExecutionMode String?
+  sortOrder            Int      @default(0)
+  isActive             Boolean  @default(true)
+  note                 String?
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, groupKey, appliesTo, sortOrder], map: "technicalActionCatalog_active_idx")
+}
+
+model technicalAppearanceIssueCatalog {
+  id             String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code           String   @unique
+  area           String
+  label          String
+  deductionScore Int      @default(0)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  note           String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, area, sortOrder], map: "technicalAppearanceIssueCatalog_active_idx")
+}
+
+model technicalPartCatalog {
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code      String   @unique
+  name      String
+  appliesTo String   @default("BOTH")
+  partGroup String   @default("MOVEMENT")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, partGroup, appliesTo, sortOrder], map: "technicalPartCatalog_active_idx")
+}
+
+model ProductContent {
+  productId          String    @id
+  titleSnapshot      String?
+  brandSnapshot      String?
+  refSnapshot        String?
+  sizeSnapshot       String?
+  movementSnapshot   String?
+  glassSnapshot      String?
+  strapClaspSnapshot String?
+  modelSnapshot      String?
+  yearSnapshot       String?
+  generatedContent   String?
+  promptNote         String?
+  generatedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now())
+  Product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([brandSnapshot])
+  @@index([modelSnapshot])
+  @@index([yearSnapshot])
+}
+
+enum Category {
+  ENTRY
+  MID_RANGE
+  LUXURY
+}
+
+enum Tag {
+  PRE_OWNED
+  VINTAGE
+  NEW
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum ProductType {
+  WATCH_STRAP
+  BOX
+  ACCESSORIES
+  SERVICE
+  PARTS
+  WATCH
+}
+
+enum OrderStatus {
+  DRAFT
+  PAID
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+  POSTED
+  RESERVED
+}
+
+enum ServiceRequestStatus {
+  DRAFT
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELED
+}
+
+enum ServicePriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ServiceDetail {
+  BASIC
+  OVERHAUL
+  SPA
+  PARTS_CHANGE
+  BATTERY_CHANGE
+}
+
+enum ServiceType {
+  WARRANTY
+  PAID
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  CANCELED
+}
+
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum Glass {
+  SAPPHIRE
+  ACRYLIC
+  MINERAL
+  HARDLEX
+  AR_COATED
+}
+
+enum ImageRole {
+  PRIMARY
+  GALLERY
+  THUMB
+  COVER
+}
+
+enum BrandStatus {
+  ACTIVE
+  INACTIVE
+  HIDDEN
+}
+
+enum CaseType {
+  ROUND
+  TANK
+  SQUARE
+  SPECIAL
+  OTHER
+  TONNEAU
+  CUSHION
+  OVAL
+  ASYMMETRICAL
+  OCTAGON
+  POLYGON
+}
+
+enum Strap {
+  LEATHER
+  BRACELET
+  RUBBER
+  NATO
+  CANVASS
+  SPECIAL
+}
+
+enum VendorRole {
+  SUPPLIER
+  SERVICE
+  BOTH
+  PRIVATE_SELLER
+}
+
+enum PaymentMethod {
+  COD
+  MOMO
+  CREDIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  CASH
+}
+
+enum InvoiceType {
+  SALE
+  PURCHASE
+  SERVICE
+  ADJUSTMENT
+  REFUND
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+  CANCELLED
+}
+
+enum MovementType {
+  AUTOMATIC
+  HAND_WOUND
+  QUARTZ
+  SOLAR
+  KINETIC
+  MECHAQUARTZ
+  SPRING_DRIVE
+  HYBRID
+}
+
+enum CaseMaterial {
+  STAINLESS_STEEL
+  TITANIUM
+  CERAMIC
+  CARBON
+  GOLD
+  PLATINUM
+  SILVER
+  BRASS
+  TWO_TONE
+  OTHER
+}
+
+enum PartType {
+  GLASS
+  RUBBER_GASKET
+  SRAP
+  BUCKLE
+  SPRING_BAR
+  BATTERY
+  MOVEMENT_PART
+  OTHER
+  BEZEL
+  INSERT
+}
+
+enum GoldColor {
+  YELLOW
+  WHITE
+  ROSE
+}
+
+enum LengthLabel {
+  L16
+  L17
+  L18
+  L19
+  L20
+}
+
+enum VendorType {
+  IN_HOUSE
+  PARTNER
+  AUTHORIZED
+  OTHER
+}
+
+enum AcquisitionType {
+  PURCHASE
+  CONSIGNMENT
+  TRADE_IN
+  BUY_BACK
+}
+
+enum AvailabilityStatus {
+  INACTIVE
+  ACTIVE
+  HIDDEN
+  RESERVED
+  SOLD
+  HOLD
+  CONSIGNED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CANCELLED
+  CONVERTED
+  EXPIRED
+}
+
+enum AcquisitionStatus {
+  DRAFT
+  POSTED
+  CANCELED
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PriceVisibility {
+  SHOW
+  HIDE
+}
+
+enum AcquisitionItemKind {
+  PRODUCT
+  SERVICE
+  FEE
+}
+
+enum AcquisitionItemStatus {
+  DRAFT
+  SENT
+  IN_SERVICE
+  RETURNED
+  BILLED
+  CANCELLED
+}
+
+enum ReserveType {
+  NONE
+  COD
+  DEPOSIT
+}
+
+enum PaymentPurpose {
+  ORDER_DEPOSIT
+  ORDER_REMAIN
+  ORDER_FULL
+  SERVICE_REQUEST
+  MAINTENANCE_COST
+  SERVICE_FEE
+  ACQUISITION_DEPOSIT
+  ACQUISITION_REMAIN
+  ACQUISITION_FULL
+  SHIPMENT_COST
+}
+
+enum OrderSource {
+  WEB
+  ADMIN
+}
+
+enum OrderVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum PaymentType {
+  ORDER
+  SHIPMENT
+  INVOICE
+  ACQUISITION
+  SERVICE
+  OTHER
+}
+
+enum ServiceScope {
+  WITH_PURCHASE
+  CUSTOMER_OWNED
+  INTERNAL
+}
+
+enum servicerequeststatus_new {
+  DRAFT
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELED
+}
+
+enum ProductStatus {
+  AVAILABLE
+  IN_SERVICE
+  CONSIGNED_FROM
+  CONSIGNED_TO
+  HOLD
+  SOLD
+}
+
+enum MaintenanceEventType {
+  ASSIGN_VENDOR
+  CHANGE_VENDOR
+  NOTE
+  COST
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum OrderItemKind {
+  PRODUCT
+  SERVICE
+  DISCOUNT
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum ShipmentStatus {
+  DRAFT
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ProductCategoryScope {
+  WATCH
+  WATCH_STRAP
+  ALL
+}
+
+enum TechnicalActionMode {
+  NONE
+  INTERNAL
+  VENDOR
+}
+
+enum TechnicalAssessmentStatus {
+  DRAFT
+  COMPLETED
+  IN_PROGRESS
+  CANCELED
+}
+
+enum TechnicalIssueType {
+  CHECK
+  SERVICE
+  REPAIR
+  REPLACE
+  OBSERVATION
+}
+
+enum TechnicalMovementKind {
+  UNKNOWN
+  BATTERY
+  MECHANICAL
+}
+
+enum MechanicalPartGroup {
+  POWER
+  ESCAPEMENT
+  BALANCE
+  GEAR_TRAIN
+  SETTING
+  CASE_LINK
+  OTHER
+}
+
+enum TechnicalSectionStatus {
+  GOOD
+  ISSUE
+}
+
+enum TechnicalIssueExecutionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}

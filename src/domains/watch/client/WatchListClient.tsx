@@ -2,40 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-    WatchListBulkBar,
-    WatchListFilters,
-    WatchListTable,
-    WatchListToolbar,
-    WatchListViewTabs,
-    WatchReadinessModal,
-} from "@/domains/watch/ui/list";
-import type {
-    Counts,
-    WatchListPageProps,
-    WatchRow,
-    ViewKey,
-} from "@/domains/watch/ui/list/types";
+import { WatchListToolbar } from "../ui/list";
+import WatchListViewTabs from "../ui/list/WatchListViewTabs";
+import WatchListFilters from "../ui/list/WatchListFilters";
+import WatchListTable from "../ui/list/WatchListTable";
+
+import { buildCounts } from "../ui/list/helpers";
+import type { ViewKey, WatchListPageProps, WatchRow } from "../ui/list/types";
 
 function normalizeView(value: string | null | undefined): ViewKey {
     const view = String(value ?? "").toLowerCase();
-    if (
-        ["draft", "processing", "ready", "hold", "sold", "all"].includes(view)
-    ) {
+    if (["draft", "processing", "ready", "hold", "sold", "all"].includes(view)) {
         return view as ViewKey;
     }
     return "draft";
-}
-
-function buildCounts(total: number, currentView: ViewKey): Counts {
-    return {
-        draft: currentView === "draft" ? total : 0,
-        processing: currentView === "processing" ? total : 0,
-        ready: currentView === "ready" ? total : 0,
-        hold: currentView === "hold" ? total : 0,
-        sold: currentView === "sold" ? total : 0,
-        all: currentView === "all" ? total : 0,
-    };
 }
 
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
@@ -43,40 +23,18 @@ function setParam(next: URLSearchParams, key: string, value?: string | null) {
     else next.set(key, value);
 }
 
-function Pagination({
-    page,
-    totalPages,
-    total,
-    onPage,
-}: {
-    page: number;
-    totalPages: number;
-    total: number;
-    onPage: (page: number) => void;
-}) {
+function Pagination({ page, totalPages, total, onPage }: { page: number; totalPages: number; total: number; onPage: (page: number) => void }) {
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
             <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> •
-                Trang <span className="font-semibold text-slate-950">{page}</span>/
-                <span className="font-semibold text-slate-950">{totalPages}</span>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
             </div>
 
             <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page <= 1}
-                    onClick={() => onPage(Math.max(1, page - 1))}
-                >
+                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))}>
                     ← Trước
                 </button>
-                <button
-                    type="button"
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page >= totalPages}
-                    onClick={() => onPage(Math.min(totalPages, page + 1))}
-                >
+                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))}>
                     Sau →
                 </button>
             </div>
@@ -92,138 +50,139 @@ export default function WatchListClient(props: WatchListPageProps) {
     const [rows, setRows] = useState<WatchRow[]>(props.items ?? []);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [readinessProduct, setReadinessProduct] = useState<WatchRow | null>(null);
+    const [filters, setFilters] = useState({
+        q: sp.get("q") ?? "",
+        sku: sp.get("sku") ?? "",
+        brandId: sp.get("brandId") ?? "",
+        vendorId: sp.get("vendorId") ?? "",
+        hasContent: sp.get("hasContent") ?? "",
+        hasImages: sp.get("hasImages") ?? "",
+        saleStage: sp.get("saleStage") ?? "",
+        opsStage: sp.get("opsStage") ?? "",
+        sort: sp.get("sort") ?? "updatedDesc",
+    });
 
+    useEffect(() => { setRows(props.items ?? []); }, [props.items]);
     useEffect(() => {
-        setRows(props.items ?? []);
-    }, [props.items]);
-
-    const currentView = useMemo<ViewKey>(() => {
-        return normalizeView(sp.get("view"));
+        setFilters({
+            q: sp.get("q") ?? "",
+            sku: sp.get("sku") ?? "",
+            brandId: sp.get("brandId") ?? "",
+            vendorId: sp.get("vendorId") ?? "",
+            hasContent: sp.get("hasContent") ?? "",
+            hasImages: sp.get("hasImages") ?? "",
+            saleStage: sp.get("saleStage") ?? "",
+            opsStage: sp.get("opsStage") ?? "",
+            sort: sp.get("sort") ?? "updatedDesc",
+        });
     }, [sp]);
 
-    const counts = useMemo(
-        () => buildCounts(props.total, currentView),
-        [props.total, currentView]
-    );
+    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
+    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView, rows), [props.counts, props.total, currentView, rows]);
+    const activeQuickFilters = useMemo(() => ({ hasContent: filters.hasContent === "yes", hasImages: filters.hasImages === "yes" }), [filters.hasContent, filters.hasImages]);
 
-    const q = sp.get("q") ?? "";
-    const sku = sp.get("sku") ?? "";
-    const brandId = sp.get("brandId") ?? "";
-    const vendorId = sp.get("vendorId") ?? "";
-    const image = sp.get("image") ?? "";
-    const sort = sp.get("sort") ?? "";
-    const saleStage = sp.get("saleStage") ?? "";
-    const opsStage = sp.get("opsStage") ?? "";
-    const missing = sp.get("missing") ?? "";
-
-    function pushWith(next: URLSearchParams) {
+    function pushParams(mutator: (next: URLSearchParams) => void) {
+        const next = new URLSearchParams(sp.toString());
+        mutator(next);
         router.push(`${pathname}?${next.toString()}`);
     }
 
     function handleViewChange(view: ViewKey) {
-        const next = new URLSearchParams(sp.toString());
-        setParam(next, "view", view === "all" ? null : view);
-        setParam(next, "page", "1");
-        pushWith(next);
+        pushParams((next) => {
+            setParam(next, "view", view === "all" ? null : view);
+            setParam(next, "page", "1");
+        });
     }
 
-    function handleFiltersChange(filters: Record<string, string>) {
-        const next = new URLSearchParams(sp.toString());
+    function handleApplyFilters() {
+        pushParams((next) => {
+            setParam(next, "q", filters.q);
+            setParam(next, "sku", filters.sku);
+            setParam(next, "brandId", filters.brandId);
+            setParam(next, "vendorId", filters.vendorId);
+            setParam(next, "hasContent", filters.hasContent);
+            setParam(next, "hasImages", filters.hasImages);
+            setParam(next, "saleStage", filters.saleStage);
+            setParam(next, "opsStage", filters.opsStage);
+            setParam(next, "sort", filters.sort);
+            setParam(next, "page", "1");
+        });
+    }
 
-        setParam(next, "q", filters.q);
-        setParam(next, "sku", filters.sku);
-        setParam(next, "brandId", filters.brandId);
-        setParam(next, "vendorId", filters.vendorId);
-        setParam(next, "image", filters.image);
-        setParam(next, "sort", filters.sort);
-        setParam(next, "saleStage", filters.saleStage);
-        setParam(next, "opsStage", filters.opsStage);
-        setParam(next, "missing", filters.missing);
-        setParam(next, "page", "1");
+    function handleClearFilters() {
+        setFilters({ q: "", sku: "", brandId: "", vendorId: "", hasContent: "", hasImages: "", saleStage: "", opsStage: "", sort: "updatedDesc" });
+        pushParams((next) => {
+            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) => next.delete(key));
+            setParam(next, "sort", "updatedDesc");
+            setParam(next, "page", "1");
+        });
+    }
 
-        pushWith(next);
+    function handleQuickFilterClick(key: "hasContent" | "hasImages") {
+        const nextValue = filters[key] === "yes" ? "" : "yes";
+        setFilters((prev) => ({ ...prev, [key]: nextValue }));
+        pushParams((next) => {
+            setParam(next, key, nextValue || null);
+            setParam(next, "page", "1");
+        });
     }
 
     function handlePage(page: number) {
-        const next = new URLSearchParams(sp.toString());
-        setParam(next, "page", String(page));
-        pushWith(next);
+        pushParams((next) => setParam(next, "page", String(page)));
     }
 
-    function onToggleOne(id: string, checked: boolean) {
-        setSelectedIds((prev) =>
-            checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)
-        );
+    function onToggleOne(productId: string, checked: boolean) {
+        setSelectedIds((prev) => checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId));
     }
 
     function onToggleAll(checked: boolean) {
-        if (!checked) {
-            setSelectedIds([]);
-            return;
-        }
-        setSelectedIds(rows.map((x) => x.id));
+        if (!checked) return setSelectedIds([]);
+        setSelectedIds(rows.map((x) => x.productId));
     }
 
-    function onView(productId: string) {
-        router.push(`/admin/watches/${productId}`);
-    }
+    function onView(productId: string) { router.push(`/admin/watches/${productId}`); }
+    function onEdit(productId: string) { router.push(`/admin/watches/${productId}/edit`); }
+    function onDelete(productId: string) { console.log("TODO delete watch", productId); }
+    function onService(productId: string) { router.push(`/admin/services/new?productId=${productId}`); }
 
-    function onEdit(productId: string) {
-        router.push(`/admin/watches/${productId}/edit`);
-    }
+    async function onPriceCommit(productId: string, field: "minPrice" | "salePrice" | "purchasePrice", value: number | null) {
+        const payload = field === "purchasePrice" ? { costPrice: value } : { [field]: value };
+        const res = await fetch(`/api/admin/watches/${productId}/pricing`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ field, value, ...payload }),
+        });
 
-    function onDelete(productId: string) {
-        console.log("TODO delete watch", productId);
-    }
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error || "Update pricing failed");
 
-    function onService(productId: string) {
-        router.push(`/admin/services/new?productId=${productId}`);
-    }
-
-    async function onPriceCommit(
-        productId: string,
-        field: "minPrice" | "salePrice" | "purchasePrice",
-        value: number | null
-    ) {
-        // TODO: nối route watch pricing mới
-        console.log("TODO watch pricing commit", { productId, field, value });
+        onPriceSaved(productId, {
+            ...(field === "purchasePrice" ? { purchasePrice: value, costPrice: value } : { [field]: value }),
+        });
     }
 
     function onPriceSaved(productId: string, patch: Partial<WatchRow>) {
-        setRows((prev) =>
-            prev.map((row) => (row.id === productId ? { ...row, ...patch } : row))
-        );
+        setRows((prev) => prev.map((row) => row.productId === productId ? { ...row, ...patch } : row));
     }
 
+    const brandOptions = (props.brands ?? []).map((brand) => ({ label: brand.name, value: brand.id }));
+    const vendorOptions = (props.vendors ?? []).map((vendor) => ({
+        label: vendor.name,
+        value: vendor.id,
+    }));
     return (
         <div className="space-y-5">
             <WatchListToolbar selectedCount={selectedIds.length} />
 
-            <WatchListViewTabs
-                currentView={currentView}
-                counts={counts}
-                onChange={handleViewChange}
-            />
+            <WatchListViewTabs value={currentView} counts={counts} onChange={handleViewChange} />
 
             <WatchListFilters
-                values={{
-                    q,
-                    sku,
-                    brandId,
-                    vendorId,
-                    image,
-                    sort,
-                    saleStage,
-                    opsStage,
-                    missing,
-                }}
-                vendors={props.vendors}
-                onChange={handleFiltersChange}
-            />
-
-            <WatchListBulkBar
-                selectedCount={selectedIds.length}
-                onClear={() => setSelectedIds([])}
+                filters={filters}
+                brandOptions={brandOptions}
+                vendorOptions={vendorOptions}
+                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
             />
 
             <WatchListTable
@@ -231,6 +190,9 @@ export default function WatchListClient(props: WatchListPageProps) {
                 selectedIds={selectedIds}
                 canViewCost={props.canViewCost}
                 canEditPrice={props.canEditPrice}
+                counts={counts}
+                activeQuickFilters={activeQuickFilters}
+                onQuickFilterClick={handleQuickFilterClick}
                 onToggleOne={onToggleOne}
                 onToggleAll={onToggleAll}
                 onOpenReadiness={setReadinessProduct}
@@ -242,18 +204,8 @@ export default function WatchListClient(props: WatchListPageProps) {
                 onService={onService}
             />
 
-            <Pagination
-                page={props.page}
-                totalPages={props.totalPages}
-                total={props.total}
-                onPage={handlePage}
-            />
+            <Pagination page={props.page} totalPages={props.totalPages} total={props.total} onPage={handlePage} />
 
-            <WatchReadinessModal
-                open={Boolean(readinessProduct)}
-                product={readinessProduct}
-                onClose={() => setReadinessProduct(null)}
-            />
         </div>
     );
 }

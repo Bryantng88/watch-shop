@@ -446,13 +446,6 @@ model Payment {
   @@index([vendor_id], map: "idx_payment_vendor")
 }
 
-model Permission {
-  id          String  @id
-  code        String  @unique
-  description String?
-  Role        Role[]  @relation("RolePermissions")
-}
-
 model Product {
   id                 String               @id @default(cuid())
   slug               String?              @unique
@@ -606,14 +599,6 @@ model Reservation {
   Product    Product?          @relation(fields: [productId], references: [id])
 
   @@index([productId])
-}
-
-model Role {
-  id          String       @id
-  name        String       @unique
-  description String?
-  Permission  Permission[] @relation("RolePermissions")
-  User        User[]       @relation("UserRoles")
 }
 
 model ServiceCatalog {
@@ -853,6 +838,21 @@ model User {
   roles             Role[]              @relation("UserRoles")
 
   @@index([isActive])
+}
+
+model Role {
+  id          String       @id
+  name        String       @unique
+  description String?
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]       @relation("UserRoles")
+}
+
+model Permission {
+  id          String  @id
+  code        String  @unique
+  description String?
+  roles       Role[]  @relation("RolePermissions")
 }
 
 model Vendor {
