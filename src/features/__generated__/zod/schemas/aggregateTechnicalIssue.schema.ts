@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TechnicalIssueOrderByWithRelationInputObjectSchema as TechnicalIssueOrderByWithRelationInputObjectSchema } from './objects/TechnicalIssueOrderByWithRelationInput.schema';
+import { TechnicalIssueWhereInputObjectSchema as TechnicalIssueWhereInputObjectSchema } from './objects/TechnicalIssueWhereInput.schema';
+import { TechnicalIssueWhereUniqueInputObjectSchema as TechnicalIssueWhereUniqueInputObjectSchema } from './objects/TechnicalIssueWhereUniqueInput.schema';
+import { TechnicalIssueCountAggregateInputObjectSchema as TechnicalIssueCountAggregateInputObjectSchema } from './objects/TechnicalIssueCountAggregateInput.schema';
+import { TechnicalIssueMinAggregateInputObjectSchema as TechnicalIssueMinAggregateInputObjectSchema } from './objects/TechnicalIssueMinAggregateInput.schema';
+import { TechnicalIssueMaxAggregateInputObjectSchema as TechnicalIssueMaxAggregateInputObjectSchema } from './objects/TechnicalIssueMaxAggregateInput.schema';
+import { TechnicalIssueAvgAggregateInputObjectSchema as TechnicalIssueAvgAggregateInputObjectSchema } from './objects/TechnicalIssueAvgAggregateInput.schema';
+import { TechnicalIssueSumAggregateInputObjectSchema as TechnicalIssueSumAggregateInputObjectSchema } from './objects/TechnicalIssueSumAggregateInput.schema';
+
+export const TechnicalIssueAggregateSchema: z.ZodType<Prisma.TechnicalIssueAggregateArgs> = z.object({ orderBy: z.union([TechnicalIssueOrderByWithRelationInputObjectSchema, TechnicalIssueOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalIssueWhereInputObjectSchema.optional(), cursor: TechnicalIssueWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TechnicalIssueCountAggregateInputObjectSchema ]).optional(), _min: TechnicalIssueMinAggregateInputObjectSchema.optional(), _max: TechnicalIssueMaxAggregateInputObjectSchema.optional(), _avg: TechnicalIssueAvgAggregateInputObjectSchema.optional(), _sum: TechnicalIssueSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueAggregateArgs>;
+
+export const TechnicalIssueAggregateZodSchema = z.object({ orderBy: z.union([TechnicalIssueOrderByWithRelationInputObjectSchema, TechnicalIssueOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalIssueWhereInputObjectSchema.optional(), cursor: TechnicalIssueWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TechnicalIssueCountAggregateInputObjectSchema ]).optional(), _min: TechnicalIssueMinAggregateInputObjectSchema.optional(), _max: TechnicalIssueMaxAggregateInputObjectSchema.optional(), _avg: TechnicalIssueAvgAggregateInputObjectSchema.optional(), _sum: TechnicalIssueSumAggregateInputObjectSchema.optional() }).strict();

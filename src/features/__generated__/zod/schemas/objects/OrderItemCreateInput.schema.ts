@@ -36,7 +36,7 @@ const makeSchema = () => z.object({
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema),
   Order: z.lazy(() => OrderCreateNestedOneWithoutOrderItemInputObjectSchema),
   Product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema)
 }).strict();
 export const OrderItemCreateInputObjectSchema: z.ZodType<Prisma.OrderItemCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateInput>;

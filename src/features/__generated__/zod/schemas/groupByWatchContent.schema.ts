@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchContentWhereInputObjectSchema as WatchContentWhereInputObjectSchema } from './objects/WatchContentWhereInput.schema';
+import { WatchContentOrderByWithAggregationInputObjectSchema as WatchContentOrderByWithAggregationInputObjectSchema } from './objects/WatchContentOrderByWithAggregationInput.schema';
+import { WatchContentScalarWhereWithAggregatesInputObjectSchema as WatchContentScalarWhereWithAggregatesInputObjectSchema } from './objects/WatchContentScalarWhereWithAggregatesInput.schema';
+import { WatchContentScalarFieldEnumSchema } from './enums/WatchContentScalarFieldEnum.schema';
+import { WatchContentCountAggregateInputObjectSchema as WatchContentCountAggregateInputObjectSchema } from './objects/WatchContentCountAggregateInput.schema';
+import { WatchContentMinAggregateInputObjectSchema as WatchContentMinAggregateInputObjectSchema } from './objects/WatchContentMinAggregateInput.schema';
+import { WatchContentMaxAggregateInputObjectSchema as WatchContentMaxAggregateInputObjectSchema } from './objects/WatchContentMaxAggregateInput.schema';
+
+export const WatchContentGroupBySchema: z.ZodType<Prisma.WatchContentGroupByArgs> = z.object({ where: WatchContentWhereInputObjectSchema.optional(), orderBy: z.union([WatchContentOrderByWithAggregationInputObjectSchema, WatchContentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchContentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchContentScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchContentCountAggregateInputObjectSchema ]).optional(), _min: WatchContentMinAggregateInputObjectSchema.optional(), _max: WatchContentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchContentGroupByArgs>;
+
+export const WatchContentGroupByZodSchema = z.object({ where: WatchContentWhereInputObjectSchema.optional(), orderBy: z.union([WatchContentOrderByWithAggregationInputObjectSchema, WatchContentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchContentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchContentScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchContentCountAggregateInputObjectSchema ]).optional(), _min: WatchContentMinAggregateInputObjectSchema.optional(), _max: WatchContentMaxAggregateInputObjectSchema.optional() }).strict();

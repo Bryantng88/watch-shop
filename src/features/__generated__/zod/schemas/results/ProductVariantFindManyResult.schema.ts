@@ -1,0 +1,39 @@
+import * as z from 'zod';
+export const ProductVariantFindManyResultSchema = z.object({
+  data: z.array(z.object({
+  id: z.string(),
+  productId: z.string(),
+  sku: z.string().optional(),
+  name: z.string().optional(),
+  price: z.number().optional(),
+  stockQty: z.number().int(),
+  isStockManaged: z.boolean().optional(),
+  maxQtyPerOrder: z.number().int(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  availabilityStatus: z.unknown(),
+  listPrice: z.number().optional(),
+  discountType: z.unknown().optional(),
+  discountValue: z.number().optional(),
+  salePrice: z.number().optional(),
+  saleStartsAt: z.date().optional(),
+  saleEndsAt: z.date().optional(),
+  costPrice: z.number().optional(),
+  AcquisitionItem: z.array(z.unknown()),
+  InvoiceItem: z.array(z.unknown()),
+  MaintenancePart: z.array(z.unknown()),
+  MaintenanceRecord: z.array(z.unknown()),
+  PartVariantSpec: z.unknown().optional(),
+  Product: z.unknown(),
+  ServiceRequest: z.array(z.unknown()),
+  StrapVariantSpec: z.unknown().optional()
+})),
+  pagination: z.object({
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1),
+  total: z.number().int().min(0),
+  totalPages: z.number().int().min(0),
+  hasNext: z.boolean(),
+  hasPrev: z.boolean()
+})
+});

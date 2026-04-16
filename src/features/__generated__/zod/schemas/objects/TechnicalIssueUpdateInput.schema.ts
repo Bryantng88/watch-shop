@@ -49,7 +49,7 @@ const makeSchema = () => z.object({
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   TechnicalAssessment: z.lazy(() => TechnicalAssessmentUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   MechanicalPartCatalog: z.lazy(() => MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   SupplyCatalog: z.lazy(() => SupplyCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   User: z.lazy(() => UserUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),

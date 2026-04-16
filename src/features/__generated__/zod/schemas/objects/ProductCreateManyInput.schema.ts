@@ -7,7 +7,7 @@ import { ProductStatusSchema } from '../enums/ProductStatus.schema';
 import { ContentStatusSchema } from '../enums/ContentStatus.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   slug: z.string().optional().nullable(),
   title: z.string(),
   primaryImageUrl: z.string().optional().nullable(),
@@ -21,7 +21,7 @@ const makeSchema = () => z.object({
   publishedAt: z.coerce.date().optional().nullable(),
   vendorId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
   categoryId: z.string().optional().nullable(),

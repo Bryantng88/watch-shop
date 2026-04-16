@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProductContentWhereInputObjectSchema as ProductContentWhereInputObjectSchema } from './objects/ProductContentWhereInput.schema';
+import { ProductContentOrderByWithAggregationInputObjectSchema as ProductContentOrderByWithAggregationInputObjectSchema } from './objects/ProductContentOrderByWithAggregationInput.schema';
+import { ProductContentScalarWhereWithAggregatesInputObjectSchema as ProductContentScalarWhereWithAggregatesInputObjectSchema } from './objects/ProductContentScalarWhereWithAggregatesInput.schema';
+import { ProductContentScalarFieldEnumSchema } from './enums/ProductContentScalarFieldEnum.schema';
+import { ProductContentCountAggregateInputObjectSchema as ProductContentCountAggregateInputObjectSchema } from './objects/ProductContentCountAggregateInput.schema';
+import { ProductContentMinAggregateInputObjectSchema as ProductContentMinAggregateInputObjectSchema } from './objects/ProductContentMinAggregateInput.schema';
+import { ProductContentMaxAggregateInputObjectSchema as ProductContentMaxAggregateInputObjectSchema } from './objects/ProductContentMaxAggregateInput.schema';
+
+export const ProductContentGroupBySchema: z.ZodType<Prisma.ProductContentGroupByArgs> = z.object({ where: ProductContentWhereInputObjectSchema.optional(), orderBy: z.union([ProductContentOrderByWithAggregationInputObjectSchema, ProductContentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ProductContentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ProductContentScalarFieldEnumSchema), _count: z.union([ z.literal(true), ProductContentCountAggregateInputObjectSchema ]).optional(), _min: ProductContentMinAggregateInputObjectSchema.optional(), _max: ProductContentMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ProductContentGroupByArgs>;
+
+export const ProductContentGroupByZodSchema = z.object({ where: ProductContentWhereInputObjectSchema.optional(), orderBy: z.union([ProductContentOrderByWithAggregationInputObjectSchema, ProductContentOrderByWithAggregationInputObjectSchema.array()]).optional(), having: ProductContentScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(ProductContentScalarFieldEnumSchema), _count: z.union([ z.literal(true), ProductContentCountAggregateInputObjectSchema ]).optional(), _min: ProductContentMinAggregateInputObjectSchema.optional(), _max: ProductContentMaxAggregateInputObjectSchema.optional() }).strict();

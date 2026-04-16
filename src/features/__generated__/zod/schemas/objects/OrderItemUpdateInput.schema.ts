@@ -47,7 +47,7 @@ const makeSchema = () => z.object({
   other_OrderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
   Order: z.lazy(() => OrderUpdateOneRequiredWithoutOrderItemNestedInputObjectSchema).optional(),
   Product: z.lazy(() => ProductUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutOrderItemNestedInputObjectSchema).optional()
 }).strict();
 export const OrderItemUpdateInputObjectSchema: z.ZodType<Prisma.OrderItemUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUpdateInput>;

@@ -1,14 +1,32 @@
 import { prisma } from "@/server/db/client";
-import { bulkSetWatchSalePriceRepo, getWatchPricingMatrixRepo, updateWatchVariantPricingRepo } from "./watch-pricing.repo";
+import { validateWatchPricingInput } from "../shared";
+import type { UpdateWatchPricingInput } from "../shared";
+import {
+  bulkSetWatchSalePriceRepo,
+  getWatchPricingRepo,
+  updateWatchPricingRepo,
+} from "./watch-pricing.repo";
 
-export async function updateWatchVariantPricing(input: any) {
-  return prisma.$transaction(async (tx) => updateWatchVariantPricingRepo(tx as any, input));
+export async function getWatchPricing(productId: string) {
+  return getWatchPricingRepo(prisma as any, productId);
 }
 
-export async function bulkSetWatchSalePrice(input: any) {
-  return prisma.$transaction(async (tx) => bulkSetWatchSalePriceRepo(tx as any, input));
+export async function updateWatchPricing(
+  productId: string,
+  input: Omit<UpdateWatchPricingInput, "productId">
+) {
+  const payload: UpdateWatchPricingInput = {
+    productId,
+    ...input,
+  };
+
+  validateWatchPricingInput(payload);
+  return updateWatchPricingRepo(prisma as any, productId, payload);
 }
 
-export async function getWatchPricingMatrix(input: any) {
-  return getWatchPricingMatrixRepo(prisma as any, input);
+export async function bulkSetWatchSalePrice(input: {
+  productIds: string[];
+  salePrice: number | string;
+}) {
+  return bulkSetWatchSalePriceRepo(prisma as any, input);
 }

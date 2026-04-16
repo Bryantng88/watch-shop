@@ -22,7 +22,7 @@ import { WatchCreateNestedOneWithoutProductInputObjectSchema as WatchCreateNeste
 import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   slug: z.string().optional().nullable(),
   title: z.string(),
   primaryImageUrl: z.string().optional().nullable(),
@@ -34,7 +34,6 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: z.number().int().optional(),
   publishedAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
   contentStatus: ContentStatusSchema.optional(),

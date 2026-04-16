@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchPriceOrderByWithRelationInputObjectSchema as WatchPriceOrderByWithRelationInputObjectSchema } from './objects/WatchPriceOrderByWithRelationInput.schema';
+import { WatchPriceWhereInputObjectSchema as WatchPriceWhereInputObjectSchema } from './objects/WatchPriceWhereInput.schema';
+import { WatchPriceWhereUniqueInputObjectSchema as WatchPriceWhereUniqueInputObjectSchema } from './objects/WatchPriceWhereUniqueInput.schema';
+import { WatchPriceCountAggregateInputObjectSchema as WatchPriceCountAggregateInputObjectSchema } from './objects/WatchPriceCountAggregateInput.schema';
+import { WatchPriceMinAggregateInputObjectSchema as WatchPriceMinAggregateInputObjectSchema } from './objects/WatchPriceMinAggregateInput.schema';
+import { WatchPriceMaxAggregateInputObjectSchema as WatchPriceMaxAggregateInputObjectSchema } from './objects/WatchPriceMaxAggregateInput.schema';
+import { WatchPriceAvgAggregateInputObjectSchema as WatchPriceAvgAggregateInputObjectSchema } from './objects/WatchPriceAvgAggregateInput.schema';
+import { WatchPriceSumAggregateInputObjectSchema as WatchPriceSumAggregateInputObjectSchema } from './objects/WatchPriceSumAggregateInput.schema';
+
+export const WatchPriceAggregateSchema: z.ZodType<Prisma.WatchPriceAggregateArgs> = z.object({ orderBy: z.union([WatchPriceOrderByWithRelationInputObjectSchema, WatchPriceOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchPriceWhereInputObjectSchema.optional(), cursor: WatchPriceWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchPriceCountAggregateInputObjectSchema ]).optional(), _min: WatchPriceMinAggregateInputObjectSchema.optional(), _max: WatchPriceMaxAggregateInputObjectSchema.optional(), _avg: WatchPriceAvgAggregateInputObjectSchema.optional(), _sum: WatchPriceSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchPriceAggregateArgs>;
+
+export const WatchPriceAggregateZodSchema = z.object({ orderBy: z.union([WatchPriceOrderByWithRelationInputObjectSchema, WatchPriceOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchPriceWhereInputObjectSchema.optional(), cursor: WatchPriceWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchPriceCountAggregateInputObjectSchema ]).optional(), _min: WatchPriceMinAggregateInputObjectSchema.optional(), _max: WatchPriceMaxAggregateInputObjectSchema.optional(), _avg: WatchPriceAvgAggregateInputObjectSchema.optional(), _sum: WatchPriceSumAggregateInputObjectSchema.optional() }).strict();

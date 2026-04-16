@@ -71,7 +71,7 @@ const maintenancerecordwhereinputSchema = z.object({
   MaintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),
   Payment: z.union([z.lazy(() => PaymentNullableScalarRelationFilterObjectSchema), z.lazy(() => PaymentWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  ServiceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
+  serviceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
   ServiceRequest: z.union([z.lazy(() => ServiceRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
   TechnicalIssue: z.union([z.lazy(() => TechnicalIssueNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema)]).optional(),
   User: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),

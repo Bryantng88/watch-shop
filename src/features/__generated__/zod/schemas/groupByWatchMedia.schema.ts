@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchMediaWhereInputObjectSchema as WatchMediaWhereInputObjectSchema } from './objects/WatchMediaWhereInput.schema';
+import { WatchMediaOrderByWithAggregationInputObjectSchema as WatchMediaOrderByWithAggregationInputObjectSchema } from './objects/WatchMediaOrderByWithAggregationInput.schema';
+import { WatchMediaScalarWhereWithAggregatesInputObjectSchema as WatchMediaScalarWhereWithAggregatesInputObjectSchema } from './objects/WatchMediaScalarWhereWithAggregatesInput.schema';
+import { WatchMediaScalarFieldEnumSchema } from './enums/WatchMediaScalarFieldEnum.schema';
+import { WatchMediaCountAggregateInputObjectSchema as WatchMediaCountAggregateInputObjectSchema } from './objects/WatchMediaCountAggregateInput.schema';
+import { WatchMediaMinAggregateInputObjectSchema as WatchMediaMinAggregateInputObjectSchema } from './objects/WatchMediaMinAggregateInput.schema';
+import { WatchMediaMaxAggregateInputObjectSchema as WatchMediaMaxAggregateInputObjectSchema } from './objects/WatchMediaMaxAggregateInput.schema';
+import { WatchMediaAvgAggregateInputObjectSchema as WatchMediaAvgAggregateInputObjectSchema } from './objects/WatchMediaAvgAggregateInput.schema';
+import { WatchMediaSumAggregateInputObjectSchema as WatchMediaSumAggregateInputObjectSchema } from './objects/WatchMediaSumAggregateInput.schema';
+
+export const WatchMediaGroupBySchema: z.ZodType<Prisma.WatchMediaGroupByArgs> = z.object({ where: WatchMediaWhereInputObjectSchema.optional(), orderBy: z.union([WatchMediaOrderByWithAggregationInputObjectSchema, WatchMediaOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchMediaScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchMediaScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchMediaCountAggregateInputObjectSchema ]).optional(), _min: WatchMediaMinAggregateInputObjectSchema.optional(), _max: WatchMediaMaxAggregateInputObjectSchema.optional(), _avg: WatchMediaAvgAggregateInputObjectSchema.optional(), _sum: WatchMediaSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchMediaGroupByArgs>;
+
+export const WatchMediaGroupByZodSchema = z.object({ where: WatchMediaWhereInputObjectSchema.optional(), orderBy: z.union([WatchMediaOrderByWithAggregationInputObjectSchema, WatchMediaOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchMediaScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchMediaScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchMediaCountAggregateInputObjectSchema ]).optional(), _min: WatchMediaMinAggregateInputObjectSchema.optional(), _max: WatchMediaMaxAggregateInputObjectSchema.optional(), _avg: WatchMediaAvgAggregateInputObjectSchema.optional(), _sum: WatchMediaSumAggregateInputObjectSchema.optional() }).strict();

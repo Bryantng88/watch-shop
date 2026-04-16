@@ -1,0 +1,46 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
+import { TechnicalMovementKindSchema } from '../enums/TechnicalMovementKind.schema';
+import { EnumTechnicalMovementKindFieldUpdateOperationsInputObjectSchema as EnumTechnicalMovementKindFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalMovementKindFieldUpdateOperationsInput.schema';
+import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
+import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
+import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
+import { EnumTechnicalActionModeFieldUpdateOperationsInputObjectSchema as EnumTechnicalActionModeFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalActionModeFieldUpdateOperationsInput.schema';
+import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
+import { TechnicalAssessmentStatusSchema } from '../enums/TechnicalAssessmentStatus.schema';
+import { EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalAssessmentStatusFieldUpdateOperationsInput.schema';
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { TechnicalSectionStatusSchema } from '../enums/TechnicalSectionStatus.schema';
+import { EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema as EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema } from './EnumTechnicalSectionStatusFieldUpdateOperationsInput.schema';
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+
+import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
+
+const makeSchema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  serviceRequestId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  movementKind: z.union([TechnicalMovementKindSchema, z.lazy(() => EnumTechnicalMovementKindFieldUpdateOperationsInputObjectSchema)]).optional(),
+  preRate: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  preAmplitude: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  preBeatError: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  postRate: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  postAmplitude: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  postBeatError: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  actionMode: z.union([TechnicalActionModeSchema, z.lazy(() => EnumTechnicalActionModeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  vendorNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  conclusion: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  status: z.union([TechnicalAssessmentStatusSchema, z.lazy(() => EnumTechnicalAssessmentStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  evaluatedById: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  evaluatedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  movementStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  caseStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  crystalStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  crownStatus: z.union([TechnicalSectionStatusSchema, z.lazy(() => EnumTechnicalSectionStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  payloadJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional()
+}).strict();
+export const TechnicalAssessmentUncheckedUpdateManyWithoutVendorInputObjectSchema: z.ZodType<Prisma.TechnicalAssessmentUncheckedUpdateManyWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalAssessmentUncheckedUpdateManyWithoutVendorInput>;
+export const TechnicalAssessmentUncheckedUpdateManyWithoutVendorInputObjectZodSchema = makeSchema();

@@ -98,6 +98,9 @@ export type WatchDetailModel = {
     hasBox: boolean;
     hasPapers: boolean;
     notes: string | null;
+    conditionGrade: string | null;
+    serialNumber: string | null;
+
   };
   spec: {
     id: string;

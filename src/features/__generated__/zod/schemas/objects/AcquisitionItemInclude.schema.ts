@@ -1,0 +1,17 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { AcquisitionArgsObjectSchema as AcquisitionArgsObjectSchema } from './AcquisitionArgs.schema';
+import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema';
+import { OrderItemArgsObjectSchema as OrderItemArgsObjectSchema } from './OrderItemArgs.schema';
+import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from './ProductVariantArgs.schema';
+import { AcquisitionSpecJobArgsObjectSchema as AcquisitionSpecJobArgsObjectSchema } from './AcquisitionSpecJobArgs.schema'
+
+const makeSchema = () => z.object({
+  Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
+  Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
+  ProductVariant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
+  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
+}).strict();
+export const AcquisitionItemIncludeObjectSchema: z.ZodType<Prisma.AcquisitionItemInclude> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemInclude>;
+export const AcquisitionItemIncludeObjectZodSchema = makeSchema();

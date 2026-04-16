@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchSpecV2WhereInputObjectSchema as WatchSpecV2WhereInputObjectSchema } from './objects/WatchSpecV2WhereInput.schema';
+import { WatchSpecV2OrderByWithAggregationInputObjectSchema as WatchSpecV2OrderByWithAggregationInputObjectSchema } from './objects/WatchSpecV2OrderByWithAggregationInput.schema';
+import { WatchSpecV2ScalarWhereWithAggregatesInputObjectSchema as WatchSpecV2ScalarWhereWithAggregatesInputObjectSchema } from './objects/WatchSpecV2ScalarWhereWithAggregatesInput.schema';
+import { WatchSpecV2ScalarFieldEnumSchema } from './enums/WatchSpecV2ScalarFieldEnum.schema';
+import { WatchSpecV2CountAggregateInputObjectSchema as WatchSpecV2CountAggregateInputObjectSchema } from './objects/WatchSpecV2CountAggregateInput.schema';
+import { WatchSpecV2MinAggregateInputObjectSchema as WatchSpecV2MinAggregateInputObjectSchema } from './objects/WatchSpecV2MinAggregateInput.schema';
+import { WatchSpecV2MaxAggregateInputObjectSchema as WatchSpecV2MaxAggregateInputObjectSchema } from './objects/WatchSpecV2MaxAggregateInput.schema';
+import { WatchSpecV2AvgAggregateInputObjectSchema as WatchSpecV2AvgAggregateInputObjectSchema } from './objects/WatchSpecV2AvgAggregateInput.schema';
+import { WatchSpecV2SumAggregateInputObjectSchema as WatchSpecV2SumAggregateInputObjectSchema } from './objects/WatchSpecV2SumAggregateInput.schema';
+
+export const WatchSpecV2GroupBySchema: z.ZodType<Prisma.WatchSpecV2GroupByArgs> = z.object({ where: WatchSpecV2WhereInputObjectSchema.optional(), orderBy: z.union([WatchSpecV2OrderByWithAggregationInputObjectSchema, WatchSpecV2OrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchSpecV2ScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchSpecV2ScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchSpecV2CountAggregateInputObjectSchema ]).optional(), _min: WatchSpecV2MinAggregateInputObjectSchema.optional(), _max: WatchSpecV2MaxAggregateInputObjectSchema.optional(), _avg: WatchSpecV2AvgAggregateInputObjectSchema.optional(), _sum: WatchSpecV2SumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchSpecV2GroupByArgs>;
+
+export const WatchSpecV2GroupByZodSchema = z.object({ where: WatchSpecV2WhereInputObjectSchema.optional(), orderBy: z.union([WatchSpecV2OrderByWithAggregationInputObjectSchema, WatchSpecV2OrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchSpecV2ScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchSpecV2ScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchSpecV2CountAggregateInputObjectSchema ]).optional(), _min: WatchSpecV2MinAggregateInputObjectSchema.optional(), _max: WatchSpecV2MaxAggregateInputObjectSchema.optional(), _avg: WatchSpecV2AvgAggregateInputObjectSchema.optional(), _sum: WatchSpecV2SumAggregateInputObjectSchema.optional() }).strict();

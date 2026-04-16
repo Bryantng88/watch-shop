@@ -1,16 +1,17 @@
 import type { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import { dbOrTx } from "@/server/db/client";
-import type { WatchListFilters } from "../shared";
+import { WatchListFilters } from "../shared/watch.types";
+
 
 function buildOrderBy(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
   switch (sort) {
     case "oldest":
       return [{ product: { createdAt: "asc" } }];
     case "priceAsc":
-      return [{ price: { salePrice: "asc" } }, { product: { updatedAt: "desc" } }];
+      return [{ watchPrice: { salePrice: "asc" } }, { product: { updatedAt: "desc" } }];
     case "priceDesc":
-      return [{ price: { salePrice: "desc" } }, { product: { updatedAt: "desc" } }];
+      return [{ watchPrice: { salePrice: "desc" } }, { product: { updatedAt: "desc" } }];
     case "titleAsc":
       return [{ product: { title: "asc" } }];
     default:
@@ -20,13 +21,6 @@ function buildOrderBy(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
 
 function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   const q = input.q?.trim();
-  const where: Prisma.WatchWhereInput = {
-    product: {
-      type: "WATCH",
-    },
-  };
-
-  const productWhere = where.product as Prisma.ProductRelationFilter;
 
   const productIs: Prisma.ProductWhereInput = {
     type: "WATCH",
@@ -54,13 +48,25 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
     };
   }
 
+  if (input.view === "draft") {
+    productIs.status = "DRAFT";
+  } else if (input.view === "sold") {
+    productIs.status = "SOLD";
+  }
+
+  const where: Prisma.WatchWhereInput = {
+    product: {
+      is: productIs,
+    },
+  };
+
   if (q) {
     where.OR = [
       { product: { is: { title: { contains: q, mode: "insensitive" } } } },
       { product: { is: { sku: { contains: q, mode: "insensitive" } } } },
-      { specV2: { is: { model: { contains: q, mode: "insensitive" } } } },
-      { specV2: { is: { referenceNumber: { contains: q, mode: "insensitive" } } } },
-      { specV2: { is: { nickname: { contains: q, mode: "insensitive" } } } },
+      { watchSpecV2: { is: { model: { contains: q, mode: "insensitive" } } } },
+      { watchSpecV2: { is: { referenceNumber: { contains: q, mode: "insensitive" } } } },
+      { watchSpecV2: { is: { nickname: { contains: q, mode: "insensitive" } } } },
     ];
   }
 
@@ -81,7 +87,7 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   }
 
   if (input.materialFamily) {
-    where.specV2 = {
+    where.watchSpecV2 = {
       is: {
         OR: [
           { primaryCaseMaterial: input.materialFamily },
@@ -92,13 +98,13 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   }
 
   if (input.hasImages === "yes") {
-    where.mediaV2 = { some: {} };
+    where.watchMedia = { some: {} };
   } else if (input.hasImages === "no") {
-    where.mediaV2 = { none: {} };
+    where.watchMedia = { none: {} };
   }
 
   if (input.hasContent === "yes") {
-    where.contentV2 = {
+    where.watchContent = {
       is: {
         OR: [
           { body: { not: null } },
@@ -110,9 +116,9 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   } else if (input.hasContent === "no") {
     where.OR = [
       ...(where.OR ?? []),
-      { contentV2: { is: null } },
+      { watchContent: { is: null } },
       {
-        contentV2: {
+        watchContent: {
           is: {
             body: null,
             summary: null,
@@ -123,17 +129,8 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
     ];
   }
 
-  if (input.view === "draft") {
-    productIs.status = "DRAFT";
-  } else if (input.view === "sold") {
-    productIs.status = "SOLD";
-  }
-
-  productWhere.is = productIs;
-
   return where;
 }
-
 export async function listAdminWatches(db: DB, input: WatchListFilters) {
   const client = dbOrTx(db);
   const page = Math.max(1, input.page ?? 1);
@@ -161,7 +158,7 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
             },
           },
         },
-        specV2: {
+        watchSpecV2: {
           select: {
             primaryCaseMaterial: true,
             secondaryCaseMaterial: true,
@@ -172,21 +169,21 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
             brand: true,
           },
         },
-        price: {
+        watchPrice: {
           select: {
             salePrice: true,
             listPrice: true,
             costPrice: true,
           },
         },
-        contentV2: {
+        watchContent: {
           select: {
             body: true,
             summary: true,
             bulletSpecs: true,
           },
         },
-        mediaV2: {
+        watchMedia: {
           select: {
             id: true,
           },
@@ -221,8 +218,8 @@ export async function searchWatches(db: DB, q: string) {
       OR: [
         { product: { is: { title: { contains: keyword, mode: "insensitive" } } } },
         { product: { is: { sku: { contains: keyword, mode: "insensitive" } } } },
-        { specV2: { is: { model: { contains: keyword, mode: "insensitive" } } } },
-        { specV2: { is: { referenceNumber: { contains: keyword, mode: "insensitive" } } } },
+        { watchSpecV2: { is: { model: { contains: keyword, mode: "insensitive" } } } },
+        { watchSpecV2: { is: { referenceNumber: { contains: keyword, mode: "insensitive" } } } },
       ],
     },
     take: 20,
@@ -236,7 +233,7 @@ export async function searchWatches(db: DB, q: string) {
           status: true,
         },
       },
-      price: {
+      watchPrice: {
         select: {
           salePrice: true,
         },

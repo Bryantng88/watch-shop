@@ -52,7 +52,7 @@ const makeSchema = () => z.object({
   MaintenancePart: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueOrderByWithRelationInputObjectSchema).optional(),
   User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),

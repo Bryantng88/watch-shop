@@ -36,7 +36,7 @@ const orderitemorderbywithrelationinputSchema = z.object({
   other_OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
   Order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const OrderItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrderItemOrderByWithRelationInput> = orderitemorderbywithrelationinputSchema as unknown as z.ZodType<Prisma.OrderItemOrderByWithRelationInput>;

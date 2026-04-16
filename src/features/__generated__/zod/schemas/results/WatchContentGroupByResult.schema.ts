@@ -1,0 +1,56 @@
+import * as z from 'zod';
+export const WatchContentGroupByResultSchema = z.array(z.object({
+  id: z.string(),
+  watchId: z.string(),
+  titleOverride: z.string(),
+  summary: z.string(),
+  hookText: z.string(),
+  body: z.string(),
+  bulletSpecs: z.array(z.string()),
+  seoTitle: z.string(),
+  seoDescription: z.string(),
+  aiMetaJson: z.unknown(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  _count: z.object({
+    id: z.number(),
+    watchId: z.number(),
+    titleOverride: z.number(),
+    summary: z.number(),
+    hookText: z.number(),
+    body: z.number(),
+    bulletSpecs: z.number(),
+    seoTitle: z.number(),
+    seoDescription: z.number(),
+    aiMetaJson: z.number(),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    watch: z.number()
+  }).optional(),
+  _min: z.object({
+    id: z.string().nullable(),
+    watchId: z.string().nullable(),
+    titleOverride: z.string().nullable(),
+    summary: z.string().nullable(),
+    hookText: z.string().nullable(),
+    body: z.string().nullable(),
+    bulletSpecs: z.array(z.string()).nullable(),
+    seoTitle: z.string().nullable(),
+    seoDescription: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional(),
+  _max: z.object({
+    id: z.string().nullable(),
+    watchId: z.string().nullable(),
+    titleOverride: z.string().nullable(),
+    summary: z.string().nullable(),
+    hookText: z.string().nullable(),
+    body: z.string().nullable(),
+    bulletSpecs: z.array(z.string()).nullable(),
+    seoTitle: z.string().nullable(),
+    seoDescription: z.string().nullable(),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
+  }).nullable().optional()
+}));

@@ -1,0 +1,54 @@
+import * as z from 'zod';
+
+import { ServiceTypeSchema } from '../../enums/ServiceType.schema';
+import { MaintenanceEventTypeSchema } from '../../enums/MaintenanceEventType.schema';
+// prettier-ignore
+export const MaintenanceRecordModelSchema = z.object({
+    id: z.string(),
+    type: ServiceTypeSchema,
+    billable: z.boolean(),
+    serviceRequestId: z.string().nullable(),
+    productId: z.string().nullable(),
+    variantId: z.string().nullable(),
+    brandSnapshot: z.string().nullable(),
+    modelSnapshot: z.string().nullable(),
+    refSnapshot: z.string().nullable(),
+    serialSnapshot: z.string().nullable(),
+    vendorId: z.string().nullable(),
+    servicedByName: z.string().nullable(),
+    vendorName: z.string().nullable(),
+    servicedAt: z.date().nullable(),
+    notes: z.string().nullable(),
+    totalCost: z.number().nullable(),
+    billed: z.boolean(),
+    invoiceId: z.string().nullable(),
+    revenueAmount: z.number().nullable(),
+    currency: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+    eventType: MaintenanceEventTypeSchema,
+    prevVendorId: z.string().nullable(),
+    prevVendorName: z.string().nullable(),
+    paymentId: z.string().nullable(),
+    paidAmount: z.number().nullable(),
+    paidAt: z.date().nullable(),
+    technicianId: z.string().nullable(),
+    technicianNameSnap: z.string().nullable(),
+    diagnosis: z.string().nullable(),
+    workSummary: z.string().nullable(),
+    serviceCatalogId: z.string().nullable(),
+    processingMode: z.string().nullable(),
+    imageFileKey: z.string().nullable(),
+    technicalIssueId: z.string().nullable(),
+    MaintenancePart: z.array(z.unknown()),
+    Payment: z.unknown().nullable(),
+    Product: z.unknown().nullable(),
+    serviceCatalog: z.unknown().nullable(),
+    ServiceRequest: z.unknown().nullable(),
+    TechnicalIssue: z.unknown().nullable(),
+    User: z.unknown().nullable(),
+    ProductVariant: z.unknown().nullable(),
+    Vendor: z.unknown().nullable()
+}).strict();
+
+export type MaintenanceRecordPureType = z.infer<typeof MaintenanceRecordModelSchema>;

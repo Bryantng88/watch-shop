@@ -44,7 +44,7 @@ const makeSchema = () => z.object({
   MaintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutMaintenanceRecordInputObjectSchema),
   Payment: z.lazy(() => PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   Product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
+  serviceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   User: z.lazy(() => UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),

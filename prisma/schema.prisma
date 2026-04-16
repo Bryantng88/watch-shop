@@ -269,7 +269,7 @@ model MaintenanceRecord {
   MaintenancePart    MaintenancePart[]
   Payment            Payment?             @relation(fields: [paymentId], references: [id])
   Product            Product?             @relation(fields: [productId], references: [id])
-  ServiceCatalog     ServiceCatalog?      @relation(fields: [serviceCatalogId], references: [id])
+  serviceCatalog     ServiceCatalog?      @relation(fields: [serviceCatalogId], references: [id])
   ServiceRequest     ServiceRequest?      @relation(fields: [serviceRequestId], references: [id])
   TechnicalIssue     TechnicalIssue?      @relation(fields: [technicalIssueId], references: [id])
   User               User?                @relation(fields: [technicianId], references: [id])
@@ -398,7 +398,7 @@ model OrderItem {
   other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
   Order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
   Product           Product?          @relation(fields: [productId], references: [id])
-  ServiceCatalog    ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
+  serviceCatalog    ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
   ServiceRequest    ServiceRequest[]
 
   @@index([orderId])
@@ -454,7 +454,7 @@ model Permission {
 }
 
 model Product {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   slug               String?              @unique
   title              String
   primaryImageUrl    String?
@@ -468,7 +468,7 @@ model Product {
   publishedAt        DateTime?
   vendorId           String?
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   tag                Tag                  @default(PRE_OWNED)
   status             ProductStatus        @default(AVAILABLE)
   categoryId         String?
@@ -820,7 +820,7 @@ model TechnicalIssue {
   MaintenanceRecord       MaintenanceRecord[]
   TechnicalAssessment     TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   MechanicalPartCatalog   MechanicalPartCatalog?        @relation(fields: [mechanicalPartCatalogId], references: [id])
-  ServiceCatalog          ServiceCatalog?               @relation(fields: [serviceCatalogId], references: [id])
+  serviceCatalog          ServiceCatalog?               @relation(fields: [serviceCatalogId], references: [id])
   ServiceRequest          ServiceRequest                @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   SupplyCatalog           SupplyCatalog?                @relation(fields: [supplyCatalogId], references: [id])
   User                    User?                         @relation(fields: [technicianId], references: [id])
@@ -1488,6 +1488,7 @@ enum ProductSaleStage {
 }
 
 enum ProductStatus {
+  DRAFT
   AVAILABLE
   IN_SERVICE
   CONSIGNED_FROM
