@@ -1,10 +1,10 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ImageRoleSchema } from '../enums/ImageRole.schema';
-import { ProductCreateNestedOneWithoutImageInputObjectSchema as ProductCreateNestedOneWithoutImageInputObjectSchema } from './ProductCreateNestedOneWithoutImageInput.schema'
+import { ProductCreateNestedOneWithoutProductImageInputObjectSchema as ProductCreateNestedOneWithoutProductImageInputObjectSchema } from './ProductCreateNestedOneWithoutProductImageInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   fileKey: z.string(),
   role: ImageRoleSchema.optional(),
   alt: z.string().optional().nullable(),
@@ -16,7 +16,8 @@ const makeSchema = () => z.object({
   dominantHex: z.string().optional().nullable(),
   contentHash: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  product: z.lazy(() => ProductCreateNestedOneWithoutImageInputObjectSchema)
+  updatedAt: z.coerce.date(),
+  Product: z.lazy(() => ProductCreateNestedOneWithoutProductImageInputObjectSchema)
 }).strict();
 export const ProductImageCreateInputObjectSchema: z.ZodType<Prisma.ProductImageCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageCreateInput>;
 export const ProductImageCreateInputObjectZodSchema = makeSchema();

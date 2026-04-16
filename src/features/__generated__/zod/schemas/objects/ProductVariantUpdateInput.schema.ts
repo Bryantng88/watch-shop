@@ -11,14 +11,14 @@ import { EnumAvailabilityStatusFieldUpdateOperationsInputObjectSchema as EnumAva
 import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { NullableEnumDiscountTypeFieldUpdateOperationsInputObjectSchema as NullableEnumDiscountTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumDiscountTypeFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
-import { AcquisitionItemUpdateManyWithoutVariantNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutVariantNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutVariantNestedInput.schema';
-import { InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema as InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutVariantNestedInput.schema';
-import { MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema as MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutVariantNestedInput.schema';
-import { MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutVariantNestedInput.schema';
-import { PartVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema as PartVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema } from './PartVariantSpecUpdateOneWithoutVariantNestedInput.schema';
-import { ProductUpdateOneRequiredWithoutVariantsNestedInputObjectSchema as ProductUpdateOneRequiredWithoutVariantsNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutVariantsNestedInput.schema';
-import { ServiceRequestUpdateManyWithoutVariantNestedInputObjectSchema as ServiceRequestUpdateManyWithoutVariantNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutVariantNestedInput.schema';
-import { StrapVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema as StrapVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema } from './StrapVariantSpecUpdateOneWithoutVariantNestedInput.schema'
+import { AcquisitionItemUpdateManyWithoutProductVariantNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutProductVariantNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutProductVariantNestedInput.schema';
+import { InvoiceItemUpdateManyWithoutProductVariantNestedInputObjectSchema as InvoiceItemUpdateManyWithoutProductVariantNestedInputObjectSchema } from './InvoiceItemUpdateManyWithoutProductVariantNestedInput.schema';
+import { MaintenancePartUpdateManyWithoutProductVariantNestedInputObjectSchema as MaintenancePartUpdateManyWithoutProductVariantNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutProductVariantNestedInput.schema';
+import { MaintenanceRecordUpdateManyWithoutProductVariantNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutProductVariantNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutProductVariantNestedInput.schema';
+import { PartVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema as PartVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema } from './PartVariantSpecUpdateOneWithoutProductVariantNestedInput.schema';
+import { ProductUpdateOneRequiredWithoutProductVariantNestedInputObjectSchema as ProductUpdateOneRequiredWithoutProductVariantNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutProductVariantNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutProductVariantNestedInputObjectSchema as ServiceRequestUpdateManyWithoutProductVariantNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutProductVariantNestedInput.schema';
+import { StrapVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema as StrapVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema } from './StrapVariantSpecUpdateOneWithoutProductVariantNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -38,14 +38,14 @@ const makeSchema = () => z.object({
   saleStartsAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   saleEndsAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   costPrice: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  invoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  maintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  partSpec: z.lazy(() => PartVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema).optional(),
-  product: z.lazy(() => ProductUpdateOneRequiredWithoutVariantsNestedInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVariantNestedInputObjectSchema).optional(),
-  strapSpec: z.lazy(() => StrapVariantSpecUpdateOneWithoutVariantNestedInputObjectSchema).optional()
+  AcquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
+  InvoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
+  MaintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
+  PartVariantSpec: z.lazy(() => PartVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductUpdateOneRequiredWithoutProductVariantNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutProductVariantNestedInputObjectSchema).optional(),
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecUpdateOneWithoutProductVariantNestedInputObjectSchema).optional()
 }).strict();
 export const ProductVariantUpdateInputObjectSchema: z.ZodType<Prisma.ProductVariantUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantUpdateInput>;
 export const ProductVariantUpdateInputObjectZodSchema = makeSchema();

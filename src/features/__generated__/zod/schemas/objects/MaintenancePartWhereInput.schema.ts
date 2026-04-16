@@ -20,8 +20,8 @@ const maintenancepartwhereinputSchema = z.object({
   quantity: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   unitCost: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
   notes: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  record: z.union([z.lazy(() => MaintenanceRecordScalarRelationFilterObjectSchema), z.lazy(() => MaintenanceRecordWhereInputObjectSchema)]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
+  MaintenanceRecord: z.union([z.lazy(() => MaintenanceRecordScalarRelationFilterObjectSchema), z.lazy(() => MaintenanceRecordWhereInputObjectSchema)]).optional(),
+  ProductVariant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
 }).strict();
 export const MaintenancePartWhereInputObjectSchema: z.ZodType<Prisma.MaintenancePartWhereInput> = maintenancepartwhereinputSchema as unknown as z.ZodType<Prisma.MaintenancePartWhereInput>;
 export const MaintenancePartWhereInputObjectZodSchema = maintenancepartwhereinputSchema;

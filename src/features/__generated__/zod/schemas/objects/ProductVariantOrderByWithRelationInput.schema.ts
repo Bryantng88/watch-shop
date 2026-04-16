@@ -30,14 +30,14 @@ const makeSchema = () => z.object({
   saleStartsAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   saleEndsAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   costPrice: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
-  invoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
-  maintenancePart: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
-  partSpec: z.lazy(() => PartVariantSpecOrderByWithRelationInputObjectSchema).optional(),
-  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
-  strapSpec: z.lazy(() => StrapVariantSpecOrderByWithRelationInputObjectSchema).optional()
+  AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
+  InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
+  MaintenancePart: z.lazy(() => MaintenancePartOrderByRelationAggregateInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
+  PartVariantSpec: z.lazy(() => PartVariantSpecOrderByWithRelationInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ProductVariantOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductVariantOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantOrderByWithRelationInput>;
 export const ProductVariantOrderByWithRelationInputObjectZodSchema = makeSchema();

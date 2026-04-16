@@ -71,16 +71,16 @@ const servicerequestwhereinputSchema = z.object({
   prioritySource: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
-  maintenance: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
-  orderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
+  OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
   product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional(),
+  productVariant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   serviceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
   technicalAssessment: z.union([z.lazy(() => TechnicalAssessmentNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
+  technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
 }).strict();
 export const ServiceRequestWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestWhereInput> = servicerequestwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestWhereInput>;
 export const ServiceRequestWhereInputObjectZodSchema = servicerequestwhereinputSchema;

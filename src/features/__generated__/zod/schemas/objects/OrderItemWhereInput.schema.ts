@@ -14,8 +14,8 @@ import { EnumOrderItemKindFilterObjectSchema as EnumOrderItemKindFilterObjectSch
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumServiceScopeNullableFilterObjectSchema as EnumServiceScopeNullableFilterObjectSchema } from './EnumServiceScopeNullableFilter.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { EnumorderflowtypeFilterObjectSchema as EnumorderflowtypeFilterObjectSchema } from './EnumorderflowtypeFilter.schema';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
+import { EnumOrderFlowTypeFilterObjectSchema as EnumOrderFlowTypeFilterObjectSchema } from './EnumOrderFlowTypeFilter.schema';
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
 import { OrderItemNullableScalarRelationFilterObjectSchema as OrderItemNullableScalarRelationFilterObjectSchema } from './OrderItemNullableScalarRelationFilter.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
@@ -51,14 +51,14 @@ const orderitemwhereinputSchema = z.object({
   serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerItemNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  createdFromFlow: z.union([z.lazy(() => EnumorderflowtypeFilterObjectSchema), orderflowtypeSchema]).optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  createdFromFlow: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional(),
+  AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
   other_OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
-  order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
+  Order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   ServiceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional()
+  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional()
 }).strict();
 export const OrderItemWhereInputObjectSchema: z.ZodType<Prisma.OrderItemWhereInput> = orderitemwhereinputSchema as unknown as z.ZodType<Prisma.OrderItemWhereInput>;
 export const OrderItemWhereInputObjectZodSchema = orderitemwhereinputSchema;

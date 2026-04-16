@@ -50,10 +50,10 @@ const acquisitionitemwhereinputSchema = z.object({
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
   productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
   productTitle: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  acquisition: z.union([z.lazy(() => AcquisitionScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema)]).optional(),
-  product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  sourceOrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional(),
+  Acquisition: z.union([z.lazy(() => AcquisitionScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema)]).optional(),
+  Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
+  OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
+  ProductVariant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional(),
   AcquisitionSpecJob: z.union([z.lazy(() => AcquisitionSpecJobNullableScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionSpecJobWhereInputObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionItemWhereInput> = acquisitionitemwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionItemWhereInput>;

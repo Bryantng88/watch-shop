@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ImageRoleSchema } from '../enums/ImageRole.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   productId: z.string(),
   fileKey: z.string(),
   role: ImageRoleSchema.optional(),
@@ -15,7 +15,8 @@ const makeSchema = () => z.object({
   sortOrder: z.number().int().optional(),
   dominantHex: z.string().optional().nullable(),
   contentHash: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date()
 }).strict();
 export const ProductImageUncheckedCreateInputObjectSchema: z.ZodType<Prisma.ProductImageUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageUncheckedCreateInput>;
 export const ProductImageUncheckedCreateInputObjectZodSchema = makeSchema();

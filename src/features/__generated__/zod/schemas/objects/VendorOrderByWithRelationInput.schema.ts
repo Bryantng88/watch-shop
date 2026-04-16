@@ -25,14 +25,14 @@ const makeSchema = () => z.object({
   bankName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   bankAcc: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   isActive: SortOrderSchema.optional(),
-  acquisitions: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
-  invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
-  services: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentOrderByRelationAggregateInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
-  Bank: z.lazy(() => BankOrderByWithRelationInputObjectSchema).optional()
+  Acquisition: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
+  Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
+  product: z.lazy(() => ProductOrderByRelationAggregateInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentOrderByRelationAggregateInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
+  bank: z.lazy(() => BankOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const VendorOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.VendorOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorOrderByWithRelationInput>;
 export const VendorOrderByWithRelationInputObjectZodSchema = makeSchema();

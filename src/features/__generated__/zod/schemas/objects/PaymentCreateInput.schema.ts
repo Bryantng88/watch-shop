@@ -8,7 +8,7 @@ import { PaymentTypeSchema } from '../enums/PaymentType.schema';
 import { MaintenanceRecordCreateNestedManyWithoutPaymentInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutPaymentInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutPaymentInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   method: PaymentMethodSchema,
   amount: z.number(),
   currency: z.string(),

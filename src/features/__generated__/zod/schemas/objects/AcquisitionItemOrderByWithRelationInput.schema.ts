@@ -30,10 +30,10 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   productType: SortOrderSchema.optional(),
   productTitle: SortOrderSchema.optional(),
-  acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
-  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  sourceOrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
+  Acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
+  ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput>;

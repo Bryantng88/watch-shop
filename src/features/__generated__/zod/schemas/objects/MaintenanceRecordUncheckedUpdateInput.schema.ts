@@ -10,7 +10,7 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
-import { MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutRecordNestedInput.schema'
+import { MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -49,7 +49,7 @@ const makeSchema = () => z.object({
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   technicalIssueId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  parts: z.lazy(() => MaintenancePartUncheckedUpdateManyWithoutRecordNestedInputObjectSchema).optional()
+  MaintenancePart: z.lazy(() => MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUncheckedUpdateInput>;
 export const MaintenanceRecordUncheckedUpdateInputObjectZodSchema = makeSchema();

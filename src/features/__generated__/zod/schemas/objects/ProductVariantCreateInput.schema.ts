@@ -2,17 +2,17 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { DiscountTypeSchema } from '../enums/DiscountType.schema';
-import { AcquisitionItemCreateNestedManyWithoutVariantInputObjectSchema as AcquisitionItemCreateNestedManyWithoutVariantInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutVariantInput.schema';
-import { InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema as InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutVariantInput.schema';
-import { MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema as MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutVariantInput.schema';
-import { MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutVariantInput.schema';
-import { PartVariantSpecCreateNestedOneWithoutVariantInputObjectSchema as PartVariantSpecCreateNestedOneWithoutVariantInputObjectSchema } from './PartVariantSpecCreateNestedOneWithoutVariantInput.schema';
-import { ProductCreateNestedOneWithoutVariantsInputObjectSchema as ProductCreateNestedOneWithoutVariantsInputObjectSchema } from './ProductCreateNestedOneWithoutVariantsInput.schema';
-import { ServiceRequestCreateNestedManyWithoutVariantInputObjectSchema as ServiceRequestCreateNestedManyWithoutVariantInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutVariantInput.schema';
-import { StrapVariantSpecCreateNestedOneWithoutVariantInputObjectSchema as StrapVariantSpecCreateNestedOneWithoutVariantInputObjectSchema } from './StrapVariantSpecCreateNestedOneWithoutVariantInput.schema'
+import { AcquisitionItemCreateNestedManyWithoutProductVariantInputObjectSchema as AcquisitionItemCreateNestedManyWithoutProductVariantInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutProductVariantInput.schema';
+import { InvoiceItemCreateNestedManyWithoutProductVariantInputObjectSchema as InvoiceItemCreateNestedManyWithoutProductVariantInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutProductVariantInput.schema';
+import { MaintenancePartCreateNestedManyWithoutProductVariantInputObjectSchema as MaintenancePartCreateNestedManyWithoutProductVariantInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutProductVariantInput.schema';
+import { MaintenanceRecordCreateNestedManyWithoutProductVariantInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductVariantInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductVariantInput.schema';
+import { PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './PartVariantSpecCreateNestedOneWithoutProductVariantInput.schema';
+import { ProductCreateNestedOneWithoutProductVariantInputObjectSchema as ProductCreateNestedOneWithoutProductVariantInputObjectSchema } from './ProductCreateNestedOneWithoutProductVariantInput.schema';
+import { ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductVariantInput.schema';
+import { StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema as StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema } from './StrapVariantSpecCreateNestedOneWithoutProductVariantInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   sku: z.string().optional().nullable(),
   name: z.string().optional().nullable(),
   price: z.number().optional().nullable(),
@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.boolean().optional().nullable(),
   maxQtyPerOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   availabilityStatus: AvailabilityStatusSchema.optional(),
   listPrice: z.number().optional().nullable(),
   discountType: DiscountTypeSchema.optional().nullable(),
@@ -28,14 +29,14 @@ const makeSchema = () => z.object({
   saleStartsAt: z.coerce.date().optional().nullable(),
   saleEndsAt: z.coerce.date().optional().nullable(),
   costPrice: z.number().optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutVariantInputObjectSchema),
-  invoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutVariantInputObjectSchema),
-  maintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutVariantInputObjectSchema),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutVariantInputObjectSchema),
-  partSpec: z.lazy(() => PartVariantSpecCreateNestedOneWithoutVariantInputObjectSchema).optional(),
-  product: z.lazy(() => ProductCreateNestedOneWithoutVariantsInputObjectSchema),
-  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutVariantInputObjectSchema),
-  strapSpec: z.lazy(() => StrapVariantSpecCreateNestedOneWithoutVariantInputObjectSchema).optional()
+  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductVariantInputObjectSchema),
+  InvoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutProductVariantInputObjectSchema),
+  MaintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutProductVariantInputObjectSchema),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductVariantInputObjectSchema),
+  PartVariantSpec: z.lazy(() => PartVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductCreateNestedOneWithoutProductVariantInputObjectSchema),
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema),
+  StrapVariantSpec: z.lazy(() => StrapVariantSpecCreateNestedOneWithoutProductVariantInputObjectSchema).optional()
 }).strict();
 export const ProductVariantCreateInputObjectSchema: z.ZodType<Prisma.ProductVariantCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductVariantCreateInput>;
 export const ProductVariantCreateInputObjectZodSchema = makeSchema();

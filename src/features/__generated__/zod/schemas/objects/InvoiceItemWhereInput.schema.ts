@@ -28,9 +28,9 @@ const invoiceitemwhereinputSchema = z.object({
   lineTotal: z.union([z.lazy(() => DecimalFilterObjectSchema), z.number()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  invoice: z.union([z.lazy(() => InvoiceScalarRelationFilterObjectSchema), z.lazy(() => InvoiceWhereInputObjectSchema)]).optional(),
-  product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
+  Invoice: z.union([z.lazy(() => InvoiceScalarRelationFilterObjectSchema), z.lazy(() => InvoiceWhereInputObjectSchema)]).optional(),
+  Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
+  ProductVariant: z.union([z.lazy(() => ProductVariantNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
 }).strict();
 export const InvoiceItemWhereInputObjectSchema: z.ZodType<Prisma.InvoiceItemWhereInput> = invoiceitemwhereinputSchema as unknown as z.ZodType<Prisma.InvoiceItemWhereInput>;
 export const InvoiceItemWhereInputObjectZodSchema = invoiceitemwhereinputSchema;

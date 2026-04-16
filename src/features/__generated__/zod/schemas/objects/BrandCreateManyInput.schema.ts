@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { BrandStatusSchema } from '../enums/BrandStatus.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
   slug: z.string(),
   country: z.string().optional().nullable(),
@@ -15,7 +15,7 @@ const makeSchema = () => z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date()
 }).strict();
 export const BrandCreateManyInputObjectSchema: z.ZodType<Prisma.BrandCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.BrandCreateManyInput>;
 export const BrandCreateManyInputObjectZodSchema = makeSchema();

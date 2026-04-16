@@ -28,13 +28,13 @@ const makeSchema = () => z.object({
   bankName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   bankAcc: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  acquisitions: z.lazy(() => AcquisitionUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  services: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional()
+  Acquisition: z.lazy(() => AcquisitionUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  Invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  product: z.lazy(() => ProductUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutVendorNestedInputObjectSchema).optional()
 }).strict();
 export const VendorUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.VendorUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUncheckedUpdateInput>;
 export const VendorUncheckedUpdateInputObjectZodSchema = makeSchema();

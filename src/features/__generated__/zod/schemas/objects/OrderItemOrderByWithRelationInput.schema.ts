@@ -31,13 +31,13 @@ const orderitemorderbywithrelationinputSchema = z.object({
   linkedOrderItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   customerItemNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdFromFlow: SortOrderSchema.optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
+  AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
-  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
+  Order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
+  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const OrderItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrderItemOrderByWithRelationInput> = orderitemorderbywithrelationinputSchema as unknown as z.ZodType<Prisma.OrderItemOrderByWithRelationInput>;
 export const OrderItemOrderByWithRelationInputObjectZodSchema = orderitemorderbywithrelationinputSchema;

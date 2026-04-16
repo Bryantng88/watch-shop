@@ -10,15 +10,15 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
-import { MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema as MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutRecordNestedInput.schema';
+import { MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInput.schema';
 import { PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './PaymentUpdateOneWithoutMaintenanceRecordNestedInput.schema';
-import { ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordsNestedInput.schema';
+import { ProductUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInput.schema';
-import { ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceNestedInput.schema';
+import { ServiceRequestUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ServiceRequestUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './UserUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenanceRecordNestedInput.schema';
-import { VendorUpdateOneWithoutServicesNestedInputObjectSchema as VendorUpdateOneWithoutServicesNestedInputObjectSchema } from './VendorUpdateOneWithoutServicesNestedInput.schema'
+import { VendorUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as VendorUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './VendorUpdateOneWithoutMaintenanceRecordNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -49,15 +49,15 @@ const makeSchema = () => z.object({
   workSummary: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  parts: z.lazy(() => MaintenancePartUpdateManyWithoutRecordNestedInputObjectSchema).optional(),
+  MaintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   Payment: z.lazy(() => PaymentUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
-  product: z.lazy(() => ProductUpdateOneWithoutMaintenanceRecordsNestedInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
   User: z.lazy(() => UserUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorUpdateOneWithoutServicesNestedInputObjectSchema).optional()
+  ProductVariant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordUpdateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUpdateInput>;
 export const MaintenanceRecordUpdateInputObjectZodSchema = makeSchema();

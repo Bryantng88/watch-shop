@@ -31,12 +31,12 @@ const makeSchema = () => z.object({
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  acquisition: z.lazy(() => AcquisitionUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  customer: z.lazy(() => CustomerUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  order: z.lazy(() => OrderUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  serviceReq: z.lazy(() => ServiceRequestUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
-  items: z.lazy(() => InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
+  Acquisition: z.lazy(() => AcquisitionUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
+  Customer: z.lazy(() => CustomerUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
+  Order: z.lazy(() => OrderUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorUpdateOneWithoutInvoiceNestedInputObjectSchema).optional(),
+  InvoiceItem: z.lazy(() => InvoiceItemUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
 }).strict();
 export const InvoiceUpdateInputObjectSchema: z.ZodType<Prisma.InvoiceUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceUpdateInput>;
 export const InvoiceUpdateInputObjectZodSchema = makeSchema();

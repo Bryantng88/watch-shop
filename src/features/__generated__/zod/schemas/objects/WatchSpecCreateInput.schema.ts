@@ -10,8 +10,8 @@ import { GoldColorSchema } from '../enums/GoldColor.schema';
 import { StrapSchema } from '../enums/Strap.schema';
 import { GlassSchema } from '../enums/Glass.schema';
 import { ProductCreateNestedOneWithoutWatchSpecInputObjectSchema as ProductCreateNestedOneWithoutWatchSpecInputObjectSchema } from './ProductCreateNestedOneWithoutWatchSpecInput.schema';
-import { ComplicationCreateNestedManyWithoutWatchSpecsInputObjectSchema as ComplicationCreateNestedManyWithoutWatchSpecsInputObjectSchema } from './ComplicationCreateNestedManyWithoutWatchSpecsInput.schema';
-import { MarketSegmentCreateNestedManyWithoutWatchSpecsInputObjectSchema as MarketSegmentCreateNestedManyWithoutWatchSpecsInputObjectSchema } from './MarketSegmentCreateNestedManyWithoutWatchSpecsInput.schema'
+import { ComplicationCreateNestedManyWithoutWatchSpecInputObjectSchema as ComplicationCreateNestedManyWithoutWatchSpecInputObjectSchema } from './ComplicationCreateNestedManyWithoutWatchSpecInput.schema';
+import { MarketSegmentCreateNestedManyWithoutWatchSpecInputObjectSchema as MarketSegmentCreateNestedManyWithoutWatchSpecInputObjectSchema } from './MarketSegmentCreateNestedManyWithoutWatchSpecInput.schema'
 
 const makeSchema = () => z.object({
   model: z.string().optional().nullable(),
@@ -36,14 +36,15 @@ const makeSchema = () => z.object({
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   sizeCategory: z.string().optional().nullable(),
   ref: z.string().optional().nullable(),
   hasStrap: z.boolean().optional(),
   isServiced: z.boolean().optional(),
   hasClasp: z.boolean().optional(),
-  product: z.lazy(() => ProductCreateNestedOneWithoutWatchSpecInputObjectSchema),
-  complication: z.lazy(() => ComplicationCreateNestedManyWithoutWatchSpecsInputObjectSchema),
-  marketSegment: z.lazy(() => MarketSegmentCreateNestedManyWithoutWatchSpecsInputObjectSchema)
+  Product: z.lazy(() => ProductCreateNestedOneWithoutWatchSpecInputObjectSchema),
+  Complication: z.lazy(() => ComplicationCreateNestedManyWithoutWatchSpecInputObjectSchema),
+  MarketSegment: z.lazy(() => MarketSegmentCreateNestedManyWithoutWatchSpecInputObjectSchema)
 }).strict();
 export const WatchSpecCreateInputObjectSchema: z.ZodType<Prisma.WatchSpecCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecCreateInput>;
 export const WatchSpecCreateInputObjectZodSchema = makeSchema();

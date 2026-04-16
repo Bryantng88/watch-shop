@@ -4,10 +4,10 @@ import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema'
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   orderId: z.string(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),
@@ -27,7 +27,7 @@ const makeSchema = () => z.object({
   serviceScope: ServiceScopeSchema.optional().nullable(),
   linkedOrderItemId: z.string().optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
-  createdFromFlow: orderflowtypeSchema.optional()
+  createdFromFlow: OrderFlowTypeSchema.optional()
 }).strict();
 export const OrderItemCreateManyInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyInput>;
 export const OrderItemCreateManyInputObjectZodSchema = makeSchema();

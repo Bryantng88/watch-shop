@@ -7,7 +7,7 @@ import { NullableBoolFieldUpdateOperationsInputObjectSchema as NullableBoolField
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
-import { ProductVariantUpdateOneRequiredWithoutStrapSpecNestedInputObjectSchema as ProductVariantUpdateOneRequiredWithoutStrapSpecNestedInputObjectSchema } from './ProductVariantUpdateOneRequiredWithoutStrapSpecNestedInput.schema'
+import { ProductVariantUpdateOneRequiredWithoutStrapVariantSpecNestedInputObjectSchema as ProductVariantUpdateOneRequiredWithoutStrapVariantSpecNestedInputObjectSchema } from './ProductVariantUpdateOneRequiredWithoutStrapVariantSpecNestedInput.schema'
 
 const makeSchema = () => z.object({
   color: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -17,7 +17,7 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   lugWidthMM: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   buckleWidthMM: z.union([z.number().int(), z.lazy(() => NullableIntFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  variant: z.lazy(() => ProductVariantUpdateOneRequiredWithoutStrapSpecNestedInputObjectSchema).optional()
+  ProductVariant: z.lazy(() => ProductVariantUpdateOneRequiredWithoutStrapVariantSpecNestedInputObjectSchema).optional()
 }).strict();
 export const StrapVariantSpecUpdateInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecUpdateInput>;
 export const StrapVariantSpecUpdateInputObjectZodSchema = makeSchema();

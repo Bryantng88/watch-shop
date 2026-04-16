@@ -12,7 +12,7 @@ const partvariantspecwhereinputSchema = z.object({
   NOT: z.union([z.lazy(() => PartVariantSpecWhereInputObjectSchema), z.lazy(() => PartVariantSpecWhereInputObjectSchema).array()]).optional(),
   variantId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   partType: z.union([z.lazy(() => EnumPartTypeFilterObjectSchema), PartTypeSchema]).optional(),
-  variant: z.union([z.lazy(() => ProductVariantScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
+  ProductVariant: z.union([z.lazy(() => ProductVariantScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
 }).strict();
 export const PartVariantSpecWhereInputObjectSchema: z.ZodType<Prisma.PartVariantSpecWhereInput> = partvariantspecwhereinputSchema as unknown as z.ZodType<Prisma.PartVariantSpecWhereInput>;
 export const PartVariantSpecWhereInputObjectZodSchema = partvariantspecwhereinputSchema;

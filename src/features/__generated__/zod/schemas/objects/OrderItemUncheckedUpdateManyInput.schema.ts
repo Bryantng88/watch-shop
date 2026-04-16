@@ -14,8 +14,8 @@ import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumOrderItemKindFieldUpdateOperationsInputObjectSchema as EnumOrderItemKindFieldUpdateOperationsInputObjectSchema } from './EnumOrderItemKindFieldUpdateOperationsInput.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
-import { EnumorderflowtypeFieldUpdateOperationsInputObjectSchema as EnumorderflowtypeFieldUpdateOperationsInputObjectSchema } from './EnumorderflowtypeFieldUpdateOperationsInput.schema'
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -38,7 +38,7 @@ const makeSchema = () => z.object({
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   linkedOrderItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  createdFromFlow: z.union([orderflowtypeSchema, z.lazy(() => EnumorderflowtypeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const OrderItemUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.OrderItemUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUncheckedUpdateManyInput>;
 export const OrderItemUncheckedUpdateManyInputObjectZodSchema = makeSchema();

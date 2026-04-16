@@ -59,9 +59,9 @@ const watchspecwhereinputSchema = z.object({
   hasStrap: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   isServiced: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   hasClasp: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  complication: z.lazy(() => ComplicationListRelationFilterObjectSchema).optional(),
-  marketSegment: z.lazy(() => MarketSegmentListRelationFilterObjectSchema).optional()
+  Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
+  Complication: z.lazy(() => ComplicationListRelationFilterObjectSchema).optional(),
+  MarketSegment: z.lazy(() => MarketSegmentListRelationFilterObjectSchema).optional()
 }).strict();
 export const WatchSpecWhereInputObjectSchema: z.ZodType<Prisma.WatchSpecWhereInput> = watchspecwhereinputSchema as unknown as z.ZodType<Prisma.WatchSpecWhereInput>;
 export const WatchSpecWhereInputObjectZodSchema = watchspecwhereinputSchema;

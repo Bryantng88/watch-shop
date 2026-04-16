@@ -10,7 +10,7 @@ import { AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema as Ac
 import { InvoiceItemCreateNestedManyWithoutProductInputObjectSchema as InvoiceItemCreateNestedManyWithoutProductInputObjectSchema } from './InvoiceItemCreateNestedManyWithoutProductInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutProductInput.schema';
 import { OrderItemCreateNestedManyWithoutProductInputObjectSchema as OrderItemCreateNestedManyWithoutProductInputObjectSchema } from './OrderItemCreateNestedManyWithoutProductInput.schema';
-import { BrandCreateNestedOneWithoutProductsInputObjectSchema as BrandCreateNestedOneWithoutProductsInputObjectSchema } from './BrandCreateNestedOneWithoutProductsInput.schema';
+import { BrandCreateNestedOneWithoutProductInputObjectSchema as BrandCreateNestedOneWithoutProductInputObjectSchema } from './BrandCreateNestedOneWithoutProductInput.schema';
 import { ProductCategoryCreateNestedOneWithoutProductInputObjectSchema as ProductCategoryCreateNestedOneWithoutProductInputObjectSchema } from './ProductCategoryCreateNestedOneWithoutProductInput.schema';
 import { VendorCreateNestedOneWithoutProductInputObjectSchema as VendorCreateNestedOneWithoutProductInputObjectSchema } from './VendorCreateNestedOneWithoutProductInput.schema';
 import { ProductContentCreateNestedOneWithoutProductInputObjectSchema as ProductContentCreateNestedOneWithoutProductInputObjectSchema } from './ProductContentCreateNestedOneWithoutProductInput.schema';
@@ -18,10 +18,11 @@ import { ProductImageCreateNestedManyWithoutProductInputObjectSchema as ProductI
 import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as ProductVariantCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantCreateNestedManyWithoutProductInput.schema';
 import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema';
 import { ServiceRequestCreateNestedManyWithoutProductInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductInput.schema';
+import { WatchCreateNestedOneWithoutProductInputObjectSchema as WatchCreateNestedOneWithoutProductInputObjectSchema } from './WatchCreateNestedOneWithoutProductInput.schema';
 import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   slug: z.string().optional().nullable(),
   title: z.string(),
   primaryImageUrl: z.string().optional().nullable(),
@@ -33,6 +34,7 @@ const makeSchema = () => z.object({
   maxQtyPerOrder: z.number().int().optional(),
   publishedAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   tag: TagSchema.optional(),
   status: ProductStatusSchema.optional(),
   contentStatus: ContentStatusSchema.optional(),
@@ -46,16 +48,17 @@ const makeSchema = () => z.object({
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutProductInputObjectSchema),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedManyWithoutProductInputObjectSchema),
   InvoiceItem: z.lazy(() => InvoiceItemCreateNestedManyWithoutProductInputObjectSchema),
-  maintenanceRecords: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema),
-  orderItems: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema),
-  brand: z.lazy(() => BrandCreateNestedOneWithoutProductsInputObjectSchema).optional(),
-  ProductCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutProductInputObjectSchema),
+  OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutProductInputObjectSchema),
+  brand: z.lazy(() => BrandCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  productCategory: z.lazy(() => ProductCategoryCreateNestedOneWithoutProductInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  content: z.lazy(() => ProductContentCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  image: z.lazy(() => ProductImageCreateNestedManyWithoutProductInputObjectSchema),
-  variants: z.lazy(() => ProductVariantCreateNestedManyWithoutProductInputObjectSchema),
-  Reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema),
-  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductInputObjectSchema),
+  productContent: z.lazy(() => ProductContentCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  productImage: z.lazy(() => ProductImageCreateNestedManyWithoutProductInputObjectSchema),
+  productVariant: z.lazy(() => ProductVariantCreateNestedManyWithoutProductInputObjectSchema),
+  reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema),
+  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductInputObjectSchema),
+  watch: z.lazy(() => WatchCreateNestedOneWithoutProductInputObjectSchema).optional(),
   watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional()
 }).strict();
 export const ProductCreateInputObjectSchema: z.ZodType<Prisma.ProductCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateInput>;

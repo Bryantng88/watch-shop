@@ -21,9 +21,9 @@ const makeSchema = () => z.object({
   address: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   district: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   Acquisition: z.lazy(() => AcquisitionOrderByRelationAggregateInputObjectSchema).optional(),
-  user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
+  User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
-  orders: z.lazy(() => OrderOrderByRelationAggregateInputObjectSchema).optional(),
+  Order: z.lazy(() => OrderOrderByRelationAggregateInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const CustomerOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.CustomerOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerOrderByWithRelationInput>;

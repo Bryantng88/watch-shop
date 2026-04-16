@@ -28,7 +28,7 @@ const productimagewhereinputSchema = z.object({
   contentHash: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
+  Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductImageWhereInputObjectSchema: z.ZodType<Prisma.ProductImageWhereInput> = productimagewhereinputSchema as unknown as z.ZodType<Prisma.ProductImageWhereInput>;
 export const ProductImageWhereInputObjectZodSchema = productimagewhereinputSchema;

@@ -36,9 +36,9 @@ const makeSchema = () => z.object({
   hasStrap: SortOrderSchema.optional(),
   isServiced: SortOrderSchema.optional(),
   hasClasp: SortOrderSchema.optional(),
-  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  complication: z.lazy(() => ComplicationOrderByRelationAggregateInputObjectSchema).optional(),
-  marketSegment: z.lazy(() => MarketSegmentOrderByRelationAggregateInputObjectSchema).optional()
+  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  Complication: z.lazy(() => ComplicationOrderByRelationAggregateInputObjectSchema).optional(),
+  MarketSegment: z.lazy(() => MarketSegmentOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const WatchSpecOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.WatchSpecOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecOrderByWithRelationInput>;
 export const WatchSpecOrderByWithRelationInputObjectZodSchema = makeSchema();

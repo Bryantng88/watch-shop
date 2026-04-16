@@ -3,12 +3,12 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema as CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema } from './CustomerCreateNestedOneWithoutAcquisitionInput.schema';
-import { VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionsInput.schema';
+import { VendorCreateNestedOneWithoutAcquisitionInputObjectSchema as VendorCreateNestedOneWithoutAcquisitionInputObjectSchema } from './VendorCreateNestedOneWithoutAcquisitionInput.schema';
 import { AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutAcquisitionInput.schema';
 import { InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: AcquisitionTypeSchema.optional(),
   acquiredAt: z.coerce.date(),
   cost: z.number().optional().nullable(),
@@ -20,12 +20,13 @@ const makeSchema = () => z.object({
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
-  customer: z.lazy(() => CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionsInputObjectSchema).optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema),
-  invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema)
+  Customer: z.lazy(() => CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
+  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema),
+  Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema)
 }).strict();
 export const AcquisitionCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionCreateInput>;
 export const AcquisitionCreateInputObjectZodSchema = makeSchema();

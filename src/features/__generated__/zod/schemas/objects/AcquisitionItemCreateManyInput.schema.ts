@@ -5,7 +5,7 @@ import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.sche
 import { ProductTypeSchema } from '../enums/ProductType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   acquisitionId: z.string(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),

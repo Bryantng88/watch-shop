@@ -9,7 +9,7 @@ const complicationwhereinputSchema = z.object({
   NOT: z.union([z.lazy(() => ComplicationWhereInputObjectSchema), z.lazy(() => ComplicationWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   name: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  watchSpecs: z.lazy(() => WatchSpecListRelationFilterObjectSchema).optional()
+  WatchSpec: z.lazy(() => WatchSpecListRelationFilterObjectSchema).optional()
 }).strict();
 export const ComplicationWhereInputObjectSchema: z.ZodType<Prisma.ComplicationWhereInput> = complicationwhereinputSchema as unknown as z.ZodType<Prisma.ComplicationWhereInput>;
 export const ComplicationWhereInputObjectZodSchema = complicationwhereinputSchema;

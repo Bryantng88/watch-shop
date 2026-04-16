@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   updatedAt: SortOrderSchema.optional(),
   lugWidthMM: SortOrderSchema.optional(),
   buckleWidthMM: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
+  ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const StrapVariantSpecOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.StrapVariantSpecOrderByWithRelationInput>;
 export const StrapVariantSpecOrderByWithRelationInputObjectZodSchema = makeSchema();

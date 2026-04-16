@@ -8,6 +8,7 @@ const makeSchema = () => z.object({
   material: StrapSchema.optional(),
   quickRelease: z.boolean().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   lugWidthMM: z.number().int(),
   buckleWidthMM: z.number().int().optional().nullable()
 }).strict();

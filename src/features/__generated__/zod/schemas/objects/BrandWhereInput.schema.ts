@@ -27,7 +27,7 @@ const brandwhereinputSchema = z.object({
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  products: z.lazy(() => ProductListRelationFilterObjectSchema).optional()
+  Product: z.lazy(() => ProductListRelationFilterObjectSchema).optional()
 }).strict();
 export const BrandWhereInputObjectSchema: z.ZodType<Prisma.BrandWhereInput> = brandwhereinputSchema as unknown as z.ZodType<Prisma.BrandWhereInput>;
 export const BrandWhereInputObjectZodSchema = brandwhereinputSchema;

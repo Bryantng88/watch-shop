@@ -7,19 +7,20 @@ import { OrderCreateNestedManyWithoutCustomerInputObjectSchema as OrderCreateNes
 import { ServiceRequestCreateNestedManyWithoutCustomerInputObjectSchema as ServiceRequestCreateNestedManyWithoutCustomerInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutCustomerInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
   email: z.string().optional().nullable(),
   phone: z.string().max(32).optional().nullable(),
   ward: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   address: z.string().optional().nullable(),
   district: z.string().optional().nullable(),
   Acquisition: z.lazy(() => AcquisitionCreateNestedManyWithoutCustomerInputObjectSchema),
-  user: z.lazy(() => UserCreateNestedOneWithoutCustomerInputObjectSchema).optional(),
+  User: z.lazy(() => UserCreateNestedOneWithoutCustomerInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutCustomerInputObjectSchema),
-  orders: z.lazy(() => OrderCreateNestedManyWithoutCustomerInputObjectSchema),
+  Order: z.lazy(() => OrderCreateNestedManyWithoutCustomerInputObjectSchema),
   ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutCustomerInputObjectSchema)
 }).strict();
 export const CustomerCreateInputObjectSchema: z.ZodType<Prisma.CustomerCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerCreateInput>;

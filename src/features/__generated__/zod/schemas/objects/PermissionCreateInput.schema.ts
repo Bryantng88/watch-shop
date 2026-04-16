@@ -1,12 +1,12 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { RoleCreateNestedManyWithoutPermissionsInputObjectSchema as RoleCreateNestedManyWithoutPermissionsInputObjectSchema } from './RoleCreateNestedManyWithoutPermissionsInput.schema'
+import { RoleCreateNestedManyWithoutPermissionInputObjectSchema as RoleCreateNestedManyWithoutPermissionInputObjectSchema } from './RoleCreateNestedManyWithoutPermissionInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   code: z.string(),
   description: z.string().optional().nullable(),
-  roles: z.lazy(() => RoleCreateNestedManyWithoutPermissionsInputObjectSchema)
+  Role: z.lazy(() => RoleCreateNestedManyWithoutPermissionInputObjectSchema)
 }).strict();
 export const PermissionCreateInputObjectSchema: z.ZodType<Prisma.PermissionCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.PermissionCreateInput>;
 export const PermissionCreateInputObjectZodSchema = makeSchema();

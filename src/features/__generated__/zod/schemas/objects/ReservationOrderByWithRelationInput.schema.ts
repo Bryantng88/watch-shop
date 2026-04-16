@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   expiresAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional()
+  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ReservationOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ReservationOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ReservationOrderByWithRelationInput>;
 export const ReservationOrderByWithRelationInputObjectZodSchema = makeSchema();

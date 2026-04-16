@@ -19,8 +19,8 @@ import { EnumOrderSourceFilterObjectSchema as EnumOrderSourceFilterObjectSchema 
 import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { EnumOrderVerificationStatusFilterObjectSchema as EnumOrderVerificationStatusFilterObjectSchema } from './EnumOrderVerificationStatusFilter.schema';
 import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
-import { EnumorderflowtypeFilterObjectSchema as EnumorderflowtypeFilterObjectSchema } from './EnumorderflowtypeFilter.schema';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
+import { EnumOrderFlowTypeFilterObjectSchema as EnumOrderFlowTypeFilterObjectSchema } from './EnumOrderFlowTypeFilter.schema';
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema';
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
@@ -58,10 +58,10 @@ const orderwhereinputSchema = z.object({
   verificationStatus: z.union([z.lazy(() => EnumOrderVerificationStatusFilterObjectSchema), OrderVerificationStatusSchema]).optional(),
   quick_from_product_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   quickFromProductId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  quickFlowType: z.union([z.lazy(() => EnumorderflowtypeFilterObjectSchema), orderflowtypeSchema]).optional(),
+  quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
-  customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
-  items: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  Customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
+  OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   Shipment: z.union([z.lazy(() => ShipmentNullableScalarRelationFilterObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema)]).optional()
 }).strict();
 export const OrderWhereInputObjectSchema: z.ZodType<Prisma.OrderWhereInput> = orderwhereinputSchema as unknown as z.ZodType<Prisma.OrderWhereInput>;

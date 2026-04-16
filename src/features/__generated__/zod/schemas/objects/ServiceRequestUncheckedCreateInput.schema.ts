@@ -3,13 +3,13 @@ import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutServiceReqInput.schema';
+import { InvoiceUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutServiceRequestInput.schema';
 import { MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema as MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema } from './MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInput.schema';
 import { TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   orderItemId: z.string().optional().nullable(),
@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   warrantyUntil: z.coerce.date().optional().nullable(),
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   servicecatalogid: z.string().optional().nullable(),
   refNo: z.string().optional().nullable(),
   scope: ServiceScopeSchema.optional().nullable(),
@@ -43,10 +44,10 @@ const makeSchema = () => z.object({
   priorityReason: z.string().optional().nullable(),
   prioritySource: z.string().optional().nullable(),
   priorityMarkedAt: z.coerce.date().optional().nullable(),
-  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceReqInputObjectSchema),
-  maintenance: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema),
+  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema)
+  technicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema)
 }).strict();
 export const ServiceRequestUncheckedCreateInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateInput>;
 export const ServiceRequestUncheckedCreateInputObjectZodSchema = makeSchema();

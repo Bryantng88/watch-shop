@@ -4,7 +4,7 @@ import { BrandStatusSchema } from '../enums/BrandStatus.schema';
 import { ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema as ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema } from './ProductUncheckedCreateNestedManyWithoutBrandInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
   slug: z.string(),
   country: z.string().optional().nullable(),
@@ -16,7 +16,8 @@ const makeSchema = () => z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  products: z.lazy(() => ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema)
+  updatedAt: z.coerce.date(),
+  Product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema)
 }).strict();
 export const BrandUncheckedCreateInputObjectSchema: z.ZodType<Prisma.BrandUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.BrandUncheckedCreateInput>;
 export const BrandUncheckedCreateInputObjectZodSchema = makeSchema();

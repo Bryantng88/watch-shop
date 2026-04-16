@@ -20,9 +20,9 @@ const makeSchema = () => z.object({
   lineTotal: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  invoice: z.lazy(() => InvoiceOrderByWithRelationInputObjectSchema).optional(),
-  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceOrderByWithRelationInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const InvoiceItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.InvoiceItemOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceItemOrderByWithRelationInput>;
 export const InvoiceItemOrderByWithRelationInputObjectZodSchema = makeSchema();

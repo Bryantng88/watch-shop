@@ -2,10 +2,10 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
-import { MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema as MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema } from './MaintenancePartUncheckedCreateNestedManyWithoutRecordInput.schema'
+import { MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   serviceRequestId: z.string().optional().nullable(),
@@ -41,7 +41,7 @@ const makeSchema = () => z.object({
   processingMode: z.string().optional().nullable(),
   imageFileKey: z.string().optional().nullable(),
   technicalIssueId: z.string().optional().nullable(),
-  parts: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutRecordInputObjectSchema)
+  MaintenancePart: z.lazy(() => MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema)
 }).strict();
 export const MaintenanceRecordUncheckedCreateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordUncheckedCreateInput>;
 export const MaintenanceRecordUncheckedCreateInputObjectZodSchema = makeSchema();

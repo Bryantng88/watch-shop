@@ -31,7 +31,7 @@ const makeSchema = () => z.object({
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  items: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
+  InvoiceItem: z.lazy(() => InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInputObjectSchema).optional()
 }).strict();
 export const InvoiceUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.InvoiceUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceUncheckedUpdateInput>;
 export const InvoiceUncheckedUpdateInputObjectZodSchema = makeSchema();

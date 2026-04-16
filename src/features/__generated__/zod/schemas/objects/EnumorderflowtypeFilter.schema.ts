@@ -1,13 +1,13 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
-import { NestedEnumorderflowtypeFilterObjectSchema as NestedEnumorderflowtypeFilterObjectSchema } from './NestedEnumorderflowtypeFilter.schema'
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { NestedEnumOrderFlowTypeFilterObjectSchema as NestedEnumOrderFlowTypeFilterObjectSchema } from './NestedEnumOrderFlowTypeFilter.schema'
 
 const makeSchema = () => z.object({
-  equals: orderflowtypeSchema.optional(),
-  in: orderflowtypeSchema.array().optional(),
-  notIn: orderflowtypeSchema.array().optional(),
-  not: z.union([orderflowtypeSchema, z.lazy(() => NestedEnumorderflowtypeFilterObjectSchema)]).optional()
+  equals: OrderFlowTypeSchema.optional(),
+  in: OrderFlowTypeSchema.array().optional(),
+  notIn: OrderFlowTypeSchema.array().optional(),
+  not: z.union([OrderFlowTypeSchema, z.lazy(() => NestedEnumOrderFlowTypeFilterObjectSchema)]).optional()
 }).strict();
-export const EnumorderflowtypeFilterObjectSchema: z.ZodType<Prisma.EnumorderflowtypeFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumorderflowtypeFilter>;
-export const EnumorderflowtypeFilterObjectZodSchema = makeSchema();
+export const EnumOrderFlowTypeFilterObjectSchema: z.ZodType<Prisma.EnumOrderFlowTypeFilter> = makeSchema() as unknown as z.ZodType<Prisma.EnumOrderFlowTypeFilter>;
+export const EnumOrderFlowTypeFilterObjectZodSchema = makeSchema();

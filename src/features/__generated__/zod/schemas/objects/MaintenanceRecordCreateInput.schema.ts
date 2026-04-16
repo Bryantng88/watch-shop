@@ -2,18 +2,18 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
-import { MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema as MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutRecordInput.schema';
+import { MaintenancePartCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as MaintenancePartCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './MaintenancePartCreateNestedManyWithoutMaintenanceRecordInput.schema';
 import { PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './PaymentCreateNestedOneWithoutMaintenanceRecordInput.schema';
-import { ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema as ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema } from './ProductCreateNestedOneWithoutMaintenanceRecordsInput.schema';
+import { ProductCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ProductCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ProductCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInput.schema';
-import { ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema as ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutMaintenanceInput.schema';
+import { ServiceRequestCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ServiceRequestCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './UserCreateNestedOneWithoutMaintenanceRecordInput.schema';
 import { ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './ProductVariantCreateNestedOneWithoutMaintenanceRecordInput.schema';
-import { VendorCreateNestedOneWithoutServicesInputObjectSchema as VendorCreateNestedOneWithoutServicesInputObjectSchema } from './VendorCreateNestedOneWithoutServicesInput.schema'
+import { VendorCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as VendorCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './VendorCreateNestedOneWithoutMaintenanceRecordInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   brandSnapshot: z.string().optional().nullable(),
@@ -41,15 +41,15 @@ const makeSchema = () => z.object({
   workSummary: z.string().optional().nullable(),
   processingMode: z.string().optional().nullable(),
   imageFileKey: z.string().optional().nullable(),
-  parts: z.lazy(() => MaintenancePartCreateNestedManyWithoutRecordInputObjectSchema),
+  MaintenancePart: z.lazy(() => MaintenancePartCreateNestedManyWithoutMaintenanceRecordInputObjectSchema),
   Payment: z.lazy(() => PaymentCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordsInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
   User: z.lazy(() => UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorCreateNestedOneWithoutServicesInputObjectSchema).optional()
+  ProductVariant: z.lazy(() => ProductVariantCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorCreateNestedOneWithoutMaintenanceRecordInputObjectSchema).optional()
 }).strict();
 export const MaintenanceRecordCreateInputObjectSchema: z.ZodType<Prisma.MaintenanceRecordCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenanceRecordCreateInput>;
 export const MaintenanceRecordCreateInputObjectZodSchema = makeSchema();

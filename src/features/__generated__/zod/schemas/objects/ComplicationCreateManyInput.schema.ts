@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string()
 }).strict();
 export const ComplicationCreateManyInputObjectSchema: z.ZodType<Prisma.ComplicationCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.ComplicationCreateManyInput>;

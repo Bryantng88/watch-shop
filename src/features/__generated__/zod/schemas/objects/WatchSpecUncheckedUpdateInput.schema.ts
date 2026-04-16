@@ -22,8 +22,8 @@ import { GlassSchema } from '../enums/Glass.schema';
 import { NullableEnumGlassFieldUpdateOperationsInputObjectSchema as NullableEnumGlassFieldUpdateOperationsInputObjectSchema } from './NullableEnumGlassFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { ComplicationUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema as ComplicationUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema } from './ComplicationUncheckedUpdateManyWithoutWatchSpecsNestedInput.schema';
-import { MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema as MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema } from './MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInput.schema'
+import { ComplicationUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema as ComplicationUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema } from './ComplicationUncheckedUpdateManyWithoutWatchSpecNestedInput.schema';
+import { MarketSegmentUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema as MarketSegmentUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema } from './MarketSegmentUncheckedUpdateManyWithoutWatchSpecNestedInput.schema'
 
 const makeSchema = () => z.object({
   productId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -55,8 +55,8 @@ const makeSchema = () => z.object({
   hasStrap: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   isServiced: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  complication: z.lazy(() => ComplicationUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional(),
-  marketSegment: z.lazy(() => MarketSegmentUncheckedUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
+  Complication: z.lazy(() => ComplicationUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema).optional(),
+  MarketSegment: z.lazy(() => MarketSegmentUncheckedUpdateManyWithoutWatchSpecNestedInputObjectSchema).optional()
 }).strict();
 export const WatchSpecUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.WatchSpecUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUncheckedUpdateInput>;
 export const WatchSpecUncheckedUpdateInputObjectZodSchema = makeSchema();

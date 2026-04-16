@@ -4,7 +4,7 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { DecimalFieldUpdateOperationsInputObjectSchema as DecimalFieldUpdateOperationsInputObjectSchema } from './DecimalFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { InvoiceUpdateOneRequiredWithoutItemsNestedInputObjectSchema as InvoiceUpdateOneRequiredWithoutItemsNestedInputObjectSchema } from './InvoiceUpdateOneRequiredWithoutItemsNestedInput.schema';
+import { InvoiceUpdateOneRequiredWithoutInvoiceItemNestedInputObjectSchema as InvoiceUpdateOneRequiredWithoutInvoiceItemNestedInputObjectSchema } from './InvoiceUpdateOneRequiredWithoutInvoiceItemNestedInput.schema';
 import { ProductUpdateOneWithoutInvoiceItemNestedInputObjectSchema as ProductUpdateOneWithoutInvoiceItemNestedInputObjectSchema } from './ProductUpdateOneWithoutInvoiceItemNestedInput.schema';
 import { ProductVariantUpdateOneWithoutInvoiceItemNestedInputObjectSchema as ProductVariantUpdateOneWithoutInvoiceItemNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutInvoiceItemNestedInput.schema'
 
@@ -19,9 +19,9 @@ const makeSchema = () => z.object({
   lineTotal: z.union([z.number(), z.lazy(() => DecimalFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  invoice: z.lazy(() => InvoiceUpdateOneRequiredWithoutItemsNestedInputObjectSchema).optional(),
-  product: z.lazy(() => ProductUpdateOneWithoutInvoiceItemNestedInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantUpdateOneWithoutInvoiceItemNestedInputObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceUpdateOneRequiredWithoutInvoiceItemNestedInputObjectSchema).optional(),
+  Product: z.lazy(() => ProductUpdateOneWithoutInvoiceItemNestedInputObjectSchema).optional(),
+  ProductVariant: z.lazy(() => ProductVariantUpdateOneWithoutInvoiceItemNestedInputObjectSchema).optional()
 }).strict();
 export const InvoiceItemUpdateInputObjectSchema: z.ZodType<Prisma.InvoiceItemUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceItemUpdateInput>;
 export const InvoiceItemUpdateInputObjectZodSchema = makeSchema();

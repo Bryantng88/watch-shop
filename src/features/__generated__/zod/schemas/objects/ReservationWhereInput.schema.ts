@@ -22,7 +22,7 @@ const reservationwhereinputSchema = z.object({
   expiresAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
+  Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
 }).strict();
 export const ReservationWhereInputObjectSchema: z.ZodType<Prisma.ReservationWhereInput> = reservationwhereinputSchema as unknown as z.ZodType<Prisma.ReservationWhereInput>;
 export const ReservationWhereInputObjectZodSchema = reservationwhereinputSchema;

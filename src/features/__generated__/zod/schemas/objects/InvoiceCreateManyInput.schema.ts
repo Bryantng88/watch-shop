@@ -4,7 +4,7 @@ import { InvoiceTypeSchema } from '../enums/InvoiceType.schema';
 import { InvoiceStatusSchema } from '../enums/InvoiceStatus.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   code: z.string().optional().nullable(),
   type: InvoiceTypeSchema,
   status: InvoiceStatusSchema.optional(),
@@ -22,7 +22,7 @@ const makeSchema = () => z.object({
   dueAt: z.coerce.date().optional().nullable(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date()
 }).strict();
 export const InvoiceCreateManyInputObjectSchema: z.ZodType<Prisma.InvoiceCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceCreateManyInput>;
 export const InvoiceCreateManyInputObjectZodSchema = makeSchema();

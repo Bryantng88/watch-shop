@@ -6,7 +6,7 @@ import { WatchSpecOrderByRelationAggregateInputObjectSchema as WatchSpecOrderByR
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   name: SortOrderSchema.optional(),
-  watchSpecs: z.lazy(() => WatchSpecOrderByRelationAggregateInputObjectSchema).optional()
+  WatchSpec: z.lazy(() => WatchSpecOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const ComplicationOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ComplicationOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ComplicationOrderByWithRelationInput>;
 export const ComplicationOrderByWithRelationInputObjectZodSchema = makeSchema();

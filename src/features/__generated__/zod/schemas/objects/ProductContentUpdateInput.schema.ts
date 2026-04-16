@@ -5,7 +5,7 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { ProductContentUpdatespecBulletsInputObjectSchema as ProductContentUpdatespecBulletsInputObjectSchema } from './ProductContentUpdatespecBulletsInput.schema';
 import { ProductContentUpdatehashtagsInputObjectSchema as ProductContentUpdatehashtagsInputObjectSchema } from './ProductContentUpdatehashtagsInput.schema';
-import { ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema as ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutContentNestedInput.schema'
+import { ProductUpdateOneRequiredWithoutProductContentNestedInputObjectSchema as ProductUpdateOneRequiredWithoutProductContentNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutProductContentNestedInput.schema'
 
 const makeSchema = () => z.object({
   titleSnapshot: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   specBullets: z.union([z.lazy(() => ProductContentUpdatespecBulletsInputObjectSchema), z.string().array()]).optional(),
   hashtags: z.union([z.lazy(() => ProductContentUpdatehashtagsInputObjectSchema), z.string().array()]).optional(),
-  Product: z.lazy(() => ProductUpdateOneRequiredWithoutContentNestedInputObjectSchema).optional()
+  Product: z.lazy(() => ProductUpdateOneRequiredWithoutProductContentNestedInputObjectSchema).optional()
 }).strict();
 export const ProductContentUpdateInputObjectSchema: z.ZodType<Prisma.ProductContentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductContentUpdateInput>;
 export const ProductContentUpdateInputObjectZodSchema = makeSchema();

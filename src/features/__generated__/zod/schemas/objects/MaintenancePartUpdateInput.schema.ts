@@ -4,7 +4,7 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecimalFieldUpdateOperationsInputObjectSchema } from './NullableDecimalFieldUpdateOperationsInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
-import { MaintenanceRecordUpdateOneRequiredWithoutPartsNestedInputObjectSchema as MaintenanceRecordUpdateOneRequiredWithoutPartsNestedInputObjectSchema } from './MaintenanceRecordUpdateOneRequiredWithoutPartsNestedInput.schema';
+import { MaintenanceRecordUpdateOneRequiredWithoutMaintenancePartNestedInputObjectSchema as MaintenanceRecordUpdateOneRequiredWithoutMaintenancePartNestedInputObjectSchema } from './MaintenanceRecordUpdateOneRequiredWithoutMaintenancePartNestedInput.schema';
 import { ProductVariantUpdateOneWithoutMaintenancePartNestedInputObjectSchema as ProductVariantUpdateOneWithoutMaintenancePartNestedInputObjectSchema } from './ProductVariantUpdateOneWithoutMaintenancePartNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -13,8 +13,8 @@ const makeSchema = () => z.object({
   quantity: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   unitCost: z.union([z.number(), z.lazy(() => NullableDecimalFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   notes: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  record: z.lazy(() => MaintenanceRecordUpdateOneRequiredWithoutPartsNestedInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenancePartNestedInputObjectSchema).optional()
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateOneRequiredWithoutMaintenancePartNestedInputObjectSchema).optional(),
+  ProductVariant: z.lazy(() => ProductVariantUpdateOneWithoutMaintenancePartNestedInputObjectSchema).optional()
 }).strict();
 export const MaintenancePartUpdateInputObjectSchema: z.ZodType<Prisma.MaintenancePartUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenancePartUpdateInput>;
 export const MaintenancePartUpdateInputObjectZodSchema = makeSchema();

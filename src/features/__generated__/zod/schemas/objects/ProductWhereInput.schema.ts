@@ -33,6 +33,8 @@ import { ProductImageListRelationFilterObjectSchema as ProductImageListRelationF
 import { ProductVariantListRelationFilterObjectSchema as ProductVariantListRelationFilterObjectSchema } from './ProductVariantListRelationFilter.schema';
 import { ReservationListRelationFilterObjectSchema as ReservationListRelationFilterObjectSchema } from './ReservationListRelationFilter.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
+import { WatchNullableScalarRelationFilterObjectSchema as WatchNullableScalarRelationFilterObjectSchema } from './WatchNullableScalarRelationFilter.schema';
+import { WatchWhereInputObjectSchema as WatchWhereInputObjectSchema } from './WatchWhereInput.schema';
 import { WatchSpecNullableScalarRelationFilterObjectSchema as WatchSpecNullableScalarRelationFilterObjectSchema } from './WatchSpecNullableScalarRelationFilter.schema';
 import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './WatchSpecWhereInput.schema'
 
@@ -69,16 +71,17 @@ const productwhereinputSchema = z.object({
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobListRelationFilterObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
-  maintenanceRecords: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
-  orderItems: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   brand: z.union([z.lazy(() => BrandNullableScalarRelationFilterObjectSchema), z.lazy(() => BrandWhereInputObjectSchema)]).optional(),
-  ProductCategory: z.union([z.lazy(() => ProductCategoryNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductCategoryWhereInputObjectSchema)]).optional(),
+  productCategory: z.union([z.lazy(() => ProductCategoryNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductCategoryWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
-  content: z.union([z.lazy(() => ProductContentNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductContentWhereInputObjectSchema)]).optional(),
-  image: z.lazy(() => ProductImageListRelationFilterObjectSchema).optional(),
-  variants: z.lazy(() => ProductVariantListRelationFilterObjectSchema).optional(),
-  Reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  productContent: z.union([z.lazy(() => ProductContentNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductContentWhereInputObjectSchema)]).optional(),
+  productImage: z.lazy(() => ProductImageListRelationFilterObjectSchema).optional(),
+  productVariant: z.lazy(() => ProductVariantListRelationFilterObjectSchema).optional(),
+  reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  watch: z.union([z.lazy(() => WatchNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchWhereInputObjectSchema)]).optional(),
   watchSpec: z.union([z.lazy(() => WatchSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductWhereInputObjectSchema: z.ZodType<Prisma.ProductWhereInput> = productwhereinputSchema as unknown as z.ZodType<Prisma.ProductWhereInput>;

@@ -6,7 +6,7 @@ import { WatchSpecUpdateManyWithoutMarketSegmentNestedInputObjectSchema as Watch
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   name: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
-  watchSpecs: z.lazy(() => WatchSpecUpdateManyWithoutMarketSegmentNestedInputObjectSchema).optional()
+  WatchSpec: z.lazy(() => WatchSpecUpdateManyWithoutMarketSegmentNestedInputObjectSchema).optional()
 }).strict();
 export const MarketSegmentUpdateInputObjectSchema: z.ZodType<Prisma.MarketSegmentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.MarketSegmentUpdateInput>;
 export const MarketSegmentUpdateInputObjectZodSchema = makeSchema();

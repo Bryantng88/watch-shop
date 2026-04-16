@@ -45,14 +45,14 @@ const productvariantwhereinputSchema = z.object({
   saleStartsAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   saleEndsAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   costPrice: z.union([z.lazy(() => DecimalNullableFilterObjectSchema), z.number()]).optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
-  invoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
-  maintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
-  partSpec: z.union([z.lazy(() => PartVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => PartVariantSpecWhereInputObjectSchema)]).optional(),
-  product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  strapSpec: z.union([z.lazy(() => StrapVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => StrapVariantSpecWhereInputObjectSchema)]).optional()
+  AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
+  InvoiceItem: z.lazy(() => InvoiceItemListRelationFilterObjectSchema).optional(),
+  MaintenancePart: z.lazy(() => MaintenancePartListRelationFilterObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  PartVariantSpec: z.union([z.lazy(() => PartVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => PartVariantSpecWhereInputObjectSchema)]).optional(),
+  Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  StrapVariantSpec: z.union([z.lazy(() => StrapVariantSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => StrapVariantSpecWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductVariantWhereInputObjectSchema: z.ZodType<Prisma.ProductVariantWhereInput> = productvariantwhereinputSchema as unknown as z.ZodType<Prisma.ProductVariantWhereInput>;
 export const ProductVariantWhereInputObjectZodSchema = productvariantwhereinputSchema;

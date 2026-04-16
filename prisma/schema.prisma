@@ -20,20 +20,100 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model MarketSegment {
-  id         String      @id @default(cuid())
-  name       String      @unique
-  watchSpecs WatchSpec[] @relation("MarketSegmentToWatchSpec")
+model Acquisition {
+  id              String            @id
+  vendorId        String?
+  customerId      String?
+  type            AcquisitionType   @default(PURCHASE)
+  acquiredAt      DateTime
+  cost            Decimal?          @db.Decimal(12, 2)
+  currency        String?
+  payoutStatus    String?
+  accquisitionStt AcquisitionStatus @default(DRAFT)
+  refNo           String?
+  notes           String?
+  condition       String?
+  warrantyUntil   DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  sentAt          DateTime?         @db.Timestamp(6)
+  returnedAt      DateTime?         @db.Timestamp(6)
+  Customer        Customer?         @relation(fields: [customerId], references: [id])
+  Vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
+  AcquisitionItem AcquisitionItem[]
+  Invoice         Invoice[]
+
+  @@index([customerId, acquiredAt])
+  @@index([vendorId, acquiredAt])
+  @@index([returnedAt], map: "acquisition_returned_idx")
+  @@index([sentAt], map: "acquisition_sent_idx")
 }
 
-model Complication {
-  id         String      @id @default(cuid())
-  name       String      @unique
-  watchSpecs WatchSpec[] @relation("ComplicationToWatchSpec")
+model AcquisitionItem {
+  id                  String                 @id
+  acquisitionId       String
+  productId           String?
+  variantId           String?
+  quantity            Int                    @default(1)
+  unitCost            Decimal?               @db.Decimal(12, 2)
+  currency            String?
+  notes               String?
+  sourceOrderItemId   String?
+  createdAt           DateTime               @default(now())
+  kind                AcquisitionItemKind?   @default(PRODUCT)
+  status              AcquisitionItemStatus? @default(DRAFT)
+  description         String?
+  expectedReturnAt    DateTime?              @db.Timestamp(6)
+  returnedAt          DateTime?              @db.Timestamp(6)
+  vendorRmaNo         String?
+  warrantyMonths      Int?
+  serviceRequestId    String?
+  capitalizeToProduct Boolean?               @default(true)
+  productType         ProductType            @default(WATCH)
+  productTitle        String
+  Acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
+  Product             Product?               @relation(fields: [productId], references: [id])
+  OrderItem           OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])
+  ProductVariant      ProductVariant?        @relation(fields: [variantId], references: [id])
+  AcquisitionSpecJob  AcquisitionSpecJob?
+
+  @@index([acquisitionId])
+  @@index([variantId])
+  @@index([serviceRequestId], map: "acqitem_serviceRequest_idx")
+  @@index([status], map: "acqitem_status_idx")
+}
+
+model AcquisitionSpecJob {
+  id                String          @id @default(dbgenerated("gen_random_uuid()"))
+  acquisitionItemId String          @unique
+  productId         String
+  status            String          @default("PENDING")
+  attempts          Int             @default(0)
+  lastError         String?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @default(now())
+  runAfter          DateTime?       @default(now()) @db.Timestamp(6)
+  priority          Int             @default(100)
+  AcquisitionItem   AcquisitionItem @relation(fields: [acquisitionItemId], references: [id], onDelete: Cascade)
+  Product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([status, createdAt])
+  @@index([runAfter], map: "idx_acq_spec_job_run_after")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Bank {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  bankName   String   @unique
+  Vendor     Vendor[]
 }
 
 model Brand {
-  id           String      @id @default(cuid())
+  id           String      @id
   name         String      @unique
   slug         String      @unique
   country      String?
@@ -45,353 +125,112 @@ model Brand {
   description  String?
   sortOrder    Int         @default(0)
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  products     Product[]
+  updatedAt    DateTime
+  Product      Product[]
 
   @@index([country])
   @@index([status, sortOrder])
 }
 
-model ProductImage {
-  id          String    @id @default(cuid())
-  productId   String
-  fileKey     String
-  role        ImageRole @default(GALLERY)
-  alt         String?
-  width       Int?
-  height      Int?
-  mime        String?
-  sizeBytes   Int?
-  sortOrder   Int       @default(0)
-  dominantHex String?
-  contentHash String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+model Complication {
+  id        String      @id
+  name      String      @unique
+  WatchSpec WatchSpec[] @relation("ComplicationToWatchSpec")
 }
 
-model Product {
-  id                 String               @id @default(cuid())
-  slug               String?              @unique
-  title              String
-  primaryImageUrl    String?
-  type               ProductType
-  priceVisibility    PriceVisibility      @default(SHOW)
-  brandId            String?
-  seoTitle           String?
-  seoDescription     String?
-  isStockManaged     Boolean              @default(true)
-  maxQtyPerOrder     Int                  @default(1)
-  publishedAt        DateTime?
-  vendorId           String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  tag                Tag                  @default(PRE_OWNED)
-  status             ProductStatus        @default(AVAILABLE)
-  categoryId         String?
-  contentStatus      ContentStatus        @default(DRAFT)
-  postContent        String?
-  aiPromptUsed       String?
-  aiGeneratedAt      DateTime?
-  sku                String?              @unique
-  nickname           String?
-  specStatus         String               @default("PENDING")
-  storefrontImageKey String?
-  AcquisitionItem    AcquisitionItem[]
-  AcquisitionSpecJob AcquisitionSpecJob[]
-  InvoiceItem        InvoiceItem[]
-  maintenanceRecords MaintenanceRecord[]
-  orderItems         OrderItem[]
-  brand              Brand?               @relation(fields: [brandId], references: [id])
-  ProductCategory    ProductCategory?     @relation(fields: [categoryId], references: [id])
-  vendor             Vendor?              @relation(fields: [vendorId], references: [id])
-  content            ProductContent?
-  image              ProductImage[]
-  variants           ProductVariant[]
-  Reservation        Reservation[]
-  ServiceRequest     ServiceRequest[]
-  watchSpec          WatchSpec?
+model Customer {
+  id             String           @id
+  name           String
+  email          String?          @unique
+  phone          String?          @db.VarChar(32)
+  ward           String?
+  city           String?
+  userId         String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  address        String?
+  district       String?
+  Acquisition    Acquisition[]
+  User           User?            @relation(fields: [userId], references: [id])
+  Invoice        Invoice[]
+  Order          Order[]
+  ServiceRequest ServiceRequest[]
 
-  @@index([brandId])
-  @@index([type])
-  @@index([createdAt])
-  @@index([updatedAt])
-  @@index([categoryId])
-  @@index([specStatus])
+  @@index([phone])
 }
 
-model ProductVariant {
-  id                 String              @id @default(cuid())
-  productId          String
-  sku                String?             @unique
-  name               String?
-  price              Decimal?            @db.Decimal(12, 2)
-  stockQty           Int                 @default(0)
-  isStockManaged     Boolean?            @default(true)
-  maxQtyPerOrder     Int                 @default(99)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  availabilityStatus AvailabilityStatus  @default(HIDDEN)
-  listPrice          Decimal?            @db.Decimal(18, 2)
-  discountType       DiscountType?
-  discountValue      Decimal?            @db.Decimal(18, 2)
-  salePrice          Decimal?            @db.Decimal(18, 2)
-  saleStartsAt       DateTime?           @db.Timestamptz(6)
-  saleEndsAt         DateTime?           @db.Timestamptz(6)
-  costPrice          Decimal?            @db.Decimal(18, 2)
-  acquisitionItem    AcquisitionItem[]
-  invoiceItem        InvoiceItem[]
-  maintenancePart    MaintenancePart[]
-  maintenanceRecord  MaintenanceRecord[]
-  partSpec           PartVariantSpec?
-  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  serviceRequest     ServiceRequest[]
-  strapSpec          StrapVariantSpec?
+model Invoice {
+  id               String          @id
+  code             String?         @unique
+  type             InvoiceType
+  status           InvoiceStatus   @default(DRAFT)
+  customerId       String?
+  vendorId         String?
+  orderId          String?
+  acquisitionId    String?
+  serviceRequestId String?
+  currency         String
+  subTotal         Decimal         @db.Decimal(12, 2)
+  taxTotal         Decimal         @default(0) @db.Decimal(12, 2)
+  discountTotal    Decimal         @default(0) @db.Decimal(12, 2)
+  grandTotal       Decimal         @db.Decimal(12, 2)
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime
+  Acquisition      Acquisition?    @relation(fields: [acquisitionId], references: [id])
+  Customer         Customer?       @relation(fields: [customerId], references: [id])
+  Order            Order?          @relation(fields: [orderId], references: [id])
+  ServiceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  Vendor           Vendor?         @relation(fields: [vendorId], references: [id])
+  InvoiceItem      InvoiceItem[]
 
-  @@index([productId])
-  @@index([availabilityStatus])
-  @@index([saleStartsAt, saleEndsAt])
-}
-
-model PartVariantSpec {
-  variantId String         @id
-  partType  PartType
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-}
-
-model WatchSpec {
-  productId       String          @id
-  model           String?
-  year            String?
-  caseType        CaseType?       @default(ROUND)
-  category        Category[]
-  gender          Gender?         @default(MEN)
-  length          Decimal?        @db.Decimal(12, 2)
-  width           Decimal?        @db.Decimal(12, 2)
-  thickness       Decimal?        @db.Decimal(12, 2)
-  movement        MovementType?   @default(AUTOMATIC)
-  caliber         String?
-  caseMaterial    CaseMaterial    @default(STAINLESS_STEEL)
-  goldKarat       Int?
-  goldColor       GoldColor?
-  caseSize        String?
-  dialColor       String?
-  marketSegmentId String?
-  strap           Strap?          @default(LEATHER)
-  glass           Glass?          @default(MINERAL)
-  boxIncluded     Boolean         @default(false)
-  bookletIncluded Boolean         @default(false)
-  cardIncluded    Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  sizeCategory    String?
-  ref             String?
-  hasStrap        Boolean         @default(false)
-  isServiced      Boolean         @default(false)
-  hasClasp        Boolean         @default(false)
-  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  complication    Complication[]  @relation("ComplicationToWatchSpec")
-  marketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
-}
-
-model StrapVariantSpec {
-  variantId     String         @id
-  color         String?
-  material      Strap          @default(LEATHER)
-  quickRelease  Boolean?       @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  lugWidthMM    Int
-  buckleWidthMM Int?
-  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([material])
-  @@index([buckleWidthMM])
-  @@index([lugWidthMM])
-}
-
-model Order {
-  id                    String                  @id @default(cuid())
-  refNo                 String?                 @unique(map: "Order_orderCode_key")
-  customerId            String?
-  shipPhone             String
-  shipAddress           String
-  shipWard              String?
-  shipCity              String
-  subtotal              Decimal                 @db.Decimal(12, 2)
-  shippingFee           Decimal?                @db.Decimal(12, 2)
-  status                OrderStatus             @default(DRAFT)
-  paymentStatus         PaymentStatus           @default(UNPAID)
-  paymentMethod         PaymentMethod?
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  customerName          String?
-  notes                 String?
-  shipDistrict          String?
-  hasShipment           Boolean
-  reserveType           ReserveType?
-  reserveUntil          DateTime?               @db.Timestamptz(6)
-  depositRequired       Decimal?                @db.Decimal(12, 2)
-  depositPaid           Decimal?                @db.Decimal(12, 2)
-  source                OrderSource             @default(ADMIN)
-  verificationStatus    OrderVerificationStatus @default(VERIFIED)
-  quick_from_product_id String?
-  quickFromProductId    String?
-  quickFlowType         orderflowtype           @default(STANDARD)
-  Invoice               Invoice[]
-  customer              Customer?               @relation(fields: [customerId], references: [id])
-  items                 OrderItem[]
-  Shipment              Shipment?
-
+  @@index([acquisitionId])
   @@index([customerId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([source])
-  @@index([verificationStatus])
-  @@index([quickFlowType], map: "idx_order_quickFlowType")
-  @@index([quickFromProductId], map: "idx_order_quickFromProductId")
-}
-
-model OrderItem {
-  id                String            @id @default(cuid())
-  orderId           String
-  productId         String?
-  variantId         String?
-  title             String
-  listPrice         Decimal           @db.Decimal(12, 2)
-  discountType      DiscountType?
-  discountValue     Decimal?          @db.Decimal(12, 2)
-  unitPriceAgreed   Decimal           @db.Decimal(12, 2)
-  taxRate           Decimal?          @db.Decimal(12, 2)
-  quantity          Int
-  subtotal          Decimal           @db.Decimal(12, 2)
-  img               String?
-  createdAt         DateTime          @default(now())
-  productType       ProductType?
-  kind              OrderItemKind
-  serviceCatalogId  String?
-  serviceScope      ServiceScope?
-  linkedOrderItemId String?
-  customerItemNote  String?
-  createdFromFlow   orderflowtype     @default(STANDARD)
-  acquisitionItem   AcquisitionItem[]
-  OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
-  other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
-  order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  Product           Product?          @relation(fields: [productId], references: [id])
-  ServiceCatalog    ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
-  serviceRequest    ServiceRequest[]
-
+  @@index([issuedAt])
   @@index([orderId])
-  @@index([productId])
-  @@index([kind], map: "idx_order_item_kind")
-  @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
-  @@index([linkedOrderItemId], map: "idx_orderitem_linked_order_item")
-  @@index([serviceScope], map: "idx_orderitem_service_scope")
-  @@index([createdFromFlow], map: "idx_orderItem_createdFromFlow")
+  @@index([serviceRequestId])
+  @@index([type, status])
+  @@index([vendorId])
 }
 
-model Reservation {
-  id         String            @id @default(cuid())
-  productId  String?
-  orderId    String?
-  status     ReservationStatus @default(ACTIVE)
-  depositAmt Decimal?          @db.Decimal(12, 2)
-  expiresAt  DateTime?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  product    Product?          @relation(fields: [productId], references: [id])
+model InvoiceItem {
+  id             String          @id
+  invoiceId      String
+  productId      String?
+  variantId      String?
+  title          String
+  description    String?
+  quantity       Decimal         @default(1) @db.Decimal(12, 2)
+  unitPrice      Decimal         @db.Decimal(12, 2)
+  discount       Decimal         @default(0) @db.Decimal(12, 2)
+  taxRate        Decimal         @default(0) @db.Decimal(5, 2)
+  lineTotal      Decimal         @db.Decimal(12, 2)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  Invoice        Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  Product        Product?        @relation(fields: [productId], references: [id])
+  ProductVariant ProductVariant? @relation(fields: [variantId], references: [id])
 
-  @@index([productId])
-}
-
-model ServiceCatalog {
-  id                String              @id @default(cuid())
-  code              String              @unique
-  name              String
-  description       String?
-  defaultPrice      Decimal?            @db.Decimal(12, 2)
-  durationMin       Int?
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  detail            ServiceDetail
-  vendorPrice       Decimal?            @db.Decimal(12, 2)
-  customerPrice     Decimal?            @db.Decimal(12, 2)
-  internalCost      Decimal?            @db.Decimal(12, 2)
-  note              String?
-  categoryKey       String?
-  sortOrder         Int                 @default(0)
-  MaintenanceRecord MaintenanceRecord[]
-  OrderItem         OrderItem[]
-  ServiceRequest    ServiceRequest[]
-  TechnicalIssue    TechnicalIssue[]
-
-  @@index([detail], map: "idx_service_catalog_detail")
-}
-
-model ServiceRequest {
-  id                      String               @id @default(cuid())
-  type                    ServiceType          @default(PAID)
-  billable                Boolean              @default(true)
-  orderItemId             String?
-  customerId              String?
-  productId               String?
-  variantId               String?
-  brandSnapshot           String?
-  modelSnapshot           String?
-  refSnapshot             String?
-  serialSnapshot          String?
-  appointmentAt           DateTime?
-  status                  ServiceRequestStatus @default(DRAFT)
-  notes                   String?
-  warrantyUntil           DateTime?
-  warrantyPolicy          String?
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
-  servicecatalogid        String?
-  refNo                   String?
-  scope                   ServiceScope?
-  vendorId                String?
-  vendorNameSnap          String?
-  technicianId            String?
-  technicianNameSnap      String?
-  skuSnapshot             String?
-  primaryImageUrlSnapshot String?
-  dummy_technical_rel     String?
-  priority                String?              @default("NORMAL")
-  priority_reason         String?
-  priority_source         String?
-  priority_marked_at      DateTime?            @db.Timestamptz(6)
-  priorityReason          String?
-  prioritySource          String?
-  priorityMarkedAt        DateTime?            @db.Timestamptz(6)
-  invoice                 Invoice[]
-  maintenance             MaintenanceRecord[]
-  customer                Customer?            @relation(fields: [customerId], references: [id])
-  orderItem               OrderItem?           @relation(fields: [orderItemId], references: [id])
-  product                 Product?             @relation(fields: [productId], references: [id])
-  user                    User?                @relation(fields: [technicianId], references: [id])
-  variant                 ProductVariant?      @relation(fields: [variantId], references: [id])
-  vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
-  serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
-  technicalAssessment     TechnicalAssessment?
-  TechnicalIssue          TechnicalIssue[]
-
-  @@index([customerId])
-  @@index([productId])
+  @@index([invoiceId])
   @@index([variantId])
-  @@index([orderItemId])
-  @@index([status])
-  @@index([orderItemId], map: "idx_service_request_order_item_id")
-  @@index([vendorId], map: "idx_service_request_vendor_id")
-  @@index([technicianId])
-  @@index([technicianId], map: "idx_service_request_technician_id")
-  @@index([priority, priorityMarkedAt(sort: Desc)], map: "idx_serviceRequest_priority")
+}
+
+model MaintenancePart {
+  id                String            @id
+  recordId          String
+  variantId         String?
+  name              String
+  quantity          Int               @default(1)
+  unitCost          Decimal?          @db.Decimal(12, 2)
+  notes             String?
+  MaintenanceRecord MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  ProductVariant    ProductVariant?   @relation(fields: [variantId], references: [id])
 }
 
 model MaintenanceRecord {
-  id                 String               @id @default(cuid())
+  id                 String               @id
   type               ServiceType          @default(PAID)
   billable           Boolean              @default(true)
   serviceRequestId   String?
@@ -427,246 +266,158 @@ model MaintenanceRecord {
   processingMode     String?
   imageFileKey       String?
   technicalIssueId   String?
-  parts              MaintenancePart[]
+  MaintenancePart    MaintenancePart[]
   Payment            Payment?             @relation(fields: [paymentId], references: [id])
-  product            Product?             @relation(fields: [productId], references: [id])
+  Product            Product?             @relation(fields: [productId], references: [id])
   ServiceCatalog     ServiceCatalog?      @relation(fields: [serviceCatalogId], references: [id])
-  serviceRequest     ServiceRequest?      @relation(fields: [serviceRequestId], references: [id])
+  ServiceRequest     ServiceRequest?      @relation(fields: [serviceRequestId], references: [id])
   TechnicalIssue     TechnicalIssue?      @relation(fields: [technicalIssueId], references: [id])
   User               User?                @relation(fields: [technicianId], references: [id])
-  variant            ProductVariant?      @relation(fields: [variantId], references: [id])
-  vendor             Vendor?              @relation(fields: [vendorId], references: [id])
+  ProductVariant     ProductVariant?      @relation(fields: [variantId], references: [id])
+  Vendor             Vendor?              @relation(fields: [vendorId], references: [id])
 
-  @@index([serviceRequestId])
   @@index([productId])
+  @@index([serviceCatalogId])
+  @@index([serviceRequestId])
+  @@index([technicalIssueId])
+  @@index([technicianId])
   @@index([variantId])
   @@index([vendorId])
   @@index([eventType], map: "idx_maintenance_record_event_type")
   @@index([paymentId], map: "idx_maintenance_record_payment_id")
-  @@index([technicianId])
   @@index([technicianId], map: "idx_maintenance_record_technician_id")
-  @@index([technicalIssueId])
-  @@index([serviceCatalogId])
 }
 
-model MaintenancePart {
-  id        String            @id @default(cuid())
-  recordId  String
-  variantId String?
-  name      String
-  quantity  Int               @default(1)
-  unitCost  Decimal?          @db.Decimal(12, 2)
-  notes     String?
-  record    MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  variant   ProductVariant?   @relation(fields: [variantId], references: [id])
+model MarketSegment {
+  id        String      @id
+  name      String      @unique
+  WatchSpec WatchSpec[] @relation("MarketSegmentToWatchSpec")
 }
 
-model Vendor {
-  id                  String                @id @default(cuid())
-  name                String                @unique
-  role                VendorRole            @default(SUPPLIER)
-  isAuthorized        Boolean               @default(false)
-  email               String?
-  phone               String?
-  address             String?
-  note                String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  bankName            String?
-  bankAcc             String?
-  isActive            Boolean               @default(true)
-  acquisitions        Acquisition[]
-  invoice             Invoice[]
-  services            MaintenanceRecord[]
-  Product             Product[]
-  ServiceRequest      ServiceRequest[]
-  TechnicalAssessment TechnicalAssessment[]
-  TechnicalIssue      TechnicalIssue[]
-  Bank                Bank?                 @relation(fields: [bankName], references: [bankName], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([name, role])
-  @@index([role])
-}
-
-model Acquisition {
-  id              String            @id @default(cuid())
-  vendorId        String?
-  customerId      String?
-  type            AcquisitionType   @default(PURCHASE)
-  acquiredAt      DateTime
-  cost            Decimal?          @db.Decimal(12, 2)
-  currency        String?
-  payoutStatus    String?
-  accquisitionStt AcquisitionStatus @default(DRAFT)
-  refNo           String?
-  notes           String?
-  condition       String?
-  warrantyUntil   DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  sentAt          DateTime?         @db.Timestamp(6)
-  returnedAt      DateTime?         @db.Timestamp(6)
-  customer        Customer?         @relation(fields: [customerId], references: [id])
-  vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
-  acquisitionItem AcquisitionItem[]
-  invoice         Invoice[]
-
-  @@index([vendorId, acquiredAt])
-  @@index([customerId, acquiredAt])
-  @@index([returnedAt], map: "acquisition_returned_idx")
-  @@index([sentAt], map: "acquisition_sent_idx")
-}
-
-model AcquisitionItem {
-  id                  String                 @id @default(cuid())
-  acquisitionId       String
-  productId           String?
-  variantId           String?
-  quantity            Int                    @default(1)
-  unitCost            Decimal?               @db.Decimal(12, 2)
-  currency            String?
-  notes               String?
-  sourceOrderItemId   String?
-  createdAt           DateTime               @default(now())
-  kind                AcquisitionItemKind?   @default(PRODUCT)
-  status              AcquisitionItemStatus? @default(DRAFT)
-  description         String?
-  expectedReturnAt    DateTime?              @db.Timestamp(6)
-  returnedAt          DateTime?              @db.Timestamp(6)
-  vendorRmaNo         String?
-  warrantyMonths      Int?
-  serviceRequestId    String?
-  capitalizeToProduct Boolean?               @default(true)
-  productType         ProductType            @default(WATCH)
-  productTitle        String
-  acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
-  product             Product?               @relation(fields: [productId], references: [id])
-  sourceOrderItem     OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])
-  variant             ProductVariant?        @relation(fields: [variantId], references: [id])
-  AcquisitionSpecJob  AcquisitionSpecJob?
-
-  @@index([acquisitionId])
-  @@index([variantId])
-  @@index([serviceRequestId], map: "acqitem_serviceRequest_idx")
-  @@index([status], map: "acqitem_status_idx")
-}
-
-model User {
-  id                String              @id @default(cuid())
-  email             String              @unique
-  passwordHash      String?
-  name              String?
-  avatarUrl         String?
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  roleId            String?
-  customer          Customer?
-  MaintenanceRecord MaintenanceRecord[]
-  Notification      Notification[]
-  ServiceRequest    ServiceRequest[]
-  TechnicalIssue    TechnicalIssue[]
-  roles             Role[]              @relation("UserRoles")
-
-  @@index([isActive])
-}
-
-model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  description String?
-  permissions Permission[] @relation("RolePermissions")
-  users       User[]       @relation("UserRoles")
-}
-
-model Permission {
-  id          String  @id @default(cuid())
-  code        String  @unique
-  description String?
-  roles       Role[]  @relation("RolePermissions")
-}
-
-model Customer {
-  id             String           @id @default(cuid())
+model MechanicalPartCatalog {
+  id             String              @id
+  code           String              @unique
   name           String
-  email          String?          @unique
-  phone          String?          @db.VarChar(32)
-  ward           String?
-  city           String?
-  userId         String?          @unique
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  address        String?
-  district       String?
-  Acquisition    Acquisition[]
-  user           User?            @relation(fields: [userId], references: [id])
-  Invoice        Invoice[]
-  orders         Order[]
-  ServiceRequest ServiceRequest[]
+  group          MechanicalPartGroup @default(OTHER)
+  defaultCost    Decimal?            @db.Decimal(12, 2)
+  note           String?
+  isActive       Boolean             @default(true)
+  sortOrder      Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @default(now())
+  TechnicalIssue TechnicalIssue[]
 
-  @@index([phone])
+  @@index([group, sortOrder])
+  @@index([isActive, sortOrder])
 }
 
-model Invoice {
-  id               String          @id @default(cuid())
-  code             String?         @unique
-  type             InvoiceType
-  status           InvoiceStatus   @default(DRAFT)
-  customerId       String?
-  vendorId         String?
-  orderId          String?
-  acquisitionId    String?
-  serviceRequestId String?
-  currency         String
-  subTotal         Decimal         @db.Decimal(12, 2)
-  taxTotal         Decimal         @default(0) @db.Decimal(12, 2)
-  discountTotal    Decimal         @default(0) @db.Decimal(12, 2)
-  grandTotal       Decimal         @db.Decimal(12, 2)
-  issuedAt         DateTime?
-  dueAt            DateTime?
-  notes            String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  acquisition      Acquisition?    @relation(fields: [acquisitionId], references: [id])
-  customer         Customer?       @relation(fields: [customerId], references: [id])
-  order            Order?          @relation(fields: [orderId], references: [id])
-  serviceReq       ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
-  vendor           Vendor?         @relation(fields: [vendorId], references: [id])
-  items            InvoiceItem[]
+model Notification {
+  id        String    @id
+  type      String
+  title     String
+  message   String
+  priority  String    @default("NORMAL")
+  isRead    Boolean   @default(false)
+  userId    String
+  metadata  Json?
+  createdAt DateTime? @default(now()) @db.Timestamp(6)
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
 
-  @@index([type, status])
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([createdAt], map: "idx_notification_created")
+  @@index([userId, isRead], map: "idx_notification_user_read")
+}
+
+model Order {
+  id                    String                  @id
+  refNo                 String?                 @unique(map: "Order_orderCode_key")
+  customerId            String?
+  shipPhone             String
+  shipAddress           String
+  shipWard              String?
+  shipCity              String
+  subtotal              Decimal                 @db.Decimal(12, 2)
+  shippingFee           Decimal?                @db.Decimal(12, 2)
+  status                OrderStatus             @default(DRAFT)
+  paymentStatus         PaymentStatus           @default(UNPAID)
+  paymentMethod         PaymentMethod?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  customerName          String?
+  notes                 String?
+  shipDistrict          String?
+  hasShipment           Boolean
+  reserveType           ReserveType?
+  reserveUntil          DateTime?               @db.Timestamptz(6)
+  depositRequired       Decimal?                @db.Decimal(12, 2)
+  depositPaid           Decimal?                @db.Decimal(12, 2)
+  source                OrderSource             @default(ADMIN)
+  verificationStatus    OrderVerificationStatus @default(VERIFIED)
+  quick_from_product_id String?
+  quickFromProductId    String?
+  quickFlowType         OrderFlowType           @default(STANDARD)
+  Invoice               Invoice[]
+  Customer              Customer?               @relation(fields: [customerId], references: [id])
+  OrderItem             OrderItem[]
+  Shipment              Shipment?
+
+  @@index([createdAt])
   @@index([customerId])
-  @@index([vendorId])
-  @@index([issuedAt])
-  @@index([orderId])
-  @@index([acquisitionId])
-  @@index([serviceRequestId])
+  @@index([source])
+  @@index([status])
+  @@index([verificationStatus])
+  @@index([quickFlowType], map: "idx_order_quickFlowType")
+  @@index([quickFromProductId], map: "idx_order_quickFromProductId")
 }
 
-model InvoiceItem {
-  id          String          @id @default(cuid())
-  invoiceId   String
-  productId   String?
-  variantId   String?
-  title       String
-  description String?
-  quantity    Decimal         @default(1) @db.Decimal(12, 2)
-  unitPrice   Decimal         @db.Decimal(12, 2)
-  discount    Decimal         @default(0) @db.Decimal(12, 2)
-  taxRate     Decimal         @default(0) @db.Decimal(5, 2)
-  lineTotal   Decimal         @db.Decimal(12, 2)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  product     Product?        @relation(fields: [productId], references: [id])
-  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+model OrderItem {
+  id                String            @id
+  orderId           String
+  productId         String?
+  variantId         String?
+  title             String
+  listPrice         Decimal           @db.Decimal(12, 2)
+  discountType      DiscountType?
+  discountValue     Decimal?          @db.Decimal(12, 2)
+  unitPriceAgreed   Decimal           @db.Decimal(12, 2)
+  taxRate           Decimal?          @db.Decimal(12, 2)
+  quantity          Int
+  subtotal          Decimal           @db.Decimal(12, 2)
+  img               String?
+  createdAt         DateTime          @default(now())
+  productType       ProductType?
+  kind              OrderItemKind
+  serviceCatalogId  String?
+  serviceScope      ServiceScope?
+  linkedOrderItemId String?
+  customerItemNote  String?
+  createdFromFlow   OrderFlowType     @default(STANDARD)
+  AcquisitionItem   AcquisitionItem[]
+  OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
+  other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
+  Order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product           Product?          @relation(fields: [productId], references: [id])
+  ServiceCatalog    ServiceCatalog?   @relation(fields: [serviceCatalogId], references: [id], onUpdate: NoAction, map: "fk_order_items_service_catalog")
+  ServiceRequest    ServiceRequest[]
 
-  @@index([invoiceId])
-  @@index([variantId])
+  @@index([orderId])
+  @@index([productId])
+  @@index([createdFromFlow], map: "idx_orderItem_createdFromFlow")
+  @@index([kind], map: "idx_order_item_kind")
+  @@index([serviceCatalogId], map: "idx_order_item_service_catalog_id")
+  @@index([linkedOrderItemId], map: "idx_orderitem_linked_order_item")
+  @@index([serviceScope], map: "idx_orderitem_service_scope")
+}
+
+model PartVariantSpec {
+  variantId      String         @id
+  partType       PartType
+  ProductVariant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-  id                 String              @id @default(cuid())
+  id                 String              @id
   method             PaymentMethod
   amount             Decimal             @db.Decimal(12, 2)
   currency           String
@@ -686,21 +437,268 @@ model Payment {
   refNo              String?             @unique @db.VarChar(30)
   MaintenanceRecord  MaintenanceRecord[]
 
+  @@index([acquisition_id], map: "idx_payment_acquisition")
   @@index([direction], map: "idx_payment_direction")
   @@index([order_id], map: "idx_payment_order")
   @@index([paidAt], map: "idx_payment_paidat")
   @@index([service_request_id], map: "idx_payment_service_request")
-  @@index([vendor_id], map: "idx_payment_vendor")
-  @@index([acquisition_id], map: "idx_payment_acquisition")
   @@index([type], map: "idx_payment_type")
+  @@index([vendor_id], map: "idx_payment_vendor")
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model Bank {
-  id         BigInt   @id @default(autoincrement())
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  bankName   String   @unique
-  Vendor     Vendor[]
+model Permission {
+  id          String  @id
+  code        String  @unique
+  description String?
+  Role        Role[]  @relation("RolePermissions")
+}
+
+model Product {
+  id                 String               @id
+  slug               String?              @unique
+  title              String
+  primaryImageUrl    String?
+  type               ProductType
+  priceVisibility    PriceVisibility      @default(SHOW)
+  brandId            String?
+  seoTitle           String?
+  seoDescription     String?
+  isStockManaged     Boolean              @default(true)
+  maxQtyPerOrder     Int                  @default(1)
+  publishedAt        DateTime?
+  vendorId           String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  tag                Tag                  @default(PRE_OWNED)
+  status             ProductStatus        @default(AVAILABLE)
+  categoryId         String?
+  contentStatus      ContentStatus        @default(DRAFT)
+  postContent        String?
+  aiPromptUsed       String?
+  aiGeneratedAt      DateTime?
+  sku                String?              @unique
+  nickname           String?
+  specStatus         String               @default("PENDING")
+  storefrontImageKey String?
+  AcquisitionItem    AcquisitionItem[]
+  AcquisitionSpecJob AcquisitionSpecJob[]
+  InvoiceItem        InvoiceItem[]
+  MaintenanceRecord  MaintenanceRecord[]
+  OrderItem          OrderItem[]
+  brand              Brand?               @relation(fields: [brandId], references: [id])
+  productCategory    ProductCategory?     @relation(fields: [categoryId], references: [id])
+  vendor             Vendor?              @relation(fields: [vendorId], references: [id])
+  productContent     ProductContent?
+  productImage       ProductImage[]
+  productVariant     ProductVariant[]
+  reservation        Reservation[]
+  serviceRequest     ServiceRequest[]
+  watch              Watch?
+  watchSpec          WatchSpec?
+
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([specStatus])
+  @@index([type])
+  @@index([updatedAt])
+}
+
+model ProductCategory {
+  id        String               @id
+  code      String               @unique
+  name      String
+  scope     ProductCategoryScope @default(ALL)
+  isActive  Boolean              @default(true)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime             @default(now()) @db.Timestamptz(6)
+  Product   Product[]
+
+  @@index([scope, isActive, sortOrder], map: "ProductCategory_scope_isActive_sort_idx")
+}
+
+model ProductContent {
+  productId          String    @id
+  titleSnapshot      String?
+  brandSnapshot      String?
+  refSnapshot        String?
+  sizeSnapshot       String?
+  movementSnapshot   String?
+  glassSnapshot      String?
+  strapClaspSnapshot String?
+  modelSnapshot      String?
+  yearSnapshot       String?
+  generatedContent   String?
+  promptNote         String?
+  generatedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now())
+  specBullets        String[]  @default([])
+  hashtags           String[]  @default([])
+  Product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([brandSnapshot])
+  @@index([modelSnapshot])
+  @@index([yearSnapshot])
+}
+
+model ProductImage {
+  id          String    @id
+  productId   String
+  fileKey     String
+  role        ImageRole @default(GALLERY)
+  alt         String?
+  width       Int?
+  height      Int?
+  mime        String?
+  sizeBytes   Int?
+  sortOrder   Int       @default(0)
+  dominantHex String?
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  Product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductVariant {
+  id                 String              @id
+  productId          String
+  sku                String?             @unique
+  name               String?
+  price              Decimal?            @db.Decimal(12, 2)
+  stockQty           Int                 @default(0)
+  isStockManaged     Boolean?            @default(true)
+  maxQtyPerOrder     Int                 @default(99)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime
+  availabilityStatus AvailabilityStatus  @default(HIDDEN)
+  listPrice          Decimal?            @db.Decimal(18, 2)
+  discountType       DiscountType?
+  discountValue      Decimal?            @db.Decimal(18, 2)
+  salePrice          Decimal?            @db.Decimal(18, 2)
+  saleStartsAt       DateTime?           @db.Timestamptz(6)
+  saleEndsAt         DateTime?           @db.Timestamptz(6)
+  costPrice          Decimal?            @db.Decimal(18, 2)
+  AcquisitionItem    AcquisitionItem[]
+  InvoiceItem        InvoiceItem[]
+  MaintenancePart    MaintenancePart[]
+  MaintenanceRecord  MaintenanceRecord[]
+  PartVariantSpec    PartVariantSpec?
+  Product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ServiceRequest     ServiceRequest[]
+  StrapVariantSpec   StrapVariantSpec?
+
+  @@index([availabilityStatus])
+  @@index([productId])
+  @@index([saleStartsAt, saleEndsAt])
+}
+
+model Reservation {
+  id         String            @id
+  productId  String?
+  orderId    String?
+  status     ReservationStatus @default(ACTIVE)
+  depositAmt Decimal?          @db.Decimal(12, 2)
+  expiresAt  DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime
+  Product    Product?          @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+model Role {
+  id          String       @id
+  name        String       @unique
+  description String?
+  Permission  Permission[] @relation("RolePermissions")
+  User        User[]       @relation("UserRoles")
+}
+
+model ServiceCatalog {
+  id                String              @id
+  code              String              @unique
+  name              String
+  description       String?
+  defaultPrice      Decimal?            @db.Decimal(12, 2)
+  durationMin       Int?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  detail            ServiceDetail
+  vendorPrice       Decimal?            @db.Decimal(12, 2)
+  customerPrice     Decimal?            @db.Decimal(12, 2)
+  internalCost      Decimal?            @db.Decimal(12, 2)
+  note              String?
+  categoryKey       String?
+  sortOrder         Int                 @default(0)
+  MaintenanceRecord MaintenanceRecord[]
+  OrderItem         OrderItem[]
+  ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
+
+  @@index([detail], map: "idx_service_catalog_detail")
+}
+
+model ServiceRequest {
+  id                      String               @id
+  type                    ServiceType          @default(PAID)
+  billable                Boolean              @default(true)
+  orderItemId             String?
+  customerId              String?
+  productId               String?
+  variantId               String?
+  brandSnapshot           String?
+  modelSnapshot           String?
+  refSnapshot             String?
+  serialSnapshot          String?
+  appointmentAt           DateTime?
+  status                  ServiceRequestStatus @default(DRAFT)
+  notes                   String?
+  warrantyUntil           DateTime?
+  warrantyPolicy          String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime
+  servicecatalogid        String?
+  refNo                   String?
+  scope                   ServiceScope?
+  vendorId                String?
+  vendorNameSnap          String?
+  technicianId            String?
+  technicianNameSnap      String?
+  skuSnapshot             String?
+  primaryImageUrlSnapshot String?
+  dummy_technical_rel     String?
+  priority                String?              @default("NORMAL")
+  priority_reason         String?
+  priority_source         String?
+  priority_marked_at      DateTime?            @db.Timestamptz(6)
+  priorityReason          String?
+  prioritySource          String?
+  priorityMarkedAt        DateTime?            @db.Timestamptz(6)
+  invoice                 Invoice[]
+  maintenanceRecord       MaintenanceRecord[]
+  customer                Customer?            @relation(fields: [customerId], references: [id])
+  OrderItem               OrderItem?           @relation(fields: [orderItemId], references: [id])
+  product                 Product?             @relation(fields: [productId], references: [id])
+  user                    User?                @relation(fields: [technicianId], references: [id])
+  productVariant          ProductVariant?      @relation(fields: [variantId], references: [id])
+  vendor                  Vendor?              @relation(fields: [vendorId], references: [id])
+  serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
+  technicalAssessment     TechnicalAssessment?
+  technicalIssue          TechnicalIssue[]
+
+  @@index([customerId])
+  @@index([orderItemId])
+  @@index([productId])
+  @@index([status])
+  @@index([technicianId])
+  @@index([variantId])
+  @@index([priority, priorityMarkedAt(sort: Desc)], map: "idx_serviceRequest_priority")
+  @@index([orderItemId], map: "idx_service_request_order_item_id")
+  @@index([technicianId], map: "idx_service_request_technician_id")
+  @@index([vendorId], map: "idx_service_request_vendor_id")
 }
 
 model Shipment {
@@ -727,18 +725,20 @@ model Shipment {
   Order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
 }
 
-model ProductCategory {
-  id        String               @id
-  code      String               @unique
-  name      String
-  scope     ProductCategoryScope @default(ALL)
-  isActive  Boolean              @default(true)
-  sortOrder Int                  @default(0)
-  createdAt DateTime             @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime             @default(now()) @db.Timestamptz(6)
-  Product   Product[]
+model StrapVariantSpec {
+  variantId      String         @id
+  color          String?
+  material       Strap          @default(LEATHER)
+  quickRelease   Boolean?       @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  lugWidthMM     Int
+  buckleWidthMM  Int?
+  ProductVariant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@index([scope, isActive, sortOrder], map: "ProductCategory_scope_isActive_sort_idx")
+  @@index([buckleWidthMM])
+  @@index([lugWidthMM])
+  @@index([material])
 }
 
 model SupplyCatalog {
@@ -827,29 +827,228 @@ model TechnicalIssue {
   Vendor                  Vendor?                       @relation(fields: [vendorId], references: [id])
 
   @@index([assessmentId])
-  @@index([mechanicalPartCatalogId])
   @@index([executionStatus])
+  @@index([isConfirmed])
+  @@index([mechanicalPartCatalogId])
   @@index([serviceRequestId])
   @@index([technicianId])
   @@index([vendorId])
-  @@index([isConfirmed])
 }
 
-model MechanicalPartCatalog {
-  id             String              @id
-  code           String              @unique
-  name           String
-  group          MechanicalPartGroup @default(OTHER)
-  defaultCost    Decimal?            @db.Decimal(12, 2)
-  note           String?
-  isActive       Boolean             @default(true)
-  sortOrder      Int                 @default(0)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @default(now())
-  TechnicalIssue TechnicalIssue[]
+model User {
+  id                String              @id
+  email             String              @unique
+  passwordHash      String?
+  name              String?
+  avatarUrl         String?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  roleId            String?
+  Customer          Customer?
+  MaintenanceRecord MaintenanceRecord[]
+  Notification      Notification[]
+  ServiceRequest    ServiceRequest[]
+  TechnicalIssue    TechnicalIssue[]
+  Role              Role[]              @relation("UserRoles")
 
-  @@index([group, sortOrder])
-  @@index([isActive, sortOrder])
+  @@index([isActive])
+}
+
+model Vendor {
+  id                  String                @id
+  name                String                @unique
+  role                VendorRole            @default(SUPPLIER)
+  isAuthorized        Boolean               @default(false)
+  email               String?
+  phone               String?
+  address             String?
+  note                String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  bankName            String?
+  bankAcc             String?
+  isActive            Boolean               @default(true)
+  Acquisition         Acquisition[]
+  Invoice             Invoice[]
+  MaintenanceRecord   MaintenanceRecord[]
+  product             Product[]
+  serviceRequest      ServiceRequest[]
+  technicalAssessment TechnicalAssessment[]
+  technicalIssue      TechnicalIssue[]
+  bank                Bank?                 @relation(fields: [bankName], references: [bankName], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([name, role])
+  @@index([role])
+}
+
+model Watch {
+  id              String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  productId       String           @unique
+  legacyVariantId String?          @unique
+  acquisitionId   String?
+  stockState      String?
+  saleState       String?
+  serviceState    String?
+  gender          Gender           @default(MEN)
+  siteChannel     WatchSiteChannel @default(AFFORDABLE)
+  conditionGrade  String?
+  movementType    MovementType?
+  movementCalibre String?
+  serialNumber    String?
+  yearText        String?
+  hasBox          Boolean          @default(false)
+  hasPapers       Boolean          @default(false)
+  attachedStrapId String?
+  notes           String?
+  createdAt       DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @db.Timestamptz(6)
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  watchContent    WatchContent?
+  watchMedia      WatchMedia[]
+  watchPrice      WatchPrice?
+  watchSpecV2     WatchSpecV2?
+
+  @@index([gender])
+  @@index([saleState])
+  @@index([serviceState])
+  @@index([siteChannel])
+}
+
+model WatchContent {
+  id             String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  watchId        String   @unique
+  titleOverride  String?
+  summary        String?
+  hookText       String?
+  body           String?
+  bulletSpecs    String[] @default([])
+  seoTitle       String?
+  seoDescription String?
+  aiMetaJson     Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
+  watch          Watch    @relation(fields: [watchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model WatchMedia {
+  id                   String     @id @default(dbgenerated("(gen_random_uuid())::text"))
+  watchId              String
+  legacyProductImageId String?    @unique
+  key                  String?
+  url                  String?
+  type                 String?
+  role                 ImageRole?
+  sortOrder            Int        @default(0)
+  alt                  String?
+  width                Int?
+  height               Int?
+  mime                 String?
+  sizeBytes            Int?
+  dominantHex          String?
+  contentHash          String?
+  createdAt            DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime   @default(now()) @db.Timestamptz(6)
+  watch                Watch      @relation(fields: [watchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([watchId, sortOrder])
+}
+
+model WatchPrice {
+  id          String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  watchId     String   @unique
+  costPrice   Decimal? @db.Decimal(18, 2)
+  serviceCost Decimal? @db.Decimal(18, 2)
+  landedCost  Decimal? @db.Decimal(18, 2)
+  listPrice   Decimal? @db.Decimal(18, 2)
+  salePrice   Decimal? @db.Decimal(18, 2)
+  minPrice    Decimal? @db.Decimal(18, 2)
+  pricingNote String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @db.Timestamptz(6)
+  watch       Watch    @relation(fields: [watchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([salePrice])
+}
+
+model WatchSpec {
+  productId       String          @id
+  model           String?
+  year            String?
+  caseType        CaseType?       @default(ROUND)
+  category        Category[]
+  gender          Gender?         @default(MEN)
+  length          Decimal?        @db.Decimal(12, 2)
+  width           Decimal?        @db.Decimal(12, 2)
+  thickness       Decimal?        @db.Decimal(12, 2)
+  movement        MovementType?   @default(AUTOMATIC)
+  caliber         String?
+  caseMaterial    CaseMaterial    @default(STAINLESS_STEEL)
+  goldKarat       Int?
+  goldColor       GoldColor?
+  caseSize        String?
+  dialColor       String?
+  marketSegmentId String?
+  strap           Strap?          @default(LEATHER)
+  glass           Glass?          @default(MINERAL)
+  boxIncluded     Boolean         @default(false)
+  bookletIncluded Boolean         @default(false)
+  cardIncluded    Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  sizeCategory    String?
+  ref             String?
+  hasStrap        Boolean         @default(false)
+  isServiced      Boolean         @default(false)
+  hasClasp        Boolean         @default(false)
+  Product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Complication    Complication[]  @relation("ComplicationToWatchSpec")
+  MarketSegment   MarketSegment[] @relation("MarketSegmentToWatchSpec")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model WatchSpecV2 {
+  id                    String                   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  watchId               String                   @unique
+  brand                 String?
+  model                 String?
+  referenceNumber       String?
+  nickname              String?
+  caseShape             CaseType?
+  caseSizeMM            Decimal?                 @db.Decimal(12, 2)
+  lugToLugMM            Decimal?                 @db.Decimal(12, 2)
+  lugWidthMM            Decimal?                 @db.Decimal(12, 2)
+  thicknessMM           Decimal?                 @db.Decimal(12, 2)
+  materialProfile       WatchMaterialProfile     @default(SINGLE_MATERIAL)
+  primaryCaseMaterial   WatchCaseMaterialFamily  @default(STAINLESS_STEEL)
+  secondaryCaseMaterial WatchCaseMaterialFamily?
+  goldTreatment         WatchGoldTreatment?
+  goldColors            WatchGoldColorV2[]       @default([])
+  goldKarat             Int?                     @db.SmallInt
+  materialNote          String?
+  dialColor             String?
+  dialFinish            String?
+  crystal               Glass?
+  movementType          MovementType?
+  calibre               String?
+  powerReserve          String?
+  waterResistance       String?
+  braceletType          Strap?
+  strapMaterialText     String?
+  buckleType            String?
+  boxIncluded           Boolean                  @default(false)
+  bookletIncluded       Boolean                  @default(false)
+  cardIncluded          Boolean                  @default(false)
+  featuresJson          Json?
+  rawSpecJson           Json?
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                 @default(now()) @db.Timestamptz(6)
+  watch                 Watch                    @relation(fields: [watchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([caseShape])
+  @@index([goldTreatment])
+  @@index([primaryCaseMaterial])
+  @@index([secondaryCaseMaterial])
 }
 
 model approvalRequests {
@@ -870,6 +1069,65 @@ model approvalRequests {
 
   @@index([serviceRequestId], map: "idx_approvalrequests_servicerequestid")
   @@index([technicalAssessmentId], map: "idx_approvalrequests_taid")
+}
+
+model system_job_control {
+  key           String   @id
+  label         String
+  enabled       Boolean  @default(true)
+  batch_size    Int      @default(6)
+  paused_reason String?
+  metadata      Json?
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_by    String?
+}
+
+model system_job_run_log {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  processor_key   String
+  trigger_source  String
+  status          String
+  processed_count Int       @default(0)
+  error_count     Int       @default(0)
+  note            String?
+  detail          Json?
+  started_at      DateTime  @default(now()) @db.Timestamptz(6)
+  finished_at     DateTime? @db.Timestamptz(6)
+
+  @@index([processor_key], map: "idx_system_job_run_log_processor_key")
+  @@index([started_at(sort: Desc)], map: "idx_system_job_run_log_started_at")
+}
+
+model technicalActionCatalog {
+  id                   String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code                 String   @unique
+  name                 String
+  appliesTo            String   @default("BOTH")
+  groupKey             String   @default("MOVEMENT")
+  requiresPart         Boolean  @default(false)
+  defaultExecutionMode String?
+  sortOrder            Int      @default(0)
+  isActive             Boolean  @default(true)
+  note                 String?
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, groupKey, appliesTo, sortOrder], map: "technicalActionCatalog_active_idx")
+}
+
+model technicalAppearanceIssueCatalog {
+  id             String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code           String   @unique
+  area           String
+  label          String
+  deductionScore Int      @default(0)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  note           String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isActive, area, sortOrder], map: "technicalAppearanceIssueCatalog_active_idx")
 }
 
 model technicalAssessments {
@@ -915,38 +1173,6 @@ model technicalAssessments {
   @@index([serviceRequestId], map: "idx_technicalassessments_servicerequestid")
 }
 
-model technicalActionCatalog {
-  id                   String   @id @default(dbgenerated("(gen_random_uuid())::text"))
-  code                 String   @unique
-  name                 String
-  appliesTo            String   @default("BOTH")
-  groupKey             String   @default("MOVEMENT")
-  requiresPart         Boolean  @default(false)
-  defaultExecutionMode String?
-  sortOrder            Int      @default(0)
-  isActive             Boolean  @default(true)
-  note                 String?
-  createdAt            DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([isActive, groupKey, appliesTo, sortOrder], map: "technicalActionCatalog_active_idx")
-}
-
-model technicalAppearanceIssueCatalog {
-  id             String   @id @default(dbgenerated("(gen_random_uuid())::text"))
-  code           String   @unique
-  area           String
-  label          String
-  deductionScore Int      @default(0)
-  sortOrder      Int      @default(0)
-  isActive       Boolean  @default(true)
-  note           String?
-  createdAt      DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([isActive, area, sortOrder], map: "technicalAppearanceIssueCatalog_active_idx")
-}
-
 model technicalPartCatalog {
   id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   code      String   @unique
@@ -962,310 +1188,25 @@ model technicalPartCatalog {
   @@index([isActive, partGroup, appliesTo, sortOrder], map: "technicalPartCatalog_active_idx")
 }
 
-model ProductContent {
-  productId          String    @id
-  titleSnapshot      String?
-  brandSnapshot      String?
-  refSnapshot        String?
-  sizeSnapshot       String?
-  movementSnapshot   String?
-  glassSnapshot      String?
-  strapClaspSnapshot String?
-  modelSnapshot      String?
-  yearSnapshot       String?
-  generatedContent   String?
-  promptNote         String?
-  generatedAt        DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @default(now())
-  specBullets        String[]  @default([])
-  hashtags           String[]  @default([])
-  Product            Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([brandSnapshot])
-  @@index([modelSnapshot])
-  @@index([yearSnapshot])
-}
-
-model AcquisitionSpecJob {
-  id                String          @id @default(dbgenerated("gen_random_uuid()"))
-  acquisitionItemId String          @unique
-  productId         String
-  status            String          @default("PENDING")
-  attempts          Int             @default(0)
-  lastError         String?
-  startedAt         DateTime?
-  finishedAt        DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @default(now())
-  runAfter          DateTime?       @default(now()) @db.Timestamp(6)
-  priority          Int             @default(100)
-  AcquisitionItem   AcquisitionItem @relation(fields: [acquisitionItemId], references: [id], onDelete: Cascade)
-  Product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([status, createdAt])
-  @@index([runAfter], map: "idx_acq_spec_job_run_after")
-}
-
-model system_job_control {
-  key           String   @id
-  label         String
-  enabled       Boolean  @default(true)
-  batch_size    Int      @default(6)
-  paused_reason String?
-  metadata      Json?
-  updated_at    DateTime @default(now()) @db.Timestamptz(6)
-  updated_by    String?
-}
-
-model system_job_run_log {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  processor_key   String
-  trigger_source  String
-  status          String
-  processed_count Int       @default(0)
-  error_count     Int       @default(0)
-  note            String?
-  detail          Json?
-  started_at      DateTime  @default(now()) @db.Timestamptz(6)
-  finished_at     DateTime? @db.Timestamptz(6)
-
-  @@index([processor_key], map: "idx_system_job_run_log_processor_key")
-  @@index([started_at(sort: Desc)], map: "idx_system_job_run_log_started_at")
-}
-
-model Notification {
-  id        String    @id
-  type      String
-  title     String
-  message   String
-  priority  String    @default("NORMAL")
-  isRead    Boolean   @default(false)
-  userId    String
-  metadata  Json?
-  createdAt DateTime? @default(now()) @db.Timestamp(6)
-  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
-
-  @@index([createdAt])
-  @@index([userId, isRead])
-  @@index([createdAt], map: "idx_notification_created")
-  @@index([userId, isRead], map: "idx_notification_user_read")
-}
-
-enum Category {
-  ENTRY
-  MID_RANGE
-  LUXURY
-}
-
-enum Tag {
-  PRE_OWNED
-  VINTAGE
-  NEW
-}
-
-enum UserRole {
-  ADMIN
-  STAFF
-  CUSTOMER
-}
-
-enum ProductType {
-  WATCH_STRAP
-  BOX
-  ACCESSORIES
+enum AcquisitionItemKind {
+  PRODUCT
   SERVICE
-  PARTS
-  WATCH
+  FEE
 }
 
-enum OrderStatus {
+enum AcquisitionItemStatus {
   DRAFT
-  PAID
-  PROCESSING
-  SHIPPED
-  COMPLETED
+  SENT
+  IN_SERVICE
+  RETURNED
+  BILLED
   CANCELLED
+}
+
+enum AcquisitionStatus {
+  DRAFT
   POSTED
-  RESERVED
-}
-
-enum ServiceRequestStatus {
-  DRAFT
-  DIAGNOSING
-  WAIT_APPROVAL
-  IN_PROGRESS
-  COMPLETED
-  DELIVERED
   CANCELED
-}
-
-enum ServicePriority {
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum ServiceDetail {
-  BASIC
-  OVERHAUL
-  SPA
-  PARTS_CHANGE
-  BATTERY_CHANGE
-}
-
-enum ServiceType {
-  WARRANTY
-  PAID
-}
-
-enum PaymentStatus {
-  UNPAID
-  PAID
-  REFUNDED
-  CANCELED
-}
-
-enum Gender {
-  MEN
-  WOMEN
-  UNISEX
-}
-
-enum Glass {
-  SAPPHIRE
-  ACRYLIC
-  MINERAL
-  HARDLEX
-  AR_COATED
-}
-
-enum ImageRole {
-  PRIMARY
-  GALLERY
-  THUMB
-  COVER
-}
-
-enum BrandStatus {
-  ACTIVE
-  INACTIVE
-  HIDDEN
-}
-
-enum CaseType {
-  ROUND
-  TANK
-  SQUARE
-  SPECIAL
-  OTHER
-  TONNEAU
-  CUSHION
-  OVAL
-  ASYMMETRICAL
-  OCTAGON
-  POLYGON
-}
-
-enum Strap {
-  LEATHER
-  BRACELET
-  RUBBER
-  NATO
-  CANVASS
-  SPECIAL
-}
-
-enum VendorRole {
-  SUPPLIER
-  SERVICE
-  BOTH
-  PRIVATE_SELLER
-}
-
-enum PaymentMethod {
-  COD
-  MOMO
-  CREDIT_CARD
-  BANK_TRANSFER
-  PAYPAL
-  CASH
-}
-
-enum InvoiceType {
-  SALE
-  PURCHASE
-  SERVICE
-  ADJUSTMENT
-  REFUND
-}
-
-enum InvoiceStatus {
-  DRAFT
-  ISSUED
-  PARTIALLY_PAID
-  PAID
-  VOID
-  CANCELLED
-}
-
-enum MovementType {
-  AUTOMATIC
-  HAND_WOUND
-  QUARTZ
-  SOLAR
-  KINETIC
-  MECHAQUARTZ
-  SPRING_DRIVE
-  HYBRID
-}
-
-enum CaseMaterial {
-  STAINLESS_STEEL
-  TITANIUM
-  CERAMIC
-  CARBON
-  GOLD
-  PLATINUM
-  SILVER
-  BRASS
-  TWO_TONE
-  OTHER
-}
-
-enum PartType {
-  GLASS
-  RUBBER_GASKET
-  SRAP
-  BUCKLE
-  SPRING_BAR
-  BATTERY
-  MOVEMENT_PART
-  OTHER
-  BEZEL
-  INSERT
-}
-
-enum GoldColor {
-  YELLOW
-  WHITE
-  ROSE
-}
-
-enum LengthLabel {
-  L16
-  L17
-  L18
-  L19
-  L20
-}
-
-enum VendorType {
-  IN_HOUSE
-  PARTNER
-  AUTHORIZED
-  OTHER
 }
 
 enum AcquisitionType {
@@ -1285,17 +1226,43 @@ enum AvailabilityStatus {
   CONSIGNED
 }
 
-enum ReservationStatus {
+enum BrandStatus {
   ACTIVE
-  CANCELLED
-  CONVERTED
-  EXPIRED
+  INACTIVE
+  HIDDEN
 }
 
-enum AcquisitionStatus {
-  DRAFT
-  POSTED
-  CANCELED
+enum CaseMaterial {
+  STAINLESS_STEEL
+  TITANIUM
+  CERAMIC
+  CARBON
+  GOLD
+  PLATINUM
+  SILVER
+  BRASS
+  TWO_TONE
+  OTHER
+}
+
+enum CaseType {
+  ROUND
+  TANK
+  SQUARE
+  SPECIAL
+  OTHER
+  TONNEAU
+  CUSHION
+  OVAL
+  ASYMMETRICAL
+  OCTAGON
+  POLYGON
+}
+
+enum Category {
+  ENTRY
+  MID_RANGE
+  LUXURY
 }
 
 enum ContentStatus {
@@ -1305,30 +1272,158 @@ enum ContentStatus {
   PROCESSING
 }
 
-enum PriceVisibility {
-  SHOW
-  HIDE
+enum DiscountType {
+  PERCENT
+  AMOUNT
 }
 
-enum AcquisitionItemKind {
-  PRODUCT
-  SERVICE
-  FEE
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
 }
 
-enum AcquisitionItemStatus {
+enum Glass {
+  SAPPHIRE
+  ACRYLIC
+  MINERAL
+  HARDLEX
+  AR_COATED
+}
+
+enum GoldColor {
+  YELLOW
+  WHITE
+  ROSE
+}
+
+enum ImageRole {
+  PRIMARY
+  GALLERY
+  THUMB
+  COVER
+}
+
+enum InvoiceStatus {
   DRAFT
-  SENT
-  IN_SERVICE
-  RETURNED
-  BILLED
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
   CANCELLED
 }
 
-enum ReserveType {
-  NONE
+enum InvoiceType {
+  SALE
+  PURCHASE
+  SERVICE
+  ADJUSTMENT
+  REFUND
+}
+
+enum LengthLabel {
+  L16
+  L17
+  L18
+  L19
+  L20
+}
+
+enum MaintenanceEventType {
+  ASSIGN_VENDOR
+  CHANGE_VENDOR
+  NOTE
+  COST
+}
+
+enum MechanicalPartGroup {
+  POWER
+  ESCAPEMENT
+  BALANCE
+  GEAR_TRAIN
+  SETTING
+  CASE_LINK
+  OTHER
+}
+
+enum MovementType {
+  AUTOMATIC
+  HAND_WOUND
+  QUARTZ
+  SOLAR
+  KINETIC
+  MECHAQUARTZ
+  SPRING_DRIVE
+  HYBRID
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum NotificationType {
+  PRODUCT_PRICE_UPDATED
+  PRODUCT_IN_SERVICE
+  PRODUCT_SERVICE_DONE
+  PRODUCT_READY_FOR_POST
+}
+
+enum OrderItemKind {
+  PRODUCT
+  SERVICE
+  DISCOUNT
+}
+
+enum OrderSource {
+  WEB
+  ADMIN
+}
+
+enum OrderStatus {
+  DRAFT
+  PAID
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+  POSTED
+  RESERVED
+}
+
+enum OrderVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum PartType {
+  GLASS
+  RUBBER_GASKET
+  SRAP
+  BUCKLE
+  SPRING_BAR
+  BATTERY
+  MOVEMENT_PART
+  OTHER
+  BEZEL
+  INSERT
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum PaymentMethod {
   COD
-  DEPOSIT
+  MOMO
+  CREDIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  CASH
 }
 
 enum PaymentPurpose {
@@ -1344,16 +1439,11 @@ enum PaymentPurpose {
   SHIPMENT_COST
 }
 
-enum OrderSource {
-  WEB
-  ADMIN
-}
-
-enum OrderVerificationStatus {
-  PENDING
-  VERIFIED
-  REJECTED
-  EXPIRED
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  CANCELED
 }
 
 enum PaymentType {
@@ -1365,127 +1455,15 @@ enum PaymentType {
   OTHER
 }
 
-enum ServiceScope {
-  WITH_PURCHASE
-  CUSTOMER_OWNED
-  INTERNAL
-}
-
-enum servicerequeststatus_new {
-  DRAFT
-  DIAGNOSING
-  WAIT_APPROVAL
-  IN_PROGRESS
-  COMPLETED
-  DELIVERED
-  CANCELED
-}
-
-enum ProductStatus {
-  AVAILABLE
-  IN_SERVICE
-  CONSIGNED_FROM
-  CONSIGNED_TO
-  HOLD
-  SOLD
-  NEED_SERVICE
-}
-
-enum MaintenanceEventType {
-  ASSIGN_VENDOR
-  CHANGE_VENDOR
-  NOTE
-  COST
-}
-
-enum DiscountType {
-  PERCENT
-  AMOUNT
-}
-
-enum OrderItemKind {
-  PRODUCT
-  SERVICE
-  DISCOUNT
-}
-
-enum PaymentDirection {
-  IN
-  OUT
-}
-
-enum ShipmentStatus {
-  DRAFT
-  READY
-  SHIPPED
-  DELIVERED
-  CANCELLED
+enum PriceVisibility {
+  SHOW
+  HIDE
 }
 
 enum ProductCategoryScope {
   WATCH
   WATCH_STRAP
   ALL
-}
-
-enum TechnicalActionMode {
-  NONE
-  INTERNAL
-  VENDOR
-}
-
-enum TechnicalAssessmentStatus {
-  DRAFT
-  COMPLETED
-  IN_PROGRESS
-  CANCELED
-}
-
-enum TechnicalIssueType {
-  CHECK
-  SERVICE
-  REPAIR
-  REPLACE
-  OBSERVATION
-}
-
-enum TechnicalMovementKind {
-  UNKNOWN
-  BATTERY
-  MECHANICAL
-}
-
-enum MechanicalPartGroup {
-  POWER
-  ESCAPEMENT
-  BALANCE
-  GEAR_TRAIN
-  SETTING
-  CASE_LINK
-  OTHER
-}
-
-enum TechnicalSectionStatus {
-  GOOD
-  ISSUE
-}
-
-enum TechnicalIssueExecutionStatus {
-  OPEN
-  IN_PROGRESS
-  DONE
-  CANCELED
-}
-
-enum orderflowtype {
-  STANDARD
-  QUICK_ORDER
-}
-
-enum serviceprioritylevel {
-  NORMAL
-  HIGH
-  URGENT
 }
 
 enum ProductOpsStage {
@@ -1509,15 +1487,211 @@ enum ProductSaleStage {
   SOLD
 }
 
-enum NotificationPriority {
-  LOW
-  NORMAL
-  HIGH
+enum ProductStatus {
+  AVAILABLE
+  IN_SERVICE
+  CONSIGNED_FROM
+  CONSIGNED_TO
+  HOLD
+  SOLD
+  NEED_SERVICE
 }
 
-enum NotificationType {
-  PRODUCT_PRICE_UPDATED
-  PRODUCT_IN_SERVICE
-  PRODUCT_SERVICE_DONE
-  PRODUCT_READY_FOR_POST
+enum ProductType {
+  WATCH_STRAP
+  BOX
+  ACCESSORIES
+  SERVICE
+  PARTS
+  WATCH
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CANCELLED
+  CONVERTED
+  EXPIRED
+}
+
+enum ReserveType {
+  NONE
+  COD
+  DEPOSIT
+}
+
+enum ServiceDetail {
+  BASIC
+  OVERHAUL
+  SPA
+  PARTS_CHANGE
+  BATTERY_CHANGE
+}
+
+enum ServicePriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ServiceRequestStatus {
+  DRAFT
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELED
+}
+
+enum ServiceScope {
+  WITH_PURCHASE
+  CUSTOMER_OWNED
+  INTERNAL
+}
+
+enum ServiceType {
+  WARRANTY
+  PAID
+}
+
+enum ShipmentStatus {
+  DRAFT
+  READY
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum Strap {
+  LEATHER
+  BRACELET
+  RUBBER
+  NATO
+  CANVASS
+  SPECIAL
+}
+
+enum Tag {
+  PRE_OWNED
+  VINTAGE
+  NEW
+}
+
+enum TechnicalActionMode {
+  NONE
+  INTERNAL
+  VENDOR
+}
+
+enum TechnicalAssessmentStatus {
+  DRAFT
+  COMPLETED
+  IN_PROGRESS
+  CANCELED
+}
+
+enum TechnicalIssueExecutionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum TechnicalIssueType {
+  CHECK
+  SERVICE
+  REPAIR
+  REPLACE
+  OBSERVATION
+}
+
+enum TechnicalMovementKind {
+  UNKNOWN
+  BATTERY
+  MECHANICAL
+}
+
+enum TechnicalSectionStatus {
+  GOOD
+  ISSUE
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum VendorRole {
+  SUPPLIER
+  SERVICE
+  BOTH
+  PRIVATE_SELLER
+}
+
+enum VendorType {
+  IN_HOUSE
+  PARTNER
+  AUTHORIZED
+  OTHER
+}
+
+enum OrderFlowType {
+  STANDARD
+  QUICK_ORDER
+}
+
+enum ServiceRequestStatus_New {
+  DRAFT
+  DIAGNOSING
+  WAIT_APPROVAL
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELED
+}
+
+enum WatchCaseMaterialFamily {
+  STAINLESS_STEEL
+  TITANIUM
+  CERAMIC
+  CARBON
+  GOLD
+  PLATINUM
+  SILVER
+  BRASS
+  OTHER
+}
+
+enum WatchGoldColorV2 {
+  YELLOW
+  WHITE
+  ROSE
+  MIXED
+}
+
+enum WatchGoldTreatment {
+  SOLID_GOLD
+  CAPPED_GOLD
+  GOLD_PLATED
+  GOLD_VERMEIL
+  GOLD_FILLED
+}
+
+enum WatchMaterialProfile {
+  SINGLE_MATERIAL
+  BIMETAL
+  COATED
+  OTHER
+}
+
+enum ServicePriorityLevel {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum WatchSiteChannel {
+  AFFORDABLE
+  LUXURY
 }

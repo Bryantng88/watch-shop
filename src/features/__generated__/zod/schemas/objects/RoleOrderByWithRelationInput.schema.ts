@@ -9,8 +9,8 @@ const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   name: SortOrderSchema.optional(),
   description: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  permissions: z.lazy(() => PermissionOrderByRelationAggregateInputObjectSchema).optional(),
-  users: z.lazy(() => UserOrderByRelationAggregateInputObjectSchema).optional()
+  Permission: z.lazy(() => PermissionOrderByRelationAggregateInputObjectSchema).optional(),
+  User: z.lazy(() => UserOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const RoleOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.RoleOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.RoleOrderByWithRelationInput>;
 export const RoleOrderByWithRelationInputObjectZodSchema = makeSchema();

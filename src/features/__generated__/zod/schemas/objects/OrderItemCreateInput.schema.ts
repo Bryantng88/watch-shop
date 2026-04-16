@@ -4,17 +4,17 @@ import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { orderflowtypeSchema } from '../enums/orderflowtype.schema';
-import { AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema as AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutSourceOrderItemInput.schema';
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { AcquisitionItemCreateNestedManyWithoutOrderItemInputObjectSchema as AcquisitionItemCreateNestedManyWithoutOrderItemInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutOrderItemInput.schema';
 import { OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema as OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema } from './OrderItemCreateNestedOneWithoutOther_OrderItemInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderItemInput.schema';
-import { OrderCreateNestedOneWithoutItemsInputObjectSchema as OrderCreateNestedOneWithoutItemsInputObjectSchema } from './OrderCreateNestedOneWithoutItemsInput.schema';
-import { ProductCreateNestedOneWithoutOrderItemsInputObjectSchema as ProductCreateNestedOneWithoutOrderItemsInputObjectSchema } from './ProductCreateNestedOneWithoutOrderItemsInput.schema';
+import { OrderCreateNestedOneWithoutOrderItemInputObjectSchema as OrderCreateNestedOneWithoutOrderItemInputObjectSchema } from './OrderCreateNestedOneWithoutOrderItemInput.schema';
+import { ProductCreateNestedOneWithoutOrderItemInputObjectSchema as ProductCreateNestedOneWithoutOrderItemInputObjectSchema } from './ProductCreateNestedOneWithoutOrderItemInput.schema';
 import { ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema as ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutOrderItemInput.schema';
 import { ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutOrderItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   variantId: z.string().optional().nullable(),
   title: z.string(),
   listPrice: z.number(),
@@ -30,14 +30,14 @@ const makeSchema = () => z.object({
   kind: OrderItemKindSchema,
   serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
-  createdFromFlow: orderflowtypeSchema.optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutSourceOrderItemInputObjectSchema),
+  createdFromFlow: OrderFlowTypeSchema.optional(),
+  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutOrderItemInputObjectSchema),
   OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema),
-  order: z.lazy(() => OrderCreateNestedOneWithoutItemsInputObjectSchema),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemsInputObjectSchema).optional(),
+  Order: z.lazy(() => OrderCreateNestedOneWithoutOrderItemInputObjectSchema),
+  Product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
   ServiceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema)
+  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema)
 }).strict();
 export const OrderItemCreateInputObjectSchema: z.ZodType<Prisma.OrderItemCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateInput>;
 export const OrderItemCreateInputObjectZodSchema = makeSchema();

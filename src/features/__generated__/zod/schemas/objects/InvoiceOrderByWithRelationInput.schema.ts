@@ -29,12 +29,12 @@ const makeSchema = () => z.object({
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
-  customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
-  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
-  serviceReq: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
-  vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
-  items: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional()
+  Acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
+  Customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
+  Order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
+  ServiceRequest: z.lazy(() => ServiceRequestOrderByWithRelationInputObjectSchema).optional(),
+  Vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
+  InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const InvoiceOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.InvoiceOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceOrderByWithRelationInput>;
 export const InvoiceOrderByWithRelationInputObjectZodSchema = makeSchema();

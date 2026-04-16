@@ -4,7 +4,7 @@ import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   serviceRequestId: z.string().optional().nullable(),

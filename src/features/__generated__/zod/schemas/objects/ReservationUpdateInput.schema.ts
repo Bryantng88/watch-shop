@@ -17,7 +17,7 @@ const makeSchema = () => z.object({
   expiresAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  product: z.lazy(() => ProductUpdateOneWithoutReservationNestedInputObjectSchema).optional()
+  Product: z.lazy(() => ProductUpdateOneWithoutReservationNestedInputObjectSchema).optional()
 }).strict();
 export const ReservationUpdateInputObjectSchema: z.ZodType<Prisma.ReservationUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ReservationUpdateInput>;
 export const ReservationUpdateInputObjectZodSchema = makeSchema();

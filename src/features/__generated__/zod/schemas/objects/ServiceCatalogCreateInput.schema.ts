@@ -7,7 +7,7 @@ import { ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema as
 import { TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceCatalogInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   code: z.string(),
   name: z.string(),
   description: z.string().optional().nullable(),
@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   durationMin: z.number().int().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   detail: ServiceDetailSchema,
   vendorPrice: z.number().optional().nullable(),
   customerPrice: z.number().optional().nullable(),

@@ -4,7 +4,7 @@ import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { DiscountTypeSchema } from '../enums/DiscountType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   productId: z.string(),
   sku: z.string().optional().nullable(),
   name: z.string().optional().nullable(),
@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   isStockManaged: z.boolean().optional().nullable(),
   maxQtyPerOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   availabilityStatus: AvailabilityStatusSchema.optional(),
   listPrice: z.number().optional().nullable(),
   discountType: DiscountTypeSchema.optional().nullable(),

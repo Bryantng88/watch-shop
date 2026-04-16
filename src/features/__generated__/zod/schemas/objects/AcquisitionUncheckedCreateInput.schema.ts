@@ -6,7 +6,7 @@ import { AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSc
 import { InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   vendorId: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   type: AcquisitionTypeSchema.optional(),
@@ -20,10 +20,11 @@ const makeSchema = () => z.object({
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema),
-  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema)
+  AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema),
+  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema)
 }).strict();
 export const AcquisitionUncheckedCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUncheckedCreateInput>;
 export const AcquisitionUncheckedCreateInputObjectZodSchema = makeSchema();

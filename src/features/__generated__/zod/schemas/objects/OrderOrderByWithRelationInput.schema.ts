@@ -36,8 +36,8 @@ const makeSchema = () => z.object({
   quickFromProductId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   quickFlowType: SortOrderSchema.optional(),
   Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
-  customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
-  items: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
+  Customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
+  OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
   Shipment: z.lazy(() => ShipmentOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const OrderOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrderOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderOrderByWithRelationInput>;

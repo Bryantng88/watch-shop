@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
 import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema as InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema } from './InvoiceCreateNestedManyWithoutServiceReqInput.schema';
+import { InvoiceCreateNestedManyWithoutServiceRequestInputObjectSchema as InvoiceCreateNestedManyWithoutServiceRequestInputObjectSchema } from './InvoiceCreateNestedManyWithoutServiceRequestInput.schema';
 import { MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutServiceRequestInput.schema';
 import { CustomerCreateNestedOneWithoutServiceRequestInputObjectSchema as CustomerCreateNestedOneWithoutServiceRequestInputObjectSchema } from './CustomerCreateNestedOneWithoutServiceRequestInput.schema';
 import { OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema as OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema } from './OrderItemCreateNestedOneWithoutServiceRequestInput.schema';
@@ -16,7 +16,7 @@ import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchem
 import { TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   brandSnapshot: z.string().optional().nullable(),
@@ -29,6 +29,7 @@ const makeSchema = () => z.object({
   warrantyUntil: z.coerce.date().optional().nullable(),
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   refNo: z.string().optional().nullable(),
   scope: ServiceScopeSchema.optional().nullable(),
   vendorNameSnap: z.string().optional().nullable(),
@@ -43,17 +44,17 @@ const makeSchema = () => z.object({
   priorityReason: z.string().optional().nullable(),
   prioritySource: z.string().optional().nullable(),
   priorityMarkedAt: z.coerce.date().optional().nullable(),
-  invoice: z.lazy(() => InvoiceCreateNestedManyWithoutServiceReqInputObjectSchema),
-  maintenance: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema),
+  invoice: z.lazy(() => InvoiceCreateNestedManyWithoutServiceRequestInputObjectSchema),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
-  orderItem: z.lazy(() => OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
+  OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
+  productVariant: z.lazy(() => ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   serviceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema)
+  technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema)
 }).strict();
 export const ServiceRequestCreateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateInput>;
 export const ServiceRequestCreateInputObjectZodSchema = makeSchema();

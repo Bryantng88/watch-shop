@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const serviceprioritylevelSchema = z.enum(['NORMAL', 'HIGH', 'URGENT'])
+export const ServicePriorityLevelSchema = z.enum(['NORMAL', 'HIGH', 'URGENT'])
 
-export type serviceprioritylevel = z.infer<typeof serviceprioritylevelSchema>;
+export type ServicePriorityLevel = z.infer<typeof ServicePriorityLevelSchema>;

@@ -33,14 +33,14 @@ const vendorwhereinputSchema = z.object({
   bankName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   bankAcc: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
-  acquisitions: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
-  invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
-  services: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
-  Product: z.lazy(() => ProductListRelationFilterObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentListRelationFilterObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  Bank: z.union([z.lazy(() => BankNullableScalarRelationFilterObjectSchema), z.lazy(() => BankWhereInputObjectSchema)]).optional()
+  Acquisition: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
+  Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  product: z.lazy(() => ProductListRelationFilterObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentListRelationFilterObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
+  bank: z.union([z.lazy(() => BankNullableScalarRelationFilterObjectSchema), z.lazy(() => BankWhereInputObjectSchema)]).optional()
 }).strict();
 export const VendorWhereInputObjectSchema: z.ZodType<Prisma.VendorWhereInput> = vendorwhereinputSchema as unknown as z.ZodType<Prisma.VendorWhereInput>;
 export const VendorWhereInputObjectZodSchema = vendorwhereinputSchema;

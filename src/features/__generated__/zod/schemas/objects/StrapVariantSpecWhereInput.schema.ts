@@ -23,7 +23,7 @@ const strapvariantspecwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   lugWidthMM: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   buckleWidthMM: z.union([z.lazy(() => IntNullableFilterObjectSchema), z.number().int()]).optional().nullable(),
-  variant: z.union([z.lazy(() => ProductVariantScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
+  ProductVariant: z.union([z.lazy(() => ProductVariantScalarRelationFilterObjectSchema), z.lazy(() => ProductVariantWhereInputObjectSchema)]).optional()
 }).strict();
 export const StrapVariantSpecWhereInputObjectSchema: z.ZodType<Prisma.StrapVariantSpecWhereInput> = strapvariantspecwhereinputSchema as unknown as z.ZodType<Prisma.StrapVariantSpecWhereInput>;
 export const StrapVariantSpecWhereInputObjectZodSchema = strapvariantspecwhereinputSchema;

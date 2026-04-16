@@ -10,7 +10,7 @@ import { TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInputObjectSch
 import { TechnicalIssueUncheckedCreateNestedManyWithoutVendorInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutVendorInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   name: z.string(),
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),
@@ -19,16 +19,17 @@ const makeSchema = () => z.object({
   address: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   bankName: z.string().optional().nullable(),
   bankAcc: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
-  acquisitions: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  services: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  Product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  ServiceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutVendorInputObjectSchema)
+  Acquisition: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  serviceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInputObjectSchema),
+  technicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutVendorInputObjectSchema)
 }).strict();
 export const VendorUncheckedCreateInputObjectSchema: z.ZodType<Prisma.VendorUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUncheckedCreateInput>;
 export const VendorUncheckedCreateInputObjectZodSchema = makeSchema();

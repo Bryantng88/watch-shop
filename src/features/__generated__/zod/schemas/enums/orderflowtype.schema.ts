@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const orderflowtypeSchema = z.enum(['STANDARD', 'QUICK_ORDER'])
+export const OrderFlowTypeSchema = z.enum(['STANDARD', 'QUICK_ORDER'])
 
-export type orderflowtype = z.infer<typeof orderflowtypeSchema>;
+export type OrderFlowType = z.infer<typeof OrderFlowTypeSchema>;

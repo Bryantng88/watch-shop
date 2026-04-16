@@ -5,7 +5,7 @@ import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema'
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   orderItemId: z.string().optional().nullable(),
@@ -22,7 +22,7 @@ const makeSchema = () => z.object({
   warrantyUntil: z.coerce.date().optional().nullable(),
   warrantyPolicy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
   servicecatalogid: z.string().optional().nullable(),
   refNo: z.string().optional().nullable(),
   scope: ServiceScopeSchema.optional().nullable(),

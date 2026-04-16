@@ -28,14 +28,14 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   bankAcc: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  acquisitions: z.lazy(() => AcquisitionUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  invoice: z.lazy(() => InvoiceUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  services: z.lazy(() => MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  TechnicalAssessment: z.lazy(() => TechnicalAssessmentUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
-  Bank: z.lazy(() => BankUpdateOneWithoutVendorNestedInputObjectSchema).optional()
+  Acquisition: z.lazy(() => AcquisitionUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  Invoice: z.lazy(() => InvoiceUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  product: z.lazy(() => ProductUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutVendorNestedInputObjectSchema).optional(),
+  bank: z.lazy(() => BankUpdateOneWithoutVendorNestedInputObjectSchema).optional()
 }).strict();
 export const VendorUpdateInputObjectSchema: z.ZodType<Prisma.VendorUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.VendorUpdateInput>;
 export const VendorUpdateInputObjectZodSchema = makeSchema();

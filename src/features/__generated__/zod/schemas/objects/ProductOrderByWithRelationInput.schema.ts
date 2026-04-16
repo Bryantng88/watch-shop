@@ -15,6 +15,7 @@ import { ProductImageOrderByRelationAggregateInputObjectSchema as ProductImageOr
 import { ProductVariantOrderByRelationAggregateInputObjectSchema as ProductVariantOrderByRelationAggregateInputObjectSchema } from './ProductVariantOrderByRelationAggregateInput.schema';
 import { ReservationOrderByRelationAggregateInputObjectSchema as ReservationOrderByRelationAggregateInputObjectSchema } from './ReservationOrderByRelationAggregateInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
+import { WatchOrderByWithRelationInputObjectSchema as WatchOrderByWithRelationInputObjectSchema } from './WatchOrderByWithRelationInput.schema';
 import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './WatchSpecOrderByWithRelationInput.schema'
 
 const makeSchema = () => z.object({
@@ -47,16 +48,17 @@ const makeSchema = () => z.object({
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByRelationAggregateInputObjectSchema).optional(),
   InvoiceItem: z.lazy(() => InvoiceItemOrderByRelationAggregateInputObjectSchema).optional(),
-  maintenanceRecords: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
-  orderItems: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
+  OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
   brand: z.lazy(() => BrandOrderByWithRelationInputObjectSchema).optional(),
-  ProductCategory: z.lazy(() => ProductCategoryOrderByWithRelationInputObjectSchema).optional(),
+  productCategory: z.lazy(() => ProductCategoryOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
-  content: z.lazy(() => ProductContentOrderByWithRelationInputObjectSchema).optional(),
-  image: z.lazy(() => ProductImageOrderByRelationAggregateInputObjectSchema).optional(),
-  variants: z.lazy(() => ProductVariantOrderByRelationAggregateInputObjectSchema).optional(),
-  Reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
+  productContent: z.lazy(() => ProductContentOrderByWithRelationInputObjectSchema).optional(),
+  productImage: z.lazy(() => ProductImageOrderByRelationAggregateInputObjectSchema).optional(),
+  productVariant: z.lazy(() => ProductVariantOrderByRelationAggregateInputObjectSchema).optional(),
+  reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
+  watch: z.lazy(() => WatchOrderByWithRelationInputObjectSchema).optional(),
   watchSpec: z.lazy(() => WatchSpecOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ProductOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductOrderByWithRelationInput>;

@@ -13,8 +13,8 @@ const makeSchema = () => z.object({
   quantity: SortOrderSchema.optional(),
   unitCost: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  record: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional(),
-  variant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
+  MaintenanceRecord: z.lazy(() => MaintenanceRecordOrderByWithRelationInputObjectSchema).optional(),
+  ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const MaintenancePartOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.MaintenancePartOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.MaintenancePartOrderByWithRelationInput>;
 export const MaintenancePartOrderByWithRelationInputObjectZodSchema = makeSchema();

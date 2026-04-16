@@ -9,7 +9,7 @@ const marketsegmentwhereinputSchema = z.object({
   NOT: z.union([z.lazy(() => MarketSegmentWhereInputObjectSchema), z.lazy(() => MarketSegmentWhereInputObjectSchema).array()]).optional(),
   id: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   name: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
-  watchSpecs: z.lazy(() => WatchSpecListRelationFilterObjectSchema).optional()
+  WatchSpec: z.lazy(() => WatchSpecListRelationFilterObjectSchema).optional()
 }).strict();
 export const MarketSegmentWhereInputObjectSchema: z.ZodType<Prisma.MarketSegmentWhereInput> = marketsegmentwhereinputSchema as unknown as z.ZodType<Prisma.MarketSegmentWhereInput>;
 export const MarketSegmentWhereInputObjectZodSchema = marketsegmentwhereinputSchema;

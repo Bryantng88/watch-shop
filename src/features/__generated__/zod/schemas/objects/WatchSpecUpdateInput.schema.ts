@@ -22,8 +22,8 @@ import { NullableEnumGlassFieldUpdateOperationsInputObjectSchema as NullableEnum
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { ProductUpdateOneRequiredWithoutWatchSpecNestedInputObjectSchema as ProductUpdateOneRequiredWithoutWatchSpecNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutWatchSpecNestedInput.schema';
-import { ComplicationUpdateManyWithoutWatchSpecsNestedInputObjectSchema as ComplicationUpdateManyWithoutWatchSpecsNestedInputObjectSchema } from './ComplicationUpdateManyWithoutWatchSpecsNestedInput.schema';
-import { MarketSegmentUpdateManyWithoutWatchSpecsNestedInputObjectSchema as MarketSegmentUpdateManyWithoutWatchSpecsNestedInputObjectSchema } from './MarketSegmentUpdateManyWithoutWatchSpecsNestedInput.schema'
+import { ComplicationUpdateManyWithoutWatchSpecNestedInputObjectSchema as ComplicationUpdateManyWithoutWatchSpecNestedInputObjectSchema } from './ComplicationUpdateManyWithoutWatchSpecNestedInput.schema';
+import { MarketSegmentUpdateManyWithoutWatchSpecNestedInputObjectSchema as MarketSegmentUpdateManyWithoutWatchSpecNestedInputObjectSchema } from './MarketSegmentUpdateManyWithoutWatchSpecNestedInput.schema'
 
 const makeSchema = () => z.object({
   model: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
@@ -54,9 +54,9 @@ const makeSchema = () => z.object({
   hasStrap: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   isServiced: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   hasClasp: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
-  product: z.lazy(() => ProductUpdateOneRequiredWithoutWatchSpecNestedInputObjectSchema).optional(),
-  complication: z.lazy(() => ComplicationUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional(),
-  marketSegment: z.lazy(() => MarketSegmentUpdateManyWithoutWatchSpecsNestedInputObjectSchema).optional()
+  Product: z.lazy(() => ProductUpdateOneRequiredWithoutWatchSpecNestedInputObjectSchema).optional(),
+  Complication: z.lazy(() => ComplicationUpdateManyWithoutWatchSpecNestedInputObjectSchema).optional(),
+  MarketSegment: z.lazy(() => MarketSegmentUpdateManyWithoutWatchSpecNestedInputObjectSchema).optional()
 }).strict();
 export const WatchSpecUpdateInputObjectSchema: z.ZodType<Prisma.WatchSpecUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchSpecUpdateInput>;
 export const WatchSpecUpdateInputObjectZodSchema = makeSchema();

@@ -26,9 +26,9 @@ const customerwhereinputSchema = z.object({
   address: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   district: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   Acquisition: z.lazy(() => AcquisitionListRelationFilterObjectSchema).optional(),
-  user: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
+  User: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
-  orders: z.lazy(() => OrderListRelationFilterObjectSchema).optional(),
+  Order: z.lazy(() => OrderListRelationFilterObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional()
 }).strict();
 export const CustomerWhereInputObjectSchema: z.ZodType<Prisma.CustomerWhereInput> = customerwhereinputSchema as unknown as z.ZodType<Prisma.CustomerWhereInput>;

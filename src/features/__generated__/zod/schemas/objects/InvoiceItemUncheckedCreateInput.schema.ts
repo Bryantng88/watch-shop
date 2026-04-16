@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  id: z.string().optional(),
+  id: z.string(),
   invoiceId: z.string(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),
@@ -14,7 +14,8 @@ const makeSchema = () => z.object({
   discount: z.number().optional(),
   taxRate: z.number().optional(),
   lineTotal: z.number(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date()
 }).strict();
 export const InvoiceItemUncheckedCreateInputObjectSchema: z.ZodType<Prisma.InvoiceItemUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.InvoiceItemUncheckedCreateInput>;
 export const InvoiceItemUncheckedCreateInputObjectZodSchema = makeSchema();
