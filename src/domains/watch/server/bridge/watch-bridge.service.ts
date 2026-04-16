@@ -7,9 +7,9 @@ import type {
 import { getWatchBridgeRow } from "./watch-bridge.repo";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
-import * as orderService from "@/src/app/(admin)/admin/orders/_servers/order.service";
-import * as acquisitionService from "@/src/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
-import * as serviceRequestService from "@/src/app/(admin)/admin/services/_server/service_request.service";
+import * as orderService from "@/app/(admin)/admin/orders/_servers/order.service";
+import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
+import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
 
 function normalizeStatus(value: unknown) {
   return String(value ?? "")

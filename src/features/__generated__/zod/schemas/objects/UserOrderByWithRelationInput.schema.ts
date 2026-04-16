@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   Notification: z.lazy(() => NotificationOrderByRelationAggregateInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
-  Role: z.lazy(() => RoleOrderByRelationAggregateInputObjectSchema).optional()
+  roles: z.lazy(() => RoleOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const UserOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.UserOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.UserOrderByWithRelationInput>;
 export const UserOrderByWithRelationInputObjectZodSchema = makeSchema();

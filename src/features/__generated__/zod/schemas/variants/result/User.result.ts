@@ -16,7 +16,7 @@ export const UserResultSchema = z.object({
     Notification: z.array(z.unknown()),
     ServiceRequest: z.array(z.unknown()),
     TechnicalIssue: z.array(z.unknown()),
-    Role: z.array(z.unknown())
+    roles: z.array(z.unknown())
 }).strict();
 
 export type UserResultType = z.infer<typeof UserResultSchema>;

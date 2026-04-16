@@ -15,7 +15,7 @@ export const UserFindManyResultSchema = z.object({
   Notification: z.array(z.unknown()),
   ServiceRequest: z.array(z.unknown()),
   TechnicalIssue: z.array(z.unknown()),
-  Role: z.array(z.unknown())
+  roles: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

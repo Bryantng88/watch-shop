@@ -20,7 +20,7 @@ const makeSchema = () => z.object({
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   Notification: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional(),
-  Role: z.lazy(() => RoleUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional()
+  roles: z.lazy(() => RoleUncheckedCreateNestedManyWithoutUserInputObjectSchema).optional()
 }).strict();
 export const UserUncheckedCreateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUncheckedCreateWithoutServiceRequestInput>;
 export const UserUncheckedCreateWithoutServiceRequestInputObjectZodSchema = makeSchema();

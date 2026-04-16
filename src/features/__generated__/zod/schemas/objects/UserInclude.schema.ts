@@ -14,7 +14,7 @@ const makeSchema = () => z.object({
   Notification: z.union([z.boolean(), z.lazy(() => NotificationFindManySchema)]).optional(),
   ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
-  Role: z.union([z.boolean(), z.lazy(() => RoleFindManySchema)]).optional(),
+  roles: z.union([z.boolean(), z.lazy(() => RoleFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => UserCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const UserIncludeObjectSchema: z.ZodType<Prisma.UserInclude> = makeSchema() as unknown as z.ZodType<Prisma.UserInclude>;

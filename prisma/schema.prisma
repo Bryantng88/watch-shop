@@ -850,7 +850,7 @@ model User {
   Notification      Notification[]
   ServiceRequest    ServiceRequest[]
   TechnicalIssue    TechnicalIssue[]
-  Role              Role[]              @relation("UserRoles")
+  roles             Role[]              @relation("UserRoles")
 
   @@index([isActive])
 }
@@ -1488,7 +1488,6 @@ enum ProductSaleStage {
 }
 
 enum ProductStatus {
-  DRAFT
   AVAILABLE
   IN_SERVICE
   CONSIGNED_FROM

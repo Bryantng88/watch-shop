@@ -30,7 +30,7 @@ const userwhereinputSchema = z.object({
   Notification: z.lazy(() => NotificationListRelationFilterObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  Role: z.lazy(() => RoleListRelationFilterObjectSchema).optional()
+  roles: z.lazy(() => RoleListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;
