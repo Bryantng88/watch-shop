@@ -1,30 +1,14 @@
 import { notFound } from "next/navigation";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
-import { getWatchEditDetail } from "@/domains/watch/server";
-
-import { prisma } from "@/server/db/client";
-import { getListBrands } from "../../../vendors/_server/vendor.repo";
-import { getListVendors } from "../../../vendors/_server/vendor.repo";
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import {
+    getWatchEditDetail,
+    listWatchEditOptions,
+} from "@/domains/watch/server";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getOptions } from "@/app/(admin)/admin/products/_components/options";
-import * as prodRepo from "@/app/(admin)/admin/products/_server/core/product.repo";
 
-export const metadata = { title: "Sửa watch · Admin" };
-
-function serialize(obj: any) {
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (value instanceof Date) return value.toISOString();
-            if (typeof value === "object" && value?._isDecimal) return Number(value);
-            return value;
-        })
-    );
-}
-
-function canEditWatchPricing(user: {
+function canViewCost(user: {
     roles?: string[] | null;
     permissions?: string[] | null;
 } | null) {
@@ -34,31 +18,28 @@ function canEditWatchPricing(user: {
     return (
         roles.includes("ADMIN") ||
         permissions.includes("ADMIN") ||
-        permissions.includes(PERMISSIONS.PRODUCT_COST_VIEW) ||
-        permissions.includes(PERMISSIONS.PRODUCT_UPDATE)
+        permissions.includes("PRODUCT_COST_VIEW")
     );
 }
 
-export default async function EditWatchPage({
+function serialize<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value));
+}
+
+export default async function WatchEditPage({
     params,
 }: {
     params: Promise<{ id: string }>;
 }) {
     await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-    const user = await getCurrentUser();
-    const canEditPricing = canEditWatchPricing(user);
     const { id } = await params;
 
-    const [detail, brands, vendors, opts, categoryOptions, strapInventoryOptions] =
-        await Promise.all([
-            getWatchEditDetail(id),
-            getListBrands(),
-            getListVendors(),
-            getOptions(),
-            prodRepo.listActiveProductCategories(prisma),
-            prodRepo.listAvailableStrapInventory(prisma),
-        ]);
+    const [detail, options, user] = await Promise.all([
+        getWatchEditDetail(id),
+        listWatchEditOptions(),
+        null,
+    ]);
 
     if (!detail) notFound();
 
@@ -66,12 +47,10 @@ export default async function EditWatchPage({
         <div className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
             <WatchFormClient
                 detail={serialize(detail)}
-                brands={serialize(brands)}
-                vendors={serialize(vendors)}
-                options={serialize(opts)}
-                categoryOptions={serialize(categoryOptions)}
-                strapInventoryOptions={serialize(strapInventoryOptions)}
-                canEditPricing={canEditPricing}
+                brands={serialize(options.brands)}
+                vendors={serialize(options.vendors)}
+                categories={serialize(options.categories)}
+                canViewCost={canViewCost(user)}
             />
         </div>
     );

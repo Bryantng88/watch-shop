@@ -6,6 +6,14 @@ function decimalToString(value: Prisma.Decimal | null | undefined) {
     return value.toString();
 }
 
+function hasMeaningfulContent(row: any) {
+    return Boolean(
+        String(row?.watchContent?.body ?? "").trim() ||
+        String(row?.watchContent?.summary ?? "").trim() ||
+        row?.watchContent?.bulletSpecs?.length
+    );
+}
+
 export function mapAdminWatchListItem(row: any): WatchListComputedItem {
     const images = (row?.product?.productImage ?? []).map((img: any) => ({
         id: img.id,
@@ -16,22 +24,18 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         sortOrder: img.sortOrder ?? null,
     }));
 
-    const adminInlineImages = images.filter(
-        (img: any) => img?.role === "INLINE" && img?.isForAdmin
-    );
-
-    const imagesCount = adminInlineImages.length;
-
-    const hasContent = Boolean(
-        row?.watchContent?.body ||
-        row?.watchContent?.summary ||
-        row?.watchContent?.bulletSpecs?.length
-    );
-
+    const galleryImages = images.filter((img: any) => img?.role === "GALLERY");
+    const imagesCount = galleryImages.length;
+    const hasImages = imagesCount > 0;
+    const hasContent = hasMeaningfulContent(row);
     const hasPrice = Boolean(row?.watchPrice?.salePrice || row?.watchPrice?.listPrice);
 
+    const status = row?.product?.status ?? "AVAILABLE";
+    const isHold = ["HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"].includes(String(status).toUpperCase());
+    const isSold = String(status).toUpperCase() === "SOLD";
+
     const publishMissing = [
-        imagesCount > 0 ? null : "images",
+        hasImages ? null : "images",
         hasContent ? null : "content",
         hasPrice ? null : "price",
     ].filter(Boolean) as string[];
@@ -41,21 +45,20 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         watchId: row.id,
         productId: row.productId,
         title: row?.product?.title ?? null,
-        type: "WATCH",
-        status: row?.product?.status ?? "AVAILABLE",
+        status,
         contentStatus: row?.product?.contentStatus ?? null,
 
         images,
         imagesCount,
-        hasImages: imagesCount > 0,
+        hasImages,
         hasContent,
 
-        isReadyToPublish: publishMissing.length === 0,
+        isReadyToPublish: !isHold && !isSold && hasImages && hasContent,
         publishMissing,
 
         sku: row?.product?.sku ?? null,
         brand: row?.product?.brand?.name ?? row?.watchSpecV2?.brand ?? null,
-        primaryImageUrl: null,
+        primaryImageUrl: galleryImages[0]?.fileKey ?? null,
 
         salePrice: decimalToString(row?.watchPrice?.salePrice),
         listPrice: decimalToString(row?.watchPrice?.listPrice),
@@ -103,6 +106,18 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 slug: row.product.brand.slug,
             }
             : null,
+        vendor: row.product.vendor
+            ? {
+                id: row.product.vendor.id,
+                name: row.product.vendor.name,
+            }
+            : null,
+        category: row.product.productCategory
+            ? {
+                id: row.product.productCategory.id,
+                name: row.product.productCategory.name,
+            }
+            : null,
         watch: {
             id: row.id,
             gender: row.gender,
@@ -128,7 +143,53 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 nickname: row.watchSpecV2.nickname ?? null,
                 caseShape: row.watchSpecV2.caseShape ?? null,
                 caseSizeMM: decimalToString(row.watchSpecV2.caseSizeMM),
+                lugToLugMM: decimalToString(row.watchSpecV2.lugToLugMM),
+                lugWidthMM: decimalToString(row.watchSpecV2.lugWidthMM),
+                thicknessMM: decimalToString(row.watchSpecV2.thicknessMM),
+                materialProfile: row.watchSpecV2.materialProfile ?? null,
+                primaryCaseMaterial: row.watchSpecV2.primaryCaseMaterial ?? null,
+                secondaryCaseMaterial: row.watchSpecV2.secondaryCaseMaterial ?? null,
+                goldTreatment: row.watchSpecV2.goldTreatment ?? null,
+                goldColors: row.watchSpecV2.goldColors ?? [],
+                goldKarat: row.watchSpecV2.goldKarat ?? null,
+                dialColor: row.watchSpecV2.dialColor ?? null,
+                crystal: row.watchSpecV2.crystal ?? null,
+                calibre: row.watchSpecV2.calibre ?? null,
+                braceletType: row.watchSpecV2.braceletType ?? null,
+                boxIncluded: row.watchSpecV2.boxIncluded ?? null,
+                bookletIncluded: row.watchSpecV2.bookletIncluded ?? null,
+                cardIncluded: row.watchSpecV2.cardIncluded ?? null,
             }
             : null,
+        price: row.watchPrice
+            ? {
+                costPrice: decimalToString(row.watchPrice.costPrice),
+                serviceCost: decimalToString(row.watchPrice.serviceCost),
+                landedCost: decimalToString(row.watchPrice.landedCost),
+                listPrice: decimalToString(row.watchPrice.listPrice),
+                salePrice: decimalToString(row.watchPrice.salePrice),
+                minPrice: decimalToString(row.watchPrice.minPrice),
+                pricingNote: row.watchPrice.pricingNote ?? null,
+            }
+            : null,
+        content: row.watchContent
+            ? {
+                titleOverride: row.watchContent.titleOverride ?? null,
+                summary: row.watchContent.summary ?? null,
+                hookText: row.watchContent.hookText ?? null,
+                body: row.watchContent.body ?? null,
+                bulletSpecs: row.watchContent.bulletSpecs ?? [],
+                seoTitle: row.watchContent.seoTitle ?? null,
+                seoDescription: row.watchContent.seoDescription ?? null,
+            }
+            : null,
+        images: (row.product.productImage ?? []).map((img: any) => ({
+            id: img.id,
+            fileKey: img.fileKey ?? null,
+            role: img.role ?? null,
+            isForAdmin: img.isForAdmin ?? null,
+            isForStorefront: img.isForStorefront ?? null,
+            sortOrder: img.sortOrder ?? null,
+        })),
     };
 }

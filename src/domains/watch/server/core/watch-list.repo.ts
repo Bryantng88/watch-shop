@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
+import prisma from "component for chatGPT/src/server/db/client";
 import { dbOrTx } from "@/server/db/client";
 import { WatchListFilters } from "../shared/watch.types";
 
@@ -18,9 +19,7 @@ function buildOrderBy(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
   }
 }
 
-function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
-  const q = input.q?.trim();
-
+function buildBaseProductWhere(input: WatchListFilters): Prisma.ProductWhereInput {
   const productIs: Prisma.ProductWhereInput = {
     type: "WATCH",
   };
@@ -47,15 +46,15 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
     };
   }
 
-  if (input.view === "draft") {
-    productIs.contentStatus = "DRAFT";
-  } else if (input.view === "sold") {
-    productIs.status = "SOLD";
-  }
+  return productIs;
+}
+
+function buildCommonWhere(input: WatchListFilters): Prisma.WatchWhereInput {
+  const q = input.q?.trim();
 
   const where: Prisma.WatchWhereInput = {
     product: {
-      is: productIs,
+      is: buildBaseProductWhere(input),
     },
   };
 
@@ -88,11 +87,10 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   if (input.hasImages === "yes") {
     where.product = {
       is: {
-        ...productIs,
+        ...buildBaseProductWhere(input),
         productImage: {
           some: {
-            role: "INLINE",
-            isForAdmin: true,
+            role: "GALLERY",
           },
         },
       },
@@ -100,11 +98,10 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   } else if (input.hasImages === "no") {
     where.product = {
       is: {
-        ...productIs,
+        ...buildBaseProductWhere(input),
         productImage: {
           none: {
-            role: "INLINE",
-            isForAdmin: true,
+            role: "GALLERY",
           },
         },
       },
@@ -122,22 +119,200 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
       },
     };
   } else if (input.hasContent === "no") {
-    where.OR = [
-      ...(where.OR ?? []),
-      { watchContent: { is: null } },
+    where.AND = [
+      ...(where.AND ?? []),
       {
-        watchContent: {
-          is: {
-            body: null,
-            summary: null,
-            bulletSpecs: { isEmpty: true },
+        OR: [
+          { watchContent: { is: null } },
+          {
+            watchContent: {
+              is: {
+                body: null,
+                summary: null,
+                bulletSpecs: { isEmpty: true },
+              },
+            },
           },
-        },
+        ],
       },
     ];
   }
 
   return where;
+}
+
+function buildReadinessWhere(view: string | undefined): Prisma.WatchWhereInput {
+  if (view === "sold") {
+    return {
+      product: {
+        is: {
+          status: "SOLD",
+        },
+      },
+    };
+  }
+
+  if (view === "hold") {
+    return {
+      product: {
+        is: {
+          status: {
+            in: ["HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
+          },
+        },
+      },
+    };
+  }
+
+  if (view === "draft") {
+    return {
+      AND: [
+        {
+          product: {
+            is: {
+              status: {
+                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
+              },
+              productImage: {
+                none: { role: "GALLERY" },
+              },
+            },
+          },
+        },
+        {
+          OR: [
+            { watchContent: { is: null } },
+            {
+              watchContent: {
+                is: {
+                  body: null,
+                  summary: null,
+                  bulletSpecs: { isEmpty: true },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  if (view === "ready") {
+    return {
+      AND: [
+        {
+          product: {
+            is: {
+              status: {
+                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
+              },
+              productImage: {
+                some: { role: "GALLERY" },
+              },
+            },
+          },
+        },
+        {
+          watchContent: {
+            is: {
+              OR: [
+                { body: { not: null } },
+                { summary: { not: null } },
+                { bulletSpecs: { isEmpty: false } },
+              ],
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  if (view === "processing") {
+    return {
+      AND: [
+        {
+          product: {
+            is: {
+              status: {
+                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
+              },
+            },
+          },
+        },
+        {
+          OR: [
+            {
+              product: {
+                is: {
+                  productImage: {
+                    some: { role: "GALLERY" },
+                  },
+                },
+              },
+            },
+            {
+              watchContent: {
+                is: {
+                  OR: [
+                    { body: { not: null } },
+                    { summary: { not: null } },
+                    { bulletSpecs: { isEmpty: false } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          NOT: {
+            AND: [
+              {
+                product: {
+                  is: {
+                    productImage: {
+                      some: { role: "GALLERY" },
+                    },
+                  },
+                },
+              },
+              {
+                watchContent: {
+                  is: {
+                    OR: [
+                      { body: { not: null } },
+                      { summary: { not: null } },
+                      { bulletSpecs: { isEmpty: false } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+  }
+
+  return {};
+}
+
+function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
+  const commonWhere = buildCommonWhere(input);
+  const readinessWhere = buildReadinessWhere(input.view);
+
+  if (!Object.keys(readinessWhere).length) {
+    return commonWhere;
+  }
+
+  return {
+    AND: [commonWhere, readinessWhere],
+  };
+}
+
+async function countByView(client: ReturnType<typeof dbOrTx>, input: WatchListFilters, view: string) {
+  return client.watch.count({
+    where: buildWhere({ ...input, view }),
+  });
 }
 
 export async function listAdminWatches(db: DB, input: WatchListFilters) {
@@ -149,7 +324,7 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
   const where = buildWhere(input);
   const orderBy = buildOrderBy(input.sort);
 
-  const [items, total] = await Promise.all([
+  const [items, total, draft, processing, ready, hold, sold, all] = await Promise.all([
     client.watch.findMany({
       where,
       orderBy,
@@ -216,6 +391,12 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
       },
     }),
     client.watch.count({ where }),
+    countByView(client, input, "draft"),
+    countByView(client, input, "processing"),
+    countByView(client, input, "ready"),
+    countByView(client, input, "hold"),
+    countByView(client, input, "sold"),
+    countByView(client, input, "all"),
   ]);
 
   return {
@@ -224,5 +405,89 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
+    counts: {
+      draft,
+      processing,
+      ready,
+      hold,
+      sold,
+      all,
+    },
+  };
+}
+
+export async function searchWatches(db: DB, q: string) {
+  const client = dbOrTx(db);
+  const keyword = q.trim();
+
+  if (!keyword) return [];
+
+  return client.watch.findMany({
+    where: {
+      AND: [
+        { product: { is: { type: "WATCH" } } },
+        {
+          OR: [
+            { product: { is: { title: { contains: keyword, mode: "insensitive" } } } },
+            { product: { is: { sku: { contains: keyword, mode: "insensitive" } } } },
+            { watchSpecV2: { is: { model: { contains: keyword, mode: "insensitive" } } } },
+            { watchSpecV2: { is: { referenceNumber: { contains: keyword, mode: "insensitive" } } } },
+          ],
+        },
+      ],
+    },
+    take: 20,
+    orderBy: [{ product: { updatedAt: "desc" } }],
+    include: {
+      product: {
+        select: {
+          id: true,
+          title: true,
+          sku: true,
+        },
+      },
+      watchSpecV2: {
+        select: {
+          model: true,
+          referenceNumber: true,
+        },
+      },
+    },
+  });
+}
+export async function listWatchEditOptions() {
+  const [brands, vendors, categories] = await Promise.all([
+    prisma.brand.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    }),
+    prisma.vendor.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+    prisma.productCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    }),
+  ]);
+
+  return {
+    brands,
+    vendors,
+    categories,
   };
 }
