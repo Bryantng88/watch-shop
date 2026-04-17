@@ -17,7 +17,10 @@ export const ProductImageInputSchema = z.object({
     contentHash: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    Product: z.unknown()
+    isPrimary: z.boolean(),
+    isForAdmin: z.boolean(),
+    isForStorefront: z.boolean(),
+    product: z.unknown()
 }).strict();
 
 export type ProductImageInputType = z.infer<typeof ProductImageInputSchema>;

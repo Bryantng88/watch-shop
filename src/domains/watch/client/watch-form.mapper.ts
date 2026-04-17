@@ -1,108 +1,131 @@
-import type { WatchDetailModel } from "../server/shared/watch.types";
-import type { WatchFormValues } from "./watch-form.types";
+import type { Prisma } from "@/prisma/client";
+import type { WatchDetailModel, WatchListComputedItem } from "./watch.types";
 
-function s(v: string | null | undefined) {
-    return v ?? "";
+function decimalToString(value: Prisma.Decimal | null | undefined) {
+    if (value == null) return null;
+    return value.toString();
 }
 
-export function mapWatchDetailToFormValues(
-    detail: WatchDetailModel
-): WatchFormValues {
+export function mapAdminWatchListItem(row: any): WatchListComputedItem {
+    const images = (row?.product?.productImage ?? []).map((img: any) => ({
+        id: img.id,
+        fileKey: img.fileKey ?? null,
+        role: img.role ?? null,
+        isForAdmin: img.isForAdmin ?? null,
+        isForStorefront: img.isForStorefront ?? null,
+        sortOrder: img.sortOrder ?? null,
+    }));
+
+    const adminInlineImages = images.filter((img: any) => img?.role === "INLINE" && img?.isForAdmin);
+    const imagesCount = adminInlineImages.length;
+
+    const hasContent = Boolean(
+        row?.watchContent?.body ||
+        row?.watchContent?.summary ||
+        row?.watchContent?.bulletSpecs?.length
+    );
+
+    const hasPrice = Boolean(row?.watchPrice?.salePrice || row?.watchPrice?.listPrice);
+
+    const publishMissing = [
+        imagesCount > 0 ? null : "images",
+        hasContent ? null : "content",
+        hasPrice ? null : "price",
+    ].filter(Boolean) as string[];
+
     return {
-        productId: detail.productId,
+        id: row.productId,
+        watchId: row.id,
+        productId: row.productId,
+        title: row?.product?.title ?? null,
+        status: row?.product?.status ?? "AVAILABLE",
+        contentStatus: row?.product?.contentStatus ?? null,
+        createdAt: row?.product?.createdAt ?? null,
+        updatedAt: row?.product?.updatedAt ?? row?.updatedAt ?? null,
+        vendorName: row?.product?.vendor?.name ?? null,
 
-        core: {
-            title: s(detail.title),
-            slug: s(detail.slug),
-            sku: s(detail.sku),
-            status: s(detail.status),
+        images,
+        imagesCount,
+        hasImages: imagesCount > 0,
+        hasContent,
 
-            brandId: s(detail.brand?.id),
-            vendorId: "",
-            categoryId: "",
+        isReadyToPublish: publishMissing.length === 0,
+        publishMissing,
 
-            seoTitle: s(detail.seoTitle),
-            seoDescription: s(detail.seoDescription),
-            primaryImageUrl: s(detail.primaryImageUrl),
-            storefrontImageKey: s(detail.storefrontImageKey),
+        sku: row?.product?.sku ?? null,
+        brand: row?.product?.brand?.name ?? row?.watchSpecV2?.brand ?? null,
+        primaryImageUrl: null,
 
-            gender: detail.watch.gender ?? "MEN",
-            siteChannel: detail.watch.siteChannel ?? "AFFORDABLE",
+        salePrice: decimalToString(row?.watchPrice?.salePrice),
+        listPrice: decimalToString(row?.watchPrice?.listPrice),
+        costPrice: decimalToString(row?.watchPrice?.costPrice),
+        minPrice: decimalToString(row?.watchPrice?.minPrice),
 
-            stockState: s(detail.watch.stockState),
-            saleState: s(detail.watch.saleState),
-            serviceState: s(detail.watch.serviceState),
+        saleState: row?.saleState ?? null,
+        serviceState: row?.serviceState ?? null,
+        gender: row?.gender ?? null,
+        siteChannel: row?.siteChannel ?? null,
 
-            conditionGrade: s(detail.watch.conditionGrade),
-            movementType: s(detail.watch.movementType),
-            movementCalibre: s(detail.watch.movementCalibre),
-            serialNumber: s(detail.watch.serialNumber),
-            yearText: s(detail.watch.yearText),
-
-            hasBox: Boolean(detail.watch.hasBox),
-            hasPapers: Boolean(detail.watch.hasPapers),
-            attachedStrapId: "",
-            notes: s(detail.watch.notes),
-        },
+        primaryCaseMaterial: row?.watchSpecV2?.primaryCaseMaterial ?? null,
+        secondaryCaseMaterial: row?.watchSpecV2?.secondaryCaseMaterial ?? null,
+        materialProfile: row?.watchSpecV2?.materialProfile ?? null,
+        goldTreatment: row?.watchSpecV2?.goldTreatment ?? null,
+        goldColors: row?.watchSpecV2?.goldColors ?? [],
+        goldKarat: row?.watchSpecV2?.goldKarat ?? null,
 
         spec: {
-            brand: s(detail.spec?.brand),
-            model: s(detail.spec?.model),
-            referenceNumber: s(detail.spec?.referenceNumber),
-            nickname: s(detail.spec?.nickname),
-
-            caseShape: s(detail.spec?.caseShape),
-            caseSizeMM: s(detail.spec?.caseSizeMM),
-            lugToLugMM: s(detail.spec?.lugToLugMM),
-            lugWidthMM: s(detail.spec?.lugWidthMM),
-            thicknessMM: s(detail.spec?.thicknessMM),
-
-            materialProfile: detail.spec?.materialProfile ?? "SINGLE_MATERIAL",
-            primaryCaseMaterial:
-                detail.spec?.primaryCaseMaterial ?? "STAINLESS_STEEL",
-            secondaryCaseMaterial: detail.spec?.secondaryCaseMaterial ?? "",
-
-            goldTreatment: detail.spec?.goldTreatment ?? "",
-            goldColors: detail.spec?.goldColors ?? [],
-            goldKarat:
-                detail.spec?.goldKarat != null
-                    ? String(detail.spec.goldKarat) as "10" | "14" | "18"
-                    : "",
-            materialNote: "",
-
-            dialColor: s(detail.spec?.dialColor),
-            dialFinish: "",
-            crystal: s(detail.spec?.crystal),
-            calibre: s(detail.spec?.calibre),
-            powerReserve: "",
-            waterResistance: "",
-            braceletType: s(detail.spec?.braceletType),
-            strapMaterialText: "",
-            buckleType: "",
-
-            boxIncluded: Boolean(detail.spec?.boxIncluded),
-            bookletIncluded: Boolean(detail.spec?.bookletIncluded),
-            cardIncluded: Boolean(detail.spec?.cardIncluded),
+            model: row?.watchSpecV2?.model ?? null,
+            referenceNumber: row?.watchSpecV2?.referenceNumber ?? null,
         },
+    };
+}
 
-        pricing: {
-            costPrice: s(detail.price?.costPrice),
-            serviceCost: s(detail.price?.serviceCost),
-            landedCost: s(detail.price?.landedCost),
-            listPrice: s(detail.price?.listPrice),
-            salePrice: s(detail.price?.salePrice),
-            minPrice: s(detail.price?.minPrice),
-            pricingNote: s(detail.price?.pricingNote),
+export function mapWatchDetail(row: any): WatchDetailModel {
+    return {
+        id: row.product.id,
+        productId: row.product.id,
+        watchId: row.id,
+        title: row.product.title,
+        slug: row.product.slug ?? null,
+        status: row.product.status,
+        sku: row.product.sku ?? null,
+        primaryImageUrl: row.product.primaryImageUrl ?? null,
+        storefrontImageKey: row.product.storefrontImageKey ?? null,
+        seoTitle: row.product.seoTitle ?? null,
+        seoDescription: row.product.seoDescription ?? null,
+        brand: row.product.brand
+            ? {
+                id: row.product.brand.id,
+                name: row.product.brand.name,
+                slug: row.product.brand.slug,
+            }
+            : null,
+        watch: {
+            id: row.id,
+            gender: row.gender,
+            siteChannel: row.siteChannel,
+            stockState: row.stockState ?? null,
+            saleState: row.saleState ?? null,
+            serviceState: row.serviceState ?? null,
+            movementType: row.movementType ?? null,
+            movementCalibre: row.movementCalibre ?? null,
+            yearText: row.yearText ?? null,
+            hasBox: row.hasBox,
+            hasPapers: row.hasPapers,
+            notes: row.notes ?? null,
+            conditionGrade: row.conditionGrade ?? null,
+            serialNumber: row.serialNumber ?? null,
         },
-
-        content: {
-            titleOverride: s(detail.content?.titleOverride),
-            summary: s(detail.content?.summary),
-            hookText: s(detail.content?.hookText),
-            body: s(detail.content?.body),
-            bulletSpecsText: (detail.content?.bulletSpecs ?? []).join("\n"),
-            seoTitle: s(detail.content?.seoTitle),
-            seoDescription: s(detail.content?.seoDescription),
-        },
+        spec: row.watchSpecV2
+            ? {
+                id: row.watchSpecV2.id,
+                brand: row.watchSpecV2.brand ?? null,
+                model: row.watchSpecV2.model ?? null,
+                referenceNumber: row.watchSpecV2.referenceNumber ?? null,
+                nickname: row.watchSpecV2.nickname ?? null,
+                caseShape: row.watchSpecV2.caseShape ?? null,
+                caseSizeMM: decimalToString(row.watchSpecV2.caseSizeMM),
+            }
+            : null,
     };
 }

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { WatchListToolbar } from "../ui/list";
 import WatchListViewTabs from "../ui/list/WatchListViewTabs";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
-
 import { buildCounts } from "../ui/list/helpers";
-import type { ViewKey, WatchListPageProps, WatchRow } from "../ui/list/types";
+import type { ViewKey, WatchListPageProps } from "../ui/list/types";
 
 function normalizeView(value: string | null | undefined): ViewKey {
     const view = String(value ?? "").toLowerCase();
@@ -23,18 +22,40 @@ function setParam(next: URLSearchParams, key: string, value?: string | null) {
     else next.set(key, value);
 }
 
-function Pagination({ page, totalPages, total, onPage }: { page: number; totalPages: number; total: number; onPage: (page: number) => void }) {
+function Pagination({
+    page,
+    totalPages,
+    total,
+    onPage,
+}: {
+    page: number;
+    totalPages: number;
+    total: number;
+    onPage: (page: number) => void;
+}) {
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
             <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang{" "}
+                <span className="font-semibold text-slate-950">{page}</span>/
+                <span className="font-semibold text-slate-950">{totalPages}</span>
             </div>
 
             <div className="flex items-center gap-2">
-                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))}>
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page <= 1}
+                    onClick={() => onPage(Math.max(1, page - 1))}
+                >
                     ← Trước
                 </button>
-                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))}>
+                <button
+                    type="button"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={page >= totalPages}
+                    onClick={() => onPage(Math.min(totalPages, page + 1))}
+                >
                     Sau →
                 </button>
             </div>
@@ -47,9 +68,7 @@ export default function WatchListClient(props: WatchListPageProps) {
     const pathname = usePathname();
     const sp = useSearchParams();
 
-    const [rows, setRows] = useState<WatchRow[]>(props.items ?? []);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [readinessProduct, setReadinessProduct] = useState<WatchRow | null>(null);
     const [filters, setFilters] = useState({
         q: sp.get("q") ?? "",
         sku: sp.get("sku") ?? "",
@@ -62,24 +81,20 @@ export default function WatchListClient(props: WatchListPageProps) {
         sort: sp.get("sort") ?? "updatedDesc",
     });
 
-    useEffect(() => { setRows(props.items ?? []); }, [props.items]);
-    useEffect(() => {
-        setFilters({
-            q: sp.get("q") ?? "",
-            sku: sp.get("sku") ?? "",
-            brandId: sp.get("brandId") ?? "",
-            vendorId: sp.get("vendorId") ?? "",
-            hasContent: sp.get("hasContent") ?? "",
-            hasImages: sp.get("hasImages") ?? "",
-            saleStage: sp.get("saleStage") ?? "",
-            opsStage: sp.get("opsStage") ?? "",
-            sort: sp.get("sort") ?? "updatedDesc",
-        });
-    }, [sp]);
-
+    const rows = props.items ?? [];
     const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
-    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView, rows), [props.counts, props.total, currentView, rows]);
-    const activeQuickFilters = useMemo(() => ({ hasContent: filters.hasContent === "yes", hasImages: filters.hasImages === "yes" }), [filters.hasContent, filters.hasImages]);
+    const counts = useMemo(
+        () => buildCounts(props.counts, props.total, currentView, rows),
+        [props.counts, props.total, currentView, rows]
+    );
+
+    const activeQuickFilters = useMemo(
+        () => ({
+            hasContent: filters.hasContent === "yes",
+            hasImages: filters.hasImages === "yes",
+        }),
+        [filters.hasContent, filters.hasImages]
+    );
 
     function pushParams(mutator: (next: URLSearchParams) => void) {
         const next = new URLSearchParams(sp.toString());
@@ -110,9 +125,22 @@ export default function WatchListClient(props: WatchListPageProps) {
     }
 
     function handleClearFilters() {
-        setFilters({ q: "", sku: "", brandId: "", vendorId: "", hasContent: "", hasImages: "", saleStage: "", opsStage: "", sort: "updatedDesc" });
+        setFilters({
+            q: "",
+            sku: "",
+            brandId: "",
+            vendorId: "",
+            hasContent: "",
+            hasImages: "",
+            saleStage: "",
+            opsStage: "",
+            sort: "updatedDesc",
+        });
+
         pushParams((next) => {
-            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) => next.delete(key));
+            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) =>
+                next.delete(key)
+            );
             setParam(next, "sort", "updatedDesc");
             setParam(next, "page", "1");
         });
@@ -132,7 +160,9 @@ export default function WatchListClient(props: WatchListPageProps) {
     }
 
     function onToggleOne(productId: string, checked: boolean) {
-        setSelectedIds((prev) => checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId));
+        setSelectedIds((prev) =>
+            checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId)
+        );
     }
 
     function onToggleAll(checked: boolean) {
@@ -140,36 +170,40 @@ export default function WatchListClient(props: WatchListPageProps) {
         setSelectedIds(rows.map((x) => x.productId));
     }
 
-    function onView(productId: string) { router.push(`/admin/watches/${productId}`); }
-    function onEdit(productId: string) { router.push(`/admin/watches/${productId}/edit`); }
-    function onDelete(productId: string) { console.log("TODO delete watch", productId); }
-    function onService(productId: string) { router.push(`/admin/services/new?productId=${productId}`); }
-
-    async function onPriceCommit(productId: string, field: "minPrice" | "salePrice" | "purchasePrice", value: number | null) {
-        const payload = field === "purchasePrice" ? { costPrice: value } : { [field]: value };
-        const res = await fetch(`/api/admin/watches/${productId}/pricing`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ field, value, ...payload }),
-        });
-
-        const data = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(data?.error || "Update pricing failed");
-
-        onPriceSaved(productId, {
-            ...(field === "purchasePrice" ? { purchasePrice: value, costPrice: value } : { [field]: value }),
-        });
+    function onView(productId: string) {
+        router.push(`/admin/watches/${productId}`);
     }
 
-    function onPriceSaved(productId: string, patch: Partial<WatchRow>) {
-        setRows((prev) => prev.map((row) => row.productId === productId ? { ...row, ...patch } : row));
+    function onEdit(productId: string) {
+        router.push(`/admin/watches/${productId}/edit`);
     }
 
-    const brandOptions = (props.brands ?? []).map((brand) => ({ label: brand.name, value: brand.id }));
+    function onDelete(productId: string) {
+        console.log("TODO delete watch", productId);
+    }
+
+    function onService(productId: string) {
+        router.push(`/admin/services/new?productId=${productId}`);
+    }
+
+    function onQuickOrder(productId: string) {
+        router.push(`/admin/orders/new?mode=quick&productId=${productId}`);
+    }
+
+    function onConsign(productId: string) {
+        router.push(`/admin/consignments/new?productId=${productId}`);
+    }
+
+    const brandOptions = (props.brands ?? []).map((brand) => ({
+        label: brand.name,
+        value: brand.id,
+    }));
+
     const vendorOptions = (props.vendors ?? []).map((vendor) => ({
         label: vendor.name,
         value: vendor.id,
     }));
+
     return (
         <div className="space-y-5">
             <WatchListToolbar selectedCount={selectedIds.length} />
@@ -189,23 +223,25 @@ export default function WatchListClient(props: WatchListPageProps) {
                 items={rows}
                 selectedIds={selectedIds}
                 canViewCost={props.canViewCost}
-                canEditPrice={props.canEditPrice}
                 counts={counts}
                 activeQuickFilters={activeQuickFilters}
                 onQuickFilterClick={handleQuickFilterClick}
                 onToggleOne={onToggleOne}
                 onToggleAll={onToggleAll}
-                onOpenReadiness={setReadinessProduct}
-                onPriceSaved={onPriceSaved}
-                onPriceCommit={onPriceCommit}
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onService={onService}
+                onQuickOrder={onQuickOrder}
+                onConsign={onConsign}
             />
 
-            <Pagination page={props.page} totalPages={props.totalPages} total={props.total} onPage={handlePage} />
-
+            <Pagination
+                page={props.page}
+                totalPages={props.totalPages}
+                total={props.total}
+                onPage={handlePage}
+            />
         </div>
     );
 }

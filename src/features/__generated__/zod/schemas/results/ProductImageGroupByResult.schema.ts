@@ -13,6 +13,9 @@ export const ProductImageGroupByResultSchema = z.array(z.object({
   contentHash: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  isPrimary: z.boolean(),
+  isForAdmin: z.boolean(),
+  isForStorefront: z.boolean(),
   _count: z.object({
     id: z.number(),
     productId: z.number(),
@@ -28,7 +31,10 @@ export const ProductImageGroupByResultSchema = z.array(z.object({
     contentHash: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    Product: z.number()
+    isPrimary: z.number(),
+    isForAdmin: z.number(),
+    isForStorefront: z.number(),
+    product: z.number()
   }).optional(),
   _sum: z.object({
     width: z.number().nullable(),

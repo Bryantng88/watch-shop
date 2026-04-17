@@ -7,6 +7,7 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { NullableIntFieldUpdateOperationsInputObjectSchema as NullableIntFieldUpdateOperationsInputObjectSchema } from './NullableIntFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { ProductUpdateOneRequiredWithoutProductImageNestedInputObjectSchema as ProductUpdateOneRequiredWithoutProductImageNestedInputObjectSchema } from './ProductUpdateOneRequiredWithoutProductImageNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -23,7 +24,10 @@ const makeSchema = () => z.object({
   contentHash: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  Product: z.lazy(() => ProductUpdateOneRequiredWithoutProductImageNestedInputObjectSchema).optional()
+  isPrimary: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  isForAdmin: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  isForStorefront: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  product: z.lazy(() => ProductUpdateOneRequiredWithoutProductImageNestedInputObjectSchema).optional()
 }).strict();
 export const ProductImageUpdateInputObjectSchema: z.ZodType<Prisma.ProductImageUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageUpdateInput>;
 export const ProductImageUpdateInputObjectZodSchema = makeSchema();

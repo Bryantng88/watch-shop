@@ -537,21 +537,24 @@ model ProductContent {
 }
 
 model ProductImage {
-  id          String    @id
-  productId   String
-  fileKey     String
-  role        ImageRole @default(GALLERY)
-  alt         String?
-  width       Int?
-  height      Int?
-  mime        String?
-  sizeBytes   Int?
-  sortOrder   Int       @default(0)
-  dominantHex String?
-  contentHash String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime
-  Product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String    @id
+  productId       String
+  fileKey         String
+  role            ImageRole @default(GALLERY)
+  alt             String?
+  width           Int?
+  height          Int?
+  mime            String?
+  sizeBytes       Int?
+  sortOrder       Int       @default(0)
+  dominantHex     String?
+  contentHash     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  isPrimary       Boolean   @default(false)
+  isForAdmin      Boolean   @default(true)
+  isForStorefront Boolean   @default(true)
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductVariant {
@@ -938,7 +941,7 @@ model WatchMedia {
   key                  String?
   url                  String?
   type                 String?
-  role                 ImageRole?
+  role                 ImageRole? @default(GALLERY)
   sortOrder            Int        @default(0)
   alt                  String?
   width                Int?
@@ -1298,10 +1301,10 @@ enum GoldColor {
 }
 
 enum ImageRole {
-  PRIMARY
   GALLERY
-  THUMB
   COVER
+  THUMB
+  INLINE
 }
 
 enum InvoiceStatus {

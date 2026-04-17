@@ -17,7 +17,10 @@ const makeSchema = () => z.object({
   contentHash: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date(),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutProductImageInputObjectSchema)
+  isPrimary: z.boolean().optional(),
+  isForAdmin: z.boolean().optional(),
+  isForStorefront: z.boolean().optional(),
+  product: z.lazy(() => ProductCreateNestedOneWithoutProductImageInputObjectSchema)
 }).strict();
 export const ProductImageCreateInputObjectSchema: z.ZodType<Prisma.ProductImageCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageCreateInput>;
 export const ProductImageCreateInputObjectZodSchema = makeSchema();

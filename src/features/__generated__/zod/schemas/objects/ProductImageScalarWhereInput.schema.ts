@@ -6,7 +6,8 @@ import { ImageRoleSchema } from '../enums/ImageRole.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
-import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
+import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema'
 
 const productimagescalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductImageScalarWhereInputObjectSchema), z.lazy(() => ProductImageScalarWhereInputObjectSchema).array()]).optional(),
@@ -25,7 +26,10 @@ const productimagescalarwhereinputSchema = z.object({
   dominantHex: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   contentHash: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  isPrimary: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isForAdmin: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isForStorefront: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const ProductImageScalarWhereInputObjectSchema: z.ZodType<Prisma.ProductImageScalarWhereInput> = productimagescalarwhereinputSchema as unknown as z.ZodType<Prisma.ProductImageScalarWhereInput>;
 export const ProductImageScalarWhereInputObjectZodSchema = productimagescalarwhereinputSchema;

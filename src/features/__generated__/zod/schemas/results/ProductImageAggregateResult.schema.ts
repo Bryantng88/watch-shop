@@ -14,7 +14,10 @@ export const ProductImageAggregateResultSchema = z.object({  _count: z.object({
     contentHash: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    Product: z.number()
+    isPrimary: z.number(),
+    isForAdmin: z.number(),
+    isForStorefront: z.number(),
+    product: z.number()
   }).optional(),
   _sum: z.object({
     width: z.number().nullable(),

@@ -17,7 +17,10 @@ export const ProductImageResultSchema = z.object({
     contentHash: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    Product: z.unknown()
+    isPrimary: z.boolean(),
+    isForAdmin: z.boolean(),
+    isForStorefront: z.boolean(),
+    product: z.unknown()
 }).strict();
 
 export type ProductImageResultType = z.infer<typeof ProductImageResultSchema>;

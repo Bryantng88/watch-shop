@@ -24,7 +24,10 @@ export const ProductImageFindManySelectSchema: z.ZodType<Prisma.ProductImageSele
     contentHash: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional()
+    isPrimary: z.boolean().optional(),
+    isForAdmin: z.boolean().optional(),
+    isForStorefront: z.boolean().optional(),
+    product: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ProductImageSelect>;
 
 export const ProductImageFindManySelectZodSchema = z.object({
@@ -42,7 +45,10 @@ export const ProductImageFindManySelectZodSchema = z.object({
     contentHash: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional()
+    isPrimary: z.boolean().optional(),
+    isForAdmin: z.boolean().optional(),
+    isForStorefront: z.boolean().optional(),
+    product: z.boolean().optional()
   }).strict();
 
 export const ProductImageFindManySchema: z.ZodType<Prisma.ProductImageFindManyArgs> = z.object({ select: ProductImageFindManySelectSchema.optional(), include: ProductImageIncludeObjectSchema.optional(), orderBy: z.union([ProductImageOrderByWithRelationInputObjectSchema, ProductImageOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductImageWhereInputObjectSchema.optional(), cursor: ProductImageWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ProductImageScalarFieldEnumSchema, ProductImageScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ProductImageFindManyArgs>;

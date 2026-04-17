@@ -5,6 +5,26 @@ import type { Counts, WatchRow } from "./types";
 
 type QuickFilterKey = "hasContent" | "hasImages";
 
+type Props = {
+    items: WatchRow[];
+    selectedIds: string[];
+    canViewCost: boolean;
+    counts?: Counts;
+    activeQuickFilters?: {
+        hasContent?: boolean;
+        hasImages?: boolean;
+    };
+    onQuickFilterClick?: (key: QuickFilterKey) => void;
+    onToggleOne: (productId: string, checked: boolean) => void;
+    onToggleAll: (checked: boolean) => void;
+    onView: (productId: string) => void;
+    onEdit: (productId: string) => void;
+    onDelete: (productId: string) => void;
+    onService: (productId: string) => void;
+    onConsign?: (productId: string) => void;
+    onQuickOrder?: (productId: string) => void;
+};
+
 function HeaderStatButton({
     value,
     label,
@@ -50,51 +70,50 @@ export default function WatchListTable({
     items,
     selectedIds,
     canViewCost,
-    canEditPrice,
     counts,
     activeQuickFilters,
     onQuickFilterClick,
     onToggleOne,
     onToggleAll,
-    onOpenReadiness,
-    onPriceSaved,
-    onPriceCommit,
     onView,
     onEdit,
     onDelete,
     onService,
-}: {
-    items: WatchRow[];
-    selectedIds: string[];
-    canViewCost: boolean;
-    canEditPrice: boolean;
-    counts?: Counts;
-    activeQuickFilters?: { hasContent?: boolean; hasImages?: boolean };
-    onQuickFilterClick?: (key: QuickFilterKey) => void;
-    onToggleOne: (productId: string, checked: boolean) => void;
-    onToggleAll: (checked: boolean) => void;
-    onOpenReadiness: (product: WatchRow) => void;
-    onPriceSaved: (productId: string, patch: Partial<WatchRow>) => void;
-    onPriceCommit: (productId: string, field: "minPrice" | "salePrice" | "purchasePrice", value: number | null) => Promise<void>;
-    onView: (productId: string) => void;
-    onEdit: (productId: string) => void;
-    onDelete: (productId: string) => void;
-    onService: (productId: string) => void;
-}) {
-    const allChecked = items.length > 0 && items.every((item) => selectedIds.includes(item.productId));
+    onConsign,
+    onQuickOrder,
+}: Props) {
+    const allChecked =
+        items.length > 0 && items.every((item) => selectedIds.includes(item.productId));
 
     return (
         <div className="rounded-[24px] border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="text-sm font-semibold text-slate-950">Danh sách dữ liệu</div>
-                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">{items.length} mục</div>
+
+                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">
+                        {items.length} mục
+                    </div>
 
                     {counts ? (
                         <>
                             <div className="h-3.5 w-px bg-slate-200" />
-                            <HeaderStatButton value={counts.hasContent ?? 0} label="có content" tone="content" active={Boolean(activeQuickFilters?.hasContent)} onClick={() => onQuickFilterClick?.("hasContent")} />
-                            <HeaderStatButton value={counts.hasImages ?? 0} label="có image" tone="image" active={Boolean(activeQuickFilters?.hasImages)} onClick={() => onQuickFilterClick?.("hasImages")} />
+
+                            <HeaderStatButton
+                                value={counts.hasContent ?? 0}
+                                label="có content"
+                                tone="content"
+                                active={Boolean(activeQuickFilters?.hasContent)}
+                                onClick={() => onQuickFilterClick?.("hasContent")}
+                            />
+
+                            <HeaderStatButton
+                                value={counts.hasImages ?? 0}
+                                label="có image"
+                                tone="image"
+                                active={Boolean(activeQuickFilters?.hasImages)}
+                                onClick={() => onQuickFilterClick?.("hasImages")}
+                            />
                         </>
                     ) : null}
                 </div>
@@ -114,34 +133,54 @@ export default function WatchListTable({
                     <thead>
                         <tr className="bg-slate-50/80">
                             <th className="px-4 py-3 text-left">
-                                <input type="checkbox" checked={allChecked} onChange={(e) => onToggleAll(e.target.checked)} />
+                                <input
+                                    type="checkbox"
+                                    checked={allChecked}
+                                    onChange={(e) => onToggleAll(e.target.checked)}
+                                />
                             </th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">Watch</th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">Post readiness</th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">Pricing</th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">Cập nhật</th>
-                            <th className="px-4 py-3 text-right text-[12px] font-semibold text-slate-500">Hành động</th>
+                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                                Watch
+                            </th>
+                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                                Post readiness
+                            </th>
+                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                                Pricing
+                            </th>
+                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
+                                Cập nhật
+                            </th>
+                            <th className="px-4 py-3 text-right text-[12px] font-semibold text-slate-500">
+                                Hành động
+                            </th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {items.map((product) => (
-                            <WatchListRow
-                                key={product.productId}
-                                product={product}
-                                checked={selectedIds.includes(product.productId)}
-                                canViewCost={canViewCost}
-                                canEditPrice={canEditPrice}
-                                onCheckedChange={(checked) => onToggleOne(product.productId, checked)}
-                                onOpenReadiness={onOpenReadiness}
-                                onPriceSaved={onPriceSaved}
-                                onPriceCommit={onPriceCommit}
-                                onView={onView}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
-                                onService={onService}
-                            />
-                        ))}
+                        {items.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                                    Không có dữ liệu
+                                </td>
+                            </tr>
+                        ) : (
+                            items.map((item) => (
+                                <WatchListRow
+                                    key={item.productId}
+                                    item={item}
+                                    checked={selectedIds.includes(item.productId)}
+                                    canViewCost={canViewCost}
+                                    onCheckedChange={(checked) => onToggleOne(item.productId, checked)}
+                                    onView={onView}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    onService={onService}
+                                    onConsign={onConsign}
+                                    onQuickOrder={onQuickOrder}
+                                />
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>

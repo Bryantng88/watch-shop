@@ -32,55 +32,6 @@ export type WatchReadinessStage =
 
 export type WatchPricingState = "READY_PRICE" | "MISSING_PRICE";
 
-export type WatchRow = {
-    id: string;
-    watchId?: string;
-    productId: string;
-
-    title?: string | null;
-    sku?: string | null;
-    slug?: string | null;
-    brand?: string | null;
-    vendorName?: string | null;
-    primaryImageUrl?: string | null;
-    storefrontImageKey?: string | null;
-
-    status?: string | null;
-    contentStatus?: string | null;
-    saleState?: string | null;
-    serviceState?: string | null;
-
-    listPrice?: number | string | null;
-    salePrice?: number | string | null;
-    costPrice?: number | string | null;
-    purchasePrice?: number | string | null;
-    minPrice?: number | string | null;
-
-    createdAt?: string | null;
-    updatedAt?: string | null;
-
-    imagesCount?: number | null;
-    publishMissing?: string[];
-    isReadyToPublish?: boolean;
-    hasContent?: boolean;
-    hasImages?: boolean;
-    hasSellPrice?: boolean;
-
-    spec?: {
-        model?: string | null;
-        referenceNumber?: string | null;
-    } | null;
-
-    computed?: {
-        hasContent: boolean;
-        hasImages: boolean;
-        hasSellPrice: boolean;
-        serviceState: WatchServiceState;
-        readinessStage: WatchReadinessStage;
-        pricingState: WatchPricingState;
-    };
-};
-
 export type WatchListPageProps = {
     items: WatchRow[];
     total: number;
@@ -93,4 +44,40 @@ export type WatchListPageProps = {
     vendors: Array<{ id: string; name: string }>;
     canViewCost: boolean;
     canEditPrice: boolean;
+};
+
+export type WatchRowImage = {
+    id?: string;
+    fileKey?: string | null;
+    url?: string | null;
+    role?: "INLINE" | "GALLERY" | "COVER" | "THUMB" | null;
+    isForAdmin?: boolean | null;
+    isForStorefront?: boolean | null;
+    sortOrder?: number | null;
+};
+
+export type WatchRow = {
+    id: string;
+    watchId: string;
+    productId: string;
+    title?: string | null;
+    sku?: string | null;
+    brand?: string | null;
+    status?: string | null;
+    vendorName?: string | null;
+    createdAt?: string | Date | null;
+    serviceState?: string | null;
+
+    salePrice?: string | null;
+    listPrice?: string | null;
+    costPrice?: string | null;
+    minPrice?: string | null;
+
+    hasImages?: boolean;
+    hasContent?: boolean;
+    imagesCount?: number | null;
+    images?: WatchRowImage[];
+
+    updatedAt?: string | Date | null;
+    isReadyToPublish?: boolean;
 };

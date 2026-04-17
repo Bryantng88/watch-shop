@@ -1,210 +1,248 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import WatchListToolbar from "./WatchListToolBar";
-import WatchListViewTabs from "./WatchListViewTabs";
-import WatchListFilters from "./WatchListFilters";
-import WatchListTable from "./WatchListTable";
-import { buildCounts } from "./helpers";
-import type { ViewKey, WatchListPageProps, WatchRow } from "./types";
+import Image from "next/image";
+import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
+import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { pickWatchInlineImage } from "../../server/shared/watch-image";
+import type { WatchRow } from "./types";
 
-function normalizeView(value: string | null | undefined): ViewKey {
-    const view = String(value ?? "").toLowerCase();
-    if (["draft", "processing", "ready", "hold", "sold", "all"].includes(view)) {
-        return view as ViewKey;
+type Props = {
+    item: WatchRow;
+    checked: boolean;
+    canViewCost: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    onView: (productId: string) => void;
+    onEdit: (productId: string) => void;
+    onDelete: (productId: string) => void;
+    onService: (productId: string) => void;
+    onConsign?: (productId: string) => void;
+    onQuickOrder?: (productId: string) => void;
+};
+
+function fmtMoney(value?: string | number | null) {
+    if (value == null || value === "") return "-";
+    const num = Number(value);
+    if (!Number.isFinite(num)) return String(value);
+    return num.toLocaleString("vi-VN");
+}
+
+function fmtDT(value?: string | Date | null) {
+    if (!value) return "-";
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleString("vi-VN");
+}
+
+function getReadinessLabel(item: WatchRow) {
+    if (item.isReadyToPublish) return "Sẵn sàng bán";
+    if (item.hasContent || item.hasImages) return "Đang hoàn thiện";
+    return "Chưa bắt đầu";
+}
+
+function getServiceMeta(serviceState?: string | null) {
+    switch (String(serviceState || "").toUpperCase()) {
+        case "DONE":
+            return { label: "Đã sửa xong", tone: "success" as const };
+        case "IN_PROGRESS":
+            return { label: "Đang service", tone: "warning" as const };
+        case "PENDING":
+            return { label: "Chờ xử lý", tone: "danger" as const };
+        default:
+            return { label: "Không cần service", tone: "muted" as const };
     }
-    return "draft";
 }
 
-function setParam(next: URLSearchParams, key: string, value?: string | null) {
-    if (!value) next.delete(key);
-    else next.set(key, value);
+function toneClass(tone?: "success" | "warning" | "danger" | "muted" | "accent") {
+    switch (tone) {
+        case "success":
+            return "text-emerald-700";
+        case "warning":
+            return "text-amber-700";
+        case "danger":
+            return "text-rose-600";
+        case "accent":
+            return "text-orange-600";
+        default:
+            return "text-slate-700";
+    }
 }
 
-function Pagination({ page, totalPages, total, onPage }: { page: number; totalPages: number; total: number; onPage: (page: number) => void }) {
+function MetaRow({
+    label,
+    value,
+    tone = "muted",
+}: {
+    label: string;
+    value: string;
+    tone?: "success" | "warning" | "danger" | "muted" | "accent";
+}) {
     return (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-            <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang <span className="font-semibold text-slate-950">{page}</span>/<span className="font-semibold text-slate-950">{totalPages}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page <= 1} onClick={() => onPage(Math.max(1, page - 1))}>
-                    ← Trước
-                </button>
-                <button type="button" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" disabled={page >= totalPages} onClick={() => onPage(Math.min(totalPages, page + 1))}>
-                    Sau →
-                </button>
+        <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
+            <div className="text-[13px] leading-8 text-slate-400">{label}</div>
+            <div className={["min-w-0 truncate text-[14px] font-medium leading-8", toneClass(tone)].join(" ")}>
+                {value}
             </div>
         </div>
     );
 }
 
-export default function WatchListClient(props: WatchListPageProps) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const sp = useSearchParams();
+function getWatchRowActions(status?: string | null) {
+    const s = String(status || "").toUpperCase();
 
-    const [rows, setRows] = useState<WatchRow[]>(props.items ?? []);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [readinessProduct, setReadinessProduct] = useState<WatchRow | null>(null);
-    const [filters, setFilters] = useState({
-        q: sp.get("q") ?? "",
-        sku: sp.get("sku") ?? "",
-        brandId: sp.get("brandId") ?? "",
-        vendorId: sp.get("vendorId") ?? "",
-        hasContent: sp.get("hasContent") ?? "",
-        hasImages: sp.get("hasImages") ?? "",
-        saleStage: sp.get("saleStage") ?? "",
-        opsStage: sp.get("opsStage") ?? "",
-        sort: sp.get("sort") ?? "updatedDesc",
-    });
-
-    useEffect(() => { setRows(props.items ?? []); }, [props.items]);
-    useEffect(() => {
-        setFilters({
-            q: sp.get("q") ?? "",
-            sku: sp.get("sku") ?? "",
-            brandId: sp.get("brandId") ?? "",
-            vendorId: sp.get("vendorId") ?? "",
-            hasContent: sp.get("hasContent") ?? "",
-            hasImages: sp.get("hasImages") ?? "",
-            saleStage: sp.get("saleStage") ?? "",
-            opsStage: sp.get("opsStage") ?? "",
-            sort: sp.get("sort") ?? "updatedDesc",
-        });
-    }, [sp]);
-
-    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
-    const counts = useMemo(() => buildCounts(props.counts, props.total, currentView, rows), [props.counts, props.total, currentView, rows]);
-    const activeQuickFilters = useMemo(() => ({ hasContent: filters.hasContent === "yes", hasImages: filters.hasImages === "yes" }), [filters.hasContent, filters.hasImages]);
-
-    function pushParams(mutator: (next: URLSearchParams) => void) {
-        const next = new URLSearchParams(sp.toString());
-        mutator(next);
-        router.push(`${pathname}?${next.toString()}`);
+    if (s === "CONSIGNED_TO") {
+        return {
+            canQuickOrder: false,
+            canConsign: false,
+        };
     }
 
-    function handleViewChange(view: ViewKey) {
-        pushParams((next) => {
-            setParam(next, "view", view === "all" ? null : view);
-            setParam(next, "page", "1");
-        });
-    }
+    return {
+        canQuickOrder: s !== "SOLD",
+        canConsign: s !== "SOLD",
+    };
+}
 
-    function handleApplyFilters() {
-        pushParams((next) => {
-            setParam(next, "q", filters.q);
-            setParam(next, "sku", filters.sku);
-            setParam(next, "brandId", filters.brandId);
-            setParam(next, "vendorId", filters.vendorId);
-            setParam(next, "hasContent", filters.hasContent);
-            setParam(next, "hasImages", filters.hasImages);
-            setParam(next, "saleStage", filters.saleStage);
-            setParam(next, "opsStage", filters.opsStage);
-            setParam(next, "sort", filters.sort);
-            setParam(next, "page", "1");
-        });
-    }
+export default function WatchListRow({
+    item,
+    checked,
+    canViewCost,
+    onCheckedChange,
+    onView,
+    onEdit,
+    onDelete,
+    onService,
+    onConsign,
+    onQuickOrder,
+}: Props) {
+    const image = pickWatchInlineImage(item.images ?? []);
+    const imageSrc = resolveMediaPreviewSrc(image?.fileKey || image?.url || null);
+    const serviceMeta = getServiceMeta(item.serviceState);
+    const readinessLabel = getReadinessLabel(item);
+    const actions = getWatchRowActions(item.status);
 
-    function handleClearFilters() {
-        setFilters({ q: "", sku: "", brandId: "", vendorId: "", hasContent: "", hasImages: "", saleStage: "", opsStage: "", sort: "updatedDesc" });
-        pushParams((next) => {
-            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) => next.delete(key));
-            setParam(next, "sort", "updatedDesc");
-            setParam(next, "page", "1");
-        });
-    }
-
-    function handleQuickFilterClick(key: "hasContent" | "hasImages") {
-        const nextValue = filters[key] === "yes" ? "" : "yes";
-        setFilters((prev) => ({ ...prev, [key]: nextValue }));
-        pushParams((next) => {
-            setParam(next, key, nextValue || null);
-            setParam(next, "page", "1");
-        });
-    }
-
-    function handlePage(page: number) {
-        pushParams((next) => setParam(next, "page", String(page)));
-    }
-
-    function onToggleOne(productId: string, checked: boolean) {
-        setSelectedIds((prev) => checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId));
-    }
-
-    function onToggleAll(checked: boolean) {
-        if (!checked) return setSelectedIds([]);
-        setSelectedIds(rows.map((x) => x.productId));
-    }
-
-    function onView(productId: string) { router.push(`/admin/watches/${productId}`); }
-    function onEdit(productId: string) { router.push(`/admin/watches/${productId}/edit`); }
-    function onDelete(productId: string) { console.log("TODO delete watch", productId); }
-    function onService(productId: string) { router.push(`/admin/services/new?productId=${productId}`); }
-
-    async function onPriceCommit(productId: string, field: "minPrice" | "salePrice" | "purchasePrice", value: number | null) {
-        const payload = field === "purchasePrice" ? { costPrice: value } : { [field]: value };
-        const res = await fetch(`/api/admin/watches/${productId}/pricing`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ field, value, ...payload }),
-        });
-
-        const data = await res.json().catch(() => null);
-        if (!res.ok) throw new Error(data?.error || "Update pricing failed");
-
-        onPriceSaved(productId, {
-            ...(field === "purchasePrice" ? { purchasePrice: value, costPrice: value } : { [field]: value }),
-        });
-    }
-
-    function onPriceSaved(productId: string, patch: Partial<WatchRow>) {
-        setRows((prev) => prev.map((row) => row.productId === productId ? { ...row, ...patch } : row));
-    }
-
-    const brandOptions = (props.brands ?? []).map((brand) => ({ label: brand.name, value: brand.id }));
-    const vendorOptions = (props.vendors ?? []).map((vendor) => ({
-        label: vendor.name,
-        value: vendor.id,
-    }));
     return (
-        <div className="space-y-5">
-            <WatchListToolbar selectedCount={selectedIds.length} />
+        <tr className="border-t border-slate-100 transition hover:bg-slate-50/40">
+            <td className="px-4 py-5 align-middle">
+                <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => onCheckedChange(e.target.checked)}
+                />
+            </td>
 
-            <WatchListViewTabs value={currentView} counts={counts} onChange={handleViewChange} />
+            <td className="px-4 py-5 align-middle">
+                <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
+                        {imageSrc ? (
+                            <Image
+                                src={imageSrc}
+                                alt={item.title || "watch"}
+                                width={64}
+                                height={64}
+                                className="h-16 w-16 object-cover"
+                            />
+                        ) : null}
+                    </div>
 
-            <WatchListFilters
-                filters={filters}
-                brandOptions={brandOptions}
-                vendorOptions={vendorOptions}
-                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-                onApply={handleApplyFilters}
-                onClear={handleClearFilters}
-            />
+                    <div className="min-w-0 flex-1">
+                        <div className="text-[15px] font-medium leading-6 text-slate-900">
+                            <span className="line-clamp-2 break-words">{item.title || "-"}</span>
+                        </div>
 
-            <WatchListTable
-                items={rows}
-                selectedIds={selectedIds}
-                canViewCost={props.canViewCost}
-                canEditPrice={props.canEditPrice}
-                counts={counts}
-                activeQuickFilters={activeQuickFilters}
-                onQuickFilterClick={handleQuickFilterClick}
-                onToggleOne={onToggleOne}
-                onToggleAll={onToggleAll}
-                onOpenReadiness={setReadinessProduct}
-                onPriceSaved={onPriceSaved}
-                onPriceCommit={onPriceCommit}
-                onView={onView}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onService={onService}
-            />
+                        <div className="mt-1 truncate text-xs text-slate-500">
+                            {`${(item.brand || "-").toLowerCase()} · watch`}
+                        </div>
 
-            <Pagination page={props.page} totalPages={props.totalPages} total={props.total} onPage={handlePage} />
+                        {item.sku ? (
+                            <div className="mt-1 text-xs text-slate-400">SKU: {item.sku}</div>
+                        ) : null}
 
-        </div>
+                        <div className="mt-2 text-xs font-medium text-slate-500">{readinessLabel}</div>
+                    </div>
+                </div>
+            </td>
+
+            <td className="px-4 py-5 align-middle">
+                <div className="space-y-0">
+                    <MetaRow
+                        label="Content"
+                        value={item.hasContent ? "Đã có" : "Chưa có"}
+                        tone={item.hasContent ? "success" : "danger"}
+                    />
+                    <MetaRow
+                        label="Image"
+                        value={item.hasImages ? `Đã có${item.imagesCount ? ` (${item.imagesCount})` : ""}` : "Chưa có"}
+                        tone={item.hasImages ? "success" : "danger"}
+                    />
+                    <MetaRow label="Service" value={serviceMeta.label} tone={serviceMeta.tone} />
+                </div>
+            </td>
+
+            <td className="px-4 py-5 align-middle">
+                <div className="space-y-0">
+                    <MetaRow label="Bán" value={fmtMoney(item.minPrice ?? item.salePrice)} tone="accent" />
+                    <MetaRow label="Sale" value={fmtMoney(item.salePrice)} tone="muted" />
+                    {canViewCost ? <MetaRow label="Mua" value={fmtMoney(item.costPrice)} tone="muted" /> : null}
+                </div>
+            </td>
+
+            <td className="px-4 py-5 align-middle">
+                <div className="space-y-1 text-sm leading-6 text-slate-600">
+                    <div>{fmtDT(item.updatedAt)}</div>
+                    {item.createdAt ? <div className="text-xs text-slate-400">Tạo: {fmtDT(item.createdAt)}</div> : null}
+                    {item.vendorName ? <div className="pt-1 text-xs text-slate-400">Vendor: {item.vendorName}</div> : null}
+                </div>
+            </td>
+
+            <td className="relative overflow-visible px-4 py-5 text-right align-middle">
+                <RowActionMenu
+                    align="right"
+                    actions={[
+                        {
+                            key: "view",
+                            label: "Xem chi tiết",
+                            icon: "view",
+                            onClick: () => onView(item.productId),
+                        },
+                        {
+                            key: "edit",
+                            label: "Chỉnh sửa",
+                            icon: "edit",
+                            onClick: () => onEdit(item.productId),
+                        },
+                        {
+                            key: "service",
+                            label: "Tạo service request",
+                            icon: "service",
+                            onClick: () => onService(item.productId),
+                        },
+                        {
+                            key: "quick",
+                            label:
+                                String(item.status).toUpperCase() === "IN_SERVICE"
+                                    ? "Tạo đơn nhanh • ưu tiên kỹ thuật"
+                                    : "Tạo đơn nhanh",
+                            icon: "product",
+                            onClick: () => onQuickOrder?.(item.productId),
+                            hidden: !actions.canQuickOrder || !onQuickOrder,
+                        },
+                        {
+                            key: "consign",
+                            label: "Consign to",
+                            icon: "archive",
+                            onClick: () => onConsign?.(item.productId),
+                            hidden: !actions.canConsign || !onConsign,
+                        },
+                        {
+                            key: "delete",
+                            label: "Xóa sản phẩm",
+                            icon: "delete",
+                            onClick: () => onDelete(item.productId),
+                            danger: true,
+                        },
+                    ]}
+                />
+            </td>
+        </tr>
     );
 }

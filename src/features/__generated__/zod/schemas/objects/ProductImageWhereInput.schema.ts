@@ -7,6 +7,7 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { IntNullableFilterObjectSchema as IntNullableFilterObjectSchema } from './IntNullableFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { ProductScalarRelationFilterObjectSchema as ProductScalarRelationFilterObjectSchema } from './ProductScalarRelationFilter.schema';
 import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema'
 
@@ -28,7 +29,10 @@ const productimagewhereinputSchema = z.object({
   contentHash: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
+  isPrimary: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isForAdmin: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  isForStorefront: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
 }).strict();
 export const ProductImageWhereInputObjectSchema: z.ZodType<Prisma.ProductImageWhereInput> = productimagewhereinputSchema as unknown as z.ZodType<Prisma.ProductImageWhereInput>;
 export const ProductImageWhereInputObjectZodSchema = productimagewhereinputSchema;

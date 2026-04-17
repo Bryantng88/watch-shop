@@ -6,7 +6,8 @@ import { ImageRoleSchema } from '../enums/ImageRole.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { IntNullableWithAggregatesFilterObjectSchema as IntNullableWithAggregatesFilterObjectSchema } from './IntNullableWithAggregatesFilter.schema';
 import { IntWithAggregatesFilterObjectSchema as IntWithAggregatesFilterObjectSchema } from './IntWithAggregatesFilter.schema';
-import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
+import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
+import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema'
 
 const productimagescalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductImageScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ProductImageScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -25,7 +26,10 @@ const productimagescalarwherewithaggregatesinputSchema = z.object({
   dominantHex: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   contentHash: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  isPrimary: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
+  isForAdmin: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
+  isForStorefront: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional()
 }).strict();
 export const ProductImageScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ProductImageScalarWhereWithAggregatesInput> = productimagescalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ProductImageScalarWhereWithAggregatesInput>;
 export const ProductImageScalarWhereWithAggregatesInputObjectZodSchema = productimagescalarwherewithaggregatesinputSchema;

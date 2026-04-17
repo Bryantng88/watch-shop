@@ -16,7 +16,10 @@ const makeSchema = () => z.object({
   dominantHex: z.literal(true).optional(),
   contentHash: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  isPrimary: z.literal(true).optional(),
+  isForAdmin: z.literal(true).optional(),
+  isForStorefront: z.literal(true).optional()
 }).strict();
 export const ProductImageMinAggregateInputObjectSchema: z.ZodType<Prisma.ProductImageMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageMinAggregateInputType>;
 export const ProductImageMinAggregateInputObjectZodSchema = makeSchema();

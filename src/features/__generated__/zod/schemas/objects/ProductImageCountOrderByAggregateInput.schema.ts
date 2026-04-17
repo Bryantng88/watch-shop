@@ -16,7 +16,10 @@ const makeSchema = () => z.object({
   dominantHex: SortOrderSchema.optional(),
   contentHash: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  isPrimary: SortOrderSchema.optional(),
+  isForAdmin: SortOrderSchema.optional(),
+  isForStorefront: SortOrderSchema.optional()
 }).strict();
 export const ProductImageCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ProductImageCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductImageCountOrderByAggregateInput>;
 export const ProductImageCountOrderByAggregateInputObjectZodSchema = makeSchema();

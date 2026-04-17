@@ -3,7 +3,6 @@ import type { DB } from "@/server/db/client";
 import { dbOrTx } from "@/server/db/client";
 import { WatchListFilters } from "../shared/watch.types";
 
-
 function buildOrderBy(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
   switch (sort) {
     case "oldest":
@@ -70,21 +69,10 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
     ];
   }
 
-  if (input.gender) {
-    where.gender = input.gender;
-  }
-
-  if (input.siteChannel) {
-    where.siteChannel = input.siteChannel;
-  }
-
-  if (input.saleStage) {
-    where.saleState = input.saleStage;
-  }
-
-  if (input.opsStage) {
-    where.serviceState = input.opsStage;
-  }
+  if (input.gender) where.gender = input.gender;
+  if (input.siteChannel) where.siteChannel = input.siteChannel;
+  if (input.saleStage) where.saleState = input.saleStage;
+  if (input.opsStage) where.serviceState = input.opsStage;
 
   if (input.materialFamily) {
     where.watchSpecV2 = {
@@ -98,9 +86,29 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   }
 
   if (input.hasImages === "yes") {
-    where.watchMedia = { some: {} };
+    where.product = {
+      is: {
+        ...productIs,
+        productImage: {
+          some: {
+            role: "INLINE",
+            isForAdmin: true,
+          },
+        },
+      },
+    };
   } else if (input.hasImages === "no") {
-    where.watchMedia = { none: {} };
+    where.product = {
+      is: {
+        ...productIs,
+        productImage: {
+          none: {
+            role: "INLINE",
+            isForAdmin: true,
+          },
+        },
+      },
+    };
   }
 
   if (input.hasContent === "yes") {
@@ -131,6 +139,7 @@ function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
 
   return where;
 }
+
 export async function listAdminWatches(db: DB, input: WatchListFilters) {
   const client = dbOrTx(db);
   const page = Math.max(1, input.page ?? 1);
@@ -156,10 +165,30 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
                 slug: true,
               },
             },
+            vendor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            productImage: {
+              select: {
+                id: true,
+                fileKey: true,
+                role: true,
+                isForAdmin: true,
+                isForStorefront: true,
+                sortOrder: true,
+                createdAt: true,
+              },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            },
           },
         },
         watchSpecV2: {
           select: {
+            model: true,
+            referenceNumber: true,
             primaryCaseMaterial: true,
             secondaryCaseMaterial: true,
             materialProfile: true,
@@ -174,6 +203,7 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
             salePrice: true,
             listPrice: true,
             costPrice: true,
+            minPrice: true,
           },
         },
         watchContent: {
@@ -181,11 +211,6 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
             body: true,
             summary: true,
             bulletSpecs: true,
-          },
-        },
-        watchMedia: {
-          select: {
-            id: true,
           },
         },
       },
@@ -200,44 +225,4 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
     pageSize,
     totalPages: Math.ceil(total / pageSize),
   };
-}
-
-export async function searchWatches(db: DB, q: string) {
-  const client = dbOrTx(db);
-  const keyword = q.trim();
-
-  if (!keyword) return [];
-
-  return client.watch.findMany({
-    where: {
-      product: {
-        is: {
-          type: "WATCH",
-        },
-      },
-      OR: [
-        { product: { is: { title: { contains: keyword, mode: "insensitive" } } } },
-        { product: { is: { sku: { contains: keyword, mode: "insensitive" } } } },
-        { watchSpecV2: { is: { model: { contains: keyword, mode: "insensitive" } } } },
-        { watchSpecV2: { is: { referenceNumber: { contains: keyword, mode: "insensitive" } } } },
-      ],
-    },
-    take: 20,
-    orderBy: [{ product: { updatedAt: "desc" } }],
-    include: {
-      product: {
-        select: {
-          id: true,
-          title: true,
-          sku: true,
-          status: true,
-        },
-      },
-      watchPrice: {
-        select: {
-          salePrice: true,
-        },
-      },
-    },
-  });
 }
