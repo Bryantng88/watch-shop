@@ -32,8 +32,9 @@ function shouldHideName(name: string) {
 
 export async function GET(req: NextRequest) {
     const profile = getProfile(req.nextUrl.searchParams.get("profile"));
-    const root = getProfileRoot(profile);
-    const prefix = sanitizeBrowsePrefix(req.nextUrl.searchParams.get("prefix"), profile);
+    const root = normalizeKey(getProfileRoot(profile));
+    const requestedPrefix = req.nextUrl.searchParams.get("prefix");
+    const prefix = sanitizeBrowsePrefix(requestedPrefix, profile) || root;
 
     try {
         const result = await s3.send(

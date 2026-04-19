@@ -455,39 +455,3 @@ export async function searchWatches(db: DB, q: string) {
     },
   });
 }
-export async function listWatchEditOptions() {
-  const [brands, vendors, categories] = await Promise.all([
-    prisma.brand.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-      },
-    }),
-    prisma.vendor.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-    prisma.productCategory.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-      },
-    }),
-  ]);
-
-  return {
-    brands,
-    vendors,
-    categories,
-  };
-}

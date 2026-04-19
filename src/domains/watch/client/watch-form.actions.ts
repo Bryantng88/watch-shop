@@ -1,122 +1,229 @@
 "use server";
 
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
-import {
-    saveWatchContent,
-    updateWatchCore,
-    updateWatchPricing,
-    updateWatchSpec,
-    getWatchPricing,
-    getWatchDetail,
-} from "../server";
-import { buildWatchSubmitPayload } from "./watch-form.submit";
+import { prisma } from "@/server/db/client";
 import type { WatchFormValues } from "./watch-form.types";
+import { replaceWatchImages } from "@/domains/watch/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-function normalizeMoney(value?: string | number | null) {
-    if (value == null || value === "") return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
+function toDecimal(value?: string) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+
+    const normalized = raw.replace(/[^\d.-]/g, "");
+    if (!normalized) return null;
+
+    return normalized;
 }
 
-function moneyChanged(a?: string | number | null, b?: string | number | null) {
-    return normalizeMoney(a) !== normalizeMoney(b);
+function sameMoney(a?: string | null, b?: string | null) {
+    return String(a ?? "") === String(b ?? "");
 }
 
-function formatMoney(value?: string | number | null) {
-    const n = normalizeMoney(value);
-    if (n == null) return "-";
-    return new Intl.NumberFormat("vi-VN").format(n) + " VND";
-}
+export async function submitWatchForm(values: WatchFormValues) {
+    const productId = values.productId;
 
-async function notifyWatchPricingChanged(input: {
-    productId: string;
-    before: Record<string, string | number | null | undefined>;
-    after: Record<string, string | number | null | undefined>;
-}) {
-    const changedKeys = ["salePrice", "listPrice", "costPrice", "minPrice"] as const;
-    const changed = changedKeys.filter((key) => moneyChanged(input.before[key], input.after[key]));
-    if (!changed.length) return;
-
-    const detail = await getWatchDetail(input.productId).catch(() => null);
-    const actor = await getCurrentUser().catch(() => null);
-
-    const title = detail?.title || "Watch";
-    const sku = detail?.sku || "-";
-    const actorName =
-        (actor as any)?.name ||
-        (actor as any)?.fullName ||
-        (actor as any)?.email ||
-        "Một tài khoản admin";
-
-    const message = [
-        `${actorName} vừa cập nhật giá cho ${title}.`,
-        `SKU: ${sku}.`,
-        changed
-            .map((key) => {
-                const label =
-                    key === "salePrice"
-                        ? "Giá bán"
-                        : key === "listPrice"
-                            ? "Giá niêm yết"
-                            : key === "costPrice"
-                                ? "Giá mua"
-                                : "Giá tối thiểu";
-                return `${label}: ${formatMoney(input.before[key])} → ${formatMoney(input.after[key])}`;
-            })
-            .join(" | "),
-    ].join(" ");
-
-    await notifyUsersByRole({
-        role: ["SALE", "TECHNICIAN"],
-        type: "WATCH_PRICE_UPDATED",
-        title: `Cập nhật giá watch · ${title}`,
-        message,
-        priority: "HIGH",
-        metadata: {
-            productId: input.productId,
-            watchId: detail?.watchId ?? null,
-            title,
-            sku,
-            before: input.before,
-            after: input.after,
-            changedFields: changed,
-            source: "watch_edit_form",
+    const current = await prisma.watch.findFirst({
+        where: { productId },
+        include: {
+            product: true,
+            watchSpecV2: true,
+            watchPrice: true,
+            watchContent: true,
         },
     });
-}
 
-export async function submitWatchForm(values: WatchFormValues, previous?: WatchFormValues) {
-    const payload = buildWatchSubmitPayload(values);
-    const currentPricing = await getWatchPricing(values.productId).catch(() => null);
+    if (!current) {
+        throw new Error("Không tìm thấy watch.");
+    }
 
-    await updateWatchCore(values.productId, payload.core);
-    await updateWatchSpec(payload.spec);
-    await updateWatchPricing(values.productId, payload.pricing);
-    await saveWatchContent(values.productId, payload.content);
-
-    const before = {
-        costPrice: previous?.pricing.costPrice ?? currentPricing?.price?.costPrice?.toString?.() ?? null,
-        listPrice: previous?.pricing.listPrice ?? currentPricing?.price?.listPrice?.toString?.() ?? null,
-        salePrice: previous?.pricing.salePrice ?? currentPricing?.price?.salePrice?.toString?.() ?? null,
-        minPrice: previous?.pricing.minPrice ?? currentPricing?.price?.minPrice?.toString?.() ?? null,
+    const prevPricing = {
+        salePrice: current.watchPrice?.salePrice?.toString() ?? null,
+        listPrice: current.watchPrice?.listPrice?.toString() ?? null,
+        minPrice: current.watchPrice?.minPrice?.toString() ?? null,
+        costPrice: current.watchPrice?.costPrice?.toString() ?? null,
     };
 
-    const after = {
-        costPrice: values.pricing.costPrice,
-        listPrice: values.pricing.listPrice,
-        salePrice: values.pricing.salePrice,
-        minPrice: values.pricing.minPrice,
-    };
+    await prisma.$transaction(async (tx) => {
+        await tx.product.update({
+            where: { id: productId },
+            data: {
+                title: values.basic.title || null,
+                slug: values.basic.slug || null,
 
-    await notifyWatchPricingChanged({
-        productId: values.productId,
-        before,
-        after,
+                brand: values.basic.brandId
+                    ? { connect: { id: values.basic.brandId } }
+                    : { disconnect: true },
+
+                vendor: values.basic.vendorId
+                    ? { connect: { id: values.basic.vendorId } }
+                    : { disconnect: true },
+
+                productCategory: values.basic.categoryId
+                    ? { connect: { id: values.basic.categoryId } }
+                    : { disconnect: true },
+            },
+        });
+
+        await tx.watch.update({
+            where: { id: current.id },
+            data: {
+                gender: (values.basic.gender as any) || null,
+                siteChannel: (values.basic.siteChannel as any) || null,
+                stockState: values.basic.stockState || null,
+                saleState: values.basic.saleState || null,
+                conditionGrade: values.basic.conditionGrade || null,
+                movementType: values.basic.movementType || null,
+                movementCalibre: values.basic.movementCalibre || null,
+                serialNumber: values.basic.serialNumber || null,
+                yearText: values.basic.yearText || null,
+            },
+        });
+
+        await tx.watchSpecV2.upsert({
+            where: { productId },
+            create: {
+                productId,
+                brand: values.spec.specBrand || null,
+                model: values.spec.model || null,
+                referenceNumber: values.spec.referenceNumber || null,
+                nickname: values.spec.nickname || null,
+                caseShape: values.spec.caseShape || null,
+                caseSizeMM: toDecimal(values.spec.caseSizeMM),
+                lugToLugMM: toDecimal(values.spec.lugToLugMM),
+                thicknessMM: toDecimal(values.spec.thicknessMM),
+                crystal: values.spec.crystal || null,
+                dialColor: values.spec.dialColor || null,
+                calibre: values.spec.calibre || null,
+                materialProfile: (values.spec.materialProfile as any) || null,
+                primaryCaseMaterial: (values.spec.primaryCaseMaterial as any) || null,
+                secondaryCaseMaterial: (values.spec.secondaryCaseMaterial as any) || null,
+                goldTreatment: (values.spec.goldTreatment as any) || null,
+                goldColors: values.spec.goldColors ?? [],
+                goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
+                braceletType: values.spec.braceletType || null,
+                strapMaterialText: values.spec.strapMaterialText || null,
+                waterResistance: values.spec.waterResistance || null,
+                powerReserve: values.spec.powerReserve || null,
+                dialFinish: values.spec.dialFinish || null,
+                buckleType: values.spec.buckleType || null,
+                materialNote: values.spec.materialNote || null,
+            },
+            update: {
+                brand: values.spec.specBrand || null,
+                model: values.spec.model || null,
+                referenceNumber: values.spec.referenceNumber || null,
+                nickname: values.spec.nickname || null,
+                caseShape: values.spec.caseShape || null,
+                caseSizeMM: toDecimal(values.spec.caseSizeMM),
+                lugToLugMM: toDecimal(values.spec.lugToLugMM),
+                thicknessMM: toDecimal(values.spec.thicknessMM),
+                crystal: values.spec.crystal || null,
+                dialColor: values.spec.dialColor || null,
+                calibre: values.spec.calibre || null,
+                materialProfile: (values.spec.materialProfile as any) || null,
+                primaryCaseMaterial: (values.spec.primaryCaseMaterial as any) || null,
+                secondaryCaseMaterial: (values.spec.secondaryCaseMaterial as any) || null,
+                goldTreatment: (values.spec.goldTreatment as any) || null,
+                goldColors: values.spec.goldColors ?? [],
+                goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
+                braceletType: values.spec.braceletType || null,
+                strapMaterialText: values.spec.strapMaterialText || null,
+                waterResistance: values.spec.waterResistance || null,
+                powerReserve: values.spec.powerReserve || null,
+                dialFinish: values.spec.dialFinish || null,
+                buckleType: values.spec.buckleType || null,
+                materialNote: values.spec.materialNote || null,
+            },
+        });
+
+        await tx.watchContent.upsert({
+            where: { productId },
+            create: {
+                productId,
+                hookText: values.content.hookText || null,
+                body: values.content.body || null,
+                bulletSpecs: values.content.bulletSpecs ?? [],
+            },
+            update: {
+                hookText: values.content.hookText || null,
+                body: values.content.body || null,
+                bulletSpecs: values.content.bulletSpecs ?? [],
+            },
+        });
+
+        await tx.watchPrice.upsert({
+            where: { productId },
+            create: {
+                productId,
+                salePrice: toDecimal(values.pricing.salePrice),
+                listPrice: toDecimal(values.pricing.listPrice),
+                minPrice: toDecimal(values.pricing.minPrice),
+                costPrice: toDecimal(values.pricing.costPrice),
+                serviceCost: toDecimal(values.pricing.serviceCost),
+                landedCost: toDecimal(values.pricing.landedCost),
+                pricingNote: values.pricing.pricingNote || null,
+            },
+            update: {
+                salePrice: toDecimal(values.pricing.salePrice),
+                listPrice: toDecimal(values.pricing.listPrice),
+                minPrice: toDecimal(values.pricing.minPrice),
+                costPrice: toDecimal(values.pricing.costPrice),
+                serviceCost: toDecimal(values.pricing.serviceCost),
+                landedCost: toDecimal(values.pricing.landedCost),
+                pricingNote: values.pricing.pricingNote || null,
+            },
+        });
     });
+
+    const selected = Array.isArray(values.media.selectedImages)
+        ? values.media.selectedImages
+        : [];
+
+    await replaceWatchImages({
+        productId,
+        images: selected.map((item, index) => ({
+            fileKey: String(item.key),
+            role: "GALLERY",
+            isForAdmin: true,
+            isForStorefront: true,
+            sortOrder: index,
+        })),
+    });
+
+    const nextPricing = {
+        salePrice: toDecimal(values.pricing.salePrice),
+        listPrice: toDecimal(values.pricing.listPrice),
+        minPrice: toDecimal(values.pricing.minPrice),
+        costPrice: toDecimal(values.pricing.costPrice),
+    };
+
+    const changedFields = [
+        !sameMoney(prevPricing.salePrice, nextPricing.salePrice) ? "salePrice" : null,
+        !sameMoney(prevPricing.listPrice, nextPricing.listPrice) ? "listPrice" : null,
+        !sameMoney(prevPricing.minPrice, nextPricing.minPrice) ? "minPrice" : null,
+        !sameMoney(prevPricing.costPrice, nextPricing.costPrice) ? "costPrice" : null,
+    ].filter(Boolean) as string[];
+
+    if (changedFields.length > 0) {
+        await notifyUsersByRole({
+            roles: ["SALE", "TECHNICIAN"],
+            title: "Watch pricing updated",
+            message: `${values.basic.title || "Watch"} vừa được cập nhật giá.`,
+            metadata: {
+                productId,
+                watchId: current.id,
+                sku: values.header.sku || null,
+                title: values.basic.title || null,
+                changedFields,
+                before: prevPricing,
+                after: nextPricing,
+            },
+            link: `/admin/watches/${productId}`,
+        });
+    }
 
     return {
         ok: true,
-        message: "Đã lưu watch. Nếu giá thay đổi, notification đã được gửi.",
+        message: "Đã lưu watch.",
     };
 }
