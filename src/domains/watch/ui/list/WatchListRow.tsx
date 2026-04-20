@@ -1,246 +1,314 @@
 "use client";
 
-import Image from "next/image";
-import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import { resolveMediaPreviewSrc } from "@/lib/media-profile";
-import { pickWatchInlineImage } from "../../server/shared/watch-image";
+import Link from "next/link";
+import {
+    MoreHorizontal,
+    ImageIcon,
+    FileText,
+    Wrench,
+    Eye,
+    Pencil,
+    ShoppingCart,
+    Hammer,
+    HandCoins,
+    Trash2,
+} from "lucide-react";
 import type { WatchRow } from "./types";
+import {
+    contentStatusText,
+    formatMoney,
+    formatRelativeStatus,
+    imageStatusText,
+    serviceStatusText,
+} from "./helpers";
 
 type Props = {
-    item: WatchRow;
+    product: WatchRow;
     checked: boolean;
-    canViewCost: boolean;
+    canViewCost?: boolean;
     onCheckedChange: (checked: boolean) => void;
-    onView: (productId: string) => void;
-    onEdit: (productId: string) => void;
-    onDelete: (productId: string) => void;
-    onService: (productId: string) => void;
-    onConsign?: (productId: string) => void;
-    onQuickOrder?: (productId: string) => void;
+
+    onView?: (row: WatchRow) => void;
+    onEdit?: (row: WatchRow) => void;
+    onDelete?: (row: WatchRow) => void;
+    onService?: (row: WatchRow) => void;
+    onQuickOrder?: (row: WatchRow) => void;
+    onConsign?: (row: WatchRow) => void;
 };
 
-function fmtMoney(value?: string | number | null) {
-    if (value == null || value === "") return "-";
-    const num = Number(value);
-    if (!Number.isFinite(num)) return String(value);
-    return num.toLocaleString("vi-VN");
-}
-
-function fmtDT(value?: string | Date | null) {
-    if (!value) return "-";
-    const d = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(d.getTime())) return "-";
-    return d.toLocaleString("vi-VN");
-}
-
-function getReadinessLabel(item: WatchRow) {
-    if (item.isReadyToPublish) return "Sẵn sàng bán";
-    if (item.hasContent || item.hasImages) return "Đang hoàn thiện";
-    return "Chưa bắt đầu";
-}
-
-function getServiceMeta(serviceState?: string | null) {
-    switch (String(serviceState || "").toUpperCase()) {
-        case "DONE":
-            return { label: "Đã sửa xong", tone: "success" as const };
-        case "IN_PROGRESS":
-            return { label: "Đang service", tone: "warning" as const };
-        case "PENDING":
-            return { label: "Chờ xử lý", tone: "danger" as const };
-        default:
-            return { label: "Không cần service", tone: "muted" as const };
-    }
-}
-
-function toneClass(tone?: "success" | "warning" | "danger" | "muted" | "accent") {
-    switch (tone) {
-        case "success":
-            return "text-emerald-700";
-        case "warning":
-            return "text-amber-700";
-        case "danger":
-            return "text-rose-600";
-        case "accent":
-            return "text-orange-600";
-        default:
-            return "text-slate-700";
-    }
-}
-
-function MetaRow({
+function ReadinessLine({
+    icon,
     label,
     value,
-    tone = "muted",
+    ok,
 }: {
+    icon: React.ReactNode;
     label: string;
     value: string;
-    tone?: "success" | "warning" | "danger" | "muted" | "accent";
+    ok: boolean;
 }) {
     return (
-        <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
-            <div className="text-[13px] leading-8 text-slate-400">{label}</div>
-            <div className={["min-w-0 truncate text-[14px] font-medium leading-8", toneClass(tone)].join(" ")}>
+        <div className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2 text-slate-500">
+                {icon}
+                <span>{label}</span>
+            </div>
+            <div
+                className={`font-medium ${ok ? "text-emerald-600" : "text-rose-500"
+                    }`}
+            >
                 {value}
             </div>
         </div>
     );
 }
 
-function getWatchRowActions(status?: string | null) {
-    const s = String(status || "").toUpperCase();
-
-    if (s === "CONSIGNED_TO") {
-        return {
-            canQuickOrder: false,
-            canConsign: false,
-        };
+function Thumb({ src, alt }: { src?: string | null; alt: string }) {
+    if (!src) {
+        return (
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <ImageIcon className="h-5 w-5 text-slate-400" />
+            </div>
+        );
     }
 
-    return {
-        canQuickOrder: s !== "SOLD",
-        canConsign: s !== "SOLD",
-    };
+    return (
+        <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <img
+                src={src}
+                alt={alt}
+                className="h-full w-full object-cover"
+            />
+        </div>
+    );
+}
+
+function RowActions({
+    row,
+    onView,
+    onEdit,
+    onDelete,
+    onService,
+    onQuickOrder,
+    onConsign,
+}: {
+    row: WatchRow;
+    onView?: (row: WatchRow) => void;
+    onEdit?: (row: WatchRow) => void;
+    onDelete?: (row: WatchRow) => void;
+    onService?: (row: WatchRow) => void;
+    onQuickOrder?: (row: WatchRow) => void;
+    onConsign?: (row: WatchRow) => void;
+}) {
+    const actions = [
+        onView
+            ? {
+                key: "view",
+                label: "Xem",
+                icon: <Eye className="h-4 w-4" />,
+                onClick: () => onView(row),
+            }
+            : null,
+        onEdit
+            ? {
+                key: "edit",
+                label: "Sửa",
+                icon: <Pencil className="h-4 w-4" />,
+                onClick: () => onEdit(row),
+            }
+            : null,
+        onQuickOrder
+            ? {
+                key: "quick-order",
+                label: "Quick order",
+                icon: <ShoppingCart className="h-4 w-4" />,
+                onClick: () => onQuickOrder(row),
+            }
+            : null,
+        onService
+            ? {
+                key: "service",
+                label: "Service",
+                icon: <Hammer className="h-4 w-4" />,
+                onClick: () => onService(row),
+            }
+            : null,
+        onConsign
+            ? {
+                key: "consign",
+                label: "Consign",
+                icon: <HandCoins className="h-4 w-4" />,
+                onClick: () => onConsign(row),
+            }
+            : null,
+        onDelete
+            ? {
+                key: "delete",
+                label: "Xóa",
+                icon: <Trash2 className="h-4 w-4" />,
+                onClick: () => onDelete(row),
+            }
+            : null,
+    ].filter(Boolean) as Array<{
+        key: string;
+        label: string;
+        icon: React.ReactNode;
+        onClick: () => void;
+    }>;
+
+    if (actions.length === 0) {
+        return (
+            <button
+                type="button"
+                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            >
+                <MoreHorizontal className="h-5 w-5" />
+            </button>
+        );
+    }
+
+    return (
+        <div className="flex justify-end">
+            <details className="relative">
+                <summary className="list-none cursor-pointer rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+                    <MoreHorizontal className="h-5 w-5" />
+                </summary>
+
+                <div className="absolute right-0 z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    {actions.map((action) => (
+                        <button
+                            key={action.key}
+                            type="button"
+                            onClick={action.onClick}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                            {action.icon}
+                            <span>{action.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </details>
+        </div>
+    );
 }
 
 export default function WatchListRow({
-    item,
+    product,
     checked,
-    canViewCost,
+    canViewCost = true,
     onCheckedChange,
     onView,
     onEdit,
     onDelete,
     onService,
-    onConsign,
     onQuickOrder,
+    onConsign,
 }: Props) {
-    const image = pickWatchInlineImage(item.images ?? []);
-    const imageSrc = resolveMediaPreviewSrc(image?.fileKey || image?.url || null);
-    const serviceMeta = getServiceMeta(item.serviceState);
-    const readinessLabel = getReadinessLabel(item);
-    const actions = getWatchRowActions(item.status);
-
     return (
-        <tr className="border-t border-slate-100 transition hover:bg-slate-50/40">
-            <td className="px-4 py-5 align-middle">
+        <tr className="border-t border-slate-100 align-top hover:bg-slate-50/40">
+            <td className="px-4 py-5">
                 <input
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => onCheckedChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300"
                 />
             </td>
 
-            <td className="px-4 py-5 align-middle">
-                <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200">
-                        {imageSrc ? (
-                            <Image
-                                src={imageSrc}
-                                alt={item.title || "watch"}
-                                width={64}
-                                height={64}
-                                className="h-16 w-16 object-cover"
-                            />
-                        ) : null}
-                    </div>
+            <td className="px-4 py-5">
+                <div className="flex min-w-[340px] items-start gap-3">
+                    <Thumb src={product.imageUrl} alt={product.title} />
 
-                    <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-medium leading-6 text-slate-900">
-                            <span className="line-clamp-2 break-words">{item.title || "-"}</span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                        <Link
+                            href={`/admin/watches/${product.productId}/edit`}
+                            className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
+                        >
+                            {product.title}
+                        </Link>
+
+                        <div className="text-xs text-slate-500">
+                            {(product.brandName || "-").toLowerCase()} · watch
                         </div>
 
-                        <div className="mt-1 truncate text-xs text-slate-500">
-                            {`${(item.brand || "-").toLowerCase()} · watch`}
+                        <div className="text-xs text-slate-400">
+                            SKU: {product.sku || "-"}
                         </div>
 
-                        {item.sku ? (
-                            <div className="mt-1 text-xs text-slate-400">SKU: {item.sku}</div>
-                        ) : null}
-
-                        <div className="mt-2 text-xs font-medium text-slate-500">{readinessLabel}</div>
+                        <div className="pt-1 text-sm text-slate-600">
+                            {formatRelativeStatus(product)}
+                        </div>
                     </div>
                 </div>
             </td>
 
-            <td className="px-4 py-5 align-middle">
-                <div className="space-y-0">
-                    <MetaRow
+            <td className="px-4 py-5">
+                <div className="min-w-[220px] space-y-2">
+                    <ReadinessLine
+                        icon={<FileText className="h-4 w-4" />}
                         label="Content"
-                        value={item.hasContent ? "Đã có" : "Chưa có"}
-                        tone={item.hasContent ? "success" : "danger"}
+                        value={contentStatusText(product)}
+                        ok={product.contentReady}
                     />
-                    <MetaRow
+                    <ReadinessLine
+                        icon={<ImageIcon className="h-4 w-4" />}
                         label="Image"
-                        value={item.hasImages ? `Đã có${item.imagesCount ? ` (${item.imagesCount})` : ""}` : "Chưa có"}
-                        tone={item.hasImages ? "success" : "danger"}
+                        value={imageStatusText(product)}
+                        ok={product.imageReady}
                     />
-                    <MetaRow label="Service" value={serviceMeta.label} tone={serviceMeta.tone} />
+                    <ReadinessLine
+                        icon={<Wrench className="h-4 w-4" />}
+                        label="Service"
+                        value={serviceStatusText(product)}
+                        ok={product.serviceReady}
+                    />
                 </div>
             </td>
 
-            <td className="px-4 py-5 align-middle">
-                <div className="space-y-0">
-                    <MetaRow label="Bán" value={fmtMoney(item.minPrice ?? item.salePrice)} tone="accent" />
-                    <MetaRow label="Sale" value={fmtMoney(item.salePrice)} tone="muted" />
-                    {canViewCost ? <MetaRow label="Mua" value={fmtMoney(item.costPrice)} tone="muted" /> : null}
+            <td className="px-4 py-5">
+                <div className="min-w-[160px] space-y-2 text-sm">
+                    <div className="flex justify-between gap-4">
+                        <span className="text-slate-400">Bán</span>
+                        <span className="font-medium text-orange-600">
+                            {formatMoney(product.salePrice)}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                        <span className="text-slate-400">Sale</span>
+                        <span className="font-medium text-slate-700">
+                            {formatMoney(product.listPrice)}
+                        </span>
+                    </div>
+
+                    {canViewCost ? (
+                        <div className="flex justify-between gap-4">
+                            <span className="text-slate-400">Mua</span>
+                            <span className="font-medium text-slate-700">
+                                {formatMoney(product.costPrice)}
+                            </span>
+                        </div>
+                    ) : null}
                 </div>
             </td>
 
-            <td className="px-4 py-5 align-middle">
-                <div className="space-y-1 text-sm leading-6 text-slate-600">
-                    <div>{fmtDT(item.updatedAt)}</div>
-                    {item.createdAt ? <div className="text-xs text-slate-400">Tạo: {fmtDT(item.createdAt)}</div> : null}
-                    {item.vendorName ? <div className="pt-1 text-xs text-slate-400">Vendor: {item.vendorName}</div> : null}
+            <td className="px-4 py-5">
+                <div className="min-w-[120px] text-sm text-slate-600">
+                    {product.updatedAt
+                        ? new Date(product.updatedAt).toLocaleString("vi-VN")
+                        : "-"}
                 </div>
             </td>
 
-            <td className="relative overflow-visible px-4 py-5 text-right align-middle">
-                <RowActionMenu
-                    align="right"
-                    actions={[
-                        {
-                            key: "view",
-                            label: "Xem chi tiết",
-                            icon: "view",
-                            onClick: () => onView(item.productId),
-                        },
-                        {
-                            key: "edit",
-                            label: "Chỉnh sửa",
-                            icon: "edit",
-                            onClick: () => onEdit(item.productId),
-                        },
-                        {
-                            key: "service",
-                            label: "Tạo service request",
-                            icon: "service",
-                            onClick: () => onService(item.productId),
-                        },
-                        {
-                            key: "quick",
-                            label:
-                                String(item.status).toUpperCase() === "IN_SERVICE"
-                                    ? "Tạo đơn nhanh • ưu tiên kỹ thuật"
-                                    : "Tạo đơn nhanh",
-                            icon: "product",
-                            onClick: () => onQuickOrder?.(item.productId),
-                            hidden: !actions.canQuickOrder || !onQuickOrder,
-                        },
-                        {
-                            key: "consign",
-                            label: "Consign to",
-                            icon: "archive",
-                            onClick: () => onConsign?.(item.productId),
-                            hidden: !actions.canConsign || !onConsign,
-                        },
-                        {
-                            key: "delete",
-                            label: "Xóa sản phẩm",
-                            icon: "delete",
-                            onClick: () => onDelete(item.productId),
-                            danger: true,
-                        },
-                    ]}
+            <td className="px-4 py-5 text-right">
+                <RowActions
+                    row={product}
+                    onView={onView}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onService={onService}
+                    onQuickOrder={onQuickOrder}
+                    onConsign={onConsign}
                 />
             </td>
         </tr>

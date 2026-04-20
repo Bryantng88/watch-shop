@@ -1,410 +1,311 @@
 import type { Prisma } from "@prisma/client";
-import type { DB } from "@/server/db/client";
-import prisma from "component for chatGPT/src/server/db/client";
-import { dbOrTx } from "@/server/db/client";
-import { WatchListFilters } from "../shared/watch.types";
+import { prisma } from "@/server/db/client";
+import type {
+  WatchListFilters,
+  WatchListResult,
+  WatchListView,
+} from "../../ui/list/types";
+import { mapWatchRow } from "../../ui/list/helpers";
 
-function buildOrderBy(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
-  switch (sort) {
-    case "oldest":
-      return [{ product: { createdAt: "asc" } }];
-    case "priceAsc":
-      return [{ watchPrice: { salePrice: "asc" } }, { product: { updatedAt: "desc" } }];
-    case "priceDesc":
-      return [{ watchPrice: { salePrice: "desc" } }, { product: { updatedAt: "desc" } }];
-    case "titleAsc":
-      return [{ product: { title: "asc" } }];
-    default:
-      return [{ product: { updatedAt: "desc" } }];
-  }
+function toPositiveInt(value: any, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+function buildHasContentWhere(): Prisma.WatchWhereInput {
+  return {
+    OR: [
+      {
+        watchContent: {
+          is: {
+            hookText: { not: null },
+          },
+        },
+      },
+      {
+        watchContent: {
+          is: {
+            body: { not: null },
+          },
+        },
+      },
+      {
+        watchContent: {
+          is: {
+            summary: { not: null },
+          },
+        },
+      },
+    ],
+  };
 }
 
-function buildBaseProductWhere(input: WatchListFilters): Prisma.ProductWhereInput {
-  const productIs: Prisma.ProductWhereInput = {
-    type: "WATCH",
+function buildHasGalleryWhere(): Prisma.WatchWhereInput {
+  return {
+    product: {
+      is: {
+        productImage: {
+          some: {
+            role: "GALLERY" as any,
+          },
+        },
+      },
+    },
   };
+}
+function buildBaseWhere(input: WatchListFilters): Prisma.WatchWhereInput {
+  const and: Prisma.WatchWhereInput[] = [];
 
-  if (input.brandIds?.length) {
-    productIs.brandId = { in: input.brandIds };
-  }
+  if (input.q?.trim()) {
+    const q = input.q.trim();
 
-  if (input.vendorId) {
-    productIs.vendorId = input.vendorId;
+    and.push({
+      OR: [
+        {
+          product: {
+            is: {
+              title: { contains: q, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          product: {
+            is: {
+              sku: { contains: q, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          product: {
+            is: {
+              brand: {
+                is: {
+                  name: { contains: q, mode: "insensitive" },
+                },
+              },
+            },
+          },
+        },
+        {
+          watchSpecV2: {
+            is: {
+              model: { contains: q, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          watchSpecV2: {
+            is: {
+              referenceNumber: {
+                contains: q,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+      ],
+    });
   }
 
   if (input.sku?.trim()) {
-    productIs.sku = {
-      contains: input.sku.trim(),
-      mode: "insensitive",
-    };
-  }
-
-  if (input.updatedFrom || input.updatedTo) {
-    productIs.updatedAt = {
-      ...(input.updatedFrom ? { gte: input.updatedFrom } : {}),
-      ...(input.updatedTo ? { lte: input.updatedTo } : {}),
-    };
-  }
-
-  return productIs;
-}
-
-function buildCommonWhere(input: WatchListFilters): Prisma.WatchWhereInput {
-  const q = input.q?.trim();
-
-  const where: Prisma.WatchWhereInput = {
-    product: {
-      is: buildBaseProductWhere(input),
-    },
-  };
-
-  if (q) {
-    where.OR = [
-      { product: { is: { title: { contains: q, mode: "insensitive" } } } },
-      { product: { is: { sku: { contains: q, mode: "insensitive" } } } },
-      { watchSpecV2: { is: { model: { contains: q, mode: "insensitive" } } } },
-      { watchSpecV2: { is: { referenceNumber: { contains: q, mode: "insensitive" } } } },
-      { watchSpecV2: { is: { nickname: { contains: q, mode: "insensitive" } } } },
-    ];
-  }
-
-  if (input.gender) where.gender = input.gender;
-  if (input.siteChannel) where.siteChannel = input.siteChannel;
-  if (input.saleStage) where.saleState = input.saleStage;
-  if (input.opsStage) where.serviceState = input.opsStage;
-
-  if (input.materialFamily) {
-    where.watchSpecV2 = {
-      is: {
-        OR: [
-          { primaryCaseMaterial: input.materialFamily },
-          { secondaryCaseMaterial: input.materialFamily },
-        ],
-      },
-    };
-  }
-
-  if (input.hasImages === "yes") {
-    where.product = {
-      is: {
-        ...buildBaseProductWhere(input),
-        productImage: {
-          some: {
-            role: "GALLERY",
-          },
-        },
-      },
-    };
-  } else if (input.hasImages === "no") {
-    where.product = {
-      is: {
-        ...buildBaseProductWhere(input),
-        productImage: {
-          none: {
-            role: "GALLERY",
-          },
-        },
-      },
-    };
-  }
-
-  if (input.hasContent === "yes") {
-    where.watchContent = {
-      is: {
-        OR: [
-          { body: { not: null } },
-          { summary: { not: null } },
-          { bulletSpecs: { isEmpty: false } },
-        ],
-      },
-    };
-  } else if (input.hasContent === "no") {
-    where.AND = [
-      ...(where.AND ?? []),
-      {
-        OR: [
-          { watchContent: { is: null } },
-          {
-            watchContent: {
-              is: {
-                body: null,
-                summary: null,
-                bulletSpecs: { isEmpty: true },
-              },
-            },
-          },
-        ],
-      },
-    ];
-  }
-
-  return where;
-}
-
-function buildReadinessWhere(view: string | undefined): Prisma.WatchWhereInput {
-  if (view === "sold") {
-    return {
+    and.push({
       product: {
         is: {
-          status: "SOLD",
+          sku: {
+            contains: input.sku.trim(),
+            mode: "insensitive",
+          },
         },
       },
-    };
+    });
   }
 
-  if (view === "hold") {
-    return {
+  if (input.brandId) {
+    and.push({
       product: {
         is: {
-          status: {
-            in: ["HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
-          },
+          brandId: input.brandId,
         },
       },
-    };
+    });
   }
 
-  if (view === "draft") {
-    return {
-      AND: [
-        {
-          product: {
-            is: {
-              status: {
-                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
-              },
-              productImage: {
-                none: { role: "GALLERY" },
-              },
-            },
-          },
+  if (input.vendorId) {
+    and.push({
+      product: {
+        is: {
+          vendorId: input.vendorId,
         },
-        {
-          OR: [
-            { watchContent: { is: null } },
-            {
-              watchContent: {
-                is: {
-                  body: null,
-                  summary: null,
-                  bulletSpecs: { isEmpty: true },
-                },
-              },
-            },
-          ],
-        },
-      ],
-    };
+      },
+    });
   }
 
-  if (view === "ready") {
-    return {
-      AND: [
-        {
-          product: {
-            is: {
-              status: {
-                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
-              },
-              productImage: {
-                some: { role: "GALLERY" },
-              },
-            },
-          },
-        },
-        {
-          watchContent: {
-            is: {
-              OR: [
-                { body: { not: null } },
-                { summary: { not: null } },
-                { bulletSpecs: { isEmpty: false } },
-              ],
-            },
-          },
-        },
-      ],
-    };
-  }
+  return and.length ? { AND: and } : {};
+}
 
-  if (view === "processing") {
-    return {
-      AND: [
-        {
-          product: {
-            is: {
-              status: {
-                notIn: ["SOLD", "HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"],
-              },
-            },
-          },
-        },
-        {
-          OR: [
-            {
-              product: {
-                is: {
-                  productImage: {
-                    some: { role: "GALLERY" },
-                  },
-                },
-              },
-            },
-            {
-              watchContent: {
-                is: {
-                  OR: [
-                    { body: { not: null } },
-                    { summary: { not: null } },
-                    { bulletSpecs: { isEmpty: false } },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-        {
-          NOT: {
-            AND: [
-              {
-                product: {
-                  is: {
-                    productImage: {
-                      some: { role: "GALLERY" },
-                    },
-                  },
-                },
-              },
-              {
-                watchContent: {
-                  is: {
-                    OR: [
-                      { body: { not: null } },
-                      { summary: { not: null } },
-                      { bulletSpecs: { isEmpty: false } },
-                    ],
-                  },
-                },
-              },
-            ],
-          },
-        },
-      ],
-    };
-  }
+function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
+  switch (view) {
+    case "draft":
+      return {
+        OR: [
+          { serviceState: "DRAFT" as any },
+          { saleState: "DRAFT" as any },
+        ],
+      };
 
+    case "processing":
+      return {
+        OR: [
+          { serviceState: "IN_PROGRESS" as any },
+          { stockState: "PROCESSING" as any },
+          { saleState: "PROCESSING" as any },
+        ],
+      };
+
+    case "ready":
+      return {
+        AND: [buildHasContentWhere(), buildHasGalleryWhere()],
+      };
+
+    case "hold":
+      return { saleState: "HOLD" as any };
+
+    case "sold":
+      return { saleState: "SOLD" as any };
+
+    case "all":
+    default:
+      return {};
+  }
+}
+function mergeWhere(
+  baseWhere: Prisma.WatchWhereInput,
+  segmentWhere: Prisma.WatchWhereInput
+): Prisma.WatchWhereInput {
+  const hasBase = Object.keys(baseWhere).length > 0;
+  const hasSegment = Object.keys(segmentWhere).length > 0;
+
+  if (hasBase && hasSegment) return { AND: [baseWhere, segmentWhere] };
+  if (hasBase) return baseWhere;
+  if (hasSegment) return segmentWhere;
   return {};
 }
 
-function buildWhere(input: WatchListFilters): Prisma.WatchWhereInput {
-  const commonWhere = buildCommonWhere(input);
-  const readinessWhere = buildReadinessWhere(input.view);
-
-  if (!Object.keys(readinessWhere).length) {
-    return commonWhere;
+function buildSort(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
+  switch (sort) {
+    case "updated_asc":
+      return [{ updatedAt: "asc" }];
+    case "title_asc":
+      return [{ product: { title: "asc" } }];
+    case "title_desc":
+      return [{ product: { title: "desc" } }];
+    default:
+      return [{ updatedAt: "desc" }];
   }
-
-  return {
-    AND: [commonWhere, readinessWhere],
-  };
 }
 
-async function countByView(client: ReturnType<typeof dbOrTx>, input: WatchListFilters, view: string) {
-  return client.watch.count({
-    where: buildWhere({ ...input, view }),
-  });
-}
-
-export async function listAdminWatches(db: DB, input: WatchListFilters) {
-  const client = dbOrTx(db);
-  const page = Math.max(1, input.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 30));
+export async function listAdminWatches(
+  input: WatchListFilters
+): Promise<WatchListResult> {
+  const page = toPositiveInt(input.page, 1);
+  const pageSize = toPositiveInt(input.pageSize, 20);
   const skip = (page - 1) * pageSize;
 
-  const where = buildWhere(input);
-  const orderBy = buildOrderBy(input.sort);
+  const baseWhere = buildBaseWhere(input);
+  const listWhere = mergeWhere(baseWhere, buildSegmentWhere(input.view));
+  const orderBy = buildSort(input.sort);
 
-  const [items, total, draft, processing, ready, hold, sold, all] = await Promise.all([
-    client.watch.findMany({
-      where,
-      orderBy,
+  const [
+    rows,
+    total,
+    draft,
+    processing,
+    ready,
+    hold,
+    sold,
+    all,
+    hasContent,
+    hasImages,
+  ] = await Promise.all([
+    prisma.watch.findMany({
+      where: listWhere,
       skip,
       take: pageSize,
+      orderBy,
       include: {
         product: {
           include: {
-            brand: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-            vendor: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            brand: true,
+            vendor: true,
             productImage: {
-              select: {
-                id: true,
-                fileKey: true,
-                role: true,
-                isForAdmin: true,
-                isForStorefront: true,
-                sortOrder: true,
-                createdAt: true,
-              },
               orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             },
           },
         },
-        watchSpecV2: {
-          select: {
-            model: true,
-            referenceNumber: true,
-            primaryCaseMaterial: true,
-            secondaryCaseMaterial: true,
-            materialProfile: true,
-            goldTreatment: true,
-            goldColors: true,
-            goldKarat: true,
-            brand: true,
-          },
-        },
-        watchPrice: {
-          select: {
-            salePrice: true,
-            listPrice: true,
-            costPrice: true,
-            minPrice: true,
-          },
-        },
-        watchContent: {
-          select: {
-            body: true,
-            summary: true,
-            bulletSpecs: true,
-          },
-        },
+        watchSpecV2: true,
+        watchPrice: true,
+        watchContent: true,
       },
     }),
-    client.watch.count({ where }),
-    countByView(client, input, "draft"),
-    countByView(client, input, "processing"),
-    countByView(client, input, "ready"),
-    countByView(client, input, "hold"),
-    countByView(client, input, "sold"),
-    countByView(client, input, "all"),
+
+    prisma.watch.count({ where: listWhere }),
+
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("draft")),
+    }),
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("processing")),
+    }),
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("ready")),
+    }),
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("hold")),
+    }),
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("sold")),
+    }),
+    prisma.watch.count({
+      where: mergeWhere(baseWhere, buildSegmentWhere("all")),
+    }),
+
+    prisma.watch.count({
+      where: {
+        AND: [listWhere, buildHasContentWhere()],
+      },
+    }),
+    prisma.watch.count({
+      where: {
+        AND: [listWhere, buildHasGalleryWhere()],
+      },
+    }),
+    prisma.watch.count({
+      where: {
+        AND: [
+          listWhere,
+          {
+            product: {
+              is: {
+                productImage: {
+                  some: {
+                    role: "INLINE" as any,
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    }),
   ]);
+
+  const items = rows.map(mapWatchRow);
 
   return {
     items,
     total,
     page,
     pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
     counts: {
       draft,
       processing,
@@ -413,45 +314,10 @@ export async function listAdminWatches(db: DB, input: WatchListFilters) {
       sold,
       all,
     },
+    summary: {
+      items: total,
+      hasContent,
+      hasImages,
+    },
   };
-}
-
-export async function searchWatches(db: DB, q: string) {
-  const client = dbOrTx(db);
-  const keyword = q.trim();
-
-  if (!keyword) return [];
-
-  return client.watch.findMany({
-    where: {
-      AND: [
-        { product: { is: { type: "WATCH" } } },
-        {
-          OR: [
-            { product: { is: { title: { contains: keyword, mode: "insensitive" } } } },
-            { product: { is: { sku: { contains: keyword, mode: "insensitive" } } } },
-            { watchSpecV2: { is: { model: { contains: keyword, mode: "insensitive" } } } },
-            { watchSpecV2: { is: { referenceNumber: { contains: keyword, mode: "insensitive" } } } },
-          ],
-        },
-      ],
-    },
-    take: 20,
-    orderBy: [{ product: { updatedAt: "desc" } }],
-    include: {
-      product: {
-        select: {
-          id: true,
-          title: true,
-          sku: true,
-        },
-      },
-      watchSpecV2: {
-        select: {
-          model: true,
-          referenceNumber: true,
-        },
-      },
-    },
-  });
 }

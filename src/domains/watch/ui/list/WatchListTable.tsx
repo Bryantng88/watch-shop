@@ -1,75 +1,111 @@
 "use client";
 
+import type { WatchRow, WatchListCounts } from "./types";
 import WatchListRow from "./WatchListRow";
-import type { Counts, WatchRow } from "./types";
 
-type QuickFilterKey = "hasContent" | "hasImages";
-
-type Props = {
-    items: WatchRow[];
-    selectedIds: string[];
-    canViewCost: boolean;
-    counts?: Counts;
-    activeQuickFilters?: {
-        hasContent?: boolean;
-        hasImages?: boolean;
-    };
-    onQuickFilterClick?: (key: QuickFilterKey) => void;
-    onToggleOne: (productId: string, checked: boolean) => void;
-    onToggleAll: (checked: boolean) => void;
-    onView: (productId: string) => void;
-    onEdit: (productId: string) => void;
-    onDelete: (productId: string) => void;
-    onService: (productId: string) => void;
-    onConsign?: (productId: string) => void;
-    onQuickOrder?: (productId: string) => void;
+type QuickFilterKey = "all" | "hasContent" | "hasImages";
+type LegacyQuickFilters = {
+    hasContent?: boolean;
+    hasImages?: boolean;
 };
 
-function HeaderStatButton({
-    value,
+type Props = {
+    items?: WatchRow[];
+    selectedIds?: string[];
+    canViewCost?: boolean;
+
+    counts?: Partial<WatchListCounts> & {
+        all?: number;
+        hasContent?: number;
+        hasImages?: number;
+    };
+
+    activeQuickFilters?: QuickFilterKey[] | LegacyQuickFilters;
+    onQuickFilterClick?: (key: QuickFilterKey) => void;
+
+    onToggleOne?: (id: string, checked: boolean) => void;
+    onToggleAll?: (checked: boolean) => void;
+
+    onView?: (row: WatchRow) => void;
+    onEdit?: (row: WatchRow) => void;
+    onDelete?: (row: WatchRow) => void;
+    onService?: (row: WatchRow) => void;
+    onQuickOrder?: (row: WatchRow) => void;
+    onConsign?: (row: WatchRow) => void;
+};
+
+function cn(...parts: Array<string | false | null | undefined>) {
+    return parts.filter(Boolean).join(" ");
+}
+
+function deriveSummary(
+    items: WatchRow[],
+    counts?: Partial<WatchListCounts> & {
+        all?: number;
+        hasContent?: number;
+        hasImages?: number;
+    }
+) {
+    return {
+        items: Number(counts?.all ?? items.length),
+        hasContent: Number(
+            counts?.hasContent ?? items.filter((item) => item?.hasContent).length
+        ),
+        hasImages: Number(
+            counts?.hasImages ?? items.filter((item) => item?.hasImages).length
+        ),
+    };
+}
+
+function isQuickFilterActive(
+    activeQuickFilters: QuickFilterKey[] | LegacyQuickFilters | undefined,
+    key: QuickFilterKey
+) {
+    if (!activeQuickFilters) return false;
+
+    if (Array.isArray(activeQuickFilters)) {
+        return activeQuickFilters.includes(key);
+    }
+
+    if (key === "all") {
+        return !activeQuickFilters.hasContent && !activeQuickFilters.hasImages;
+    }
+
+    return Boolean(activeQuickFilters[key]);
+}
+
+function FilterChip({
+    active,
     label,
-    tone = "default",
-    active = false,
+    value,
     onClick,
 }: {
-    value: number;
+    active: boolean;
     label: string;
-    tone?: "default" | "content" | "image";
-    active?: boolean;
+    value: number;
     onClick?: () => void;
 }) {
-    const toneClass =
-        tone === "content"
-            ? active
-                ? "text-emerald-800"
-                : "text-emerald-700"
-            : tone === "image"
-                ? active
-                    ? "text-sky-800"
-                    : "text-sky-700"
-                : active
-                    ? "text-slate-800"
-                    : "text-slate-500";
-
     return (
         <button
             type="button"
             onClick={onClick}
-            className={[
-                "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition",
-                active ? "bg-slate-100" : "hover:bg-slate-50",
-            ].join(" ")}
+            className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                active
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            )}
         >
-            <span className={`font-semibold ${toneClass}`}>{value}</span>
-            <span className={active ? "text-slate-600" : "text-slate-400"}>{label}</span>
+            <span>{label}</span>
+            <span>{value}</span>
         </button>
     );
 }
 
 export default function WatchListTable({
-    items,
-    selectedIds,
-    canViewCost,
+    items = [],
+    selectedIds = [],
+    canViewCost = true,
     counts,
     activeQuickFilters,
     onQuickFilterClick,
@@ -79,105 +115,115 @@ export default function WatchListTable({
     onEdit,
     onDelete,
     onService,
-    onConsign,
     onQuickOrder,
+    onConsign,
 }: Props) {
+    const safeItems = Array.isArray(items) ? items : [];
+    const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
+
+    const summary = deriveSummary(safeItems, counts);
+
     const allChecked =
-        items.length > 0 && items.every((item) => selectedIds.includes(item.productId));
+        safeItems.length > 0 &&
+        safeItems.every((item) => safeSelectedIds.includes(item.id));
 
     return (
-        <div className="rounded-[24px] border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-sm font-semibold text-slate-950">Danh sách dữ liệu</div>
+        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+            <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-4">
+                <div className="text-[18px] font-semibold text-slate-900">
+                    Danh sách dữ liệu
+                </div>
 
-                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-500">
-                        {items.length} mục
-                    </div>
+                <FilterChip
+                    active={isQuickFilterActive(activeQuickFilters, "all")}
+                    label="mục"
+                    value={summary.items}
+                    onClick={() => onQuickFilterClick?.("all")}
+                />
 
-                    {counts ? (
-                        <>
-                            <div className="h-3.5 w-px bg-slate-200" />
+                <div className="text-xs text-slate-500">
+                    <button
+                        type="button"
+                        onClick={() => onQuickFilterClick?.("hasContent")}
+                        className={cn(
+                            "transition hover:text-slate-700",
+                            isQuickFilterActive(activeQuickFilters, "hasContent") &&
+                            "font-medium text-emerald-600"
+                        )}
+                    >
+                        <span className="font-medium text-emerald-600">
+                            {summary.hasContent}
+                        </span>{" "}
+                        có content
+                    </button>
+                </div>
 
-                            <HeaderStatButton
-                                value={counts.hasContent ?? 0}
-                                label="có content"
-                                tone="content"
-                                active={Boolean(activeQuickFilters?.hasContent)}
-                                onClick={() => onQuickFilterClick?.("hasContent")}
-                            />
-
-                            <HeaderStatButton
-                                value={counts.hasImages ?? 0}
-                                label="có image"
-                                tone="image"
-                                active={Boolean(activeQuickFilters?.hasImages)}
-                                onClick={() => onQuickFilterClick?.("hasImages")}
-                            />
-                        </>
-                    ) : null}
+                <div className="text-xs text-slate-500">
+                    <button
+                        type="button"
+                        onClick={() => onQuickFilterClick?.("hasImages")}
+                        className={cn(
+                            "transition hover:text-slate-700",
+                            isQuickFilterActive(activeQuickFilters, "hasImages") &&
+                            "font-medium text-blue-600"
+                        )}
+                    >
+                        <span className="font-medium text-blue-600">
+                            {summary.hasImages}
+                        </span>{" "}
+                        có image
+                    </button>
                 </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="min-w-full table-fixed">
-                    <colgroup>
-                        <col className="w-12" />
-                        <col className="w-[34%]" />
-                        <col className="w-[22%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[20%]" />
-                        <col className="w-[8%]" />
-                    </colgroup>
-
-                    <thead>
-                        <tr className="bg-slate-50/80">
-                            <th className="px-4 py-3 text-left">
+            <div className="overflow-x-auto">
+                <table className="min-w-full text-left">
+                    <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th className="w-10 px-4 py-4">
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
-                                    onChange={(e) => onToggleAll(e.target.checked)}
+                                    onChange={(e) =>
+                                        onToggleAll?.(e.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                                Watch
-                            </th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                                Post readiness
-                            </th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                                Pricing
-                            </th>
-                            <th className="px-4 py-3 text-left text-[12px] font-semibold text-slate-500">
-                                Cập nhật
-                            </th>
-                            <th className="px-4 py-3 text-right text-[12px] font-semibold text-slate-500">
-                                Hành động
-                            </th>
+                            <th className="px-4 py-4">Watch</th>
+                            <th className="px-4 py-4">Post readiness</th>
+                            <th className="px-4 py-4">Pricing</th>
+                            <th className="px-4 py-4">Cập nhật</th>
+                            <th className="px-4 py-4 text-right">Hành động</th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {items.length === 0 ? (
+                        {safeItems.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                                    Không có dữ liệu
+                                <td
+                                    colSpan={6}
+                                    className="px-4 py-12 text-center text-sm text-slate-500"
+                                >
+                                    Chưa có watch nào khớp bộ lọc hiện tại.
                                 </td>
                             </tr>
                         ) : (
-                            items.map((item) => (
+                            safeItems.map((item) => (
                                 <WatchListRow
-                                    key={item.productId}
-                                    item={item}
-                                    checked={selectedIds.includes(item.productId)}
+                                    key={item.id}
+                                    product={item}
+                                    checked={safeSelectedIds.includes(item.id)}
                                     canViewCost={canViewCost}
-                                    onCheckedChange={(checked) => onToggleOne(item.productId, checked)}
+                                    onCheckedChange={(checked) =>
+                                        onToggleOne?.(item.id, checked)
+                                    }
                                     onView={onView}
                                     onEdit={onEdit}
                                     onDelete={onDelete}
                                     onService={onService}
-                                    onConsign={onConsign}
                                     onQuickOrder={onQuickOrder}
+                                    onConsign={onConsign}
                                 />
                             ))
                         )}

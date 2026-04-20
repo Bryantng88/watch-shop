@@ -1,6 +1,6 @@
 "use client";
 
-import type { Counts, ViewKey } from "./types";
+import type { ViewKey, WatchListCounts } from "./types";
 
 const items: Array<{ key: ViewKey; label: string }> = [
     { key: "draft", label: "Draft" },
@@ -17,7 +17,7 @@ export default function WatchListViewTabs({
     onChange,
 }: {
     value: ViewKey;
-    counts: Counts;
+    counts: WatchListCounts;
     onChange: (value: ViewKey) => void;
 }) {
     return (
@@ -25,7 +25,7 @@ export default function WatchListViewTabs({
             <div className="flex min-w-max items-center gap-6 overflow-x-auto">
                 {items.map((item) => {
                     const active = item.key === value;
-                    const count = counts[item.key];
+                    const count = counts[item.key] ?? 0;
 
                     return (
                         <button
@@ -43,13 +43,17 @@ export default function WatchListViewTabs({
                             <span
                                 className={[
                                     "ml-2 rounded-full px-2 py-0.5 text-[11px]",
-                                    active ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-400",
+                                    active
+                                        ? "bg-slate-100 text-slate-700"
+                                        : "bg-slate-50 text-slate-400",
                                 ].join(" ")}
                             >
                                 {count}
                             </span>
 
-                            {active ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" /> : null}
+                            {active ? (
+                                <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" />
+                            ) : null}
                         </button>
                     );
                 })}

@@ -80,18 +80,18 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
 
         await tx.watchSpecV2.upsert({
-            where: { productId },
+            where: { watchId: current.id },
             create: {
-                productId,
+                watchId: current.id,
                 brand: values.spec.specBrand || null,
                 model: values.spec.model || null,
                 referenceNumber: values.spec.referenceNumber || null,
                 nickname: values.spec.nickname || null,
-                caseShape: values.spec.caseShape || null,
+                caseShape: (values.spec.caseShape as any) || null,
                 caseSizeMM: toDecimal(values.spec.caseSizeMM),
                 lugToLugMM: toDecimal(values.spec.lugToLugMM),
                 thicknessMM: toDecimal(values.spec.thicknessMM),
-                crystal: values.spec.crystal || null,
+                crystal: (values.spec.crystal as any) || null,
                 dialColor: values.spec.dialColor || null,
                 calibre: values.spec.calibre || null,
                 materialProfile: (values.spec.materialProfile as any) || null,
@@ -100,7 +100,7 @@ export async function submitWatchForm(values: WatchFormValues) {
                 goldTreatment: (values.spec.goldTreatment as any) || null,
                 goldColors: values.spec.goldColors ?? [],
                 goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
-                braceletType: values.spec.braceletType || null,
+                braceletType: (values.spec.braceletType as any) || null,
                 strapMaterialText: values.spec.strapMaterialText || null,
                 waterResistance: values.spec.waterResistance || null,
                 powerReserve: values.spec.powerReserve || null,
@@ -113,11 +113,11 @@ export async function submitWatchForm(values: WatchFormValues) {
                 model: values.spec.model || null,
                 referenceNumber: values.spec.referenceNumber || null,
                 nickname: values.spec.nickname || null,
-                caseShape: values.spec.caseShape || null,
+                caseShape: (values.spec.caseShape as any) || null,
                 caseSizeMM: toDecimal(values.spec.caseSizeMM),
                 lugToLugMM: toDecimal(values.spec.lugToLugMM),
                 thicknessMM: toDecimal(values.spec.thicknessMM),
-                crystal: values.spec.crystal || null,
+                crystal: (values.spec.crystal as any) || null,
                 dialColor: values.spec.dialColor || null,
                 calibre: values.spec.calibre || null,
                 materialProfile: (values.spec.materialProfile as any) || null,
@@ -126,7 +126,7 @@ export async function submitWatchForm(values: WatchFormValues) {
                 goldTreatment: (values.spec.goldTreatment as any) || null,
                 goldColors: values.spec.goldColors ?? [],
                 goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
-                braceletType: values.spec.braceletType || null,
+                braceletType: (values.spec.braceletType as any) || null,
                 strapMaterialText: values.spec.strapMaterialText || null,
                 waterResistance: values.spec.waterResistance || null,
                 powerReserve: values.spec.powerReserve || null,
@@ -137,9 +137,9 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
 
         await tx.watchContent.upsert({
-            where: { productId },
+            where: { watchId: current.id },
             create: {
-                productId,
+                watchId: current.id,
                 hookText: values.content.hookText || null,
                 body: values.content.body || null,
                 bulletSpecs: values.content.bulletSpecs ?? [],
@@ -152,9 +152,9 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
 
         await tx.watchPrice.upsert({
-            where: { productId },
+            where: { watchId: current.id },
             create: {
-                productId,
+                watchId: current.id,
                 salePrice: toDecimal(values.pricing.salePrice),
                 listPrice: toDecimal(values.pricing.listPrice),
                 minPrice: toDecimal(values.pricing.minPrice),

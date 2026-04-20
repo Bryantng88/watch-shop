@@ -7,7 +7,7 @@ import WatchListViewTabs from "../ui/list/WatchListViewTabs";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
 import { buildCounts } from "../ui/list/helpers";
-import type { ViewKey, WatchListPageProps } from "../ui/list/types";
+import type { ViewKey, WatchListPageProps, WatchRow } from "../ui/list/types";
 
 function normalizeView(value: string | null | undefined): ViewKey {
     const view = String(value ?? "").toLowerCase();
@@ -68,6 +68,9 @@ export default function WatchListClient(props: WatchListPageProps) {
     const pathname = usePathname();
     const sp = useSearchParams();
 
+    const rows = props.items ?? [];
+    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
+
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [filters, setFilters] = useState({
         q: sp.get("q") ?? "",
@@ -81,13 +84,10 @@ export default function WatchListClient(props: WatchListPageProps) {
         sort: sp.get("sort") ?? "updatedDesc",
     });
 
-    const rows = props.items ?? [];
-    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
     const counts = useMemo(
-        () => buildCounts(props.counts, props.total, currentView, rows),
-        [props.counts, props.total, currentView, rows]
+        () => buildCounts(rows, props.counts),
+        [rows, props.counts]
     );
-
     const activeQuickFilters = useMemo(
         () => ({
             hasContent: filters.hasContent === "yes",
@@ -138,17 +138,45 @@ export default function WatchListClient(props: WatchListPageProps) {
         });
 
         pushParams((next) => {
-            ["q", "sku", "brandId", "vendorId", "hasContent", "hasImages", "saleStage", "opsStage"].forEach((key) =>
-                next.delete(key)
-            );
+            [
+                "q",
+                "sku",
+                "brandId",
+                "vendorId",
+                "hasContent",
+                "hasImages",
+                "saleStage",
+                "opsStage",
+            ].forEach((key) => next.delete(key));
+
             setParam(next, "sort", "updatedDesc");
             setParam(next, "page", "1");
         });
     }
 
-    function handleQuickFilterClick(key: "hasContent" | "hasImages") {
+    function handleQuickFilterClick(key: "all" | "hasContent" | "hasImages") {
+        if (key === "all") {
+            setFilters((prev) => ({
+                ...prev,
+                hasContent: "",
+                hasImages: "",
+            }));
+
+            pushParams((next) => {
+                next.delete("hasContent");
+                next.delete("hasImages");
+                setParam(next, "page", "1");
+            });
+            return;
+        }
+
         const nextValue = filters[key] === "yes" ? "" : "yes";
-        setFilters((prev) => ({ ...prev, [key]: nextValue }));
+
+        setFilters((prev) => ({
+            ...prev,
+            [key]: nextValue,
+        }));
+
         pushParams((next) => {
             setParam(next, key, nextValue || null);
             setParam(next, "page", "1");
@@ -159,39 +187,42 @@ export default function WatchListClient(props: WatchListPageProps) {
         pushParams((next) => setParam(next, "page", String(page)));
     }
 
-    function onToggleOne(productId: string, checked: boolean) {
+    function onToggleOne(watchId: string, checked: boolean) {
         setSelectedIds((prev) =>
-            checked ? [...new Set([...prev, productId])] : prev.filter((x) => x !== productId)
+            checked ? [...new Set([...prev, watchId])] : prev.filter((x) => x !== watchId)
         );
     }
 
     function onToggleAll(checked: boolean) {
-        if (!checked) return setSelectedIds([]);
-        setSelectedIds(rows.map((x) => x.productId));
+        if (!checked) {
+            setSelectedIds([]);
+            return;
+        }
+        setSelectedIds(rows.map((x) => x.id));
     }
 
-    function onView(productId: string) {
-        router.push(`/admin/watches/${productId}`);
+    function onView(row: WatchRow) {
+        router.push(`/admin/watches/${row.productId}`);
     }
 
-    function onEdit(productId: string) {
-        router.push(`/admin/watches/${productId}/edit`);
+    function onEdit(row: WatchRow) {
+        router.push(`/admin/watches/${row.productId}/edit`);
     }
 
-    function onDelete(productId: string) {
-        console.log("TODO delete watch", productId);
+    function onDelete(row: WatchRow) {
+        console.log("TODO delete watch", row);
     }
 
-    function onService(productId: string) {
-        router.push(`/admin/services/new?productId=${productId}`);
+    function onService(row: WatchRow) {
+        router.push(`/admin/services/new?productId=${row.productId}`);
     }
 
-    function onQuickOrder(productId: string) {
-        router.push(`/admin/orders/new?mode=quick&productId=${productId}`);
+    function onQuickOrder(row: WatchRow) {
+        router.push(`/admin/orders/new?mode=quick&productId=${row.productId}`);
     }
 
-    function onConsign(productId: string) {
-        router.push(`/admin/consignments/new?productId=${productId}`);
+    function onConsign(row: WatchRow) {
+        router.push(`/admin/consignments/new?productId=${row.productId}`);
     }
 
     const brandOptions = (props.brands ?? []).map((brand) => ({
@@ -208,7 +239,11 @@ export default function WatchListClient(props: WatchListPageProps) {
         <div className="space-y-5">
             <WatchListToolbar selectedCount={selectedIds.length} />
 
-            <WatchListViewTabs value={currentView} counts={counts} onChange={handleViewChange} />
+            <WatchListViewTabs
+                value={currentView}
+                counts={counts}
+                onChange={handleViewChange}
+            />
 
             <WatchListFilters
                 filters={filters}
@@ -223,7 +258,11 @@ export default function WatchListClient(props: WatchListPageProps) {
                 items={rows}
                 selectedIds={selectedIds}
                 canViewCost={props.canViewCost}
-                counts={counts}
+                counts={{
+                    ...counts,
+                    hasContent: props.summary?.hasContent ?? 0,
+                    hasImages: props.summary?.hasImages ?? 0,
+                }}
                 activeQuickFilters={activeQuickFilters}
                 onQuickFilterClick={handleQuickFilterClick}
                 onToggleOne={onToggleOne}
