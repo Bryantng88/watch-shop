@@ -11,6 +11,7 @@ function toPositiveInt(value: any, fallback: number) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
+
 function buildHasContentWhere(): Prisma.WatchWhereInput {
   return {
     OR: [
@@ -52,6 +53,7 @@ function buildHasGalleryWhere(): Prisma.WatchWhereInput {
     },
   };
 }
+
 function buildBaseWhere(input: WatchListFilters): Prisma.WatchWhereInput {
   const and: Prisma.WatchWhereInput[] = [];
 
@@ -177,6 +179,7 @@ function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
       return {};
   }
 }
+
 function mergeWhere(
   baseWhere: Prisma.WatchWhereInput,
   segmentWhere: Prisma.WatchWhereInput
@@ -193,10 +196,13 @@ function mergeWhere(
 function buildSort(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
   switch (sort) {
     case "updated_asc":
+    case "updatedAsc":
       return [{ updatedAt: "asc" }];
     case "title_asc":
+    case "titleAsc":
       return [{ product: { title: "asc" } }];
     case "title_desc":
+    case "titleDesc":
       return [{ product: { title: "desc" } }];
     default:
       return [{ updatedAt: "desc" }];
@@ -210,8 +216,10 @@ export async function listAdminWatches(
   const pageSize = toPositiveInt(input.pageSize, 20);
   const skip = (page - 1) * pageSize;
 
+  const activeView: WatchListView = input.view ?? "draft";
+
   const baseWhere = buildBaseWhere(input);
-  const listWhere = mergeWhere(baseWhere, buildSegmentWhere(input.view));
+  const listWhere = mergeWhere(baseWhere, buildSegmentWhere(activeView));
   const orderBy = buildSort(input.sort);
 
   const [
@@ -273,27 +281,10 @@ export async function listAdminWatches(
         AND: [listWhere, buildHasContentWhere()],
       },
     }),
+
     prisma.watch.count({
       where: {
         AND: [listWhere, buildHasGalleryWhere()],
-      },
-    }),
-    prisma.watch.count({
-      where: {
-        AND: [
-          listWhere,
-          {
-            product: {
-              is: {
-                productImage: {
-                  some: {
-                    role: "INLINE" as any,
-                  },
-                },
-              },
-            },
-          },
-        ],
       },
     }),
   ]);

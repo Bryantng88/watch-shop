@@ -21,16 +21,23 @@ function normalizeRole(value: any) {
     return String(value ?? "").toUpperCase();
 }
 
+function sortImages(images: any[]) {
+    return [...images].sort(
+        (a: any, b: any) =>
+            Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+    );
+}
+
 function getInlineImages(row: any) {
-    return pickImages(row)
-        .filter((img: any) => normalizeRole(img?.role) === "INLINE")
-        .sort((a: any, b: any) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0));
+    return sortImages(
+        pickImages(row).filter((img: any) => normalizeRole(img?.role) === "INLINE")
+    );
 }
 
 function getGalleryImages(row: any) {
-    return pickImages(row)
-        .filter((img: any) => normalizeRole(img?.role) === "GALLERY")
-        .sort((a: any, b: any) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0));
+    return sortImages(
+        pickImages(row).filter((img: any) => normalizeRole(img?.role) === "GALLERY")
+    );
 }
 
 export function mapWatchImage(row: any) {
@@ -73,7 +80,6 @@ export function normalizeNumber(value: any) {
 export function mapWatchRow(row: any): WatchRow {
     const product = row?.product ?? row ?? {};
     const galleryImages = getGalleryImages(row);
-
     const imagesCount = galleryImages.length;
     const hasImages = imagesCount > 0;
     const hasContent = hasValidContent(row);
@@ -81,7 +87,7 @@ export function mapWatchRow(row: any): WatchRow {
     const price = row?.watchPrice ?? row?.price ?? {};
 
     return {
-        id: String(row?.id ?? ""),
+        id: String(row?.id ?? product?.id ?? ""),
         productId: String(row?.productId ?? product?.id ?? ""),
         sku: String(product?.sku ?? row?.sku ?? ""),
         title: String(product?.title ?? row?.title ?? ""),

@@ -1,6 +1,5 @@
 import { getAdminWatchList } from "@/domains/watch/server";
 import WatchListClient from "@/domains/watch/client/WatchListClient";
-import { parseProductListSearchParams } from "@/app/(admin)/admin/products/helpers/search-params";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -39,6 +38,16 @@ function hasPermission(user: any, permission: string) {
     });
 }
 
+function firstValue(value: string | string[] | undefined) {
+    if (Array.isArray(value)) return value[0] ?? "";
+    return value ?? "";
+}
+
+function toPositiveInt(value: string | undefined, fallback: number) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
 export default async function WatchesPage({
     searchParams,
 }: {
@@ -47,33 +56,47 @@ export default async function WatchesPage({
     await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
     const resolvedSearchParams = await searchParams;
-
-    const sp = new URLSearchParams();
-    for (const [k, v] of Object.entries(resolvedSearchParams)) {
-        if (Array.isArray(v)) {
-            for (const x of v) {
-                if (x != null && x !== "") sp.append(k, String(x));
-            }
-        } else if (v != null && v !== "") {
-            sp.append(k, String(v));
-        }
-    }
-
-    const input = parseProductListSearchParams(sp);
     const user = await getCurrentUser();
 
     const isAdmin = hasRole(user, "ADMIN");
     const canViewCost =
         isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
-    const canEditPrice =
-        isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_UPDATE);
+
+    const input = {
+        view: (firstValue(resolvedSearchParams.view) || "draft") as
+            | "draft"
+            | "processing"
+            | "ready"
+            | "hold"
+            | "sold"
+            | "all",
+        q: firstValue(resolvedSearchParams.q),
+        sku: firstValue(resolvedSearchParams.sku),
+        brandId: firstValue(resolvedSearchParams.brandId),
+        vendorId: firstValue(resolvedSearchParams.vendorId),
+        hasContent: firstValue(resolvedSearchParams.hasContent) as "" | "yes" | "no",
+        hasImages: firstValue(resolvedSearchParams.hasImages) as "" | "yes" | "no",
+        saleStage: firstValue(resolvedSearchParams.saleStage),
+        opsStage: firstValue(resolvedSearchParams.opsStage),
+        sort: firstValue(resolvedSearchParams.sort) || "updatedDesc",
+        page: toPositiveInt(firstValue(resolvedSearchParams.page), 1),
+        pageSize: toPositiveInt(firstValue(resolvedSearchParams.pageSize), 20),
+    };
 
     const [result, vendors] = await Promise.all([
-        getAdminWatchList(input as any),
+        getAdminWatchList(input),
         getListVendors(),
     ]);
 
-    const { items, total, page, pageSize, totalPages } = result;
+    const {
+        items,
+        total,
+        page,
+        pageSize,
+        totalPages,
+        counts,
+        summary,
+    } = result;
 
     return (
         <WatchListClient
@@ -82,10 +105,10 @@ export default async function WatchesPage({
             page={page}
             pageSize={pageSize}
             totalPages={totalPages}
-            rawSearchParams={resolvedSearchParams}
+            counts={counts}
+            summary={summary}
             vendors={serialize(vendors)}
             canViewCost={canViewCost}
-            canEditPrice={canEditPrice}
         />
     );
 }
