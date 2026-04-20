@@ -2,13 +2,14 @@
 
 import WatchHeader from "../ui/list/detail/WatchHeader";
 import WatchMediaPanel from "../ui/list/detail/WatchMediaPanel";
-import { WatchOpsPanel, WatchOverviewPanel } from "../ui/list/detail/WatchOverviewPanel";
+import {
+    WatchOpsPanel,
+    WatchOverviewPanel,
+} from "../ui/list/detail/WatchOverviewPanel";
 import WatchPricingPanel from "../ui/list/detail/WatchPricingPanel";
 import WatchContentPanel from "../ui/list/detail/WatchContentPanel";
 import WatchServicePanel from "../ui/list/detail/WatchServicePanel";
 import WatchTradePanel from "../ui/list/detail/WatchTradePanel";
-import { CollapsibleSection, TinyStat, boolText } from "../ui/list/detail/shared";
-import { Image as ImageIcon } from "lucide-react";
 
 type Props = {
     detail: any;
@@ -19,6 +20,17 @@ type Props = {
     canViewTradeFinancials?: boolean;
 };
 
+function normalizeRole(value: any) {
+    return String(value ?? "").toUpperCase();
+}
+
+function sortImages(items: any[]) {
+    return [...items].sort(
+        (a, b) =>
+            Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+    );
+}
+
 export default function WatchDetailClient({
     detail,
     images = [],
@@ -26,7 +38,15 @@ export default function WatchDetailClient({
     tradeHistory,
     canViewTradeFinancials = false,
 }: Props) {
-    const galleryCount = (images ?? []).filter((img) => String(img?.role ?? "").toUpperCase() === "GALLERY").length || (images?.length ?? 0);
+    const sortedImages = sortImages(images ?? []);
+
+    const inlineImages = sortedImages.filter(
+        (img) => normalizeRole(img?.role) === "INLINE"
+    );
+
+    const galleryImages = sortedImages.filter(
+        (img) => normalizeRole(img?.role) === "GALLERY"
+    );
 
     return (
         <div className="space-y-6">
@@ -34,7 +54,13 @@ export default function WatchDetailClient({
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
                 <div className="space-y-6 xl:col-span-8">
-                    <WatchMediaPanel detail={detail} images={images} canViewTradeFinancials={canViewTradeFinancials} />
+                    <WatchMediaPanel
+                        detail={detail}
+                        inlineImages={inlineImages}
+                        galleryImages={galleryImages}
+                        canViewTradeFinancials={canViewTradeFinancials}
+                    />
+
                     <WatchOverviewPanel detail={detail} />
                     <WatchContentPanel detail={detail} />
                     <WatchServicePanel serviceHistory={serviceHistory} />
@@ -43,21 +69,10 @@ export default function WatchDetailClient({
 
                 <div className="space-y-6 xl:col-span-4">
                     <WatchOpsPanel detail={detail} />
-                    <WatchPricingPanel detail={detail} canViewTradeFinancials={canViewTradeFinancials} />
-                    <CollapsibleSection
-                        title="Hình ảnh & phụ kiện"
-                        desc="Theo dõi nhanh media và phụ kiện đi kèm."
-                        icon={<ImageIcon className="h-5 w-5" />}
-                        defaultOpen
-                    >
-                        <div className="grid grid-cols-1 gap-3">
-                            <TinyStat label="Số ảnh" value={galleryCount} />
-                            <TinyStat label="Has box" value={boolText(detail?.watch?.hasBox ?? detail?.spec?.boxIncluded)} />
-                            <TinyStat label="Has papers" value={boolText(detail?.watch?.hasPapers ?? detail?.spec?.cardIncluded)} />
-                            <TinyStat label="Booklet" value={boolText(detail?.spec?.bookletIncluded)} />
-                            <TinyStat label="Card" value={boolText(detail?.spec?.cardIncluded)} />
-                        </div>
-                    </CollapsibleSection>
+                    <WatchPricingPanel
+                        detail={detail}
+                        canViewTradeFinancials={canViewTradeFinancials}
+                    />
                 </div>
             </div>
         </div>

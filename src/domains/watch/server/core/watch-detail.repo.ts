@@ -10,6 +10,11 @@ export async function getAdminWatchRow(db: DB, productId: string) {
       product: {
         include: {
           brand: true,
+          vendor: true,
+          productCategory: true,
+          productImage: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
         },
       },
       watchSpecV2: true,
@@ -35,6 +40,9 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
           brand: true,
           vendor: true,
           productCategory: true,
+          productImage: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
         },
       },
       watchSpecV2: true,

@@ -148,18 +148,35 @@ function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
   switch (view) {
     case "draft":
       return {
-        OR: [
-          { serviceState: "DRAFT" as any },
-          { saleState: "DRAFT" as any },
+        AND: [
+          {
+            NOT: buildHasContentWhere(),
+          },
+          {
+            NOT: buildHasGalleryWhere(),
+          },
         ],
       };
 
     case "processing":
       return {
         OR: [
-          { serviceState: "IN_PROGRESS" as any },
-          { stockState: "PROCESSING" as any },
-          { saleState: "PROCESSING" as any },
+          {
+            AND: [
+              buildHasContentWhere(),
+              {
+                NOT: buildHasGalleryWhere(),
+              },
+            ],
+          },
+          {
+            AND: [
+              {
+                NOT: buildHasContentWhere(),
+              },
+              buildHasGalleryWhere(),
+            ],
+          },
         ],
       };
 
