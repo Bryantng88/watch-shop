@@ -56,79 +56,71 @@ function normalizeMediaItem(input: WatchMediaItemInput, index: number) {
 
 export async function replaceWatchImagesRepo(
   db: DB,
-  input: ReplaceWatchImagesInput
+  input: {
+    productId: string;
+    images: Array<{
+      fileKey?: string | null;
+      url?: string | null;
+      key?: string | null;
+      path?: string | null;
+      role?: string | null;
+      isForAdmin?: boolean | null;
+      isForStorefront?: boolean | null;
+      sortOrder?: number | null;
+    }>;
+  }
 ) {
-
   return withDbTransaction(db, async (tx) => {
     const watch = await tx.watch.findUnique({
       where: { productId: input.productId },
-      select: { id: true, productId: true },
-    });
-
-    if (!watch) {
-      throw new Error("Không tìm thấy watch để cập nhật hình");
-    }
-
-    await tx.watchMedia.deleteMany({
-      where: { watchId: watch.id },
-    });
-
-    if (!input.images.length) {
-      await tx.product.update({
-        where: { id: input.productId },
-        data: {
-          primaryImageUrl: null,
-          storefrontImageKey: null,
-        },
-      });
-
-      return [];
-    }
-
-    const created = [];
-    for (let i = 0; i < input.images.length; i += 1) {
-      const item = normalizeMediaItem(input.images[i], i);
-
-      const row = await tx.watchMedia.create({
-        data: {
-          watchId: watch.id,
-          legacyProductImageId: item.legacyProductImageId,
-          key: item.key,
-          url: item.url,
-          type: item.type,
-          role: item.role as any,
-          sortOrder: item.sortOrder,
-          alt: item.alt,
-          width: item.width,
-          height: item.height,
-          mime: item.mime,
-          sizeBytes: item.sizeBytes,
-          dominantHex: item.dominantHex,
-          contentHash: item.contentHash,
-        },
-      });
-
-      created.push(row);
-    }
-
-    const primary =
-      created.find((item) => item.role === "PRIMARY") ??
-      created.find((item) => item.role === "STOREFRONT") ??
-      created[0] ??
-      null;
-
-    await tx.product.update({
-      where: { id: input.productId },
-      data: {
-        primaryImageUrl: primary?.url ?? null,
-        storefrontImageKey: primary?.key ?? null,
+      select: {
+        productId: true,
       },
     });
 
-    return created;
+    if (!watch) {
+      throw new Error("Không tìm thấy watch");
+    }
+
+    const galleryItems = (input.images ?? [])
+      .filter((item) => String(item?.role ?? "").toUpperCase() === "GALLERY")
+      .map((item, index) => ({
+        productId: input.productId,
+        fileKey:
+          item.fileKey ??
+          item.key ??
+          item.path ??
+          null,
+        url: item.url ?? null,
+        role: "GALLERY" as any,
+        isForAdmin: item.isForAdmin ?? true,
+        isForStorefront: item.isForStorefront ?? true,
+        sortOrder:
+          typeof item.sortOrder === "number" ? item.sortOrder : index,
+      }))
+      .filter((item) => item.fileKey || item.url);
+
+    await tx.productImage.deleteMany({
+      where: {
+        productId: input.productId,
+        role: "GALLERY" as any,
+      },
+    });
+
+    if (galleryItems.length > 0) {
+      await tx.productImage.createMany({
+        data: galleryItems,
+      });
+    }
+
+    return tx.productImage.findMany({
+      where: {
+        productId: input.productId,
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
   });
 }
-
 export async function reorderWatchImagesRepo(
   db: DB,
   input: ReorderWatchImagesInput
@@ -219,9 +211,13 @@ export async function getWatchImagesRepo(db: DB, productId: string) {
   const watch = await client.watch.findUnique({
     where: { productId },
     select: {
-      id: true,
-      watchMedia: {
-        orderBy: { sortOrder: "asc" },
+      productId: true,
+      product: {
+        select: {
+          productImage: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
+        },
       },
     },
   });
@@ -230,5 +226,5 @@ export async function getWatchImagesRepo(db: DB, productId: string) {
     throw new Error("Không tìm thấy watch");
   }
 
-  return watch.watchMedia;
+  return watch.product?.productImage ?? [];
 }
