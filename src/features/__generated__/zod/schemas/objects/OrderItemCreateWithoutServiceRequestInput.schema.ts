@@ -13,7 +13,7 @@ import { ProductCreateNestedOneWithoutOrderItemInputObjectSchema as ProductCreat
 import { ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema as ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutOrderItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   variantId: z.string().optional().nullable(),
   title: z.string(),
   listPrice: z.number(),
@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
+  updatedAt: z.coerce.date().optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),

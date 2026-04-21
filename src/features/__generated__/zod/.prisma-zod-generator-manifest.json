@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2026-04-17T11:03:53.478Z",
+  "generatedAt": "2026-04-21T10:14:15.893Z",
   "outputPath": "D:\\workspace\\project\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",

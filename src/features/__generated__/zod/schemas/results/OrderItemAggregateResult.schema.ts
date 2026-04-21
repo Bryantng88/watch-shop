@@ -21,6 +21,7 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     linkedOrderItemId: z.number(),
     customerItemNote: z.number(),
     createdFromFlow: z.number(),
+    updatedAt: z.number(),
     AcquisitionItem: z.number(),
     OrderItem: z.number(),
     other_OrderItem: z.number(),
@@ -61,7 +62,8 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
     linkedOrderItemId: z.string().nullable(),
-    customerItemNote: z.string().nullable()
+    customerItemNote: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -79,5 +81,6 @@ export const OrderItemAggregateResultSchema = z.object({  _count: z.object({
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
     linkedOrderItemId: z.string().nullable(),
-    customerItemNote: z.string().nullable()
+    customerItemNote: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()});

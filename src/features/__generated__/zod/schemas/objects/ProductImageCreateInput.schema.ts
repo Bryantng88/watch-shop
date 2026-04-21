@@ -4,7 +4,7 @@ import { ImageRoleSchema } from '../enums/ImageRole.schema';
 import { ProductCreateNestedOneWithoutProductImageInputObjectSchema as ProductCreateNestedOneWithoutProductImageInputObjectSchema } from './ProductCreateNestedOneWithoutProductImageInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   fileKey: z.string(),
   role: ImageRoleSchema.optional(),
   alt: z.string().optional().nullable(),
@@ -16,7 +16,6 @@ const makeSchema = () => z.object({
   dominantHex: z.string().optional().nullable(),
   contentHash: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
   isPrimary: z.boolean().optional(),
   isForAdmin: z.boolean().optional(),
   isForStorefront: z.boolean().optional(),

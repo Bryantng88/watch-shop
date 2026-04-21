@@ -4,7 +4,7 @@ import { AvailabilityStatusSchema } from '../enums/AvailabilityStatus.schema';
 import { DiscountTypeSchema } from '../enums/DiscountType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   productId: z.string(),
   sku: z.string().optional().nullable(),
   name: z.string().optional().nullable(),

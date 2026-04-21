@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { VendorRoleSchema } from '../enums/VendorRole.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),

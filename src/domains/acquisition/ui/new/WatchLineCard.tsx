@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Expand, Loader2, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
-import type { AcquisitionWatchLine } from "./acquisition-form.types";
+import type { AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
 
 type Props = {
     line: AcquisitionWatchLine;
@@ -54,15 +54,15 @@ export default function WatchLineCard({
         onChange({ ...line, [key]: value });
     };
 
-    const handlePickImage = async (fileKey: string) => {
-        if (!fileKey) return;
-        setMovingImage(true);
+    async function handlePickImage(nextFileKey: string) {
+        if (!nextFileKey?.trim()) return;
 
+        setMovingImage(true);
         try {
             const res = await fetch("/api/admin/acquisitions/prepare-inline-images", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fileKeys: [fileKey] }),
+                body: JSON.stringify({ fileKeys: [nextFileKey] }),
             });
 
             const data = await res.json().catch(() => null);
@@ -70,18 +70,22 @@ export default function WatchLineCard({
                 throw new Error(data?.error || "Không thể xử lý ảnh đã chọn.");
             }
 
-            const first = data?.items?.[0];
+            const first = Array.isArray(data?.items) ? data.items[0] : null;
+            if (!first?.key) {
+                throw new Error("Không nhận được ảnh sau khi xử lý.");
+            }
+
             onChange({
                 ...line,
-                imageKey: first?.key ?? null,
-                imageUrl: first?.url ?? null,
+                imageKey: first.key ?? null,
+                imageUrl: first.url ?? null,
             });
         } catch (error: any) {
             alert(error?.message || "Không thể xử lý ảnh đã chọn.");
         } finally {
             setMovingImage(false);
         }
-    };
+    }
 
     const handleCostChange = (raw: string) => {
         setField("cost", parseMoneyInput(raw) as AcquisitionWatchLine["cost"]);
@@ -122,7 +126,7 @@ export default function WatchLineCard({
                     ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[96px_minmax(0,1.5fr)_minmax(0,1.2fr)_90px_160px_110px] xl:items-start">
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[92px_minmax(0,1.5fr)_minmax(0,1.2fr)_150px_110px] xl:items-start">
                     <div className="space-y-1">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Ảnh
@@ -130,7 +134,7 @@ export default function WatchLineCard({
 
                         <div className="relative w-fit">
                             <MediaPickerInline
-                                value={line.imageUrl || line.imageKey}
+                                value={line.imageKey ?? ""}
                                 onChange={handlePickImage}
                                 pending={movingImage}
                                 disabled={movingImage}
@@ -161,7 +165,7 @@ export default function WatchLineCard({
                         <input
                             value={line.quickInput}
                             onChange={(e) => setField("quickInput", e.target.value)}
-                            placeholder="VD: seiko tự động tròn mặt đen"
+                            placeholder="VD: seiko tự động"
                             className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>
@@ -173,20 +177,7 @@ export default function WatchLineCard({
                         <input
                             value={line.aiHint}
                             onChange={(e) => setField("aiHint", e.target.value)}
-                            placeholder="VD: niềng 18K gold, máy..."
-                            className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                        />
-                    </div>
-
-                    <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                            SL
-                        </div>
-                        <input
-                            type="number"
-                            min={1}
-                            value={line.quantity}
-                            onChange={(e) => setField("quantity", Number(e.target.value || 1))}
+                            placeholder="VD: niềng 18K"
                             className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>
@@ -195,7 +186,6 @@ export default function WatchLineCard({
                         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                             Giá nhập
                         </div>
-
                         <input
                             type="text"
                             inputMode="numeric"

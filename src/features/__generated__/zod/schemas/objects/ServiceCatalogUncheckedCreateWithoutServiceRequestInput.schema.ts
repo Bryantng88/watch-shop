@@ -6,7 +6,7 @@ import { OrderItemUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchem
 import { TechnicalIssueUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutServiceCatalogInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string(),
   name: z.string(),
   description: z.string().optional().nullable(),

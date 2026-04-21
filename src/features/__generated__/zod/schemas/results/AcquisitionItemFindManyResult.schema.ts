@@ -22,6 +22,7 @@ export const AcquisitionItemFindManyResultSchema = z.object({
   capitalizeToProduct: z.boolean().optional(),
   productType: z.unknown(),
   productTitle: z.string(),
+  updatedAt: z.date(),
   Acquisition: z.unknown(),
   Product: z.unknown().optional(),
   OrderItem: z.unknown().optional(),

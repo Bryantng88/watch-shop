@@ -7,7 +7,7 @@ import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   orderId: z.string(),
   productId: z.string().optional().nullable(),
   variantId: z.string().optional().nullable(),
@@ -26,7 +26,8 @@ const makeSchema = () => z.object({
   serviceCatalogId: z.string().optional().nullable(),
   serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
-  createdFromFlow: OrderFlowTypeSchema.optional()
+  createdFromFlow: OrderFlowTypeSchema.optional(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const OrderItemCreateManyOrderItemInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyOrderItemInput>;
 export const OrderItemCreateManyOrderItemInputObjectZodSchema = makeSchema();

@@ -28,6 +28,7 @@ export const OrderItemInputSchema = z.object({
     linkedOrderItemId: z.string().optional().nullable(),
     customerItemNote: z.string().optional().nullable(),
     createdFromFlow: OrderFlowTypeSchema,
+    updatedAt: z.date(),
     AcquisitionItem: z.array(z.unknown()),
     OrderItem: z.unknown().optional().nullable(),
     other_OrderItem: z.array(z.unknown()),

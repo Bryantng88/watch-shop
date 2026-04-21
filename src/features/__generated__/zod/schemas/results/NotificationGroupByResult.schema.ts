@@ -9,6 +9,7 @@ export const NotificationGroupByResultSchema = z.array(z.object({
   userId: z.string(),
   metadata: z.unknown(),
   createdAt: z.date(),
+  updatedAt: z.date(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -19,6 +20,7 @@ export const NotificationGroupByResultSchema = z.array(z.object({
     userId: z.number(),
     metadata: z.number(),
     createdAt: z.number(),
+    updatedAt: z.number(),
     User: z.number()
   }).optional(),
   _min: z.object({
@@ -28,7 +30,8 @@ export const NotificationGroupByResultSchema = z.array(z.object({
     message: z.string().nullable(),
     priority: z.string().nullable(),
     userId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -37,6 +40,7 @@ export const NotificationGroupByResultSchema = z.array(z.object({
     message: z.string().nullable(),
     priority: z.string().nullable(),
     userId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()
 }));

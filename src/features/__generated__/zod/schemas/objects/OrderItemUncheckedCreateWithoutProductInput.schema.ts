@@ -10,7 +10,7 @@ import { OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as 
 import { ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   orderId: z.string(),
   variantId: z.string().optional().nullable(),
   title: z.string(),
@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   linkedOrderItemId: z.string().optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
+  updatedAt: z.coerce.date().optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional()

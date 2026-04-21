@@ -41,7 +41,8 @@ const orderitemscalarwherewithaggregatesinputSchema = z.object({
   serviceScope: z.union([z.lazy(() => EnumServiceScopeNullableWithAggregatesFilterObjectSchema), ServiceScopeSchema]).optional().nullable(),
   linkedOrderItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   customerItemNote: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  createdFromFlow: z.union([z.lazy(() => EnumOrderFlowTypeWithAggregatesFilterObjectSchema), OrderFlowTypeSchema]).optional()
+  createdFromFlow: z.union([z.lazy(() => EnumOrderFlowTypeWithAggregatesFilterObjectSchema), OrderFlowTypeSchema]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const OrderItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput> = orderitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput>;
 export const OrderItemScalarWhereWithAggregatesInputObjectZodSchema = orderitemscalarwherewithaggregatesinputSchema;

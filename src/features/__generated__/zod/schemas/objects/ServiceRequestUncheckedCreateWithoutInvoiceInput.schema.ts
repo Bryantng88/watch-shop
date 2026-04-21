@@ -8,7 +8,7 @@ import { TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputOb
 import { TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   orderItemId: z.string().optional().nullable(),

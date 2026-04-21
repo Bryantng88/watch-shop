@@ -14,6 +14,7 @@ const makeSchema = () => z.object({
   userId: SortOrderSchema.optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  updatedAt: SortOrderSchema.optional(),
   User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const NotificationOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.NotificationOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationOrderByWithRelationInput>;

@@ -35,7 +35,8 @@ const makeSchema = () => z.object({
   serviceRequestId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   capitalizeToProduct: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional()
+  productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemUncheckedUpdateManyWithoutAcquisitionInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUncheckedUpdateManyWithoutAcquisitionInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUncheckedUpdateManyWithoutAcquisitionInput>;
 export const AcquisitionItemUncheckedUpdateManyWithoutAcquisitionInputObjectZodSchema = makeSchema();

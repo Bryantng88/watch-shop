@@ -11,7 +11,7 @@ import { InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema as Invoic
 import { OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   refNo: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   shipPhone: z.string(),

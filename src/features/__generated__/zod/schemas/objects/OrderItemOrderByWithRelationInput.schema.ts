@@ -31,6 +31,7 @@ const orderitemorderbywithrelationinputSchema = z.object({
   linkedOrderItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   customerItemNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdFromFlow: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),

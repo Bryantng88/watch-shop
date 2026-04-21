@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   linkedOrderItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   customerItemNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdFromFlow: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional(),
   _count: z.lazy(() => OrderItemCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => OrderItemAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => OrderItemMaxOrderByAggregateInputObjectSchema).optional(),

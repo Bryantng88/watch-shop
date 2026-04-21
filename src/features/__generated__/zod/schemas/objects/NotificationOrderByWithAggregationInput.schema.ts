@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   userId: SortOrderSchema.optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  updatedAt: SortOrderSchema.optional(),
   _count: z.lazy(() => NotificationCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => NotificationMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => NotificationMinOrderByAggregateInputObjectSchema).optional()

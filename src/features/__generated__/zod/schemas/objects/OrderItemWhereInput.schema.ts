@@ -52,6 +52,7 @@ const orderitemwhereinputSchema = z.object({
   linkedOrderItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerItemNote: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdFromFlow: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
   OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),
   other_OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),

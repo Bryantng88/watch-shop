@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ReservationStatusSchema } from '../enums/ReservationStatus.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   productId: z.string().optional().nullable(),
   orderId: z.string().optional().nullable(),
   status: ReservationStatusSchema.optional(),

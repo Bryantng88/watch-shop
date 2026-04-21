@@ -4,7 +4,7 @@ import { InvoiceTypeSchema } from '../enums/InvoiceType.schema';
 import { InvoiceStatusSchema } from '../enums/InvoiceStatus.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string().optional().nullable(),
   type: InvoiceTypeSchema,
   status: InvoiceStatusSchema.optional(),

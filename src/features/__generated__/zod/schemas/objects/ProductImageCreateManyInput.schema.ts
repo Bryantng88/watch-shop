@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ImageRoleSchema } from '../enums/ImageRole.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   productId: z.string(),
   fileKey: z.string(),
   role: ImageRoleSchema.optional(),
@@ -16,7 +16,7 @@ const makeSchema = () => z.object({
   dominantHex: z.string().optional().nullable(),
   contentHash: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   isPrimary: z.boolean().optional(),
   isForAdmin: z.boolean().optional(),
   isForStorefront: z.boolean().optional()

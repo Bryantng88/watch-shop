@@ -5,7 +5,7 @@ import { ServiceRequestStatusSchema } from '../enums/ServiceRequestStatus.schema
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   orderItemId: z.string().optional().nullable(),

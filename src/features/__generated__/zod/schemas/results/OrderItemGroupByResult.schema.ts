@@ -16,6 +16,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
   serviceCatalogId: z.string(),
   linkedOrderItemId: z.string(),
   customerItemNote: z.string(),
+  updatedAt: z.date(),
   _count: z.object({
     id: z.number(),
     orderId: z.number(),
@@ -38,6 +39,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     linkedOrderItemId: z.number(),
     customerItemNote: z.number(),
     createdFromFlow: z.number(),
+    updatedAt: z.number(),
     AcquisitionItem: z.number(),
     OrderItem: z.number(),
     other_OrderItem: z.number(),
@@ -78,7 +80,8 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
     linkedOrderItemId: z.string().nullable(),
-    customerItemNote: z.string().nullable()
+    customerItemNote: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -96,6 +99,7 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     createdAt: z.date().nullable(),
     serviceCatalogId: z.string().nullable(),
     linkedOrderItemId: z.string().nullable(),
-    customerItemNote: z.string().nullable()
+    customerItemNote: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()
 }));

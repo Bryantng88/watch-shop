@@ -12,7 +12,7 @@ import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateN
 import { ShipmentCreateNestedOneWithoutOrderInputObjectSchema as ShipmentCreateNestedOneWithoutOrderInputObjectSchema } from './ShipmentCreateNestedOneWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   refNo: z.string().optional().nullable(),
   shipPhone: z.string(),
   shipAddress: z.string(),

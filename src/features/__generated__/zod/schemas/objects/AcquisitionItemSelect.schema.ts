@@ -28,6 +28,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.boolean().optional(),
   productType: z.boolean().optional(),
   productTitle: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
   Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),

@@ -11,7 +11,8 @@ const makeSchema = () => z.object({
   isRead: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
   metadata: SortOrderSchema.optional(),
-  createdAt: SortOrderSchema.optional()
+  createdAt: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional()
 }).strict();
 export const NotificationCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.NotificationCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationCountOrderByAggregateInput>;
 export const NotificationCountOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -12,6 +12,7 @@ const makeSchema = () => z.object({
   userId: z.boolean().optional(),
   metadata: z.boolean().optional(),
   createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
   User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional()
 }).strict();
 export const NotificationSelectObjectSchema: z.ZodType<Prisma.NotificationSelect> = makeSchema() as unknown as z.ZodType<Prisma.NotificationSelect>;

@@ -13,6 +13,7 @@ export const PaymentGroupByResultSchema = z.array(z.object({
   acquisition_id: z.string(),
   shipment_id: z.string(),
   refNo: z.string(),
+  updatedAt: z.date(),
   _count: z.object({
     id: z.number(),
     method: z.number(),
@@ -32,6 +33,7 @@ export const PaymentGroupByResultSchema = z.array(z.object({
     shipment_id: z.number(),
     type: z.number(),
     refNo: z.number(),
+    updatedAt: z.number(),
     MaintenanceRecord: z.number()
   }).optional(),
   _sum: z.object({
@@ -53,7 +55,8 @@ export const PaymentGroupByResultSchema = z.array(z.object({
     vendor_id: z.string().nullable(),
     acquisition_id: z.string().nullable(),
     shipment_id: z.string().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -68,6 +71,7 @@ export const PaymentGroupByResultSchema = z.array(z.object({
     vendor_id: z.string().nullable(),
     acquisition_id: z.string().nullable(),
     shipment_id: z.string().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()
 }));

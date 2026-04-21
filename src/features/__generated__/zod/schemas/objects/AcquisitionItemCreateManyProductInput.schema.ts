@@ -5,7 +5,7 @@ import { AcquisitionItemStatusSchema } from '../enums/AcquisitionItemStatus.sche
 import { ProductTypeSchema } from '../enums/ProductType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   acquisitionId: z.string(),
   variantId: z.string().optional().nullable(),
   quantity: z.number().int().optional(),
@@ -24,7 +24,8 @@ const makeSchema = () => z.object({
   serviceRequestId: z.string().optional().nullable(),
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
-  productTitle: z.string()
+  productTitle: z.string(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const AcquisitionItemCreateManyProductInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCreateManyProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCreateManyProductInput>;
 export const AcquisitionItemCreateManyProductInputObjectZodSchema = makeSchema();

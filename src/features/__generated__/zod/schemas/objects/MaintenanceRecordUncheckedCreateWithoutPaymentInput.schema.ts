@@ -5,7 +5,7 @@ import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema
 import { MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema as MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInputObjectSchema } from './MaintenancePartUncheckedCreateNestedManyWithoutMaintenanceRecordInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   serviceRequestId: z.string().optional().nullable(),

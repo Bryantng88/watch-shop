@@ -21,7 +21,7 @@ datasource db {
 }
 
 model Acquisition {
-  id              String            @id
+  id              String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   vendorId        String?
   customerId      String?
   type            AcquisitionType   @default(PURCHASE)
@@ -35,7 +35,7 @@ model Acquisition {
   condition       String?
   warrantyUntil   DateTime?
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime          @updatedAt
   sentAt          DateTime?         @db.Timestamp(6)
   returnedAt      DateTime?         @db.Timestamp(6)
   Customer        Customer?         @relation(fields: [customerId], references: [id])
@@ -50,7 +50,7 @@ model Acquisition {
 }
 
 model AcquisitionItem {
-  id                  String                 @id
+  id                  String                 @id @default(dbgenerated("(gen_random_uuid())::text"))
   acquisitionId       String
   productId           String?
   variantId           String?
@@ -71,6 +71,7 @@ model AcquisitionItem {
   capitalizeToProduct Boolean?               @default(true)
   productType         ProductType            @default(WATCH)
   productTitle        String
+  updatedAt           DateTime               @updatedAt
   Acquisition         Acquisition            @relation(fields: [acquisitionId], references: [id], onDelete: Cascade)
   Product             Product?               @relation(fields: [productId], references: [id])
   OrderItem           OrderItem?             @relation(fields: [sourceOrderItemId], references: [id])
@@ -113,7 +114,7 @@ model Bank {
 }
 
 model Brand {
-  id           String      @id
+  id           String      @id @default(dbgenerated("(gen_random_uuid())::text"))
   name         String      @unique
   slug         String      @unique
   country      String?
@@ -133,13 +134,13 @@ model Brand {
 }
 
 model Complication {
-  id        String      @id
+  id        String      @id @default(dbgenerated("(gen_random_uuid())::text"))
   name      String      @unique
   WatchSpec WatchSpec[] @relation("ComplicationToWatchSpec")
 }
 
 model Customer {
-  id             String           @id
+  id             String           @id @default(dbgenerated("(gen_random_uuid())::text"))
   name           String
   email          String?          @unique
   phone          String?          @db.VarChar(32)
@@ -160,7 +161,7 @@ model Customer {
 }
 
 model Invoice {
-  id               String          @id
+  id               String          @id @default(dbgenerated("(gen_random_uuid())::text"))
   code             String?         @unique
   type             InvoiceType
   status           InvoiceStatus   @default(DRAFT)
@@ -196,7 +197,7 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id             String          @id
+  id             String          @id @default(dbgenerated("(gen_random_uuid())::text"))
   invoiceId      String
   productId      String?
   variantId      String?
@@ -218,7 +219,7 @@ model InvoiceItem {
 }
 
 model MaintenancePart {
-  id                String            @id
+  id                String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   recordId          String
   variantId         String?
   name              String
@@ -230,7 +231,7 @@ model MaintenancePart {
 }
 
 model MaintenanceRecord {
-  id                 String               @id
+  id                 String               @id @default(dbgenerated("(gen_random_uuid())::text"))
   type               ServiceType          @default(PAID)
   billable           Boolean              @default(true)
   serviceRequestId   String?
@@ -289,13 +290,13 @@ model MaintenanceRecord {
 }
 
 model MarketSegment {
-  id        String      @id
+  id        String      @id @default(dbgenerated("(gen_random_uuid())::text"))
   name      String      @unique
   WatchSpec WatchSpec[] @relation("MarketSegmentToWatchSpec")
 }
 
 model MechanicalPartCatalog {
-  id             String              @id
+  id             String              @id @default(dbgenerated("(gen_random_uuid())::text"))
   code           String              @unique
   name           String
   group          MechanicalPartGroup @default(OTHER)
@@ -312,7 +313,7 @@ model MechanicalPartCatalog {
 }
 
 model Notification {
-  id        String    @id
+  id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   type      String
   title     String
   message   String
@@ -321,6 +322,7 @@ model Notification {
   userId    String
   metadata  Json?
   createdAt DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt DateTime  @default(now())
   User      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
 
   @@index([createdAt])
@@ -330,7 +332,7 @@ model Notification {
 }
 
 model Order {
-  id                    String                  @id
+  id                    String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
   refNo                 String?                 @unique(map: "Order_orderCode_key")
   customerId            String?
   shipPhone             String
@@ -372,7 +374,7 @@ model Order {
 }
 
 model OrderItem {
-  id                String            @id
+  id                String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   orderId           String
   productId         String?
   variantId         String?
@@ -393,6 +395,7 @@ model OrderItem {
   linkedOrderItemId String?
   customerItemNote  String?
   createdFromFlow   OrderFlowType     @default(STANDARD)
+  updatedAt         DateTime          @default(now())
   AcquisitionItem   AcquisitionItem[]
   OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
   other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")
@@ -417,7 +420,7 @@ model PartVariantSpec {
 }
 
 model Payment {
-  id                 String              @id
+  id                 String              @id @default(dbgenerated("(gen_random_uuid())::text"))
   method             PaymentMethod
   amount             Decimal             @db.Decimal(12, 2)
   currency           String
@@ -435,6 +438,7 @@ model Payment {
   shipment_id        String?
   type               PaymentType         @default(ORDER)
   refNo              String?             @unique @db.VarChar(30)
+  updatedAt          DateTime            @default(now())
   MaintenanceRecord  MaintenanceRecord[]
 
   @@index([acquisition_id], map: "idx_payment_acquisition")
@@ -498,7 +502,7 @@ model Product {
 }
 
 model ProductCategory {
-  id        String               @id
+  id        String               @id @default(dbgenerated("(gen_random_uuid())::text"))
   code      String               @unique
   name      String
   scope     ProductCategoryScope @default(ALL)
@@ -537,7 +541,7 @@ model ProductContent {
 }
 
 model ProductImage {
-  id              String    @id
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   productId       String
   fileKey         String
   role            ImageRole @default(GALLERY)
@@ -550,7 +554,7 @@ model ProductImage {
   dominantHex     String?
   contentHash     String?
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime  @updatedAt
   isPrimary       Boolean   @default(false)
   isForAdmin      Boolean   @default(true)
   isForStorefront Boolean   @default(true)
@@ -558,7 +562,7 @@ model ProductImage {
 }
 
 model ProductVariant {
-  id                 String              @id
+  id                 String              @id @default(dbgenerated("(gen_random_uuid())::text"))
   productId          String
   sku                String?             @unique
   name               String?
@@ -591,7 +595,7 @@ model ProductVariant {
 }
 
 model Reservation {
-  id         String            @id
+  id         String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   productId  String?
   orderId    String?
   status     ReservationStatus @default(ACTIVE)
@@ -605,7 +609,7 @@ model Reservation {
 }
 
 model ServiceCatalog {
-  id                String              @id
+  id                String              @id @default(dbgenerated("(gen_random_uuid())::text"))
   code              String              @unique
   name              String
   description       String?
@@ -630,7 +634,7 @@ model ServiceCatalog {
 }
 
 model ServiceRequest {
-  id                      String               @id
+  id                      String               @id @default(dbgenerated("(gen_random_uuid())::text"))
   type                    ServiceType          @default(PAID)
   billable                Boolean              @default(true)
   orderItemId             String?
@@ -730,7 +734,7 @@ model StrapVariantSpec {
 }
 
 model SupplyCatalog {
-  id             String           @id
+  id             String           @id @default(dbgenerated("(gen_random_uuid())::text"))
   code           String           @unique
   name           String
   category       String
@@ -824,7 +828,7 @@ model TechnicalIssue {
 }
 
 model User {
-  id                String              @id
+  id                String              @id @default(dbgenerated("(gen_random_uuid())::text"))
   email             String              @unique
   passwordHash      String?
   name              String?
@@ -844,7 +848,7 @@ model User {
 }
 
 model Role {
-  id          String       @id
+  id          String       @id @default(dbgenerated("(gen_random_uuid())::text"))
   name        String       @unique
   description String?
   permissions Permission[] @relation("RolePermissions")
@@ -852,14 +856,14 @@ model Role {
 }
 
 model Permission {
-  id          String  @id
+  id          String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   code        String  @unique
   description String?
   roles       Role[]  @relation("RolePermissions")
 }
 
 model Vendor {
-  id                  String                @id
+  id                  String                @id @default(dbgenerated("(gen_random_uuid())::text"))
   name                String                @unique
   role                VendorRole            @default(SUPPLIER)
   isAuthorized        Boolean               @default(false)

@@ -7,7 +7,7 @@ import { ServiceRequestCreateNestedManyWithoutUserInputObjectSchema as ServiceRe
 import { TechnicalIssueCreateNestedManyWithoutUserInputObjectSchema as TechnicalIssueCreateNestedManyWithoutUserInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutUserInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   email: z.string(),
   passwordHash: z.string().optional().nullable(),
   name: z.string().optional().nullable(),

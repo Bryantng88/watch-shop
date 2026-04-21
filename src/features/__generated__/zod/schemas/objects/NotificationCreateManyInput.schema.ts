@@ -5,7 +5,7 @@ import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValue
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: z.string(),
   title: z.string(),
   message: z.string(),
@@ -13,7 +13,8 @@ const makeSchema = () => z.object({
   isRead: z.boolean().optional(),
   userId: z.string(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  createdAt: z.coerce.date().optional().nullable()
+  createdAt: z.coerce.date().optional().nullable(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const NotificationCreateManyInputObjectSchema: z.ZodType<Prisma.NotificationCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationCreateManyInput>;
 export const NotificationCreateManyInputObjectZodSchema = makeSchema();

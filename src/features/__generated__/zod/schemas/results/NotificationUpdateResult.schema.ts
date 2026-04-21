@@ -9,5 +9,6 @@ export const NotificationUpdateResultSchema = z.nullable(z.object({
   userId: z.string(),
   metadata: z.unknown().optional(),
   createdAt: z.date().optional(),
+  updatedAt: z.date(),
   User: z.unknown()
 }));

@@ -20,7 +20,8 @@ const makeSchema = () => z.object({
   purpose: z.literal(true).optional(),
   shipment_id: z.literal(true).optional(),
   type: z.literal(true).optional(),
-  refNo: z.literal(true).optional()
+  refNo: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional()
 }).strict();
 export const PaymentMinAggregateInputObjectSchema: z.ZodType<Prisma.PaymentMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.PaymentMinAggregateInputType>;
 export const PaymentMinAggregateInputObjectZodSchema = makeSchema();

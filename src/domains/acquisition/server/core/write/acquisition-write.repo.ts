@@ -27,10 +27,6 @@ type CreateOrUpdateAcqItemInput = {
     quantity?: number;
     unitCost?: number;
     unitPrice?: number;
-    productType?: ProductType | string;
-    productId?: string | null;
-    variantId?: string | null;
-    strapSpec?: any;
     watchFlags?: any;
     quickSpec?: any;
     aiMeta?: any;
@@ -50,7 +46,6 @@ function resolveItemUnitCost(input: CreateOrUpdateAcqItemInput) {
 
 function buildItemDescription(input: CreateOrUpdateAcqItemInput) {
     return stringifyAcquisitionItemMeta({
-        strapSpec: input.strapSpec,
         watchFlags: input.watchFlags,
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
@@ -105,19 +100,6 @@ export async function updateAcqTotal(tx: DB, acqId: string, total: number) {
     return updateAcquisitionCost(tx, acqId, total);
 }
 
-export async function resolveVariantIdForProduct(tx: DB, productId?: string | null) {
-    const db = getDb(tx);
-    if (!productId) return null;
-
-    const variant = await db.productVariant.findFirst({
-        where: { productId },
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-        select: { id: true },
-    });
-
-    return variant?.id ?? null;
-}
-
 export async function createAcqItem(
     tx: DB,
     acqId: string,
@@ -125,19 +107,15 @@ export async function createAcqItem(
 ) {
     const db = getDb(tx);
 
-    const productId = item.productId ?? null;
-    const variantId =
-        item.variantId ?? (productId ? await resolveVariantIdForProduct(tx, productId) : null);
-
     return db.acquisitionItem.create({
         data: {
             acquisitionId: acqId,
             productTitle: resolveItemTitle(item),
-            quantity: Number(item.quantity ?? 1),
+            quantity: 1,
             unitCost: resolveItemUnitCost(item),
-            productType: (item.productType ?? ProductType.WATCH) as ProductType,
-            productId,
-            variantId,
+            productType: ProductType.WATCH,
+            productId: null,
+            variantId: null,
             description: buildItemDescription(item),
         },
         select: {
@@ -159,12 +137,7 @@ export async function updateAcqItem(
 ) {
     const db = getDb(tx);
 
-    const productId = item.productId ?? null;
-    const variantId =
-        item.variantId ?? (productId ? await resolveVariantIdForProduct(tx, productId) : null);
-
     const shouldRewriteDescription =
-        item.strapSpec !== undefined ||
         item.watchFlags !== undefined ||
         item.quickSpec !== undefined ||
         item.aiMeta !== undefined;
@@ -173,11 +146,8 @@ export async function updateAcqItem(
         where: { id: item.id },
         data: {
             productTitle: resolveItemTitle(item),
-            quantity: Number(item.quantity ?? 1),
+            quantity: 1,
             unitCost: resolveItemUnitCost(item),
-            productType: item.productType ? (item.productType as ProductType) : undefined,
-            productId,
-            variantId,
             ...(shouldRewriteDescription
                 ? { description: buildItemDescription(item) }
                 : {}),
@@ -200,9 +170,9 @@ export async function findAcqItems(tx: DB, acqId: string) {
     return db.acquisitionItem.findMany({
         where: { acquisitionId: acqId },
         include: {
-            product: true,
-            variant: true,
+            Product: true,
         },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
 }
 
@@ -212,15 +182,15 @@ export async function getAcqtById(id: string, tx?: DB) {
     return db.acquisition.findUnique({
         where: { id },
         include: {
-            vendor: true,
-            customer: true,
-            acquisitionItem: {
+            Vendor: true,
+            Customer: true,
+            AcquisitionItem: {
                 include: {
-                    product: true,
-                    variant: true,
+                    Product: true,
                 },
+                orderBy: [{ createdAt: "asc" }, { id: "asc" }],
             },
-            invoice: true,
+            Invoice: true,
         },
     });
 }
@@ -230,7 +200,6 @@ export async function linkAcquisitionItemToProduct(
     input: {
         itemId: string;
         productId: string;
-        variantId?: string | null;
     }
 ) {
     const db = getDb(tx);
@@ -239,7 +208,7 @@ export async function linkAcquisitionItemToProduct(
         where: { id: input.itemId },
         data: {
             productId: input.productId,
-            variantId: input.variantId ?? null,
+            variantId: null,
         },
         select: {
             id: true,
@@ -274,9 +243,7 @@ export async function updateAcquisitionItemStatus(
     return db.acquisitionItem.updateMany({
         where: {
             acquisitionId: input.acquisitionId,
-            ...(input.fromStatus
-                ? { status: input.fromStatus as any }
-                : {}),
+            ...(input.fromStatus ? { status: input.fromStatus as any } : {}),
         },
         data: {
             status: input.toStatus as any,
@@ -343,16 +310,13 @@ export async function createWatchDraftForAcquisitionItem(
         acquisitionId: string;
         vendorId: string;
         title: string;
-        quantity?: number | null;
         unitCost?: number | null;
         imageKey?: string | null;
         imageUrl?: string | null;
     }
 ) {
     const db = getDb(tx);
-
     const unitCost = Number(input.unitCost ?? 0);
-    const quantity = Number(input.quantity ?? 1);
 
     const product = await db.product.create({
         data: {
@@ -361,7 +325,7 @@ export async function createWatchDraftForAcquisitionItem(
             vendorId: input.vendorId,
             status: ProductStatus.HOLD,
             contentStatus: ContentStatus.DRAFT,
-            specStatus: "PENDING" as any,
+            specStatus: "PENDING",
             sku: null,
             primaryImageUrl: input.imageUrl ?? null,
             storefrontImageKey: input.imageKey ?? null,
@@ -377,11 +341,11 @@ export async function createWatchDraftForAcquisitionItem(
         data: {
             productId: product.id,
             acquisitionId: input.acquisitionId,
-            gender: "MEN" as any,
-            siteChannel: "AFFORDABLE" as any,
-            stockState: "IN_STOCK" as any,
-            saleState: "OFF_SHELF" as any,
-            serviceState: "PENDING" as any,
+            gender: "MEN",
+            siteChannel: "AFFORDABLE",
+            stockState: "IN_STOCK",
+            saleState: "OFF_SHELF",
+            serviceState: "PENDING",
         },
         select: {
             id: true,
@@ -426,32 +390,17 @@ export async function createWatchDraftForAcquisitionItem(
         });
     }
 
-    const variant = await db.productVariant.create({
-        data: {
-            productId: product.id,
-            sku: null,
-            stockQty: quantity,
-            costPrice: new Prisma.Decimal(unitCost),
-            availabilityStatus: "HIDDEN" as any,
-        },
-        select: {
-            id: true,
-            sku: true,
-        },
-    });
-
     await db.acquisitionItem.update({
         where: { id: input.acquisitionItemId },
         data: {
             productId: product.id,
-            variantId: variant.id,
+            variantId: null,
         },
     });
 
     return {
         productId: product.id,
         watchId: watch.id,
-        variantId: variant.id,
     };
 }
 
@@ -462,7 +411,6 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
         where: { id: itemId },
         include: {
             Product: true,
-            //variant: true,
         },
     });
 
@@ -479,16 +427,6 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
             storefrontImageKey: firstImage?.key ?? undefined,
         },
     });
-
-    if (item.variantId) {
-        await db.productVariant.update({
-            where: { id: item.variantId },
-            data: {
-                stockQty: Number(item.quantity ?? 1),
-                costPrice: item.unitCost ?? undefined,
-            },
-        });
-    }
 
     const watch = await db.watch.findUnique({
         where: { productId: item.productId },

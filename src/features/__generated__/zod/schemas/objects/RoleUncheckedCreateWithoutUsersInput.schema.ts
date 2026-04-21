@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { PermissionUncheckedCreateNestedManyWithoutRolesInputObjectSchema as PermissionUncheckedCreateNestedManyWithoutRolesInputObjectSchema } from './PermissionUncheckedCreateNestedManyWithoutRolesInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   description: z.string().optional().nullable(),
   permissions: z.lazy(() => PermissionUncheckedCreateNestedManyWithoutRolesInputObjectSchema).optional()

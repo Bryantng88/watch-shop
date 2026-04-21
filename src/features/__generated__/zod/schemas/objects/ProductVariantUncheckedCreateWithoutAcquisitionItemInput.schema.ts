@@ -10,7 +10,7 @@ import { ServiceRequestUncheckedCreateNestedManyWithoutProductVariantInputObject
 import { StrapVariantSpecUncheckedCreateNestedOneWithoutProductVariantInputObjectSchema as StrapVariantSpecUncheckedCreateNestedOneWithoutProductVariantInputObjectSchema } from './StrapVariantSpecUncheckedCreateNestedOneWithoutProductVariantInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   productId: z.string(),
   sku: z.string().optional().nullable(),
   name: z.string().optional().nullable(),

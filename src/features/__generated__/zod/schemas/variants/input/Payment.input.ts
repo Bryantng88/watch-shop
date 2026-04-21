@@ -25,6 +25,7 @@ export const PaymentInputSchema = z.object({
     shipment_id: z.string().optional().nullable(),
     type: PaymentTypeSchema,
     refNo: z.string().optional().nullable(),
+    updatedAt: z.date(),
     MaintenanceRecord: z.array(z.unknown())
 }).strict();
 

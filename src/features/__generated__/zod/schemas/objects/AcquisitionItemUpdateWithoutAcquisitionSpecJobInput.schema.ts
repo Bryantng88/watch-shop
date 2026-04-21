@@ -37,6 +37,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.union([z.boolean(), z.lazy(() => NullableBoolFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   Acquisition: z.lazy(() => AcquisitionUpdateOneRequiredWithoutAcquisitionItemNestedInputObjectSchema).optional(),
   Product: z.lazy(() => ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),

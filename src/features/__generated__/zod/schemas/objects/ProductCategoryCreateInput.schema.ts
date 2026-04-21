@@ -4,7 +4,7 @@ import { ProductCategoryScopeSchema } from '../enums/ProductCategoryScope.schema
 import { ProductCreateNestedManyWithoutProductCategoryInputObjectSchema as ProductCreateNestedManyWithoutProductCategoryInputObjectSchema } from './ProductCreateNestedManyWithoutProductCategoryInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string(),
   name: z.string(),
   scope: ProductCategoryScopeSchema.optional(),

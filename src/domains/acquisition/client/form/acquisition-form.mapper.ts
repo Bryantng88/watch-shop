@@ -13,10 +13,8 @@ function uid() {
 export function createEmptyWatchLine(): AcquisitionWatchLine {
     return {
         id: uid(),
-        kind: "WATCH",
         quickInput: "",
         aiHint: "",
-        quantity: 1,
         cost: "",
         receiveService: true,
         imageKey: null,
@@ -29,10 +27,8 @@ export function createWatchLineFromPreparedImage(
 ): AcquisitionWatchLine {
     return {
         id: uid(),
-        kind: "WATCH",
         quickInput: "",
         aiHint: "",
-        quantity: 1,
         cost: "",
         receiveService: true,
         imageKey: image.key ?? null,
@@ -40,14 +36,48 @@ export function createWatchLineFromPreparedImage(
     };
 }
 
+export function hasImage(line: AcquisitionWatchLine) {
+    return Boolean(
+        String(line.imageKey ?? "").trim() || String(line.imageUrl ?? "").trim()
+    );
+}
+
 export function isBlankWatchLine(line: AcquisitionWatchLine) {
     return (
         !line.quickInput?.trim() &&
         !line.aiHint?.trim() &&
         (line.cost === "" || Number(line.cost || 0) === 0) &&
-        Number(line.quantity || 1) === 1 &&
         line.receiveService === true &&
         !line.imageKey &&
         !line.imageUrl
     );
+}
+
+export function applyPreparedImagesTopDown(
+    lines: AcquisitionWatchLine[],
+    images: AcquisitionPreparedImage[]
+): AcquisitionWatchLine[] {
+    if (!images.length) return lines;
+
+    const next = [...lines];
+    let imageIndex = 0;
+
+    for (let i = 0; i < next.length && imageIndex < images.length; i += 1) {
+        if (hasImage(next[i])) continue;
+
+        const image = images[imageIndex];
+        next[i] = {
+            ...next[i],
+            imageKey: image.key ?? null,
+            imageUrl: image.url ?? null,
+        };
+        imageIndex += 1;
+    }
+
+    while (imageIndex < images.length) {
+        next.push(createWatchLineFromPreparedImage(images[imageIndex]));
+        imageIndex += 1;
+    }
+
+    return next;
 }

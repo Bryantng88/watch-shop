@@ -15,7 +15,7 @@ import { ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema as 
 import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentCreateNestedOneWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   brandSnapshot: z.string().optional().nullable(),

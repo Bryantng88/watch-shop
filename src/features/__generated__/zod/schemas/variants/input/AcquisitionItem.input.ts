@@ -26,6 +26,7 @@ export const AcquisitionItemInputSchema = z.object({
     capitalizeToProduct: z.boolean().optional().nullable(),
     productType: ProductTypeSchema,
     productTitle: z.string(),
+    updatedAt: z.date(),
     Acquisition: z.unknown(),
     Product: z.unknown().optional().nullable(),
     OrderItem: z.unknown().optional().nullable(),

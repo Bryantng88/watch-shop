@@ -6,7 +6,7 @@ import { OrderCreateNestedManyWithoutCustomerInputObjectSchema as OrderCreateNes
 import { ServiceRequestCreateNestedManyWithoutCustomerInputObjectSchema as ServiceRequestCreateNestedManyWithoutCustomerInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutCustomerInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   email: z.string().optional().nullable(),
   phone: z.string().max(32).optional().nullable(),

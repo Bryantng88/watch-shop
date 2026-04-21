@@ -60,7 +60,7 @@ function getRootPrefix(profile: SharedMediaProfile) {
             return "inline/product/technical/active";
         case "inline":
         default:
-            return "inline";
+            return "products/inline/active";
     }
 }
 

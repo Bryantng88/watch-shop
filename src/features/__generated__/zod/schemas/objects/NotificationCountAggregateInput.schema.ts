@@ -12,6 +12,7 @@ const makeSchema = () => z.object({
   userId: z.literal(true).optional(),
   metadata: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const NotificationCountAggregateInputObjectSchema: z.ZodType<Prisma.NotificationCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.NotificationCountAggregateInputType>;

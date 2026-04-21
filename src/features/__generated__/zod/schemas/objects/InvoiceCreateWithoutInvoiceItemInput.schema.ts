@@ -9,7 +9,7 @@ import { ServiceRequestCreateNestedOneWithoutInvoiceInputObjectSchema as Service
 import { VendorCreateNestedOneWithoutInvoiceInputObjectSchema as VendorCreateNestedOneWithoutInvoiceInputObjectSchema } from './VendorCreateNestedOneWithoutInvoiceInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string().optional().nullable(),
   type: InvoiceTypeSchema,
   status: InvoiceStatusSchema.optional(),

@@ -18,6 +18,7 @@ export const PaymentAggregateResultSchema = z.object({  _count: z.object({
     shipment_id: z.number(),
     type: z.number(),
     refNo: z.number(),
+    updatedAt: z.number(),
     MaintenanceRecord: z.number()
   }).optional(),
   _sum: z.object({
@@ -39,7 +40,8 @@ export const PaymentAggregateResultSchema = z.object({  _count: z.object({
     vendor_id: z.string().nullable(),
     acquisition_id: z.string().nullable(),
     shipment_id: z.string().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -54,5 +56,6 @@ export const PaymentAggregateResultSchema = z.object({  _count: z.object({
     vendor_id: z.string().nullable(),
     acquisition_id: z.string().nullable(),
     shipment_id: z.string().nullable(),
-    refNo: z.string().nullable()
+    refNo: z.string().nullable(),
+    updatedAt: z.date().nullable()
   }).nullable().optional()});

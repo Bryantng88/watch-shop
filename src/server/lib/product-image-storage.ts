@@ -8,7 +8,7 @@ export type MediaProfile =
     | "storefront-chosen";
 
 const PROFILE_ROOTS: Record<MediaProfile, string> = {
-    inline: "inline",
+    inline: "products/inline/active",
     edit: "products/edit/active",
     sold: "products/sold",
     "storefront-active": "products/storefront/active",

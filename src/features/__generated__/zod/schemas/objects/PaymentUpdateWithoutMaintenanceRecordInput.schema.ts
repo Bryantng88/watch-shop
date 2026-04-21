@@ -34,7 +34,8 @@ const makeSchema = () => z.object({
   purpose: z.union([PaymentPurposeSchema, z.lazy(() => EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema)]).optional(),
   shipment_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   type: z.union([PaymentTypeSchema, z.lazy(() => EnumPaymentTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  refNo: z.union([z.string().max(30), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  refNo: z.union([z.string().max(30), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const PaymentUpdateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.PaymentUpdateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUpdateWithoutMaintenanceRecordInput>;
 export const PaymentUpdateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

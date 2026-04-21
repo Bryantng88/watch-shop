@@ -4,7 +4,7 @@ import { BrandStatusSchema } from '../enums/BrandStatus.schema';
 import { ProductCreateNestedManyWithoutBrandInputObjectSchema as ProductCreateNestedManyWithoutBrandInputObjectSchema } from './ProductCreateNestedManyWithoutBrandInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   slug: z.string(),
   country: z.string().optional().nullable(),

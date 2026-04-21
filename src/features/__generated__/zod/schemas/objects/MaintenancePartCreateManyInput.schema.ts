@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   recordId: z.string(),
   variantId: z.string().optional().nullable(),
   name: z.string(),

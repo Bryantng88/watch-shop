@@ -6,7 +6,7 @@ import { AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSc
 import { InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   vendorId: z.string().optional().nullable(),
   type: AcquisitionTypeSchema.optional(),
   acquiredAt: z.coerce.date(),
@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   condition: z.string().optional().nullable(),
   warrantyUntil: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),

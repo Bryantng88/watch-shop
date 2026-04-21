@@ -31,6 +31,7 @@ const makeSchema = () => z.object({
   linkedOrderItemId: z.boolean().optional(),
   customerItemNote: z.boolean().optional(),
   createdFromFlow: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
   AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   other_OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),

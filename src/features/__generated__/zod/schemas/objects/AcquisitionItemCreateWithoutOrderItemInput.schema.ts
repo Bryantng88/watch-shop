@@ -9,7 +9,7 @@ import { ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema as
 import { AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   quantity: z.number().int().optional(),
   unitCost: z.number().optional().nullable(),
   currency: z.string().optional().nullable(),
@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
   productTitle: z.string(),
+  updatedAt: z.coerce.date().optional(),
   Acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutAcquisitionItemInputObjectSchema),
   Product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
   ProductVariant: z.lazy(() => ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),

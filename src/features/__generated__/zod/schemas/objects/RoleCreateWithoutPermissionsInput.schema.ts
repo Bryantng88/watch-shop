@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { UserCreateNestedManyWithoutRolesInputObjectSchema as UserCreateNestedManyWithoutRolesInputObjectSchema } from './UserCreateNestedManyWithoutRolesInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   description: z.string().optional().nullable(),
   users: z.lazy(() => UserCreateNestedManyWithoutRolesInputObjectSchema).optional()

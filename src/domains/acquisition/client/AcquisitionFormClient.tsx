@@ -2,11 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Box, Plus, Save } from "lucide-react";
-import AcquisitionBulkImagePicker from "@/app/(admin)/admin/acquisitions/_client/AcquisitionBulkImagePicker";
+import AcquisitionBulkImagePicker from "../ui/new/AcquisitionBulkImagePicker";
 import {
+    applyPreparedImagesTopDown,
     createEmptyWatchLine,
-    createWatchLineFromPreparedImage,
-    isBlankWatchLine,
 } from "./form/acquisition-form.mapper";
 import { submitInlineAcquisition } from "./form/acquisition-form.submit";
 import type {
@@ -39,50 +38,30 @@ export default function AcquisitionFormClient({ vendors }: Props) {
     const totalWatchCost = useMemo(() => {
         return watchLines.reduce((sum, line) => {
             const cost = line.cost === "" ? 0 : Number(line.cost || 0);
-            const qty = Number(line.quantity || 1);
-            return sum + cost * qty;
+            return sum + cost;
         }, 0);
     }, [watchLines]);
 
-    const updateLine = (id: string, next: AcquisitionWatchLine) => {
+    function updateLine(id: string, next: AcquisitionWatchLine) {
         setWatchLines((prev) => prev.map((line) => (line.id === id ? next : line)));
-    };
+    }
 
-    const removeLine = (id: string) => {
-        setWatchLines((prev) => prev.filter((line) => line.id !== id));
-    };
-
-    const addWatchLine = () => {
-        setWatchLines((prev) => [...prev, createEmptyWatchLine()]);
-    };
-
-    const importPreparedImages = (images: AcquisitionPreparedImage[]) => {
-        if (!images.length) return;
-
+    function removeLine(id: string) {
         setWatchLines((prev) => {
-            const nextLines = [...prev];
-            const mappedLines = images.map(createWatchLineFromPreparedImage);
-
-            if (nextLines.length === 1 && isBlankWatchLine(nextLines[0])) {
-                nextLines[0] = {
-                    ...nextLines[0],
-                    ...mappedLines[0],
-                    id: nextLines[0].id,
-                };
-
-                if (mappedLines.length > 1) {
-                    nextLines.push(...mappedLines.slice(1));
-                }
-
-                return nextLines;
-            }
-
-            nextLines.push(...mappedLines);
-            return nextLines;
+            const next = prev.filter((line) => line.id !== id);
+            return next.length ? next : [createEmptyWatchLine()];
         });
-    };
+    }
 
-    const submit = async () => {
+    function addWatchLine() {
+        setWatchLines((prev) => [...prev, createEmptyWatchLine()]);
+    }
+
+    function importPreparedImages(images: AcquisitionPreparedImage[]) {
+        setWatchLines((prev) => applyPreparedImagesTopDown(prev, images));
+    }
+
+    async function submit() {
         if (!vendorId) {
             alert("Vui lòng chọn vendor.");
             return;
@@ -90,6 +69,20 @@ export default function AcquisitionFormClient({ vendors }: Props) {
 
         if (!watchLines.length) {
             alert("Cần ít nhất một dòng đồng hồ.");
+            return;
+        }
+
+        const validLines = watchLines.filter(
+            (line) =>
+                line.imageKey ||
+                line.imageUrl ||
+                line.quickInput.trim() ||
+                line.aiHint.trim() ||
+                Number(line.cost || 0) > 0
+        );
+
+        if (!validLines.length) {
+            alert("Phiếu nhập chưa có dữ liệu watch hợp lệ.");
             return;
         }
 
@@ -102,7 +95,7 @@ export default function AcquisitionFormClient({ vendors }: Props) {
                 currency,
                 type,
                 notes: notes || null,
-                items: watchLines,
+                items: validLines,
             });
 
             alert("Đã lưu phiếu nhập");
@@ -111,24 +104,25 @@ export default function AcquisitionFormClient({ vendors }: Props) {
         } finally {
             setSubmitting(false);
         }
-    };
+    }
 
     return (
         <div className="space-y-6">
             <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold text-slate-900">Tạo phiếu nhập</h1>
+                        <h1 className="text-2xl font-semibold text-slate-900">
+                            Tạo phiếu nhập watch
+                        </h1>
                         <p className="text-sm text-slate-500">
-                            Mỗi dòng watch dùng InlineImagePicker làm đầu vào. AI chỉ chạy sau khi post phiếu.
+                            Chọn nhiều ảnh từ NAS rồi đổ vào các dòng watch đang trống, từ trên xuống dưới.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                         {[
                             ["Trạng thái", "DRAFT"],
                             ["Tổng đồng hồ", String(watchLines.length)],
-                            ["Tổng dây", "0"],
                             [
                                 "Tổng giá trị",
                                 `${new Intl.NumberFormat("vi-VN").format(totalWatchCost)} VND`,
@@ -221,8 +215,6 @@ export default function AcquisitionFormClient({ vendors }: Props) {
                                         className="h-[44px] w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                                     >
                                         <option value="PURCHASE">PURCHASE</option>
-                                        <option value="SALE">SALE</option>
-                                        <option value="RETURN">RETURN</option>
                                         <option value="BUY_BACK">BUY_BACK</option>
                                         <option value="TRADE_IN">TRADE_IN</option>
                                         <option value="CONSIGNMENT">CONSIGNMENT</option>
@@ -247,10 +239,10 @@ export default function AcquisitionFormClient({ vendors }: Props) {
                             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                                 <div>
                                     <div className="text-lg font-semibold text-slate-900">
-                                        Danh sách đồng hồ
+                                        Danh sách watch
                                     </div>
                                     <div className="text-sm text-slate-500">
-                                        Mỗi dòng watch có InlineImagePicker riêng và ảnh là đầu vào chính cho AI/spec.
+                                        Chọn nhiều ảnh từ NAS, hệ thống sẽ đổ vào các dòng đang trống trước rồi mới thêm dòng mới.
                                     </div>
                                 </div>
 

@@ -4,7 +4,7 @@ import { MaintenanceRecordCreateNestedOneWithoutMaintenancePartInputObjectSchema
 import { ProductVariantCreateNestedOneWithoutMaintenancePartInputObjectSchema as ProductVariantCreateNestedOneWithoutMaintenancePartInputObjectSchema } from './ProductVariantCreateNestedOneWithoutMaintenancePartInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   quantity: z.number().int().optional(),
   unitCost: z.number().optional().nullable(),

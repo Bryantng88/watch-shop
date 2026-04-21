@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { MaintenanceRecordCreateNestedOneWithoutMaintenancePartInputObjectSchema as MaintenanceRecordCreateNestedOneWithoutMaintenancePartInputObjectSchema } from './MaintenanceRecordCreateNestedOneWithoutMaintenancePartInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   quantity: z.number().int().optional(),
   unitCost: z.number().optional().nullable(),

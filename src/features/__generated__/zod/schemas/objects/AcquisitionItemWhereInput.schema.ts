@@ -50,6 +50,7 @@ const acquisitionitemwhereinputSchema = z.object({
   capitalizeToProduct: z.union([z.lazy(() => BoolNullableFilterObjectSchema), z.boolean()]).optional().nullable(),
   productType: z.union([z.lazy(() => EnumProductTypeFilterObjectSchema), ProductTypeSchema]).optional(),
   productTitle: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   Acquisition: z.union([z.lazy(() => AcquisitionScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductNullableScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   OrderItem: z.union([z.lazy(() => OrderItemNullableScalarRelationFilterObjectSchema), z.lazy(() => OrderItemWhereInputObjectSchema)]).optional(),

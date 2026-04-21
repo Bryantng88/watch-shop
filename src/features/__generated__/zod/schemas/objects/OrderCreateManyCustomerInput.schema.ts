@@ -9,7 +9,7 @@ import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   refNo: z.string().optional().nullable(),
   shipPhone: z.string(),
   shipAddress: z.string(),

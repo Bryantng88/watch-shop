@@ -4,7 +4,7 @@ import { ProductCreateNestedOneWithoutInvoiceItemInputObjectSchema as ProductCre
 import { ProductVariantCreateNestedOneWithoutInvoiceItemInputObjectSchema as ProductVariantCreateNestedOneWithoutInvoiceItemInputObjectSchema } from './ProductVariantCreateNestedOneWithoutInvoiceItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   title: z.string(),
   description: z.string().optional().nullable(),
   quantity: z.number().optional(),

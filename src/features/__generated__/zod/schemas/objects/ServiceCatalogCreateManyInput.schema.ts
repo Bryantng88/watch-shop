@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ServiceDetailSchema } from '../enums/ServiceDetail.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string(),
   name: z.string(),
   description: z.string().optional().nullable(),

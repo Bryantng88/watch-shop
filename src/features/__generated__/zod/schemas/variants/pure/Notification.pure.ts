@@ -11,6 +11,7 @@ export const NotificationModelSchema = z.object({
     userId: z.string(),
     metadata: z.unknown().nullable(),
     createdAt: z.date().nullable(),
+    updatedAt: z.date(),
     User: z.unknown()
 }).strict();
 

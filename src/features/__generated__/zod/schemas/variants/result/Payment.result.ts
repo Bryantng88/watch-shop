@@ -25,6 +25,7 @@ export const PaymentResultSchema = z.object({
     shipment_id: z.string().nullable(),
     type: PaymentTypeSchema,
     refNo: z.string().nullable(),
+    updatedAt: z.date(),
     MaintenanceRecord: z.array(z.unknown())
 }).strict();
 

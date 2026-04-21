@@ -6,7 +6,7 @@ import { InvoiceCreateNestedManyWithoutCustomerInputObjectSchema as InvoiceCreat
 import { OrderCreateNestedManyWithoutCustomerInputObjectSchema as OrderCreateNestedManyWithoutCustomerInputObjectSchema } from './OrderCreateNestedManyWithoutCustomerInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   email: z.string().optional().nullable(),
   phone: z.string().max(32).optional().nullable(),

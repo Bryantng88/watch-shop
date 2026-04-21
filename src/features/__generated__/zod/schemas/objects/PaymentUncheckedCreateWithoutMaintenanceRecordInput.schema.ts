@@ -7,7 +7,7 @@ import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
 import { PaymentTypeSchema } from '../enums/PaymentType.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   method: PaymentMethodSchema,
   amount: z.number(),
   currency: z.string(),
@@ -24,7 +24,8 @@ const makeSchema = () => z.object({
   purpose: PaymentPurposeSchema.optional(),
   shipment_id: z.string().optional().nullable(),
   type: PaymentTypeSchema.optional(),
-  refNo: z.string().optional().nullable()
+  refNo: z.string().optional().nullable(),
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const PaymentUncheckedCreateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUncheckedCreateWithoutMaintenanceRecordInput>;
 export const PaymentUncheckedCreateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

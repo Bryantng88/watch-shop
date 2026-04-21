@@ -41,6 +41,7 @@ const makeSchema = () => z.object({
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutOrderItemNestedInputObjectSchema).optional()

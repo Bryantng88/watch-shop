@@ -22,6 +22,7 @@ export const OrderItemFindManyResultSchema = z.object({
   linkedOrderItemId: z.string().optional(),
   customerItemNote: z.string().optional(),
   createdFromFlow: z.unknown(),
+  updatedAt: z.date(),
   AcquisitionItem: z.array(z.unknown()),
   OrderItem: z.unknown().optional(),
   other_OrderItem: z.array(z.unknown()),

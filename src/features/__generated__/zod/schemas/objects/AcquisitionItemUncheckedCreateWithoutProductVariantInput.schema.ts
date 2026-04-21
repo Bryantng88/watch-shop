@@ -6,7 +6,7 @@ import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   acquisitionId: z.string(),
   productId: z.string().optional().nullable(),
   quantity: z.number().int().optional(),
@@ -26,6 +26,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.boolean().optional().nullable(),
   productType: ProductTypeSchema.optional(),
   productTitle: z.string(),
+  updatedAt: z.coerce.date().optional(),
   AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUncheckedCreateWithoutProductVariantInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUncheckedCreateWithoutProductVariantInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUncheckedCreateWithoutProductVariantInput>;

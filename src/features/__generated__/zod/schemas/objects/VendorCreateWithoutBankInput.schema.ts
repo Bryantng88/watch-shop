@@ -10,7 +10,7 @@ import { TechnicalAssessmentCreateNestedManyWithoutVendorInputObjectSchema as Te
 import { TechnicalIssueCreateNestedManyWithoutVendorInputObjectSchema as TechnicalIssueCreateNestedManyWithoutVendorInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),

@@ -4,7 +4,7 @@ import { ReservationStatusSchema } from '../enums/ReservationStatus.schema';
 import { ProductCreateNestedOneWithoutReservationInputObjectSchema as ProductCreateNestedOneWithoutReservationInputObjectSchema } from './ProductCreateNestedOneWithoutReservationInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   orderId: z.string().optional().nullable(),
   status: ReservationStatusSchema.optional(),
   depositAmt: z.number().optional().nullable(),

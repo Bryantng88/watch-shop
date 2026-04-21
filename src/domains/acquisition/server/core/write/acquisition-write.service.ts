@@ -1,30 +1,22 @@
 "use server";
 
 import { prisma, DB } from "@/server/db/client";
-import * as dto from "../../shared/acquisition.dto";
-import { toDraftItem } from "../../shared/acquisition.mapper";
-import {
-    computeActiveAcquisitionTotal,
-    toNonEmptyString,
-} from "../../shared/helper";
+import * as dto from "../../../shared/acquisition.dto";
+import { toDraftItem } from "../../../shared/acquisition.mapper";
+import { computeActiveAcquisitionTotal } from "../../../shared/helper";
 import {
     getAiMetaFromDescription,
     getWatchFlagsFromDescription,
 } from "../../metadata";
 import * as repoAcq from "./acquisition-write.repo";
 
-// nếu AI/spec job bạn chưa move sang domains/acquisition/server/ai
-// thì tạm giữ import cũ trước rồi move sau
 import {
     enqueueAcquisitionSpecJob,
     processQueuedAcquisitionSpecJobs,
 } from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
 
-// nếu invoice/service request chưa move thì giữ import cũ trước
 import { createInvoiceFromAcquisition } from "@/app/(admin)/admin/invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "@/app/(admin)/admin/services/_server/service_request.service";
-
-type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
 
 async function resolveVendorIdForPosting(
     acq: Awaited<ReturnType<typeof repoAcq.getAcqtById>>,
@@ -48,9 +40,7 @@ async function maybeCreateTechnicalCheckForPostedWatch(
     input: {
         acqId: string;
         productId: string;
-        variantId: string;
         productSku?: string | null;
-        variantSku?: string | null;
         primaryImageUrl?: string | null;
         needService?: boolean;
     }
@@ -59,8 +49,8 @@ async function maybeCreateTechnicalCheckForPostedWatch(
 
     await createTechnicalCheckFromAcquisitionTx(tx as any, {
         productId: input.productId,
-        variantId: input.variantId,
-        skuSnapshot: input.productSku ?? input.variantSku ?? null,
+        variantId: null,
+        skuSnapshot: input.productSku ?? null,
         primaryImageUrlSnapshot: input.primaryImageUrl ?? null,
         notes: `Tạo từ phiếu nhập ${input.acqId}: Kiểm tra kỹ thuật tổng quát`,
     });
@@ -93,25 +83,21 @@ export async function createAcquisitionWithItem(input: dto.CreateAcquisitionInpu
 
         for (const raw of input.items) {
             const item = toDraftItem(raw);
+            const createdItem = await repoAcq.createAcqItem(tx, acq.id, item);
+            total += Number(item.unitCost ?? 0);
 
-            const createdItem = await repoAcq.createAcqItem(tx, acq.id, item as any);
-            total += Number(item.quantity ?? 0) * Number(item.unitCost ?? 0);
+            const aiMeta = item.aiMeta ?? {};
+            const firstImage = Array.isArray(aiMeta?.images) ? aiMeta.images[0] : null;
 
-            if ((item.productType ?? "WATCH") === "WATCH") {
-                const aiMeta = item.aiMeta ?? {};
-                const firstImage = Array.isArray(aiMeta?.images) ? aiMeta.images[0] : null;
-
-                await repoAcq.createWatchDraftForAcquisitionItem(tx, {
-                    acquisitionItemId: createdItem.id,
-                    acquisitionId: acq.id,
-                    vendorId,
-                    title: item.productTitle ?? "Watch draft",
-                    quantity: Number(item.quantity ?? 1),
-                    unitCost: Number(item.unitCost ?? 0),
-                    imageKey: firstImage?.key ?? null,
-                    imageUrl: firstImage?.url ?? null,
-                });
-            }
+            await repoAcq.createWatchDraftForAcquisitionItem(tx, {
+                acquisitionItemId: createdItem.id,
+                acquisitionId: acq.id,
+                vendorId,
+                title: item.productTitle ?? "Watch draft",
+                unitCost: Number(item.unitCost ?? 0),
+                imageKey: firstImage?.key ?? null,
+                imageUrl: firstImage?.url ?? null,
+            });
         }
 
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
@@ -135,7 +121,7 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
         throw new Error("Không tìm thấy vendor để post phiếu");
     }
 
-    const items = acq.acquisitionItem ?? [];
+    const items = acq.AcquisitionItem ?? [];
     if (!items.length) {
         throw new Error("Phiếu nhập chưa có dòng nào");
     }
@@ -143,32 +129,10 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
     const result = await prisma.$transaction(
         async (tx) => {
             for (const item of items) {
-                if ((item.productType ?? "WATCH") !== "WATCH") continue;
-
                 if (!item.productId) {
                     throw new Error(
                         `Dòng "${item.productTitle ?? item.id}" chưa được linked product/watch draft`
                     );
-                }
-
-                let resolvedVariantId = item.variantId ?? null;
-
-                if (!resolvedVariantId) {
-                    const variant = await tx.productVariant.findFirst({
-                        where: { productId: item.productId },
-                        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-                        select: { id: true },
-                    });
-
-                    resolvedVariantId = variant?.id ?? null;
-
-                    if (resolvedVariantId) {
-                        await repoAcq.linkAcquisitionItemToProduct(tx, {
-                            itemId: item.id,
-                            productId: item.productId,
-                            variantId: resolvedVariantId,
-                        });
-                    }
                 }
 
                 await enqueueAcquisitionSpecJob(tx as any, {
@@ -178,17 +142,13 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
 
                 const watchFlags = getWatchFlagsFromDescription(item.description);
 
-                if (resolvedVariantId) {
-                    await maybeCreateTechnicalCheckForPostedWatch(tx, {
-                        acqId: acq.refNo ?? acq.id,
-                        productId: item.productId,
-                        variantId: resolvedVariantId,
-                        productSku: item.product?.sku ?? null,
-                        variantSku: null,
-                        primaryImageUrl: item.product?.primaryImageUrl ?? null,
-                        needService: Boolean(watchFlags?.needService ?? false),
-                    });
-                }
+                await maybeCreateTechnicalCheckForPostedWatch(tx, {
+                    acqId: acq.refNo ?? acq.id,
+                    productId: item.productId,
+                    productSku: item.Product?.sku ?? null,
+                    primaryImageUrl: item.Product?.primaryImageUrl ?? null,
+                    needService: Boolean(watchFlags?.needService ?? false),
+                });
             }
 
             await repoAcq.updateAcquisitionItemStatus(tx, {
@@ -265,11 +225,11 @@ export async function postMultipleAcquisitions(acquisitionIds: string[]) {
 export async function updateAcquisitionItems(
     tx: DB,
     acqId: string,
-    items: dto.ItemInput[]
+    items: dto.WatchItemInput[]
 ) {
     const acq = await tx.acquisition.findUnique({
         where: { id: acqId },
-        select: { accquisitionStt: true },
+        select: { accquisitionStt: true, vendorId: true },
     });
 
     if (!acq) {
@@ -289,27 +249,21 @@ export async function updateAcquisitionItems(
         const item = toDraftItem(raw);
 
         if (raw.id.startsWith("tmp-")) {
-            const createdItem = await repoAcq.createAcqItem(tx, acqId, item as any);
+            const createdItem = await repoAcq.createAcqItem(tx, acqId, item);
 
-            if ((item.productType ?? "WATCH") === "WATCH" && acq.accquisitionStt !== "POSTED") {
+            if (acq.accquisitionStt !== "POSTED") {
                 const aiMeta = item.aiMeta ?? {};
                 const firstImage = Array.isArray(aiMeta?.images) ? aiMeta.images[0] : null;
 
-                const acqRow = await tx.acquisition.findUnique({
-                    where: { id: acqId },
-                    select: { vendorId: true },
-                });
-
-                if (!acqRow?.vendorId) {
+                if (!acq.vendorId) {
                     throw new Error("Phiếu nhập không có vendor");
                 }
 
                 await repoAcq.createWatchDraftForAcquisitionItem(tx, {
                     acquisitionItemId: createdItem.id,
                     acquisitionId: acqId,
-                    vendorId: acqRow.vendorId,
+                    vendorId: acq.vendorId,
                     title: item.productTitle ?? "Watch draft",
-                    quantity: Number(item.quantity ?? 1),
                     unitCost: Number(item.unitCost ?? 0),
                     imageKey: firstImage?.key ?? null,
                     imageUrl: firstImage?.url ?? null,
@@ -322,13 +276,18 @@ export async function updateAcquisitionItems(
         await repoAcq.updateAcqItem(tx, {
             ...item,
             id: raw.id,
-        } as any);
+        });
 
         await repoAcq.syncLinkedProductFromAcquisitionItem(tx, raw.id);
     }
 
     const all = await repoAcq.findAcqItems(tx, acqId);
-    const total = computeActiveAcquisitionTotal(all as any[]);
+    const total = computeActiveAcquisitionTotal(
+        all.map((item) => ({
+            quantity: item.quantity,
+            unitCost: Number(item.unitCost ?? 0),
+        }))
+    );
 
     await repoAcq.updateAcqTotal(tx, acqId, total);
 

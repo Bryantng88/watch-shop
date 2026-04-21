@@ -15,7 +15,7 @@ import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchem
 import { TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   brandSnapshot: z.string().optional().nullable(),

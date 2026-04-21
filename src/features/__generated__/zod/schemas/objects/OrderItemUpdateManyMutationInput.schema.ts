@@ -34,7 +34,8 @@ const makeSchema = () => z.object({
   kind: z.union([OrderItemKindSchema, z.lazy(() => EnumOrderItemKindFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
 }).strict();
 export const OrderItemUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.OrderItemUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUpdateManyMutationInput>;
 export const OrderItemUpdateManyMutationInputObjectZodSchema = makeSchema();

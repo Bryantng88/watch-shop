@@ -19,6 +19,7 @@ export const NotificationFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Notifica
     userId: z.boolean().optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional(),
     User: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.NotificationSelect>;
 
@@ -32,6 +33,7 @@ export const NotificationFindFirstOrThrowSelectZodSchema = z.object({
     userId: z.boolean().optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    updatedAt: z.boolean().optional(),
     User: z.boolean().optional()
   }).strict();
 

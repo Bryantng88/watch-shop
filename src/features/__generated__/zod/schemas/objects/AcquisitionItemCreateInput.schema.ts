@@ -10,7 +10,7 @@ import { ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema as
 import { AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema as AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema } from './AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   quantity: z.number().int().optional(),
   unitCost: z.number().optional().nullable(),
   currency: z.string().optional().nullable(),

@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { TechnicalIssueUncheckedCreateNestedManyWithoutSupplyCatalogInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutSupplyCatalogInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutSupplyCatalogInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string(),
   name: z.string(),
   category: z.string(),

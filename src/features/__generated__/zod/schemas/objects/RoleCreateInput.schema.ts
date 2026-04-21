@@ -4,7 +4,7 @@ import { PermissionCreateNestedManyWithoutRolesInputObjectSchema as PermissionCr
 import { UserCreateNestedManyWithoutRolesInputObjectSchema as UserCreateNestedManyWithoutRolesInputObjectSchema } from './UserCreateNestedManyWithoutRolesInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   description: z.string().optional().nullable(),
   permissions: z.lazy(() => PermissionCreateNestedManyWithoutRolesInputObjectSchema),

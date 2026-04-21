@@ -12,7 +12,7 @@ import { UserCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as UserCre
 import { VendorCreateNestedOneWithoutMaintenanceRecordInputObjectSchema as VendorCreateNestedOneWithoutMaintenanceRecordInputObjectSchema } from './VendorCreateNestedOneWithoutMaintenanceRecordInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: ServiceTypeSchema.optional(),
   billable: z.boolean().optional(),
   brandSnapshot: z.string().optional().nullable(),

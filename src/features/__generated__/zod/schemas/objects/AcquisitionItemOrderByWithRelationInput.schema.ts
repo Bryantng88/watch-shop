@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   capitalizeToProduct: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   productType: SortOrderSchema.optional(),
   productTitle: SortOrderSchema.optional(),
+  updatedAt: SortOrderSchema.optional(),
   Acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
   Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),

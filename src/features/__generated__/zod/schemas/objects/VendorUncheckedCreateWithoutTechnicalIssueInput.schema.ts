@@ -9,7 +9,7 @@ import { ServiceRequestUncheckedCreateNestedManyWithoutVendorInputObjectSchema a
 import { TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInputObjectSchema as TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInputObjectSchema } from './TechnicalAssessmentUncheckedCreateNestedManyWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),

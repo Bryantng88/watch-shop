@@ -11,7 +11,7 @@ import { ProductCreateNestedOneWithoutProductVariantInputObjectSchema as Product
 import { ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductVariantInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductVariantInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   sku: z.string().optional().nullable(),
   name: z.string().optional().nullable(),
   price: z.number().optional().nullable(),

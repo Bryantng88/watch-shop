@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { WatchSpecCreateNestedManyWithoutComplicationInputObjectSchema as WatchSpecCreateNestedManyWithoutComplicationInputObjectSchema } from './WatchSpecCreateNestedManyWithoutComplicationInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   WatchSpec: z.lazy(() => WatchSpecCreateNestedManyWithoutComplicationInputObjectSchema)
 }).strict();

@@ -10,7 +10,7 @@ import { TechnicalAssessmentCreateNestedManyWithoutVendorInputObjectSchema as Te
 import { BankCreateNestedOneWithoutVendorInputObjectSchema as BankCreateNestedOneWithoutVendorInputObjectSchema } from './BankCreateNestedOneWithoutVendorInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   role: VendorRoleSchema.optional(),
   isAuthorized: z.boolean().optional(),

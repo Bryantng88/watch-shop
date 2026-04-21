@@ -6,10 +6,8 @@ export type AcquisitionPreparedImage = {
 
 export type AcquisitionWatchLine = {
     id: string;
-    kind: "WATCH";
     quickInput: string;
     aiHint: string;
-    quantity: number;
     cost: number | "";
     receiveService: boolean;
     imageKey: string | null;

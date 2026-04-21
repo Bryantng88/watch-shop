@@ -4,7 +4,7 @@ import { MechanicalPartGroupSchema } from '../enums/MechanicalPartGroup.schema';
 import { TechnicalIssueUncheckedCreateNestedManyWithoutMechanicalPartCatalogInputObjectSchema as TechnicalIssueUncheckedCreateNestedManyWithoutMechanicalPartCatalogInputObjectSchema } from './TechnicalIssueUncheckedCreateNestedManyWithoutMechanicalPartCatalogInput.schema'
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   code: z.string(),
   name: z.string(),
   group: MechanicalPartGroupSchema.optional(),

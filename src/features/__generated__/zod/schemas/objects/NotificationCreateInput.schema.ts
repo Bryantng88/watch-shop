@@ -6,7 +6,7 @@ import { UserCreateNestedOneWithoutNotificationInputObjectSchema as UserCreateNe
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
 const makeSchema = () => z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: z.string(),
   title: z.string(),
   message: z.string(),
@@ -14,6 +14,7 @@ const makeSchema = () => z.object({
   isRead: z.boolean().optional(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional().nullable(),
+  updatedAt: z.coerce.date().optional(),
   User: z.lazy(() => UserCreateNestedOneWithoutNotificationInputObjectSchema)
 }).strict();
 export const NotificationCreateInputObjectSchema: z.ZodType<Prisma.NotificationCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationCreateInput>;

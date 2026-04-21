@@ -11,6 +11,7 @@ export const NotificationInputSchema = z.object({
     userId: z.string(),
     metadata: z.unknown().optional().nullable(),
     createdAt: z.date().optional().nullable(),
+    updatedAt: z.date(),
     User: z.unknown()
 }).strict();
 
