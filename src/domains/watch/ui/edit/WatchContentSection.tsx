@@ -2,7 +2,7 @@
 
 import { BookOpen } from "lucide-react";
 import { FieldLabel, SectionCard, Textarea } from "./shared";
-import type { WatchFormValues } from "../../client/watch-form.types";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
 
 type Props = {
     values: WatchFormValues["content"];

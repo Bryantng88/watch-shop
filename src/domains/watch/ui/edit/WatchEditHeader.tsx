@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Save } from "lucide-react";
 import { Badge } from "./shared";
-import type { WatchFormValues } from "../../client/watch-form.types";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
 
 type SimpleOption = { id: string; name: string; slug?: string | null };
 

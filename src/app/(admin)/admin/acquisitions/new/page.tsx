@@ -1,16 +1,12 @@
-// app/(admin)/admin/acquisitions/new/page.tsx
-
-import { getVendorList } from "../../vendors/_server/vendor.service";
-//import NewAcqForm from "../_client/NewAcqForm";
-import NewAcquisitionForm from "../_client/NewAcquisitionForm";
-
+import { getVendorList } from "@/domains/vendor/server/vendor.service";
+import AcquisitionFormClient from "@/domains/acquisition/client/AcquisitionFormClient";
 
 export default async function AcquisitionNewPage() {
     const vendors = await getVendorList();
 
     return (
-        <div className="w-full px-6 max-w-[1400px] px-4 pt-6 lg:px-6">
-            <NewAcquisitionForm vendors={vendors} />
+        <div className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
+            <AcquisitionFormClient vendors={vendors} />
         </div>
     );
 }

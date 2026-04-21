@@ -2,9 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 
-import { submitWatchForm } from "./watch-form.actions";
-import { mapWatchDetailToFormValues } from "./watch-form.mapper";
-import type { WatchFormValues } from "./watch-form.types";
+import { submitWatchForm } from "./form/watch-form.actions";
+import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
+import type { WatchFormValues } from "./form/watch-form.types";
 
 import WatchEditHeader from "../ui/edit/WatchEditHeader";
 import WatchSpecSection from "../ui/edit/WatchSpecSection";

@@ -2,7 +2,7 @@
 
 import { Tag } from "lucide-react";
 import { FieldLabel, Input, SectionCard, SidebarStat, Textarea, moneyPreview } from "./shared";
-import type { WatchFormValues } from "../../client/watch-form.types";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
 
 type Props = {
     values: WatchFormValues["pricing"];

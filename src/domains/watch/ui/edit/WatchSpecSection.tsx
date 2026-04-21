@@ -2,7 +2,7 @@
 
 import { Gem } from "lucide-react";
 import { FieldLabel, Input, SectionCard, Select, Toggle } from "./shared"
-import type { WatchFormValues } from "../../client/watch-form.types";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
 
 type Props = {
     values: WatchFormValues["spec"];

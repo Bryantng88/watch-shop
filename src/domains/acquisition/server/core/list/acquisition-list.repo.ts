@@ -4,6 +4,7 @@ import type {
     AcquisitionListView,
 } from "../shared/search-params";
 
+
 function normalizeText(value: any) {
     return String(value ?? "").trim();
 }
@@ -110,6 +111,10 @@ function buildItemTitle(item: any) {
     );
 }
 
+function buildItemSubtitle(item: any) {
+    return item?.description || item?.Product?.sku || "";
+}
+
 export async function listAdminAcquisitions(input: AcquisitionListFilters) {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
@@ -151,13 +156,27 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             ? row.AcquisitionItem
             : [];
 
-        const previewTitles = acquisitionItems
-            .slice(0, 3)
-            .map((item) => buildItemTitle(item));
-
         const linkedWatchCount = acquisitionItems.filter(
             (item) => Boolean(item?.productId)
         ).length;
+
+        const detailItems = acquisitionItems.map((item, index) => ({
+            id: item.id,
+            index: index + 1,
+            title: buildItemTitle(item),
+            subtitle: buildItemSubtitle(item),
+            linkedWatchProductId: item.productId ?? null,
+            linkedWatchTitle: item.Product?.title ?? null,
+            linkedWatchSku: item.Product?.sku ?? null,
+            cost: item.cost != null ? Number(item.cost) : null,
+            quantity:
+                item.quantity != null && Number.isFinite(Number(item.quantity))
+                    ? Number(item.quantity)
+                    : null,
+        }));
+
+        const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
+        const remaining = Math.max(detailItems.length - previewTitles.length, 0);
 
         return {
             id: row.id,
@@ -169,12 +188,13 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             linkedWatchCount,
             totalAmount: row.cost != null ? Number(row.cost) : null,
             notes: row.notes ?? "",
-            acquiredAt: row.acquiredAt,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
+            acquiredAt: row.acquiredAt ? row.acquiredAt.toISOString() : "",
+            createdAt: row.createdAt ? row.createdAt.toISOString() : "",
+            updatedAt: row.updatedAt ? row.updatedAt.toISOString() : "",
             type: row.type ?? null,
-            firstItemTitle: previewTitles[0] ?? "-",
             previewTitles,
+            remainingCount: remaining,
+            detailItems,
         };
     });
 

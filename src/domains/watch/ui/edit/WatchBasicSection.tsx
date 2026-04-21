@@ -2,7 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { FieldLabel, Input, SectionCard, Select } from "./shared";
-import { WatchFormValues } from "../../client/watch-form.types";
+import { WatchFormValues } from "../../client/form/watch-form.types";
 
 type SimpleOption = { id: string; name: string; slug?: string | null };
 

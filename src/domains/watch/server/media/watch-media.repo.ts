@@ -1,103 +1,122 @@
-import { DB, withDbTransaction } from "@/server/db/client";
-import { dbOrTx } from "@/server/db/client";
-import type {
-  ReplaceWatchImagesInput,
-  ReorderWatchImagesInput,
-  SetWatchStorefrontImageInput,
-  WatchMediaItemInput,
-} from "../shared";
+import type { Prisma } from "@prisma/client";
+import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 
-function normalizeImageRole(role?: string | null) {
-  if (!role) return null;
+type ReplaceWatchImagesInput = {
+  productId: string;
+  images: Array<{
+    id?: string | null;
+    fileKey?: string | null;
+    key?: string | null;
+    path?: string | null;
+    url?: string | null;
+    role?: string | null;
+    alt?: string | null;
+    width?: number | null;
+    height?: number | null;
+    mime?: string | null;
+    sizeBytes?: number | null;
+    dominantHex?: string | null;
+    contentHash?: string | null;
+    isForAdmin?: boolean | null;
+    isForStorefront?: boolean | null;
+    sortOrder?: number | null;
+  }>;
+};
 
-  const upper = role.toUpperCase();
+type ReorderWatchImagesInput = {
+  productId: string;
+  imageIds: string[];
+};
+
+type SetWatchStorefrontImageInput = {
+  productId: string;
+  imageId?: string | null;
+};
+
+function normalizeRole(role?: string | null) {
+  const value = String(role ?? "").trim().toUpperCase();
+  if (!value) return null;
 
   const allowed = new Set([
-    "PRIMARY",
+    "INLINE",
     "GALLERY",
+    "PRIMARY",
     "DETAIL",
     "THUMBNAIL",
     "STOREFRONT",
-    "INLINE",
   ]);
 
-  return allowed.has(upper) ? upper : null;
+  return allowed.has(value) ? value : null;
 }
 
-function normalizeMediaItem(input: WatchMediaItemInput, index: number) {
+function normalizeMediaItem(
+  item: ReplaceWatchImagesInput["images"][number],
+  index: number
+) {
   return {
-    legacyProductImageId: input.legacyProductImageId ?? null,
-    key: input.key ?? null,
-    url: input.url ?? null,
-    type: input.type ?? null,
-    role: normalizeImageRole(input.role),
-    sortOrder:
-      typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
-        ? input.sortOrder
-        : index,
-    alt: input.alt ?? null,
+    fileKey: item.fileKey ?? item.key ?? item.path ?? null,
+    url: item.url ?? null,
+    role: normalizeRole(item.role),
+    alt: item.alt ?? null,
     width:
-      typeof input.width === "number" && Number.isFinite(input.width)
-        ? input.width
+      typeof item.width === "number" && Number.isFinite(item.width)
+        ? item.width
         : null,
     height:
-      typeof input.height === "number" && Number.isFinite(input.height)
-        ? input.height
+      typeof item.height === "number" && Number.isFinite(item.height)
+        ? item.height
         : null,
-    mime: input.mime ?? null,
+    mime: item.mime ?? null,
     sizeBytes:
-      typeof input.sizeBytes === "number" && Number.isFinite(input.sizeBytes)
-        ? input.sizeBytes
+      typeof item.sizeBytes === "number" && Number.isFinite(item.sizeBytes)
+        ? item.sizeBytes
         : null,
-    dominantHex: input.dominantHex ?? null,
-    contentHash: input.contentHash ?? null,
+    dominantHex: item.dominantHex ?? null,
+    contentHash: item.contentHash ?? null,
+    isForAdmin:
+      typeof item.isForAdmin === "boolean" ? item.isForAdmin : true,
+    isForStorefront:
+      typeof item.isForStorefront === "boolean" ? item.isForStorefront : false,
+    sortOrder:
+      typeof item.sortOrder === "number" && Number.isFinite(item.sortOrder)
+        ? item.sortOrder
+        : index,
   };
+}
+
+function pickPrimaryForProductUpdate(
+  rows: Array<{
+    role?: string | null;
+    fileKey?: string | null;
+    url?: string | null;
+  }>
+) {
+  return (
+    rows.find((item) => item.role === "INLINE") ??
+    rows.find((item) => item.role === "STOREFRONT") ??
+    rows.find((item) => item.role === "PRIMARY") ??
+    rows[0] ??
+    null
+  );
 }
 
 export async function replaceWatchImagesRepo(
   db: DB,
-  input: {
-    productId: string;
-    images: Array<{
-      fileKey?: string | null;
-      url?: string | null;
-      key?: string | null;
-      path?: string | null;
-      role?: string | null;
-      isForAdmin?: boolean | null;
-      isForStorefront?: boolean | null;
-      sortOrder?: number | null;
-    }>;
-  }
+  input: ReplaceWatchImagesInput
 ) {
   return withDbTransaction(db, async (tx) => {
     const watch = await tx.watch.findUnique({
       where: { productId: input.productId },
-      select: {
-        productId: true,
-      },
+      select: { productId: true },
     });
 
     if (!watch) {
-      throw new Error("Không tìm thấy watch");
+      throw new Error("Không tìm thấy watch để cập nhật hình");
     }
 
     const galleryItems = (input.images ?? [])
-      .filter((item) => String(item?.role ?? "").toUpperCase() === "GALLERY")
-      .map((item, index) => ({
-        productId: input.productId,
-        fileKey:
-          item.fileKey ??
-          item.key ??
-          item.path ??
-          null,
-        url: item.url ?? null,
-        role: "GALLERY" as any,
-        isForAdmin: item.isForAdmin ?? true,
-        isForStorefront: item.isForStorefront ?? true,
-        sortOrder:
-          typeof item.sortOrder === "number" ? item.sortOrder : index,
-      }))
+      .map((item, index) => normalizeMediaItem(item, index))
+      .filter((item) => item.role === "GALLERY")
       .filter((item) => item.fileKey || item.url);
 
     await tx.productImage.deleteMany({
@@ -108,29 +127,65 @@ export async function replaceWatchImagesRepo(
     });
 
     if (galleryItems.length > 0) {
-      await tx.productImage.createMany({
-        data: galleryItems,
-      });
+      for (const item of galleryItems) {
+        await tx.productImage.create({
+          data: {
+            productId: input.productId,
+            fileKey: item.fileKey,
+            url: item.url,
+            role: item.role as any,
+            alt: item.alt,
+            width: item.width,
+            height: item.height,
+            mime: item.mime,
+            sizeBytes: item.sizeBytes,
+            dominantHex: item.dominantHex,
+            contentHash: item.contentHash,
+            isForAdmin: item.isForAdmin,
+            isForStorefront: item.isForStorefront,
+            sortOrder: item.sortOrder,
+          } as Prisma.ProductImageUncheckedCreateInput,
+        });
+      }
     }
 
-    return tx.productImage.findMany({
-      where: {
-        productId: input.productId,
-      },
+    const allImages = await tx.productImage.findMany({
+      where: { productId: input.productId },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
+
+    const primary = pickPrimaryForProductUpdate(
+      allImages.map((img: any) => ({
+        role: String(img?.role ?? "").toUpperCase(),
+        fileKey: img?.fileKey ?? null,
+        url: img?.url ?? null,
+      }))
+    );
+
+    const storefront = allImages.find(
+      (img: any) => String(img?.role ?? "").toUpperCase() === "STOREFRONT"
+    ) as any;
+
+    await tx.product.update({
+      where: { id: input.productId },
+      data: {
+        primaryImageUrl: primary?.fileKey ?? primary?.url ?? null,
+        storefrontImageKey: storefront?.fileKey ?? null,
+      },
+    });
+
+    return allImages;
   });
 }
+
 export async function reorderWatchImagesRepo(
   db: DB,
   input: ReorderWatchImagesInput
 ) {
-  const client = dbOrTx(db);
-
   return withDbTransaction(db, async (tx) => {
     const watch = await tx.watch.findUnique({
       where: { productId: input.productId },
-      select: { id: true },
+      select: { productId: true },
     });
 
     if (!watch) {
@@ -138,10 +193,11 @@ export async function reorderWatchImagesRepo(
     }
 
     for (let index = 0; index < input.imageIds.length; index += 1) {
-      await tx.watchMedia.updateMany({
+      await tx.productImage.updateMany({
         where: {
           id: input.imageIds[index],
-          watchId: watch.id,
+          productId: input.productId,
+          role: "GALLERY" as any,
         },
         data: {
           sortOrder: index,
@@ -149,9 +205,9 @@ export async function reorderWatchImagesRepo(
       });
     }
 
-    return tx.watchMedia.findMany({
-      where: { watchId: watch.id },
-      orderBy: { sortOrder: "asc" },
+    return tx.productImage.findMany({
+      where: { productId: input.productId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     });
   });
 }
@@ -160,15 +216,14 @@ export async function setWatchStorefrontImageRepo(
   db: DB,
   input: SetWatchStorefrontImageInput
 ) {
-
   return withDbTransaction(db, async (tx) => {
     const watch = await tx.watch.findUnique({
       where: { productId: input.productId },
-      select: { id: true },
+      select: { productId: true },
     });
 
     if (!watch) {
-      throw new Error("Không tìm thấy watch để đặt ảnh storefront");
+      throw new Error("Không tìm thấy watch để đặt storefront");
     }
 
     if (!input.imageId) {
@@ -182,10 +237,10 @@ export async function setWatchStorefrontImageRepo(
       return null;
     }
 
-    const image = await tx.watchMedia.findFirst({
+    const image = await tx.productImage.findFirst({
       where: {
         id: input.imageId,
-        watchId: watch.id,
+        productId: input.productId,
       },
     });
 
@@ -196,8 +251,7 @@ export async function setWatchStorefrontImageRepo(
     await tx.product.update({
       where: { id: input.productId },
       data: {
-        storefrontImageKey: image.key ?? null,
-        primaryImageUrl: image.url ?? null,
+        storefrontImageKey: (image as any).fileKey ?? null,
       },
     });
 

@@ -2,7 +2,7 @@
 
 import { Boxes } from "lucide-react";
 import { SectionCard, SidebarStat } from "./shared";
-import type { WatchFormValues } from "../../client/watch-form.types";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
 
 type Props = {
     values: WatchFormValues["media"];
