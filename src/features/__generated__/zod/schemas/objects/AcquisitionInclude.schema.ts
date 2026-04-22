@@ -7,9 +7,9 @@ import { InvoiceFindManySchema as InvoiceFindManySchema } from '../findManyInvoi
 import { AcquisitionCountOutputTypeArgsObjectSchema as AcquisitionCountOutputTypeArgsObjectSchema } from './AcquisitionCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
-  Customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
-  Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
+  vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => AcquisitionCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

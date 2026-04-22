@@ -27,9 +27,9 @@ export const AcquisitionFindManySelectSchema: z.ZodType<Prisma.AcquisitionSelect
     updatedAt: z.boolean().optional(),
     sentAt: z.boolean().optional(),
     returnedAt: z.boolean().optional(),
-    Customer: z.boolean().optional(),
-    Vendor: z.boolean().optional(),
-    AcquisitionItem: z.boolean().optional(),
+    customer: z.boolean().optional(),
+    vendor: z.boolean().optional(),
+    acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionSelect>;
@@ -52,9 +52,9 @@ export const AcquisitionFindManySelectZodSchema = z.object({
     updatedAt: z.boolean().optional(),
     sentAt: z.boolean().optional(),
     returnedAt: z.boolean().optional(),
-    Customer: z.boolean().optional(),
-    Vendor: z.boolean().optional(),
-    AcquisitionItem: z.boolean().optional(),
+    customer: z.boolean().optional(),
+    vendor: z.boolean().optional(),
+    acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

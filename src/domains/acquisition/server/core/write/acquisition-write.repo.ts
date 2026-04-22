@@ -182,9 +182,9 @@ export async function getAcqtById(id: string, tx?: DB) {
     return db.acquisition.findUnique({
         where: { id },
         include: {
-            Vendor: true,
-            Customer: true,
-            AcquisitionItem: {
+            vendor: true,
+            customer: true,
+            acquisitionItem: {
                 include: {
                     product: true,
                 },

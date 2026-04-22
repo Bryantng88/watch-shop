@@ -13,7 +13,8 @@ import * as repoAcq from "./acquisition-write.repo";
 import {
     enqueueAcquisitionSpecJob,
     processQueuedAcquisitionSpecJobs,
-} from "@/app/(admin)/admin/acquisitions/_server/ai/acquisition-spec-job.service";
+    processAcquisitionSpecJobsByItemIds,
+} from "@/domains/acquisition/server/ai/acquisition-spec-job.service"
 
 import { createInvoiceFromAcquisition } from "@/app/(admin)/admin/invoices/_servers/invoices.repo";
 import { createTechnicalCheckFromAcquisitionTx } from "@/app/(admin)/admin/services/_server/service_request.service";
@@ -121,7 +122,7 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
         throw new Error("Không tìm thấy vendor để post phiếu");
     }
 
-    const items = acq.AcquisitionItem ?? [];
+    const items = acq.acquisitionItem ?? [];
     if (!items.length) {
         throw new Error("Phiếu nhập chưa có dòng nào");
     }
@@ -176,10 +177,8 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
     );
 
     try {
-        await processQueuedAcquisitionSpecJobs({
+        await processAcquisitionSpecJobsByItemIds({
             acquisitionItemIds: items.map((x) => x.id),
-            limit: items.length,
-            includeFailed: false,
         });
     } catch (error) {
         console.error("[ACQ_POST][SPEC_JOB_NON_BLOCKING_ERROR]", {

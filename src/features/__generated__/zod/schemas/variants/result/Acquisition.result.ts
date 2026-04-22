@@ -21,9 +21,9 @@ export const AcquisitionResultSchema = z.object({
     updatedAt: z.date(),
     sentAt: z.date().nullable(),
     returnedAt: z.date().nullable(),
-    Customer: z.unknown().nullable(),
-    Vendor: z.unknown().nullable(),
-    AcquisitionItem: z.array(z.unknown()),
+    customer: z.unknown().nullable(),
+    vendor: z.unknown().nullable(),
+    acquisitionItem: z.array(z.unknown()),
     Invoice: z.array(z.unknown())
 }).strict();
 

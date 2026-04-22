@@ -33,9 +33,9 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     sentAt: z.number(),
     returnedAt: z.number(),
-    Customer: z.number(),
-    Vendor: z.number(),
-    AcquisitionItem: z.number(),
+    customer: z.number(),
+    vendor: z.number(),
+    acquisitionItem: z.number(),
     Invoice: z.number()
   }).optional(),
   _sum: z.object({

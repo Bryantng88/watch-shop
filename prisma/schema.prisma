@@ -38,9 +38,9 @@ model Acquisition {
   updatedAt       DateTime          @updatedAt
   sentAt          DateTime?         @db.Timestamp(6)
   returnedAt      DateTime?         @db.Timestamp(6)
-  Customer        Customer?         @relation(fields: [customerId], references: [id])
-  Vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
-  AcquisitionItem AcquisitionItem[]
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
+  acquisitionItem AcquisitionItem[]
   Invoice         Invoice[]
 
   @@index([customerId, acquiredAt])
@@ -651,7 +651,7 @@ model ServiceRequest {
   warrantyUntil           DateTime?
   warrantyPolicy          String?
   createdAt               DateTime             @default(now())
-  updatedAt               DateTime
+  updatedAt               DateTime             @updatedAt
   servicecatalogid        String?
   refNo                   String?
   scope                   ServiceScope?

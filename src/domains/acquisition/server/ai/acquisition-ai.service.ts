@@ -10,7 +10,7 @@ export type GenerateAcquisitionSpecInput = {
     model?: string | null;
     notes?: string | null;
     condition?: string | null;
-    images?: string[];
+    images?: string[]; // nhận cả https URL hoặc data:image/...;base64,...
 };
 
 export type GenerateAcquisitionSpecResult = {
@@ -44,10 +44,6 @@ export type GenerateAcquisitionSpecResult = {
     };
     summary?: string | null;
 };
-
-type ResponseContentItem =
-    | { type: "input_text"; text: string }
-    | { type: "input_image"; image_url: string };
 
 function buildPrompt(input: GenerateAcquisitionSpecInput) {
     return `
@@ -114,22 +110,28 @@ export async function generateAcquisitionSpec(
     const images = (input.images ?? []).filter(
         (x): x is string => typeof x === "string" && x.trim().length > 0
     );
+
+    const content: Array<
+        | { type: "input_text"; text: string }
+        | { type: "input_image"; image_url: string; detail: "auto" }
+    > = [
+            {
+                type: "input_text",
+                text: buildPrompt(input),
+            },
+            ...images.map((image) => ({
+                type: "input_image" as const,
+                image_url: image,
+                detail: "auto" as const,
+            })),
+        ];
+
     const res = await openai.responses.create({
         model: "gpt-4.1-mini",
         input: [
             {
                 role: "user",
-                content: [
-                    {
-                        type: "input_text",
-                        text: buildPrompt(input),
-                    },
-                    ...images.map((url) => ({
-                        type: "input_image" as const,
-                        image_url: url,
-                        detail: "auto" as const,
-                    })),
-                ],
+                content,
             },
         ],
     });

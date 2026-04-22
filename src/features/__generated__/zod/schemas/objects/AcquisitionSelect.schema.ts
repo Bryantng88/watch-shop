@@ -24,9 +24,9 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   sentAt: z.boolean().optional(),
   returnedAt: z.boolean().optional(),
-  Customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
-  Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
+  vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => AcquisitionCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

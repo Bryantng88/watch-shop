@@ -18,9 +18,9 @@ export const AcquisitionFindManyResultSchema = z.object({
   updatedAt: z.date(),
   sentAt: z.date().optional(),
   returnedAt: z.date().optional(),
-  Customer: z.unknown().optional(),
-  Vendor: z.unknown().optional(),
-  AcquisitionItem: z.array(z.unknown()),
+  customer: z.unknown().optional(),
+  vendor: z.unknown().optional(),
+  acquisitionItem: z.array(z.unknown()),
   Invoice: z.array(z.unknown())
 })),
   pagination: z.object({

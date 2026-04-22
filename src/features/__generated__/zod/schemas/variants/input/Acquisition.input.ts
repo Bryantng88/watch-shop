@@ -21,9 +21,9 @@ export const AcquisitionInputSchema = z.object({
     updatedAt: z.date(),
     sentAt: z.date().optional().nullable(),
     returnedAt: z.date().optional().nullable(),
-    Customer: z.unknown().optional().nullable(),
-    Vendor: z.unknown().optional().nullable(),
-    AcquisitionItem: z.array(z.unknown()),
+    customer: z.unknown().optional().nullable(),
+    vendor: z.unknown().optional().nullable(),
+    acquisitionItem: z.array(z.unknown()),
     Invoice: z.array(z.unknown())
 }).strict();
 

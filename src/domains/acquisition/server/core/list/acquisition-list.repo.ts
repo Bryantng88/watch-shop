@@ -2,7 +2,7 @@ import { prisma } from "@/server/db/client";
 import type {
     AcquisitionListFilters,
     AcquisitionListView,
-} from "../shared/search-params";
+} from "../../shared/search-params"
 
 
 function normalizeText(value: any) {
@@ -124,8 +124,8 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
         where: buildWhere(input),
         orderBy: [{ updatedAt: "desc" }],
         include: {
-            Vendor: true,
-            AcquisitionItem: {
+            vendor: true,
+            acquisitionItem: {
                 include: {
                     product: {
                         select: {
@@ -152,8 +152,8 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
     const pagedRows = filteredRows.slice(skip, skip + pageSize);
 
     const items = pagedRows.map((row) => {
-        const acquisitionItems = Array.isArray(row.AcquisitionItem)
-            ? row.AcquisitionItem
+        const acquisitionItems = Array.isArray(row.acquisitionItem)
+            ? row.acquisitionItem
             : [];
 
         const linkedWatchCount = acquisitionItems.filter(
@@ -183,7 +183,7 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             refNo: row.refNo ?? "-",
             status: mapStatus(row.accquisitionStt),
             statusLabel: formatStatusLabel(row.accquisitionStt),
-            vendorName: row.Vendor?.name ?? "-",
+            vendorName: row.vendor?.name ?? "-",
             itemCount: acquisitionItems.length,
             linkedWatchCount,
             totalAmount: row.cost != null ? Number(row.cost) : null,

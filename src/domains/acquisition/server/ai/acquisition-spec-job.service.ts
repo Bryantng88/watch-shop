@@ -8,8 +8,12 @@ import {
     Strap,
     WatchCaseMaterialFamily,
     WatchGoldColorV2,
+    ImageRole,
 } from "@prisma/client";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/server/db/client";
+import { s3, S3_BUCKET } from "@/server/s3";
+import { normalizeKey } from "@/server/lib/storage-key";
 import { generateAcquisitionSpec } from "./acquisition-ai.service";
 import { buildProductTitleFromWatchAi } from "./acquisition-spec-mapper";
 import { resolveBrandFromAcquisitionAi } from "./acquisition-brand-resolver";
@@ -41,12 +45,6 @@ function getImageEntriesFromAiMeta(
     aiMeta: any
 ): Array<{ key?: string | null; url?: string | null }> {
     return Array.isArray(aiMeta?.images) ? aiMeta.images : [];
-}
-
-function getImageUrlsFromAiMeta(aiMeta: any): string[] {
-    return getImageEntriesFromAiMeta(aiMeta)
-        .map((item) => item?.url)
-        .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
 }
 
 async function persistAiDraftToItem(
@@ -198,6 +196,141 @@ function mapGoldColors(value: unknown): WatchGoldColorV2[] | undefined {
     }
 }
 
+function normalizeImageRole(value: unknown) {
+    return String(value ?? "").toUpperCase();
+}
+
+function sortImages(images: any[]) {
+    return [...images].sort(
+        (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+    );
+}
+
+function pickPreferredImages(images: any[]) {
+    const sorted = sortImages(images);
+
+    const inline = sorted.filter(
+        (img) =>
+            normalizeImageRole(img?.role) === "INLINE" ||
+            img?.role === ImageRole.INLINE
+    );
+    if (inline.length > 0) return inline;
+
+    const gallery = sorted.filter(
+        (img) =>
+            normalizeImageRole(img?.role) === "GALLERY" ||
+            img?.role === ImageRole.GALLERY
+    );
+    if (gallery.length > 0) return gallery;
+
+    return sorted;
+}
+
+async function bodyToBuffer(body: any): Promise<Buffer> {
+    if (!body) throw new Error("Empty S3 body");
+
+    if (typeof body.transformToByteArray === "function") {
+        const bytes = await body.transformToByteArray();
+        return Buffer.from(bytes);
+    }
+
+    if (typeof body.arrayBuffer === "function") {
+        const arr = await body.arrayBuffer();
+        return Buffer.from(arr);
+    }
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of body) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+}
+
+function inferMimeType(input?: string | null) {
+    const value = String(input ?? "").toLowerCase();
+
+    if (value.includes("image/jpeg") || value.endsWith(".jpg") || value.endsWith(".jpeg")) {
+        return "image/jpeg";
+    }
+    if (value.includes("image/png") || value.endsWith(".png")) {
+        return "image/png";
+    }
+    if (value.includes("image/webp") || value.endsWith(".webp")) {
+        return "image/webp";
+    }
+    if (value.includes("image/gif") || value.endsWith(".gif")) {
+        return "image/gif";
+    }
+
+    return "image/jpeg";
+}
+
+async function fileKeyToDataUrl(fileKey?: string | null, mimeHint?: string | null) {
+    const key = normalizeKey(fileKey);
+    if (!key) return null;
+
+    try {
+        const obj = await s3.send(
+            new GetObjectCommand({
+                Bucket: S3_BUCKET,
+                Key: key,
+            })
+        );
+
+        if (!obj.Body) return null;
+
+        const buffer = await bodyToBuffer(obj.Body);
+        if (!buffer.length) return null;
+
+        const mime = inferMimeType(obj.ContentType ?? mimeHint ?? key);
+        return `data:${mime};base64,${buffer.toString("base64")}`;
+    } catch (error) {
+        console.error("[ACQ_SPEC][READ_IMAGE_FAILED]", { key, error });
+        return null;
+    }
+}
+
+async function getImageDataUrlsForAi(product: any, aiMeta: any): Promise<string[]> {
+    const productImages = Array.isArray(product?.productImage)
+        ? product.productImage
+        : [];
+
+    const preferred = pickPreferredImages(productImages);
+
+    const fromProduct = await Promise.all(
+        preferred.map((img) =>
+            fileKeyToDataUrl(
+                img?.fileKey ?? img?.key ?? img?.path ?? null,
+                img?.mime ?? null
+            )
+        )
+    );
+
+    const validFromProduct = fromProduct.filter(
+        (x): x is string => typeof x === "string" && x.trim().length > 0
+    );
+
+    if (validFromProduct.length > 0) {
+        return Array.from(new Set(validFromProduct));
+    }
+
+    const aiMetaEntries = getImageEntriesFromAiMeta(aiMeta);
+
+    const fallback = await Promise.all(
+        aiMetaEntries.map((img) =>
+            fileKeyToDataUrl(img?.key ?? null, null)
+        )
+    );
+
+    return Array.from(
+        new Set(
+            fallback.filter(
+                (x): x is string => typeof x === "string" && x.trim().length > 0
+            )
+        )
+    );
+}
+
 export async function enqueueAcquisitionSpecJob(
     tx: Tx,
     input: {
@@ -239,6 +372,7 @@ export async function processAcquisitionSpecJob(
             product: {
                 include: {
                     brand: true,
+                    productImage: true,
                     watch: {
                         include: {
                             watchSpecV2: true,
@@ -267,7 +401,7 @@ export async function processAcquisitionSpecJob(
 
     const currentAiMeta = getAiMetaFromDescription(item.description);
     const imageEntries = getImageEntriesFromAiMeta(currentAiMeta);
-    const imageUrls = getImageUrlsFromAiMeta(currentAiMeta);
+    const imageDataUrls = await getImageDataUrlsForAi(item.product, currentAiMeta);
 
     const ai =
         currentAiMeta?.ai?.extractedSpec
@@ -278,7 +412,7 @@ export async function processAcquisitionSpecJob(
                 model: null,
                 notes: item.notes ?? item.acquisition?.notes ?? null,
                 condition: null,
-                images: imageUrls,
+                images: imageDataUrls, // data URLs từ NAS/S3
             });
 
     if (!ai?.extractedSpec) {
