@@ -29,11 +29,11 @@ const makeSchema = () => z.object({
   productType: z.boolean().optional(),
   productTitle: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
-  Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
-  Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
+  acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   ProductVariant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
-  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
+  acquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemSelectObjectSchema: z.ZodType<Prisma.AcquisitionItemSelect> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 export const AcquisitionItemSelectObjectZodSchema = makeSchema();

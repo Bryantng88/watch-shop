@@ -13,7 +13,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   runAfter: z.coerce.date().optional().nullable(),
   priority: z.number().int().optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema)
+  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema)
 }).strict();
 export const AcquisitionSpecJobCreateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobCreateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobCreateWithoutProductInput>;
 export const AcquisitionSpecJobCreateWithoutProductInputObjectZodSchema = makeSchema();

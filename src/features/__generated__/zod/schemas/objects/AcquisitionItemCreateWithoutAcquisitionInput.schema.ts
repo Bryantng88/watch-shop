@@ -27,10 +27,10 @@ const makeSchema = () => z.object({
   productType: ProductTypeSchema.optional(),
   productTitle: z.string(),
   updatedAt: z.coerce.date().optional(),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
+  product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
   ProductVariant: z.lazy(() => ProductVariantCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional(),
-  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
+  acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobCreateNestedOneWithoutAcquisitionItemInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemCreateWithoutAcquisitionInputObjectSchema: z.ZodType<Prisma.AcquisitionItemCreateWithoutAcquisitionInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemCreateWithoutAcquisitionInput>;
 export const AcquisitionItemCreateWithoutAcquisitionInputObjectZodSchema = makeSchema();

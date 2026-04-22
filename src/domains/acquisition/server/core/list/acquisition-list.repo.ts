@@ -127,7 +127,7 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             Vendor: true,
             AcquisitionItem: {
                 include: {
-                    Product: {
+                    product: {
                         select: {
                             id: true,
                             title: true,
@@ -166,8 +166,8 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             title: buildItemTitle(item),
             subtitle: buildItemSubtitle(item),
             linkedWatchProductId: item.productId ?? null,
-            linkedWatchTitle: item.Product?.title ?? null,
-            linkedWatchSku: item.Product?.sku ?? null,
+            linkedWatchTitle: item.product?.title ?? null,
+            linkedWatchSku: item.product?.sku ?? null,
             cost: item.cost != null ? Number(item.cost) : null,
             quantity:
                 item.quantity != null && Number.isFinite(Number(item.quantity))

@@ -32,11 +32,11 @@ export const AcquisitionItemFindFirstSelectSchema: z.ZodType<Prisma.AcquisitionI
     productType: z.boolean().optional(),
     productTitle: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    Product: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    product: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
     ProductVariant: z.boolean().optional(),
-    AcquisitionSpecJob: z.boolean().optional()
+    acquisitionSpecJob: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 
 export const AcquisitionItemFindFirstSelectZodSchema = z.object({
@@ -62,11 +62,11 @@ export const AcquisitionItemFindFirstSelectZodSchema = z.object({
     productType: z.boolean().optional(),
     productTitle: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    Product: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    product: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
     ProductVariant: z.boolean().optional(),
-    AcquisitionSpecJob: z.boolean().optional()
+    acquisitionSpecJob: z.boolean().optional()
   }).strict();
 
 export const AcquisitionItemFindFirstSchema: z.ZodType<Prisma.AcquisitionItemFindFirstArgs> = z.object({ select: AcquisitionItemFindFirstSelectSchema.optional(), include: AcquisitionItemIncludeObjectSchema.optional(), orderBy: z.union([AcquisitionItemOrderByWithRelationInputObjectSchema, AcquisitionItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionItemWhereInputObjectSchema.optional(), cursor: AcquisitionItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([AcquisitionItemScalarFieldEnumSchema, AcquisitionItemScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemFindFirstArgs>;

@@ -25,7 +25,7 @@ export const AcquisitionSpecJobGroupByResultSchema = z.array(z.object({
     updatedAt: z.number(),
     runAfter: z.number(),
     priority: z.number(),
-    AcquisitionItem: z.number(),
+    acquisitionItem: z.number(),
     Product: z.number()
   }).optional(),
   _sum: z.object({

@@ -26,7 +26,7 @@ const acquisitionspecjobwhereinputSchema = z.object({
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   runAfter: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   priority: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  AcquisitionItem: z.union([z.lazy(() => AcquisitionItemScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionItemWhereInputObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.lazy(() => AcquisitionItemScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionItemWhereInputObjectSchema)]).optional(),
   Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
 }).strict();
 export const AcquisitionSpecJobWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobWhereInput> = acquisitionspecjobwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionSpecJobWhereInput>;

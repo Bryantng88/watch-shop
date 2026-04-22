@@ -23,11 +23,11 @@ export const AcquisitionItemFindManyResultSchema = z.object({
   productType: z.unknown(),
   productTitle: z.string(),
   updatedAt: z.date(),
-  Acquisition: z.unknown(),
-  Product: z.unknown().optional(),
-  OrderItem: z.unknown().optional(),
+  acquisition: z.unknown(),
+  product: z.unknown().optional(),
+  orderItem: z.unknown().optional(),
   ProductVariant: z.unknown().optional(),
-  AcquisitionSpecJob: z.unknown().optional()
+  acquisitionSpecJob: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

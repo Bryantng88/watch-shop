@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
 import { AppToastProvider } from "@/components/feedback/AppToastProvider";
 import { AppDialogProvider } from "@/components/feedback/AppDialogProvider";
+import { AppProgressProvider } from "@/components/feedback/AppProgressProvider";
 import { getSideMenuNotificationCounts } from "./_server/sidebar-notifications";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -43,11 +44,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
                 <AppToastProvider>
                     <AppDialogProvider>
-                        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50">
-                            <div className="mx-auto w-full max-w-[1680px] px-4 py-6 lg:px-6 2xl:px-8">
-                                {children}
-                            </div>
-                        </main>
+                        <AppProgressProvider>
+                            <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50">
+                                <div className="mx-auto w-full max-w-[1680px] px-4 py-6 lg:px-6 2xl:px-8">
+                                    {children}
+                                </div>
+                            </main>
+                        </AppProgressProvider>
                     </AppDialogProvider>
                 </AppToastProvider>
             </div>

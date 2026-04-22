@@ -32,11 +32,11 @@ export const AcquisitionItemFindManySelectSchema: z.ZodType<Prisma.AcquisitionIt
     productType: z.boolean().optional(),
     productTitle: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    Product: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    product: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
     ProductVariant: z.boolean().optional(),
-    AcquisitionSpecJob: z.boolean().optional()
+    acquisitionSpecJob: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemSelect>;
 
 export const AcquisitionItemFindManySelectZodSchema = z.object({
@@ -62,11 +62,11 @@ export const AcquisitionItemFindManySelectZodSchema = z.object({
     productType: z.boolean().optional(),
     productTitle: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    Product: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    product: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
     ProductVariant: z.boolean().optional(),
-    AcquisitionSpecJob: z.boolean().optional()
+    acquisitionSpecJob: z.boolean().optional()
   }).strict();
 
 export const AcquisitionItemFindManySchema: z.ZodType<Prisma.AcquisitionItemFindManyArgs> = z.object({ select: AcquisitionItemFindManySelectSchema.optional(), include: AcquisitionItemIncludeObjectSchema.optional(), orderBy: z.union([AcquisitionItemOrderByWithRelationInputObjectSchema, AcquisitionItemOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionItemWhereInputObjectSchema.optional(), cursor: AcquisitionItemWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([AcquisitionItemScalarFieldEnumSchema, AcquisitionItemScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionItemFindManyArgs>;

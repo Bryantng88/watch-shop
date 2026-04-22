@@ -38,10 +38,10 @@ const makeSchema = () => z.object({
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  Product: z.lazy(() => ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
+  product: z.lazy(() => ProductUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
   ProductVariant: z.lazy(() => ProductVariantUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
-  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
+  acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUpdateWithoutAcquisitionInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUpdateWithoutAcquisitionInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUpdateWithoutAcquisitionInput>;
 export const AcquisitionItemUpdateWithoutAcquisitionInputObjectZodSchema = makeSchema();

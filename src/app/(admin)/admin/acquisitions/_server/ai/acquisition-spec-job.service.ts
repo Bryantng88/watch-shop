@@ -1,58 +1,125 @@
 "use server";
 
-import { prisma, DB } from "@/server/db/client";
-import * as acquisitionAiService from "./acquisition-ai.service";
-import * as repoAcq from "../core/acquisition.repo";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/server/db/client";
+import { generateAcquisitionSpec } from "./acquisition-ai.service";
 import {
-  getAiMetaFromDescription,
-  parseAcquisitionItemMeta,
-} from "../content/acquisition-item-metadata";
-import {
-  buildProductTitleFromAi,
-  mapCaseMaterial,
-  mapCaseType,
-  mapGender,
-  mapGlass,
-  mapGoldColor,
-  mapMovementType,
-  mapStrap,
-  resolveSpecStatusFromAi,
-} from "../shared/acquisition.mapper";
-import {
-  safeJsonParse,
-  toDecimal,
-  toInt,
-  toStringOrNull,
-} from "../shared/helper";
-import { genUniqueProductSku } from "../../../products/_server/shared/helper";
+  mapWatchSpecFromAi,
+  buildProductTitleFromWatchAi,
+} from "./acquisition-spec-mapper";
+import { resolveBrandFromAcquisitionAi } from "./acquisition-brand-resolver";
+import { genUniqueAcquisitionSku } from "@/domains/acquisition/shared/sku.helper";
 
-type ExistingAcqItem = Awaited<ReturnType<typeof repoAcq.findAcqItems>>[number];
+type Tx = Prisma.TransactionClient;
+type JsonObject = Record<string, any>;
 
-type AiDraftPayload = {
-  extractedSpec?: any;
-  generatedDraft?: any | null;
-  meta?: any;
-};
+function safeJsonParse<T = JsonObject>(value?: string | null): T {
+  if (!value) return {} as T;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return {} as T;
+  }
+}
 
-type PostedWatchAiBundle = {
-  aiMeta: any;
-  aiExtracted: any;
-  aiGenerated: any | null;
-  aiDraft: AiDraftPayload | null;
-};
+function stringifyJson(value: unknown) {
+  return JSON.stringify(value ?? {});
+}
 
-function getAiImageUrls(aiMeta: ReturnType<typeof getAiMetaFromDescription>) {
-  return (aiMeta?.images ?? []).map((x) => String(x?.url ?? "").trim()).filter(Boolean);
+function getAiMetaFromDescription(description?: string | null) {
+  const meta = safeJsonParse<JsonObject>(description);
+  return meta?.aiMeta ?? {};
+}
+
+function getImageEntriesFromAiMeta(
+  aiMeta: any
+): Array<{ key?: string | null; url?: string | null }> {
+  return Array.isArray(aiMeta?.images) ? aiMeta.images : [];
+}
+
+function getImageUrlsFromAiMeta(aiMeta: any): string[] {
+  return getImageEntriesFromAiMeta(aiMeta)
+    .map((item) => item?.url)
+    .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
+}
+
+function isPresent(value: unknown) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+function hasMeaningfulSpec(spec: Record<string, unknown>) {
+  return Object.values(spec).some(isPresent);
+}
+
+function omitNullish<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== null && value !== undefined)
+  ) as Partial<T>;
+}
+
+function buildSafeWatchSpecCreate(productId: string, spec: Record<string, unknown>) {
+  return {
+    productId,
+    ...omitNullish(spec),
+    updatedAt: new Date(),
+  };
+}
+
+function buildSafeWatchSpecUpdate(spec: Record<string, unknown>) {
+  return {
+    ...omitNullish(spec),
+  };
+}
+
+async function persistAiDraftToItem(
+  tx: Tx,
+  itemId: string,
+  description: string | null | undefined,
+  input: {
+    aiHint?: string | null;
+    images?: Array<{ key?: string | null; url?: string | null }>;
+    ai: unknown;
+  }
+) {
+  const meta = safeJsonParse<JsonObject>(description);
+
+  await tx.acquisitionItem.update({
+    where: { id: itemId },
+    data: {
+      description: stringifyJson({
+        ...meta,
+        aiMeta: {
+          ...(meta.aiMeta ?? {}),
+          aiHint: input.aiHint ?? meta?.aiMeta?.aiHint ?? null,
+          images: input.images ?? meta?.aiMeta?.images ?? [],
+          ai: input.ai,
+        },
+      }),
+    },
+  });
+}
+
+function shouldRefreshSku(input: {
+  productType?: string | null;
+  currentSku?: string | null;
+  resolvedBrandName?: string | null;
+}) {
+  if (String(input.productType ?? "").toUpperCase() !== "WATCH") return false;
+  if (!input.resolvedBrandName) return false;
+  if (!input.currentSku) return true;
+
+  const sku = String(input.currentSku);
+  return /^WAT-\d{4}-\d{4}$/i.test(sku) || /^PRD-\d{4}-\d{4}$/i.test(sku);
 }
 
 export async function enqueueAcquisitionSpecJob(
-  tx: DB,
+  tx: Tx,
   input: {
     acquisitionItemId: string;
     productId: string;
   }
 ) {
-  await (tx as any).acquisitionSpecJob.upsert({
+  await tx.acquisitionSpecJob.upsert({
     where: { acquisitionItemId: input.acquisitionItemId },
     update: {
       productId: input.productId,
@@ -71,389 +138,214 @@ export async function enqueueAcquisitionSpecJob(
       runAfter: new Date(),
     },
   });
-
-  console.log("[ACQ_SPEC_JOB][ENQUEUED]", input);
 }
 
-export async function persistAiDraftToItem(
-  tx: DB,
-  itemId: string,
-  description: string | null | undefined,
-  aiDraft: AiDraftPayload,
-  aiHint: string | null,
-  images: Array<{ key?: string | null; url?: string | null }>
-) {
-  const meta = parseAcquisitionItemMeta(description);
-
-  await tx.acquisitionItem.update({
-    where: { id: itemId },
-    data: {
-      description: JSON.stringify({
-        ...(meta.kind ? { kind: meta.kind } : { kind: "watch" }),
-        ...(meta.watchFlags ? { watchFlags: meta.watchFlags } : {}),
-        ...(meta.strapSpec ? { strapSpec: meta.strapSpec } : {}),
-        ...(meta.quickSpec ? { quickSpec: meta.quickSpec } : {}),
-        aiMeta: {
-          ...(meta.aiMeta ?? {}),
-          aiHint,
-          images,
-          ai: aiDraft,
-        },
-      }),
-    },
-  });
-}
-
-export async function preparePostedWatchAiDataOutsideTx(
-  item: ExistingAcqItem,
-  aiMetaInput?: any
-): Promise<PostedWatchAiBundle> {
-  const aiMeta = aiMetaInput ?? getAiMetaFromDescription(item.description);
-  let aiExtracted = aiMeta?.ai?.extractedSpec ?? null;
-  let aiGenerated = aiMeta?.ai?.generatedDraft ?? null;
-  let aiDraft: AiDraftPayload | null = aiMeta?.ai ?? null;
-
-  if (aiExtracted) {
-    return { aiMeta, aiExtracted, aiGenerated, aiDraft };
+export async function processAcquisitionSpecJob(
+  tx: Tx,
+  input: {
+    acquisitionItemId: string;
   }
-
-  const imageUrls = getAiImageUrls(aiMeta);
-  if (!imageUrls.length && !(aiMeta?.images?.length > 0)) {
-    return { aiMeta, aiExtracted: null, aiGenerated: null, aiDraft: null };
-  }
-
-  const generated = await acquisitionAiService.generateAcquisitionDraft({
-    origin: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000",
-    imageUrls,
-    imageEntries: aiMeta?.images ?? [],
-    titleHint: item.productTitle ?? null,
-    hintText: aiMeta?.aiHint ?? null,
-    vendorName: null,
-    cost: Number(item.unitCost ?? 0),
-  });
-
-  aiDraft = generated;
-  aiExtracted = generated?.extractedSpec ?? null;
-  aiGenerated = generated?.generatedDraft ?? null;
-
-  return { aiMeta, aiExtracted, aiGenerated, aiDraft };
-}
-
-export async function persistPostedWatchAiData(
-  tx: DB,
-  item: ExistingAcqItem,
-  bundle: PostedWatchAiBundle
 ) {
-  if (!bundle.aiDraft) return;
-
-  const currentMeta = safeJsonParse<Record<string, any>>(item.description) ?? {};
-  await tx.acquisitionItem.update({
-    where: { id: item.id },
-    data: {
-      description: JSON.stringify({
-        ...currentMeta,
-        aiMeta: {
-          ...(bundle.aiMeta ?? {}),
-          aiHint: bundle.aiMeta?.aiHint ?? null,
-          images: bundle.aiMeta?.images ?? [],
-          ai: bundle.aiDraft,
+  const item = await tx.acquisitionItem.findUnique({
+    where: { id: input.acquisitionItemId },
+    include: {
+      acquisition: true,
+      product: {
+        include: {
+          brand: true,
         },
-      }),
-    },
-  });
-}
-
-export async function resolveBrandConnectFromAi(tx: DB, brandName: unknown) {
-  const normalized = toStringOrNull(brandName);
-  if (!normalized) return undefined;
-
-  const matchedBrand = await tx.brand.findFirst({
-    where: {
-      name: {
-        equals: normalized,
-        mode: "insensitive" as any,
       },
     },
-    select: { id: true },
   });
 
-  if (!matchedBrand?.id) return undefined;
-  return { connect: { id: matchedBrand.id } };
+  if (!item || !item.productId || !item.product) {
+    throw new Error("Acquisition item or product not found");
+  }
+
+  if (item.product.type !== "WATCH") {
+    await tx.acquisitionSpecJob.update({
+      where: { acquisitionItemId: item.id },
+      data: {
+        status: "DONE",
+        lastError: null,
+        finishedAt: new Date(),
+      },
+    });
+    return;
+  }
+
+  const currentAiMeta = getAiMetaFromDescription(item.description);
+  const imageEntries = getImageEntriesFromAiMeta(currentAiMeta);
+  const imageUrls = getImageUrlsFromAiMeta(currentAiMeta);
+
+  const ai =
+    currentAiMeta?.ai?.extractedSpec
+      ? currentAiMeta.ai
+      : await generateAcquisitionSpec({
+        title: item.productTitle ?? item.product.title,
+        brand: item.product.brand?.name ?? null,
+        model: null,
+        notes: item.notes ?? item.acquisition?.notes ?? null,
+        condition: null,
+        images: imageUrls,
+      });
+
+  if (!ai?.extractedSpec) {
+    throw new Error("AI did not return extractedSpec");
+  }
+
+  const resolvedBrand =
+    item.product.brand ??
+    (await resolveBrandFromAcquisitionAi(tx as any, {
+      titleHint: item.productTitle ?? item.product.title,
+      aiHint: currentAiMeta?.aiHint ?? null,
+      extractedSpec: ai.extractedSpec,
+    }));
+
+  const resolvedBrandName =
+    resolvedBrand?.name ??
+    item.product.brand?.name ??
+    ai?.extractedSpec?.confirmedFacts?.brandName ??
+    ai?.extractedSpec?.brandName ??
+    ai?.extractedSpec?.suggestedFacts?.probableBrand ??
+    ai?.extractedSpec?.probableVisualFacts?.probableBrand ??
+    null;
+
+  await persistAiDraftToItem(tx, item.id, item.description, {
+    aiHint: currentAiMeta?.aiHint ?? null,
+    images: imageEntries,
+    ai,
+  });
+
+  const nextSku = shouldRefreshSku({
+    productType: item.product.type,
+    currentSku: item.product.sku,
+    resolvedBrandName,
+  })
+    ? await genUniqueAcquisitionSku(tx as any, {
+      kind: "WATCH",
+      brandName: resolvedBrandName,
+      date: item.acquisition?.acquiredAt ?? new Date(),
+    })
+    : undefined;
+
+  const mappedSpec = mapWatchSpecFromAi(ai.extractedSpec);
+
+  await tx.product.update({
+    where: { id: item.productId },
+    data: {
+      title: buildProductTitleFromWatchAi({
+        brand: resolvedBrandName,
+        extractedSpec: ai.extractedSpec,
+        fallback: item.productTitle ?? item.product.title,
+      }),
+      ...(resolvedBrand && !item.product.brandId
+        ? { brandId: resolvedBrand.id }
+        : {}),
+      ...(nextSku ? { sku: nextSku } : {}),
+    },
+  });
+
+  if (hasMeaningfulSpec(mappedSpec)) {
+    await tx.watchSpec.upsert({
+      where: { productId: item.productId },
+      create: buildSafeWatchSpecCreate(item.productId, mappedSpec),
+      update: buildSafeWatchSpecUpdate(mappedSpec),
+    });
+  }
+
+  await tx.acquisitionSpecJob.update({
+    where: { acquisitionItemId: item.id },
+    data: {
+      status: "DONE",
+      lastError: null,
+      finishedAt: new Date(),
+    },
+  });
 }
 
-export async function createWatchSpecSafe(
-  tx: DB,
+export async function failAcquisitionSpecJob(
+  tx: Tx,
   input: {
-    productId: string;
-    aiExtracted: any;
+    acquisitionItemId: string;
+    errorMessage: string;
   }
 ) {
-  const { productId, aiExtracted } = input;
-  if (!aiExtracted) return;
-
-  const probable = aiExtracted?.probableVisualFacts ?? {};
-
-  const resolvedCaseType = mapCaseType(aiExtracted.caseType) ?? mapCaseType(probable.caseType);
-  const resolvedGender = mapGender(aiExtracted.gender);
-  const resolvedMovement = mapMovementType(aiExtracted.movement) ?? mapMovementType(probable.movement);
-  const resolvedCaseMaterial =
-    mapCaseMaterial(aiExtracted.caseMaterial) ?? mapCaseMaterial(probable.caseMaterial);
-  const resolvedStrap = mapStrap(aiExtracted.strapType) ?? mapStrap(probable.strapType);
-  const resolvedGlass = mapGlass(aiExtracted.glass) ?? mapGlass(probable.glass);
-  const resolvedDialColor = toStringOrNull(aiExtracted.dialColor) ?? toStringOrNull(probable.dialColor);
-  const resolvedWidth = toDecimal(aiExtracted.widthEstimateMm) ?? toDecimal(probable.widthEstimateMm);
-  const resolvedLength = toDecimal(aiExtracted.lengthEstimateMm);
-  const resolvedThickness = toDecimal(aiExtracted.thicknessEstimateMm);
-  const resolvedRef = toStringOrNull(aiExtracted.bestRefCandidate);
-  const resolvedModel = toStringOrNull(aiExtracted.modelFamily);
-  const resolvedYear = toStringOrNull(aiExtracted.yearEstimate);
-  const resolvedCaliber = toStringOrNull(aiExtracted.bestCaliberCandidate);
-  const resolvedGoldKarat = toInt(aiExtracted.goldKarat);
-  const resolvedGoldColor = mapGoldColor(aiExtracted.goldColor);
-
-  const resolvedBoxIncluded =
-    aiExtracted?.likelyAccessories?.boxIncluded == null ? null : Boolean(aiExtracted.likelyAccessories.boxIncluded);
-  const resolvedBookletIncluded =
-    aiExtracted?.likelyAccessories?.bookletIncluded == null ? null : Boolean(aiExtracted.likelyAccessories.bookletIncluded);
-  const resolvedCardIncluded =
-    aiExtracted?.likelyAccessories?.cardIncluded == null ? null : Boolean(aiExtracted.likelyAccessories.cardIncluded);
-
-  const hasMeaningfulSpec =
-    Boolean(resolvedRef) ||
-    Boolean(resolvedModel) ||
-    Boolean(resolvedYear) ||
-    Boolean(resolvedCaseType) ||
-    Boolean(resolvedGender) ||
-    Boolean(resolvedMovement) ||
-    Boolean(resolvedCaliber) ||
-    Boolean(resolvedCaseMaterial) ||
-    resolvedGoldKarat != null ||
-    Boolean(resolvedGoldColor) ||
-    resolvedLength != null ||
-    resolvedWidth != null ||
-    resolvedThickness != null ||
-    Boolean(resolvedStrap) ||
-    Boolean(resolvedGlass) ||
-    Boolean(resolvedDialColor) ||
-    resolvedBoxIncluded != null ||
-    resolvedBookletIncluded != null ||
-    resolvedCardIncluded != null;
-
-  if (!hasMeaningfulSpec) return;
-
-  await tx.watchSpec.upsert({
-    where: { productId },
-    update: {
-      ref: resolvedRef,
-      model: resolvedModel,
-      year: resolvedYear,
-      caseType: resolvedCaseType ?? undefined,
-      gender: resolvedGender ?? undefined,
-      movement: resolvedMovement ?? undefined,
-      caliber: resolvedCaliber,
-      caseMaterial: resolvedCaseMaterial ?? undefined,
-      goldKarat: resolvedGoldKarat,
-      goldColor: resolvedGoldColor ?? undefined,
-      length: resolvedLength,
-      width: resolvedWidth,
-      thickness: resolvedThickness,
-      strap: resolvedStrap ?? undefined,
-      glass: resolvedGlass ?? undefined,
-      dialColor: resolvedDialColor,
-      boxIncluded: resolvedBoxIncluded ?? false,
-      bookletIncluded: resolvedBookletIncluded ?? false,
-      cardIncluded: resolvedCardIncluded ?? false,
-    },
-    create: {
-      product: { connect: { id: productId } },
-      ref: resolvedRef,
-      model: resolvedModel,
-      year: resolvedYear,
-      caseType: resolvedCaseType ?? undefined,
-      gender: resolvedGender ?? undefined,
-      movement: resolvedMovement ?? undefined,
-      caliber: resolvedCaliber,
-      caseMaterial: resolvedCaseMaterial ?? undefined,
-      goldKarat: resolvedGoldKarat,
-      goldColor: resolvedGoldColor ?? undefined,
-      length: resolvedLength,
-      width: resolvedWidth,
-      thickness: resolvedThickness,
-      strap: resolvedStrap ?? undefined,
-      glass: resolvedGlass ?? undefined,
-      dialColor: resolvedDialColor,
-      boxIncluded: resolvedBoxIncluded ?? false,
-      bookletIncluded: resolvedBookletIncluded ?? false,
-      cardIncluded: resolvedCardIncluded ?? false,
+  await tx.acquisitionSpecJob.update({
+    where: { acquisitionItemId: input.acquisitionItemId },
+    data: {
+      status: "FAILED",
+      lastError: input.errorMessage,
+      finishedAt: new Date(),
+      runAfter: new Date(Date.now() + 5 * 60 * 1000),
     },
   });
 }
 
 export async function processQueuedAcquisitionSpecJobs(input?: {
   limit?: number;
-  acquisitionItemIds?: string[];
   includeFailed?: boolean;
 }) {
-  const normalizedIds = Array.from(
-    new Set((input?.acquisitionItemIds ?? []).map((x) => String(x).trim()).filter(Boolean))
-  );
+  const limit = Math.max(1, Math.min(Number(input?.limit ?? 3), 10));
+  const includeFailed = Boolean(input?.includeFailed);
 
-  const statuses = input?.includeFailed ? ["PENDING", "FAILED"] : ["PENDING"];
-
-  const jobs = await (prisma as any).acquisitionSpecJob.findMany({
+  const jobs = await prisma.acquisitionSpecJob.findMany({
     where: {
-      status: { in: statuses },
+      status: includeFailed
+        ? { in: ["PENDING", "FAILED"] }
+        : "PENDING",
       runAfter: { lte: new Date() },
-      ...(normalizedIds.length
-        ? {
-          acquisitionItemId: {
-            in: normalizedIds,
-          },
-        }
-        : {}),
     },
-    orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-    take: Math.max(1, Math.min(input?.limit ?? 6, 10)),
+    orderBy: [{ runAfter: "asc" }, { createdAt: "asc" }],
+    take: limit,
+    include: {
+      acquisitionItem: true,
+    },
   });
 
   let processed = 0;
-
-  console.log("[ACQ_SPEC_JOB][RUNNER_START]", {
-    limit: input?.limit ?? null,
-    acquisitionItemIds: normalizedIds,
-    includeFailed: Boolean(input?.includeFailed),
-  });
-  console.log("[ACQ_SPEC_JOB][FOUND_JOBS]", jobs.length);
+  let failed = 0;
+  const errors: Array<{ id: string; error: string }> = [];
 
   for (const job of jobs) {
-    console.log("[ACQ_SPEC_JOB][JOB]", {
-      jobId: job.id,
-      acquisitionItemId: job.acquisitionItemId,
-      status: job.status,
-    });
-
-    const claim = await (prisma as any).acquisitionSpecJob.updateMany({
-      where: {
-        id: job.id,
-        status: { in: statuses },
-      },
-      data: {
-        status: "RUNNING",
-        startedAt: new Date(),
-        attempts: Number(job.attempts ?? 0) + 1,
-        lastError: null,
-      },
-    });
-
-    console.log("[ACQ_SPEC_JOB][CLAIM_RESULT]", {
-      jobId: job.id,
-      count: claim?.count ?? 0,
-    });
-
-    if (!claim?.count) continue;
-
     try {
-      const item = await prisma.acquisitionItem.findUnique({
-        where: { id: job.acquisitionItemId },
-        include: { product: true },
-      });
-
-      if (!item?.productId || !item.product) {
-        throw new Error("Thiếu acquisition item hoặc product để gen spec.");
-      }
-
-      const aiMeta = getAiMetaFromDescription(item.description);
-      const preparedAi = await preparePostedWatchAiDataOutsideTx(item as ExistingAcqItem, aiMeta);
-      const aiExtracted = preparedAi.aiExtracted;
-
-      if (!aiExtracted) {
-        throw new Error("AI không trả về extractedSpec.");
-      }
-
-      const built = buildProductTitleFromAi({
-        aiExtracted,
-        aiMeta: preparedAi.aiMeta,
-        item: item as ExistingAcqItem,
-      });
-
       await prisma.$transaction(async (tx) => {
-        await persistPostedWatchAiData(tx, item as ExistingAcqItem, preparedAi);
-
-        const brandConnect = await resolveBrandConnectFromAi(tx, built.resolvedBrandName);
-
-        const shouldRefreshSku =
-          item.product?.type === "WATCH" &&
-          Boolean(built.resolvedBrandName) &&
-          (
-            !item.product?.sku ||
-            /^WAT-\d{4}-\d{4}$/i.test(String(item.product.sku)) ||
-            /^PRD-\d{4}-\d{4}$/i.test(String(item.product.sku))
-          );
-
-        const nextSku = shouldRefreshSku
-          ? await genUniqueProductSku(tx, {
-            type: item.product?.type,
-            brandName: built.resolvedBrandName,
-          })
-          : undefined;
-        await tx.product.update({
-          where: { id: item.productId! },
-          data: {
-            title: built.title,
-            nickname: built.nickname,
-            specStatus: resolveSpecStatusFromAi(aiExtracted),
-            ...(brandConnect ? { brand: brandConnect } : {}),
-            ...(nextSku ? { sku: nextSku } : {}),
-          },
-        });
-
-        await createWatchSpecSafe(tx, {
-          productId: item.productId!,
-          aiExtracted,
-        });
-
-        await (tx as any).acquisitionSpecJob.update({
+        await tx.acquisitionSpecJob.update({
           where: { id: job.id },
           data: {
-            status: "DONE",
-            finishedAt: new Date(),
+            status: "RUNNING",
+            startedAt: new Date(),
+            attempts: { increment: 1 },
             lastError: null,
           },
+        });
+
+        await processAcquisitionSpecJob(tx, {
+          acquisitionItemId: job.acquisitionItemId,
         });
       });
 
       processed += 1;
-
-      console.log("[ACQ_SPEC_JOB][DONE]", {
-        jobId: job.id,
-        acquisitionItemId: job.acquisitionItemId,
-        productId: item.productId,
-      });
-    } catch (error) {
-      console.error("[ACQ_SPEC_JOB][FAILED]", {
-        jobId: job.id,
-        acquisitionItemId: job.acquisitionItemId,
-        error: error instanceof Error ? error.message : String(error),
+    } catch (error: any) {
+      failed += 1;
+      errors.push({
+        id: job.acquisitionItemId,
+        error: error?.message || "Unknown error",
       });
 
-      await (prisma as any).acquisitionSpecJob.update({
-        where: { id: job.id },
-        data: {
-          status: "FAILED",
-          finishedAt: new Date(),
-          lastError: error instanceof Error ? error.message : String(error),
-          runAfter: new Date(Date.now() + 5 * 60 * 1000),
-        },
-      });
-
-      if (job.productId) {
-        await prisma.product.updateMany({
-          where: { id: job.productId },
-          data: { specStatus: "FAILED" },
+      await prisma.$transaction(async (tx) => {
+        await failAcquisitionSpecJob(tx, {
+          acquisitionItemId: job.acquisitionItemId,
+          errorMessage: error?.message || "Unknown error",
         });
-      }
+      });
     }
   }
 
-  return { processed };
+  return {
+    total: jobs.length,
+    processed,
+    failed,
+    errors,
+  };
 }

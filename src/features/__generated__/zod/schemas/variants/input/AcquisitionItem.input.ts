@@ -27,11 +27,11 @@ export const AcquisitionItemInputSchema = z.object({
     productType: ProductTypeSchema,
     productTitle: z.string(),
     updatedAt: z.date(),
-    Acquisition: z.unknown(),
-    Product: z.unknown().optional().nullable(),
-    OrderItem: z.unknown().optional().nullable(),
+    acquisition: z.unknown(),
+    product: z.unknown().optional().nullable(),
+    orderItem: z.unknown().optional().nullable(),
     ProductVariant: z.unknown().optional().nullable(),
-    AcquisitionSpecJob: z.unknown().optional().nullable()
+    acquisitionSpecJob: z.unknown().optional().nullable()
 }).strict();
 
 export type AcquisitionItemInputType = z.infer<typeof AcquisitionItemInputSchema>;

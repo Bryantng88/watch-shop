@@ -38,10 +38,10 @@ const makeSchema = () => z.object({
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  Acquisition: z.lazy(() => AcquisitionUpdateOneRequiredWithoutAcquisitionItemNestedInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
+  acquisition: z.lazy(() => AcquisitionUpdateOneRequiredWithoutAcquisitionItemNestedInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
   ProductVariant: z.lazy(() => ProductVariantUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional(),
-  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
+  acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUpdateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUpdateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUpdateWithoutProductInput>;
 export const AcquisitionItemUpdateWithoutProductInputObjectZodSchema = makeSchema();

@@ -42,11 +42,11 @@ export const AcquisitionItemGroupByResultSchema = z.array(z.object({
     productType: z.number(),
     productTitle: z.number(),
     updatedAt: z.number(),
-    Acquisition: z.number(),
-    Product: z.number(),
-    OrderItem: z.number(),
+    acquisition: z.number(),
+    product: z.number(),
+    orderItem: z.number(),
     ProductVariant: z.number(),
-    AcquisitionSpecJob: z.number()
+    acquisitionSpecJob: z.number()
   }).optional(),
   _sum: z.object({
     quantity: z.number().nullable(),

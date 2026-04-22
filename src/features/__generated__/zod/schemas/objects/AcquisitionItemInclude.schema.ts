@@ -7,11 +7,11 @@ import { ProductVariantArgsObjectSchema as ProductVariantArgsObjectSchema } from
 import { AcquisitionSpecJobArgsObjectSchema as AcquisitionSpecJobArgsObjectSchema } from './AcquisitionSpecJobArgs.schema'
 
 const makeSchema = () => z.object({
-  Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
-  Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
+  acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionArgsObjectSchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
   ProductVariant: z.union([z.boolean(), z.lazy(() => ProductVariantArgsObjectSchema)]).optional(),
-  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
+  acquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionItemIncludeObjectSchema: z.ZodType<Prisma.AcquisitionItemInclude> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemInclude>;
 export const AcquisitionItemIncludeObjectZodSchema = makeSchema();

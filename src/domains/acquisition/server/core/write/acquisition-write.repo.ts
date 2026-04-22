@@ -170,7 +170,7 @@ export async function findAcqItems(tx: DB, acqId: string) {
     return db.acquisitionItem.findMany({
         where: { acquisitionId: acqId },
         include: {
-            Product: true,
+            product: true,
         },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
@@ -186,7 +186,7 @@ export async function getAcqtById(id: string, tx?: DB) {
             Customer: true,
             AcquisitionItem: {
                 include: {
-                    Product: true,
+                    product: true,
                 },
                 orderBy: [{ createdAt: "asc" }, { id: "asc" }],
             },
@@ -410,7 +410,7 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
     const item = await db.acquisitionItem.findUnique({
         where: { id: itemId },
         include: {
-            Product: true,
+            product: true,
         },
     });
 

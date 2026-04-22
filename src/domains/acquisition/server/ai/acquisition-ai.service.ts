@@ -114,26 +114,22 @@ export async function generateAcquisitionSpec(
     const images = (input.images ?? []).filter(
         (x): x is string => typeof x === "string" && x.trim().length > 0
     );
-
-    const content: ResponseContentItem[] = [
-        {
-            type: "input_text",
-            text: buildPrompt(input),
-        },
-        ...images.map(
-            (url): ResponseContentItem => ({
-                type: "input_image",
-                image_url: url,
-            })
-        ),
-    ];
-
     const res = await openai.responses.create({
         model: "gpt-4.1-mini",
         input: [
             {
                 role: "user",
-                content,
+                content: [
+                    {
+                        type: "input_text",
+                        text: buildPrompt(input),
+                    },
+                    ...images.map((url) => ({
+                        type: "input_image" as const,
+                        image_url: url,
+                        detail: "auto" as const,
+                    })),
+                ],
             },
         ],
     });

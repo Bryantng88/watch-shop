@@ -12,7 +12,7 @@ export const AcquisitionSpecJobAggregateResultSchema = z.object({  _count: z.obj
     updatedAt: z.number(),
     runAfter: z.number(),
     priority: z.number(),
-    AcquisitionItem: z.number(),
+    acquisitionItem: z.number(),
     Product: z.number()
   }).optional(),
   _sum: z.object({

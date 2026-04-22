@@ -31,11 +31,11 @@ const makeSchema = () => z.object({
   productType: SortOrderSchema.optional(),
   productTitle: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  Acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
+  acquisition: z.lazy(() => AcquisitionOrderByWithRelationInputObjectSchema).optional(),
+  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   ProductVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),
-  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByWithRelationInputObjectSchema).optional()
+  acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemOrderByWithRelationInput>;
 export const AcquisitionItemOrderByWithRelationInputObjectZodSchema = makeSchema();

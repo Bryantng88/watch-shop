@@ -4,7 +4,7 @@ import { AcquisitionItemArgsObjectSchema as AcquisitionItemArgsObjectSchema } fr
 import { ProductArgsObjectSchema as ProductArgsObjectSchema } from './ProductArgs.schema'
 
 const makeSchema = () => z.object({
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemArgsObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemArgsObjectSchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionSpecJobIncludeObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobInclude> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobInclude>;

@@ -12,6 +12,6 @@ export const AcquisitionSpecJobFindFirstResultSchema = z.nullable(z.object({
   updatedAt: z.date(),
   runAfter: z.date().optional(),
   priority: z.number().int(),
-  AcquisitionItem: z.unknown(),
+  acquisitionItem: z.unknown(),
   Product: z.unknown()
 }));

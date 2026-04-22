@@ -3,8 +3,11 @@
 import AcquisitionListRow from "./AcquisitionListRow";
 import type { AcquisitionListItem } from "./types";
 
+
+
 export default function AcquisitionListTable({
     items,
+
 }: {
     items: AcquisitionListItem[];
 }) {

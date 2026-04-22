@@ -135,8 +135,7 @@ export default function AcquisitionListClient(
 
                 <AcquisitionListTable
                     items={props.items}
-                    selectedIds={selectedIds}
-                    onSelectedIdsChange={setSelectedIds}
+
                 />
 
                 <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm text-slate-600">

@@ -27,11 +27,11 @@ export const AcquisitionItemResultSchema = z.object({
     productType: ProductTypeSchema,
     productTitle: z.string(),
     updatedAt: z.date(),
-    Acquisition: z.unknown(),
-    Product: z.unknown().nullable(),
-    OrderItem: z.unknown().nullable(),
+    acquisition: z.unknown(),
+    product: z.unknown().nullable(),
+    orderItem: z.unknown().nullable(),
     ProductVariant: z.unknown().nullable(),
-    AcquisitionSpecJob: z.unknown().nullable()
+    acquisitionSpecJob: z.unknown().nullable()
 }).strict();
 
 export type AcquisitionItemResultType = z.infer<typeof AcquisitionItemResultSchema>;

@@ -145,8 +145,8 @@ export async function postAcquisition(acqId: string, vendorName?: string | null)
                 await maybeCreateTechnicalCheckForPostedWatch(tx, {
                     acqId: acq.refNo ?? acq.id,
                     productId: item.productId,
-                    productSku: item.Product?.sku ?? null,
-                    primaryImageUrl: item.Product?.primaryImageUrl ?? null,
+                    productSku: item.product?.sku ?? null,
+                    primaryImageUrl: item.product?.primaryImageUrl ?? null,
                     needService: Boolean(watchFlags?.needService ?? false),
                 });
             }
@@ -305,4 +305,43 @@ export async function cancelAcquisition(id: string) {
         where: { id },
         data: { accquisitionStt: "CANCELED" as any },
     });
+}
+
+async function enqueueWatchSpecJobsAfterPost(
+    tx: typeof prisma,
+    acquisitionId: string
+) {
+    const items = await tx.acquisitionItem.findMany({
+        where: { acquisitionId },
+        include: {
+            product: true,
+        },
+    });
+
+    for (const item of items) {
+        if (!item.productId) continue;
+        if (item.product?.type !== "WATCH") continue;
+
+        await tx.acquisitionSpecJob.upsert({
+            where: {
+                acquisitionItemId: item.id,
+            },
+            update: {
+                productId: item.productId,
+                status: "PENDING",
+                attempts: 0,
+                lastError: null,
+                runAfter: new Date(),
+                startedAt: null,
+                finishedAt: null,
+            },
+            create: {
+                acquisitionItemId: item.id,
+                productId: item.productId,
+                status: "PENDING",
+                attempts: 0,
+                runAfter: new Date(),
+            },
+        });
+    }
 }

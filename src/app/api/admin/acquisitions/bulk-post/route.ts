@@ -21,12 +21,24 @@ export async function POST(req: NextRequest) {
 
         if (!acquisitionIds.length) {
             return NextResponse.json(
-                { ok: false, error: "Thiếu acquisitionIds" },
+                { ok: false, posted: [], failed: [], error: "Thiếu acquisitionIds" },
                 { status: 400 }
             );
         }
 
         const result = await service.postMultipleAcquisitions(acquisitionIds);
+
+        if (result.failed.length > 0 && result.posted.length === 0) {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    posted: [],
+                    failed: result.failed,
+                    error: result.failed[0]?.error || "Duyệt phiếu thất bại",
+                },
+                { status: 409 }
+            );
+        }
 
         if (result.failed.length > 0) {
             return NextResponse.json(
@@ -47,7 +59,12 @@ export async function POST(req: NextRequest) {
         });
     } catch (e: any) {
         return NextResponse.json(
-            { ok: false, error: e?.message || "Bulk post failed" },
+            {
+                ok: false,
+                posted: [],
+                failed: [],
+                error: e?.message || "Bulk post failed",
+            },
             { status: 500 }
         );
     }

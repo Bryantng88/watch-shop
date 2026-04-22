@@ -16,7 +16,7 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   runAfter: z.boolean().optional(),
   priority: z.boolean().optional(),
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemArgsObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemArgsObjectSchema)]).optional(),
   Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();
 export const AcquisitionSpecJobSelectObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobSelect> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobSelect>;

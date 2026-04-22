@@ -53,4 +53,7 @@ export type AcquisitionListClientProps = {
     totalPages: number;
     counts: AcquisitionListCounts;
     vendors: AcquisitionVendorOption[];
+    selectedIds?: string[];
+    onSelectedIdsChange?: React.Dispatch<React.SetStateAction<string[]>>;
+
 };

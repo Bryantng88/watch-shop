@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { SystemJobControlOrderByWithRelationInputObjectSchema as SystemJobControlOrderByWithRelationInputObjectSchema } from './objects/SystemJobControlOrderByWithRelationInput.schema';
+import { SystemJobControlWhereInputObjectSchema as SystemJobControlWhereInputObjectSchema } from './objects/SystemJobControlWhereInput.schema';
+import { SystemJobControlWhereUniqueInputObjectSchema as SystemJobControlWhereUniqueInputObjectSchema } from './objects/SystemJobControlWhereUniqueInput.schema';
+import { SystemJobControlCountAggregateInputObjectSchema as SystemJobControlCountAggregateInputObjectSchema } from './objects/SystemJobControlCountAggregateInput.schema';
+
+export const SystemJobControlCountSchema: z.ZodType<Prisma.SystemJobControlCountArgs> = z.object({ orderBy: z.union([SystemJobControlOrderByWithRelationInputObjectSchema, SystemJobControlOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobControlWhereInputObjectSchema.optional(), cursor: SystemJobControlWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), SystemJobControlCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.SystemJobControlCountArgs>;
+
+export const SystemJobControlCountZodSchema = z.object({ orderBy: z.union([SystemJobControlOrderByWithRelationInputObjectSchema, SystemJobControlOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobControlWhereInputObjectSchema.optional(), cursor: SystemJobControlWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), SystemJobControlCountAggregateInputObjectSchema ]).optional() }).strict();

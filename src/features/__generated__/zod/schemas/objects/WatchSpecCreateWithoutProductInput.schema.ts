@@ -35,7 +35,7 @@ const makeSchema = () => z.object({
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   sizeCategory: z.string().optional().nullable(),
   ref: z.string().optional().nullable(),
   hasStrap: z.boolean().optional(),

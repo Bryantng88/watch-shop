@@ -1,5 +1,5 @@
 import * as z from 'zod';
 
-export const SystemJobRunLogScalarFieldEnumSchema = z.enum(['id', 'processor_key', 'trigger_source', 'status', 'processed_count', 'error_count', 'note', 'detail', 'started_at', 'finished_at'])
+export const SystemJobRunLogScalarFieldEnumSchema = z.enum(['id', 'processorKey', 'triggerSource', 'status', 'processedCount', 'errorCount', 'note', 'detail', 'startedAt', 'finishedAt'])
 
 export type SystemJobRunLogScalarFieldEnum = z.infer<typeof SystemJobRunLogScalarFieldEnumSchema>;

@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { SystemJobRunLogOrderByWithRelationInputObjectSchema as SystemJobRunLogOrderByWithRelationInputObjectSchema } from './objects/SystemJobRunLogOrderByWithRelationInput.schema';
+import { SystemJobRunLogWhereInputObjectSchema as SystemJobRunLogWhereInputObjectSchema } from './objects/SystemJobRunLogWhereInput.schema';
+import { SystemJobRunLogWhereUniqueInputObjectSchema as SystemJobRunLogWhereUniqueInputObjectSchema } from './objects/SystemJobRunLogWhereUniqueInput.schema';
+import { SystemJobRunLogCountAggregateInputObjectSchema as SystemJobRunLogCountAggregateInputObjectSchema } from './objects/SystemJobRunLogCountAggregateInput.schema';
+import { SystemJobRunLogMinAggregateInputObjectSchema as SystemJobRunLogMinAggregateInputObjectSchema } from './objects/SystemJobRunLogMinAggregateInput.schema';
+import { SystemJobRunLogMaxAggregateInputObjectSchema as SystemJobRunLogMaxAggregateInputObjectSchema } from './objects/SystemJobRunLogMaxAggregateInput.schema';
+import { SystemJobRunLogAvgAggregateInputObjectSchema as SystemJobRunLogAvgAggregateInputObjectSchema } from './objects/SystemJobRunLogAvgAggregateInput.schema';
+import { SystemJobRunLogSumAggregateInputObjectSchema as SystemJobRunLogSumAggregateInputObjectSchema } from './objects/SystemJobRunLogSumAggregateInput.schema';
+
+export const SystemJobRunLogAggregateSchema: z.ZodType<Prisma.SystemJobRunLogAggregateArgs> = z.object({ orderBy: z.union([SystemJobRunLogOrderByWithRelationInputObjectSchema, SystemJobRunLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobRunLogWhereInputObjectSchema.optional(), cursor: SystemJobRunLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), SystemJobRunLogCountAggregateInputObjectSchema ]).optional(), _min: SystemJobRunLogMinAggregateInputObjectSchema.optional(), _max: SystemJobRunLogMaxAggregateInputObjectSchema.optional(), _avg: SystemJobRunLogAvgAggregateInputObjectSchema.optional(), _sum: SystemJobRunLogSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.SystemJobRunLogAggregateArgs>;
+
+export const SystemJobRunLogAggregateZodSchema = z.object({ orderBy: z.union([SystemJobRunLogOrderByWithRelationInputObjectSchema, SystemJobRunLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobRunLogWhereInputObjectSchema.optional(), cursor: SystemJobRunLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), SystemJobRunLogCountAggregateInputObjectSchema ]).optional(), _min: SystemJobRunLogMinAggregateInputObjectSchema.optional(), _max: SystemJobRunLogMaxAggregateInputObjectSchema.optional(), _avg: SystemJobRunLogAvgAggregateInputObjectSchema.optional(), _sum: SystemJobRunLogSumAggregateInputObjectSchema.optional() }).strict();

@@ -38,7 +38,7 @@ const makeSchema = () => z.object({
   productType: z.union([ProductTypeSchema, z.lazy(() => EnumProductTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   productTitle: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  AcquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
+  acquisitionSpecJob: z.lazy(() => AcquisitionSpecJobUncheckedUpdateOneWithoutAcquisitionItemNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionItemUncheckedUpdateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.AcquisitionItemUncheckedUpdateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionItemUncheckedUpdateWithoutOrderItemInput>;
 export const AcquisitionItemUncheckedUpdateWithoutOrderItemInputObjectZodSchema = makeSchema();

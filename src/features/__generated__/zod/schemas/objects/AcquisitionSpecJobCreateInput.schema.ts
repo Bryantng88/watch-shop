@@ -14,7 +14,7 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   runAfter: z.coerce.date().optional().nullable(),
   priority: z.number().int().optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema),
+  acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema),
   Product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema)
 }).strict();
 export const AcquisitionSpecJobCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobCreateInput>;
