@@ -4,7 +4,6 @@ import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { WatchContentOrderByWithRelationInputObjectSchema as WatchContentOrderByWithRelationInputObjectSchema } from './WatchContentOrderByWithRelationInput.schema';
-import { WatchMediaOrderByRelationAggregateInputObjectSchema as WatchMediaOrderByRelationAggregateInputObjectSchema } from './WatchMediaOrderByRelationAggregateInput.schema';
 import { WatchPriceOrderByWithRelationInputObjectSchema as WatchPriceOrderByWithRelationInputObjectSchema } from './WatchPriceOrderByWithRelationInput.schema';
 import { WatchSpecV2OrderByWithRelationInputObjectSchema as WatchSpecV2OrderByWithRelationInputObjectSchema } from './WatchSpecV2OrderByWithRelationInput.schema'
 
@@ -16,8 +15,8 @@ const makeSchema = () => z.object({
   stockState: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   saleState: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   serviceState: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  gender: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
+  gender: SortOrderSchema.optional(),
   conditionGrade: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   movementType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   movementCalibre: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -25,13 +24,12 @@ const makeSchema = () => z.object({
   yearText: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
-  attachedStrapId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  specStatus: SortOrderSchema.optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   watchContent: z.lazy(() => WatchContentOrderByWithRelationInputObjectSchema).optional(),
-  watchMedia: z.lazy(() => WatchMediaOrderByRelationAggregateInputObjectSchema).optional(),
   watchPrice: z.lazy(() => WatchPriceOrderByWithRelationInputObjectSchema).optional(),
   watchSpecV2: z.lazy(() => WatchSpecV2OrderByWithRelationInputObjectSchema).optional()
 }).strict();

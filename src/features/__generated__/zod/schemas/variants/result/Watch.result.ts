@@ -1,8 +1,9 @@
 import * as z from 'zod';
 
-import { GenderSchema } from '../../enums/Gender.schema';
 import { WatchSiteChannelSchema } from '../../enums/WatchSiteChannel.schema';
+import { GenderSchema } from '../../enums/Gender.schema';
 import { MovementTypeSchema } from '../../enums/MovementType.schema';
+import { WatchSpecStatusSchema } from '../../enums/WatchSpecStatus.schema';
 // prettier-ignore
 export const WatchResultSchema = z.object({
     id: z.string(),
@@ -12,8 +13,8 @@ export const WatchResultSchema = z.object({
     stockState: z.string().nullable(),
     saleState: z.string().nullable(),
     serviceState: z.string().nullable(),
-    gender: GenderSchema,
     siteChannel: WatchSiteChannelSchema,
+    gender: GenderSchema,
     conditionGrade: z.string().nullable(),
     movementType: MovementTypeSchema.nullable(),
     movementCalibre: z.string().nullable(),
@@ -21,13 +22,12 @@ export const WatchResultSchema = z.object({
     yearText: z.string().nullable(),
     hasBox: z.boolean(),
     hasPapers: z.boolean(),
-    attachedStrapId: z.string().nullable(),
+    specStatus: WatchSpecStatusSchema,
     notes: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
     product: z.unknown(),
     watchContent: z.unknown().nullable(),
-    watchMedia: z.array(z.unknown()),
     watchPrice: z.unknown().nullable(),
     watchSpecV2: z.unknown().nullable()
 }).strict();

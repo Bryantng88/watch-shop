@@ -8,8 +8,8 @@ const makeSchema = () => z.object({
   enabled: z.literal(true).optional(),
   batchSize: z.literal(true).optional(),
   pausedReason: z.literal(true).optional(),
-  updated_at: z.literal(true).optional(),
-  updated_by: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  updatedBy: z.literal(true).optional()
 }).strict();
 export const SystemJobControlMinAggregateInputObjectSchema: z.ZodType<Prisma.SystemJobControlMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlMinAggregateInputType>;
 export const SystemJobControlMinAggregateInputObjectZodSchema = makeSchema();

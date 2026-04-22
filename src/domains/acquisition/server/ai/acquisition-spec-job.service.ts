@@ -1,14 +1,20 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import {
+    Prisma,
+    CaseType,
+    MovementType,
+    Glass,
+    Strap,
+    WatchCaseMaterialFamily,
+    WatchGoldColorV2,
+} from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { generateAcquisitionSpec } from "./acquisition-ai.service";
-import {
-    mapWatchSpecFromAi,
-    buildProductTitleFromWatchAi,
-} from "./acquisition-spec-mapper";
+import { buildProductTitleFromWatchAi } from "./acquisition-spec-mapper";
 import { resolveBrandFromAcquisitionAi } from "./acquisition-brand-resolver";
 import { genUniqueAcquisitionSku } from "@/domains/acquisition/shared/sku.helper";
+import { computeWatchSpecStatus } from "./watch-spec-status.helper";
 
 type Tx = Prisma.TransactionClient;
 type JsonObject = Record<string, any>;
@@ -41,34 +47,6 @@ function getImageUrlsFromAiMeta(aiMeta: any): string[] {
     return getImageEntriesFromAiMeta(aiMeta)
         .map((item) => item?.url)
         .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
-}
-
-function isPresent(value: unknown) {
-    return value !== null && value !== undefined && value !== "";
-}
-
-function hasMeaningfulSpec(spec: Record<string, unknown>) {
-    return Object.values(spec).some(isPresent);
-}
-
-function omitNullish<T extends Record<string, unknown>>(obj: T): Partial<T> {
-    return Object.fromEntries(
-        Object.entries(obj).filter(([, value]) => value !== null && value !== undefined)
-    ) as Partial<T>;
-}
-
-function buildSafeWatchSpecCreate(productId: string, spec: Record<string, unknown>) {
-    return {
-        productId,
-        ...omitNullish(spec),
-        updatedAt: new Date(),
-    };
-}
-
-function buildSafeWatchSpecUpdate(spec: Record<string, unknown>) {
-    return {
-        ...omitNullish(spec),
-    };
 }
 
 async function persistAiDraftToItem(
@@ -112,6 +90,114 @@ function shouldRefreshSku(input: {
     return /^WAT-\d{4}-\d{4}$/i.test(sku) || /^PRD-\d{4}-\d{4}$/i.test(sku);
 }
 
+function s(value: unknown) {
+    const text = String(value ?? "").trim();
+    return text || null;
+}
+
+function decimalOrNull(value: unknown) {
+    if (value == null || value === "") return null;
+    const num = Number(value);
+    if (!Number.isFinite(num)) return null;
+    return new Prisma.Decimal(num);
+}
+
+function mapCaseShape(value: unknown): CaseType | undefined {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "ROUND":
+        case "TANK":
+        case "SQUARE":
+        case "TONNEAU":
+        case "CUSHION":
+        case "OVAL":
+        case "ASYMMETRICAL":
+        case "OCTAGON":
+        case "POLYGON":
+        case "SPECIAL":
+            return text as CaseType;
+        default:
+            return undefined;
+    }
+}
+
+function mapMovementType(value: unknown): MovementType | undefined {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "AUTOMATIC":
+        case "HAND_WOUND":
+        case "QUARTZ":
+        case "SOLAR":
+        case "KINETIC":
+        case "MECHAQUARTZ":
+        case "SPRING_DRIVE":
+        case "HYBRID":
+            return text as MovementType;
+        default:
+            return undefined;
+    }
+}
+
+function mapGlass(value: unknown): Glass | undefined {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "SAPPHIRE":
+        case "ACRYLIC":
+        case "MINERAL":
+        case "HARDLEX":
+        case "AR_COATED":
+            return text as Glass;
+        default:
+            return undefined;
+    }
+}
+
+function mapBraceletType(value: unknown): Strap | undefined {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "LEATHER":
+        case "BRACELET":
+        case "RUBBER":
+        case "NATO":
+        case "CANVASS":
+        case "SPECIAL":
+            return text as Strap;
+        default:
+            return undefined;
+    }
+}
+
+function mapPrimaryCaseMaterial(value: unknown): WatchCaseMaterialFamily {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "STAINLESS_STEEL":
+        case "TITANIUM":
+        case "CERAMIC":
+        case "CARBON":
+        case "GOLD":
+        case "PLATINUM":
+        case "SILVER":
+        case "BRASS":
+            return text as WatchCaseMaterialFamily;
+        default:
+            return "OTHER";
+    }
+}
+
+function mapGoldColors(value: unknown): WatchGoldColorV2[] | undefined {
+    const text = s(value)?.toUpperCase();
+    switch (text) {
+        case "YELLOW":
+            return ["YELLOW"];
+        case "WHITE":
+            return ["WHITE"];
+        case "ROSE":
+            return ["ROSE"];
+        default:
+            return undefined;
+    }
+}
+
 export async function enqueueAcquisitionSpecJob(
     tx: Tx,
     input: {
@@ -153,6 +239,11 @@ export async function processAcquisitionSpecJob(
             product: {
                 include: {
                     brand: true,
+                    watch: {
+                        include: {
+                            watchSpecV2: true,
+                        },
+                    },
                 },
             },
         },
@@ -194,21 +285,23 @@ export async function processAcquisitionSpecJob(
         throw new Error("AI did not return extractedSpec");
     }
 
+    const ex = ai.extractedSpec;
+
     const resolvedBrand =
         item.product.brand ??
         (await resolveBrandFromAcquisitionAi(tx as any, {
             titleHint: item.productTitle ?? item.product.title,
             aiHint: currentAiMeta?.aiHint ?? null,
-            extractedSpec: ai.extractedSpec,
+            extractedSpec: ex,
         }));
 
     const resolvedBrandName =
         resolvedBrand?.name ??
         item.product.brand?.name ??
-        ai?.extractedSpec?.confirmedFacts?.brandName ??
-        ai?.extractedSpec?.brandName ??
-        ai?.extractedSpec?.suggestedFacts?.probableBrand ??
-        ai?.extractedSpec?.probableVisualFacts?.probableBrand ??
+        ex?.confirmedFacts?.brandName ??
+        ex?.brandName ??
+        ex?.suggestedFacts?.probableBrand ??
+        ex?.probableVisualFacts?.probableBrand ??
         null;
 
     await persistAiDraftToItem(tx, item.id, item.description, {
@@ -216,6 +309,17 @@ export async function processAcquisitionSpecJob(
         images: imageEntries,
         ai,
     });
+
+    const watch =
+        item.product.watch ??
+        (await tx.watch.findUnique({
+            where: { productId: item.productId },
+            include: { watchSpecV2: true },
+        }));
+
+    if (!watch) {
+        throw new Error("Watch not found for product");
+    }
 
     const nextSku = shouldRefreshSku({
         productType: item.product.type,
@@ -229,16 +333,62 @@ export async function processAcquisitionSpecJob(
         })
         : undefined;
 
-    const mappedSpec = mapWatchSpecFromAi(ai.extractedSpec);
+    const mappedMovementType =
+        mapMovementType(ex?.movement) ??
+        mapMovementType(ex?.probableVisualFacts?.movement);
+
+    const mappedCaseShape =
+        mapCaseShape(ex?.caseType) ??
+        mapCaseShape(ex?.probableVisualFacts?.caseType);
+
+    const mappedCrystal =
+        mapGlass(ex?.glass) ??
+        mapGlass(ex?.probableVisualFacts?.glass);
+
+    const mappedBraceletType = mapBraceletType(
+        (ex as any)?.braceletType ??
+        (ex as any)?.strap ??
+        ex?.probableVisualFacts?.strap
+    );
+
+    const mappedPrimaryCaseMaterial = mapPrimaryCaseMaterial(
+        ex?.caseMaterial ?? ex?.probableVisualFacts?.caseMaterial
+    );
+
+    const mappedGoldColors = mapGoldColors((ex as any)?.goldColor);
+
+    const inferredCaseSize =
+        decimalOrNull(ex?.widthEstimateMm) ??
+        decimalOrNull(ex?.probableVisualFacts?.widthEstimateMm);
+
+    const inferredThickness = decimalOrNull((ex as any)?.thicknessMm);
+    const inferredYearText = s(ex?.yearEstimate);
+    const inferredCalibre = s(ex?.bestCaliberCandidate);
+    const inferredReference = s(ex?.bestRefCandidate);
+    const inferredModel = s(ex?.modelFamily);
+    const inferredDialColor =
+        s(ex?.dialColor) ?? s(ex?.probableVisualFacts?.dialColor);
+
+    const specStatus = computeWatchSpecStatus({
+        brand: resolvedBrandName,
+        model: inferredModel,
+        referenceNumber: inferredReference,
+        movementType: mappedMovementType ?? null,
+        calibre: inferredCalibre,
+        dialColor: inferredDialColor,
+        caseSizeMM: inferredCaseSize,
+    });
+
+    const watchTitle = buildProductTitleFromWatchAi({
+        brand: resolvedBrandName,
+        extractedSpec: ex,
+        fallback: item.productTitle ?? item.product.title,
+    });
 
     await tx.product.update({
         where: { id: item.productId },
         data: {
-            title: buildProductTitleFromWatchAi({
-                brand: resolvedBrandName,
-                extractedSpec: ai.extractedSpec,
-                fallback: item.productTitle ?? item.product.title,
-            }),
+            title: watchTitle,
             ...(resolvedBrand && !item.product.brandId
                 ? { brandId: resolvedBrand.id }
                 : {}),
@@ -246,13 +396,78 @@ export async function processAcquisitionSpecJob(
         },
     });
 
-    if (hasMeaningfulSpec(mappedSpec)) {
-        await tx.watchSpec.upsert({
-            where: { productId: item.productId },
-            create: buildSafeWatchSpecCreate(item.productId, mappedSpec),
-            update: buildSafeWatchSpecUpdate(mappedSpec),
-        });
-    }
+    await tx.watch.update({
+        where: { productId: item.productId },
+        data: {
+            movementType: mappedMovementType,
+            movementCalibre: inferredCalibre ?? undefined,
+            yearText: inferredYearText ?? undefined,
+            hasBox:
+                typeof (ex as any)?.boxIncluded === "boolean"
+                    ? Boolean((ex as any).boxIncluded)
+                    : watch.hasBox,
+            hasPapers:
+                typeof (ex as any)?.bookletIncluded === "boolean" ||
+                    typeof (ex as any)?.cardIncluded === "boolean"
+                    ? Boolean((ex as any)?.bookletIncluded || (ex as any)?.cardIncluded)
+                    : watch.hasPapers,
+            specStatus,
+            updatedAt: new Date(),
+        },
+    });
+
+    await tx.watchSpecV2.upsert({
+        where: { watchId: watch.id },
+        create: {
+            watchId: watch.id,
+            brand: resolvedBrandName ?? null,
+            model: inferredModel,
+            referenceNumber: inferredReference,
+            caseShape: mappedCaseShape,
+            caseSizeMM: inferredCaseSize,
+            thicknessMM: inferredThickness,
+            primaryCaseMaterial: mappedPrimaryCaseMaterial,
+            goldKarat:
+                (ex as any)?.goldKarat != null ? Number((ex as any).goldKarat) : null,
+            goldColors: mappedGoldColors ?? [],
+            dialColor: inferredDialColor,
+            crystal: mappedCrystal,
+            movementType: mappedMovementType,
+            calibre: inferredCalibre,
+            braceletType: mappedBraceletType,
+            bookletIncluded: Boolean((ex as any)?.bookletIncluded),
+            cardIncluded: Boolean((ex as any)?.cardIncluded),
+            rawSpecJson: ex ?? {},
+            updatedAt: new Date(),
+        },
+        update: {
+            brand: resolvedBrandName ?? undefined,
+            model: inferredModel ?? undefined,
+            referenceNumber: inferredReference ?? undefined,
+            caseShape: mappedCaseShape,
+            caseSizeMM: inferredCaseSize ?? undefined,
+            thicknessMM: inferredThickness ?? undefined,
+            primaryCaseMaterial: mappedPrimaryCaseMaterial,
+            goldKarat:
+                (ex as any)?.goldKarat != null ? Number((ex as any).goldKarat) : undefined,
+            goldColors: mappedGoldColors ?? undefined,
+            dialColor: inferredDialColor ?? undefined,
+            crystal: mappedCrystal,
+            movementType: mappedMovementType,
+            calibre: inferredCalibre ?? undefined,
+            braceletType: mappedBraceletType,
+            bookletIncluded:
+                typeof (ex as any)?.bookletIncluded === "boolean"
+                    ? Boolean((ex as any).bookletIncluded)
+                    : undefined,
+            cardIncluded:
+                typeof (ex as any)?.cardIncluded === "boolean"
+                    ? Boolean((ex as any).cardIncluded)
+                    : undefined,
+            rawSpecJson: ex ?? undefined,
+            updatedAt: new Date(),
+        },
+    });
 
     await tx.acquisitionSpecJob.update({
         where: { acquisitionItemId: item.id },
@@ -271,6 +486,11 @@ export async function failAcquisitionSpecJob(
         errorMessage: string;
     }
 ) {
+    const job = await tx.acquisitionSpecJob.findUnique({
+        where: { acquisitionItemId: input.acquisitionItemId },
+        select: { productId: true },
+    });
+
     await tx.acquisitionSpecJob.update({
         where: { acquisitionItemId: input.acquisitionItemId },
         data: {
@@ -280,8 +500,17 @@ export async function failAcquisitionSpecJob(
             runAfter: new Date(Date.now() + 5 * 60 * 1000),
         },
     });
-}
 
+    if (job?.productId) {
+        await tx.watch.updateMany({
+            where: { productId: job.productId },
+            data: {
+                specStatus: "FAILED",
+                updatedAt: new Date(),
+            },
+        });
+    }
+}
 
 export async function claimQueuedAcquisitionSpecJobs(input?: {
     limit?: number;
@@ -290,7 +519,7 @@ export async function claimQueuedAcquisitionSpecJobs(input?: {
     const limit = Math.max(1, Math.min(Number(input?.limit ?? 3), 10));
     const includeFailed = Boolean(input?.includeFailed);
 
-    const jobs = await prisma.acquisitionSpecJob.findMany({
+    return prisma.acquisitionSpecJob.findMany({
         where: {
             status: includeFailed
                 ? { in: ["PENDING", "FAILED"] }
@@ -302,8 +531,6 @@ export async function claimQueuedAcquisitionSpecJobs(input?: {
         orderBy: [{ runAfter: "asc" }, { createdAt: "asc" }],
         take: limit,
     });
-
-    return jobs;
 }
 
 export async function processQueuedAcquisitionSpecJobs(input?: {

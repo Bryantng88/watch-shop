@@ -11,7 +11,7 @@ export const NotificationFindManyResultSchema = z.object({
   metadata: z.unknown().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date(),
-  User: z.unknown()
+  user: z.unknown()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

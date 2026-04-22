@@ -8,8 +8,8 @@ export const SystemJobControlInputSchema = z.object({
     batchSize: z.number().int(),
     pausedReason: z.string().optional().nullable(),
     metadata: z.unknown().optional().nullable(),
-    updated_at: z.date(),
-    updated_by: z.string().optional().nullable()
+    updatedAt: z.date(),
+    updatedBy: z.string().optional().nullable()
 }).strict();
 
 export type SystemJobControlInputType = z.infer<typeof SystemJobControlInputSchema>;

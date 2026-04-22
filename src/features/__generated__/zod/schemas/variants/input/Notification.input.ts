@@ -12,7 +12,7 @@ export const NotificationInputSchema = z.object({
     metadata: z.unknown().optional().nullable(),
     createdAt: z.date().optional().nullable(),
     updatedAt: z.date(),
-    User: z.unknown()
+    user: z.unknown()
 }).strict();
 
 export type NotificationInputType = z.infer<typeof NotificationInputSchema>;

@@ -8,8 +8,8 @@ const makeSchema = () => z.object({
   enabled: SortOrderSchema.optional(),
   batchSize: SortOrderSchema.optional(),
   pausedReason: SortOrderSchema.optional(),
-  updated_at: SortOrderSchema.optional(),
-  updated_by: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  updatedBy: SortOrderSchema.optional()
 }).strict();
 export const SystemJobControlMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.SystemJobControlMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlMaxOrderByAggregateInput>;
 export const SystemJobControlMaxOrderByAggregateInputObjectZodSchema = makeSchema();

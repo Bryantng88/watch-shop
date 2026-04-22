@@ -40,7 +40,6 @@ export { PermissionModelSchema } from './Permission.pure';
 export { VendorModelSchema } from './Vendor.pure';
 export { WatchModelSchema } from './Watch.pure';
 export { WatchContentModelSchema } from './WatchContent.pure';
-export { WatchMediaModelSchema } from './WatchMedia.pure';
 export { WatchPriceModelSchema } from './WatchPrice.pure';
 export { WatchSpecModelSchema } from './WatchSpec.pure';
 export { WatchSpecV2ModelSchema } from './WatchSpecV2.pure';

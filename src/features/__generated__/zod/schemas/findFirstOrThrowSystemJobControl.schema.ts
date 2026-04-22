@@ -15,8 +15,8 @@ export const SystemJobControlFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Syst
     batchSize: z.boolean().optional(),
     pausedReason: z.boolean().optional(),
     metadata: z.boolean().optional(),
-    updated_at: z.boolean().optional(),
-    updated_by: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    updatedBy: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.SystemJobControlSelect>;
 
 export const SystemJobControlFindFirstOrThrowSelectZodSchema = z.object({
@@ -26,8 +26,8 @@ export const SystemJobControlFindFirstOrThrowSelectZodSchema = z.object({
     batchSize: z.boolean().optional(),
     pausedReason: z.boolean().optional(),
     metadata: z.boolean().optional(),
-    updated_at: z.boolean().optional(),
-    updated_by: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    updatedBy: z.boolean().optional()
   }).strict();
 
 export const SystemJobControlFindFirstOrThrowSchema: z.ZodType<Prisma.SystemJobControlFindFirstOrThrowArgs> = z.object({ select: SystemJobControlFindFirstOrThrowSelectSchema.optional(),  orderBy: z.union([SystemJobControlOrderByWithRelationInputObjectSchema, SystemJobControlOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobControlWhereInputObjectSchema.optional(), cursor: SystemJobControlWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([SystemJobControlScalarFieldEnumSchema, SystemJobControlScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.SystemJobControlFindFirstOrThrowArgs>;

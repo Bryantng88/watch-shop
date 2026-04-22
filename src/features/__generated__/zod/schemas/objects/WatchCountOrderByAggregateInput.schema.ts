@@ -10,8 +10,8 @@ const makeSchema = () => z.object({
   stockState: SortOrderSchema.optional(),
   saleState: SortOrderSchema.optional(),
   serviceState: SortOrderSchema.optional(),
-  gender: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
+  gender: SortOrderSchema.optional(),
   conditionGrade: SortOrderSchema.optional(),
   movementType: SortOrderSchema.optional(),
   movementCalibre: SortOrderSchema.optional(),
@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   yearText: SortOrderSchema.optional(),
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
-  attachedStrapId: SortOrderSchema.optional(),
+  specStatus: SortOrderSchema.optional(),
   notes: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()

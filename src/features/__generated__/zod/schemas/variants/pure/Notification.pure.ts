@@ -12,7 +12,7 @@ export const NotificationModelSchema = z.object({
     metadata: z.unknown().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date(),
-    User: z.unknown()
+    user: z.unknown()
 }).strict();
 
 export type NotificationPureType = z.infer<typeof NotificationModelSchema>;

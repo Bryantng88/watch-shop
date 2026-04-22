@@ -55,7 +55,6 @@ const makeSchema = () => z.object({
   braceletType: z.union([StrapSchema, z.lazy(() => NullableEnumStrapFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   strapMaterialText: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   buckleType: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  boxIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   bookletIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   cardIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),

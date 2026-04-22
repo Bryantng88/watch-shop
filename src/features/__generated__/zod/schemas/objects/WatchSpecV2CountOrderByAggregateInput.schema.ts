@@ -31,7 +31,6 @@ const makeSchema = () => z.object({
   braceletType: SortOrderSchema.optional(),
   strapMaterialText: SortOrderSchema.optional(),
   buckleType: SortOrderSchema.optional(),
-  boxIncluded: SortOrderSchema.optional(),
   bookletIncluded: SortOrderSchema.optional(),
   cardIncluded: SortOrderSchema.optional(),
   featuresJson: SortOrderSchema.optional(),

@@ -6,8 +6,8 @@ export const SystemJobControlAggregateResultSchema = z.object({  _count: z.objec
     batchSize: z.number(),
     pausedReason: z.number(),
     metadata: z.number(),
-    updated_at: z.number(),
-    updated_by: z.number()
+    updatedAt: z.number(),
+    updatedBy: z.number()
   }).optional(),
   _sum: z.object({
     batchSize: z.number().nullable()
@@ -20,14 +20,14 @@ export const SystemJobControlAggregateResultSchema = z.object({  _count: z.objec
     label: z.string().nullable(),
     batchSize: z.number().int().nullable(),
     pausedReason: z.string().nullable(),
-    updated_at: z.date().nullable(),
-    updated_by: z.string().nullable()
+    updatedAt: z.date().nullable(),
+    updatedBy: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     key: z.string().nullable(),
     label: z.string().nullable(),
     batchSize: z.number().int().nullable(),
     pausedReason: z.string().nullable(),
-    updated_at: z.date().nullable(),
-    updated_by: z.string().nullable()
+    updatedAt: z.date().nullable(),
+    updatedBy: z.string().nullable()
   }).nullable().optional()});

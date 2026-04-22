@@ -57,7 +57,6 @@ export async function upsertWatchSpecRepo(
       strapMaterialText: input.strapMaterialText ?? null,
       buckleType: input.buckleType ?? null,
 
-      boxIncluded: input.boxIncluded ?? false,
       bookletIncluded: input.bookletIncluded ?? false,
       cardIncluded: input.cardIncluded ?? false,
 
@@ -131,9 +130,7 @@ export async function upsertWatchSpecRepo(
         ? { buckleType: input.buckleType }
         : {}),
 
-      ...(input.boxIncluded !== undefined
-        ? { boxIncluded: input.boxIncluded }
-        : {}),
+
       ...(input.bookletIncluded !== undefined
         ? { bookletIncluded: input.bookletIncluded }
         : {}),

@@ -17,8 +17,8 @@ export const WatchFindManySelectSchema: z.ZodType<Prisma.WatchSelect> = z.object
     stockState: z.boolean().optional(),
     saleState: z.boolean().optional(),
     serviceState: z.boolean().optional(),
-    gender: z.boolean().optional(),
     siteChannel: z.boolean().optional(),
+    gender: z.boolean().optional(),
     conditionGrade: z.boolean().optional(),
     movementType: z.boolean().optional(),
     movementCalibre: z.boolean().optional(),
@@ -26,16 +26,14 @@ export const WatchFindManySelectSchema: z.ZodType<Prisma.WatchSelect> = z.object
     yearText: z.boolean().optional(),
     hasBox: z.boolean().optional(),
     hasPapers: z.boolean().optional(),
-    attachedStrapId: z.boolean().optional(),
+    specStatus: z.boolean().optional(),
     notes: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     product: z.boolean().optional(),
     watchContent: z.boolean().optional(),
-    watchMedia: z.boolean().optional(),
     watchPrice: z.boolean().optional(),
-    watchSpecV2: z.boolean().optional(),
-    _count: z.boolean().optional()
+    watchSpecV2: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WatchSelect>;
 
 export const WatchFindManySelectZodSchema = z.object({
@@ -46,8 +44,8 @@ export const WatchFindManySelectZodSchema = z.object({
     stockState: z.boolean().optional(),
     saleState: z.boolean().optional(),
     serviceState: z.boolean().optional(),
-    gender: z.boolean().optional(),
     siteChannel: z.boolean().optional(),
+    gender: z.boolean().optional(),
     conditionGrade: z.boolean().optional(),
     movementType: z.boolean().optional(),
     movementCalibre: z.boolean().optional(),
@@ -55,16 +53,14 @@ export const WatchFindManySelectZodSchema = z.object({
     yearText: z.boolean().optional(),
     hasBox: z.boolean().optional(),
     hasPapers: z.boolean().optional(),
-    attachedStrapId: z.boolean().optional(),
+    specStatus: z.boolean().optional(),
     notes: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     product: z.boolean().optional(),
     watchContent: z.boolean().optional(),
-    watchMedia: z.boolean().optional(),
     watchPrice: z.boolean().optional(),
-    watchSpecV2: z.boolean().optional(),
-    _count: z.boolean().optional()
+    watchSpecV2: z.boolean().optional()
   }).strict();
 
 export const WatchFindManySchema: z.ZodType<Prisma.WatchFindManyArgs> = z.object({ select: WatchFindManySelectSchema.optional(), include: WatchIncludeObjectSchema.optional(), orderBy: z.union([WatchOrderByWithRelationInputObjectSchema, WatchOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchWhereInputObjectSchema.optional(), cursor: WatchWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([WatchScalarFieldEnumSchema, WatchScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.WatchFindManyArgs>;

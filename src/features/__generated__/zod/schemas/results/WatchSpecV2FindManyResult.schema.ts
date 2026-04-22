@@ -29,7 +29,6 @@ export const WatchSpecV2FindManyResultSchema = z.object({
   braceletType: z.unknown().optional(),
   strapMaterialText: z.string().optional(),
   buckleType: z.string().optional(),
-  boxIncluded: z.boolean(),
   bookletIncluded: z.boolean(),
   cardIncluded: z.boolean(),
   featuresJson: z.unknown().optional(),

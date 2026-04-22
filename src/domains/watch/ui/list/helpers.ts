@@ -105,9 +105,9 @@ export function mapWatchRow(row: any): WatchRow {
             row?.vendor?.name ??
             null,
 
-        imageUrl: mapWatchImage(row), // chỉ lấy INLINE
-        imagesCount,                  // chỉ đếm GALLERY
-        hasImages,                    // readiness image = có GALLERY
+        imageUrl: mapWatchImage(row),
+        imagesCount,
+        hasImages,
         hasContent,
 
         serviceState: row?.serviceState ?? null,
@@ -128,6 +128,8 @@ export function mapWatchRow(row: any): WatchRow {
         contentReady: hasContent,
         imageReady: hasImages,
         serviceReady: !row?.serviceRequest || row?.serviceState === "DONE",
+
+        specStatus: row?.specStatus ?? "PENDING",
     };
 }
 
@@ -145,11 +147,30 @@ export function buildCounts(
     };
 }
 
-export function formatRelativeStatus(row: WatchRow) {
-    if (row.saleState === "READY") return "Sẵn sàng bán";
-    if (row.saleState === "HOLD") return "Đang giữ";
-    if (row.saleState === "SOLD") return "Đã bán";
-    return "Đang hoàn thiện";
+export function specStatusText(row: WatchRow) {
+    switch (row.specStatus) {
+        case "READY":
+            return "Spec sẵn sàng";
+        case "PARTIAL":
+            return "Thiếu spec";
+        case "FAILED":
+            return "Spec lỗi";
+        default:
+            return "Chưa có spec";
+    }
+}
+
+export function specStatusTone(row: WatchRow) {
+    switch (row.specStatus) {
+        case "READY":
+            return "text-emerald-600";
+        case "PARTIAL":
+            return "text-amber-600";
+        case "FAILED":
+            return "text-rose-500";
+        default:
+            return "text-slate-500";
+    }
 }
 
 export function contentStatusText(row: WatchRow) {

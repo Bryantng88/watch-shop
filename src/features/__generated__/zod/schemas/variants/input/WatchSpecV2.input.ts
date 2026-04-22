@@ -38,7 +38,6 @@ export const WatchSpecV2InputSchema = z.object({
     braceletType: StrapSchema.optional().nullable(),
     strapMaterialText: z.string().optional().nullable(),
     buckleType: z.string().optional().nullable(),
-    boxIncluded: z.boolean(),
     bookletIncluded: z.boolean(),
     cardIncluded: z.boolean(),
     featuresJson: z.unknown().optional().nullable(),

@@ -17,8 +17,8 @@ const systemjobcontrolscalarwherewithaggregatesinputSchema = z.object({
   batchSize: z.union([z.lazy(() => IntWithAggregatesFilterObjectSchema), z.number().int()]).optional(),
   pausedReason: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   metadata: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),
-  updated_at: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updated_by: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  updatedBy: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const SystemJobControlScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.SystemJobControlScalarWhereWithAggregatesInput> = systemjobcontrolscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.SystemJobControlScalarWhereWithAggregatesInput>;
 export const SystemJobControlScalarWhereWithAggregatesInputObjectZodSchema = systemjobcontrolscalarwherewithaggregatesinputSchema;

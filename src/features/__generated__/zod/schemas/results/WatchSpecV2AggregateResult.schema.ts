@@ -28,7 +28,6 @@ export const WatchSpecV2AggregateResultSchema = z.object({  _count: z.object({
     braceletType: z.number(),
     strapMaterialText: z.number(),
     buckleType: z.number(),
-    boxIncluded: z.number(),
     bookletIncluded: z.number(),
     cardIncluded: z.number(),
     featuresJson: z.number(),

@@ -10,8 +10,8 @@ const makeSchema = () => z.object({
   batchSize: SortOrderSchema.optional(),
   pausedReason: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  updated_at: SortOrderSchema.optional(),
-  updated_by: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional()
+  updatedAt: SortOrderSchema.optional(),
+  updatedBy: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional()
 }).strict();
 export const SystemJobControlOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.SystemJobControlOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlOrderByWithRelationInput>;
 export const SystemJobControlOrderByWithRelationInputObjectZodSchema = makeSchema();

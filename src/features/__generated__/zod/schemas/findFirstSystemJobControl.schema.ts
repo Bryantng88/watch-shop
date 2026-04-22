@@ -15,8 +15,8 @@ export const SystemJobControlFindFirstSelectSchema: z.ZodType<Prisma.SystemJobCo
     batchSize: z.boolean().optional(),
     pausedReason: z.boolean().optional(),
     metadata: z.boolean().optional(),
-    updated_at: z.boolean().optional(),
-    updated_by: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    updatedBy: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.SystemJobControlSelect>;
 
 export const SystemJobControlFindFirstSelectZodSchema = z.object({
@@ -26,8 +26,8 @@ export const SystemJobControlFindFirstSelectZodSchema = z.object({
     batchSize: z.boolean().optional(),
     pausedReason: z.boolean().optional(),
     metadata: z.boolean().optional(),
-    updated_at: z.boolean().optional(),
-    updated_by: z.boolean().optional()
+    updatedAt: z.boolean().optional(),
+    updatedBy: z.boolean().optional()
   }).strict();
 
 export const SystemJobControlFindFirstSchema: z.ZodType<Prisma.SystemJobControlFindFirstArgs> = z.object({ select: SystemJobControlFindFirstSelectSchema.optional(),  orderBy: z.union([SystemJobControlOrderByWithRelationInputObjectSchema, SystemJobControlOrderByWithRelationInputObjectSchema.array()]).optional(), where: SystemJobControlWhereInputObjectSchema.optional(), cursor: SystemJobControlWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([SystemJobControlScalarFieldEnumSchema, SystemJobControlScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.SystemJobControlFindFirstArgs>;

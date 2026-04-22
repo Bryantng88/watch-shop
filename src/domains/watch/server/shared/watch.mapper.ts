@@ -1,4 +1,4 @@
-import type { Prisma } from "@/prisma/client";
+import { Prisma } from "@prisma/client";
 import type { WatchDetailModel, WatchListComputedItem } from "./watch.types";
 
 function decimalToString(value: Prisma.Decimal | null | undefined) {
@@ -130,6 +130,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             yearText: row.yearText ?? null,
             hasBox: row.hasBox,
             hasPapers: row.hasPapers,
+            specStatus: row.specStatus ?? "PENDING",
             notes: row.notes ?? null,
             conditionGrade: row.conditionGrade ?? null,
             serialNumber: row.serialNumber ?? null,
@@ -156,7 +157,6 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 crystal: row.watchSpecV2.crystal ?? null,
                 calibre: row.watchSpecV2.calibre ?? null,
                 braceletType: row.watchSpecV2.braceletType ?? null,
-                boxIncluded: row.watchSpecV2.boxIncluded ?? null,
                 bookletIncluded: row.watchSpecV2.bookletIncluded ?? null,
                 cardIncluded: row.watchSpecV2.cardIncluded ?? null,
             }

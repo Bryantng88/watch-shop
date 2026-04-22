@@ -33,7 +33,6 @@ const makeSchema = () => z.object({
   braceletType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   strapMaterialText: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   buckleType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  boxIncluded: SortOrderSchema.optional(),
   bookletIncluded: SortOrderSchema.optional(),
   cardIncluded: SortOrderSchema.optional(),
   featuresJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

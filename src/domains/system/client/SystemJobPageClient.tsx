@@ -59,7 +59,7 @@ export default function SystemJobsPageClient() {
     const [busyKey, setBusyKey] = useState<string | null>(null);
 
     async function loadControls() {
-        const res = await fetch("/api/admin/system-job-controls", {
+        const res = await fetch("/api/admin/jobs/system-job-controls", {
             cache: "no-store",
         });
         const data = await res.json().catch(() => null);
@@ -73,7 +73,7 @@ export default function SystemJobsPageClient() {
     }
 
     async function loadLogs() {
-        const res = await fetch("/api/admin/system-job-logs", {
+        const res = await fetch("/api/admin/jobs/system-job-logs", {
             cache: "no-store",
         });
         const data = await res.json().catch(() => null);
@@ -118,7 +118,7 @@ export default function SystemJobsPageClient() {
         setBusyKey(control.key);
 
         try {
-            const res = await fetch(`/api/admin/system-job-controls/${control.key}`, {
+            const res = await fetch(`/api/admin/jobs/system-job-controls/${control.key}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -157,7 +157,7 @@ export default function SystemJobsPageClient() {
         setBusyKey(control.key);
 
         try {
-            const res = await fetch(`/api/admin/system-job-controls/${control.key}`, {
+            const res = await fetch(`/api/admin/jobs/system-job-controls/${control.key}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -194,7 +194,7 @@ export default function SystemJobsPageClient() {
         });
 
         try {
-            const res = await fetch("/api/admin/system-jobs/run-now", {
+            const res = await fetch("/api/admin/jobs/system-jobs/run-now", {
                 method: "POST",
             });
 
@@ -229,7 +229,7 @@ export default function SystemJobsPageClient() {
         });
 
         try {
-            const res = await fetch("/api/admin/system-jobs/run-acquisition-spec", {
+            const res = await fetch("/api/admin/jobs/system-jobs/run-acquisition-spec", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

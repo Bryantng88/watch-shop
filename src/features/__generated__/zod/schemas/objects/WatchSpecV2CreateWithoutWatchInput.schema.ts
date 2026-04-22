@@ -41,7 +41,6 @@ const makeSchema = () => z.object({
   braceletType: StrapSchema.optional().nullable(),
   strapMaterialText: z.string().optional().nullable(),
   buckleType: z.string().optional().nullable(),
-  boxIncluded: z.boolean().optional(),
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),

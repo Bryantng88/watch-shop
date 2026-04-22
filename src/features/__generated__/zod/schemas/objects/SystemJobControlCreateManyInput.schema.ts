@@ -11,8 +11,8 @@ const makeSchema = () => z.object({
   batchSize: z.number().int().optional(),
   pausedReason: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  updated_at: z.coerce.date().optional(),
-  updated_by: z.string().optional().nullable()
+  updatedAt: z.coerce.date().optional(),
+  updatedBy: z.string().optional().nullable()
 }).strict();
 export const SystemJobControlCreateManyInputObjectSchema: z.ZodType<Prisma.SystemJobControlCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlCreateManyInput>;
 export const SystemJobControlCreateManyInputObjectZodSchema = makeSchema();

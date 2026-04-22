@@ -9,8 +9,8 @@ const makeSchema = () => z.object({
   batchSize: z.boolean().optional(),
   pausedReason: z.boolean().optional(),
   metadata: z.boolean().optional(),
-  updated_at: z.boolean().optional(),
-  updated_by: z.boolean().optional()
+  updatedAt: z.boolean().optional(),
+  updatedBy: z.boolean().optional()
 }).strict();
 export const SystemJobControlSelectObjectSchema: z.ZodType<Prisma.SystemJobControlSelect> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlSelect>;
 export const SystemJobControlSelectObjectZodSchema = makeSchema();

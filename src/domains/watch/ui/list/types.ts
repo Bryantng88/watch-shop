@@ -56,6 +56,8 @@ export type WatchRow = {
     contentReady: boolean;
     imageReady: boolean;
     serviceReady: boolean;
+
+    specStatus?: "PENDING" | "PARTIAL" | "READY" | "FAILED" | null;
 };
 
 export type WatchListResult = {

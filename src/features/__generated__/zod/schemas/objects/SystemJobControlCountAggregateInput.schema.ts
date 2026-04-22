@@ -9,8 +9,8 @@ const makeSchema = () => z.object({
   batchSize: z.literal(true).optional(),
   pausedReason: z.literal(true).optional(),
   metadata: z.literal(true).optional(),
-  updated_at: z.literal(true).optional(),
-  updated_by: z.literal(true).optional(),
+  updatedAt: z.literal(true).optional(),
+  updatedBy: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const SystemJobControlCountAggregateInputObjectSchema: z.ZodType<Prisma.SystemJobControlCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlCountAggregateInputType>;

@@ -17,9 +17,10 @@ import type { WatchRow } from "./types";
 import {
     contentStatusText,
     formatMoney,
-    formatRelativeStatus,
     imageStatusText,
     serviceStatusText,
+    specStatusText,
+    specStatusTone,
 } from "./helpers";
 
 type Props = {
@@ -235,8 +236,8 @@ export default function WatchListRow({
                             SKU: {product.sku || "-"}
                         </div>
 
-                        <div className="pt-1 text-sm text-slate-600">
-                            {formatRelativeStatus(product)}
+                        <div className={`mt-1 text-xs font-medium ${specStatusTone(product)}`}>
+                            {specStatusText(product)}
                         </div>
                     </div>
                 </div>

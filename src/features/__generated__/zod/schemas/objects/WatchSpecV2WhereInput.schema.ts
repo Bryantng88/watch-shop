@@ -58,7 +58,6 @@ const watchspecv2whereinputSchema = z.object({
   braceletType: z.union([z.lazy(() => EnumStrapNullableFilterObjectSchema), StrapSchema]).optional().nullable(),
   strapMaterialText: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   buckleType: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  boxIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   bookletIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   featuresJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),

@@ -10,5 +10,5 @@ export const NotificationFindFirstResultSchema = z.nullable(z.object({
   metadata: z.unknown().optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date(),
-  User: z.unknown()
+  user: z.unknown()
 }));

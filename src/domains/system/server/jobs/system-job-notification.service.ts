@@ -1,21 +1,28 @@
 import { prisma } from "@/server/db/client";
 
+type NotificationPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
 export async function pushSystemJobNotification(input: {
+    userId: string;
     title: string;
     message: string;
-    level?: "INFO" | "SUCCESS" | "WARNING" | "ERROR";
-    actionUrl?: string | null;
+    type?: string;
+    priority?: NotificationPriority;
+    metadata?: Record<string, unknown>;
 }) {
     try {
         await prisma.notification.create({
             data: {
+                userId: input.userId,
+                type: input.type ?? "SYSTEM_JOB",
                 title: input.title,
                 message: input.message,
-                level: input.level ?? "INFO",
-                actionUrl: input.actionUrl ?? "/admin/system/jobs",
+                priority: input.priority ?? "NORMAL",
+                //metadata: input.metadata ?? {},
             },
         });
-    } catch {
-        // không chặn flow chính nếu notification fail
+    } catch (e) {
+        console.error("pushSystemJobNotification error:", e);
+        // không block flow chính
     }
 }

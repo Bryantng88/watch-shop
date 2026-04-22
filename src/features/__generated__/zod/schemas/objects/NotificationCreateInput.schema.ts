@@ -15,7 +15,7 @@ const makeSchema = () => z.object({
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional().nullable(),
   updatedAt: z.coerce.date().optional(),
-  User: z.lazy(() => UserCreateNestedOneWithoutNotificationInputObjectSchema)
+  user: z.lazy(() => UserCreateNestedOneWithoutNotificationInputObjectSchema)
 }).strict();
 export const NotificationCreateInputObjectSchema: z.ZodType<Prisma.NotificationCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationCreateInput>;
 export const NotificationCreateInputObjectZodSchema = makeSchema();

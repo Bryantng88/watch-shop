@@ -7,8 +7,8 @@ export const SystemJobControlFindManyResultSchema = z.object({
   batchSize: z.number().int(),
   pausedReason: z.string().optional(),
   metadata: z.unknown().optional(),
-  updated_at: z.date(),
-  updated_by: z.string().optional()
+  updatedAt: z.date(),
+  updatedBy: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

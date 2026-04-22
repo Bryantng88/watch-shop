@@ -40,7 +40,6 @@ export { PermissionResultSchema } from './Permission.result';
 export { VendorResultSchema } from './Vendor.result';
 export { WatchResultSchema } from './Watch.result';
 export { WatchContentResultSchema } from './WatchContent.result';
-export { WatchMediaResultSchema } from './WatchMedia.result';
 export { WatchPriceResultSchema } from './WatchPrice.result';
 export { WatchSpecResultSchema } from './WatchSpec.result';
 export { WatchSpecV2ResultSchema } from './WatchSpecV2.result';

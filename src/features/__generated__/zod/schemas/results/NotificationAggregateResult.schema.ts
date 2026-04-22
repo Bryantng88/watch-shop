@@ -10,7 +10,7 @@ export const NotificationAggregateResultSchema = z.object({  _count: z.object({
     metadata: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    User: z.number()
+    user: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

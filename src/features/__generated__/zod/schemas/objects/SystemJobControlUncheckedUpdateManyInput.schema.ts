@@ -16,8 +16,8 @@ const makeSchema = () => z.object({
   batchSize: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   pausedReason: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
-  updated_at: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updated_by: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedBy: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const SystemJobControlUncheckedUpdateManyInputObjectSchema: z.ZodType<Prisma.SystemJobControlUncheckedUpdateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.SystemJobControlUncheckedUpdateManyInput>;
 export const SystemJobControlUncheckedUpdateManyInputObjectZodSchema = makeSchema();

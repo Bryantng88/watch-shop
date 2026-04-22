@@ -6,8 +6,8 @@ export const SystemJobControlGroupByResultSchema = z.array(z.object({
   batchSize: z.number().int(),
   pausedReason: z.string(),
   metadata: z.unknown(),
-  updated_at: z.date(),
-  updated_by: z.string(),
+  updatedAt: z.date(),
+  updatedBy: z.string(),
   _count: z.object({
     key: z.number(),
     label: z.number(),
@@ -15,8 +15,8 @@ export const SystemJobControlGroupByResultSchema = z.array(z.object({
     batchSize: z.number(),
     pausedReason: z.number(),
     metadata: z.number(),
-    updated_at: z.number(),
-    updated_by: z.number()
+    updatedAt: z.number(),
+    updatedBy: z.number()
   }).optional(),
   _sum: z.object({
     batchSize: z.number().nullable()
@@ -29,15 +29,15 @@ export const SystemJobControlGroupByResultSchema = z.array(z.object({
     label: z.string().nullable(),
     batchSize: z.number().int().nullable(),
     pausedReason: z.string().nullable(),
-    updated_at: z.date().nullable(),
-    updated_by: z.string().nullable()
+    updatedAt: z.date().nullable(),
+    updatedBy: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     key: z.string().nullable(),
     label: z.string().nullable(),
     batchSize: z.number().int().nullable(),
     pausedReason: z.string().nullable(),
-    updated_at: z.date().nullable(),
-    updated_by: z.string().nullable()
+    updatedAt: z.date().nullable(),
+    updatedBy: z.string().nullable()
   }).nullable().optional()
 }));

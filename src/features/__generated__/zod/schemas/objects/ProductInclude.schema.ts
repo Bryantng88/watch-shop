@@ -18,11 +18,11 @@ import { WatchSpecArgsObjectSchema as WatchSpecArgsObjectSchema } from './WatchS
 import { ProductCountOutputTypeArgsObjectSchema as ProductCountOutputTypeArgsObjectSchema } from './ProductCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
-  AcquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobFindManySchema)]).optional(),
-  InvoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
-  MaintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  acquisitionSpecJob: z.union([z.boolean(), z.lazy(() => AcquisitionSpecJobFindManySchema)]).optional(),
+  invoiceItem: z.union([z.boolean(), z.lazy(() => InvoiceItemFindManySchema)]).optional(),
+  maintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
   brand: z.union([z.boolean(), z.lazy(() => BrandArgsObjectSchema)]).optional(),
   productCategory: z.union([z.boolean(), z.lazy(() => ProductCategoryArgsObjectSchema)]).optional(),
   vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
