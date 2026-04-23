@@ -5,7 +5,8 @@ import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsIn
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema as AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema } from './AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInput.schema'
+import { AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema as AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema } from './AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInput.schema';
+import { AcquisitionSpecJobLogUpdateManyWithoutAcquisitionSpecJobNestedInputObjectSchema as AcquisitionSpecJobLogUpdateManyWithoutAcquisitionSpecJobNestedInputObjectSchema } from './AcquisitionSpecJobLogUpdateManyWithoutAcquisitionSpecJobNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -18,7 +19,8 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   runAfter: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   priority: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  acquisitionItem: z.lazy(() => AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema).optional()
+  acquisitionItem: z.lazy(() => AcquisitionItemUpdateOneRequiredWithoutAcquisitionSpecJobNestedInputObjectSchema).optional(),
+  logs: z.lazy(() => AcquisitionSpecJobLogUpdateManyWithoutAcquisitionSpecJobNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionSpecJobUpdateWithoutProductInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobUpdateWithoutProductInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobUpdateWithoutProductInput>;
 export const AcquisitionSpecJobUpdateWithoutProductInputObjectZodSchema = makeSchema();

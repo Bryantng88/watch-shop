@@ -23,18 +23,38 @@ function padSeq(value: number) {
     return String(value).padStart(3, "0");
 }
 
-function buildBrandPrefix(brandName?: string | null) {
-    const raw = normalizeText(brandName).replace(/[^A-Z]/g, "");
-    if (!raw) return "GEN";
+function buildWatchBrandPrefix(brandName?: string | null) {
+    const normalized = normalizeText(brandName);
+    if (!normalized) return "UNK";
 
-    const words = raw.split(/\s+/).filter(Boolean);
+    const words = normalized
+        .split(/\s+/)
+        .map((w) => w.replace(/[^A-Z0-9]/g, ""))
+        .filter(Boolean);
+
+    if (!words.length) return "UNK";
+
+    const known: Record<string, string> = {
+        OMEGA: "OME",
+        ROLEX: "RLX",
+        LONGINES: "LNG",
+        ORIS: "ORI",
+        EXACTLY: "XCT",
+        "RAYMOND WEIL": "RMW",
+        SEIKO: "SEI",
+        CITIZEN: "CTZ",
+    };
+
+    const joinedName = words.join(" ");
+    if (known[joinedName]) return known[joinedName];
+    if (known[words[0]]) return known[words[0]];
+
     if (words.length >= 2) {
-        const joined = words.map((w) => w[0]).join("");
-        return joined.slice(0, 3).padEnd(3, "X");
+        const initials = words.map((w) => w[0]).join("");
+        return initials.slice(0, 3).padEnd(3, "X");
     }
 
-    const single = words[0] ?? raw;
-
+    const single = words[0];
     if (single.length <= 3) return single.padEnd(3, "X");
 
     const consonants = single.replace(/[AEIOUY]/g, "");
@@ -53,9 +73,9 @@ export function resolveSkuPrefix(input: {
         case "BOX":
             return "BOX";
         case "WATCH":
-            return buildBrandPrefix(input.brandName);
+            return buildWatchBrandPrefix(input.brandName);
         default:
-            return buildBrandPrefix(input.brandName);
+            return buildWatchBrandPrefix(input.brandName);
     }
 }
 

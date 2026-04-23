@@ -1,3 +1,5 @@
+import { buildDeterministicWatchTitle } from "./watch-title.helper";
+
 function s(value: unknown) {
     const text = String(value ?? "").trim();
     return text || null;
@@ -55,11 +57,23 @@ export function buildProductTitleFromWatchAi(input: {
     extractedSpec?: any;
     fallback?: string | null;
 }) {
-    const parts = [
-        s(input.brand),
-        s(input.extractedSpec?.modelFamily),
-        s(input.extractedSpec?.bestRefCandidate),
-    ].filter(Boolean);
+    const extracted = input.extractedSpec ?? {};
+    const visual = extracted?.probableVisualFacts ?? {};
 
-    return parts.length > 0 ? parts.join(" ") : (input.fallback ?? "Watch");
+    const movement =
+        mapMovement(extracted?.movement) ??
+        mapMovement(visual?.movement) ??
+        null;
+
+    const dialColor =
+        s(extracted?.dialColor) ??
+        s(visual?.dialColor) ??
+        null;
+
+    return buildDeterministicWatchTitle({
+        brand: s(input.brand),
+        model: s(extracted?.modelFamily),
+        movement,
+        dialColor,
+    });
 }

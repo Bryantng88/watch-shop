@@ -50,3 +50,4 @@ export { technicalActionCatalogInputSchema } from './technicalActionCatalog.inpu
 export { technicalAppearanceIssueCatalogInputSchema } from './technicalAppearanceIssueCatalog.input';
 export { technicalAssessmentsInputSchema } from './technicalAssessments.input';
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
+export { AcquisitionSpecJobLogInputSchema } from './AcquisitionSpecJobLog.input';

@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-
+import { AcquisitionSpecJobLogUncheckedCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema as AcquisitionSpecJobLogUncheckedCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema } from './AcquisitionSpecJobLogUncheckedCreateNestedManyWithoutAcquisitionSpecJobInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -13,7 +13,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   runAfter: z.coerce.date().optional().nullable(),
-  priority: z.number().int().optional()
+  priority: z.number().int().optional(),
+  logs: z.lazy(() => AcquisitionSpecJobLogUncheckedCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema).optional()
 }).strict();
 export const AcquisitionSpecJobUncheckedCreateWithoutAcquisitionItemInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobUncheckedCreateWithoutAcquisitionItemInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobUncheckedCreateWithoutAcquisitionItemInput>;
 export const AcquisitionSpecJobUncheckedCreateWithoutAcquisitionItemInputObjectZodSchema = makeSchema();

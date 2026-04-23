@@ -23,7 +23,9 @@ export const AcquisitionSpecJobFindManySelectSchema: z.ZodType<Prisma.Acquisitio
     runAfter: z.boolean().optional(),
     priority: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
-    Product: z.boolean().optional()
+    product: z.boolean().optional(),
+    logs: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionSpecJobSelect>;
 
 export const AcquisitionSpecJobFindManySelectZodSchema = z.object({
@@ -40,7 +42,9 @@ export const AcquisitionSpecJobFindManySelectZodSchema = z.object({
     runAfter: z.boolean().optional(),
     priority: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
-    Product: z.boolean().optional()
+    product: z.boolean().optional(),
+    logs: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict();
 
 export const AcquisitionSpecJobFindManySchema: z.ZodType<Prisma.AcquisitionSpecJobFindManyArgs> = z.object({ select: AcquisitionSpecJobFindManySelectSchema.optional(), include: AcquisitionSpecJobIncludeObjectSchema.optional(), orderBy: z.union([AcquisitionSpecJobOrderByWithRelationInputObjectSchema, AcquisitionSpecJobOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionSpecJobWhereInputObjectSchema.optional(), cursor: AcquisitionSpecJobWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([AcquisitionSpecJobScalarFieldEnumSchema, AcquisitionSpecJobScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionSpecJobFindManyArgs>;

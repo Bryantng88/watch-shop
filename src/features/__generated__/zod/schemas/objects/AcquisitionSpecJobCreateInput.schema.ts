@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema as AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema } from './AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInput.schema';
-import { ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema as ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema } from './ProductCreateNestedOneWithoutAcquisitionSpecJobInput.schema'
+import { ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema as ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema } from './ProductCreateNestedOneWithoutAcquisitionSpecJobInput.schema';
+import { AcquisitionSpecJobLogCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema as AcquisitionSpecJobLogCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema } from './AcquisitionSpecJobLogCreateNestedManyWithoutAcquisitionSpecJobInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -15,7 +16,8 @@ const makeSchema = () => z.object({
   runAfter: z.coerce.date().optional().nullable(),
   priority: z.number().int().optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema)
+  product: z.lazy(() => ProductCreateNestedOneWithoutAcquisitionSpecJobInputObjectSchema),
+  logs: z.lazy(() => AcquisitionSpecJobLogCreateNestedManyWithoutAcquisitionSpecJobInputObjectSchema)
 }).strict();
 export const AcquisitionSpecJobCreateInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionSpecJobCreateInput>;
 export const AcquisitionSpecJobCreateInputObjectZodSchema = makeSchema();

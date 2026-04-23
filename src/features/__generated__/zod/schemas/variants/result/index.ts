@@ -50,3 +50,4 @@ export { technicalActionCatalogResultSchema } from './technicalActionCatalog.res
 export { technicalAppearanceIssueCatalogResultSchema } from './technicalAppearanceIssueCatalog.result';
 export { technicalAssessmentsResultSchema } from './technicalAssessments.result';
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
+export { AcquisitionSpecJobLogResultSchema } from './AcquisitionSpecJobLog.result';

@@ -15,7 +15,8 @@ export const AcquisitionSpecJobResultSchema = z.object({
     runAfter: z.date().nullable(),
     priority: z.number().int(),
     acquisitionItem: z.unknown(),
-    Product: z.unknown()
+    product: z.unknown(),
+    logs: z.array(z.unknown())
 }).strict();
 
 export type AcquisitionSpecJobResultType = z.infer<typeof AcquisitionSpecJobResultSchema>;

@@ -13,5 +13,6 @@ export const AcquisitionSpecJobDeleteResultSchema = z.nullable(z.object({
   runAfter: z.date().optional(),
   priority: z.number().int(),
   acquisitionItem: z.unknown(),
-  Product: z.unknown()
+  product: z.unknown(),
+  logs: z.array(z.unknown())
 }));

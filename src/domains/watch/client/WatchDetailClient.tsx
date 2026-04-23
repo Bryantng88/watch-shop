@@ -1,15 +1,15 @@
 "use client";
 
-import WatchHeader from "../ui/list/detail/WatchHeader";
-import WatchMediaPanel from "../ui/list/detail/WatchMediaPanel";
+import WatchHeader from "../ui/detail/WatchHeader";
+import WatchMediaPanel from "../ui/detail/WatchMediaPanel";
 import {
     WatchOpsPanel,
     WatchOverviewPanel,
-} from "../ui/list/detail/WatchOverviewPanel";
-import WatchPricingPanel from "../ui/list/detail/WatchPricingPanel";
-import WatchContentPanel from "../ui/list/detail/WatchContentPanel";
-import WatchServicePanel from "../ui/list/detail/WatchServicePanel";
-import WatchTradePanel from "../ui/list/detail/WatchTradePanel";
+} from "../ui/detail/WatchOverviewPanel";
+import WatchPricingPanel from "../ui/detail/WatchPricingPanel";
+import WatchContentPanel from "../ui/detail/WatchContentPanel";
+import WatchServicePanel from "../ui/detail/WatchServicePanel";
+import WatchTradePanel from "../ui/detail/WatchTradePanel";
 
 type Props = {
     detail: any;

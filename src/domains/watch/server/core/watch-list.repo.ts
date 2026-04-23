@@ -148,20 +148,9 @@ function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
   switch (view) {
     case "draft":
       return {
-        OR: [
-          {
-            specStatus: "PENDING" as any,
-          },
-          {
-            AND: [
-              {
-                NOT: buildHasContentWhere(),
-              },
-              {
-                NOT: buildHasGalleryWhere(),
-              },
-            ],
-          },
+        AND: [
+          { NOT: buildHasContentWhere() },
+          { NOT: buildHasGalleryWhere() },
         ],
       };
 
@@ -169,21 +158,14 @@ function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
       return {
         OR: [
           {
-            specStatus: "PARTIAL" as any,
-          },
-          {
             AND: [
               buildHasContentWhere(),
-              {
-                NOT: buildHasGalleryWhere(),
-              },
+              { NOT: buildHasGalleryWhere() },
             ],
           },
           {
             AND: [
-              {
-                NOT: buildHasContentWhere(),
-              },
+              { NOT: buildHasContentWhere() },
               buildHasGalleryWhere(),
             ],
           },
@@ -193,9 +175,6 @@ function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
     case "ready":
       return {
         AND: [
-          {
-            specStatus: "READY" as any,
-          },
           buildHasContentWhere(),
           buildHasGalleryWhere(),
         ],

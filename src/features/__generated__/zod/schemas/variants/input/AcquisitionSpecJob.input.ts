@@ -15,7 +15,8 @@ export const AcquisitionSpecJobInputSchema = z.object({
     runAfter: z.date().optional().nullable(),
     priority: z.number().int(),
     acquisitionItem: z.unknown(),
-    Product: z.unknown()
+    product: z.unknown(),
+    logs: z.array(z.unknown())
 }).strict();
 
 export type AcquisitionSpecJobInputType = z.infer<typeof AcquisitionSpecJobInputSchema>;

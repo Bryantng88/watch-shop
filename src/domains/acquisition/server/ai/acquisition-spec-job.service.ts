@@ -8,20 +8,50 @@ import {
     Strap,
     WatchCaseMaterialFamily,
     WatchGoldColorV2,
-    ImageRole,
 } from "@prisma/client";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { prisma } from "@/server/db/client";
 import { s3, S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/storage-key";
 import { generateAcquisitionSpec } from "./acquisition-ai.service";
-import { buildProductTitleFromWatchAi } from "./acquisition-spec-mapper";
 import { resolveBrandFromAcquisitionAi } from "./acquisition-brand-resolver";
-import { genUniqueAcquisitionSku } from "@/domains/acquisition/shared/sku.helper";
-import { computeWatchSpecStatus } from "./watch-spec-status.helper";
+import { computeWatchSpecStatus } from "./helper/watch-spec-status.helper";
+import { appendAcquisitionSpecJobLog } from "./acquisition-spec-job-log.service";
+import { applyWatchTitleAndSkuForSpec } from "@/domains/watch/server/core/write/watch-write.service";
 
 type Tx = Prisma.TransactionClient;
 type JsonObject = Record<string, any>;
+
+type PreparedAcquisitionSpecJob =
+    | {
+        skip: true;
+        jobId: string;
+        item: any;
+    }
+    | {
+        skip: false;
+        jobId: string;
+        item: any;
+        watch: any;
+        ai: any;
+        imageEntries: Array<{ key?: string | null; url?: string | null }>;
+        resolvedBrand: any;
+        resolvedBrandName: string | null;
+        mappedMovementType?: MovementType;
+        mappedCaseShape?: CaseType;
+        mappedCrystal?: Glass;
+        mappedBraceletType?: Strap;
+        mappedPrimaryCaseMaterial: WatchCaseMaterialFamily;
+        mappedGoldColors?: WatchGoldColorV2[];
+        inferredCaseSize: Prisma.Decimal | null;
+        inferredThickness: Prisma.Decimal | null;
+        inferredYearText: string | null;
+        inferredCalibre: string | null;
+        inferredReference: string | null;
+        inferredModel: string | null;
+        inferredDialColor: string | null;
+        specStatus: "PENDING" | "PARTIAL" | "READY";
+    };
 
 function safeJsonParse<T = JsonObject>(value?: string | null): T {
     if (!value) return {} as T;
@@ -45,6 +75,23 @@ function getImageEntriesFromAiMeta(
     aiMeta: any
 ): Array<{ key?: string | null; url?: string | null }> {
     return Array.isArray(aiMeta?.images) ? aiMeta.images : [];
+}
+
+async function safeAppendLog(input: {
+    acquisitionSpecJobId: string;
+    acquisitionItemId: string;
+    acquisitionId?: string | null;
+    productId?: string | null;
+    stage: string;
+    level?: "INFO" | "WARN" | "ERROR";
+    message: string;
+    payload?: unknown;
+}) {
+    try {
+        await appendAcquisitionSpecJobLog(input);
+    } catch (error) {
+        console.error("[ACQ_SPEC][LOG_APPEND_FAILED]", error);
+    }
 }
 
 async function persistAiDraftToItem(
@@ -73,19 +120,6 @@ async function persistAiDraftToItem(
             }),
         },
     });
-}
-
-function shouldRefreshSku(input: {
-    productType?: string | null;
-    currentSku?: string | null;
-    resolvedBrandName?: string | null;
-}) {
-    if (String(input.productType ?? "").toUpperCase() !== "WATCH") return false;
-    if (!input.resolvedBrandName) return false;
-    if (!input.currentSku) return true;
-
-    const sku = String(input.currentSku);
-    return /^WAT-\d{4}-\d{4}$/i.test(sku) || /^PRD-\d{4}-\d{4}$/i.test(sku);
 }
 
 function s(value: unknown) {
@@ -210,16 +244,12 @@ function pickPreferredImages(images: any[]) {
     const sorted = sortImages(images);
 
     const inline = sorted.filter(
-        (img) =>
-            normalizeImageRole(img?.role) === "INLINE" ||
-            img?.role === ImageRole.INLINE
+        (img) => normalizeImageRole(img?.role) === "INLINE"
     );
     if (inline.length > 0) return inline;
 
     const gallery = sorted.filter(
-        (img) =>
-            normalizeImageRole(img?.role) === "GALLERY" ||
-            img?.role === ImageRole.GALLERY
+        (img) => normalizeImageRole(img?.role) === "GALLERY"
     );
     if (gallery.length > 0) return gallery;
 
@@ -249,7 +279,11 @@ async function bodyToBuffer(body: any): Promise<Buffer> {
 function inferMimeType(input?: string | null) {
     const value = String(input ?? "").toLowerCase();
 
-    if (value.includes("image/jpeg") || value.endsWith(".jpg") || value.endsWith(".jpeg")) {
+    if (
+        value.includes("image/jpeg") ||
+        value.endsWith(".jpg") ||
+        value.endsWith(".jpeg")
+    ) {
         return "image/jpeg";
     }
     if (value.includes("image/png") || value.endsWith(".png")) {
@@ -265,7 +299,10 @@ function inferMimeType(input?: string | null) {
     return "image/jpeg";
 }
 
-async function fileKeyToDataUrl(fileKey?: string | null, mimeHint?: string | null) {
+async function fileKeyToDataUrl(
+    fileKey?: string | null,
+    mimeHint?: string | null
+) {
     const key = normalizeKey(fileKey);
     if (!key) return null;
 
@@ -317,9 +354,7 @@ async function getImageDataUrlsForAi(product: any, aiMeta: any): Promise<string[
     const aiMetaEntries = getImageEntriesFromAiMeta(aiMeta);
 
     const fallback = await Promise.all(
-        aiMetaEntries.map((img) =>
-            fileKeyToDataUrl(img?.key ?? null, null)
-        )
+        aiMetaEntries.map((img) => fileKeyToDataUrl(img?.key ?? null, null))
     );
 
     return Array.from(
@@ -359,13 +394,11 @@ export async function enqueueAcquisitionSpecJob(
     });
 }
 
-export async function processAcquisitionSpecJob(
-    tx: Tx,
-    input: {
-        acquisitionItemId: string;
-    }
-) {
-    const item = await tx.acquisitionItem.findUnique({
+async function prepareAcquisitionSpecJobData(input: {
+    jobId: string;
+    acquisitionItemId: string;
+}): Promise<PreparedAcquisitionSpecJob> {
+    const item = await prisma.acquisitionItem.findUnique({
         where: { id: input.acquisitionItemId },
         include: {
             acquisition: true,
@@ -388,20 +421,30 @@ export async function processAcquisitionSpecJob(
     }
 
     if (item.product.type !== "WATCH") {
-        await tx.acquisitionSpecJob.update({
-            where: { acquisitionItemId: item.id },
-            data: {
-                status: "DONE",
-                lastError: null,
-                finishedAt: new Date(),
-            },
-        });
-        return;
+        return {
+            skip: true,
+            jobId: input.jobId,
+            item,
+        };
     }
 
     const currentAiMeta = getAiMetaFromDescription(item.description);
     const imageEntries = getImageEntriesFromAiMeta(currentAiMeta);
     const imageDataUrls = await getImageDataUrlsForAi(item.product, currentAiMeta);
+
+    await safeAppendLog({
+        acquisitionSpecJobId: input.jobId,
+        acquisitionItemId: item.id,
+        acquisitionId: item.acquisitionId ?? null,
+        productId: item.productId ?? null,
+        stage: "PREPARE_INPUT",
+        message: "Chuẩn bị input AI",
+        payload: {
+            titleHint: item.productTitle ?? item.product.title,
+            imageCount: imageDataUrls.length,
+            imageKeys: imageEntries.map((x) => x?.key).filter(Boolean),
+        },
+    });
 
     const ai =
         currentAiMeta?.ai?.extractedSpec
@@ -412,18 +455,31 @@ export async function processAcquisitionSpecJob(
                 model: null,
                 notes: item.notes ?? item.acquisition?.notes ?? null,
                 condition: null,
-                images: imageDataUrls, // data URLs từ NAS/S3
+                images: imageDataUrls,
             });
 
     if (!ai?.extractedSpec) {
         throw new Error("AI did not return extractedSpec");
     }
 
+    await safeAppendLog({
+        acquisitionSpecJobId: input.jobId,
+        acquisitionItemId: item.id,
+        acquisitionId: item.acquisitionId ?? null,
+        productId: item.productId ?? null,
+        stage: "AI_OUTPUT",
+        message: "AI đã trả extractedSpec",
+        payload: {
+            extractedSpec: ai.extractedSpec ?? null,
+            summary: ai.summary ?? null,
+        },
+    });
+
     const ex = ai.extractedSpec;
 
     const resolvedBrand =
         item.product.brand ??
-        (await resolveBrandFromAcquisitionAi(tx as any, {
+        (await resolveBrandFromAcquisitionAi(prisma as any, {
             titleHint: item.productTitle ?? item.product.title,
             aiHint: currentAiMeta?.aiHint ?? null,
             extractedSpec: ex,
@@ -438,15 +494,9 @@ export async function processAcquisitionSpecJob(
         ex?.probableVisualFacts?.probableBrand ??
         null;
 
-    await persistAiDraftToItem(tx, item.id, item.description, {
-        aiHint: currentAiMeta?.aiHint ?? null,
-        images: imageEntries,
-        ai,
-    });
-
     const watch =
         item.product.watch ??
-        (await tx.watch.findUnique({
+        (await prisma.watch.findUnique({
             where: { productId: item.productId },
             include: { watchSpecV2: true },
         }));
@@ -454,18 +504,6 @@ export async function processAcquisitionSpecJob(
     if (!watch) {
         throw new Error("Watch not found for product");
     }
-
-    const nextSku = shouldRefreshSku({
-        productType: item.product.type,
-        currentSku: item.product.sku,
-        resolvedBrandName,
-    })
-        ? await genUniqueAcquisitionSku(tx as any, {
-            kind: "WATCH",
-            brandName: resolvedBrandName,
-            date: item.acquisition?.acquiredAt ?? new Date(),
-        })
-        : undefined;
 
     const mappedMovementType =
         mapMovementType(ex?.movement) ??
@@ -513,20 +551,117 @@ export async function processAcquisitionSpecJob(
         caseSizeMM: inferredCaseSize,
     });
 
-    const watchTitle = buildProductTitleFromWatchAi({
-        brand: resolvedBrandName,
-        extractedSpec: ex,
-        fallback: item.productTitle ?? item.product.title,
+    return {
+        skip: false,
+        jobId: input.jobId,
+        item,
+        watch,
+        ai,
+        imageEntries,
+        resolvedBrand,
+        resolvedBrandName,
+        mappedMovementType,
+        mappedCaseShape,
+        mappedCrystal,
+        mappedBraceletType,
+        mappedPrimaryCaseMaterial,
+        mappedGoldColors,
+        inferredCaseSize,
+        inferredThickness,
+        inferredYearText,
+        inferredCalibre,
+        inferredReference,
+        inferredModel,
+        inferredDialColor,
+        specStatus,
+    };
+}
+
+async function persistPreparedAcquisitionSpecJob(
+    tx: Tx,
+    prepared: PreparedAcquisitionSpecJob
+) {
+    if (prepared.skip) {
+        await tx.acquisitionSpecJob.update({
+            where: { acquisitionItemId: prepared.item.id },
+            data: {
+                status: "DONE",
+                lastError: null,
+                finishedAt: new Date(),
+            },
+        });
+
+        await safeAppendLog({
+            acquisitionSpecJobId: prepared.jobId,
+            acquisitionItemId: prepared.item.id,
+            acquisitionId: prepared.item.acquisitionId ?? null,
+            productId: prepared.item.productId ?? null,
+            stage: "DONE",
+            message: "Bỏ qua vì item không phải WATCH",
+        });
+
+        return;
+    }
+
+    const {
+        jobId,
+        item,
+        watch,
+        ai,
+        imageEntries,
+        resolvedBrand,
+        resolvedBrandName,
+        mappedMovementType,
+        mappedCaseShape,
+        mappedCrystal,
+        mappedBraceletType,
+        mappedPrimaryCaseMaterial,
+        mappedGoldColors,
+        inferredCaseSize,
+        inferredThickness,
+        inferredYearText,
+        inferredCalibre,
+        inferredReference,
+        inferredModel,
+        inferredDialColor,
+        specStatus,
+    } = prepared;
+
+    const currentAiMeta = getAiMetaFromDescription(item.description);
+
+    await persistAiDraftToItem(tx, item.id, item.description, {
+        aiHint: currentAiMeta?.aiHint ?? null,
+        images: imageEntries,
+        ai,
     });
 
-    await tx.product.update({
-        where: { id: item.productId },
-        data: {
-            title: watchTitle,
-            ...(resolvedBrand && !item.product.brandId
-                ? { brandId: resolvedBrand.id }
-                : {}),
-            ...(nextSku ? { sku: nextSku } : {}),
+    const derived = await applyWatchTitleAndSkuForSpec(tx, {
+        productId: item.productId,
+        currentSku: item.product.sku,
+        currentBrandId: item.product.brandId,
+        resolvedBrandId: resolvedBrand?.id ?? null,
+        brandName: resolvedBrandName,
+        model: inferredModel,
+        movement: mappedMovementType ? String(mappedMovementType) : null,
+        dialColor: inferredDialColor,
+        acquiredAt: item.acquisition?.acquiredAt ?? new Date(),
+    });
+
+    await safeAppendLog({
+        acquisitionSpecJobId: jobId,
+        acquisitionItemId: item.id,
+        acquisitionId: item.acquisitionId ?? null,
+        productId: item.productId ?? null,
+        stage: "BUILD_DERIVED",
+        message: "Đã build title và SKU",
+        payload: {
+            title: derived.title,
+            sku: derived.sku,
+            resolvedBrandName,
+            model: inferredModel,
+            movement: mappedMovementType ?? null,
+            dialColor: inferredDialColor,
+            specStatus,
         },
     });
 
@@ -537,13 +672,16 @@ export async function processAcquisitionSpecJob(
             movementCalibre: inferredCalibre ?? undefined,
             yearText: inferredYearText ?? undefined,
             hasBox:
-                typeof (ex as any)?.boxIncluded === "boolean"
-                    ? Boolean((ex as any).boxIncluded)
+                typeof (ai.extractedSpec as any)?.boxIncluded === "boolean"
+                    ? Boolean((ai.extractedSpec as any).boxIncluded)
                     : watch.hasBox,
             hasPapers:
-                typeof (ex as any)?.bookletIncluded === "boolean" ||
-                    typeof (ex as any)?.cardIncluded === "boolean"
-                    ? Boolean((ex as any)?.bookletIncluded || (ex as any)?.cardIncluded)
+                typeof (ai.extractedSpec as any)?.bookletIncluded === "boolean" ||
+                    typeof (ai.extractedSpec as any)?.cardIncluded === "boolean"
+                    ? Boolean(
+                        (ai.extractedSpec as any)?.bookletIncluded ||
+                        (ai.extractedSpec as any)?.cardIncluded
+                    )
                     : watch.hasPapers,
             specStatus,
             updatedAt: new Date(),
@@ -562,16 +700,18 @@ export async function processAcquisitionSpecJob(
             thicknessMM: inferredThickness,
             primaryCaseMaterial: mappedPrimaryCaseMaterial,
             goldKarat:
-                (ex as any)?.goldKarat != null ? Number((ex as any).goldKarat) : null,
+                (ai.extractedSpec as any)?.goldKarat != null
+                    ? Number((ai.extractedSpec as any).goldKarat)
+                    : null,
             goldColors: mappedGoldColors ?? [],
             dialColor: inferredDialColor,
             crystal: mappedCrystal,
             movementType: mappedMovementType,
             calibre: inferredCalibre,
             braceletType: mappedBraceletType,
-            bookletIncluded: Boolean((ex as any)?.bookletIncluded),
-            cardIncluded: Boolean((ex as any)?.cardIncluded),
-            rawSpecJson: ex ?? {},
+            bookletIncluded: Boolean((ai.extractedSpec as any)?.bookletIncluded),
+            cardIncluded: Boolean((ai.extractedSpec as any)?.cardIncluded),
+            rawSpecJson: ai.extractedSpec ?? {},
             updatedAt: new Date(),
         },
         update: {
@@ -583,7 +723,9 @@ export async function processAcquisitionSpecJob(
             thicknessMM: inferredThickness ?? undefined,
             primaryCaseMaterial: mappedPrimaryCaseMaterial,
             goldKarat:
-                (ex as any)?.goldKarat != null ? Number((ex as any).goldKarat) : undefined,
+                (ai.extractedSpec as any)?.goldKarat != null
+                    ? Number((ai.extractedSpec as any).goldKarat)
+                    : undefined,
             goldColors: mappedGoldColors ?? undefined,
             dialColor: inferredDialColor ?? undefined,
             crystal: mappedCrystal,
@@ -591,14 +733,14 @@ export async function processAcquisitionSpecJob(
             calibre: inferredCalibre ?? undefined,
             braceletType: mappedBraceletType,
             bookletIncluded:
-                typeof (ex as any)?.bookletIncluded === "boolean"
-                    ? Boolean((ex as any).bookletIncluded)
+                typeof (ai.extractedSpec as any)?.bookletIncluded === "boolean"
+                    ? Boolean((ai.extractedSpec as any).bookletIncluded)
                     : undefined,
             cardIncluded:
-                typeof (ex as any)?.cardIncluded === "boolean"
-                    ? Boolean((ex as any).cardIncluded)
+                typeof (ai.extractedSpec as any)?.cardIncluded === "boolean"
+                    ? Boolean((ai.extractedSpec as any).cardIncluded)
                     : undefined,
-            rawSpecJson: ex ?? undefined,
+            rawSpecJson: ai.extractedSpec ?? undefined,
             updatedAt: new Date(),
         },
     });
@@ -611,6 +753,45 @@ export async function processAcquisitionSpecJob(
             finishedAt: new Date(),
         },
     });
+
+    await safeAppendLog({
+        acquisitionSpecJobId: jobId,
+        acquisitionItemId: item.id,
+        acquisitionId: item.acquisitionId ?? null,
+        productId: item.productId ?? null,
+        stage: "DONE",
+        message: "Đã lưu Watch + WatchSpecV2 thành công",
+        payload: {
+            title: derived.title,
+            sku: derived.sku,
+            primaryCaseMaterial: mappedPrimaryCaseMaterial,
+            referenceNumber: inferredReference,
+            model: inferredModel,
+            calibre: inferredCalibre,
+        },
+    });
+}
+
+export async function processAcquisitionSpecJob(
+    tx: Tx,
+    input: {
+        acquisitionItemId: string;
+    }
+) {
+    const job = await prisma.acquisitionSpecJob.findUnique({
+        where: { acquisitionItemId: input.acquisitionItemId },
+    });
+
+    if (!job) {
+        throw new Error("AcquisitionSpecJob not found");
+    }
+
+    const prepared = await prepareAcquisitionSpecJobData({
+        jobId: job.id,
+        acquisitionItemId: input.acquisitionItemId,
+    });
+
+    await persistPreparedAcquisitionSpecJob(tx, prepared);
 }
 
 export async function failAcquisitionSpecJob(
@@ -622,7 +803,7 @@ export async function failAcquisitionSpecJob(
 ) {
     const job = await tx.acquisitionSpecJob.findUnique({
         where: { acquisitionItemId: input.acquisitionItemId },
-        select: { productId: true },
+        select: { id: true, productId: true },
     });
 
     await tx.acquisitionSpecJob.update({
@@ -642,6 +823,17 @@ export async function failAcquisitionSpecJob(
                 specStatus: "FAILED",
                 updatedAt: new Date(),
             },
+        });
+    }
+
+    if (job?.id) {
+        await safeAppendLog({
+            acquisitionSpecJobId: job.id,
+            acquisitionItemId: input.acquisitionItemId,
+            productId: job.productId ?? null,
+            stage: "FAILED",
+            level: "ERROR",
+            message: input.errorMessage,
         });
     }
 }
@@ -682,21 +874,37 @@ export async function processQueuedAcquisitionSpecJobs(input?: {
 
     for (const job of jobs) {
         try {
-            await prisma.$transaction(async (tx) => {
-                await tx.acquisitionSpecJob.update({
-                    where: { id: job.id },
-                    data: {
-                        status: "RUNNING",
-                        startedAt: new Date(),
-                        attempts: { increment: 1 },
-                        lastError: null,
-                    },
-                });
-
-                await processAcquisitionSpecJob(tx, {
-                    acquisitionItemId: job.acquisitionItemId,
-                });
+            await safeAppendLog({
+                acquisitionSpecJobId: job.id,
+                acquisitionItemId: job.acquisitionItemId,
+                productId: job.productId ?? null,
+                stage: "START",
+                message: "Bắt đầu xử lý spec job",
             });
+
+            const prepared = await prepareAcquisitionSpecJobData({
+                jobId: job.id,
+                acquisitionItemId: job.acquisitionItemId,
+            });
+
+            await prisma.$transaction(
+                async (tx) => {
+                    await tx.acquisitionSpecJob.update({
+                        where: { id: job.id },
+                        data: {
+                            status: "RUNNING",
+                            startedAt: new Date(),
+                            attempts: { increment: 1 },
+                            lastError: null,
+                        },
+                    });
+
+                    await persistPreparedAcquisitionSpecJob(tx, prepared);
+                },
+                {
+                    timeout: 15000,
+                }
+            );
 
             processed += 1;
         } catch (error: any) {
@@ -717,6 +925,88 @@ export async function processQueuedAcquisitionSpecJobs(input?: {
 
     return {
         total: jobs.length,
+        processed,
+        failed,
+        errors,
+    };
+}
+
+export async function processAcquisitionSpecJobsByItemIds(input: {
+    acquisitionItemIds: string[];
+}) {
+    const ids = Array.from(
+        new Set(
+            (input.acquisitionItemIds ?? []).filter(
+                (x): x is string => typeof x === "string" && x.trim().length > 0
+            )
+        )
+    );
+
+    let processed = 0;
+    let failed = 0;
+    const errors: Array<{ id: string; error: string }> = [];
+
+    for (const acquisitionItemId of ids) {
+        try {
+            const job = await prisma.acquisitionSpecJob.findUnique({
+                where: { acquisitionItemId },
+            });
+
+            if (!job) {
+                throw new Error("AcquisitionSpecJob not found");
+            }
+
+            await safeAppendLog({
+                acquisitionSpecJobId: job.id,
+                acquisitionItemId,
+                productId: job.productId ?? null,
+                stage: "START",
+                message: "Bắt đầu xử lý spec job theo item ids",
+            });
+
+            const prepared = await prepareAcquisitionSpecJobData({
+                jobId: job.id,
+                acquisitionItemId,
+            });
+
+            await prisma.$transaction(
+                async (tx) => {
+                    await tx.acquisitionSpecJob.update({
+                        where: { id: job.id },
+                        data: {
+                            status: "RUNNING",
+                            startedAt: new Date(),
+                            attempts: { increment: 1 },
+                            lastError: null,
+                        },
+                    });
+
+                    await persistPreparedAcquisitionSpecJob(tx, prepared);
+                },
+                {
+                    timeout: 15000,
+                }
+            );
+
+            processed += 1;
+        } catch (error: any) {
+            failed += 1;
+            errors.push({
+                id: acquisitionItemId,
+                error: error?.message || "Unknown error",
+            });
+
+            await prisma.$transaction(async (tx) => {
+                await failAcquisitionSpecJob(tx, {
+                    acquisitionItemId,
+                    errorMessage: error?.message || "Unknown error",
+                });
+            });
+        }
+    }
+
+    return {
+        total: ids.length,
         processed,
         failed,
         errors,

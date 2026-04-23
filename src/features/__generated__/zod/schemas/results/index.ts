@@ -609,3 +609,16 @@ export { technicalPartCatalogDeleteManyResultSchema } from './technicalPartCatal
 export { technicalPartCatalogAggregateResultSchema } from './technicalPartCatalogAggregateResult.schema';
 export { technicalPartCatalogGroupByResultSchema } from './technicalPartCatalogGroupByResult.schema';
 export { technicalPartCatalogCountResultSchema } from './technicalPartCatalogCountResult.schema';
+export { AcquisitionSpecJobLogFindUniqueResultSchema } from './AcquisitionSpecJobLogFindUniqueResult.schema';
+export { AcquisitionSpecJobLogFindFirstResultSchema } from './AcquisitionSpecJobLogFindFirstResult.schema';
+export { AcquisitionSpecJobLogFindManyResultSchema } from './AcquisitionSpecJobLogFindManyResult.schema';
+export { AcquisitionSpecJobLogCreateResultSchema } from './AcquisitionSpecJobLogCreateResult.schema';
+export { AcquisitionSpecJobLogCreateManyResultSchema } from './AcquisitionSpecJobLogCreateManyResult.schema';
+export { AcquisitionSpecJobLogUpdateResultSchema } from './AcquisitionSpecJobLogUpdateResult.schema';
+export { AcquisitionSpecJobLogUpdateManyResultSchema } from './AcquisitionSpecJobLogUpdateManyResult.schema';
+export { AcquisitionSpecJobLogUpsertResultSchema } from './AcquisitionSpecJobLogUpsertResult.schema';
+export { AcquisitionSpecJobLogDeleteResultSchema } from './AcquisitionSpecJobLogDeleteResult.schema';
+export { AcquisitionSpecJobLogDeleteManyResultSchema } from './AcquisitionSpecJobLogDeleteManyResult.schema';
+export { AcquisitionSpecJobLogAggregateResultSchema } from './AcquisitionSpecJobLogAggregateResult.schema';
+export { AcquisitionSpecJobLogGroupByResultSchema } from './AcquisitionSpecJobLogGroupByResult.schema';
+export { AcquisitionSpecJobLogCountResultSchema } from './AcquisitionSpecJobLogCountResult.schema';

@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema as AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema } from './objects/AcquisitionSpecJobLogOrderByWithRelationInput.schema';
+import { AcquisitionSpecJobLogWhereInputObjectSchema as AcquisitionSpecJobLogWhereInputObjectSchema } from './objects/AcquisitionSpecJobLogWhereInput.schema';
+import { AcquisitionSpecJobLogWhereUniqueInputObjectSchema as AcquisitionSpecJobLogWhereUniqueInputObjectSchema } from './objects/AcquisitionSpecJobLogWhereUniqueInput.schema';
+import { AcquisitionSpecJobLogCountAggregateInputObjectSchema as AcquisitionSpecJobLogCountAggregateInputObjectSchema } from './objects/AcquisitionSpecJobLogCountAggregateInput.schema';
+
+export const AcquisitionSpecJobLogCountSchema: z.ZodType<Prisma.AcquisitionSpecJobLogCountArgs> = z.object({ orderBy: z.union([AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema, AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionSpecJobLogWhereInputObjectSchema.optional(), cursor: AcquisitionSpecJobLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), AcquisitionSpecJobLogCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.AcquisitionSpecJobLogCountArgs>;
+
+export const AcquisitionSpecJobLogCountZodSchema = z.object({ orderBy: z.union([AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema, AcquisitionSpecJobLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: AcquisitionSpecJobLogWhereInputObjectSchema.optional(), cursor: AcquisitionSpecJobLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), AcquisitionSpecJobLogCountAggregateInputObjectSchema ]).optional() }).strict();

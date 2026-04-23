@@ -14,7 +14,8 @@ export const AcquisitionSpecJobFindManyResultSchema = z.object({
   runAfter: z.date().optional(),
   priority: z.number().int(),
   acquisitionItem: z.unknown(),
-  Product: z.unknown()
+  product: z.unknown(),
+  logs: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

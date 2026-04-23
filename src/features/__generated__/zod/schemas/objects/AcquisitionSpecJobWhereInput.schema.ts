@@ -8,7 +8,8 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { AcquisitionItemScalarRelationFilterObjectSchema as AcquisitionItemScalarRelationFilterObjectSchema } from './AcquisitionItemScalarRelationFilter.schema';
 import { AcquisitionItemWhereInputObjectSchema as AcquisitionItemWhereInputObjectSchema } from './AcquisitionItemWhereInput.schema';
 import { ProductScalarRelationFilterObjectSchema as ProductScalarRelationFilterObjectSchema } from './ProductScalarRelationFilter.schema';
-import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema'
+import { ProductWhereInputObjectSchema as ProductWhereInputObjectSchema } from './ProductWhereInput.schema';
+import { AcquisitionSpecJobLogListRelationFilterObjectSchema as AcquisitionSpecJobLogListRelationFilterObjectSchema } from './AcquisitionSpecJobLogListRelationFilter.schema'
 
 const acquisitionspecjobwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionSpecJobWhereInputObjectSchema), z.lazy(() => AcquisitionSpecJobWhereInputObjectSchema).array()]).optional(),
@@ -27,7 +28,8 @@ const acquisitionspecjobwhereinputSchema = z.object({
   runAfter: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   priority: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   acquisitionItem: z.union([z.lazy(() => AcquisitionItemScalarRelationFilterObjectSchema), z.lazy(() => AcquisitionItemWhereInputObjectSchema)]).optional(),
-  Product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional()
+  product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
+  logs: z.lazy(() => AcquisitionSpecJobLogListRelationFilterObjectSchema).optional()
 }).strict();
 export const AcquisitionSpecJobWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionSpecJobWhereInput> = acquisitionspecjobwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionSpecJobWhereInput>;
 export const AcquisitionSpecJobWhereInputObjectZodSchema = acquisitionspecjobwhereinputSchema;

@@ -20,11 +20,7 @@ export async function getAdminWatchRow(db: DB, productId: string) {
       watchSpecV2: true,
       watchPrice: true,
       watchContent: true,
-      watchMedia: {
-        orderBy: {
-          sortOrder: "asc",
-        },
-      },
+
     },
   });
 }
@@ -48,11 +44,7 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
       watchSpecV2: true,
       watchPrice: true,
       watchContent: true,
-      watchMedia: {
-        orderBy: {
-          sortOrder: "asc",
-        },
-      },
+
     },
   });
 }
