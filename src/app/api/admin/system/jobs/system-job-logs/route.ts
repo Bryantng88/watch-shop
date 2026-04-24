@@ -4,11 +4,16 @@ import { getRecentJobRunLogs } from "@/domains/system/server/jobs/system-job-log
 export async function GET() {
     try {
         const logs = await getRecentJobRunLogs(50);
-        return NextResponse.json({ logs });
+
+        return NextResponse.json({
+            ok: true,
+            items: logs,
+        });
     } catch (error: any) {
         return NextResponse.json(
             {
-                error: error?.message || "Load system job logs failed",
+                ok: false,
+                error: error?.message || "Không thể tải job logs",
             },
             { status: 500 }
         );

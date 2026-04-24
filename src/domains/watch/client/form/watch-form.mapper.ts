@@ -23,6 +23,11 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         .map(toPickedMediaItem)
         .filter(Boolean) as PickedMediaItem[];
 
+    const costPrice =
+        detail?.price?.costPrice ??
+        detail?.acquisition?.unitCost ??
+        "";
+
     return {
         productId: s(detail?.productId),
 
@@ -43,7 +48,8 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             stockState: s(detail?.watch?.stockState),
             saleState: s(detail?.watch?.saleState),
             conditionGrade: s(detail?.watch?.conditionGrade),
-            movementType: s(detail?.watch?.movementType),
+            movementType:
+                s(detail?.watch?.movementType) || s(detail?.spec?.movementType),
             movementCalibre: s(detail?.watch?.movementCalibre),
             serialNumber: s(detail?.watch?.serialNumber),
             yearText: s(detail?.watch?.yearText),
@@ -90,7 +96,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             salePrice: s(detail?.price?.salePrice),
             listPrice: s(detail?.price?.listPrice),
             minPrice: s(detail?.price?.minPrice),
-            costPrice: s(detail?.price?.costPrice),
+            costPrice: s(costPrice),
             serviceCost: s(detail?.price?.serviceCost),
             landedCost: s(detail?.price?.landedCost),
             pricingNote: s(detail?.price?.pricingNote),

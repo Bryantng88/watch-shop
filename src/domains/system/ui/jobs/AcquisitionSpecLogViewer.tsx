@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAcquisitionSpecLogs } from "@/domains/system/client/jobs/system-job.actions";
+import { getAcquisitionSpecLogs } from "@/domains/system/client/system-job.action";
 
 type Props = {
     jobId?: string;

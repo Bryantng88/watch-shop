@@ -1,7 +1,4 @@
-import type { Prisma } from "@prisma/client";
-import type { DB } from "@/server/db/client";
-import prisma from "component for chatGPT/src/server/db/client";
-import { dbOrTx } from "@/server/db/client";
+import { prisma } from "@/server/db/client";
 
 export async function listWatchEditOptions() {
     const [brands, vendors, categories] = await Promise.all([
@@ -25,7 +22,6 @@ export async function listWatchEditOptions() {
             select: {
                 id: true,
                 name: true,
-                //slug: true,
             },
         }),
     ]);

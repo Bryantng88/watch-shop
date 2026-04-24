@@ -1,17 +1,20 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { FieldLabel, Input, SectionCard, Select } from "./shared";
-import { WatchFormValues } from "../../client/form/watch-form.types";
+import { FieldLabel, Input, SectionCard, Select, Button } from "./shared";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
+import { buildWatchSpecSummary } from "./WatchSpecModal";
 
 type SimpleOption = { id: string; name: string; slug?: string | null };
 
 type Props = {
     values: WatchFormValues["basic"];
+    spec: WatchFormValues["spec"];
     brands: SimpleOption[];
     vendors: SimpleOption[];
     categories: SimpleOption[];
     onChange: (patch: Partial<WatchFormValues["basic"]>) => void;
+    onOpenSpecModal: () => void;
 };
 
 const GENDER_OPTIONS = ["MEN", "WOMEN", "UNISEX"].map((x) => ({
@@ -30,19 +33,24 @@ const SITE_CHANNEL_OPTIONS = [
 }));
 
 const MOVEMENT_TYPE_OPTIONS = [
-    "MANUAL_WIND",
     "AUTOMATIC",
+    "HAND_WOUND",
     "QUARTZ",
-    "ECO_DRIVE",
     "SOLAR",
+    "KINETIC",
+    "MECHAQUARTZ",
+    "SPRING_DRIVE",
+    "HYBRID",
 ].map((x) => ({ value: x, label: x }));
 
 export default function WatchBasicSection({
     values,
+    spec,
     brands,
     vendors,
     categories,
     onChange,
+    onOpenSpecModal,
 }: Props) {
     const brandOptions = brands.map((x) => ({ value: x.id, label: x.name }));
     const vendorOptions = vendors.map((x) => ({ value: x.id, label: x.name }));
@@ -51,11 +59,13 @@ export default function WatchBasicSection({
         label: x.name,
     }));
 
+    const specSummary = buildWatchSpecSummary(spec);
+
     return (
         <SectionCard
             icon={<Pencil className="h-5 w-5" />}
             title="Thông tin chính"
-            subtitle="Giữ phần thật sự cần thao tác hằng ngày."
+            subtitle="Giữ phần thao tác hằng ngày ở đây. Spec sâu đưa sang modal riêng."
         >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
@@ -184,8 +194,35 @@ export default function WatchBasicSection({
                     <Input
                         value={values.yearText}
                         onChange={(e) => onChange({ yearText: e.target.value })}
-                        placeholder="mid-20th century / 1970s / ..."
+                        placeholder="1970s / 1990s / ..."
                     />
+                </div>
+
+                <div className="md:col-span-2">
+                    <div className="rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="min-w-0">
+                                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                                    Spec snapshot
+                                </div>
+                                <div className="mt-1 text-sm font-medium text-slate-900">
+                                    {specSummary}
+                                </div>
+                                <div className="mt-1 text-sm text-slate-500">
+                                    Model, reference, case, material... được gom vào modal riêng để form chính gọn hơn.
+                                </div>
+                            </div>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onOpenSpecModal}
+                                className="shrink-0 border-indigo-200 bg-white/80 text-indigo-700 hover:bg-white"
+                            >
+                                Chỉnh spec & vật liệu
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </SectionCard>
