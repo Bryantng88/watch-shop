@@ -127,8 +127,8 @@ model Brand {
   description  String?
   sortOrder    Int         @default(0)
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime
-  Product      Product[]
+  updatedAt    DateTime    @updatedAt
+  product      Product[]
 
   @@index([country])
   @@index([status, sortOrder])
@@ -838,11 +838,11 @@ model User {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
   roleId            String?
-  Customer          Customer?
-  MaintenanceRecord MaintenanceRecord[]
-  Notification      Notification[]
-  ServiceRequest    ServiceRequest[]
-  TechnicalIssue    TechnicalIssue[]
+  customer          Customer?
+  maintenanceRecord MaintenanceRecord[]
+  notification      Notification[]
+  serviceRequest    ServiceRequest[]
+  technicalIssue    TechnicalIssue[]
   roles             Role[]              @relation("UserRoles")
 
   @@index([isActive])

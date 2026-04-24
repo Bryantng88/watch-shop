@@ -1,11 +1,23 @@
 import { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import { dbOrTx } from "@/server/db/client";
-import type { UpdateWatchPricingInput } from "../shared";
+
+export type UpdateWatchPricingInput = {
+  salePrice?: number | string | null;
+  minPrice?: number | string | null;
+  costPrice?: number | string | null;
+  serviceCost?: number | string | null;
+  landedCost?: number | string | null;
+  pricingNote?: string | null;
+};
 
 function toDecimal(value?: number | string | null) {
   if (value == null || value === "") return null;
-  return new Prisma.Decimal(value);
+
+  const normalized = String(value).replace(/[^\d.-]/g, "");
+  if (!normalized) return null;
+
+  return new Prisma.Decimal(normalized);
 }
 
 export async function getWatchPricingRepo(db: DB, productId: string) {
@@ -13,13 +25,21 @@ export async function getWatchPricingRepo(db: DB, productId: string) {
 
   const watch = await client.watch.findUnique({
     where: { productId },
-    include: {
+    select: {
+      id: true,
+      productId: true,
       watchPrice: true,
       product: {
         select: {
           id: true,
           title: true,
           sku: true,
+          brand: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -30,6 +50,7 @@ export async function getWatchPricingRepo(db: DB, productId: string) {
   }
 
   return {
+    watchId: watch.id,
     product: watch.product,
     price: watch.watchPrice,
   };
@@ -55,82 +76,20 @@ export async function updateWatchPricingRepo(
     where: { watchId: watch.id },
     create: {
       watchId: watch.id,
+      salePrice: toDecimal(input.salePrice),
+      minPrice: toDecimal(input.minPrice),
       costPrice: toDecimal(input.costPrice),
       serviceCost: toDecimal(input.serviceCost),
       landedCost: toDecimal(input.landedCost),
-      listPrice: toDecimal(input.listPrice),
-      salePrice: toDecimal(input.salePrice),
-      minPrice: toDecimal(input.minPrice),
       pricingNote: input.pricingNote ?? null,
     },
     update: {
-      ...(input.costPrice !== undefined
-        ? { costPrice: toDecimal(input.costPrice) }
-        : {}),
-      ...(input.serviceCost !== undefined
-        ? { serviceCost: toDecimal(input.serviceCost) }
-        : {}),
-      ...(input.landedCost !== undefined
-        ? { landedCost: toDecimal(input.landedCost) }
-        : {}),
-      ...(input.listPrice !== undefined
-        ? { listPrice: toDecimal(input.listPrice) }
-        : {}),
-      ...(input.salePrice !== undefined
-        ? { salePrice: toDecimal(input.salePrice) }
-        : {}),
-      ...(input.minPrice !== undefined
-        ? { minPrice: toDecimal(input.minPrice) }
-        : {}),
-      ...(input.pricingNote !== undefined
-        ? { pricingNote: input.pricingNote }
-        : {}),
+      salePrice: toDecimal(input.salePrice),
+      minPrice: toDecimal(input.minPrice),
+      costPrice: toDecimal(input.costPrice),
+      serviceCost: toDecimal(input.serviceCost),
+      landedCost: toDecimal(input.landedCost),
+      pricingNote: input.pricingNote ?? null,
     },
   });
-}
-
-export async function bulkSetWatchSalePriceRepo(
-  db: DB,
-  input: {
-    productIds: string[];
-    salePrice: number | string;
-  }
-) {
-  const client = dbOrTx(db);
-
-  const watches = await client.watch.findMany({
-    where: {
-      productId: {
-        in: input.productIds,
-      },
-    },
-    select: {
-      id: true,
-      productId: true,
-    },
-  });
-
-  const salePrice = toDecimal(input.salePrice);
-
-  if (!salePrice) {
-    throw new Error("salePrice không hợp lệ");
-  }
-
-  const results = [];
-  for (const watch of watches) {
-    const row = await client.watchPrice.upsert({
-      where: { watchId: watch.id },
-      create: {
-        watchId: watch.id,
-        salePrice,
-      },
-      update: {
-        salePrice,
-      },
-    });
-
-    results.push(row);
-  }
-
-  return results;
 }

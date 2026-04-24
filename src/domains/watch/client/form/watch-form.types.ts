@@ -2,6 +2,8 @@ export type PickedMediaItem = {
     key: string;
     url?: string | null;
     name?: string | null;
+    role?: string | null;
+    sortOrder?: number | null;
 };
 
 export type WatchFormValues = {
@@ -74,8 +76,9 @@ export type WatchFormValues = {
     };
 
     media: {
+        inlineImage: PickedMediaItem | null;
         chosenImages: PickedMediaItem[];
-        selectedImages: PickedMediaItem[];
+        galleryImages: PickedMediaItem[];
         imageCount: number;
         hasBox: boolean;
         hasPapers: boolean;

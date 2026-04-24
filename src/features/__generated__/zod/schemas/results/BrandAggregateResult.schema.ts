@@ -13,7 +13,7 @@ export const BrandAggregateResultSchema = z.object({  _count: z.object({
     sortOrder: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    Product: z.number()
+    product: z.number()
   }).optional(),
   _sum: z.object({
     foundedYear: z.number().nullable(),

@@ -1,56 +1,85 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { CollapsibleSection, Field, SectionEmpty } from "./shared";
+import { DetailField, SectionCard, SectionEmpty } from "./shared";
 
 export default function WatchContentPanel({ detail }: { detail: any }) {
-  const bulletSpecs = Array.isArray(detail?.content?.bulletSpecs) ? detail.content.bulletSpecs.filter(Boolean) : [];
+  const content = detail?.content ?? {};
+  const bulletSpecs = Array.isArray(content?.bulletSpecs)
+    ? content.bulletSpecs.filter(Boolean)
+    : [];
+
+  const hasContent =
+    Boolean(content?.hookText) ||
+    Boolean(content?.body) ||
+    bulletSpecs.length > 0 ||
+    Boolean(content?.titleOverride) ||
+    Boolean(content?.seoTitle);
 
   return (
-    <CollapsibleSection
-      title="Nội dung bài đăng"
-      desc="Phần content của watch để vận hành và đăng bài."
+    <SectionCard
+      title="Content"
+      subtitle="Nội dung bài đăng và mô tả bán hàng."
       icon={<FileText className="h-5 w-5" />}
       defaultOpen
     >
-      <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Field label="Title override" value={detail?.content?.titleOverride || "-"} />
-          <Field label="SEO title" value={detail?.content?.seoTitle || "-"} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Summary</div>
-            <div className="whitespace-pre-wrap text-sm leading-7 text-slate-900">{detail?.content?.summary || "-"}</div>
+      {!hasContent ? (
+        <SectionEmpty text="Chưa có nội dung cho watch này." />
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
+            <DetailField
+              label="Title override"
+              value={content?.titleOverride || "-"}
+            />
+            <DetailField
+              label="SEO title"
+              value={content?.seoTitle || "-"}
+            />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Hook</div>
-            <div className="whitespace-pre-wrap text-sm leading-7 text-slate-900">{detail?.content?.hookText || "-"}</div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Body</div>
-          <div className="whitespace-pre-wrap text-sm leading-7 text-slate-900">{detail?.content?.body || "-"}</div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Bullet specs</div>
-          {bulletSpecs.length ? (
-            <div className="space-y-2">
-              {bulletSpecs.map((item: string, idx: number) => (
-                <div key={`${idx}-${item}`} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  ▪️ {item}
-                </div>
-              ))}
+          {content?.hookText ? (
+            <div className="rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-indigo-700/80">
+                Hook
+              </div>
+              <div className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-800">
+                {content.hookText}
+              </div>
             </div>
-          ) : (
-            <SectionEmpty text="Chưa có bullet specs." />
-          )}
+          ) : null}
+
+          {content?.body ? (
+            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-200">
+              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
+                Body
+              </div>
+              <div className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-800">
+                {content.body}
+              </div>
+            </div>
+          ) : null}
+
+          {bulletSpecs.length > 0 ? (
+            <div>
+              <div className="mb-3 text-sm font-semibold text-slate-900">
+                Bullet specs
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {bulletSpecs.map((item: string, index: number) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-700 ring-1 ring-inset ring-slate-200"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
-      </div>
-    </CollapsibleSection>
+      )}
+    </SectionCard>
   );
 }

@@ -15,7 +15,7 @@ const makeSchema = () => z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date()
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const BrandCreateManyInputObjectSchema: z.ZodType<Prisma.BrandCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.BrandCreateManyInput>;
 export const BrandCreateManyInputObjectZodSchema = makeSchema();

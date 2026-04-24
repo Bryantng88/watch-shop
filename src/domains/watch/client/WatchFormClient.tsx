@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { useNotify } from "@/components/feedback/AppToastProvider";
 import { submitWatchForm } from "./form/watch-form.actions";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
 import type { WatchFormValues } from "./form/watch-form.types";
@@ -22,6 +24,7 @@ type Props = {
     vendors?: SimpleOption[];
     categories?: SimpleOption[];
     canViewCost?: boolean;
+    canEditPrice?: boolean;
 };
 
 export default function WatchFormClient({
@@ -30,6 +33,7 @@ export default function WatchFormClient({
     vendors = [],
     categories = [],
     canViewCost = false,
+    canEditPrice = false,
 }: Props) {
     const initialValues = useMemo(
         () => mapWatchDetailToFormValues(detail),
@@ -41,7 +45,7 @@ export default function WatchFormClient({
     const [message, setMessage] = useState("");
     const [mediaError] = useState<string | null>(null);
     const [specModalOpen, setSpecModalOpen] = useState(false);
-
+    const [brandOptions, setBrandOptions] = useState<SimpleOption[]>(brands);
     const updateBasic = (patch: Partial<WatchFormValues["basic"]>) => {
         setValues((prev) => ({
             ...prev,
@@ -94,14 +98,41 @@ export default function WatchFormClient({
         });
     };
 
+    const searchParams = useSearchParams();
+    const notify = useNotify();
+    const pricingRef = useRef<HTMLDivElement | null>(null);
+
+    const focus = searchParams.get("focus");
+
+    useEffect(() => {
+        if (focus !== "pricing") return;
+
+        window.setTimeout(() => {
+            pricingRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+            });
+
+            notify.info({
+                title: "Đang xem thay đổi giá",
+                message: "Pricing block đã được focus từ thông báo.",
+            });
+        }, 250);
+    }, [focus, notify]);
+    const inlineImage = values.media.inlineImage;
     return (
         <div className="space-y-6">
             <WatchEditHeader
                 values={values}
-                brands={brands}
+                brands={brandOptions}
+                inlineImage={inlineImage}
                 pending={pending}
                 message={message}
                 onSubmit={onSubmit}
+                breadcrumbs={[
+                    { label: "Watches", href: "/admin/watches" },
+                    { label: values.basic.title || "Edit" },
+                ]}
                 onChange={(patch) => {
                     setValues((prev) => ({
                         ...prev,
@@ -128,6 +159,8 @@ export default function WatchFormClient({
                         categories={categories}
                         onChange={updateBasic}
                         onOpenSpecModal={() => setSpecModalOpen(true)}
+                        onBrandsChange={setBrandOptions}
+
                     />
 
                     <WatchContentSection
@@ -137,15 +170,15 @@ export default function WatchFormClient({
 
                     <WatchImageSection
                         chosenImages={values.media.chosenImages || []}
-                        selectedImages={values.media.selectedImages || []}
+                        galleryImages={values.media.galleryImages || []}
                         onChosenImagesChange={(items) => {
                             updateMedia({
                                 chosenImages: [...items],
                             });
                         }}
-                        onSelectedImagesChange={(items) => {
+                        onGalleryImagesChange={(items) => {
                             updateMedia({
-                                selectedImages: [...items],
+                                galleryImages: [...items],
                                 imageCount: items.length,
                             });
                         }}
@@ -154,11 +187,22 @@ export default function WatchFormClient({
                 </div>
 
                 <div className="space-y-6 xl:col-span-4">
-                    <WatchPricingSidebar
-                        values={values.pricing}
-                        canViewCost={canViewCost}
-                        onChange={updatePricing}
-                    />
+                    <div
+                        ref={pricingRef}
+                        className={
+                            focus === "pricing"
+                                ? "rounded-[32px] ring-2 ring-amber-300 ring-offset-4 ring-offset-slate-50"
+                                : ""
+                        }
+                    >
+                        <WatchPricingSidebar
+                            values={values.pricing}
+                            canViewCost={canViewCost}
+                            canEditPrice={canEditPrice}
+                            notificationDiff={focus === "pricing" ? searchParams.get("notificationId") : null}
+                            onChange={updatePricing}
+                        />
+                    </div>
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex items-start justify-between gap-3">

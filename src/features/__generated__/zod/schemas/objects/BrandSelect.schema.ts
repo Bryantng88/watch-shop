@@ -17,7 +17,7 @@ const makeSchema = () => z.object({
   sortOrder: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
-  Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => BrandCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const BrandSelectObjectSchema: z.ZodType<Prisma.BrandSelect> = makeSchema() as unknown as z.ZodType<Prisma.BrandSelect>;

@@ -13,7 +13,22 @@ type AdminTopbarProps = {
         roles?: string[];
     };
 };
+function getNotificationRoute(item: any) {
+    const meta = item.metadata ?? {};
 
+    const rawRoute =
+        typeof meta.route === "string"
+            ? meta.route
+            : typeof meta.link === "string"
+                ? meta.link
+                : typeof meta.productId === "string"
+                    ? `/admin/watches/${meta.productId}?focus=${meta.focus ?? "pricing"}`
+                    : "/admin/watches";
+
+    const separator = rawRoute.includes("?") ? "&" : "?";
+
+    return `${rawRoute}${separator}notificationId=${item.id}`;
+}
 function formatRelativeTime(input: string) {
     const date = new Date(input);
     const diff = Date.now() - date.getTime();
@@ -125,10 +140,7 @@ export default function AdminTopbar({
                                                         await markAsRead(item.id);
                                                     }
 
-                                                    const route =
-                                                        typeof item.metadata?.route === "string"
-                                                            ? item.metadata.route
-                                                            : "/admin/notifications";
+                                                    const route = getNotificationRoute(item);
 
                                                     setOpenNotify(false);
                                                     router.push(route);
@@ -139,10 +151,10 @@ export default function AdminTopbar({
                                                 <div className="flex items-start gap-3">
                                                     <span
                                                         className={`mt-1.5 h-2.5 w-2.5 rounded-full ${item.priority === "HIGH"
-                                                                ? "bg-red-500"
-                                                                : item.priority === "LOW"
-                                                                    ? "bg-gray-400"
-                                                                    : "bg-blue-500"
+                                                            ? "bg-red-500"
+                                                            : item.priority === "LOW"
+                                                                ? "bg-gray-400"
+                                                                : "bg-blue-500"
                                                             }`}
                                                     />
                                                     <div className="min-w-0 flex-1">

@@ -1,58 +1,67 @@
 "use client";
 
 import { Clock3, Settings2 } from "lucide-react";
-import { CollapsibleSection, Field, TinyStat } from "./shared";
+import { DetailField, SectionCard, SidebarStat } from "./shared";
 
 export function WatchOverviewPanel({ detail }: { detail: any }) {
+  const spec = detail?.spec ?? {};
+  const watch = detail?.watch ?? {};
+
   return (
-    <CollapsibleSection
-      title="Thông số & cấu hình"
-      desc="Snapshot chính của watch."
+    <SectionCard
+      title="Spec & vật liệu"
+      subtitle="Snapshot spec chính của watch."
       icon={<Settings2 className="h-5 w-5" />}
       defaultOpen
     >
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Field label="Model" value={detail?.spec?.model || "-"} />
-        <Field label="Reference" value={detail?.spec?.referenceNumber || "-"} />
-        <Field label="Nickname" value={detail?.spec?.nickname || "-"} />
-        <Field label="Case shape" value={detail?.spec?.caseShape || "-"} />
-        <Field label="Case size" value={detail?.spec?.caseSizeMM ? `${detail.spec.caseSizeMM} mm` : "-"} />
-        <Field label="Lug to lug" value={detail?.spec?.lugToLugMM ? `${detail.spec.lugToLugMM} mm` : "-"} />
-        <Field label="Lug width" value={detail?.spec?.lugWidthMM ? `${detail.spec.lugWidthMM} mm` : "-"} />
-        <Field label="Thickness" value={detail?.spec?.thicknessMM ? `${detail.spec.thicknessMM} mm` : "-"} />
-        <Field label="Dial" value={detail?.spec?.dialColor || "-"} />
-        <Field label="Crystal" value={detail?.spec?.crystal || "-"} />
-        <Field label="Calibre" value={detail?.spec?.calibre || detail?.watch?.movementCalibre || "-"} />
-        <Field label="Movement" value={detail?.watch?.movementType || "-"} />
-        <Field label="Serial" value={detail?.watch?.serialNumber || "-"} mono />
-        <Field label="Year text" value={detail?.watch?.yearText || "-"} />
-        <Field label="Primary material" value={detail?.spec?.primaryCaseMaterial || "-"} />
-        <Field label="Secondary material" value={detail?.spec?.secondaryCaseMaterial || "-"} />
-        <Field label="Material profile" value={detail?.spec?.materialProfile || "-"} />
-        <Field label="Gold treatment" value={detail?.spec?.goldTreatment || "-"} />
-        <Field label="Gold color" value={Array.isArray(detail?.spec?.goldColors) ? detail.spec.goldColors.join(", ") || "-" : "-"} />
-        <Field label="Gold karat" value={detail?.spec?.goldKarat || "-"} />
+      <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
+        <DetailField label="Model" value={spec.model || "-"} />
+        <DetailField label="Reference" value={spec.referenceNumber || "-"} />
+        <DetailField label="Nickname" value={spec.nickname || "-"} />
+        <DetailField label="Case shape" value={spec.caseShape || "-"} />
+        <DetailField label="Case size" value={spec.caseSizeMM ? `${spec.caseSizeMM} mm` : "-"} />
+        <DetailField label="Lug to lug" value={spec.lugToLugMM ? `${spec.lugToLugMM} mm` : "-"} />
+        <DetailField label="Thickness" value={spec.thicknessMM ? `${spec.thicknessMM} mm` : "-"} />
+        <DetailField label="Dial" value={spec.dialColor || "-"} />
+        <DetailField label="Crystal" value={spec.crystal || "-"} />
+        <DetailField label="Calibre" value={spec.calibre || watch.movementCalibre || "-"} />
+        <DetailField label="Movement" value={watch.movementType || spec.movementType || "-"} />
+        <DetailField label="Serial" value={watch.serialNumber || "-"} mono />
+        <DetailField label="Year text" value={watch.yearText || "-"} />
+        <DetailField label="Material profile" value={spec.materialProfile || "-"} />
+        <DetailField label="Primary material" value={spec.primaryCaseMaterial || "-"} />
+        <DetailField label="Secondary material" value={spec.secondaryCaseMaterial || "-"} />
+        <DetailField label="Gold treatment" value={spec.goldTreatment || "-"} />
+        <DetailField
+          label="Gold color"
+          value={Array.isArray(spec.goldColors) ? spec.goldColors.join(", ") || "-" : "-"}
+        />
+        <DetailField label="Gold karat" value={spec.goldKarat || "-"} />
+        <DetailField label="Bracelet type" value={spec.braceletType || "-"} />
+        <DetailField label="Buckle type" value={spec.buckleType || "-"} />
       </div>
-    </CollapsibleSection>
+    </SectionCard>
   );
 }
 
 export function WatchOpsPanel({ detail }: { detail: any }) {
+  const watch = detail?.watch ?? {};
+
   return (
-    <CollapsibleSection
+    <SectionCard
       title="Tổng quan vận hành"
-      desc="Những điểm cần nhìn nhanh giống product detail."
+      subtitle="Những trạng thái cần nhìn nhanh."
       icon={<Clock3 className="h-5 w-5" />}
       defaultOpen
     >
-      <div className="grid grid-cols-1 gap-3">
-        <TinyStat label="Product status" value={detail?.status || "-"} />
-        <TinyStat label="Sale state" value={detail?.watch?.saleState || "-"} />
-        <TinyStat label="Service state" value={detail?.watch?.serviceState || "-"} />
-        <TinyStat label="Stock state" value={detail?.watch?.stockState || "-"} />
-        <TinyStat label="Giới tính" value={detail?.watch?.gender || "-"} />
-        <TinyStat label="Site channel" value={detail?.watch?.siteChannel || "-"} />
+      <div className="space-y-3">
+        <SidebarStat label="Product status" value={detail?.status || "-"} />
+        <SidebarStat label="Sale state" value={watch.saleState || "-"} />
+        <SidebarStat label="Service state" value={watch.serviceState || "-"} />
+        <SidebarStat label="Stock state" value={watch.stockState || "-"} />
+        <SidebarStat label="Gender" value={watch.gender || "-"} />
+        <SidebarStat label="Site channel" value={watch.siteChannel || "-"} />
       </div>
-    </CollapsibleSection>
+    </SectionCard>
   );
 }

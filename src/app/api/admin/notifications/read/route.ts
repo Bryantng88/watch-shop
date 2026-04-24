@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { markNotificationAsRead } from "@/server/notifications/notification.repo";
-import { getCurrentAuthUser } from "@/server/auth/get-current-user";
+
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import { markNotificationAsRead } from "@/app/(admin)/admin/notifications/notification.repo";
 
 export async function POST(req: Request) {
-    const user = await getCurrentAuthUser();
+    const user = await getCurrentUser();
     if (!user) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

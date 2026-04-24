@@ -14,7 +14,6 @@ import WatchTradePanel from "../ui/detail/WatchTradePanel";
 type Props = {
     detail: any;
     images?: any[];
-    pricing?: any;
     serviceHistory?: any[];
     tradeHistory?: { acquisitions?: any[]; orders?: any[] } | any[];
     canViewTradeFinancials?: boolean;
@@ -26,8 +25,7 @@ function normalizeRole(value: any) {
 
 function sortImages(items: any[]) {
     return [...items].sort(
-        (a, b) =>
-            Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+        (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
     );
 }
 
@@ -40,9 +38,9 @@ export default function WatchDetailClient({
 }: Props) {
     const sortedImages = sortImages(images ?? []);
 
-    const inlineImages = sortedImages.filter(
-        (img) => normalizeRole(img?.role) === "INLINE"
-    );
+    const inlineImage =
+        sortedImages.find((img) => normalizeRole(img?.role) === "INLINE") ??
+        null;
 
     const galleryImages = sortedImages.filter(
         (img) => normalizeRole(img?.role) === "GALLERY"
@@ -50,13 +48,13 @@ export default function WatchDetailClient({
 
     return (
         <div className="space-y-6">
-            <WatchHeader detail={detail} />
+            <WatchHeader detail={detail} inlineImage={inlineImage} />
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
                 <div className="space-y-6 xl:col-span-8">
                     <WatchMediaPanel
                         detail={detail}
-                        inlineImages={inlineImages}
+                        inlineImage={inlineImage}
                         galleryImages={galleryImages}
                         canViewTradeFinancials={canViewTradeFinancials}
                     />
@@ -64,7 +62,10 @@ export default function WatchDetailClient({
                     <WatchOverviewPanel detail={detail} />
                     <WatchContentPanel detail={detail} />
                     <WatchServicePanel serviceHistory={serviceHistory} />
-                    <WatchTradePanel tradeHistory={tradeHistory} />
+                    <WatchTradePanel
+                        tradeHistory={tradeHistory}
+                        canViewTradeFinancials={canViewTradeFinancials}
+                    />
                 </div>
 
                 <div className="space-y-6 xl:col-span-4">

@@ -12,13 +12,35 @@ function canViewCost(user: {
     roles?: string[] | null;
     permissions?: string[] | null;
 } | null) {
-    const roles = (user?.roles ?? []).map((x) => String(x).trim().toUpperCase());
-    const permissions = (user?.permissions ?? []).map((x) => String(x).trim());
+    const roles = (user?.roles ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
+    const permissions = (user?.permissions ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
 
     return (
         roles.includes("ADMIN") ||
         permissions.includes("ADMIN") ||
         permissions.includes("PRODUCT_COST_VIEW")
+    );
+}
+
+function canEditPrice(user: {
+    roles?: string[] | null;
+    permissions?: string[] | null;
+} | null) {
+    const roles = (user?.roles ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
+    const permissions = (user?.permissions ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
+
+    return (
+        roles.includes("ADMIN") ||
+        permissions.includes("ADMIN") ||
+        permissions.includes("PRODUCT_PRICE_EDIT")
     );
 }
 
@@ -31,14 +53,13 @@ export default async function WatchEditPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+    const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
     const { id } = await params;
 
-    const [detail, options, user] = await Promise.all([
+    const [detail, options] = await Promise.all([
         getWatchEditDetail(id),
         listWatchEditOptions(),
-        null,
     ]);
 
     if (!detail) notFound();
@@ -51,6 +72,7 @@ export default async function WatchEditPage({
                 vendors={serialize(options.vendors)}
                 categories={serialize(options.categories)}
                 canViewCost={canViewCost(user)}
+                canEditPrice={canEditPrice(user)}
             />
         </div>
     );

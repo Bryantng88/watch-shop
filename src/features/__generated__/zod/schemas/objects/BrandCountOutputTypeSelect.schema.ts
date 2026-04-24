@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  Product: z.boolean().optional()
+  product: z.boolean().optional()
 }).strict();
 export const BrandCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.BrandCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.BrandCountOutputTypeSelect>;
 export const BrandCountOutputTypeSelectObjectZodSchema = makeSchema();

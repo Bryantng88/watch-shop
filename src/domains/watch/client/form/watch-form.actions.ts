@@ -2,111 +2,34 @@
 
 import { prisma } from "@/server/db/client";
 import type { WatchFormValues } from "./watch-form.types";
-import { replaceWatchImages } from "@/domains/watch/server";
+import { replaceWatchGalleryImages } from "@/domains/watch/server";
+import { updateWatchPricingWithDiff } from "@/domains/watch/server/pricing";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
-
-function toDecimal(value?: string) {
-    const raw = String(value ?? "").trim();
-    if (!raw) return null;
-
-    const normalized = raw.replace(/[^\d.-]/g, "");
-    if (!normalized) return null;
-
-    return normalized;
+import {
+    WatchFormEnums,
+    pickEnumOrDefault,
+    pickEnumOrNull,
+    pickEnumOrUndefined,
+    pickGoldColors,
+    toDecimal,
+} from "./watch-form.server.utils"
+function textOrUndefined(value?: string | null) {
+    const text = String(value ?? "").trim();
+    return text || undefined;
 }
 
-function sameMoney(a?: string | null, b?: string | null) {
-    return String(a ?? "") === String(b ?? "");
+function textOrNull(value?: string | null) {
+    const text = String(value ?? "").trim();
+    return text || null;
 }
-
-function pickEnum<T extends string>(
-    value: string | null | undefined,
-    allowed: readonly T[]
-): T | null {
-    const raw = String(value ?? "").trim() as T;
-    return allowed.includes(raw) ? raw : null;
-}
-
-const MOVEMENT_TYPES = [
-    "AUTOMATIC",
-    "HAND_WOUND",
-    "QUARTZ",
-    "SOLAR",
-    "KINETIC",
-    "MECHAQUARTZ",
-    "SPRING_DRIVE",
-    "HYBRID",
-] as const;
-
-const CASE_TYPES = [
-    "ROUND",
-    "TANK",
-    "SQUARE",
-    "SPECIAL",
-    "OTHER",
-    "TONNEAU",
-    "CUSHION",
-    "OVAL",
-    "ASYMMETRICAL",
-    "OCTAGON",
-    "POLYGON",
-] as const;
-
-const GLASS_TYPES = [
-    "SAPPHIRE",
-    "ACRYLIC",
-    "MINERAL",
-    "HARDLEX",
-    "AR_COATED",
-] as const;
-
-const MATERIAL_PROFILES = [
-    "SINGLE_MATERIAL",
-    "BIMETAL",
-    "COATED",
-    "OTHER",
-] as const;
-
-const CASE_MATERIALS = [
-    "STAINLESS_STEEL",
-    "TITANIUM",
-    "CERAMIC",
-    "CARBON",
-    "GOLD",
-    "PLATINUM",
-    "SILVER",
-    "BRASS",
-    "OTHER",
-] as const;
-
-const GOLD_TREATMENTS = [
-    "SOLID_GOLD",
-    "CAPPED_GOLD",
-    "GOLD_PLATED",
-    "GOLD_VERMEIL",
-    "GOLD_FILLED",
-] as const;
-
-const GOLD_COLORS = ["YELLOW", "WHITE", "ROSE", "MIXED"] as const;
-
-const BRACELET_TYPES = [
-    "LEATHER",
-    "BRACELET",
-    "RUBBER",
-    "NATO",
-    "CANVASS",
-    "SPECIAL",
-] as const;
-
 export async function submitWatchForm(values: WatchFormValues) {
     const productId = values.productId;
 
-    const current = await prisma.watch.findFirst({
+    const current = await prisma.watch.findUnique({
         where: { productId },
         include: {
             product: true,
             watchSpecV2: true,
-            watchPrice: true,
             watchContent: true,
         },
     });
@@ -114,13 +37,6 @@ export async function submitWatchForm(values: WatchFormValues) {
     if (!current) {
         throw new Error("Không tìm thấy watch.");
     }
-
-    const prevPricing = {
-        salePrice: current.watchPrice?.salePrice?.toString() ?? null,
-        listPrice: current.watchPrice?.listPrice?.toString() ?? null,
-        minPrice: current.watchPrice?.minPrice?.toString() ?? null,
-        costPrice: current.watchPrice?.costPrice?.toString() ?? null,
-    };
 
     await prisma.$transaction(async (tx) => {
         const brand = values.basic.brandId
@@ -137,9 +53,9 @@ export async function submitWatchForm(values: WatchFormValues) {
         await tx.product.update({
             where: { id: productId },
             data: {
-                title: values.basic.title || null,
-                slug: values.basic.slug || null,
-                sku: values.header.sku || null,
+                title: textOrUndefined(values.basic.title),
+                slug: textOrUndefined(values.basic.slug),
+                sku: textOrUndefined(values.header.sku),
 
                 brand: values.basic.brandId
                     ? { connect: { id: values.basic.brandId } }
@@ -154,126 +70,111 @@ export async function submitWatchForm(values: WatchFormValues) {
                     : { disconnect: true },
             },
         });
-
         await tx.watch.update({
             where: { id: current.id },
             data: {
-                gender: values.basic.gender || null,
-                siteChannel: values.basic.siteChannel || null,
+                gender: pickEnumOrUndefined(
+                    values.basic.gender,
+                    WatchFormEnums.Gender
+                ),
+
+                siteChannel: pickEnumOrUndefined(
+                    values.basic.siteChannel,
+                    WatchFormEnums.WatchSiteChannel
+                ),
+
                 stockState: values.basic.stockState || null,
                 saleState: values.basic.saleState || null,
                 conditionGrade: values.basic.conditionGrade || null,
-                movementType: pickEnum(
+
+                movementType: pickEnumOrNull(
                     values.basic.movementType,
-                    MOVEMENT_TYPES
+                    WatchFormEnums.MovementType
                 ),
+
                 movementCalibre: values.basic.movementCalibre || null,
                 serialNumber: values.basic.serialNumber || null,
                 yearText: values.basic.yearText || null,
             },
         });
 
+        const specData = {
+            brand: brand?.name ?? null,
+            model: values.spec.model || null,
+            referenceNumber: values.spec.referenceNumber || null,
+            nickname: values.spec.nickname || null,
+
+            caseShape: pickEnumOrNull(
+                values.spec.caseShape,
+                WatchFormEnums.CaseType
+            ),
+
+            caseSizeMM: toDecimal(values.spec.caseSizeMM),
+            lugToLugMM: toDecimal(values.spec.lugToLugMM),
+            thicknessMM: toDecimal(values.spec.thicknessMM),
+
+            crystal: pickEnumOrNull(
+                values.spec.crystal,
+                WatchFormEnums.Glass
+            ),
+
+            dialColor: values.spec.dialColor || null,
+            dialFinish: values.spec.dialFinish || null,
+
+            movementType: pickEnumOrNull(
+                values.basic.movementType,
+                WatchFormEnums.MovementType
+            ),
+
+            calibre: values.spec.calibre || null,
+
+            materialProfile: pickEnumOrDefault(
+                values.spec.materialProfile,
+                WatchFormEnums.WatchMaterialProfile,
+                WatchFormEnums.WatchMaterialProfile.SINGLE_MATERIAL
+            ),
+
+            primaryCaseMaterial: pickEnumOrDefault(
+                values.spec.primaryCaseMaterial,
+                WatchFormEnums.WatchCaseMaterialFamily,
+                WatchFormEnums.WatchCaseMaterialFamily.STAINLESS_STEEL
+            ),
+
+            secondaryCaseMaterial: pickEnumOrNull(
+                values.spec.secondaryCaseMaterial,
+                WatchFormEnums.WatchCaseMaterialFamily
+            ),
+
+            goldTreatment: pickEnumOrNull(
+                values.spec.goldTreatment,
+                WatchFormEnums.WatchGoldTreatment
+            ),
+
+            goldColors: pickGoldColors(values.spec.goldColors),
+
+            goldKarat: values.spec.goldKarat
+                ? Number(values.spec.goldKarat)
+                : null,
+
+            braceletType: pickEnumOrNull(
+                values.spec.braceletType,
+                WatchFormEnums.Strap
+            ),
+
+            strapMaterialText: values.spec.strapMaterialText || null,
+            waterResistance: values.spec.waterResistance || null,
+            powerReserve: values.spec.powerReserve || null,
+            buckleType: values.spec.buckleType || null,
+            materialNote: values.spec.materialNote || null,
+        };
+
         await tx.watchSpecV2.upsert({
             where: { watchId: current.id },
             create: {
                 watchId: current.id,
-                brand: brand?.name ?? null,
-                model: values.spec.model || null,
-                referenceNumber: values.spec.referenceNumber || null,
-                nickname: values.spec.nickname || null,
-                caseShape: pickEnum(values.spec.caseShape, CASE_TYPES),
-                caseSizeMM: toDecimal(values.spec.caseSizeMM),
-                lugToLugMM: toDecimal(values.spec.lugToLugMM),
-                thicknessMM: toDecimal(values.spec.thicknessMM),
-                crystal: pickEnum(values.spec.crystal, GLASS_TYPES),
-                dialColor: values.spec.dialColor || null,
-                dialFinish: values.spec.dialFinish || null,
-                movementType: pickEnum(
-                    values.basic.movementType,
-                    MOVEMENT_TYPES
-                ),
-                calibre: values.spec.calibre || null,
-                materialProfile: pickEnum(
-                    values.spec.materialProfile,
-                    MATERIAL_PROFILES
-                ),
-                primaryCaseMaterial: pickEnum(
-                    values.spec.primaryCaseMaterial,
-                    CASE_MATERIALS
-                ),
-                secondaryCaseMaterial: pickEnum(
-                    values.spec.secondaryCaseMaterial,
-                    CASE_MATERIALS
-                ),
-                goldTreatment: pickEnum(
-                    values.spec.goldTreatment,
-                    GOLD_TREATMENTS
-                ),
-                goldColors: (values.spec.goldColors ?? []).filter((x) =>
-                    GOLD_COLORS.includes(x as any)
-                ) as any,
-                goldKarat: values.spec.goldKarat
-                    ? Number(values.spec.goldKarat)
-                    : null,
-                braceletType: pickEnum(
-                    values.spec.braceletType,
-                    BRACELET_TYPES
-                ),
-                strapMaterialText: values.spec.strapMaterialText || null,
-                waterResistance: values.spec.waterResistance || null,
-                powerReserve: values.spec.powerReserve || null,
-                buckleType: values.spec.buckleType || null,
-                materialNote: values.spec.materialNote || null,
+                ...specData,
             },
-            update: {
-                brand: brand?.name ?? null,
-                model: values.spec.model || null,
-                referenceNumber: values.spec.referenceNumber || null,
-                nickname: values.spec.nickname || null,
-                caseShape: pickEnum(values.spec.caseShape, CASE_TYPES),
-                caseSizeMM: toDecimal(values.spec.caseSizeMM),
-                lugToLugMM: toDecimal(values.spec.lugToLugMM),
-                thicknessMM: toDecimal(values.spec.thicknessMM),
-                crystal: pickEnum(values.spec.crystal, GLASS_TYPES),
-                dialColor: values.spec.dialColor || null,
-                dialFinish: values.spec.dialFinish || null,
-                movementType: pickEnum(
-                    values.basic.movementType,
-                    MOVEMENT_TYPES
-                ),
-                calibre: values.spec.calibre || null,
-                materialProfile: pickEnum(
-                    values.spec.materialProfile,
-                    MATERIAL_PROFILES
-                ),
-                primaryCaseMaterial: pickEnum(
-                    values.spec.primaryCaseMaterial,
-                    CASE_MATERIALS
-                ),
-                secondaryCaseMaterial: pickEnum(
-                    values.spec.secondaryCaseMaterial,
-                    CASE_MATERIALS
-                ),
-                goldTreatment: pickEnum(
-                    values.spec.goldTreatment,
-                    GOLD_TREATMENTS
-                ),
-                goldColors: (values.spec.goldColors ?? []).filter((x) =>
-                    GOLD_COLORS.includes(x as any)
-                ) as any,
-                goldKarat: values.spec.goldKarat
-                    ? Number(values.spec.goldKarat)
-                    : null,
-                braceletType: pickEnum(
-                    values.spec.braceletType,
-                    BRACELET_TYPES
-                ),
-                strapMaterialText: values.spec.strapMaterialText || null,
-                waterResistance: values.spec.waterResistance || null,
-                powerReserve: values.spec.powerReserve || null,
-                buckleType: values.spec.buckleType || null,
-                materialNote: values.spec.materialNote || null,
-            },
+            update: specData,
         });
 
         await tx.watchContent.upsert({
@@ -290,83 +191,59 @@ export async function submitWatchForm(values: WatchFormValues) {
                 bulletSpecs: values.content.bulletSpecs ?? [],
             },
         });
-
-        await tx.watchPrice.upsert({
-            where: { watchId: current.id },
-            create: {
-                watchId: current.id,
-                salePrice: toDecimal(values.pricing.salePrice),
-                listPrice: toDecimal(values.pricing.listPrice),
-                minPrice: toDecimal(values.pricing.minPrice),
-                costPrice: toDecimal(values.pricing.costPrice),
-                serviceCost: toDecimal(values.pricing.serviceCost),
-                landedCost: toDecimal(values.pricing.landedCost),
-                pricingNote: values.pricing.pricingNote || null,
-            },
-            update: {
-                salePrice: toDecimal(values.pricing.salePrice),
-                listPrice: toDecimal(values.pricing.listPrice),
-                minPrice: toDecimal(values.pricing.minPrice),
-                costPrice: toDecimal(values.pricing.costPrice),
-                serviceCost: toDecimal(values.pricing.serviceCost),
-                landedCost: toDecimal(values.pricing.landedCost),
-                pricingNote: values.pricing.pricingNote || null,
-            },
-        });
     });
 
-    const selected = Array.isArray(values.media.selectedImages)
-        ? values.media.selectedImages
-        : [];
-
-    await replaceWatchImages({
+    await replaceWatchGalleryImages({
         productId,
-        images: selected.map((item, index) => ({
+        images: (values.media.galleryImages ?? []).map((item, index) => ({
             fileKey: String(item.key),
-            role: "GALLERY",
             isForAdmin: true,
             isForStorefront: true,
             sortOrder: index,
         })),
     });
 
-    const nextPricing = {
-        salePrice: toDecimal(values.pricing.salePrice),
-        listPrice: toDecimal(values.pricing.listPrice),
-        minPrice: toDecimal(values.pricing.minPrice),
-        costPrice: toDecimal(values.pricing.costPrice),
-    };
+    const pricingResult = await updateWatchPricingWithDiff(productId, {
+        salePrice: values.pricing.salePrice,
+        minPrice: values.pricing.minPrice,
+        costPrice: values.pricing.costPrice,
+        serviceCost: values.pricing.serviceCost,
+        landedCost: values.pricing.landedCost,
+        pricingNote: values.pricing.pricingNote,
+    });
 
-    const changedFields = [
-        !sameMoney(prevPricing.salePrice, nextPricing.salePrice)
-            ? "salePrice"
-            : null,
-        !sameMoney(prevPricing.listPrice, nextPricing.listPrice)
-            ? "listPrice"
-            : null,
-        !sameMoney(prevPricing.minPrice, nextPricing.minPrice)
-            ? "minPrice"
-            : null,
-        !sameMoney(prevPricing.costPrice, nextPricing.costPrice)
-            ? "costPrice"
-            : null,
-    ].filter(Boolean) as string[];
+    if (pricingResult.changedFields.length > 0) {
+        const route = `/admin/watches/${productId}?focus=pricing`;
 
-    if (changedFields.length > 0) {
         await notifyUsersByRole({
-            roles: ["SALE", "TECHNICIAN"],
-            title: "Watch pricing updated",
-            message: `${values.basic.title || "Watch"} vừa được cập nhật giá.`,
+            role: "SALE",
+            type: "WATCH_PRICE_UPDATED",
+            title: "Giá watch vừa được cập nhật",
+            message: `${pricingResult.product?.title || values.basic.title || "Watch"
+                } vừa được chỉnh giá.`,
+            priority: "NORMAL",
             metadata: {
+                route: `/admin/watches/${productId}?focus=pricing`,
                 productId,
-                watchId: current.id,
-                sku: values.header.sku || null,
-                title: values.basic.title || null,
-                changedFields,
-                before: prevPricing,
-                after: nextPricing,
+                focus: "pricing",
+                sku: pricingResult.product?.sku ?? values.header.sku ?? null,
+                title: pricingResult.product?.title ?? values.basic.title ?? null,
+                changedFields: pricingResult.changedFields,
+                before: {
+                    salePrice: pricingResult.before?.salePrice?.toString() ?? null,
+                    minPrice: pricingResult.before?.minPrice?.toString() ?? null,
+                    costPrice: pricingResult.before?.costPrice?.toString() ?? null,
+                    serviceCost: pricingResult.before?.serviceCost?.toString() ?? null,
+                    landedCost: pricingResult.before?.landedCost?.toString() ?? null,
+                },
+                after: {
+                    salePrice: pricingResult.after?.salePrice?.toString() ?? null,
+                    minPrice: pricingResult.after?.minPrice?.toString() ?? null,
+                    costPrice: pricingResult.after?.costPrice?.toString() ?? null,
+                    serviceCost: pricingResult.after?.serviceCost?.toString() ?? null,
+                    landedCost: pricingResult.after?.landedCost?.toString() ?? null,
+                },
             },
-            link: `/admin/watches/${productId}`,
         });
     }
 

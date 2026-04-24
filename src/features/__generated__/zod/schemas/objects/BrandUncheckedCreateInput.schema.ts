@@ -16,8 +16,7 @@ const makeSchema = () => z.object({
   description: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
-  Product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema)
+  product: z.lazy(() => ProductUncheckedCreateNestedManyWithoutBrandInputObjectSchema)
 }).strict();
 export const BrandUncheckedCreateInputObjectSchema: z.ZodType<Prisma.BrandUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.BrandUncheckedCreateInput>;
 export const BrandUncheckedCreateInputObjectZodSchema = makeSchema();

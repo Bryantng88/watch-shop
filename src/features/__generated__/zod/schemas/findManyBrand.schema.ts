@@ -23,7 +23,7 @@ export const BrandFindManySelectSchema: z.ZodType<Prisma.BrandSelect> = z.object
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional(),
+    product: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.BrandSelect>;
 
@@ -41,7 +41,7 @@ export const BrandFindManySelectZodSchema = z.object({
     sortOrder: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional(),
+    product: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

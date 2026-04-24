@@ -12,21 +12,32 @@ function toPickedMediaItem(img: any): PickedMediaItem | null {
         key,
         url: img?.url ?? `/api/media/sign?key=${encodeURIComponent(key)}`,
         name: key.split("/").pop() ?? key,
+        role: img?.role ?? null,
+        sortOrder: img?.sortOrder ?? null,
     };
 }
 
 export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
     const images = Array.isArray(detail?.images) ? detail.images : [];
 
-    const selectedImages = images
+    const inlineImage =
+        images
+            .filter((img: any) => String(img?.role ?? "").toUpperCase() === "INLINE")
+            .sort(
+                (a: any, b: any) =>
+                    Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+            )
+            .map(toPickedMediaItem)
+            .filter(Boolean)[0] ?? null;
+
+    const galleryImages = images
         .filter((img: any) => String(img?.role ?? "").toUpperCase() === "GALLERY")
+        .sort(
+            (a: any, b: any) =>
+                Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+        )
         .map(toPickedMediaItem)
         .filter(Boolean) as PickedMediaItem[];
-
-    const costPrice =
-        detail?.price?.costPrice ??
-        detail?.acquisition?.unitCost ??
-        "";
 
     return {
         productId: s(detail?.productId),
@@ -48,8 +59,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             stockState: s(detail?.watch?.stockState),
             saleState: s(detail?.watch?.saleState),
             conditionGrade: s(detail?.watch?.conditionGrade),
-            movementType:
-                s(detail?.watch?.movementType) || s(detail?.spec?.movementType),
+            movementType: s(detail?.watch?.movementType),
             movementCalibre: s(detail?.watch?.movementCalibre),
             serialNumber: s(detail?.watch?.serialNumber),
             yearText: s(detail?.watch?.yearText),
@@ -96,16 +106,17 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             salePrice: s(detail?.price?.salePrice),
             listPrice: s(detail?.price?.listPrice),
             minPrice: s(detail?.price?.minPrice),
-            costPrice: s(costPrice),
+            costPrice: s(detail?.price?.costPrice),
             serviceCost: s(detail?.price?.serviceCost),
             landedCost: s(detail?.price?.landedCost),
             pricingNote: s(detail?.price?.pricingNote),
         },
 
         media: {
-            chosenImages: selectedImages,
-            selectedImages,
-            imageCount: selectedImages.length,
+            inlineImage: inlineImage as PickedMediaItem | null,
+            chosenImages: galleryImages,
+            galleryImages,
+            imageCount: galleryImages.length,
             hasBox: Boolean(detail?.watch?.hasBox ?? detail?.spec?.boxIncluded),
             hasPapers: Boolean(detail?.watch?.hasPapers),
             bookletIncluded: Boolean(detail?.spec?.bookletIncluded),

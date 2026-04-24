@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  Product: z.lazy(() => ProductUncheckedUpdateManyWithoutBrandNestedInputObjectSchema).optional()
+  product: z.lazy(() => ProductUncheckedUpdateManyWithoutBrandNestedInputObjectSchema).optional()
 }).strict();
 export const BrandUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.BrandUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.BrandUncheckedUpdateInput>;
 export const BrandUncheckedUpdateInputObjectZodSchema = makeSchema();

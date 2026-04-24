@@ -16,7 +16,7 @@ export const BrandResultSchema = z.object({
     sortOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    Product: z.array(z.unknown())
+    product: z.array(z.unknown())
 }).strict();
 
 export type BrandResultType = z.infer<typeof BrandResultSchema>;

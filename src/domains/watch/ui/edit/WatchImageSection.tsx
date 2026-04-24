@@ -8,9 +8,9 @@ import { SectionCard } from "./shared";
 
 type Props = {
     chosenImages: PickedMediaItem[];
-    selectedImages: PickedMediaItem[];
+    galleryImages: PickedMediaItem[];
     onChosenImagesChange: (items: PickedMediaItem[]) => void;
-    onSelectedImagesChange: (items: PickedMediaItem[]) => void;
+    onGalleryImagesChange: (items: PickedMediaItem[]) => void;
     error?: string | null;
 };
 
@@ -37,16 +37,16 @@ function InfoChip({
 
 export default function WatchImageSection({
     chosenImages,
-    selectedImages,
+    galleryImages,
     onChosenImagesChange,
-    onSelectedImagesChange,
+    onGalleryImagesChange,
     error,
 }: Props) {
     return (
         <SectionCard
             icon={<ImageIcon className="h-5 w-5" />}
             title="Hình ảnh"
-            subtitle="Chọn ảnh từ products/edit/active vào chosen trước, rồi lọc ảnh thực sự sẽ lưu cho watch."
+            subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
         >
             <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -55,8 +55,8 @@ export default function WatchImageSection({
                         value={String(chosenImages.length)}
                     />
                     <InfoChip
-                        label="Sẽ lưu"
-                        value={`${selectedImages.length}/8`}
+                        label="Gallery sẽ lưu"
+                        value={`${galleryImages.length}/8`}
                         tone="primary"
                     />
                 </div>
@@ -64,13 +64,13 @@ export default function WatchImageSection({
                 <div className="rounded-3xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-4">
                     <MediaPickerMulti
                         chosenValue={chosenImages}
-                        selectedValue={selectedImages}
+                        selectedValue={galleryImages}
                         onChosenChange={onChosenImagesChange}
-                        onSelectedChange={onSelectedImagesChange}
+                        onSelectedChange={onGalleryImagesChange}
                         profile="edit"
                         maxFinalSelection={8}
-                        title="Ảnh watch"
-                        description="Có thể chọn nhiều ảnh từ products/edit/active. Khi xác nhận, ảnh sẽ được chuyển sang products/edit/chosen."
+                        title="Ảnh gallery"
+                        description="Chỉ chọn ảnh gallery. Ảnh đại diện INLINE được quản lý riêng cho header/list thumbnail."
                     />
                 </div>
 

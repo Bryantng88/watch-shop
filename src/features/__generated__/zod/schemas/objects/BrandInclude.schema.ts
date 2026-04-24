@@ -4,7 +4,7 @@ import { ProductFindManySchema as ProductFindManySchema } from '../findManyProdu
 import { BrandCountOutputTypeArgsObjectSchema as BrandCountOutputTypeArgsObjectSchema } from './BrandCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
-  Product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => BrandCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const BrandIncludeObjectSchema: z.ZodType<Prisma.BrandInclude> = makeSchema() as unknown as z.ZodType<Prisma.BrandInclude>;

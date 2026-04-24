@@ -11,6 +11,7 @@ import {
     Input,
     Select,
     Toggle,
+    Textarea
 } from "./shared";
 
 type Props = {
@@ -170,7 +171,7 @@ export default function WatchSpecModal({
                             <Input
                                 value={draft.model}
                                 onChange={(e) => patch({ model: e.target.value })}
-                                placeholder="Model"
+                                placeholder="De Ville / Datejust / Tank..."
                             />
                         </div>
 
@@ -181,7 +182,7 @@ export default function WatchSpecModal({
                                 onChange={(e) =>
                                     patch({ referenceNumber: e.target.value })
                                 }
-                                placeholder="Reference"
+
                             />
                         </div>
 
@@ -190,7 +191,7 @@ export default function WatchSpecModal({
                             <Input
                                 value={draft.nickname}
                                 onChange={(e) => patch({ nickname: e.target.value })}
-                                placeholder="Nickname"
+
                             />
                         </div>
                     </div>
@@ -448,13 +449,10 @@ export default function WatchSpecModal({
 
                         <div className="md:col-span-2">
                             <FieldLabel>Material note</FieldLabel>
-                            <textarea
+                            <Textarea
                                 value={draft.materialNote}
-                                onChange={(e) =>
-                                    patch({ materialNote: e.target.value })
-                                }
+                                onChange={(e) => patch({ materialNote: e.target.value })}
                                 placeholder="Ghi chú vật liệu"
-                                className="block min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                             />
                         </div>
                     </div>

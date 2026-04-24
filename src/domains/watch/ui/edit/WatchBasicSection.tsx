@@ -4,17 +4,18 @@ import { Pencil } from "lucide-react";
 import { FieldLabel, Input, SectionCard, Select, Button } from "./shared";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { buildWatchSpecSummary } from "./WatchSpecModal";
-
+import WatchBrandField from "./WatchBrandField";
 type SimpleOption = { id: string; name: string; slug?: string | null };
 
 type Props = {
     values: WatchFormValues["basic"];
     spec: WatchFormValues["spec"];
-    brands: SimpleOption[];
     vendors: SimpleOption[];
     categories: SimpleOption[];
     onChange: (patch: Partial<WatchFormValues["basic"]>) => void;
     onOpenSpecModal: () => void;
+    brands: SimpleOption[];
+    onBrandsChange: (brands: SimpleOption[]) => void;
 };
 
 const GENDER_OPTIONS = ["MEN", "WOMEN", "UNISEX"].map((x) => ({
@@ -51,6 +52,7 @@ export default function WatchBasicSection({
     categories,
     onChange,
     onOpenSpecModal,
+    onBrandsChange
 }: Props) {
     const brandOptions = brands.map((x) => ({ value: x.id, label: x.name }));
     const vendorOptions = vendors.map((x) => ({ value: x.id, label: x.name }));
@@ -87,12 +89,11 @@ export default function WatchBasicSection({
                 </div>
 
                 <div>
-                    <FieldLabel>Brand</FieldLabel>
-                    <Select
+                    <WatchBrandField
                         value={values.brandId}
-                        onChange={(e) => onChange({ brandId: e.target.value })}
-                        options={brandOptions}
-                        placeholder="Chọn brand"
+                        brands={brands}
+                        onBrandsChange={onBrandsChange}
+                        onChange={(brandId) => onChange({ brandId })}
                     />
                 </div>
 

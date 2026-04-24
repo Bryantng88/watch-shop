@@ -10,6 +10,25 @@ import {
 } from "@/domains/watch/server";
 import WatchDetailClient from "@/domains/watch/client/WatchDetailClient";
 
+function canViewTradeFinancials(user: {
+    roles?: string[] | null;
+    permissions?: string[] | null;
+} | null) {
+    const roles = (user?.roles ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
+
+    const permissions = (user?.permissions ?? []).map((x) =>
+        String(x).trim().toUpperCase()
+    );
+
+    return (
+        roles.includes("ADMIN") ||
+        permissions.includes("ADMIN") ||
+        permissions.includes("PRODUCT_COST_VIEW")
+    );
+}
+
 function serialize(obj: any) {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
@@ -25,7 +44,7 @@ export default async function WatchDetailPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    await requirePermission(PERMISSIONS.PRODUCT_VIEW);
+    const user = await requirePermission(PERMISSIONS.PRODUCT_VIEW);
 
     const { id } = await params;
 
@@ -47,7 +66,7 @@ export default async function WatchDetailPage({
             pricing={serialize(pricing)}
             serviceHistory={serialize(serviceHistory)}
             tradeHistory={serialize(tradeHistory)}
-            canViewTradeFinancials={true}
+            canViewTradeFinancials={canViewTradeFinancials(user)}
         />
     );
 }

@@ -7,63 +7,20 @@ export function cx(...parts: Array<string | false | null | undefined>) {
     return parts.filter(Boolean).join(" ");
 }
 
-export function toneClass(status?: string) {
-    const s = String(status ?? "").toUpperCase();
-    if (["AVAILABLE", "READY", "ACTIVE", "IN_STOCK"].includes(s)) {
-        return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-    }
-    if (["DRAFT", "PENDING", "IN_SERVICE", "PROCESSING", "HOLD"].includes(s)) {
-        return "bg-amber-50 text-amber-700 ring-amber-200";
-    }
-    if (["SOLD", "ARCHIVED", "CANCELLED", "CANCELED"].includes(s)) {
-        return "bg-slate-100 text-slate-700 ring-slate-200";
-    }
-    return "bg-blue-50 text-blue-700 ring-blue-200";
-}
-
-export function Badge({ label }: { label: string }) {
-    return (
-        <span
-            className={cx(
-                "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
-                toneClass(label)
-            )}
-        >
-            {label || "-"}
-        </span>
-    );
-}
-
 export function FieldLabel({ children }: { children: React.ReactNode }) {
     return (
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">            {children}
+        <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
+            {children}
         </label>
     );
 }
 
-export function Input(
-    props: React.InputHTMLAttributes<HTMLInputElement>
-) {
+export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     return (
         <input
             {...props}
             className={cx(
-                "block h-[40px] w-full border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none placeholder:text-slate-400 transition",
-                "focus:border-slate-400 focus:ring-0",
-                props.className
-            )}
-        />
-    );
-}
-
-export function Textarea(
-    props: React.TextareaHTMLAttributes<HTMLTextAreaElement>
-) {
-    return (
-        <textarea
-            {...props}
-            className={cx(
-                "block min-h-[108px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100",
+                "block h-[40px] w-full border-0 border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none placeholder:text-slate-400 transition focus:border-slate-400 focus:ring-0",
                 props.className
             )}
         />
@@ -82,8 +39,7 @@ export function Select(
         <select
             {...rest}
             className={cx(
-                "block h-[40px] w-full border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none transition",
-                "focus:border-slate-400 focus:ring-0",
+                "block h-[40px] w-full border-0 border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0",
                 rest.className
             )}
         >
@@ -96,37 +52,21 @@ export function Select(
         </select>
     );
 }
-export function Toggle({
-    checked,
-    onChange,
-    label,
-}: {
-    checked: boolean;
-    onChange: (next: boolean) => void;
-    label: string;
-}) {
+
+export function Textarea(
+    props: React.TextareaHTMLAttributes<HTMLTextAreaElement>
+) {
     return (
-        <button
-            type="button"
-            onClick={() => onChange(!checked)}
+        <textarea
+            {...props}
             className={cx(
-                "inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm shadow-sm",
-                checked
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-700"
+                "block min-h-[100px] w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 transition",
+                "focus:border-slate-300 focus:ring-2 focus:ring-slate-100",
+                props.className
             )}
-        >
-            <span
-                className={cx(
-                    "h-2.5 w-2.5 rounded-full",
-                    checked ? "bg-white" : "bg-slate-300"
-                )}
-            />
-            {label}
-        </button>
+        />
     );
 }
-
 export function Button({
     variant = "default",
     className,
@@ -148,6 +88,37 @@ export function Button({
                 className
             )}
         />
+    );
+}
+
+export function Toggle({
+    checked,
+    onChange,
+    label,
+}: {
+    checked: boolean;
+    onChange: (next: boolean) => void;
+    label: string;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className={cx(
+                "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
+                checked
+                    ? "bg-slate-950 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            )}
+        >
+            <span
+                className={cx(
+                    "h-2.5 w-2.5 rounded-full",
+                    checked ? "bg-white" : "bg-slate-300"
+                )}
+            />
+            {label}
+        </button>
     );
 }
 
@@ -178,8 +149,14 @@ export function SectionCard({
                         {icon}
                     </div>
                     <div>
-                        <div className="text-base font-semibold text-slate-900">{title}</div>
-                        {subtitle ? <div className="text-sm text-slate-500">{subtitle}</div> : null}
+                        <div className="text-base font-semibold text-slate-900">
+                            {title}
+                        </div>
+                        {subtitle ? (
+                            <div className="text-sm text-slate-500">
+                                {subtitle}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
@@ -261,7 +238,7 @@ export function Dialog({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -274,11 +251,7 @@ export function Dialog({
     );
 }
 
-export function DialogFooter({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+export function DialogFooter({ children }: { children: React.ReactNode }) {
     return (
         <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
             {children}
@@ -298,10 +271,10 @@ export function SidebarStat({
     return (
         <div
             className={cx(
-                "rounded-2xl border px-4 py-3",
+                "rounded-2xl px-4 py-3 ring-1 ring-inset",
                 emphasize
-                    ? "border-orange-200 bg-orange-50"
-                    : "border-slate-200 bg-slate-50"
+                    ? "bg-orange-50 ring-orange-200"
+                    : "bg-slate-50 ring-slate-200"
             )}
         >
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">

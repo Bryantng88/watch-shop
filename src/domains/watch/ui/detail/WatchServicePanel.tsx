@@ -1,47 +1,72 @@
 "use client";
 
 import { Wrench } from "lucide-react";
-import { CollapsibleSection, DotLabel, SectionEmpty, fmtDate, toneForStatus } from "./shared";
+import {
+  DetailField,
+  SectionCard,
+  SectionEmpty,
+  StatusBadge,
+  fmtDate,
+} from "./shared";
 
-export default function WatchServicePanel({ serviceHistory = [] }: { serviceHistory?: any[]; }) {
-  const openService = (serviceHistory ?? []).find(
-    (x: any) => !["COMPLETED", "DELIVERED", "CANCELED", "CANCELLED"].includes(String(x?.status ?? "").toUpperCase())
-  );
+type Props = {
+  serviceHistory?: any[];
+};
+
+export default function WatchServicePanel({ serviceHistory = [] }: Props) {
+  const items = Array.isArray(serviceHistory) ? serviceHistory : [];
 
   return (
-    <CollapsibleSection
+    <SectionCard
       title="Lịch sử service"
-      desc="Theo dõi trạng thái xử lý kỹ thuật."
+      subtitle="Theo dõi trạng thái xử lý kỹ thuật."
       icon={<Wrench className="h-5 w-5" />}
       defaultOpen
-      right={openService ? <span className="hidden text-xs text-slate-500 sm:block">Đang mở: {openService.status || "-"}</span> : null}
     >
-      {serviceHistory.length ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="px-3 py-3 font-medium">Issue</th>
-                <th className="px-3 py-3 font-medium">Status</th>
-                <th className="px-3 py-3 font-medium">Vendor</th>
-                <th className="px-3 py-3 font-medium">Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceHistory.map((item: any) => (
-                <tr key={item.id} className="border-b border-slate-100">
-                  <td className="px-3 py-3 text-slate-900">{item?.issueTitle || item?.title || item?.issueType || "-"}</td>
-                  <td className="px-3 py-3"><DotLabel label={item?.status || "-"} tone={toneForStatus(item?.status)} /></td>
-                  <td className="px-3 py-3 text-slate-700">{item?.vendor?.name || item?.vendorName || "-"}</td>
-                  <td className="px-3 py-3 text-slate-500">{fmtDate(item?.updatedAt || item?.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {items.length === 0 ? (
+        <SectionEmpty text="Chưa có lịch sử service cho watch này." />
       ) : (
-        <SectionEmpty text="Chưa có lịch sử service." />
+        <div className="overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200">
+          <div className="grid grid-cols-12 gap-3 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <div className="col-span-4">Issue</div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-3">Vendor</div>
+            <div className="col-span-3">Updated</div>
+          </div>
+
+          <div className="divide-y divide-slate-200">
+            {items.map((item, index) => (
+              <div
+                key={item.id ?? index}
+                className="grid grid-cols-12 gap-3 px-4 py-4 text-sm"
+              >
+                <div className="col-span-4 min-w-0">
+                  <div className="truncate font-medium text-slate-900">
+                    {item.issue || item.title || "-"}
+                  </div>
+                  {item.note || item.description ? (
+                    <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                      {item.note || item.description}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="col-span-2">
+                  <StatusBadge label={item.status} />
+                </div>
+
+                <div className="col-span-3 text-slate-700">
+                  {item.vendor?.name || item.vendorName || "-"}
+                </div>
+
+                <div className="col-span-3 text-slate-500">
+                  {fmtDate(item.updatedAt || item.createdAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
-    </CollapsibleSection>
+    </SectionCard>
   );
 }
