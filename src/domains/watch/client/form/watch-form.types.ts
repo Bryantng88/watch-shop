@@ -60,9 +60,12 @@ export type WatchFormValues = {
     };
 
     content: {
+        titleOverride: string;
+        seoTitle: string;
         hookText: string;
         body: string;
         bulletSpecs: string[];
+        hashtags: string;
     };
 
     pricing: {

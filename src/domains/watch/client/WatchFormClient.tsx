@@ -165,9 +165,10 @@ export default function WatchFormClient({
 
                     <WatchContentSection
                         values={values.content}
+                        watchValues={values}
                         onChange={updateContent}
+                        onOpenSpecModal={() => setSpecModalOpen(true)}
                     />
-
                     <WatchImageSection
                         chosenImages={values.media.chosenImages || []}
                         galleryImages={values.media.galleryImages || []}

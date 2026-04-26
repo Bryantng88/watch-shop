@@ -11,11 +11,11 @@ export const UserInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     roleId: z.string().optional().nullable(),
-    Customer: z.unknown().optional().nullable(),
-    MaintenanceRecord: z.array(z.unknown()),
-    Notification: z.array(z.unknown()),
-    ServiceRequest: z.array(z.unknown()),
-    TechnicalIssue: z.array(z.unknown()),
+    customer: z.unknown().optional().nullable(),
+    maintenanceRecord: z.array(z.unknown()),
+    notification: z.array(z.unknown()),
+    serviceRequest: z.array(z.unknown()),
+    technicalIssue: z.array(z.unknown()),
     roles: z.array(z.unknown())
 }).strict();
 

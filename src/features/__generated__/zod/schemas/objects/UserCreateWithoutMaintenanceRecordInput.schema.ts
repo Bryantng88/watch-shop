@@ -16,10 +16,10 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date(),
   roleId: z.string().optional().nullable(),
-  Customer: z.lazy(() => CustomerCreateNestedOneWithoutUserInputObjectSchema).optional(),
-  Notification: z.lazy(() => NotificationCreateNestedManyWithoutUserInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutUserInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutUserInputObjectSchema).optional(),
+  customer: z.lazy(() => CustomerCreateNestedOneWithoutUserInputObjectSchema).optional(),
+  notification: z.lazy(() => NotificationCreateNestedManyWithoutUserInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutUserInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutUserInputObjectSchema).optional(),
   roles: z.lazy(() => RoleCreateNestedManyWithoutUsersInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutMaintenanceRecordInput>;

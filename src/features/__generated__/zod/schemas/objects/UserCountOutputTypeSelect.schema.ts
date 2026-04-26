@@ -3,10 +3,10 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  MaintenanceRecord: z.boolean().optional(),
-  Notification: z.boolean().optional(),
-  ServiceRequest: z.boolean().optional(),
-  TechnicalIssue: z.boolean().optional(),
+  maintenanceRecord: z.boolean().optional(),
+  notification: z.boolean().optional(),
+  serviceRequest: z.boolean().optional(),
+  technicalIssue: z.boolean().optional(),
   roles: z.boolean().optional()
 }).strict();
 export const UserCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.UserCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.UserCountOutputTypeSelect>;

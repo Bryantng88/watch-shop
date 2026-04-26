@@ -19,11 +19,11 @@ export const UserFindManySelectSchema: z.ZodType<Prisma.UserSelect> = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     roleId: z.boolean().optional(),
-    Customer: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
-    Notification: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
-    TechnicalIssue: z.boolean().optional(),
+    customer: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
+    notification: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional(),
     roles: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.UserSelect>;
@@ -38,11 +38,11 @@ export const UserFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     roleId: z.boolean().optional(),
-    Customer: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
-    Notification: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
-    TechnicalIssue: z.boolean().optional(),
+    customer: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
+    notification: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional(),
     roles: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
