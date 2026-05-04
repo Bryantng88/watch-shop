@@ -31,7 +31,7 @@ function dedupeItems(items: PickedMediaItem[]) {
         map.set(key, {
             key,
             url: item?.url ?? null,
-            name: item?.name ?? null,
+            name: item?.name ?? key.split("/").pop() ?? key,
         });
     }
 
@@ -55,6 +55,7 @@ function normalizeItems(items?: PickedMediaItem[]) {
 function toPickedItem(input: string | PickedMediaItem): PickedMediaItem {
     if (typeof input === "string") {
         const key = input.trim();
+
         return {
             key,
             url: resolveMediaPreviewSrc(key) || null,
@@ -63,43 +64,77 @@ function toPickedItem(input: string | PickedMediaItem): PickedMediaItem {
     }
 
     const key = String(input?.key ?? "").trim();
-    const previewSrc = resolveMediaPreviewSrc(key);
 
     return {
         key,
-        url: input?.url ?? previewSrc ?? null,
+        url: input?.url ?? resolveMediaPreviewSrc(key) ?? null,
         name: input?.name ?? key.split("/").pop() ?? key,
     };
 }
 
-async function moveToChosen(key: string) {
+async function moveMedia(params: {
+    fromKey: string;
+    toPrefix: string;
+    deleteSource: boolean;
+    overwrite?: boolean;
+}): Promise<PickedMediaItem> {
+    const cleanKey = String(params.fromKey || "").trim();
+
     const res = await fetch("/api/media/move", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            fromKey: key,
-            toPrefix: "products/edit/chosen",
-            deleteSource: false,
-            overwrite: false,
+            fromKey: cleanKey,
+            toPrefix: params.toPrefix,
+            deleteSource: params.deleteSource,
+            overwrite: params.overwrite ?? false,
         }),
     });
 
     const json = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-        throw new Error(json?.error || `Không thể move ảnh: ${key}`);
+        throw new Error(json?.error || `Không thể chuyển ảnh: ${cleanKey}`);
     }
 
+    const movedKey = String(json?.key ?? cleanKey);
+
     return {
-        key: String(json?.key ?? key),
-        url: json?.url ?? null,
-        name:
-            String(json?.key ?? key)
-                .split("/")
-                .pop() ?? String(json?.key ?? key),
+        key: movedKey,
+        url: json?.url ?? resolveMediaPreviewSrc(movedKey) ?? null,
+        name: movedKey.split("/").pop() ?? movedKey,
     };
+}
+
+async function moveToChosen(key: string): Promise<PickedMediaItem> {
+    const cleanKey = String(key || "").trim();
+
+    if (cleanKey.startsWith("products/edit/chosen/")) {
+        return toPickedItem(cleanKey);
+    }
+
+    return moveMedia({
+        fromKey: cleanKey,
+        toPrefix: "products/edit/chosen",
+        deleteSource: true,
+        overwrite: false,
+    });
+}
+async function moveBackToActive(key: string): Promise<PickedMediaItem> {
+    const cleanKey = String(key || "").trim();
+
+    if (!cleanKey.startsWith("products/edit/chosen/")) {
+        return toPickedItem(cleanKey);
+    }
+
+    return moveMedia({
+        fromKey: cleanKey,
+        toPrefix: "products/edit/active",
+        deleteSource: true,
+        overwrite: false,
+    });
 }
 
 function ChosenGrid({
@@ -108,12 +143,14 @@ function ChosenGrid({
     onToggleSelect,
     onRemoveChosen,
     maxFinalSelection,
+    movingBackKey,
 }: {
     items: PickedMediaItem[];
     selectedItems: PickedMediaItem[];
     onToggleSelect: (item: PickedMediaItem) => void;
-    onRemoveChosen: (key: string) => void;
+    onRemoveChosen: (key: string) => void | Promise<void>;
     maxFinalSelection: number;
+    movingBackKey?: string | null;
 }) {
     const selectedKeySet = new Set(selectedItems.map((item) => item.key));
 
@@ -133,19 +170,21 @@ function ChosenGrid({
                         const src =
                             item.url || resolveMediaPreviewSrc(item.key) || "";
                         const active = selectedKeySet.has(item.key);
+                        const isMovingBack = movingBackKey === item.key;
 
                         return (
                             <div
                                 key={item.key}
                                 className={`group relative overflow-hidden rounded-2xl border bg-white ${active
-                                        ? "border-blue-500 ring-2 ring-blue-100"
-                                        : "border-slate-200"
+                                    ? "border-blue-500 ring-2 ring-blue-100"
+                                    : "border-slate-200"
                                     }`}
                             >
                                 <button
                                     type="button"
                                     onClick={() => onToggleSelect(item)}
-                                    className="block w-full"
+                                    disabled={isMovingBack}
+                                    className="block w-full disabled:cursor-not-allowed disabled:opacity-60"
                                     title={
                                         active
                                             ? "Bỏ khỏi danh sách sẽ lưu"
@@ -156,6 +195,8 @@ function ChosenGrid({
                                         <img
                                             src={src}
                                             alt={item.name ?? item.key}
+                                            loading="lazy"
+                                            decoding="async"
                                             className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                                         />
                                     </div>
@@ -171,10 +212,11 @@ function ChosenGrid({
                                     <div className="flex items-center gap-1">
                                         <button
                                             type="button"
+                                            disabled={isMovingBack}
                                             onClick={() => onToggleSelect(item)}
-                                            className={`rounded-full px-2 py-1 text-[11px] font-medium ${active
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-slate-100 text-slate-700"
+                                            className={`rounded-full px-2 py-1 text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-60 ${active
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-slate-100 text-slate-700"
                                                 }`}
                                         >
                                             {active ? "Đã chọn" : "Chọn"}
@@ -182,12 +224,13 @@ function ChosenGrid({
 
                                         <button
                                             type="button"
+                                            disabled={isMovingBack}
                                             onClick={() =>
                                                 onRemoveChosen(item.key)
                                             }
-                                            className="rounded-full bg-black px-2 py-1 text-[11px] text-white"
+                                            className="rounded-full bg-black px-2 py-1 text-[11px] text-white disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            X
+                                            {isMovingBack ? "..." : "X"}
                                         </button>
                                     </div>
                                 </div>
@@ -231,6 +274,8 @@ function SelectedStrip({
                                 <img
                                     src={src}
                                     alt={item.name ?? item.key}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="h-full w-full object-cover"
                                 />
 
@@ -262,6 +307,9 @@ export default function MediaPickerMulti({
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [submitting, setSubmitting] = React.useState(false);
+    const [movingBackKey, setMovingBackKey] = React.useState<string | null>(
+        null
+    );
 
     const chosenItems = React.useMemo(
         () => normalizeItems(chosenValue),
@@ -284,28 +332,40 @@ export default function MediaPickerMulti({
                 setSubmitting(true);
 
                 const movedItems = await Promise.all(
-                    keys.map(async (key) => {
-                        if (key.startsWith("products/edit/chosen/")) {
-                            return toPickedItem(key);
-                        }
-
-                        const moved = await moveToChosen(key);
-                        return toPickedItem(moved);
-                    })
+                    keys.map(async (key) => moveToChosen(key))
                 );
 
-                const nextChosen = dedupeItems(movedItems);
+                const nextChosen = dedupeItems([
+                    ...chosenItems,
+                    ...movedItems,
+                ]);
 
-                onChosenChange([...nextChosen]);
-                onSelectedChange(nextChosen.slice(0, maxFinalSelection));
+                const nextSelected = dedupeItems([
+                    ...selectedItems,
+                    ...movedItems,
+                ]).slice(0, maxFinalSelection);
+
+                onChosenChange(nextChosen);
+                onSelectedChange(nextSelected);
                 setOpen(false);
             } catch (error) {
                 console.error("media move error", error);
+                alert(
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể chuyển ảnh sang chosen"
+                );
             } finally {
                 setSubmitting(false);
             }
         },
-        [maxFinalSelection, onChosenChange, onSelectedChange]
+        [
+            chosenItems,
+            selectedItems,
+            maxFinalSelection,
+            onChosenChange,
+            onSelectedChange,
+        ]
     );
 
     const handleToggleSelect = React.useCallback(
@@ -323,22 +383,40 @@ export default function MediaPickerMulti({
 
             if (selectedItems.length >= maxFinalSelection) return;
 
-            onSelectedChange([...selectedItems, item]);
+            onSelectedChange(dedupeItems([...selectedItems, item]));
         },
         [maxFinalSelection, onSelectedChange, selectedItems, selectedKeySet]
     );
 
     const handleRemoveChosen = React.useCallback(
-        (key: string) => {
-            const nextChosen = chosenItems.filter((item) => item.key !== key);
-            const nextSelected = selectedItems.filter(
-                (item) => item.key !== key
-            );
+        async (key: string) => {
+            try {
+                setMovingBackKey(key);
 
-            onChosenChange(nextChosen);
-            onSelectedChange(nextSelected);
+                await moveBackToActive(key);
+
+                const nextChosen = chosenItems.filter(
+                    (item) => item.key !== key
+                );
+
+                const nextSelected = selectedItems.filter(
+                    (item) => item.key !== key
+                );
+
+                onChosenChange(nextChosen);
+                onSelectedChange(nextSelected);
+            } catch (error) {
+                console.error("media move back error", error);
+                alert(
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể chuyển ảnh về active"
+                );
+            } finally {
+                setMovingBackKey(null);
+            }
         },
-        [chosenItems, onChosenChange, onSelectedChange, selectedItems]
+        [chosenItems, selectedItems, onChosenChange, onSelectedChange]
     );
 
     const handleRemoveSelected = React.useCallback(
@@ -357,6 +435,7 @@ export default function MediaPickerMulti({
                             {title}
                         </div>
                     ) : null}
+
                     {description ? (
                         <div className="text-sm text-slate-500">
                             {description}
@@ -369,7 +448,7 @@ export default function MediaPickerMulti({
                 <button
                     type="button"
                     onClick={() => setOpen(true)}
-                    disabled={submitting}
+                    disabled={submitting || Boolean(movingBackKey)}
                     className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {submitting ? "Đang chuyển ảnh..." : "+ Chọn ảnh từ kho"}
@@ -390,6 +469,7 @@ export default function MediaPickerMulti({
                 onToggleSelect={handleToggleSelect}
                 onRemoveChosen={handleRemoveChosen}
                 maxFinalSelection={maxFinalSelection}
+                movingBackKey={movingBackKey}
             />
 
             <SelectedStrip

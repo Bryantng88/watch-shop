@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import { moveMediaObject } from "@/server/lib/media-storage"
+import { moveMediaObject } from "@/server/lib/media-storage";
 import { normalizeKey } from "@/server/lib/product-image-storage";
+import { moveMediaAssetIndex } from "@/server/lib/media-index";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_CREATE);
+    const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
     if (auth instanceof Response) return auth;
 
     try {
@@ -29,11 +30,18 @@ export async function POST(req: NextRequest) {
         });
 
         const key = normalizeKey(moved.key);
+        const fromKey = normalizeKey(moved.fromKey);
+
+        await moveMediaAssetIndex({
+            fromKey,
+            toKey: key,
+            deleteSource: body.deleteSource,
+        });
 
         return NextResponse.json({
             success: true,
             key,
-            fromKey: normalizeKey(moved.fromKey),
+            fromKey,
             url: `/api/media/sign?key=${encodeURIComponent(key)}`,
             copied: moved.copied,
             deleted: moved.deleted,

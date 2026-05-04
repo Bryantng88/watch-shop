@@ -622,3 +622,16 @@ export { AcquisitionSpecJobLogDeleteManyResultSchema } from './AcquisitionSpecJo
 export { AcquisitionSpecJobLogAggregateResultSchema } from './AcquisitionSpecJobLogAggregateResult.schema';
 export { AcquisitionSpecJobLogGroupByResultSchema } from './AcquisitionSpecJobLogGroupByResult.schema';
 export { AcquisitionSpecJobLogCountResultSchema } from './AcquisitionSpecJobLogCountResult.schema';
+export { MediaAssetFindUniqueResultSchema } from './MediaAssetFindUniqueResult.schema';
+export { MediaAssetFindFirstResultSchema } from './MediaAssetFindFirstResult.schema';
+export { MediaAssetFindManyResultSchema } from './MediaAssetFindManyResult.schema';
+export { MediaAssetCreateResultSchema } from './MediaAssetCreateResult.schema';
+export { MediaAssetCreateManyResultSchema } from './MediaAssetCreateManyResult.schema';
+export { MediaAssetUpdateResultSchema } from './MediaAssetUpdateResult.schema';
+export { MediaAssetUpdateManyResultSchema } from './MediaAssetUpdateManyResult.schema';
+export { MediaAssetUpsertResultSchema } from './MediaAssetUpsertResult.schema';
+export { MediaAssetDeleteResultSchema } from './MediaAssetDeleteResult.schema';
+export { MediaAssetDeleteManyResultSchema } from './MediaAssetDeleteManyResult.schema';
+export { MediaAssetAggregateResultSchema } from './MediaAssetAggregateResult.schema';
+export { MediaAssetGroupByResultSchema } from './MediaAssetGroupByResult.schema';
+export { MediaAssetCountResultSchema } from './MediaAssetCountResult.schema';

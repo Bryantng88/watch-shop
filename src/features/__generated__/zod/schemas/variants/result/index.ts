@@ -51,3 +51,4 @@ export { technicalAppearanceIssueCatalogResultSchema } from './technicalAppearan
 export { technicalAssessmentsResultSchema } from './technicalAssessments.result';
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
 export { AcquisitionSpecJobLogResultSchema } from './AcquisitionSpecJobLog.result';
+export { MediaAssetResultSchema } from './MediaAsset.result';

@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { MediaAssetOrderByWithRelationInputObjectSchema as MediaAssetOrderByWithRelationInputObjectSchema } from './objects/MediaAssetOrderByWithRelationInput.schema';
+import { MediaAssetWhereInputObjectSchema as MediaAssetWhereInputObjectSchema } from './objects/MediaAssetWhereInput.schema';
+import { MediaAssetWhereUniqueInputObjectSchema as MediaAssetWhereUniqueInputObjectSchema } from './objects/MediaAssetWhereUniqueInput.schema';
+import { MediaAssetCountAggregateInputObjectSchema as MediaAssetCountAggregateInputObjectSchema } from './objects/MediaAssetCountAggregateInput.schema';
+import { MediaAssetMinAggregateInputObjectSchema as MediaAssetMinAggregateInputObjectSchema } from './objects/MediaAssetMinAggregateInput.schema';
+import { MediaAssetMaxAggregateInputObjectSchema as MediaAssetMaxAggregateInputObjectSchema } from './objects/MediaAssetMaxAggregateInput.schema';
+import { MediaAssetAvgAggregateInputObjectSchema as MediaAssetAvgAggregateInputObjectSchema } from './objects/MediaAssetAvgAggregateInput.schema';
+import { MediaAssetSumAggregateInputObjectSchema as MediaAssetSumAggregateInputObjectSchema } from './objects/MediaAssetSumAggregateInput.schema';
+
+export const MediaAssetAggregateSchema: z.ZodType<Prisma.MediaAssetAggregateArgs> = z.object({ orderBy: z.union([MediaAssetOrderByWithRelationInputObjectSchema, MediaAssetOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaAssetWhereInputObjectSchema.optional(), cursor: MediaAssetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaAssetCountAggregateInputObjectSchema ]).optional(), _min: MediaAssetMinAggregateInputObjectSchema.optional(), _max: MediaAssetMaxAggregateInputObjectSchema.optional(), _avg: MediaAssetAvgAggregateInputObjectSchema.optional(), _sum: MediaAssetSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.MediaAssetAggregateArgs>;
+
+export const MediaAssetAggregateZodSchema = z.object({ orderBy: z.union([MediaAssetOrderByWithRelationInputObjectSchema, MediaAssetOrderByWithRelationInputObjectSchema.array()]).optional(), where: MediaAssetWhereInputObjectSchema.optional(), cursor: MediaAssetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), MediaAssetCountAggregateInputObjectSchema ]).optional(), _min: MediaAssetMinAggregateInputObjectSchema.optional(), _max: MediaAssetMaxAggregateInputObjectSchema.optional(), _avg: MediaAssetAvgAggregateInputObjectSchema.optional(), _sum: MediaAssetSumAggregateInputObjectSchema.optional() }).strict();

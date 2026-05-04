@@ -51,3 +51,4 @@ export { technicalAppearanceIssueCatalogInputSchema } from './technicalAppearanc
 export { technicalAssessmentsInputSchema } from './technicalAssessments.input';
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
 export { AcquisitionSpecJobLogInputSchema } from './AcquisitionSpecJobLog.input';
+export { MediaAssetInputSchema } from './MediaAsset.input';

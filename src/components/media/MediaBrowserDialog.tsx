@@ -26,7 +26,14 @@ export type SharedMediaItem = {
 type FolderItem = {
     prefix: string;
 };
+type BrowseFolderPayload = {
+    prefix?: unknown;
+};
 
+type BrowseFilePayload = {
+    key?: unknown;
+    url?: unknown;
+};
 type Props = {
     open: boolean;
     onClose: () => void;
@@ -126,9 +133,16 @@ export default function MediaBrowserDialog({
         string[]
     >([]);
     const [prefix, setPrefix] = React.useState<string>(getRootPrefix(profile));
-
+    const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+    const [hasMore, setHasMore] = React.useState(false);
+    const [totalCount, setTotalCount] = React.useState(0);
     const rootPrefix = React.useMemo(() => getRootPrefix(profile), [profile]);
     const profileLabel = getLabel(profile);
+
+    const resetPagination = React.useCallback(() => {
+        setNextCursor(null);
+        setHasMore(false);
+    }, []);
 
     React.useEffect(() => {
         if (!open) return;
@@ -140,12 +154,14 @@ export default function MediaBrowserDialog({
         setItems([]);
         setFolders([]);
         setError(null);
-    }, [profile]);
+        resetPagination();
+    }, [profile, resetPagination]);
 
     React.useEffect(() => {
         if (!open) return;
         setPrefix(getRootPrefix(profile));
-    }, [open, profile]);
+        resetPagination();
+    }, [open, profile, resetPagination]);
 
     const helpText =
         description ??
@@ -153,52 +169,86 @@ export default function MediaBrowserDialog({
             ? "Chọn nhiều ảnh từ thư viện."
             : "Chọn 1 ảnh từ thư viện.");
 
-    const loadItems = React.useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
+    const loadItems = React.useCallback(
+        async (mode: "reset" | "more" = "reset", cursor?: string | null) => {
+            try {
+                setLoading(true);
+                setError(null);
 
-            const qs = new URLSearchParams({
-                profile,
-                prefix,
-            });
+                const qs = new URLSearchParams({
+                    profile,
+                    prefix,
+                    limit: "48",
+                });
 
-            const res = await fetch(`/api/media/browse?${qs.toString()}`, {
-                cache: "no-store",
-            });
-            const json = await res.json().catch(() => ({}));
+                if (mode === "more" && cursor) {
+                    qs.set("cursor", cursor);
+                }
 
-            if (!res.ok) {
-                throw new Error(json?.error || "Không tải được thư viện ảnh");
-            }
+                const res = await fetch(`/api/media/browse?${qs.toString()}`, {
+                    cache: "no-store",
+                });
 
-            setFolders(
-                Array.isArray(json?.folders)
-                    ? json.folders.map((item: any) => ({
+                const json = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    throw new Error(
+                        json?.error || "Không tải được thư viện ảnh"
+                    );
+                }
+
+                const nextFolders: FolderItem[] = Array.isArray(json?.folders)
+                    ? json.folders.map((item: BrowseFolderPayload) => ({
                         prefix: String(item?.prefix ?? ""),
                     }))
-                    : []
-            );
+                    : [];
 
-            setItems(
-                Array.isArray(json?.files)
-                    ? json.files.map((item: any) => ({
+                const nextFiles: SharedMediaItem[] = Array.isArray(json?.files)
+                    ? json.files.map((item: BrowseFilePayload) => ({
                         key: String(item?.key ?? ""),
-                        signedUrl: item?.url ?? null,
+                        signedUrl: typeof item?.url === "string" ? item.url : null,
                     }))
-                    : []
-            );
-        } catch (e: any) {
-            setError(e?.message || "Không tải được thư viện ảnh");
-        } finally {
-            setLoading(false);
-        }
-    }, [profile, prefix]);
+                    : [];
+                if (mode === "more") {
+                    setFolders((prev) => {
+                        const map = new Map(
+                            prev.map((item) => [item.prefix, item])
+                        );
+                        nextFolders.forEach((item: FolderItem) =>
+                            map.set(item.prefix, item)
+                        );
+                        return Array.from(map.values());
+                    });
+
+                    setItems((prev) => {
+                        const map = new Map(
+                            prev.map((item) => [item.key, item])
+                        );
+                        nextFiles.forEach((item: SharedMediaItem) =>
+                            map.set(item.key, item)
+                        ); return Array.from(map.values());
+                    });
+                } else {
+                    setFolders(nextFolders);
+                    setItems(nextFiles);
+                }
+
+                setNextCursor(json?.nextCursor ?? null);
+                setHasMore(Boolean(json?.hasMore));
+                setTotalCount(Number(json?.totalCount ?? 0));
+            } catch (e: any) {
+                setError(e?.message || "Không tải được thư viện ảnh");
+            } finally {
+                setLoading(false);
+            }
+        },
+        [profile, prefix]
+    );
 
     React.useEffect(() => {
         if (!open) return;
-        loadItems();
-    }, [open, loadItems]);
+        loadItems("reset");
+    }, [open, prefix, profile, loadItems]);
 
     function toggleKey(fileKey: string) {
         setInternalSelectedKeys((prev) => {
@@ -225,16 +275,30 @@ export default function MediaBrowserDialog({
     }
 
     function handleOpenFolder(nextPrefix: string) {
+        resetPagination();
+        setItems([]);
+        setFolders([]);
         setPrefix(nextPrefix);
     }
 
     function handleGoUp() {
+        resetPagination();
+        setItems([]);
+        setFolders([]);
         setPrefix((prev) => getParentPrefix(prev, rootPrefix));
+    }
+
+    function handleGoRoot() {
+        resetPagination();
+        setItems([]);
+        setFolders([]);
+        setPrefix(rootPrefix);
     }
 
     if (!open) return null;
 
     const canGoUp = prefix !== rootPrefix;
+    const initialLoading = loading && items.length === 0 && folders.length === 0;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
@@ -252,11 +316,15 @@ export default function MediaBrowserDialog({
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={loadItems}
+                            onClick={() => {
+                                resetPagination();
+                                loadItems("reset");
+                            }}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             Tải lại
                         </button>
+
                         <button
                             type="button"
                             onClick={onClose}
@@ -269,8 +337,23 @@ export default function MediaBrowserDialog({
 
                 <div className="border-b border-slate-100 px-5 py-3 text-sm text-slate-500">
                     <div>{helpText}</div>
-                    <div className="mt-1 text-xs text-slate-400">
-                        Đang duyệt: {prefix}
+
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <span>Đang duyệt: {prefix}</span>
+                        <span>•</span>
+                        <span>
+                            Tổng ảnh:{" "}
+                            <strong className="font-semibold text-slate-600">
+                                {totalCount}
+                            </strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                            Đã tải:{" "}
+                            <strong className="font-semibold text-slate-600">
+                                {items.length}/{totalCount}
+                            </strong>
+                        </span>
                     </div>
                     {selectionMode === "multiple" ? (
                         <span className="mt-1 inline-block font-medium text-slate-700">
@@ -293,7 +376,7 @@ export default function MediaBrowserDialog({
 
                         <button
                             type="button"
-                            onClick={() => setPrefix(rootPrefix)}
+                            onClick={handleGoRoot}
                             className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             <RefreshCw className="mr-1 h-4 w-4" />
@@ -303,7 +386,7 @@ export default function MediaBrowserDialog({
                 </div>
 
                 <div className="min-h-[320px] flex-1 overflow-auto p-5">
-                    {loading ? (
+                    {initialLoading ? (
                         <div className="flex h-[240px] items-center justify-center text-slate-500">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Đang tải ảnh...
@@ -326,13 +409,16 @@ export default function MediaBrowserDialog({
                                                 key={folder.prefix}
                                                 type="button"
                                                 onClick={() =>
-                                                    handleOpenFolder(folder.prefix)
+                                                    handleOpenFolder(
+                                                        folder.prefix
+                                                    )
                                                 }
                                                 className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left hover:border-slate-300 hover:bg-slate-50"
                                             >
                                                 <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
                                                     <Folder className="h-5 w-5" />
                                                 </div>
+
                                                 <div className="min-w-0">
                                                     <div className="truncate text-sm font-medium text-slate-800">
                                                         {basename(folder.prefix)}
@@ -380,7 +466,9 @@ export default function MediaBrowserDialog({
                                                     key={item.key}
                                                     type="button"
                                                     onClick={() =>
-                                                        handleItemClick(item.key)
+                                                        handleItemClick(
+                                                            item.key
+                                                        )
                                                     }
                                                     className={cx(
                                                         "relative overflow-hidden rounded-2xl border text-left transition",
@@ -392,8 +480,12 @@ export default function MediaBrowserDialog({
                                                     <div className="aspect-square bg-slate-100">
                                                         {item.signedUrl ? (
                                                             <img
-                                                                src={item.signedUrl}
+                                                                src={
+                                                                    item.signedUrl
+                                                                }
                                                                 alt={item.key}
+                                                                loading="lazy"
+                                                                decoding="async"
                                                                 className="h-full w-full object-cover"
                                                             />
                                                         ) : (
@@ -424,6 +516,31 @@ export default function MediaBrowserDialog({
                                             );
                                         })}
                                     </div>
+
+                                    {hasMore ? (
+                                        <div className="flex justify-center pt-4">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    loadItems(
+                                                        "more",
+                                                        nextCursor
+                                                    )
+                                                }
+                                                disabled={loading || !nextCursor}
+                                                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {loading ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Đang tải...
+                                                    </>
+                                                ) : (
+                                                    "Tải thêm ảnh"
+                                                )}
+                                            </button>
+                                        </div>
+                                    ) : null}
                                 </div>
                             )}
                         </div>
@@ -436,6 +553,7 @@ export default function MediaBrowserDialog({
                             Có thể chọn nhiều ảnh. Ảnh sẽ được chuyển sang thư
                             mục chosen sau khi xác nhận.
                         </div>
+
                         <button
                             type="button"
                             onClick={handleSubmit}
