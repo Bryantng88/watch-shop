@@ -8,6 +8,8 @@ import { WatchGoldColorV2Schema } from '../../enums/WatchGoldColorV2.schema';
 import { GlassSchema } from '../../enums/Glass.schema';
 import { MovementTypeSchema } from '../../enums/MovementType.schema';
 import { StrapSchema } from '../../enums/Strap.schema';
+import { WatchStrapSetTypeSchema } from '../../enums/WatchStrapSetType.schema';
+import { WatchStrapComponentSourceSchema } from '../../enums/WatchStrapComponentSource.schema';
 // prettier-ignore
 export const WatchSpecV2ResultSchema = z.object({
     id: z.string(),
@@ -40,6 +42,8 @@ export const WatchSpecV2ResultSchema = z.object({
     buckleType: z.string().nullable(),
     bookletIncluded: z.boolean(),
     cardIncluded: z.boolean(),
+    strapSetType: WatchStrapSetTypeSchema.nullable(),
+    strapComponentSource: WatchStrapComponentSourceSchema.nullable(),
     featuresJson: z.unknown().nullable(),
     rawSpecJson: z.unknown().nullable(),
     createdAt: z.date(),

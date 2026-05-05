@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { GenderSchema } from '../enums/Gender.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
+import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { ProductCreateNestedOneWithoutWatchInputObjectSchema as ProductCreateNestedOneWithoutWatchInputObjectSchema } from './ProductCreateNestedOneWithoutWatchInput.schema';
 import { WatchContentCreateNestedOneWithoutWatchInputObjectSchema as WatchContentCreateNestedOneWithoutWatchInputObjectSchema } from './WatchContentCreateNestedOneWithoutWatchInput.schema';
@@ -23,6 +24,7 @@ const makeSchema = () => z.object({
   movementCalibre: z.string().optional().nullable(),
   serialNumber: z.string().optional().nullable(),
   yearText: z.string().optional().nullable(),
+  style: WatchStyleSchema.optional().nullable(),
   hasBox: z.boolean().optional(),
   hasPapers: z.boolean().optional(),
   specStatus: WatchSpecStatusSchema.optional(),

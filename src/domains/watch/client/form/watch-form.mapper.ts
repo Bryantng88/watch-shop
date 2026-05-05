@@ -63,6 +63,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             movementCalibre: s(detail?.watch?.movementCalibre),
             serialNumber: s(detail?.watch?.serialNumber),
             yearText: s(detail?.watch?.yearText),
+            style: s(detail?.watch?.style),
         },
 
         spec: {
@@ -75,6 +76,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             lugToLugMM: s(detail?.spec?.lugToLugMM),
             thicknessMM: s(detail?.spec?.thicknessMM),
             crystal: s(detail?.spec?.crystal),
+            strapSetType: s(detail?.spec?.strapSetType),
             dialColor: s(detail?.spec?.dialColor),
             calibre: s(detail?.spec?.calibre),
             materialProfile: s(detail?.spec?.materialProfile || "SINGLE_MATERIAL"),
@@ -87,6 +89,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             goldKarat: s(detail?.spec?.goldKarat),
             braceletType: s(detail?.spec?.braceletType),
             strapMaterialText: s(detail?.spec?.strapMaterialText),
+            strapComponentSource: s(detail?.spec?.strapComponentSource),
             waterResistance: s(detail?.spec?.waterResistance),
             powerReserve: s(detail?.spec?.powerReserve),
             dialFinish: s(detail?.spec?.dialFinish),

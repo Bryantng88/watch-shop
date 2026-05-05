@@ -21,6 +21,10 @@ import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumStrapNullableWithAggregatesFilterObjectSchema as EnumStrapNullableWithAggregatesFilterObjectSchema } from './EnumStrapNullableWithAggregatesFilter.schema';
 import { StrapSchema } from '../enums/Strap.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
+import { EnumWatchStrapSetTypeNullableWithAggregatesFilterObjectSchema as EnumWatchStrapSetTypeNullableWithAggregatesFilterObjectSchema } from './EnumWatchStrapSetTypeNullableWithAggregatesFilter.schema';
+import { WatchStrapSetTypeSchema } from '../enums/WatchStrapSetType.schema';
+import { EnumWatchStrapComponentSourceNullableWithAggregatesFilterObjectSchema as EnumWatchStrapComponentSourceNullableWithAggregatesFilterObjectSchema } from './EnumWatchStrapComponentSourceNullableWithAggregatesFilter.schema';
+import { WatchStrapComponentSourceSchema } from '../enums/WatchStrapComponentSource.schema';
 import { JsonNullableWithAggregatesFilterObjectSchema as JsonNullableWithAggregatesFilterObjectSchema } from './JsonNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
 
@@ -58,6 +62,8 @@ const watchspecv2scalarwherewithaggregatesinputSchema = z.object({
   buckleType: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   bookletIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
+  strapSetType: z.union([z.lazy(() => EnumWatchStrapSetTypeNullableWithAggregatesFilterObjectSchema), WatchStrapSetTypeSchema]).optional().nullable(),
+  strapComponentSource: z.union([z.lazy(() => EnumWatchStrapComponentSourceNullableWithAggregatesFilterObjectSchema), WatchStrapComponentSourceSchema]).optional().nullable(),
   featuresJson: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),
   rawSpecJson: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),

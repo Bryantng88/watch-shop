@@ -8,6 +8,8 @@ import { EnumGenderFilterObjectSchema as EnumGenderFilterObjectSchema } from './
 import { GenderSchema } from '../enums/Gender.schema';
 import { EnumMovementTypeNullableFilterObjectSchema as EnumMovementTypeNullableFilterObjectSchema } from './EnumMovementTypeNullableFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
+import { EnumWatchStyleNullableFilterObjectSchema as EnumWatchStyleNullableFilterObjectSchema } from './EnumWatchStyleNullableFilter.schema';
+import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { EnumWatchSpecStatusFilterObjectSchema as EnumWatchSpecStatusFilterObjectSchema } from './EnumWatchSpecStatusFilter.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
@@ -39,6 +41,7 @@ const watchwhereinputSchema = z.object({
   movementCalibre: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serialNumber: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   yearText: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  style: z.union([z.lazy(() => EnumWatchStyleNullableFilterObjectSchema), WatchStyleSchema]).optional().nullable(),
   hasBox: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   hasPapers: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   specStatus: z.union([z.lazy(() => EnumWatchSpecStatusFilterObjectSchema), WatchSpecStatusSchema]).optional(),

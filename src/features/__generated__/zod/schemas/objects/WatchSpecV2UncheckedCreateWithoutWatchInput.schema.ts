@@ -9,6 +9,8 @@ import { WatchGoldColorV2Schema } from '../enums/WatchGoldColorV2.schema';
 import { GlassSchema } from '../enums/Glass.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { StrapSchema } from '../enums/Strap.schema';
+import { WatchStrapSetTypeSchema } from '../enums/WatchStrapSetType.schema';
+import { WatchStrapComponentSourceSchema } from '../enums/WatchStrapComponentSource.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
@@ -43,6 +45,8 @@ const makeSchema = () => z.object({
   buckleType: z.string().optional().nullable(),
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
+  strapSetType: WatchStrapSetTypeSchema.optional().nullable(),
+  strapComponentSource: WatchStrapComponentSourceSchema.optional().nullable(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   rawSpecJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),

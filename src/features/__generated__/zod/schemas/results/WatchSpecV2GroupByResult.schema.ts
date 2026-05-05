@@ -56,6 +56,8 @@ export const WatchSpecV2GroupByResultSchema = z.array(z.object({
     buckleType: z.number(),
     bookletIncluded: z.number(),
     cardIncluded: z.number(),
+    strapSetType: z.number(),
+    strapComponentSource: z.number(),
     featuresJson: z.number(),
     rawSpecJson: z.number(),
     createdAt: z.number(),

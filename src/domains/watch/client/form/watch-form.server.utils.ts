@@ -9,6 +9,9 @@ import {
     WatchGoldTreatment,
     WatchMaterialProfile,
     WatchSiteChannel,
+    WatchStyle,
+    WatchStrapSetType,
+    WatchStrapComponentSource
 } from "@prisma/client";
 
 export function toDecimal(value?: string | null) {
@@ -65,4 +68,7 @@ export const WatchFormEnums = {
     WatchCaseMaterialFamily,
     WatchGoldTreatment,
     Strap,
+    WatchStyle,
+    WatchStrapSetType,
+    WatchStrapComponentSource,
 };

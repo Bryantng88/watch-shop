@@ -17,6 +17,7 @@ const makeSchema = () => z.object({
   movementCalibre: z.literal(true).optional(),
   serialNumber: z.literal(true).optional(),
   yearText: z.literal(true).optional(),
+  style: z.literal(true).optional(),
   hasBox: z.literal(true).optional(),
   hasPapers: z.literal(true).optional(),
   specStatus: z.literal(true).optional(),

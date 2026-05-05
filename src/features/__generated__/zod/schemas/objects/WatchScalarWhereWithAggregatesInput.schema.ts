@@ -8,6 +8,8 @@ import { EnumGenderWithAggregatesFilterObjectSchema as EnumGenderWithAggregatesF
 import { GenderSchema } from '../enums/Gender.schema';
 import { EnumMovementTypeNullableWithAggregatesFilterObjectSchema as EnumMovementTypeNullableWithAggregatesFilterObjectSchema } from './EnumMovementTypeNullableWithAggregatesFilter.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
+import { EnumWatchStyleNullableWithAggregatesFilterObjectSchema as EnumWatchStyleNullableWithAggregatesFilterObjectSchema } from './EnumWatchStyleNullableWithAggregatesFilter.schema';
+import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { BoolWithAggregatesFilterObjectSchema as BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 import { EnumWatchSpecStatusWithAggregatesFilterObjectSchema as EnumWatchSpecStatusWithAggregatesFilterObjectSchema } from './EnumWatchSpecStatusWithAggregatesFilter.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
@@ -31,6 +33,7 @@ const watchscalarwherewithaggregatesinputSchema = z.object({
   movementCalibre: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   serialNumber: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   yearText: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  style: z.union([z.lazy(() => EnumWatchStyleNullableWithAggregatesFilterObjectSchema), WatchStyleSchema]).optional().nullable(),
   hasBox: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   hasPapers: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   specStatus: z.union([z.lazy(() => EnumWatchSpecStatusWithAggregatesFilterObjectSchema), WatchSpecStatusSchema]).optional(),

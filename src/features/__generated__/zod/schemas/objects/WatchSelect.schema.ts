@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   movementCalibre: z.boolean().optional(),
   serialNumber: z.boolean().optional(),
   yearText: z.boolean().optional(),
+  style: z.boolean().optional(),
   hasBox: z.boolean().optional(),
   hasPapers: z.boolean().optional(),
   specStatus: z.boolean().optional(),

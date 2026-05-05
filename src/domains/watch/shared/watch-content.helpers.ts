@@ -46,7 +46,6 @@ export function getPriceHookLabel(value?: string | null) {
     const price = Number(raw);
 
     if (!Number.isFinite(price) || price <= 0) return "";
-
     if (price < 5_000_000) return "X triệu nhỏ xíu";
     if (price >= 5_000_000 && price <= 8_000_000) return "X triệu trung bình";
 
@@ -72,23 +71,6 @@ function movementLabel(value?: string | null) {
         MECHAQUARTZ: "mecha-quartz",
         SPRING_DRIVE: "Spring Drive",
         HYBRID: "hybrid",
-    };
-
-    return map[normalizeEnum(value)] || "";
-}
-
-function caseShapeLabel(value?: string | null) {
-    const map: Record<string, string> = {
-        ROUND: "tròn",
-        TANK: "tank",
-        SQUARE: "vuông",
-        RECTANGLE: "chữ nhật",
-        TONNEAU: "tonneau",
-        CUSHION: "cushion",
-        OVAL: "oval",
-        OCTAGON: "bát giác",
-        SPECIAL: "đặc biệt",
-        OTHER: "khác",
     };
 
     return map[normalizeEnum(value)] || "";
@@ -122,28 +104,58 @@ function crystalLabel(value?: string | null) {
     return map[normalizeEnum(value)] || "";
 }
 
-function getWatchAdjective(values: WatchFormValues) {
-    const spec = values.spec;
+function styleLabel(value?: string | null) {
+    const map: Record<string, string> = {
+        MILITARY: "military",
+        DRESS: "dress",
+        SPORT: "sport",
+        TOOL: "tool watch",
+        CASUAL: "casual",
+        CLASSIC: "classic",
+        MINIMALIST: "minimalist",
+        LUXURY: "luxury",
+        RETRO: "retro",
+        FUTURISTIC: "futuristic",
+    };
 
-    const braceletType = normalizeEnum(spec.braceletType);
-    const materialProfile = normalizeEnum(spec.materialProfile);
-    const strapText = clean(spec.strapMaterialText).toLowerCase();
+    return map[normalizeEnum(value)] || "";
+}
 
-    const isDemi =
-        materialProfile === "BIMETAL" ||
-        strapText.includes("demi") ||
-        strapText.includes("two tone") ||
-        strapText.includes("two-tone");
+function strapSetLabel(
+    type?: string | null,
+    source?: string | null
+) {
+    const t = (type || "").toUpperCase();
+    const s = (source || "").toUpperCase();
 
-    if (isDemi) return "tinh tế";
-    if (braceletType === "BRACELET") return "năng động";
-    if (
-        braceletType === "LEATHER" ||
-        strapText.includes("leather") ||
-        strapText.includes("da")
-    ) {
-        return "thanh lịch";
+    if (t === "BRAND_ORIGINAL") {
+        return "Dây khóa hãng.";
     }
+
+    if (t === "COMPONENT") {
+        if (s === "FROM_STOCK") {
+            return "Dây khóa linh kiện, lấy dây thay từ kho.";
+        }
+
+        if (s === "KEEP_CURRENT") {
+            return "Dây khóa linh kiện, giữ nguyên hiện trạng.";
+        }
+
+        return "Dây khóa linh kiện.";
+    }
+
+    return "";
+}
+
+function getWatchAdjective(values: WatchFormValues) {
+    const style = normalizeEnum(values.basic.style);
+
+    if (style === "DRESS") return "thanh lịch";
+    if (style === "CLASSIC") return "cổ điển";
+    if (style === "MINIMALIST") return "tối giản";
+    if (style === "SPORT") return "năng động";
+    if (style === "LUXURY") return "sang trọng";
+    if (style === "RETRO") return "retro";
 
     return "dễ đeo";
 }
@@ -151,25 +163,52 @@ function getWatchAdjective(values: WatchFormValues) {
 function buildHeroName(values: WatchFormValues) {
     const brand = clean(values.spec.specBrand);
     const model = clean(values.spec.model);
+    const nickname = clean(values.spec.nickname);
+    const reference = clean(values.spec.referenceNumber);
     const title = clean(values.basic.title);
 
-    return [brand, model].filter(Boolean).join(" ") || title || "chiếc đồng hồ này";
+    return [brand, model || nickname || reference]
+        .filter(Boolean)
+        .join(" ") || title || "chiếc đồng hồ này";
+}
+
+function buildTitleDescriptor(values: WatchFormValues) {
+    const style = normalizeEnum(values.basic.style);
+    const movement = normalizeEnum(values.basic.movementType);
+    const dial = clean(values.spec.dialColor);
+    const hasComplication =
+        clean(values.spec.model).toLowerCase().includes("date") ||
+        clean(values.spec.nickname).toLowerCase().includes("date") ||
+        clean(values.basic.title).toLowerCase().includes("date");
+
+    if (hasComplication) return "Complex But Perfectly Balanced";
+    if (style === "DRESS") return "Elegant Dress Watch With Vintage Soul";
+    if (style === "CLASSIC") return "Classic, Clean And Timeless";
+    if (style === "MINIMALIST") return "Minimal, Refined And Easy To Wear";
+    if (style === "SPORT") return "Sporty, Sharp And Ready For Daily Wear";
+    if (style === "MILITARY") return "Utilitarian Spirit With Vintage Charm";
+    if (movement === "AUTOMATIC") return "Clean Daily With Automatic Heart";
+    if (dial) return `${titleCase(dial)} Dial With Vintage Character`;
+
+    return "Vintage Character For Daily Wear";
 }
 
 export function buildPostTitle(values: WatchFormValues) {
     const year = clean(values.basic.yearText);
     const brand = clean(values.spec.specBrand);
     const model = clean(values.spec.model);
-    const dial = clean(values.spec.dialColor);
+    const nickname = clean(values.spec.nickname);
+    const reference = clean(values.spec.referenceNumber);
+    const baseTitle = clean(values.basic.title);
 
-    const parts = [
-        year,
-        brand,
-        model,
-        dial ? `With ${titleCase(dial)} Dial` : "",
-    ].filter(Boolean);
+    const identity =
+        [brand, model || nickname || reference].filter(Boolean).join(" ") ||
+        baseTitle;
 
-    return parts.join(" ") || clean(values.basic.title) || "Vintage Watch";
+    const descriptor = buildTitleDescriptor(values);
+
+    return [year, identity].filter(Boolean).join(" ").toUpperCase() +
+        (descriptor ? ` – ${descriptor.toUpperCase()}` : "");
 }
 
 export function buildHookText(values: WatchFormValues) {
@@ -187,43 +226,59 @@ export function buildHookText(values: WatchFormValues) {
 export function buildBulletSpecs(values: WatchFormValues) {
     const spec = values.spec;
     const basic = values.basic;
-
     const bulletSpecs: string[] = [];
 
+    const model = clean(spec.model);
     const movementText = movementLabel(basic.movementType);
     const calibre = clean(spec.calibre) || clean(basic.movementCalibre);
-    const shapeText = caseShapeLabel(spec.caseShape);
-    const materialText = materialLabel(spec.primaryCaseMaterial);
+    const caseSize = clean(spec.caseSizeMM);
+    const materialProfile = normalizeEnum(spec.materialProfile);
+    const primaryMaterial = materialLabel(spec.primaryCaseMaterial);
+    const secondaryMaterial = materialLabel(spec.secondaryCaseMaterial);
     const crystalText = crystalLabel(spec.crystal);
+    const strapText = strapSetLabel(
+        spec.strapSetType,
+        spec.strapComponentSource
+    );
 
-    if (movementText) {
+    if (strapText) {
+        bulletSpecs.push(strapText);
+    }
+    const styleText = styleLabel(basic.style);
+
+    if (model) {
+        bulletSpecs.push(`Model ${model}.`);
+    }
+
+    if (movementText || calibre) {
         bulletSpecs.push(
-            `Bộ máy ${movementText}${calibre ? `, calibre ${calibre}` : ""}.`
+            `Bộ máy ${[movementText, calibre].filter(Boolean).join(", ")}.`
         );
     }
 
-    if (clean(spec.caseSizeMM) || shapeText) {
-        bulletSpecs.push(
-            `Vỏ ${shapeText || "đồng hồ"}${clean(spec.caseSizeMM) ? `, kích thước ${spec.caseSizeMM}mm` : ""
-            }.`
-        );
+    if (caseSize) {
+        bulletSpecs.push(`Kích thước ${caseSize}mm.`);
     }
 
-    if (materialText) bulletSpecs.push(`Chất liệu vỏ ${materialText}.`);
-    if (crystalText) bulletSpecs.push(`Kính ${crystalText}.`);
+    if (primaryMaterial) {
+        const materialText =
+            materialProfile === "BIMETAL" && secondaryMaterial
+                ? `${primaryMaterial} / ${secondaryMaterial}`
+                : primaryMaterial;
 
-    if (clean(spec.dialColor) || clean(spec.dialFinish)) {
-        bulletSpecs.push(
-            `Mặt số ${[spec.dialColor, spec.dialFinish].filter(Boolean).join(", ")}.`
-        );
+        bulletSpecs.push(`Chất liệu vỏ ${materialText}.`);
     }
 
-    if (clean(spec.waterResistance)) {
-        bulletSpecs.push(`Kháng nước ${spec.waterResistance}.`);
+    if (crystalText) {
+        bulletSpecs.push(`Kính ${crystalText}.`);
     }
 
-    if (clean(spec.powerReserve)) {
-        bulletSpecs.push(`Thời lượng cót khoảng ${spec.powerReserve}.`);
+    if (strapText) {
+        bulletSpecs.push(strapText);
+    }
+
+    if (styleText) {
+        bulletSpecs.push(`Phong cách ${styleText}.`);
     }
 
     return bulletSpecs;
@@ -234,9 +289,9 @@ export function buildHashtags(values: WatchFormValues) {
         hashtag(values.header.sku),
         hashtag(values.spec.specBrand),
         hashtag(values.spec.model),
-        hashtag(values.spec.dialColor),
+        hashtag(values.spec.nickname),
+        hashtag(values.basic.style),
         hashtag(values.basic.movementType),
-        hashtag(values.spec.caseShape),
         hashtag(values.spec.primaryCaseMaterial),
         "#vintagewatch",
         "#donghovintage",
@@ -272,18 +327,54 @@ function buildWarnings(values: WatchFormValues) {
     const warnings: GenWarning[] = [];
 
     if (!clean(values.spec.specBrand) && !clean(values.basic.title)) {
-        pushMissing(warnings, "brand", "Chưa có brand/title để tạo hook tự nhiên.");
+        pushMissing(warnings, "brand", "Chưa có brand/title để tạo title.");
     }
 
-    if (!clean(values.spec.model)) pushMissing(warnings, "model", "Chưa có model.");
-    if (!clean(values.basic.movementType)) pushMissing(warnings, "movementType", "Chưa có movement type.");
-    if (!clean(values.spec.caseSizeMM)) pushMissing(warnings, "caseSizeMM", "Chưa có case size.");
-    if (!clean(values.spec.dialColor)) pushMissing(warnings, "dialColor", "Chưa có màu mặt số.");
-    if (!clean(values.spec.crystal)) pushMissing(warnings, "crystal", "Chưa có loại kính.");
-    if (!clean(values.spec.primaryCaseMaterial)) pushMissing(warnings, "primaryCaseMaterial", "Chưa có chất liệu vỏ.");
-    if (!getPriceHookLabel(values.pricing.salePrice)) pushMissing(warnings, "salePrice", "Chưa có giá bán để tạo câu hook đúng rule.");
-    if (!getSiteChannelHookPhrase(values.basic.siteChannel)) pushMissing(warnings, "siteChannel", "Chưa xác định site channel AFFORDABLE/COLLECTIBLE.");
+    if (!clean(values.spec.model)) {
+        pushMissing(warnings, "model", "Chưa có model, bullet model sẽ được bỏ qua.");
+    }
 
+    if (!clean(values.basic.movementType)) {
+        pushMissing(warnings, "movementType", "Chưa có movement type.");
+    }
+
+    if (!clean(values.spec.caseSizeMM)) {
+        pushMissing(warnings, "caseSizeMM", "Chưa có case size.");
+    }
+
+    if (!clean(values.spec.crystal)) {
+        pushMissing(warnings, "crystal", "Chưa có loại kính.");
+    }
+
+    if (!clean(values.spec.primaryCaseMaterial)) {
+        pushMissing(warnings, "primaryCaseMaterial", "Chưa có chất liệu vỏ.");
+    }
+
+    if (!clean(values.spec.strapSetType)) {
+        pushMissing(warnings, "strapSetType", "Chưa xác định dây khóa hãng hay linh kiện.");
+    }
+
+    if (!clean(values.basic.style)) {
+        pushMissing(warnings, "style", "Chưa chọn phong cách watch.");
+    }
+    if (!clean(values.spec.strapSetType)) {
+        pushMissing(
+            warnings,
+            "strapSetType",
+            "Chưa chọn dây hãng hay linh kiện."
+        );
+    }
+
+    if (
+        values.spec.strapSetType === "COMPONENT_STRAP_COMPONENT_BUCKLE" &&
+        !clean(values.spec.strapComponentSource)
+    ) {
+        pushMissing(
+            warnings,
+            "strapComponentSource",
+            "Chưa chọn nguồn dây (giữ nguyên hay từ kho)."
+        );
+    }
     return warnings;
 }
 

@@ -39,6 +39,8 @@ const makeSchema = () => z.object({
   buckleType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   bookletIncluded: SortOrderSchema.optional(),
   cardIncluded: SortOrderSchema.optional(),
+  strapSetType: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  strapComponentSource: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   featuresJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   rawSpecJson: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),

@@ -77,7 +77,10 @@ export async function submitWatchForm(values: WatchFormValues) {
                     values.basic.gender,
                     WatchFormEnums.Gender
                 ),
-
+                style: pickEnumOrNull(
+                    values.basic.style,
+                    WatchFormEnums.WatchStyle
+                ),
                 siteChannel: pickEnumOrUndefined(
                     values.basic.siteChannel,
                     WatchFormEnums.WatchSiteChannel
@@ -103,7 +106,15 @@ export async function submitWatchForm(values: WatchFormValues) {
             model: values.spec.model || null,
             referenceNumber: values.spec.referenceNumber || null,
             nickname: values.spec.nickname || null,
+            strapSetType: pickEnumOrNull(
+                values.spec.strapSetType,
+                WatchFormEnums.WatchStrapSetType
+            ),
 
+            strapComponentSource: pickEnumOrNull(
+                values.spec.strapComponentSource,
+                WatchFormEnums.WatchStrapComponentSource
+            ),
             caseShape: pickEnumOrNull(
                 values.spec.caseShape,
                 WatchFormEnums.CaseType
@@ -181,11 +192,13 @@ export async function submitWatchForm(values: WatchFormValues) {
             where: { watchId: current.id },
             create: {
                 watchId: current.id,
+                titleOverride: values.content.titleOverride || null,
                 hookText: values.content.hookText || null,
                 body: values.content.body || null,
                 bulletSpecs: values.content.bulletSpecs ?? [],
             },
             update: {
+                titleOverride: values.content.titleOverride || null,
                 hookText: values.content.hookText || null,
                 body: values.content.body || null,
                 bulletSpecs: values.content.bulletSpecs ?? [],

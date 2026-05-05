@@ -30,6 +30,8 @@ export const WatchSpecV2DeleteResultSchema = z.nullable(z.object({
   buckleType: z.string().optional(),
   bookletIncluded: z.boolean(),
   cardIncluded: z.boolean(),
+  strapSetType: z.unknown().optional(),
+  strapComponentSource: z.unknown().optional(),
   featuresJson: z.unknown().optional(),
   rawSpecJson: z.unknown().optional(),
   createdAt: z.date(),

@@ -8,6 +8,8 @@ import { GenderSchema } from '../enums/Gender.schema';
 import { EnumGenderFieldUpdateOperationsInputObjectSchema as EnumGenderFieldUpdateOperationsInputObjectSchema } from './EnumGenderFieldUpdateOperationsInput.schema';
 import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema as NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumMovementTypeFieldUpdateOperationsInput.schema';
+import { WatchStyleSchema } from '../enums/WatchStyle.schema';
+import { NullableEnumWatchStyleFieldUpdateOperationsInputObjectSchema as NullableEnumWatchStyleFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchStyleFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { EnumWatchSpecStatusFieldUpdateOperationsInputObjectSchema as EnumWatchSpecStatusFieldUpdateOperationsInputObjectSchema } from './EnumWatchSpecStatusFieldUpdateOperationsInput.schema';
@@ -31,6 +33,7 @@ const makeSchema = () => z.object({
   movementCalibre: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   serialNumber: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   yearText: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  style: z.union([WatchStyleSchema, z.lazy(() => NullableEnumWatchStyleFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   hasBox: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   hasPapers: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   specStatus: z.union([WatchSpecStatusSchema, z.lazy(() => EnumWatchSpecStatusFieldUpdateOperationsInputObjectSchema)]).optional(),

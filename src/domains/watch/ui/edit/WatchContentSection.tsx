@@ -92,7 +92,19 @@ export default function WatchContentSection({
                         Gen hook & bullet specs
                     </Button>
                 </div>
-
+                <div>
+                    <FieldLabel>TITLE</FieldLabel>
+                    <input
+                        value={values.titleOverride}
+                        onChange={(e) =>
+                            onChange({
+                                titleOverride: e.target.value,
+                            })
+                        }
+                        placeholder="Title bài đăng sau khi gen"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                    />
+                </div>
                 {generation?.warnings?.length ? (
                     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-inset ring-amber-200">
                         <div className="flex items-start gap-3">

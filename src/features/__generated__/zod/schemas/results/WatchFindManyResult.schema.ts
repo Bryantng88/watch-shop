@@ -15,6 +15,7 @@ export const WatchFindManyResultSchema = z.object({
   movementCalibre: z.string().optional(),
   serialNumber: z.string().optional(),
   yearText: z.string().optional(),
+  style: z.unknown().optional(),
   hasBox: z.boolean(),
   hasPapers: z.boolean(),
   specStatus: z.unknown(),

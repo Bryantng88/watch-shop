@@ -30,6 +30,7 @@ export type WatchFormValues = {
         movementCalibre: string;
         serialNumber: string;
         yearText: string;
+        style: string;
     };
 
     spec: {
@@ -47,6 +48,8 @@ export type WatchFormValues = {
         materialProfile: string;
         primaryCaseMaterial: string;
         secondaryCaseMaterial: string;
+        strapSetType: string;
+        strapComponentSource: string;
         goldTreatment: string;
         goldColors: string[];
         goldKarat: string;

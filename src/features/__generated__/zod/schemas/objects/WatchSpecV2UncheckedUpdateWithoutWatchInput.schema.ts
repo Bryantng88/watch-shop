@@ -22,6 +22,10 @@ import { NullableEnumMovementTypeFieldUpdateOperationsInputObjectSchema as Nulla
 import { StrapSchema } from '../enums/Strap.schema';
 import { NullableEnumStrapFieldUpdateOperationsInputObjectSchema as NullableEnumStrapFieldUpdateOperationsInputObjectSchema } from './NullableEnumStrapFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
+import { WatchStrapSetTypeSchema } from '../enums/WatchStrapSetType.schema';
+import { NullableEnumWatchStrapSetTypeFieldUpdateOperationsInputObjectSchema as NullableEnumWatchStrapSetTypeFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchStrapSetTypeFieldUpdateOperationsInput.schema';
+import { WatchStrapComponentSourceSchema } from '../enums/WatchStrapComponentSource.schema';
+import { NullableEnumWatchStrapComponentSourceFieldUpdateOperationsInputObjectSchema as NullableEnumWatchStrapComponentSourceFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchStrapComponentSourceFieldUpdateOperationsInput.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema'
 
@@ -57,6 +61,8 @@ const makeSchema = () => z.object({
   buckleType: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   bookletIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   cardIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  strapSetType: z.union([WatchStrapSetTypeSchema, z.lazy(() => NullableEnumWatchStrapSetTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  strapComponentSource: z.union([WatchStrapComponentSourceSchema, z.lazy(() => NullableEnumWatchStrapComponentSourceFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   rawSpecJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),

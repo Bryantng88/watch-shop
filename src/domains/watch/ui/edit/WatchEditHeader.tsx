@@ -7,7 +7,7 @@ import AdminBreadcrumbs, {
     type AdminBreadcrumbItem,
 } from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import InlineImage from "@/domains/shared/ui/image/InlineImage";
-
+import { Loader2 } from "lucide-react";
 type SimpleOption = {
     id: string;
     name: string;
@@ -156,9 +156,16 @@ export default function WatchEditHeader({
                         type="button"
                         onClick={onSubmit}
                         disabled={pending}
-                        className="inline-flex items-center rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        {pending ? "Đang lưu..." : "Lưu thay đổi"}
+                        {pending ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Đang lưu...
+                            </>
+                        ) : (
+                            "Lưu thay đổi"
+                        )}
                     </button>
                 </div>
             </div>

@@ -14,6 +14,7 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     movementCalibre: z.number(),
     serialNumber: z.number(),
     yearText: z.number(),
+    style: z.number(),
     hasBox: z.number(),
     hasPapers: z.number(),
     specStatus: z.number(),

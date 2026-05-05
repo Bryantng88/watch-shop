@@ -5,30 +5,23 @@ import sharp from "sharp";
 import { s3, S3_BUCKET } from "@/server/s3";
 import { normalizeKey } from "@/server/lib/product-image-storage";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function getFileNameFromKey(key: string) {
     return key.split("/").pop() || "image.jpg";
 }
 
-function safeAsciiFileName(fileName: string) {
+function safeFileName(fileName: string) {
     return fileName.replace(/[^\w.\-()[\] ]+/g, "_");
 }
 
 function toJpegFileName(fileName: string) {
-    return safeAsciiFileName(fileName).replace(/\.[^.]+$/i, ".jpg");
+    const safe = safeFileName(fileName);
+    return safe.replace(/\.[^.]+$/i, ".jpg");
 }
 
-function getContentTypeFromFileName(fileName: string) {
-    if (/\.(jpe?g)$/i.test(fileName)) return "image/jpeg";
-    if (/\.png$/i.test(fileName)) return "image/png";
-    if (/\.webp$/i.test(fileName)) return "image/webp";
-    if (/\.gif$/i.test(fileName)) return "image/gif";
-    if (/\.avif$/i.test(fileName)) return "image/avif";
-    return "application/octet-stream";
-}
-
-async function streamToBuffer(body: any) {
+async function bodyToBuffer(body: any) {
     const chunks: Buffer[] = [];
 
     for await (const chunk of body) {
@@ -44,6 +37,7 @@ export async function GET(req: NextRequest) {
 
     const download = req.nextUrl.searchParams.get("download") === "1";
     const format = req.nextUrl.searchParams.get("format");
+    const shouldConvertToJpeg = download || format === "jpeg" || format === "jpg";
 
     if (!key) {
         return NextResponse.json({ error: "Missing key" }, { status: 400 });
@@ -58,14 +52,20 @@ export async function GET(req: NextRequest) {
         );
 
         if (!obj.Body) {
-            return NextResponse.json({ error: "File not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "File not found", key },
+                { status: 404 }
+            );
         }
 
         const originalFileName = getFileNameFromKey(key);
 
-        if (format === "jpeg" || format === "jpg") {
-            const inputBuffer = await streamToBuffer(obj.Body);
-            const jpegBuffer = await sharp(inputBuffer)
+        if (shouldConvertToJpeg) {
+            const inputBuffer = await bodyToBuffer(obj.Body);
+
+            const jpegBuffer = await sharp(inputBuffer, {
+                failOn: "none",
+            })
                 .rotate()
                 .jpeg({
                     quality: 92,
@@ -75,27 +75,23 @@ export async function GET(req: NextRequest) {
 
             const fileName = toJpegFileName(originalFileName);
 
-            return new NextResponse(jpegBuffer, {
+            return new Response(new Uint8Array(jpegBuffer), {
                 headers: {
                     "Content-Type": "image/jpeg",
-                    "Content-Disposition": `${download ? "attachment" : "inline"
-                        }; filename="${fileName}"`,
-                    "Cache-Control": "public, max-age=3600",
+                    "Content-Disposition": `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
                     "X-Resolved-Key": key,
                     "X-Converted-Format": "jpeg",
                 },
             });
         }
 
-        const fileName = safeAsciiFileName(originalFileName);
-        const contentType =
-            obj.ContentType || getContentTypeFromFileName(fileName);
-
         return new NextResponse(obj.Body as any, {
             headers: {
-                "Content-Type": contentType,
-                "Content-Disposition": `${download ? "attachment" : "inline"
-                    }; filename="${fileName}"`,
+                "Content-Type": obj.ContentType ?? "application/octet-stream",
+                "Content-Disposition": `inline; filename="${safeFileName(originalFileName)}"`,
                 "Cache-Control": "public, max-age=3600",
                 "X-Resolved-Key": key,
             },

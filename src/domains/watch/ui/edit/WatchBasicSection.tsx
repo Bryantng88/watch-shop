@@ -32,7 +32,18 @@ const SITE_CHANNEL_OPTIONS = [
     value: x,
     label: x,
 }));
-
+const WATCH_STYLE_OPTIONS = [
+    "MILITARY",
+    "DRESS",
+    "SPORT",
+    "TOOL",
+    "CASUAL",
+    "CLASSIC",
+    "MINIMALIST",
+    "LUXURY",
+    "RETRO",
+    "FUTURISTIC",
+].map((x) => ({ value: x, label: x }));
 const MOVEMENT_TYPE_OPTIONS = [
     "AUTOMATIC",
     "HAND_WOUND",
@@ -134,7 +145,15 @@ export default function WatchBasicSection({
                         options={SITE_CHANNEL_OPTIONS}
                     />
                 </div>
-
+                <div>
+                    <FieldLabel>Style</FieldLabel>
+                    <Select
+                        value={values.style}
+                        onChange={(e) => onChange({ style: e.target.value })}
+                        options={WATCH_STYLE_OPTIONS}
+                        placeholder="Chọn phong cách"
+                    />
+                </div>
                 <div>
                     <FieldLabel>Stock state</FieldLabel>
                     <Input

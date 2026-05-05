@@ -33,6 +33,8 @@ const makeSchema = () => z.object({
   buckleType: SortOrderSchema.optional(),
   bookletIncluded: SortOrderSchema.optional(),
   cardIncluded: SortOrderSchema.optional(),
+  strapSetType: SortOrderSchema.optional(),
+  strapComponentSource: SortOrderSchema.optional(),
   featuresJson: SortOrderSchema.optional(),
   rawSpecJson: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),

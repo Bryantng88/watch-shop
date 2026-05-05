@@ -907,9 +907,9 @@ model Watch {
   movementCalibre String?
   serialNumber    String?
   yearText        String?
-
-  hasBox    Boolean @default(false)
-  hasPapers Boolean @default(false)
+  style           WatchStyle?
+  hasBox          Boolean       @default(false)
+  hasPapers       Boolean       @default(false)
 
   specStatus WatchSpecStatus @default(PENDING)
 
@@ -1042,12 +1042,13 @@ model WatchSpecV2 {
   buckleType        String?
 
   // Accessories / papers detail
-  bookletIncluded Boolean @default(false)
-  cardIncluded    Boolean @default(false)
-
+  bookletIncluded      Boolean                    @default(false)
+  cardIncluded         Boolean                    @default(false)
+  strapSetType         WatchStrapSetType?
+  strapComponentSource WatchStrapComponentSource?
   // Flexible structured / raw data
-  featuresJson Json?
-  rawSpecJson  Json?
+  featuresJson         Json?
+  rawSpecJson          Json?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @db.Timestamptz(6)
@@ -1241,6 +1242,29 @@ enum AcquisitionItemKind {
   PRODUCT
   SERVICE
   FEE
+}
+
+enum WatchStyle {
+  MILITARY
+  DRESS
+  SPORT
+  TOOL
+  CASUAL
+  CLASSIC
+  MINIMALIST
+  LUXURY
+  RETRO
+  FUTURISTIC
+}
+
+enum WatchStrapSetType {
+  BRAND_ORIGINAL
+  COMPONENT
+}
+
+enum WatchStrapComponentSource {
+  KEEP_CURRENT
+  FROM_STOCK
 }
 
 enum AcquisitionItemStatus {

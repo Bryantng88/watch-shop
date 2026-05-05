@@ -76,7 +76,20 @@ const BRACELET_OPTIONS = [
     "CANVASS",
     "SPECIAL",
 ].map((x) => ({ value: x, label: x }));
-
+const STRAP_SET_TYPE_OPTIONS = [
+    { value: "BRAND_ORIGINAL", label: "Dây khóa hãng" },
+    { value: "COMPONENT", label: "Dây khóa linh kiện" },
+];
+const STRAP_COMPONENT_SOURCE_OPTIONS = [
+    {
+        value: "KEEP_CURRENT",
+        label: "Giữ nguyên hiện trạng",
+    },
+    {
+        value: "FROM_STOCK",
+        label: "Lấy dây thay từ kho",
+    },
+];
 export default function WatchSpecSection({ values, onChange }: Props) {
     const materialProfile = values.materialProfile || "SINGLE_MATERIAL";
     const isBimetal = materialProfile === "BIMETAL";
@@ -358,7 +371,36 @@ export default function WatchSpecSection({ values, onChange }: Props) {
                                 placeholder="Pin buckle / deployant / ..."
                             />
                         </div>
+                        <div>
+                            <FieldLabel>Dây / khóa</FieldLabel>
+                            <Select
+                                value={values.strapSetType}
+                                onChange={(e) =>
+                                    onChange({
+                                        strapSetType: e.target.value,
+                                        strapComponentSource: "", // reset khi đổi
+                                    })
+                                }
+                                options={STRAP_SET_TYPE_OPTIONS}
+                                placeholder="Chọn tình trạng dây khóa"
+                            />
+                        </div>
 
+                        {values.strapSetType === "COMPONENT" && (
+                            <div>
+                                <FieldLabel>Nguồn dây</FieldLabel>
+                                <Select
+                                    value={values.strapComponentSource}
+                                    onChange={(e) =>
+                                        onChange({
+                                            strapComponentSource: e.target.value,
+                                        })
+                                    }
+                                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
+                                    placeholder="Chọn nguồn dây"
+                                />
+                            </div>
+                        )}
                         <div className="md:col-span-2">
                             <FieldLabel>Material note</FieldLabel>
                             <Textarea

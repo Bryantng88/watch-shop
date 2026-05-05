@@ -17,6 +17,7 @@ const makeSchema = () => z.object({
   movementCalibre: SortOrderSchema.optional(),
   serialNumber: SortOrderSchema.optional(),
   yearText: SortOrderSchema.optional(),
+  style: SortOrderSchema.optional(),
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
   specStatus: SortOrderSchema.optional(),

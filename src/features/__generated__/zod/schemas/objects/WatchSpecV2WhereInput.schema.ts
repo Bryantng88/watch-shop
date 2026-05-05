@@ -21,6 +21,10 @@ import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { EnumStrapNullableFilterObjectSchema as EnumStrapNullableFilterObjectSchema } from './EnumStrapNullableFilter.schema';
 import { StrapSchema } from '../enums/Strap.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
+import { EnumWatchStrapSetTypeNullableFilterObjectSchema as EnumWatchStrapSetTypeNullableFilterObjectSchema } from './EnumWatchStrapSetTypeNullableFilter.schema';
+import { WatchStrapSetTypeSchema } from '../enums/WatchStrapSetType.schema';
+import { EnumWatchStrapComponentSourceNullableFilterObjectSchema as EnumWatchStrapComponentSourceNullableFilterObjectSchema } from './EnumWatchStrapComponentSourceNullableFilter.schema';
+import { WatchStrapComponentSourceSchema } from '../enums/WatchStrapComponentSource.schema';
 import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { WatchScalarRelationFilterObjectSchema as WatchScalarRelationFilterObjectSchema } from './WatchScalarRelationFilter.schema';
@@ -60,6 +64,8 @@ const watchspecv2whereinputSchema = z.object({
   buckleType: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   bookletIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
+  strapSetType: z.union([z.lazy(() => EnumWatchStrapSetTypeNullableFilterObjectSchema), WatchStrapSetTypeSchema]).optional().nullable(),
+  strapComponentSource: z.union([z.lazy(() => EnumWatchStrapComponentSourceNullableFilterObjectSchema), WatchStrapComponentSourceSchema]).optional().nullable(),
   featuresJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   rawSpecJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),

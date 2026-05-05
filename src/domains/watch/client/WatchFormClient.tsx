@@ -15,6 +15,7 @@ import WatchContentSection from "../ui/edit/WatchContentSection";
 import WatchPricingSidebar from "../ui/edit/WatchPricingSidebar";
 import WatchImageSection from "../ui/edit/WatchImageSection";
 import WatchMediaSidebar from "../ui/edit/WatchMediaSidebar";
+import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
 
 type SimpleOption = { id: string; name: string; slug?: string | null };
 
@@ -39,7 +40,7 @@ export default function WatchFormClient({
         () => mapWatchDetailToFormValues(detail),
         [detail]
     );
-
+    const [afterSaveOpen, setAfterSaveOpen] = useState(false);
     const [values, setValues] = useState<WatchFormValues>(initialValues);
     const [pending, startTransition] = useTransition();
     const [message, setMessage] = useState("");
@@ -87,11 +88,13 @@ export default function WatchFormClient({
 
     const onSubmit = () => {
         setMessage("");
+        setAfterSaveOpen(false);
 
         startTransition(async () => {
             try {
                 const result = await submitWatchForm(values);
                 setMessage(result?.message || "Đã lưu watch.");
+                setAfterSaveOpen(true);
             } catch (error: any) {
                 setMessage(error?.message || "Không thể lưu watch.");
             }
@@ -249,6 +252,13 @@ export default function WatchFormClient({
                 values={values.spec}
                 onClose={() => setSpecModalOpen(false)}
                 onSave={replaceSpec}
+            />
+
+            <AfterSaveDialog
+                open={afterSaveOpen}
+                detailHref={`/admin/watches/${values.productId}`}
+                fallbackBackHref="/admin/watches"
+                onContinue={() => setAfterSaveOpen(false)}
             />
         </div>
     );

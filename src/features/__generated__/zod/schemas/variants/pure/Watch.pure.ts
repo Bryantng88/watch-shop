@@ -3,6 +3,7 @@ import * as z from 'zod';
 import { WatchSiteChannelSchema } from '../../enums/WatchSiteChannel.schema';
 import { GenderSchema } from '../../enums/Gender.schema';
 import { MovementTypeSchema } from '../../enums/MovementType.schema';
+import { WatchStyleSchema } from '../../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../../enums/WatchSpecStatus.schema';
 // prettier-ignore
 export const WatchModelSchema = z.object({
@@ -20,6 +21,7 @@ export const WatchModelSchema = z.object({
     movementCalibre: z.string().nullable(),
     serialNumber: z.string().nullable(),
     yearText: z.string().nullable(),
+    style: WatchStyleSchema.nullable(),
     hasBox: z.boolean(),
     hasPapers: z.boolean(),
     specStatus: WatchSpecStatusSchema,
