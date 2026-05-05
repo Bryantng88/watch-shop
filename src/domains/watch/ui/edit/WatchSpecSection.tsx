@@ -80,7 +80,7 @@ const STRAP_SET_TYPE_OPTIONS = [
     { value: "BRAND_ORIGINAL", label: "Dây khóa hãng" },
     { value: "COMPONENT", label: "Dây khóa linh kiện" },
 ];
-const STRAP_COMPONENT_SOURCE_OPTIONS = [
+const COMPONENT = [
     {
         value: "KEEP_CURRENT",
         label: "Giữ nguyên hiện trạng",
@@ -354,23 +354,7 @@ export default function WatchSpecSection({ values, onChange }: Props) {
                             />
                         </div>
 
-                        <div>
-                            <FieldLabel>Strap material text</FieldLabel>
-                            <Input
-                                value={values.strapMaterialText}
-                                onChange={(e) => onChange({ strapMaterialText: e.target.value })}
-                                placeholder="Leather / steel / beads of rice / ..."
-                            />
-                        </div>
 
-                        <div>
-                            <FieldLabel>Buckle type</FieldLabel>
-                            <Input
-                                value={values.buckleType}
-                                onChange={(e) => onChange({ buckleType: e.target.value })}
-                                placeholder="Pin buckle / deployant / ..."
-                            />
-                        </div>
                         <div>
                             <FieldLabel>Dây / khóa</FieldLabel>
                             <Select
@@ -378,11 +362,11 @@ export default function WatchSpecSection({ values, onChange }: Props) {
                                 onChange={(e) =>
                                     onChange({
                                         strapSetType: e.target.value,
-                                        strapComponentSource: "", // reset khi đổi
+                                        strapComponentSource: "",
                                     })
                                 }
                                 options={STRAP_SET_TYPE_OPTIONS}
-                                placeholder="Chọn tình trạng dây khóa"
+                                placeholder="Chọn dây hãng / linh kiện"
                             />
                         </div>
 
@@ -396,11 +380,20 @@ export default function WatchSpecSection({ values, onChange }: Props) {
                                             strapComponentSource: e.target.value,
                                         })
                                     }
-                                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
+                                    options={COMPONENT}
                                     placeholder="Chọn nguồn dây"
                                 />
                             </div>
                         )}
+                        <div>
+                            <FieldLabel>Buckle type</FieldLabel>
+                            <Input
+                                value={values.buckleType}
+                                onChange={(e) => onChange({ buckleType: e.target.value })}
+                                placeholder="Pin buckle / deployant / ..."
+                            />
+                        </div>
+
                         <div className="md:col-span-2">
                             <FieldLabel>Material note</FieldLabel>
                             <Textarea

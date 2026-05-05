@@ -1,3 +1,6 @@
+
+
+
 import {
     Gender,
     ProductStatus,
@@ -6,10 +9,18 @@ import {
     WatchGoldTreatment,
     WatchMaterialProfile,
     WatchSiteChannel,
+    WatchStyle,
+    WatchStrapSetType,
+    WatchStrapComponentSource,
+    WatchSpecStatus,
 } from "@prisma/client";
 
-import { WatchBrandModel, WatchVendorModel, WatchCategoryModel, WatchDetailImageItem } from "../server";
-
+import {
+    WatchBrandModel,
+    WatchVendorModel,
+    WatchCategoryModel,
+    WatchDetailImageItem,
+} from "../server";
 
 export type WatchDetailModel = {
     id: string;
@@ -33,16 +44,23 @@ export type WatchDetailModel = {
 
     watch: {
         id: string;
+
         gender?: Gender | null;
+        style?: WatchStyle | null; // ✅ thêm
+
         siteChannel?: WatchSiteChannel | null;
         stockState?: string | null;
         saleState?: string | null;
         serviceState?: string | null;
+        specStatus?: WatchSpecStatus | null;
         movementType?: string | null;
         movementCalibre?: string | null;
+
         yearText?: string | null;
+
         hasBox?: boolean | null;
         hasPapers?: boolean | null;
+
         notes?: string | null;
         conditionGrade?: string | null;
         serialNumber?: string | null;
@@ -50,6 +68,7 @@ export type WatchDetailModel = {
 
     spec?: {
         id?: string;
+
         brand?: string | null;
         model?: string | null;
         referenceNumber?: string | null;
@@ -70,9 +89,23 @@ export type WatchDetailModel = {
         goldKarat?: number | null;
 
         dialColor?: string | null;
+        dialFinish?: string | null; // ✅ thêm
+
         crystal?: string | null;
+
         calibre?: string | null;
+        powerReserve?: string | null; // ✅ thêm
+        waterResistance?: string | null; // ✅ thêm
+
         braceletType?: string | null;
+        strapMaterialText?: string | null;
+
+        // ✅ NEW LOGIC STRAP
+        strapSetType?: WatchStrapSetType | null;
+        strapComponentSource?: WatchStrapComponentSource | null;
+
+        buckleType?: string | null;
+        materialNote?: string | null;
 
         boxIncluded?: boolean | null;
         bookletIncluded?: boolean | null;
@@ -95,7 +128,7 @@ export type WatchDetailModel = {
         hookText?: string | null;
         body?: string | null;
         bulletSpecs?: string[];
-        seoTitle?: string | null;
+        hashtags?: string | null; seoTitle?: string | null;
         seoDescription?: string | null;
     } | null;
 

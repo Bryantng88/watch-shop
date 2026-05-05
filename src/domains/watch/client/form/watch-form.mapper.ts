@@ -98,11 +98,13 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         },
 
         content: {
+            titleOverride: s(detail?.content?.titleOverride),
             hookText: s(detail?.content?.hookText),
             body: s(detail?.content?.body),
             bulletSpecs: Array.isArray(detail?.content?.bulletSpecs)
                 ? detail.content.bulletSpecs.map((x: any) => String(x))
                 : [],
+            hashtags: s(detail?.content?.hashtags)
         },
 
         pricing: {

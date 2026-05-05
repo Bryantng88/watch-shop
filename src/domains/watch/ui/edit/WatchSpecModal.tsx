@@ -84,7 +84,20 @@ const BRACELET_OPTIONS = [
     "CANVASS",
     "SPECIAL",
 ].map((x) => ({ value: x, label: x }));
-
+const STRAP_SET_TYPE_OPTIONS = [
+    { value: "BRAND_ORIGINAL", label: "Dây khóa hãng" },
+    { value: "COMPONENT", label: "Dây khóa linh kiện" },
+];
+const STRAP_COMPONENT_SOURCE_OPTIONS = [
+    {
+        value: "KEEP_CURRENT",
+        label: "Giữ nguyên hiện trạng",
+    },
+    {
+        value: "FROM_STOCK",
+        label: "Lấy dây thay từ kho",
+    },
+];
 export function buildWatchSpecSummary(spec: WatchFormValues["spec"]) {
     const parts = [
         spec.model,
@@ -428,16 +441,35 @@ export default function WatchSpecModal({
                         </div>
 
                         <div>
-                            <FieldLabel>Strap material text</FieldLabel>
-                            <Input
-                                value={draft.strapMaterialText}
+                            <FieldLabel>Dây / khóa</FieldLabel>
+                            <Select
+                                value={draft.strapSetType}
                                 onChange={(e) =>
-                                    patch({ strapMaterialText: e.target.value })
+                                    patch({
+                                        strapSetType: e.target.value,
+                                        strapComponentSource: "",
+                                    })
                                 }
-                                placeholder="Leather / steel / beads of rice / ..."
+                                options={STRAP_SET_TYPE_OPTIONS}
+                                placeholder="Chọn dây hãng / linh kiện"
                             />
                         </div>
 
+                        {draft.strapSetType === "COMPONENT" ? (
+                            <div>
+                                <FieldLabel>Nguồn dây</FieldLabel>
+                                <Select
+                                    value={draft.strapComponentSource}
+                                    onChange={(e) =>
+                                        patch({
+                                            strapComponentSource: e.target.value,
+                                        })
+                                    }
+                                    options={STRAP_COMPONENT_SOURCE_OPTIONS}
+                                    placeholder="Chọn nguồn dây"
+                                />
+                            </div>
+                        ) : null}
                         <div>
                             <FieldLabel>Buckle type</FieldLabel>
                             <Input

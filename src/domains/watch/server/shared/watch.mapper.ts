@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
-import type { WatchDetailModel, WatchListComputedItem } from "./watch.types";
+import type { WatchListComputedItem } from "./watch.types";
+import { WatchDetailModel } from "../../shared/watch.types";
 
 function decimalToString(value: Prisma.Decimal | null | undefined) {
     if (value == null) return null;
@@ -127,6 +128,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             serviceState: row.serviceState ?? null,
             movementType: row.movementType ?? null,
             movementCalibre: row.movementCalibre ?? null,
+            style: row.style ?? null,
             yearText: row.yearText ?? null,
             hasBox: row.hasBox,
             hasPapers: row.hasPapers,
@@ -154,9 +156,17 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 goldColors: row.watchSpecV2.goldColors ?? [],
                 goldKarat: row.watchSpecV2.goldKarat ?? null,
                 dialColor: row.watchSpecV2.dialColor ?? null,
+                dialFinish: row.watchSpecV2.dialFinish ?? null,
                 crystal: row.watchSpecV2.crystal ?? null,
                 calibre: row.watchSpecV2.calibre ?? null,
+                powerReserve: row.watchSpecV2.powerReserve ?? null,
+                waterResistance: row.watchSpecV2.waterResistance ?? null,
                 braceletType: row.watchSpecV2.braceletType ?? null,
+                strapMaterialText: row.watchSpecV2.strapMaterialText ?? null,
+                strapSetType: row.watchSpecV2.strapSetType ?? null,
+                strapComponentSource: row.watchSpecV2.strapComponentSource ?? null,
+                buckleType: row.watchSpecV2.buckleType ?? null,
+                materialNote: row.watchSpecV2.materialNote ?? null,
                 bookletIncluded: row.watchSpecV2.bookletIncluded ?? null,
                 cardIncluded: row.watchSpecV2.cardIncluded ?? null,
             }
@@ -179,6 +189,8 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 hookText: row.watchContent.hookText ?? null,
                 body: row.watchContent.body ?? null,
                 bulletSpecs: row.watchContent.bulletSpecs ?? [],
+                hashtags: row.watchContent.hashtags ?? null,
+
                 seoTitle: row.watchContent.seoTitle ?? null,
                 seoDescription: row.watchContent.seoDescription ?? null,
             }

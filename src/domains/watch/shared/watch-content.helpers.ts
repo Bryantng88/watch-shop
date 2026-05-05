@@ -229,25 +229,30 @@ export function buildBulletSpecs(values: WatchFormValues) {
     const bulletSpecs: string[] = [];
 
     const model = clean(spec.model);
+    const reference = clean(spec.referenceNumber);
+
     const movementText = movementLabel(basic.movementType);
     const calibre = clean(spec.calibre) || clean(basic.movementCalibre);
+
     const caseSize = clean(spec.caseSizeMM);
     const materialProfile = normalizeEnum(spec.materialProfile);
     const primaryMaterial = materialLabel(spec.primaryCaseMaterial);
     const secondaryMaterial = materialLabel(spec.secondaryCaseMaterial);
     const crystalText = crystalLabel(spec.crystal);
+
     const strapText = strapSetLabel(
         spec.strapSetType,
         spec.strapComponentSource
     );
 
-    if (strapText) {
-        bulletSpecs.push(strapText);
-    }
     const styleText = styleLabel(basic.style);
 
-    if (model) {
-        bulletSpecs.push(`Model ${model}.`);
+    if (model || reference) {
+        const identity = [model, reference ? `Ref. ${reference}` : ""]
+            .filter(Boolean)
+            .join(" – ");
+
+        bulletSpecs.push(`Model ${identity}.`);
     }
 
     if (movementText || calibre) {
@@ -281,7 +286,7 @@ export function buildBulletSpecs(values: WatchFormValues) {
         bulletSpecs.push(`Phong cách ${styleText}.`);
     }
 
-    return bulletSpecs;
+    return Array.from(new Set(bulletSpecs));
 }
 
 export function buildHashtags(values: WatchFormValues) {
@@ -366,7 +371,7 @@ function buildWarnings(values: WatchFormValues) {
     }
 
     if (
-        values.spec.strapSetType === "COMPONENT_STRAP_COMPONENT_BUCKLE" &&
+        values.spec.strapSetType === "COMPONENT" &&
         !clean(values.spec.strapComponentSource)
     ) {
         pushMissing(
