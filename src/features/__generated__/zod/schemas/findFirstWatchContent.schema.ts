@@ -22,7 +22,15 @@ export const WatchContentFindFirstSelectSchema: z.ZodType<Prisma.WatchContentSel
     aiMetaJson: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    watch: z.boolean().optional()
+    watch: z.boolean().optional(),
+    contentStatus: z.boolean().optional(),
+    submittedAt: z.boolean().optional(),
+    submittedById: z.boolean().optional(),
+    reviewedAt: z.boolean().optional(),
+    reviewedById: z.boolean().optional(),
+    reviewNote: z.boolean().optional(),
+    publishedAt: z.boolean().optional(),
+    publishedById: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WatchContentSelect>;
 
 export const WatchContentFindFirstSelectZodSchema = z.object({
@@ -38,7 +46,15 @@ export const WatchContentFindFirstSelectZodSchema = z.object({
     aiMetaJson: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    watch: z.boolean().optional()
+    watch: z.boolean().optional(),
+    contentStatus: z.boolean().optional(),
+    submittedAt: z.boolean().optional(),
+    submittedById: z.boolean().optional(),
+    reviewedAt: z.boolean().optional(),
+    reviewedById: z.boolean().optional(),
+    reviewNote: z.boolean().optional(),
+    publishedAt: z.boolean().optional(),
+    publishedById: z.boolean().optional()
   }).strict();
 
 export const WatchContentFindFirstSchema: z.ZodType<Prisma.WatchContentFindFirstArgs> = z.object({ select: WatchContentFindFirstSelectSchema.optional(), include: WatchContentIncludeObjectSchema.optional(), orderBy: z.union([WatchContentOrderByWithRelationInputObjectSchema, WatchContentOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchContentWhereInputObjectSchema.optional(), cursor: WatchContentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([WatchContentScalarFieldEnumSchema, WatchContentScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.WatchContentFindFirstArgs>;

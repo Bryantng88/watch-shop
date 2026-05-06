@@ -184,16 +184,16 @@ export default function WatchListTable({
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
-                                    onChange={(e) =>
-                                        onToggleAll?.(e.target.checked)
-                                    }
+                                    onChange={(e) => onToggleAll?.(e.target.checked)}
                                     className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>
                             <th className="px-4 py-4">Watch</th>
                             <th className="px-4 py-4">Post readiness</th>
-                            <th className="px-4 py-4">Pricing</th>
+                            <th className="px-4 py-4">Giá bán</th>
+                            <th className="px-4 py-4">Tạo lúc</th>
                             <th className="px-4 py-4">Cập nhật</th>
+
                             <th className="px-4 py-4 text-right">Hành động</th>
                         </tr>
                     </thead>
@@ -202,7 +202,7 @@ export default function WatchListTable({
                         {safeItems.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={6}
+                                    colSpan={5}
                                     className="px-4 py-12 text-center text-sm text-slate-500"
                                 >
                                     Chưa có watch nào khớp bộ lọc hiện tại.

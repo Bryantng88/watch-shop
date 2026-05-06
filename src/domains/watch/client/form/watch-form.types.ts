@@ -69,6 +69,9 @@ export type WatchFormValues = {
         body: string;
         bulletSpecs: string[];
         hashtags: string;
+        contentStatus: string;
+        reviewNote: string;
+
     };
 
     pricing: {

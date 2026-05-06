@@ -15,6 +15,14 @@ const makeSchema = () => z.object({
   aiMetaJson: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  contentStatus: z.literal(true).optional(),
+  submittedAt: z.literal(true).optional(),
+  submittedById: z.literal(true).optional(),
+  reviewedAt: z.literal(true).optional(),
+  reviewedById: z.literal(true).optional(),
+  reviewNote: z.literal(true).optional(),
+  publishedAt: z.literal(true).optional(),
+  publishedById: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const WatchContentCountAggregateInputObjectSchema: z.ZodType<Prisma.WatchContentCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.WatchContentCountAggregateInputType>;

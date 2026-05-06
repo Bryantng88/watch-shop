@@ -5,6 +5,7 @@ import { Check, Copy, FileText } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
+import WatchContentReviewBar from "../content/WatchContentReviewBar";
 
 export default function WatchContentPanel({ detail }: { detail: any }) {
   const [copied, setCopied] = useState(false);
@@ -52,6 +53,13 @@ export default function WatchContentPanel({ detail }: { detail: any }) {
       icon={<FileText className="h-5 w-5" />}
       defaultOpen
     >
+      <WatchContentReviewBar
+        productId={detail.productId}
+        status={detail.content?.contentStatus}
+        reviewNote={detail.content?.reviewNote}
+        canReview={true}
+        canSubmit={false}
+      />
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

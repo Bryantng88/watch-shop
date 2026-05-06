@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BookOpen, WandSparkles, AlertTriangle } from "lucide-react";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
+import WatchContentReviewBar from "../content/WatchContentReviewBar";
 import {
     Button,
     FieldLabel,
@@ -20,6 +21,7 @@ type Props = {
     watchValues: WatchFormValues;
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
+    canReview?: boolean;
 };
 
 export default function WatchContentSection({
@@ -27,6 +29,7 @@ export default function WatchContentSection({
     watchValues,
     onChange,
     onOpenSpecModal,
+    canReview
 }: Props) {
     const [generation, setGeneration] =
         useState<WatchContentGenerationResult | null>(null);
@@ -67,11 +70,19 @@ export default function WatchContentSection({
     };
 
     return (
+
         <SectionCard
             icon={<BookOpen className="h-5 w-5" />}
             title="Content"
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
         >
+            <WatchContentReviewBar
+                productId={productId}
+                status={values.contentStatus}
+                reviewNote={values.reviewNote}
+                canReview={canReview}
+                canSubmit
+            />
             <div className="space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
                     <div>

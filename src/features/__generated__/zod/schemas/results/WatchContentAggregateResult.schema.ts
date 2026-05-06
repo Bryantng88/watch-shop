@@ -12,7 +12,15 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     aiMetaJson: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    watch: z.number()
+    watch: z.number(),
+    contentStatus: z.number(),
+    submittedAt: z.number(),
+    submittedById: z.number(),
+    reviewedAt: z.number(),
+    reviewedById: z.number(),
+    reviewNote: z.number(),
+    publishedAt: z.number(),
+    publishedById: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -25,7 +33,14 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     seoTitle: z.string().nullable(),
     seoDescription: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    submittedAt: z.date().nullable(),
+    submittedById: z.string().nullable(),
+    reviewedAt: z.date().nullable(),
+    reviewedById: z.string().nullable(),
+    reviewNote: z.string().nullable(),
+    publishedAt: z.date().nullable(),
+    publishedById: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -38,5 +53,12 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     seoTitle: z.string().nullable(),
     seoDescription: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    submittedAt: z.date().nullable(),
+    submittedById: z.string().nullable(),
+    reviewedAt: z.date().nullable(),
+    reviewedById: z.string().nullable(),
+    reviewNote: z.string().nullable(),
+    publishedAt: z.date().nullable(),
+    publishedById: z.string().nullable()
   }).nullable().optional()});

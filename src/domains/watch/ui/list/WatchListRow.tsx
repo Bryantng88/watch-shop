@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
     MoreHorizontal,
@@ -16,11 +17,11 @@ import {
 import type { WatchRow } from "./types";
 import {
     contentStatusText,
+    contentStatusTone,
     formatMoney,
-    imageStatusText,
-    serviceStatusText,
     specStatusText,
     specStatusTone,
+    formatDateTime
 } from "./helpers";
 
 type Props = {
@@ -37,53 +38,49 @@ type Props = {
     onConsign?: (row: WatchRow) => void;
 };
 
-function ReadinessLine({
-    icon,
-    label,
-    value,
-    ok,
-}: {
-    icon: React.ReactNode;
-    label: string;
-    value: string;
-    ok: boolean;
-}) {
-    return (
-        <div className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-2 text-slate-500">
-                {icon}
-                <span>{label}</span>
-            </div>
-            <div
-                className={`font-medium ${ok ? "text-emerald-600" : "text-rose-500"
-                    }`}
-            >
-                {value}
-            </div>
-        </div>
-    );
-}
-
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     if (!src) {
         return (
-            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                 <ImageIcon className="h-5 w-5 text-slate-400" />
             </div>
         );
     }
 
     return (
-        <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-            <img
-                src={src}
-                alt={alt}
-                className="h-full w-full object-cover"
-            />
+        <div className="h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <img src={src} alt={alt} className="h-full w-full object-cover" />
         </div>
     );
 }
 
+
+function WatchReadinessSummary({ row }: { row: WatchRow }) {
+    return (
+        <div className="mt-2 flex items-center gap-2.5">
+            <span
+                title={row.contentReady ? "Đã có content" : "Chưa có content"}
+                className={row.contentReady ? "text-emerald-600" : "text-rose-500"}
+            >
+                <FileText className="h-4 w-4" />
+            </span>
+
+            <span
+                title={row.imageReady ? "Đã có ảnh" : "Chưa có ảnh"}
+                className={row.imageReady ? "text-emerald-600" : "text-rose-500"}
+            >
+                <ImageIcon className="h-4 w-4" />
+            </span>
+
+            <span
+                title={row.serviceReady ? "Không cần service / đã xong" : "Đang cần service"}
+                className={row.serviceReady ? "text-emerald-600" : "text-rose-500"}
+            >
+                <Wrench className="h-4 w-4" />
+            </span>
+        </div>
+    );
+}
 function RowActions({
     row,
     onView,
@@ -157,17 +154,6 @@ function RowActions({
         onClick: () => void;
     }>;
 
-    if (actions.length === 0) {
-        return (
-            <button
-                type="button"
-                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-            >
-                <MoreHorizontal className="h-5 w-5" />
-            </button>
-        );
-    }
-
     return (
         <div className="flex justify-end">
             <details className="relative">
@@ -196,7 +182,6 @@ function RowActions({
 export default function WatchListRow({
     product,
     checked,
-    canViewCost = true,
     onCheckedChange,
     onView,
     onEdit,
@@ -205,9 +190,13 @@ export default function WatchListRow({
     onQuickOrder,
     onConsign,
 }: Props) {
+    const isRecent =
+        product.updatedAt &&
+        Date.now() - new Date(product.updatedAt).getTime() <
+        1000 * 60 * 60 * 24;
     return (
-        <tr className="border-t border-slate-100 align-top hover:bg-slate-50/40">
-            <td className="px-4 py-5">
+        <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
+            <td className="px-4 py-4">
                 <input
                     type="checkbox"
                     checked={checked}
@@ -216,11 +205,11 @@ export default function WatchListRow({
                 />
             </td>
 
-            <td className="px-4 py-5">
-                <div className="flex min-w-[340px] items-start gap-3">
+            <td className="px-4 py-4">
+                <div className="flex min-w-[460px] items-start gap-3">
                     <Thumb src={product.imageUrl} alt={product.title} />
 
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="min-w-0 flex-1">
                         <Link
                             href={`/admin/watches/${product.productId}/edit`}
                             className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
@@ -228,80 +217,52 @@ export default function WatchListRow({
                             {product.title}
                         </Link>
 
-                        <div className="text-xs text-slate-500">
-                            {(product.brandName || "-").toLowerCase()} · watch
-                        </div>
 
-                        <div className="text-xs text-slate-400">
+
+                        <div className="mt-1 text-xs text-slate-400">
                             SKU: {product.sku || "-"}
                         </div>
 
-                        <div className={`mt-1 text-xs font-medium ${specStatusTone(product)}`}>
-                            {specStatusText(product)}
-                        </div>
+
+                        <WatchReadinessSummary row={product} />
                     </div>
                 </div>
             </td>
 
-            <td className="px-4 py-5">
-                <div className="min-w-[220px] space-y-2">
-                    <ReadinessLine
-                        icon={<FileText className="h-4 w-4" />}
-                        label="Content"
-                        value={contentStatusText(product)}
-                        ok={product.contentReady}
-                    />
-                    <ReadinessLine
-                        icon={<ImageIcon className="h-4 w-4" />}
-                        label="Image"
-                        value={imageStatusText(product)}
-                        ok={product.imageReady}
-                    />
-                    <ReadinessLine
-                        icon={<Wrench className="h-4 w-4" />}
-                        label="Service"
-                        value={serviceStatusText(product)}
-                        ok={product.serviceReady}
-                    />
+            <td className="px-4 py-4">
+                <span
+                    className={`inline-flex min-w-[96px] justify-center rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${contentStatusTone(
+                        product
+                    )}`}
+                >
+                    {contentStatusText(product)}
+                </span>
+            </td>
+
+            <td className="px-4 py-4">
+                <div className="min-w-[120px] text-sm font-semibold text-orange-600">
+                    {formatMoney(product.salePrice)}
+                </div>
+            </td>
+            <td className="px-4 py-4 align-middle">
+                <div className="text-sm text-slate-700">
+                    {formatDateTime(product.createdAt)}
                 </div>
             </td>
 
-            <td className="px-4 py-5">
-                <div className="min-w-[160px] space-y-2 text-sm">
-                    <div className="flex justify-between gap-4">
-                        <span className="text-slate-400">Bán</span>
-                        <span className="font-medium text-orange-600">
-                            {formatMoney(product.salePrice)}
-                        </span>
-                    </div>
-
-                    <div className="flex justify-between gap-4">
-                        <span className="text-slate-400">Sale</span>
-                        <span className="font-medium text-slate-700">
-                            {formatMoney(product.listPrice)}
-                        </span>
-                    </div>
-
-                    {canViewCost ? (
-                        <div className="flex justify-between gap-4">
-                            <span className="text-slate-400">Mua</span>
-                            <span className="font-medium text-slate-700">
-                                {formatMoney(product.costPrice)}
-                            </span>
-                        </div>
-                    ) : null}
+            <td className="px-4 py-4 align-middle">
+                <div
+                    className={cn(
+                        "text-sm",
+                        isRecent
+                            ? "font-semibold text-emerald-500"
+                            : "text-slate-700"
+                    )}
+                >
+                    {formatDateTime(product.updatedAt)}
                 </div>
             </td>
-
-            <td className="px-4 py-5">
-                <div className="min-w-[120px] text-sm text-slate-600">
-                    {product.updatedAt
-                        ? new Date(product.updatedAt).toLocaleString("vi-VN")
-                        : "-"}
-                </div>
-            </td>
-
-            <td className="px-4 py-5 text-right">
+            <td className="px-4 py-4 text-right">
                 <RowActions
                     row={product}
                     onView={onView}

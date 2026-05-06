@@ -1,2 +1,13 @@
-export * from "./watch-content.repo";
-export * from "./watch-content.service";
+export {
+    getWatchContent,
+    saveWatchContent,
+    syncWatchContentSnapshot,
+    submitWatchContentForReview,
+    approveWatchContent,
+    rejectWatchContent,
+    markWatchContentPublished,
+    moveWatchContentToDraft,
+    updateWatchContentReviewStatus,
+} from "./watch-content.service";
+
+export type { WatchContentReviewAction } from "./watch-content.repo";
