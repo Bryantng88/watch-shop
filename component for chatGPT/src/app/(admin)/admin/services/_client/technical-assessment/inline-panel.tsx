@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ImagePlus, Plus, ScanSearch, Wrench } from "lucide-react";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import TechnicalImagePicker from "@/components/media/TechnicalImagePicker";
 
 import {

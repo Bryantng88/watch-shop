@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import DotLabel from "@/app/(admin)/admin/__components/DotLabel";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type ProductDetailPayload = {
     product: any;

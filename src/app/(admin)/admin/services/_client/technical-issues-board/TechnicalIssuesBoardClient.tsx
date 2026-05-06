@@ -14,7 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Search, X } from "lucide-react";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { BoardColumn } from "./board-column";
 import { ClosedSrBadge, ReadyToCloseBadge } from "./badges";
 import { COLUMNS } from "./constants";
@@ -165,22 +165,22 @@ export default function TechnicalIssueBoardClient({ items, counts }: Props) {
         action === "confirm"
           ? `/api/admin/technical-issues/${issueId}/confirm`
           : action === "start"
-          ? `/api/admin/technical-issues/${issueId}/start`
-          : action === "complete"
-          ? `/api/admin/technical-issues/${issueId}/complete`
-          : `/api/admin/technical-issues/${issueId}/cancel`;
+            ? `/api/admin/technical-issues/${issueId}/start`
+            : action === "complete"
+              ? `/api/admin/technical-issues/${issueId}/complete`
+              : `/api/admin/technical-issues/${issueId}/cancel`;
 
       const body =
         action === "complete"
           ? {
-              actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
-              resolutionNote: drawerState.resolutionNote.trim() || null,
-            }
+            actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
+            resolutionNote: drawerState.resolutionNote.trim() || null,
+          }
           : action === "cancel"
-          ? {
+            ? {
               reason: drawerState.resolutionNote.trim() || null,
             }
-          : {};
+            : {};
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -507,7 +507,7 @@ export default function TechnicalIssueBoardClient({ items, counts }: Props) {
           <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
             {activeItem ? (
               <div className="w-[360px] max-w-[90vw]">
-                <IssueCard item={activeItem} dragging onOpen={() => {}} onOpenServiceRequest={() => {}} />
+                <IssueCard item={activeItem} dragging onOpen={() => { }} onOpenServiceRequest={() => { }} />
               </div>
             ) : null}
           </DragOverlay>

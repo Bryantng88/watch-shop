@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 import { TechnicalAssessmentInlinePanel } from "../_client/technical-assessment"
 import {

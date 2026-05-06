@@ -12,7 +12,7 @@ import {
     ShieldCheck,
     Wrench,
 } from "lucide-react";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type ActionItem = {
     id: string;

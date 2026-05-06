@@ -8,8 +8,8 @@ import DotLabel from "../../__components/DotLabel";
 import TechnicalAssessmentModal from "./temp-file/TechnicalAssessmentModal";
 import StatusBadge from "@/components/badges/StatusBadge";
 import SegmentTabs from "@/components/tabs/SegmenTabs";
-import { useNotify } from "@/components/feedback/AppToastProvider";
-import { useAppDialog } from "@/components/feedback/AppDialogProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 
 type ServiceReqItem = {
     id: string;

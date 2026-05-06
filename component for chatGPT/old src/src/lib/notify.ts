@@ -1,6 +1,6 @@
 "use client";
 
-import { TOAST_DISMISS_EVENT, TOAST_PUSH_EVENT, type NotifyInput } from "@/components/feedback/AppToastProvider";
+import { TOAST_DISMISS_EVENT, TOAST_PUSH_EVENT, type NotifyInput } from "@/domains/shared/feedback/AppToastProvider";
 
 type NotifyKind = "success" | "error" | "info" | "warning";
 

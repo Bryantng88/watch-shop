@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { useNotify } from "@/components/feedback/AppToastProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { submitWatchForm } from "./form/watch-form.actions";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
 import type { WatchFormValues } from "./form/watch-form.types";
@@ -57,7 +57,33 @@ export default function WatchFormClient({
         }));
     };
     const router = useRouter();
+    type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
+    type ReviewStatusChange = {
+        status: ReviewStatus;
+        reviewNote?: string | null;
+    };
+
+    const handleReviewStatusChange = (
+        target: "content" | "image",
+        next: ReviewStatusChange
+    ) => {
+        setValues((prev) => {
+            if (target === "content") {
+                return {
+                    ...prev,
+                    contentReviewStatus: next.status,
+                    contentReviewNote: next.reviewNote ?? null,
+                };
+            }
+
+            return {
+                ...prev,
+                imageReviewStatus: next.status,
+                imageReviewNote: next.reviewNote ?? null,
+            };
+        });
+    };
     type AfterSaveMode = "normal" | "submitContent" | "submitImage" | "submitBoth" | "continueContent";
 
     const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
@@ -243,16 +269,13 @@ export default function WatchFormClient({
                             canReviewContent={canReviewContent}
                             onChange={updateContent}
                             onOpenSpecModal={() => setSpecModalOpen(true)}
-                            onReviewStatusChange={(patch) =>
-                                setValues((prev) => ({ ...prev, ...patch }))
+                            onReviewStatusChange={(next) =>
+                                handleReviewStatusChange("content", next)
                             }
                         />
                     </div>
                     <WatchImageSection
                         productId={values.productId}
-                        onReviewStatusChange={(patch) =>
-                            setValues((prev) => ({ ...prev, ...patch }))
-                        }
                         chosenImages={values.media.chosenImages || []}
                         galleryImages={values.media.galleryImages || []}
                         imageReviewStatus={values.imageReviewStatus}
@@ -269,7 +292,9 @@ export default function WatchFormClient({
                                 imageCount: items.length,
                             });
                         }}
-                        error={mediaError}
+                        onReviewStatusChange={(next) =>
+                            handleReviewStatusChange("image", next)
+                        }
                     />
                 </div>
 

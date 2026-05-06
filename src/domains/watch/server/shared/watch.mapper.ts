@@ -88,9 +88,16 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
 }
 
 export function mapWatchDetail(row: any): WatchDetailModel {
-    const reviewMap = getReviewByTarget(row.reviewStates);
-    const contentReview = reviewMap.get("CONTENT");
-    const imageReview = reviewMap.get("IMAGE");
+    const contentReview = row.reviewStates?.find(
+        (item: any) => item.targetType === "CONTENT"
+    );
+
+    const imageReview = row.reviewStates?.find(
+        (item: any) => item.targetType === "IMAGE"
+    );
+
+    const contentStatus = contentReview?.status ?? "DRAFT";
+    const imageStatus = imageReview?.status ?? "DRAFT";
 
     return {
         id: row.product.id,
@@ -201,15 +208,15 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             : null,
         review: {
             content: {
-                status: contentReview?.status ?? row.watchContent?.contentStatus ?? "DRAFT",
-                reviewNote: contentReview?.reviewNote ?? row.watchContent?.reviewNote ?? null,
-                submittedAt: contentReview?.submittedAt ?? row.watchContent?.submittedAt ?? null,
-                submittedById: contentReview?.submittedById ?? row.watchContent?.submittedById ?? null,
-                reviewedAt: contentReview?.reviewedAt ?? row.watchContent?.reviewedAt ?? null,
-                reviewedById: contentReview?.reviewedById ?? row.watchContent?.reviewedById ?? null,
+                status: contentStatus,
+                reviewNote: contentReview?.reviewNote ?? null,
+                submittedAt: contentReview?.submittedAt ?? null,
+                submittedById: contentReview?.submittedById ?? null,
+                reviewedAt: contentReview?.reviewedAt ?? null,
+                reviewedById: contentReview?.reviewedById ?? null,
             },
             image: {
-                status: imageReview?.status ?? "DRAFT",
+                status: imageStatus,
                 reviewNote: imageReview?.reviewNote ?? null,
                 submittedAt: imageReview?.submittedAt ?? null,
                 submittedById: imageReview?.submittedById ?? null,
@@ -217,8 +224,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 reviewedById: imageReview?.reviewedById ?? null,
             },
             readyForPublish:
-                String(contentReview?.status ?? row.watchContent?.contentStatus ?? "DRAFT") === "APPROVED" &&
-                String(imageReview?.status ?? "DRAFT") === "APPROVED",
+                contentStatus === "APPROVED" && imageStatus === "APPROVED",
         },
         images: (row.product.productImage ?? []).map((img: any) => ({
             id: img.id,

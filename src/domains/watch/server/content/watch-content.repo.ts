@@ -72,7 +72,7 @@ export async function saveWatchContentRepo(
         hookText: input.hookText ?? null,
         body: input.body ?? null,
         bulletSpecs: input.bulletSpecs ?? [],
-        hashtags: (input as any).hashtags ?? null,
+        hashTags: (input as any).hashtags ?? null,
         seoTitle: input.seoTitle ?? null,
         seoDescription: input.seoDescription ?? null,
         aiMetaJson:

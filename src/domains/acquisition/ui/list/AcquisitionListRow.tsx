@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { BadgeCheck } from "lucide-react";
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
-import { useNotify } from "@/components/feedback/AppToastProvider";
-import { useAppDialog } from "@/components/feedback/AppDialogProvider";
-import { useAppProgress } from "@/components/feedback/AppProgressProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisition.action";
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";

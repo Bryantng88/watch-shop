@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
-import { approveWatchReview, rejectWatchReview } from "@/domains/watch/server/review";
+import {
+    approveWatchReview,
+    rejectWatchReview,
+} from "@/domains/watch/server/review";
 
 export const dynamic = "force-dynamic";
 
@@ -18,18 +21,30 @@ function getAuthUserId(auth: any) {
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
+        const params = await context.params;
         const body = BodySchema.parse(await req.json());
 
-        const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_CONTENT_REVIEW);
+        const auth = await requirePermissionApi(
+            PERMISSIONS.PRODUCT_CONTENT_REVIEW
+        );
         if (auth instanceof Response) return auth;
 
-        const userId = getAuthUserId(auth);
-        const state = body.action === "approve"
-            ? await approveWatchReview({ productId: params.id, targetType: "IMAGE", userId })
-            : await rejectWatchReview({ productId: params.id, targetType: "IMAGE", userId, note: body.note });
+        const input = {
+            productId: params.id,
+            targetType: "IMAGE" as const,
+            userId: getAuthUserId(auth),
+        };
+
+        const state =
+            body.action === "approve"
+                ? await approveWatchReview(input)
+                : await rejectWatchReview({
+                    ...input,
+                    note: body.note,
+                });
 
         return NextResponse.json({
             success: true,
@@ -41,7 +56,7 @@ export async function POST(
         return NextResponse.json(
             {
                 success: false,
-                error: error?.message || "Không thể duyệt.",
+                error: error?.message || "Không thể duyệt hình ảnh.",
             },
             { status: 400 }
         );

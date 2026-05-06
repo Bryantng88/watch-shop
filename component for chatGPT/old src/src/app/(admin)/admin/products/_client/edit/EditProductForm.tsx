@@ -23,7 +23,7 @@ import {
     Wrench,
 } from 'lucide-react';
 
-import { useNotify } from '@/components/feedback/AppToastProvider';
+import { useNotify } from '@/domains/shared/feedback/AppToastProvider';
 import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
 import ProductAiPanel, {
     type GeneratedLongformPayload,

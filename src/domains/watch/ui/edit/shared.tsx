@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChevronDown, X } from "lucide-react";
-
+import { ReactNode, useState } from "react";
 export function cx(...parts: Array<string | false | null | undefined>) {
     return parts.filter(Boolean).join(" ");
 }
@@ -121,60 +121,70 @@ export function Toggle({
         </button>
     );
 }
+type SectionCardProps = {
+    icon: ReactNode;
+    title: string;
+    subtitle?: string;
+    children: ReactNode;
+    actions?: ReactNode;
+    defaultOpen?: boolean;
+    onBeforeOpen?: () => boolean | Promise<boolean>;
+};
 
 export function SectionCard({
     icon,
     title,
     subtitle,
     children,
-    defaultOpen = true,
     actions,
-}: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle?: string;
-    children: React.ReactNode;
-    defaultOpen?: boolean;
-    actions?: React.ReactNode;
-}) {
+    defaultOpen = false,
+    onBeforeOpen,
+}: SectionCardProps) {
     const [open, setOpen] = useState(defaultOpen);
+
+    const handleToggle = async () => {
+        if (!open && onBeforeOpen) {
+            const allowed = await onBeforeOpen();
+            if (!allowed) return;
+        }
+
+        setOpen((prev) => !prev);
+    };
 
     return (
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-            <div className="flex w-full items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                <button
-                    type="button"
-                    onClick={() => setOpen((v) => !v)}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                         {icon}
                     </div>
+
                     <div className="min-w-0">
-                        <div className="text-base font-semibold text-slate-900">
+                        <h2 className="font-semibold text-slate-950">
                             {title}
-                        </div>
+                        </h2>
+
                         {subtitle ? (
-                            <div className="text-sm text-slate-500">
+                            <p className="mt-0.5 text-sm text-slate-500">
                                 {subtitle}
-                            </div>
+                            </p>
                         ) : null}
                     </div>
-                </button>
+                </div>
 
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="flex shrink-0 items-center gap-2">
                     {actions}
+
                     <button
                         type="button"
-                        onClick={() => setOpen((v) => !v)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                        aria-label={open ? "Thu gọn" : "Mở rộng"}
+                        onClick={handleToggle}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-700"
                     >
                         <ChevronDown
-                            className={cx(
-                                "h-5 w-5 transition-transform",
-                                open && "rotate-180"
-                            )}
+                            className={[
+                                "h-4 w-4 transition-transform",
+                                open ? "rotate-180" : "",
+                            ].join(" ")}
                         />
                     </button>
                 </div>

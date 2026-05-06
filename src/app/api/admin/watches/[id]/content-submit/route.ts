@@ -12,9 +12,11 @@ function getAuthUserId(auth: any) {
 
 export async function POST(
     _req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
+        const params = await context.params;
+
         const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
         if (auth instanceof Response) return auth;
 
@@ -34,7 +36,7 @@ export async function POST(
         return NextResponse.json(
             {
                 success: false,
-                error: error?.message || "Không thể gửi duyệt.",
+                error: error?.message || "Không thể gửi duyệt nội dung.",
             },
             { status: 400 }
         );

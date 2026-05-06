@@ -2,9 +2,9 @@ import AdminTopbar from "./_client/AdminTopBar";
 import AdminSidebar from "./_client/AdmidSideBar";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
-import { AppToastProvider } from "@/components/feedback/AppToastProvider";
-import { AppDialogProvider } from "@/components/feedback/AppDialogProvider";
-import { AppProgressProvider } from "@/components/feedback/AppProgressProvider";
+import { AppToastProvider } from "@/domains/shared/feedback/AppToastProvider";
+import { AppDialogProvider } from "@/domains/shared/feedback/AppDialogProvider";
+import { AppProgressProvider } from "@/domains/shared/feedback/AppProgressProvider";
 import { getSideMenuNotificationCounts } from "./_server/sidebar-notifications";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
