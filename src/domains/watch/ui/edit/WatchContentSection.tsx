@@ -14,7 +14,7 @@ import {
     generateWatchContent,
     type WatchContentGenerationResult,
 } from "@/domains/watch/shared/watch-content.helpers";
-
+import SectionReviewActions from "../review/SectionReviewActions";
 type Props = {
     productId: string;
     values: WatchFormValues["content"];
@@ -22,6 +22,7 @@ type Props = {
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
     canReviewContent?: boolean;
+    onReviewStatusChange?: (patch: Partial<WatchFormValues["content"]>) => void;
 };
 
 export default function WatchContentSection({
@@ -31,6 +32,7 @@ export default function WatchContentSection({
     onChange,
     onOpenSpecModal,
     canReviewContent = false,
+    onReviewStatusChange,
 }: Props) {
     const [generation, setGeneration] =
         useState<WatchContentGenerationResult | null>(null);
@@ -46,7 +48,7 @@ export default function WatchContentSection({
             titleOverride: result.titleOverride,
             hookText: result.hookText,
             bulletSpecs: result.bulletSpecs,
-            hashtags: result.hashtags,
+            hashTags: result.hashTags,
         });
 
         setGeneration(result);
@@ -75,7 +77,15 @@ export default function WatchContentSection({
             icon={<BookOpen className="h-5 w-5" />}
             title="Content"
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
+
         >
+            <SectionReviewActions
+                productId={productId}
+                target="content"
+                status={contentReviewStatus}
+                reviewNote={contentReviewNote}
+                canReviewContent={canReviewContent}
+            />
             <div className="space-y-5">
 
 

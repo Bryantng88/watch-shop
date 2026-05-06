@@ -19,6 +19,7 @@ const makeSchema = () => z.object({
   reviewedAt: z.literal(true).optional(),
   reviewedById: z.literal(true).optional(),
   reviewNote: z.literal(true).optional(),
+  hashTags: z.literal(true).optional(),
   publishedAt: z.literal(true).optional(),
   publishedById: z.literal(true).optional()
 }).strict();

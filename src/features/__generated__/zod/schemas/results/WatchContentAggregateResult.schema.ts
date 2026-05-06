@@ -19,6 +19,7 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     reviewedAt: z.number(),
     reviewedById: z.number(),
     reviewNote: z.number(),
+    hashTags: z.number(),
     publishedAt: z.number(),
     publishedById: z.number()
   }).optional(),
@@ -39,6 +40,7 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     reviewedAt: z.date().nullable(),
     reviewedById: z.string().nullable(),
     reviewNote: z.string().nullable(),
+    hashTags: z.string().nullable(),
     publishedAt: z.date().nullable(),
     publishedById: z.string().nullable()
   }).nullable().optional(),
@@ -59,6 +61,7 @@ export const WatchContentAggregateResultSchema = z.object({  _count: z.object({
     reviewedAt: z.date().nullable(),
     reviewedById: z.string().nullable(),
     reviewNote: z.string().nullable(),
+    hashTags: z.string().nullable(),
     publishedAt: z.date().nullable(),
     publishedById: z.string().nullable()
   }).nullable().optional()});

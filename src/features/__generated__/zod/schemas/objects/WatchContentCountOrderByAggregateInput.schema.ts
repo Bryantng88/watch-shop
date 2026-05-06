@@ -21,6 +21,7 @@ const makeSchema = () => z.object({
   reviewedAt: SortOrderSchema.optional(),
   reviewedById: SortOrderSchema.optional(),
   reviewNote: SortOrderSchema.optional(),
+  hashTags: SortOrderSchema.optional(),
   publishedAt: SortOrderSchema.optional(),
   publishedById: SortOrderSchema.optional()
 }).strict();

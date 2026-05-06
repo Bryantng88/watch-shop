@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchReviewStateOrderByWithRelationInputObjectSchema as WatchReviewStateOrderByWithRelationInputObjectSchema } from './objects/WatchReviewStateOrderByWithRelationInput.schema';
+import { WatchReviewStateWhereInputObjectSchema as WatchReviewStateWhereInputObjectSchema } from './objects/WatchReviewStateWhereInput.schema';
+import { WatchReviewStateWhereUniqueInputObjectSchema as WatchReviewStateWhereUniqueInputObjectSchema } from './objects/WatchReviewStateWhereUniqueInput.schema';
+import { WatchReviewStateCountAggregateInputObjectSchema as WatchReviewStateCountAggregateInputObjectSchema } from './objects/WatchReviewStateCountAggregateInput.schema';
+
+export const WatchReviewStateCountSchema: z.ZodType<Prisma.WatchReviewStateCountArgs> = z.object({ orderBy: z.union([WatchReviewStateOrderByWithRelationInputObjectSchema, WatchReviewStateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewStateWhereInputObjectSchema.optional(), cursor: WatchReviewStateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WatchReviewStateCountArgs>;
+
+export const WatchReviewStateCountZodSchema = z.object({ orderBy: z.union([WatchReviewStateOrderByWithRelationInputObjectSchema, WatchReviewStateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewStateWhereInputObjectSchema.optional(), cursor: WatchReviewStateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional() }).strict();

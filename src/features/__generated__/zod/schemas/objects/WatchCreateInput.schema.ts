@@ -8,7 +8,8 @@ import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { ProductCreateNestedOneWithoutWatchInputObjectSchema as ProductCreateNestedOneWithoutWatchInputObjectSchema } from './ProductCreateNestedOneWithoutWatchInput.schema';
 import { WatchContentCreateNestedOneWithoutWatchInputObjectSchema as WatchContentCreateNestedOneWithoutWatchInputObjectSchema } from './WatchContentCreateNestedOneWithoutWatchInput.schema';
 import { WatchPriceCreateNestedOneWithoutWatchInputObjectSchema as WatchPriceCreateNestedOneWithoutWatchInputObjectSchema } from './WatchPriceCreateNestedOneWithoutWatchInput.schema';
-import { WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2CreateNestedOneWithoutWatchInput.schema'
+import { WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2CreateNestedOneWithoutWatchInput.schema';
+import { WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema as WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema } from './WatchReviewStateCreateNestedManyWithoutWatchInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -34,7 +35,8 @@ const makeSchema = () => z.object({
   product: z.lazy(() => ProductCreateNestedOneWithoutWatchInputObjectSchema),
   watchContent: z.lazy(() => WatchContentCreateNestedOneWithoutWatchInputObjectSchema).optional(),
   watchPrice: z.lazy(() => WatchPriceCreateNestedOneWithoutWatchInputObjectSchema).optional(),
-  watchSpecV2: z.lazy(() => WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema).optional()
+  watchSpecV2: z.lazy(() => WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema)
 }).strict();
 export const WatchCreateInputObjectSchema: z.ZodType<Prisma.WatchCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchCreateInput>;
 export const WatchCreateInputObjectZodSchema = makeSchema();

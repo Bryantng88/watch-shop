@@ -22,6 +22,7 @@ const makeSchema = () => z.object({
   reviewedAt: z.boolean().optional(),
   reviewedById: z.boolean().optional(),
   reviewNote: z.boolean().optional(),
+  hashTags: z.boolean().optional(),
   publishedAt: z.boolean().optional(),
   publishedById: z.boolean().optional()
 }).strict();

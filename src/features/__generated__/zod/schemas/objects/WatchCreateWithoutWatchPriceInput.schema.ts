@@ -7,7 +7,8 @@ import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { ProductCreateNestedOneWithoutWatchInputObjectSchema as ProductCreateNestedOneWithoutWatchInputObjectSchema } from './ProductCreateNestedOneWithoutWatchInput.schema';
 import { WatchContentCreateNestedOneWithoutWatchInputObjectSchema as WatchContentCreateNestedOneWithoutWatchInputObjectSchema } from './WatchContentCreateNestedOneWithoutWatchInput.schema';
-import { WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2CreateNestedOneWithoutWatchInput.schema'
+import { WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2CreateNestedOneWithoutWatchInput.schema';
+import { WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema as WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema } from './WatchReviewStateCreateNestedManyWithoutWatchInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutWatchInputObjectSchema),
   watchContent: z.lazy(() => WatchContentCreateNestedOneWithoutWatchInputObjectSchema).optional(),
-  watchSpecV2: z.lazy(() => WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema).optional()
+  watchSpecV2: z.lazy(() => WatchSpecV2CreateNestedOneWithoutWatchInputObjectSchema).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateCreateNestedManyWithoutWatchInputObjectSchema).optional()
 }).strict();
 export const WatchCreateWithoutWatchPriceInputObjectSchema: z.ZodType<Prisma.WatchCreateWithoutWatchPriceInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchCreateWithoutWatchPriceInput>;
 export const WatchCreateWithoutWatchPriceInputObjectZodSchema = makeSchema();

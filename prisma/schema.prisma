@@ -921,8 +921,9 @@ model Watch {
   product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   watchContent WatchContent?
 
-  watchPrice  WatchPrice?
-  watchSpecV2 WatchSpecV2?
+  watchPrice   WatchPrice?
+  watchSpecV2  WatchSpecV2?
+  reviewStates WatchReviewState[]
 
   @@index([gender])
   @@index([saleState])
@@ -951,12 +952,62 @@ model WatchContent {
   submittedAt   DateTime? @db.Timestamptz(6)
   submittedById String?
 
-  reviewedAt   DateTime? @db.Timestamptz(6)
-  reviewedById String?
-  reviewNote   String?
-
+  reviewedAt    DateTime? @db.Timestamptz(6)
+  reviewedById  String?
+  reviewNote    String?
+  hashTags      String?
   publishedAt   DateTime? @db.Timestamptz(6)
   publishedById String?
+}
+
+model WatchReviewState {
+  id String @id @default(cuid())
+
+  watchId   String
+  productId String
+
+  targetType WatchReviewTargetType
+  status     WatchReviewStatus     @default(DRAFT)
+
+  submittedAt   DateTime?
+  submittedById String?
+
+  reviewedAt   DateTime?
+  reviewedById String?
+
+  reviewNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  watch          Watch            @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  WatchReviewLog WatchReviewLog[]
+
+  @@unique([watchId, targetType])
+  @@index([productId])
+  @@index([targetType, status])
+}
+
+model WatchReviewLog {
+  id String @id @default(cuid())
+
+  reviewStateId String
+
+  action WatchReviewAction
+
+  fromStatus WatchReviewStatus?
+  toStatus   WatchReviewStatus
+
+  actorId String?
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  reviewState WatchReviewState @relation(fields: [reviewStateId], references: [id], onDelete: Cascade)
+
+  @@index([reviewStateId])
+  @@index([actorId])
+  @@index([createdAt])
 }
 
 model WatchPrice {
@@ -1788,4 +1839,24 @@ enum WatchSpecStatus {
   PARTIAL
   READY
   FAILED
+}
+
+enum WatchReviewTargetType {
+  CONTENT
+  IMAGE
+}
+
+enum WatchReviewStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum WatchReviewAction {
+  SUBMIT
+  APPROVE
+  REJECT
+  RESET_DRAFT
+  AUTO_APPROVE
 }

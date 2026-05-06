@@ -6,7 +6,8 @@ import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchContentUncheckedCreateNestedOneWithoutWatchInput.schema';
-import { WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2UncheckedCreateNestedOneWithoutWatchInput.schema'
+import { WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchSpecV2UncheckedCreateNestedOneWithoutWatchInput.schema';
+import { WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema as WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema } from './WatchReviewStateUncheckedCreateNestedManyWithoutWatchInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -31,7 +32,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   watchContent: z.lazy(() => WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional(),
-  watchSpecV2: z.lazy(() => WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional()
+  watchSpecV2: z.lazy(() => WatchSpecV2UncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema).optional()
 }).strict();
 export const WatchUncheckedCreateWithoutWatchPriceInputObjectSchema: z.ZodType<Prisma.WatchUncheckedCreateWithoutWatchPriceInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchUncheckedCreateWithoutWatchPriceInput>;
 export const WatchUncheckedCreateWithoutWatchPriceInputObjectZodSchema = makeSchema();

@@ -22,6 +22,7 @@ export const WatchContentResultSchema = z.object({
     reviewedAt: z.date().nullable(),
     reviewedById: z.string().nullable(),
     reviewNote: z.string().nullable(),
+    hashTags: z.string().nullable(),
     publishedAt: z.date().nullable(),
     publishedById: z.string().nullable()
 }).strict();

@@ -24,6 +24,7 @@ const makeSchema = () => z.object({
   reviewedAt: z.coerce.date().optional().nullable(),
   reviewedById: z.string().optional().nullable(),
   reviewNote: z.string().optional().nullable(),
+  hashTags: z.string().optional().nullable(),
   publishedAt: z.coerce.date().optional().nullable(),
   publishedById: z.string().optional().nullable()
 }).strict();

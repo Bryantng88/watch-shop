@@ -40,6 +40,8 @@ export { PermissionInputSchema } from './Permission.input';
 export { VendorInputSchema } from './Vendor.input';
 export { WatchInputSchema } from './Watch.input';
 export { WatchContentInputSchema } from './WatchContent.input';
+export { WatchReviewStateInputSchema } from './WatchReviewState.input';
+export { WatchReviewLogInputSchema } from './WatchReviewLog.input';
 export { WatchPriceInputSchema } from './WatchPrice.input';
 export { WatchSpecInputSchema } from './WatchSpec.input';
 export { WatchSpecV2InputSchema } from './WatchSpecV2.input';

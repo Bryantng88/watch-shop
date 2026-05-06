@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import type { WatchListComputedItem } from "./watch.types";
 import { WatchDetailModel } from "../../shared/watch.types";
+import { getReviewByTarget } from "../review";
 
 function decimalToString(value: Prisma.Decimal | null | undefined) {
     if (value == null) return null;
@@ -47,8 +48,7 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         productId: row.productId,
         title: row?.product?.title ?? null,
         status,
-        contentStatus: row?.product?.contentStatus ?? null,
-
+        contentStatus: (row?.reviewStates ?? []).find((x: any) => String(x.targetType) === "CONTENT")?.status ?? row?.watchContent?.contentStatus ?? "DRAFT",
         images,
         imagesCount,
         hasImages,
@@ -88,6 +88,10 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
 }
 
 export function mapWatchDetail(row: any): WatchDetailModel {
+    const reviewMap = getReviewByTarget(row.reviewStates);
+    const contentReview = reviewMap.get("CONTENT");
+    const imageReview = reviewMap.get("IMAGE");
+
     return {
         id: row.product.id,
         productId: row.product.id,
@@ -195,6 +199,27 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 seoDescription: row.watchContent.seoDescription ?? null,
             }
             : null,
+        review: {
+            content: {
+                status: contentReview?.status ?? row.watchContent?.contentStatus ?? "DRAFT",
+                reviewNote: contentReview?.reviewNote ?? row.watchContent?.reviewNote ?? null,
+                submittedAt: contentReview?.submittedAt ?? row.watchContent?.submittedAt ?? null,
+                submittedById: contentReview?.submittedById ?? row.watchContent?.submittedById ?? null,
+                reviewedAt: contentReview?.reviewedAt ?? row.watchContent?.reviewedAt ?? null,
+                reviewedById: contentReview?.reviewedById ?? row.watchContent?.reviewedById ?? null,
+            },
+            image: {
+                status: imageReview?.status ?? "DRAFT",
+                reviewNote: imageReview?.reviewNote ?? null,
+                submittedAt: imageReview?.submittedAt ?? null,
+                submittedById: imageReview?.submittedById ?? null,
+                reviewedAt: imageReview?.reviewedAt ?? null,
+                reviewedById: imageReview?.reviewedById ?? null,
+            },
+            readyForPublish:
+                String(contentReview?.status ?? row.watchContent?.contentStatus ?? "DRAFT") === "APPROVED" &&
+                String(imageReview?.status ?? "DRAFT") === "APPROVED",
+        },
         images: (row.product.productImage ?? []).map((img: any) => ({
             id: img.id,
             fileKey: img.fileKey ?? null,

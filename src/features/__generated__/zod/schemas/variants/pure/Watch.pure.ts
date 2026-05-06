@@ -31,7 +31,8 @@ export const WatchModelSchema = z.object({
     product: z.unknown(),
     watchContent: z.unknown().nullable(),
     watchPrice: z.unknown().nullable(),
-    watchSpecV2: z.unknown().nullable()
+    watchSpecV2: z.unknown().nullable(),
+    reviewStates: z.array(z.unknown())
 }).strict();
 
 export type WatchPureType = z.infer<typeof WatchModelSchema>;

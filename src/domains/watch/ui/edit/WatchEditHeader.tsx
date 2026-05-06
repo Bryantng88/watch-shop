@@ -12,6 +12,7 @@ import AdminBreadcrumbs, {
     type AdminBreadcrumbItem,
 } from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import WatchContentHeaderActions from "@/domains/watch/ui/content/WatchContentHeaderActions";
+import HeaderReviewActions from "../review/HeaderReviewActions";
 
 type SimpleOption = {
     id: string;
@@ -31,16 +32,49 @@ type Props = {
     onChange?: (patch: Partial<WatchFormValues>) => void;
 };
 
-function StatusBadge({ label }: { label?: string | null }) {
-    if (!label) return null;
+function getOverallReviewStatus(values: WatchFormValues) {
+    const content = String(values.contentReviewStatus ?? "DRAFT").toUpperCase();
+    const image = String(values.imageReviewStatus ?? "DRAFT").toUpperCase();
+
+    if (content === "REJECTED" || image === "REJECTED") {
+        return "Cần chỉnh";
+    }
+
+    if (content === "SUBMITTED" || image === "SUBMITTED") {
+        return "Chờ duyệt";
+    }
+
+    if (content === "APPROVED" && image === "APPROVED") {
+        return "Sẵn sàng";
+    }
+
+    if (content === "APPROVED" || image === "APPROVED") {
+        return "Duyệt một phần";
+    }
+
+    return "Draft";
+}
+
+function ReviewBadge({ label }: { label: string }) {
+    const style =
+        label === "Chờ duyệt"
+            ? "border-amber-200 bg-amber-50 text-amber-700"
+            : label === "Sẵn sàng"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : label === "Cần chỉnh"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : label === "Duyệt một phần"
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600";
 
     return (
-        <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+        <span
+            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${style}`}
+        >
             {label}
         </span>
     );
 }
-
 function HeaderImage({
     image,
     title,
@@ -109,8 +143,7 @@ export default function WatchEditHeader({
                                     {title}
                                 </h1>
 
-                                <StatusBadge label={values.basic.stockState || null} />
-                                <StatusBadge label={values.basic.saleState || null} />
+                                <ReviewBadge label={getOverallReviewStatus(values)} />
                             </div>
 
                             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
@@ -147,15 +180,13 @@ export default function WatchEditHeader({
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    {productId ? (
-                        <WatchContentHeaderActions
-                            productId={productId}
-                            status={values.content.contentStatus}
-                            reviewNote={values.content.reviewNote}
-                            canReviewContent={canReviewContent}
-                        />
-                    ) : null}
 
+                    <HeaderReviewActions
+                        productId={values.productId}
+                        contentStatus={values.contentReviewStatus}
+                        imageStatus={values.imageReviewStatus}
+                        canReviewContent={canReviewContent}
+                    />
                     <Link
                         href="/admin/watches"
                         className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"

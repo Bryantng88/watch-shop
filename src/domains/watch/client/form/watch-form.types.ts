@@ -8,7 +8,10 @@ export type PickedMediaItem = {
 
 export type WatchFormValues = {
     productId: string;
-
+    contentReviewStatus?: string | null;
+    contentReviewNote?: string | null;
+    imageReviewStatus?: string | null;
+    imageReviewNote?: string | null;
     header: {
         sku: string;
         status: string;
@@ -64,13 +67,14 @@ export type WatchFormValues = {
 
     content: {
         titleOverride: string;
-        seoTitle: string;
         hookText: string;
         body: string;
         bulletSpecs: string[];
-        hashtags: string;
-        contentStatus: string;
-        reviewNote: string;
+        hashTags: string;
+        contentReviewStatus: string;
+        contentReviewNote: string;
+        imageReviewStatus: string;
+        imageReviewNote: string;
 
     };
 

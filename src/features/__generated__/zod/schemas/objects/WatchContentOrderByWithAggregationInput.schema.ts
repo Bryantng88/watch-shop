@@ -25,6 +25,7 @@ const makeSchema = () => z.object({
   reviewedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   reviewedById: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   reviewNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  hashTags: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   publishedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   publishedById: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => WatchContentCountOrderByAggregateInputObjectSchema).optional(),

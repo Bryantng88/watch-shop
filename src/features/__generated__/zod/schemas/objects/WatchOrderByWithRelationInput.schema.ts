@@ -5,7 +5,8 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { ProductOrderByWithRelationInputObjectSchema as ProductOrderByWithRelationInputObjectSchema } from './ProductOrderByWithRelationInput.schema';
 import { WatchContentOrderByWithRelationInputObjectSchema as WatchContentOrderByWithRelationInputObjectSchema } from './WatchContentOrderByWithRelationInput.schema';
 import { WatchPriceOrderByWithRelationInputObjectSchema as WatchPriceOrderByWithRelationInputObjectSchema } from './WatchPriceOrderByWithRelationInput.schema';
-import { WatchSpecV2OrderByWithRelationInputObjectSchema as WatchSpecV2OrderByWithRelationInputObjectSchema } from './WatchSpecV2OrderByWithRelationInput.schema'
+import { WatchSpecV2OrderByWithRelationInputObjectSchema as WatchSpecV2OrderByWithRelationInputObjectSchema } from './WatchSpecV2OrderByWithRelationInput.schema';
+import { WatchReviewStateOrderByRelationAggregateInputObjectSchema as WatchReviewStateOrderByRelationAggregateInputObjectSchema } from './WatchReviewStateOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   watchContent: z.lazy(() => WatchContentOrderByWithRelationInputObjectSchema).optional(),
   watchPrice: z.lazy(() => WatchPriceOrderByWithRelationInputObjectSchema).optional(),
-  watchSpecV2: z.lazy(() => WatchSpecV2OrderByWithRelationInputObjectSchema).optional()
+  watchSpecV2: z.lazy(() => WatchSpecV2OrderByWithRelationInputObjectSchema).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const WatchOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.WatchOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchOrderByWithRelationInput>;
 export const WatchOrderByWithRelationInputObjectZodSchema = makeSchema();

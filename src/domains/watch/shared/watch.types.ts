@@ -22,6 +22,21 @@ import {
     WatchDetailImageItem,
 } from "../server";
 
+
+export type WatchReviewSnapshot = {
+    status: string;
+    reviewNote?: string | null;
+    submittedAt?: Date | string | null;
+    submittedById?: string | null;
+    reviewedAt?: Date | string | null;
+    reviewedById?: string | null;
+};
+export type WatchDetailReviewSnapshot = {
+    content: WatchReviewSnapshot;
+    image: WatchReviewSnapshot;
+    readyForPublish: boolean;
+};
+
 export type WatchDetailModel = {
     id: string;
     productId: string;
@@ -136,7 +151,7 @@ export type WatchDetailModel = {
         reviewedAt?: Date | string | null;
         publishedAt?: Date | string | null;
     } | null;
-
+    review: WatchDetailReviewSnapshot;
     images?: WatchDetailImageItem[];
     updatedAt?: Date | string | null;
 };

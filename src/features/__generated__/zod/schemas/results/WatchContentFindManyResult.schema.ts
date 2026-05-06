@@ -20,6 +20,7 @@ export const WatchContentFindManyResultSchema = z.object({
   reviewedAt: z.date().optional(),
   reviewedById: z.string().optional(),
   reviewNote: z.string().optional(),
+  hashTags: z.string().optional(),
   publishedAt: z.date().optional(),
   publishedById: z.string().optional()
 })),

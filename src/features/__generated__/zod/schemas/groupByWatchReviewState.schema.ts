@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchReviewStateWhereInputObjectSchema as WatchReviewStateWhereInputObjectSchema } from './objects/WatchReviewStateWhereInput.schema';
+import { WatchReviewStateOrderByWithAggregationInputObjectSchema as WatchReviewStateOrderByWithAggregationInputObjectSchema } from './objects/WatchReviewStateOrderByWithAggregationInput.schema';
+import { WatchReviewStateScalarWhereWithAggregatesInputObjectSchema as WatchReviewStateScalarWhereWithAggregatesInputObjectSchema } from './objects/WatchReviewStateScalarWhereWithAggregatesInput.schema';
+import { WatchReviewStateScalarFieldEnumSchema } from './enums/WatchReviewStateScalarFieldEnum.schema';
+import { WatchReviewStateCountAggregateInputObjectSchema as WatchReviewStateCountAggregateInputObjectSchema } from './objects/WatchReviewStateCountAggregateInput.schema';
+import { WatchReviewStateMinAggregateInputObjectSchema as WatchReviewStateMinAggregateInputObjectSchema } from './objects/WatchReviewStateMinAggregateInput.schema';
+import { WatchReviewStateMaxAggregateInputObjectSchema as WatchReviewStateMaxAggregateInputObjectSchema } from './objects/WatchReviewStateMaxAggregateInput.schema';
+
+export const WatchReviewStateGroupBySchema: z.ZodType<Prisma.WatchReviewStateGroupByArgs> = z.object({ where: WatchReviewStateWhereInputObjectSchema.optional(), orderBy: z.union([WatchReviewStateOrderByWithAggregationInputObjectSchema, WatchReviewStateOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchReviewStateScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchReviewStateScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewStateMinAggregateInputObjectSchema.optional(), _max: WatchReviewStateMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchReviewStateGroupByArgs>;
+
+export const WatchReviewStateGroupByZodSchema = z.object({ where: WatchReviewStateWhereInputObjectSchema.optional(), orderBy: z.union([WatchReviewStateOrderByWithAggregationInputObjectSchema, WatchReviewStateOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchReviewStateScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchReviewStateScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewStateMinAggregateInputObjectSchema.optional(), _max: WatchReviewStateMaxAggregateInputObjectSchema.optional() }).strict();

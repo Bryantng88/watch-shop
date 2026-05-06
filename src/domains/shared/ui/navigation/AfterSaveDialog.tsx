@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ArrowLeft, Eye, PenLine } from "lucide-react";
+import {
+    CheckCircle2,
+    ArrowLeft,
+    Eye,
+    PenLine,
+    Send,
+} from "lucide-react";
 
 type Props = {
     open: boolean;
@@ -9,7 +15,11 @@ type Props = {
     message?: string;
     detailHref: string;
     fallbackBackHref?: string;
-    onContinue: () => void;
+
+    continueLabel?: string;
+    continueIcon?: "edit" | "send";
+
+    onContinue: () => void | Promise<void>;
 };
 
 export default function AfterSaveDialog({
@@ -18,11 +28,15 @@ export default function AfterSaveDialog({
     message = "Bạn muốn tiếp tục chỉnh sửa hay điều hướng sang màn hình khác?",
     detailHref,
     fallbackBackHref = "/admin/watches",
+    continueLabel = "Chỉnh tiếp",
+    continueIcon = "edit",
     onContinue,
 }: Props) {
     const router = useRouter();
 
     if (!open) return null;
+
+    const ContinueIcon = continueIcon === "send" ? Send : PenLine;
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/40 p-4">
@@ -48,8 +62,8 @@ export default function AfterSaveDialog({
                         onClick={onContinue}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
-                        <PenLine className="h-4 w-4" />
-                        Chỉnh tiếp
+                        <ContinueIcon className="h-4 w-4" />
+                        {continueLabel}
                     </button>
 
                     <button

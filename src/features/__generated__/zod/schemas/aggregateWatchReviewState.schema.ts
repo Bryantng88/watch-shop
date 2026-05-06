@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchReviewStateOrderByWithRelationInputObjectSchema as WatchReviewStateOrderByWithRelationInputObjectSchema } from './objects/WatchReviewStateOrderByWithRelationInput.schema';
+import { WatchReviewStateWhereInputObjectSchema as WatchReviewStateWhereInputObjectSchema } from './objects/WatchReviewStateWhereInput.schema';
+import { WatchReviewStateWhereUniqueInputObjectSchema as WatchReviewStateWhereUniqueInputObjectSchema } from './objects/WatchReviewStateWhereUniqueInput.schema';
+import { WatchReviewStateCountAggregateInputObjectSchema as WatchReviewStateCountAggregateInputObjectSchema } from './objects/WatchReviewStateCountAggregateInput.schema';
+import { WatchReviewStateMinAggregateInputObjectSchema as WatchReviewStateMinAggregateInputObjectSchema } from './objects/WatchReviewStateMinAggregateInput.schema';
+import { WatchReviewStateMaxAggregateInputObjectSchema as WatchReviewStateMaxAggregateInputObjectSchema } from './objects/WatchReviewStateMaxAggregateInput.schema';
+
+export const WatchReviewStateAggregateSchema: z.ZodType<Prisma.WatchReviewStateAggregateArgs> = z.object({ orderBy: z.union([WatchReviewStateOrderByWithRelationInputObjectSchema, WatchReviewStateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewStateWhereInputObjectSchema.optional(), cursor: WatchReviewStateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewStateMinAggregateInputObjectSchema.optional(), _max: WatchReviewStateMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchReviewStateAggregateArgs>;
+
+export const WatchReviewStateAggregateZodSchema = z.object({ orderBy: z.union([WatchReviewStateOrderByWithRelationInputObjectSchema, WatchReviewStateOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewStateWhereInputObjectSchema.optional(), cursor: WatchReviewStateWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchReviewStateCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewStateMinAggregateInputObjectSchema.optional(), _max: WatchReviewStateMaxAggregateInputObjectSchema.optional() }).strict();

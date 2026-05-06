@@ -34,7 +34,9 @@ export const WatchFindFirstSelectSchema: z.ZodType<Prisma.WatchSelect> = z.objec
     product: z.boolean().optional(),
     watchContent: z.boolean().optional(),
     watchPrice: z.boolean().optional(),
-    watchSpecV2: z.boolean().optional()
+    watchSpecV2: z.boolean().optional(),
+    reviewStates: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WatchSelect>;
 
 export const WatchFindFirstSelectZodSchema = z.object({
@@ -62,7 +64,9 @@ export const WatchFindFirstSelectZodSchema = z.object({
     product: z.boolean().optional(),
     watchContent: z.boolean().optional(),
     watchPrice: z.boolean().optional(),
-    watchSpecV2: z.boolean().optional()
+    watchSpecV2: z.boolean().optional(),
+    reviewStates: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict();
 
 export const WatchFindFirstSchema: z.ZodType<Prisma.WatchFindFirstArgs> = z.object({ select: WatchFindFirstSelectSchema.optional(), include: WatchIncludeObjectSchema.optional(), orderBy: z.union([WatchOrderByWithRelationInputObjectSchema, WatchOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchWhereInputObjectSchema.optional(), cursor: WatchWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([WatchScalarFieldEnumSchema, WatchScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.WatchFindFirstArgs>;

@@ -17,6 +17,7 @@ export const WatchContentGroupByResultSchema = z.array(z.object({
   reviewedAt: z.date(),
   reviewedById: z.string(),
   reviewNote: z.string(),
+  hashTags: z.string(),
   publishedAt: z.date(),
   publishedById: z.string(),
   _count: z.object({
@@ -39,6 +40,7 @@ export const WatchContentGroupByResultSchema = z.array(z.object({
     reviewedAt: z.number(),
     reviewedById: z.number(),
     reviewNote: z.number(),
+    hashTags: z.number(),
     publishedAt: z.number(),
     publishedById: z.number()
   }).optional(),
@@ -59,6 +61,7 @@ export const WatchContentGroupByResultSchema = z.array(z.object({
     reviewedAt: z.date().nullable(),
     reviewedById: z.string().nullable(),
     reviewNote: z.string().nullable(),
+    hashTags: z.string().nullable(),
     publishedAt: z.date().nullable(),
     publishedById: z.string().nullable()
   }).nullable().optional(),
@@ -79,6 +82,7 @@ export const WatchContentGroupByResultSchema = z.array(z.object({
     reviewedAt: z.date().nullable(),
     reviewedById: z.string().nullable(),
     reviewNote: z.string().nullable(),
+    hashTags: z.string().nullable(),
     publishedAt: z.date().nullable(),
     publishedById: z.string().nullable()
   }).nullable().optional()

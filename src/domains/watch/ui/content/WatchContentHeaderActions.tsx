@@ -49,14 +49,6 @@ function getStatusMeta(status?: string | null) {
         };
     }
 
-    if (s === "PUBLISHED") {
-        return {
-            label: "Đã đăng",
-            className: "bg-blue-50 text-blue-700 ring-blue-200",
-            icon: <CheckCircle2 className="h-4 w-4" />,
-        };
-    }
-
     return {
         label: "Draft",
         className: "bg-slate-50 text-slate-600 ring-slate-200",
@@ -79,34 +71,46 @@ export default function WatchContentHeaderActions({
     const isAdmin = canReviewContent;
     const isUser = !canReviewContent;
 
-    const canSubmit = isUser && currentStatus === "DRAFT";
-    const canApprove = isAdmin && currentStatus === "SUBMITTED";
+    async function submitReview() {
+        try {
+            setPendingAction("submit");
 
-    async function runAction(
-        action: "submit" | "approve" | "reject",
-        note?: string | null
-    ) {
+            const res = await fetch(
+                `/api/admin/watches/${productId}/content-submit`,
+                { method: "POST" }
+            );
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(json?.error || "Không thể gửi duyệt.");
+            }
+
+            router.refresh();
+        } catch (error) {
+            alert(error instanceof Error ? error.message : "Không thể gửi duyệt.");
+        } finally {
+            setPendingAction(null);
+        }
+    }
+
+    async function review(action: "approve" | "reject", note?: string | null) {
         try {
             setPendingAction(action);
 
             const res = await fetch(
-                `/api/admin/watches/${productId}/content-status`,
+                `/api/admin/watches/${productId}/content-review`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        action,
-                        note: note ?? null,
-                    }),
+                    body: JSON.stringify({ action, note: note ?? null }),
                 }
             );
 
             const json = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(
-                    json?.error || "Không cập nhật được trạng thái content."
-                );
+                throw new Error(json?.error || "Không thể duyệt content.");
             }
 
             router.refresh();
@@ -114,7 +118,7 @@ export default function WatchContentHeaderActions({
             alert(
                 error instanceof Error
                     ? error.message
-                    : "Không cập nhật được trạng thái content."
+                    : "Không thể duyệt content."
             );
         } finally {
             setPendingAction(null);
@@ -124,8 +128,7 @@ export default function WatchContentHeaderActions({
     async function handleReject() {
         const note = window.prompt("Lý do trả về để sale chỉnh lại:");
         if (!note?.trim()) return;
-
-        await runAction("reject", note.trim());
+        await review("reject", note.trim());
     }
 
     return (
@@ -138,10 +141,10 @@ export default function WatchContentHeaderActions({
                 {meta.label}
             </span>
 
-            {canSubmit ? (
+            {isUser && ["DRAFT", "REJECTED"].includes(currentStatus) ? (
                 <button
                     type="button"
-                    onClick={() => runAction("submit")}
+                    onClick={submitReview}
                     disabled={Boolean(pendingAction)}
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
                 >
@@ -154,11 +157,11 @@ export default function WatchContentHeaderActions({
                 </button>
             ) : null}
 
-            {canApprove ? (
+            {isAdmin && currentStatus === "SUBMITTED" ? (
                 <>
                     <button
                         type="button"
-                        onClick={() => runAction("approve")}
+                        onClick={() => review("approve")}
                         disabled={Boolean(pendingAction)}
                         className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                     >

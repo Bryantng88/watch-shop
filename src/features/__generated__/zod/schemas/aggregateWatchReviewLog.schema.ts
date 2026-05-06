@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchReviewLogOrderByWithRelationInputObjectSchema as WatchReviewLogOrderByWithRelationInputObjectSchema } from './objects/WatchReviewLogOrderByWithRelationInput.schema';
+import { WatchReviewLogWhereInputObjectSchema as WatchReviewLogWhereInputObjectSchema } from './objects/WatchReviewLogWhereInput.schema';
+import { WatchReviewLogWhereUniqueInputObjectSchema as WatchReviewLogWhereUniqueInputObjectSchema } from './objects/WatchReviewLogWhereUniqueInput.schema';
+import { WatchReviewLogCountAggregateInputObjectSchema as WatchReviewLogCountAggregateInputObjectSchema } from './objects/WatchReviewLogCountAggregateInput.schema';
+import { WatchReviewLogMinAggregateInputObjectSchema as WatchReviewLogMinAggregateInputObjectSchema } from './objects/WatchReviewLogMinAggregateInput.schema';
+import { WatchReviewLogMaxAggregateInputObjectSchema as WatchReviewLogMaxAggregateInputObjectSchema } from './objects/WatchReviewLogMaxAggregateInput.schema';
+
+export const WatchReviewLogAggregateSchema: z.ZodType<Prisma.WatchReviewLogAggregateArgs> = z.object({ orderBy: z.union([WatchReviewLogOrderByWithRelationInputObjectSchema, WatchReviewLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewLogWhereInputObjectSchema.optional(), cursor: WatchReviewLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchReviewLogCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewLogMinAggregateInputObjectSchema.optional(), _max: WatchReviewLogMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchReviewLogAggregateArgs>;
+
+export const WatchReviewLogAggregateZodSchema = z.object({ orderBy: z.union([WatchReviewLogOrderByWithRelationInputObjectSchema, WatchReviewLogOrderByWithRelationInputObjectSchema.array()]).optional(), where: WatchReviewLogWhereInputObjectSchema.optional(), cursor: WatchReviewLogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WatchReviewLogCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewLogMinAggregateInputObjectSchema.optional(), _max: WatchReviewLogMaxAggregateInputObjectSchema.optional() }).strict();

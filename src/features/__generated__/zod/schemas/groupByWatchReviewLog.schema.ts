@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WatchReviewLogWhereInputObjectSchema as WatchReviewLogWhereInputObjectSchema } from './objects/WatchReviewLogWhereInput.schema';
+import { WatchReviewLogOrderByWithAggregationInputObjectSchema as WatchReviewLogOrderByWithAggregationInputObjectSchema } from './objects/WatchReviewLogOrderByWithAggregationInput.schema';
+import { WatchReviewLogScalarWhereWithAggregatesInputObjectSchema as WatchReviewLogScalarWhereWithAggregatesInputObjectSchema } from './objects/WatchReviewLogScalarWhereWithAggregatesInput.schema';
+import { WatchReviewLogScalarFieldEnumSchema } from './enums/WatchReviewLogScalarFieldEnum.schema';
+import { WatchReviewLogCountAggregateInputObjectSchema as WatchReviewLogCountAggregateInputObjectSchema } from './objects/WatchReviewLogCountAggregateInput.schema';
+import { WatchReviewLogMinAggregateInputObjectSchema as WatchReviewLogMinAggregateInputObjectSchema } from './objects/WatchReviewLogMinAggregateInput.schema';
+import { WatchReviewLogMaxAggregateInputObjectSchema as WatchReviewLogMaxAggregateInputObjectSchema } from './objects/WatchReviewLogMaxAggregateInput.schema';
+
+export const WatchReviewLogGroupBySchema: z.ZodType<Prisma.WatchReviewLogGroupByArgs> = z.object({ where: WatchReviewLogWhereInputObjectSchema.optional(), orderBy: z.union([WatchReviewLogOrderByWithAggregationInputObjectSchema, WatchReviewLogOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchReviewLogScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchReviewLogScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchReviewLogCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewLogMinAggregateInputObjectSchema.optional(), _max: WatchReviewLogMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WatchReviewLogGroupByArgs>;
+
+export const WatchReviewLogGroupByZodSchema = z.object({ where: WatchReviewLogWhereInputObjectSchema.optional(), orderBy: z.union([WatchReviewLogOrderByWithAggregationInputObjectSchema, WatchReviewLogOrderByWithAggregationInputObjectSchema.array()]).optional(), having: WatchReviewLogScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(WatchReviewLogScalarFieldEnumSchema), _count: z.union([ z.literal(true), WatchReviewLogCountAggregateInputObjectSchema ]).optional(), _min: WatchReviewLogMinAggregateInputObjectSchema.optional(), _max: WatchReviewLogMaxAggregateInputObjectSchema.optional() }).strict();

@@ -6,7 +6,6 @@ import {
   saveWatchContentRepo,
   syncWatchContentSnapshotRepo,
   updateWatchContentStatusRepo,
-  type WatchContentReviewAction,
 } from "./watch-content.repo";
 
 function hasMeaningfulContent(content: any) {
@@ -15,19 +14,15 @@ function hasMeaningfulContent(content: any) {
     String(content?.hookText ?? "").trim() ||
     String(content?.body ?? "").trim() ||
     String(content?.summary ?? "").trim() ||
+    String(content?.hashtags ?? "").trim() ||
     (Array.isArray(content?.bulletSpecs) &&
       content.bulletSpecs.some((x: any) => String(x ?? "").trim()))
   );
 }
 
 async function getReviewTargetOrThrow(productId: string) {
-  const target = await getWatchContentReviewTargetRepo(
-    prisma as any,
-    productId
-  );
-
+  const target = await getWatchContentReviewTargetRepo(prisma as any, productId);
   if (!target) throw new Error("Không tìm thấy watch");
-
   return target;
 }
 
@@ -54,6 +49,11 @@ export async function submitWatchContentForReview(input: {
   userId?: string | null;
 }) {
   const target = await getReviewTargetOrThrow(input.productId);
+  const currentStatus = target.watchContent?.contentStatus ?? "DRAFT";
+
+  if (!["DRAFT", "REJECTED"].includes(currentStatus)) {
+    throw new Error("Chỉ content Draft hoặc Trả về mới được gửi duyệt.");
+  }
 
   if (!hasMeaningfulContent(target.watchContent)) {
     throw new Error("Chưa có nội dung để gửi duyệt.");
@@ -63,6 +63,7 @@ export async function submitWatchContentForReview(input: {
     productId: input.productId,
     status: "SUBMITTED",
     userId: input.userId ?? null,
+    reviewNote: null,
   });
 }
 
@@ -70,7 +71,12 @@ export async function approveWatchContent(input: {
   productId: string;
   userId?: string | null;
 }) {
-  await getReviewTargetOrThrow(input.productId);
+  const target = await getReviewTargetOrThrow(input.productId);
+  const currentStatus = target.watchContent?.contentStatus ?? "DRAFT";
+
+  if (currentStatus !== "SUBMITTED") {
+    throw new Error("Chỉ content đã gửi duyệt mới được duyệt.");
+  }
 
   return updateWatchContentStatusRepo(prisma as any, {
     productId: input.productId,
@@ -85,7 +91,12 @@ export async function rejectWatchContent(input: {
   userId?: string | null;
   note?: string | null;
 }) {
-  await getReviewTargetOrThrow(input.productId);
+  const target = await getReviewTargetOrThrow(input.productId);
+  const currentStatus = target.watchContent?.contentStatus ?? "DRAFT";
+
+  if (currentStatus !== "SUBMITTED") {
+    throw new Error("Chỉ content đã gửi duyệt mới được trả về.");
+  }
 
   return updateWatchContentStatusRepo(prisma as any, {
     productId: input.productId,
@@ -95,58 +106,20 @@ export async function rejectWatchContent(input: {
   });
 }
 
-export async function markWatchContentPublished(input: {
+export async function autoApproveWatchContent(input: {
   productId: string;
   userId?: string | null;
 }) {
   const target = await getReviewTargetOrThrow(input.productId);
-  const currentStatus = target.watchContent?.contentStatus;
 
-  if (currentStatus !== "APPROVED" && currentStatus !== "PUBLISHED") {
-    throw new Error("Content chưa được duyệt nên chưa thể chuyển sang đã đăng.");
+  if (!hasMeaningfulContent(target.watchContent)) {
+    return target.watchContent;
   }
 
   return updateWatchContentStatusRepo(prisma as any, {
     productId: input.productId,
-    status: "PUBLISHED",
+    status: "APPROVED",
     userId: input.userId ?? null,
+    reviewNote: null,
   });
-}
-
-export async function moveWatchContentToDraft(input: {
-  productId: string;
-  userId?: string | null;
-}) {
-  await getReviewTargetOrThrow(input.productId);
-
-  return updateWatchContentStatusRepo(prisma as any, {
-    productId: input.productId,
-    status: "DRAFT",
-    userId: input.userId ?? null,
-  });
-}
-
-export async function updateWatchContentReviewStatus(input: {
-  productId: string;
-  action: WatchContentReviewAction;
-  userId?: string | null;
-  note?: string | null;
-}) {
-  if (input.action === "submit") {
-    return submitWatchContentForReview(input);
-  }
-
-  if (input.action === "approve") {
-    return approveWatchContent(input);
-  }
-
-  if (input.action === "reject") {
-    return rejectWatchContent(input);
-  }
-
-  if (input.action === "publish") {
-    return markWatchContentPublished(input);
-  }
-
-  return moveWatchContentToDraft(input);
 }

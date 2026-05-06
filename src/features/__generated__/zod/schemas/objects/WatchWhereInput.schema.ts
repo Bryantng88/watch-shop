@@ -21,7 +21,8 @@ import { WatchContentWhereInputObjectSchema as WatchContentWhereInputObjectSchem
 import { WatchPriceNullableScalarRelationFilterObjectSchema as WatchPriceNullableScalarRelationFilterObjectSchema } from './WatchPriceNullableScalarRelationFilter.schema';
 import { WatchPriceWhereInputObjectSchema as WatchPriceWhereInputObjectSchema } from './WatchPriceWhereInput.schema';
 import { WatchSpecV2NullableScalarRelationFilterObjectSchema as WatchSpecV2NullableScalarRelationFilterObjectSchema } from './WatchSpecV2NullableScalarRelationFilter.schema';
-import { WatchSpecV2WhereInputObjectSchema as WatchSpecV2WhereInputObjectSchema } from './WatchSpecV2WhereInput.schema'
+import { WatchSpecV2WhereInputObjectSchema as WatchSpecV2WhereInputObjectSchema } from './WatchSpecV2WhereInput.schema';
+import { WatchReviewStateListRelationFilterObjectSchema as WatchReviewStateListRelationFilterObjectSchema } from './WatchReviewStateListRelationFilter.schema'
 
 const watchwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => WatchWhereInputObjectSchema), z.lazy(() => WatchWhereInputObjectSchema).array()]).optional(),
@@ -51,7 +52,8 @@ const watchwhereinputSchema = z.object({
   product: z.union([z.lazy(() => ProductScalarRelationFilterObjectSchema), z.lazy(() => ProductWhereInputObjectSchema)]).optional(),
   watchContent: z.union([z.lazy(() => WatchContentNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchContentWhereInputObjectSchema)]).optional(),
   watchPrice: z.union([z.lazy(() => WatchPriceNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchPriceWhereInputObjectSchema)]).optional(),
-  watchSpecV2: z.union([z.lazy(() => WatchSpecV2NullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecV2WhereInputObjectSchema)]).optional()
+  watchSpecV2: z.union([z.lazy(() => WatchSpecV2NullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecV2WhereInputObjectSchema)]).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateListRelationFilterObjectSchema).optional()
 }).strict();
 export const WatchWhereInputObjectSchema: z.ZodType<Prisma.WatchWhereInput> = watchwhereinputSchema as unknown as z.ZodType<Prisma.WatchWhereInput>;
 export const WatchWhereInputObjectZodSchema = watchwhereinputSchema;

@@ -9,7 +9,7 @@ export type WatchContentGenerationResult = {
     titleOverride: string;
     hookText: string;
     bulletSpecs: string[];
-    hashtags: string;
+    hashTags: string;
     postText: string;
     warnings: GenWarning[];
 };
@@ -289,21 +289,24 @@ export function buildBulletSpecs(values: WatchFormValues) {
     return Array.from(new Set(bulletSpecs));
 }
 
-export function buildHashtags(values: WatchFormValues) {
+export function buildhashTags(values: WatchFormValues) {
     const tags = [
         hashtag(values.header.sku),
-        hashtag(values.spec.specBrand),
-        hashtag(values.spec.model),
-        hashtag(values.spec.nickname),
-        hashtag(values.basic.style),
-        hashtag(values.basic.movementType),
-        hashtag(values.spec.primaryCaseMaterial),
         "#vintagewatch",
-        "#donghovintage",
-        "#watchcollector",
+        hashtag(values.basic.style),
+        hashtag(values.spec.specBrand || values.basic.title.split(" ")[0]),
     ].filter(Boolean);
 
     return Array.from(new Set(tags)).join(" ");
+}
+
+function buildBodyText(body?: string | null) {
+    return clean(body)
+        .split(/\n{2,}|\n/g)
+        .map((x) => clean(x))
+        .filter(Boolean)
+        .map((x) => `• ${x}`)
+        .join("\n");
 }
 
 export function buildPostText(input: {
@@ -311,23 +314,28 @@ export function buildPostText(input: {
     body?: string | null;
     bulletSpecs?: string[];
     hookText?: string | null;
-    hashtags?: string | null;
+    hashTags?: string | null;
 }) {
+    const titleText = clean(input.title)
+        ? `**${clean(input.title)}**`
+        : "";
+
+    const bodyText = buildBodyText(input.body);
+
     const specText = input.bulletSpecs?.length
         ? input.bulletSpecs.map((x) => `• ${x}`).join("\n")
         : "";
 
     return [
-        clean(input.title),
-        clean(input.body),
+        titleText,
+        bodyText,
         specText ? `Thông số nổi bật:\n${specText}` : "",
         clean(input.hookText),
-        clean(input.hashtags),
+        clean(input.hashTags),
     ]
         .filter(Boolean)
         .join("\n\n");
 }
-
 function buildWarnings(values: WatchFormValues) {
     const warnings: GenWarning[] = [];
 
@@ -389,19 +397,19 @@ export function generateWatchContent(
     const titleOverride = buildPostTitle(values);
     const hookText = buildHookText(values);
     const bulletSpecs = buildBulletSpecs(values);
-    const hashtags = buildHashtags(values);
+    const hashTags = buildhashTags(values);
 
     return {
         titleOverride,
         hookText,
         bulletSpecs,
-        hashtags,
+        hashTags,
         postText: buildPostText({
             title: titleOverride,
             body: values.content.body,
             bulletSpecs,
             hookText,
-            hashtags,
+            hashTags,
         }),
         warnings: buildWarnings(values),
     };

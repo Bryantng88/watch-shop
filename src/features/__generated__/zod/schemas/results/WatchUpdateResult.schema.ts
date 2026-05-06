@@ -24,5 +24,6 @@ export const WatchUpdateResultSchema = z.nullable(z.object({
   product: z.unknown(),
   watchContent: z.unknown().optional(),
   watchPrice: z.unknown().optional(),
-  watchSpecV2: z.unknown().optional()
+  watchSpecV2: z.unknown().optional(),
+  reviewStates: z.array(z.unknown())
 }));

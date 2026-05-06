@@ -6,7 +6,8 @@ import { MovementTypeSchema } from '../enums/MovementType.schema';
 import { WatchStyleSchema } from '../enums/WatchStyle.schema';
 import { WatchSpecStatusSchema } from '../enums/WatchSpecStatus.schema';
 import { WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchContentUncheckedCreateNestedOneWithoutWatchInput.schema';
-import { WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchPriceUncheckedCreateNestedOneWithoutWatchInput.schema'
+import { WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema as WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema } from './WatchPriceUncheckedCreateNestedOneWithoutWatchInput.schema';
+import { WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema as WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema } from './WatchReviewStateUncheckedCreateNestedManyWithoutWatchInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -31,7 +32,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   watchContent: z.lazy(() => WatchContentUncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional(),
-  watchPrice: z.lazy(() => WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional()
+  watchPrice: z.lazy(() => WatchPriceUncheckedCreateNestedOneWithoutWatchInputObjectSchema).optional(),
+  reviewStates: z.lazy(() => WatchReviewStateUncheckedCreateNestedManyWithoutWatchInputObjectSchema).optional()
 }).strict();
 export const WatchUncheckedCreateWithoutWatchSpecV2InputObjectSchema: z.ZodType<Prisma.WatchUncheckedCreateWithoutWatchSpecV2Input> = makeSchema() as unknown as z.ZodType<Prisma.WatchUncheckedCreateWithoutWatchSpecV2Input>;
 export const WatchUncheckedCreateWithoutWatchSpecV2InputObjectZodSchema = makeSchema();

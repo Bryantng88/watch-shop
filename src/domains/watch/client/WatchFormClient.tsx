@@ -16,6 +16,7 @@ import WatchPricingSidebar from "../ui/edit/WatchPricingSidebar";
 import WatchImageSection from "../ui/edit/WatchImageSection";
 import WatchMediaSidebar from "../ui/edit/WatchMediaSidebar";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
+import { useRouter } from "next/navigation";
 
 type SimpleOption = { id: string; name: string; slug?: string | null };
 
@@ -55,7 +56,11 @@ export default function WatchFormClient({
             basic: { ...prev.basic, ...patch },
         }));
     };
+    const router = useRouter();
 
+    type AfterSaveMode = "normal" | "submitContent" | "submitImage" | "submitBoth" | "continueContent";
+
+    const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
     const updateSpec = (patch: Partial<WatchFormValues["spec"]>) => {
         setValues((prev) => ({ ...prev, spec: { ...prev.spec, ...patch } }));
     };
@@ -87,15 +92,77 @@ export default function WatchFormClient({
             },
         }));
     };
+    const submitReviewTarget = async (target: "content" | "image") => {
+        const res = await fetch(
+            `/api/admin/watches/${values.productId}/${target}-submit`,
+            { method: "POST" }
+        );
 
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(json?.error || "Không thể gửi duyệt.");
+        }
+
+        setValues((prev) => ({
+            ...prev,
+            content: {
+                ...prev.content,
+                ...(target === "content"
+                    ? { contentReviewStatus: "SUBMITTED", contentReviewNote: "" }
+                    : { imageReviewStatus: "SUBMITTED", imageReviewNote: "" }),
+            },
+        }));
+    };
+
+    const submitReviewByMode = async () => {
+        if (afterSaveMode === "submitContent") {
+            await submitReviewTarget("content");
+            setMessage("Đã lưu watch và gửi duyệt nội dung.");
+        }
+
+        if (afterSaveMode === "submitImage") {
+            await submitReviewTarget("image");
+            setMessage("Đã lưu watch và gửi duyệt hình ảnh.");
+        }
+
+        if (afterSaveMode === "submitBoth") {
+            await submitReviewTarget("content");
+            await submitReviewTarget("image");
+            setMessage("Đã lưu watch và gửi duyệt nội dung + hình ảnh.");
+        }
+
+        router.refresh();
+    };
+    const contentRef = useRef<HTMLDivElement | null>(null);
     const onSubmit = () => {
         setMessage("");
         setAfterSaveOpen(false);
+        setAfterSaveMode("normal");
 
         startTransition(async () => {
             try {
                 const result = await submitWatchForm(values);
+
                 setMessage(result?.message || "Đã lưu watch.");
+
+                if (result?.askContinueContent) {
+                    setAfterSaveMode("continueContent");
+                } else if (result?.askSubmitReview) {
+                    const targets = result?.reviewSubmitTargets ?? [];
+                    if (targets.includes("CONTENT") && targets.includes("IMAGE")) {
+                        setAfterSaveMode("submitBoth");
+                    } else if (targets.includes("CONTENT")) {
+                        setAfterSaveMode("submitContent");
+                    } else if (targets.includes("IMAGE")) {
+                        setAfterSaveMode("submitImage");
+                    } else {
+                        setAfterSaveMode("normal");
+                    }
+                } else {
+                    setAfterSaveMode("normal");
+                }
+
                 setAfterSaveOpen(true);
             } catch (error: any) {
                 setMessage(error?.message || "Không thể lưu watch.");
@@ -169,17 +236,25 @@ export default function WatchFormClient({
 
                     />
 
-                    <WatchContentSection
-                        productId={values.productId}
-                        values={values.content}
-                        watchValues={values}
-                        onChange={updateContent}
-                        onOpenSpecModal={() => setSpecModalOpen(true)}
-                        canReviewContent={canReviewContent}
-                    />
+                    <div ref={contentRef}>
+                        <WatchContentSection
+                            productId={values.productId}
+                            values={values.content}
+                            watchValues={values}
+                            contentReviewStatus={values.contentReviewStatus}
+                            contentReviewNote={values.contentReviewNote}
+                            canReviewContent={canReviewContent}
+                            onChange={updateContent}
+                        />
+                    </div>
                     <WatchImageSection
+                        productId={values.productId}
+                        onReviewStatusChange={updateContent}
                         chosenImages={values.media.chosenImages || []}
                         galleryImages={values.media.galleryImages || []}
+                        imageReviewStatus={values.imageReviewStatus}
+                        imageReviewNote={values.imageReviewNote}
+                        canReviewContent={canReviewContent}
                         onChosenImagesChange={(items) => {
                             updateMedia({
                                 chosenImages: [...items],
@@ -263,7 +338,67 @@ export default function WatchFormClient({
                 open={afterSaveOpen}
                 detailHref={`/admin/watches/${values.productId}`}
                 fallbackBackHref="/admin/watches"
-                onContinue={() => setAfterSaveOpen(false)}
+                title={
+                    afterSaveMode === "submitContent" || afterSaveMode === "submitImage" || afterSaveMode === "submitBoth"
+                        ? afterSaveMode === "submitImage"
+                            ? "Đã lưu hình ảnh"
+                            : afterSaveMode === "submitBoth"
+                                ? "Đã lưu nội dung và hình ảnh"
+                                : "Đã lưu nội dung"
+                        : afterSaveMode === "continueContent"
+                            ? "Đã lưu hình ảnh"
+                            : "Đã lưu thành công"
+                }
+                message={
+                    afterSaveMode === "submitContent" || afterSaveMode === "submitImage" || afterSaveMode === "submitBoth"
+                        ? afterSaveMode === "submitImage"
+                            ? "Hình ảnh đã được cập nhật. Bạn có muốn gửi duyệt hình ảnh luôn không?"
+                            : afterSaveMode === "submitBoth"
+                                ? "Nội dung và hình ảnh đã sẵn sàng. Bạn có muốn gửi duyệt cả hai luôn không?"
+                                : "Nội dung đã sẵn sàng. Bạn có muốn gửi duyệt nội dung luôn không?"
+                        : afterSaveMode === "continueContent"
+                            ? "Bạn mới cập nhật hình ảnh nhưng chưa có nội dung bán hàng. Bạn có muốn thao tác tiếp phần content không?"
+                            : "Bạn muốn tiếp tục chỉnh sửa hay điều hướng sang màn hình khác?"
+                }
+                continueLabel={
+                    afterSaveMode === "submitContent" || afterSaveMode === "submitImage" || afterSaveMode === "submitBoth"
+                        ? afterSaveMode === "submitBoth"
+                            ? "Gửi duyệt cả hai"
+                            : "Gửi duyệt"
+                        : afterSaveMode === "continueContent"
+                            ? "Soạn content"
+                            : "Chỉnh tiếp"
+                }
+                continueIcon={
+                    afterSaveMode === "submitContent" ||
+                        afterSaveMode === "submitImage" ||
+                        afterSaveMode === "submitBoth"
+                        ? "send"
+                        : "edit"
+                }
+                onContinue={async () => {
+                    if (
+                        afterSaveMode === "submitContent" ||
+                        afterSaveMode === "submitImage" ||
+                        afterSaveMode === "submitBoth"
+                    ) {
+                        await submitReviewByMode();
+                        setAfterSaveOpen(false);
+                        return;
+                    }
+
+                    if (afterSaveMode === "continueContent") {
+                        setAfterSaveOpen(false);
+                        window.setTimeout(() => {
+                            contentRef.current?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                            });
+                        }, 120);
+                        return;
+                    }
+                    setAfterSaveOpen(false);
+                }}
             />
         </div>
     );
