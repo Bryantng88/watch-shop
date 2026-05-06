@@ -11,8 +11,6 @@ import type {
 import AdminBreadcrumbs, {
     type AdminBreadcrumbItem,
 } from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
-import WatchContentHeaderActions from "@/domains/watch/ui/content/WatchContentHeaderActions";
-import HeaderReviewActions from "../review/HeaderReviewActions";
 
 type SimpleOption = {
     id: string;
@@ -36,22 +34,10 @@ function getOverallReviewStatus(values: WatchFormValues) {
     const content = String(values.contentReviewStatus ?? "DRAFT").toUpperCase();
     const image = String(values.imageReviewStatus ?? "DRAFT").toUpperCase();
 
-    if (content === "REJECTED" || image === "REJECTED") {
-        return "Cần chỉnh";
-    }
-
-    if (content === "SUBMITTED" || image === "SUBMITTED") {
-        return "Chờ duyệt";
-    }
-
-    if (content === "APPROVED" && image === "APPROVED") {
-        return "Sẵn sàng";
-    }
-
-    if (content === "APPROVED" || image === "APPROVED") {
-        return "Duyệt một phần";
-    }
-
+    if (content === "REJECTED" || image === "REJECTED") return "Cần chỉnh";
+    if (content === "SUBMITTED" || image === "SUBMITTED") return "Chờ duyệt";
+    if (content === "APPROVED" && image === "APPROVED") return "Sẵn sàng";
+    if (content === "APPROVED" || image === "APPROVED") return "Duyệt một phần";
     return "Draft";
 }
 
@@ -75,6 +61,7 @@ function ReviewBadge({ label }: { label: string }) {
         </span>
     );
 }
+
 function HeaderImage({
     image,
     title,
@@ -112,7 +99,6 @@ export default function WatchEditHeader({
     onSubmit,
     onChange,
     inlineImage = null,
-    canReviewContent = false,
 }: Props) {
     const brandName =
         brands.find((x) => x.id === values.basic.brandId)?.name || "-";
@@ -180,13 +166,6 @@ export default function WatchEditHeader({
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-
-                    <HeaderReviewActions
-                        productId={values.productId}
-                        contentStatus={values.contentReviewStatus}
-                        imageStatus={values.imageReviewStatus}
-                        canReviewContent={canReviewContent}
-                    />
                     <Link
                         href="/admin/watches"
                         className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"

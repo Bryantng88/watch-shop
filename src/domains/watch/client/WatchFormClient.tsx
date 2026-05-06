@@ -106,12 +106,9 @@ export default function WatchFormClient({
 
         setValues((prev) => ({
             ...prev,
-            content: {
-                ...prev.content,
-                ...(target === "content"
-                    ? { contentReviewStatus: "SUBMITTED", contentReviewNote: "" }
-                    : { imageReviewStatus: "SUBMITTED", imageReviewNote: "" }),
-            },
+            ...(target === "content"
+                ? { contentReviewStatus: "SUBMITTED", contentReviewNote: "" }
+                : { imageReviewStatus: "SUBMITTED", imageReviewNote: "" }),
         }));
     };
 
@@ -245,11 +242,17 @@ export default function WatchFormClient({
                             contentReviewNote={values.contentReviewNote}
                             canReviewContent={canReviewContent}
                             onChange={updateContent}
+                            onOpenSpecModal={() => setSpecModalOpen(true)}
+                            onReviewStatusChange={(patch) =>
+                                setValues((prev) => ({ ...prev, ...patch }))
+                            }
                         />
                     </div>
                     <WatchImageSection
                         productId={values.productId}
-                        onReviewStatusChange={updateContent}
+                        onReviewStatusChange={(patch) =>
+                            setValues((prev) => ({ ...prev, ...patch }))
+                        }
                         chosenImages={values.media.chosenImages || []}
                         galleryImages={values.media.galleryImages || []}
                         imageReviewStatus={values.imageReviewStatus}

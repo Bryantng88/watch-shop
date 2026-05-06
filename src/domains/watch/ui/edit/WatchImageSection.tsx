@@ -5,7 +5,7 @@ import MediaPickerMulti, {
     type PickedMediaItem,
 } from "@/components/media/MediaPickerMulti";
 import { SectionCard } from "./shared";
-import ReviewInlineBar from "@/domains/watch/ui/review/ReviewInlineBar";
+import SectionReviewActions from "../review/SectionReviewActions";
 
 type Props = {
     chosenImages: PickedMediaItem[];
@@ -17,7 +17,10 @@ type Props = {
     imageReviewStatus?: string | null;
     imageReviewNote?: string | null;
     canReviewContent?: boolean;
-    onReviewStatusChange?: (patch: { imageReviewStatus?: string; imageReviewNote?: string }) => void;
+    onReviewStatusChange?: (patch: {
+        imageReviewStatus?: string | null;
+        imageReviewNote?: string | null;
+    }) => void;
 };
 
 function InfoChip({
@@ -58,18 +61,13 @@ export default function WatchImageSection({
             icon={<ImageIcon className="h-5 w-5" />}
             title="Hình ảnh"
             subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
-        >
-            <div className="space-y-4">
-                <ReviewInlineBar
+            actions={
+                <SectionReviewActions
                     productId={productId}
-                    targetType="IMAGE"
-                    title="Image review"
+                    target="image"
                     status={imageReviewStatus}
                     reviewNote={imageReviewNote}
-                    canReview={canReviewContent}
-                    canSubmit={!canReviewContent}
-                    compact
-                    onSubmitted={(status) => onReviewStatusChange?.({ imageReviewStatus: status })}
+                    canReviewContent={canReviewContent}
                     onReviewed={(status, note) =>
                         onReviewStatusChange?.({
                             imageReviewStatus: status,
@@ -77,7 +75,9 @@ export default function WatchImageSection({
                         })
                     }
                 />
-
+            }
+        >
+            <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                     <InfoChip
                         label="Trong chosen"

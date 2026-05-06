@@ -39,8 +39,17 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         .map(toPickedMediaItem)
         .filter(Boolean) as PickedMediaItem[];
 
+    const contentReviewStatus = s(detail?.review?.content?.status) || "DRAFT";
+    const contentReviewNote = s(detail?.review?.content?.reviewNote);
+    const imageReviewStatus = s(detail?.review?.image?.status) || "DRAFT";
+    const imageReviewNote = s(detail?.review?.image?.reviewNote);
+
     return {
         productId: s(detail?.productId),
+        contentReviewStatus,
+        contentReviewNote,
+        imageReviewStatus,
+        imageReviewNote,
 
         header: {
             sku: s(detail?.sku),
@@ -104,11 +113,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             bulletSpecs: Array.isArray(detail?.content?.bulletSpecs)
                 ? detail.content.bulletSpecs.map((x: any) => String(x))
                 : [],
-            hashTags: s(detail?.content?.hashTags ?? detail?.content?.hashTags),
-            contentReviewStatus: s(detail?.review?.content?.status) || "DRAFT",
-            contentReviewNote: s(detail?.review?.content?.reviewNote),
-            imageReviewStatus: s(detail?.review?.image?.status) || "DRAFT",
-            imageReviewNote: s(detail?.review?.image?.reviewNote),
+            hashTags: s(detail?.content?.hashTags ?? detail?.content?.hashtags),
         },
 
         pricing: {

@@ -15,23 +15,31 @@ import {
     type WatchContentGenerationResult,
 } from "@/domains/watch/shared/watch-content.helpers";
 import SectionReviewActions from "../review/SectionReviewActions";
+
 type Props = {
     productId: string;
     values: WatchFormValues["content"];
     watchValues: WatchFormValues;
+    contentReviewStatus?: string | null;
+    contentReviewNote?: string | null;
+    canReviewContent?: boolean;
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
-    canReviewContent?: boolean;
-    onReviewStatusChange?: (patch: Partial<WatchFormValues["content"]>) => void;
+    onReviewStatusChange?: (patch: {
+        contentReviewStatus?: string | null;
+        contentReviewNote?: string | null;
+    }) => void;
 };
 
 export default function WatchContentSection({
     productId,
     values,
     watchValues,
+    contentReviewStatus,
+    contentReviewNote,
+    canReviewContent = false,
     onChange,
     onOpenSpecModal,
-    canReviewContent = false,
     onReviewStatusChange,
 }: Props) {
     const [generation, setGeneration] =
@@ -77,18 +85,23 @@ export default function WatchContentSection({
             icon={<BookOpen className="h-5 w-5" />}
             title="Content"
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
-
+            actions={
+                <SectionReviewActions
+                    productId={productId}
+                    target="content"
+                    status={contentReviewStatus}
+                    reviewNote={contentReviewNote}
+                    canReviewContent={canReviewContent}
+                    onReviewed={(status, note) =>
+                        onReviewStatusChange?.({
+                            contentReviewStatus: status,
+                            contentReviewNote: note ?? "",
+                        })
+                    }
+                />
+            }
         >
-            <SectionReviewActions
-                productId={productId}
-                target="content"
-                status={contentReviewStatus}
-                reviewNote={contentReviewNote}
-                canReviewContent={canReviewContent}
-            />
             <div className="space-y-5">
-
-
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
                     <div>
                         <div className="text-sm font-semibold text-slate-900">
