@@ -14,11 +14,13 @@ import WatchTradePanel from "../ui/detail/WatchTradePanel";
 type Props = {
     detail: any;
     images?: any[];
+    pricing?: any;
     serviceHistory?: any[];
     tradeHistory?: { acquisitions?: any[]; orders?: any[] } | any[];
     canViewTradeFinancials?: boolean;
     canReviewContent?: boolean;
 };
+
 function normalizeRole(value: any) {
     return String(value ?? "").toUpperCase();
 }
@@ -55,15 +57,18 @@ export default function WatchDetailClient({
                 <div className="space-y-6 xl:col-span-8">
                     <WatchMediaPanel
                         detail={detail}
-                        inlineImage={inlineImage}
                         galleryImages={galleryImages}
-                        canViewTradeFinancials={canViewTradeFinancials}
-                        canReviewContent={canReviewContent}
                     />
 
                     <WatchOverviewPanel detail={detail} />
-                    <WatchContentPanel detail={detail} />
+
+                    <WatchContentPanel
+                        detail={detail}
+                        canReviewContent={canReviewContent}
+                    />
+
                     <WatchServicePanel serviceHistory={serviceHistory} />
+
                     <WatchTradePanel
                         tradeHistory={tradeHistory}
                         canViewTradeFinancials={canViewTradeFinancials}
@@ -72,6 +77,7 @@ export default function WatchDetailClient({
 
                 <div className="space-y-6 xl:col-span-4">
                     <WatchOpsPanel detail={detail} />
+
                     <WatchPricingPanel
                         detail={detail}
                         canViewTradeFinancials={canViewTradeFinancials}

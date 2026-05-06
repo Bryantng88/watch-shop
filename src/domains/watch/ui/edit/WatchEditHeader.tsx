@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+
 import RegenerateTitleSkuButton from "@/domains/watch/ui/edit/RegenerateTitleSkuButton";
-import type { WatchFormValues } from "@/domains/watch/client/form/watch-form.types";
+import type {
+    PickedMediaItem,
+    WatchFormValues,
+} from "@/domains/watch/client/form/watch-form.types";
 import AdminBreadcrumbs, {
     type AdminBreadcrumbItem,
 } from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
-import InlineImage from "@/domains/shared/ui/image/InlineImage";
-import { Loader2 } from "lucide-react";
+import WatchContentHeaderActions from "@/domains/watch/ui/content/WatchContentHeaderActions";
+
 type SimpleOption = {
     id: string;
     name: string;
@@ -16,11 +21,12 @@ type SimpleOption = {
 
 type Props = {
     values: WatchFormValues;
-    inlineImage?: InlineImageItem | null;
+    inlineImage?: PickedMediaItem | null;
     brands?: SimpleOption[];
     pending?: boolean;
     message?: string;
     breadcrumbs?: AdminBreadcrumbItem[];
+    canReviewContent?: boolean;
     onSubmit: () => void;
     onChange?: (patch: Partial<WatchFormValues>) => void;
 };
@@ -35,6 +41,34 @@ function StatusBadge({ label }: { label?: string | null }) {
     );
 }
 
+function HeaderImage({
+    image,
+    title,
+}: {
+    image?: PickedMediaItem | null;
+    title: string;
+}) {
+    const src = image?.url || image?.key
+        ? image?.url || `/api/media/sign?key=${encodeURIComponent(image?.key ?? "")}`
+        : null;
+
+    return (
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            {src ? (
+                <img
+                    src={src}
+                    alt={title}
+                    className="h-full w-full object-cover"
+                />
+            ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                    No image
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function WatchEditHeader({
     values,
     brands = [],
@@ -43,7 +77,8 @@ export default function WatchEditHeader({
     breadcrumbs,
     onSubmit,
     onChange,
-    inlineImage = null
+    inlineImage = null,
+    canReviewContent = false,
 }: Props) {
     const brandName =
         brands.find((x) => x.id === values.basic.brandId)?.name || "-";
@@ -52,23 +87,12 @@ export default function WatchEditHeader({
     const sku = values.header.sku || "-";
     const productId = values.productId || "";
 
-    const images = [
-        ...(values.media.selectedImages || []),
-        ...(values.media.chosenImages || []),
-    ].map((img) => ({
-        fileKey: img.key,
-        url: img.url,
-        role: img.role,
-        sortOrder: img.sortOrder,
-    }));
-
-    const items: AdminBreadcrumbItem[] =
-        breadcrumbs?.length
-            ? breadcrumbs
-            : [
-                { label: "Watches", href: "/admin/watches" },
-                { label: title },
-            ];
+    const items: AdminBreadcrumbItem[] = breadcrumbs?.length
+        ? breadcrumbs
+        : [
+            { label: "Watches", href: "/admin/watches" },
+            { label: title },
+        ];
 
     return (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -77,11 +101,7 @@ export default function WatchEditHeader({
                     <AdminBreadcrumbs items={items} />
 
                     <div className="mt-4 flex items-start gap-4">
-                        <InlineImage
-                            image={inlineImage}
-                            title={title}
-                            size="lg"
-                        />
+                        <HeaderImage image={inlineImage} title={title} />
 
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -126,7 +146,16 @@ export default function WatchEditHeader({
                     ) : null}
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {productId ? (
+                        <WatchContentHeaderActions
+                            productId={productId}
+                            status={values.content.contentStatus}
+                            reviewNote={values.content.reviewNote}
+                            canReviewContent={canReviewContent}
+                        />
+                    ) : null}
+
                     <Link
                         href="/admin/watches"
                         className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"

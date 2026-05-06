@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { AlertTriangle, BookOpen, WandSparkles } from "lucide-react";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
-import WatchContentReviewBar from "../content/WatchContentReviewBar";
 import {
     Button,
     FieldLabel,
@@ -78,13 +77,7 @@ export default function WatchContentSection({
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
         >
             <div className="space-y-5">
-                <WatchContentReviewBar
-                    productId={productId}
-                    status={values.contentStatus}
-                    reviewNote={values.reviewNote}
-                    canReview={canReviewContent}
-                    canSubmit
-                />
+
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
                     <div>
@@ -123,10 +116,10 @@ export default function WatchContentSection({
                     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-inset ring-amber-200">
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+
                             <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold text-amber-800">
-                                    Content đã được gen, nhưng còn thiếu dữ liệu
-                                    spec.
+                                    Content đã được gen, nhưng còn thiếu dữ liệu spec.
                                 </div>
 
                                 <div className="mt-2 space-y-1 text-sm text-amber-800/90">
@@ -173,6 +166,7 @@ export default function WatchContentSection({
                 <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <FieldLabel>Bullet specs</FieldLabel>
+
                         <button
                             type="button"
                             onClick={addBullet}

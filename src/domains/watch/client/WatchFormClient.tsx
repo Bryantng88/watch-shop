@@ -134,6 +134,7 @@ export default function WatchFormClient({
                 pending={pending}
                 message={message}
                 onSubmit={onSubmit}
+                canReviewContent={canReviewContent}
                 breadcrumbs={[
                     { label: "Watches", href: "/admin/watches" },
                     { label: values.basic.title || "Edit" },
