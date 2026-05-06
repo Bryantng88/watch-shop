@@ -258,6 +258,11 @@ export async function listAdminWatches(
             productImage: {
               orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             },
+            serviceRequest: {
+              include: {
+                technicalIssue: true,
+              },
+            },
           },
         },
         watchSpecV2: true,

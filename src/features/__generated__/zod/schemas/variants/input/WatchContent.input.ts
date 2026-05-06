@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { ContentStatusSchema } from '../../enums/ContentStatus.schema';
 // prettier-ignore
 export const WatchContentInputSchema = z.object({
     id: z.string(),
@@ -14,7 +15,15 @@ export const WatchContentInputSchema = z.object({
     aiMetaJson: z.unknown().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    watch: z.unknown()
+    watch: z.unknown(),
+    contentStatus: ContentStatusSchema,
+    submittedAt: z.date().optional().nullable(),
+    submittedById: z.string().optional().nullable(),
+    reviewedAt: z.date().optional().nullable(),
+    reviewedById: z.string().optional().nullable(),
+    reviewNote: z.string().optional().nullable(),
+    publishedAt: z.date().optional().nullable(),
+    publishedById: z.string().optional().nullable()
 }).strict();
 
 export type WatchContentInputType = z.infer<typeof WatchContentInputSchema>;

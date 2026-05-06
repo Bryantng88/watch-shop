@@ -38,6 +38,19 @@ export type WatchRow = {
     hasImages: boolean;
     hasContent: boolean;
 
+    contentStatus?:
+    | "DRAFT"
+    | "SUBMITTED"
+    | "APPROVED"
+    | "REJECTED"
+    | "PUBLISHED"
+    | "ARCHIVED"
+    | "PROCESSING"
+    | string
+    | null;
+
+    serviceIssuesCount: number;
+
     serviceState?: string | null;
     stockState?: string | null;
     saleState?: string | null;
@@ -51,7 +64,8 @@ export type WatchRow = {
     costPrice?: number | null;
     minPrice?: number | null;
 
-    updatedAt?: string | null;
+    createdAt?: string | Date | null;
+    updatedAt?: string | Date | null;
 
     contentReady: boolean;
     imageReady: boolean;
@@ -59,7 +73,6 @@ export type WatchRow = {
 
     specStatus?: "PENDING" | "PARTIAL" | "READY" | "FAILED" | null;
 };
-
 export type WatchListResult = {
     items: WatchRow[];
     total: number;

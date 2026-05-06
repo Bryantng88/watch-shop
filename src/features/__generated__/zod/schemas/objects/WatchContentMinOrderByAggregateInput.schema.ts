@@ -12,7 +12,15 @@ const makeSchema = () => z.object({
   seoTitle: SortOrderSchema.optional(),
   seoDescription: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  contentStatus: SortOrderSchema.optional(),
+  submittedAt: SortOrderSchema.optional(),
+  submittedById: SortOrderSchema.optional(),
+  reviewedAt: SortOrderSchema.optional(),
+  reviewedById: SortOrderSchema.optional(),
+  reviewNote: SortOrderSchema.optional(),
+  publishedAt: SortOrderSchema.optional(),
+  publishedById: SortOrderSchema.optional()
 }).strict();
 export const WatchContentMinOrderByAggregateInputObjectSchema: z.ZodType<Prisma.WatchContentMinOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchContentMinOrderByAggregateInput>;
 export const WatchContentMinOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -130,6 +130,11 @@ export type WatchDetailModel = {
         bulletSpecs?: string[];
         hashtags?: string | null; seoTitle?: string | null;
         seoDescription?: string | null;
+        contentStatus?: string | null;
+        reviewNote?: string | null;
+        submittedAt?: Date | string | null;
+        reviewedAt?: Date | string | null;
+        publishedAt?: Date | string | null;
     } | null;
 
     images?: WatchDetailImageItem[];

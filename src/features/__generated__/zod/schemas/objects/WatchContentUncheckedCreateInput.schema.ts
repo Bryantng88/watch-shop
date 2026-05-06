@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { WatchContentCreatebulletSpecsInputObjectSchema as WatchContentCreatebulletSpecsInputObjectSchema } from './WatchContentCreatebulletSpecsInput.schema';
-import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema'
+import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
+import { ContentStatusSchema } from '../enums/ContentStatus.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -17,7 +18,15 @@ const makeSchema = () => z.object({
   seoDescription: z.string().optional().nullable(),
   aiMetaJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  contentStatus: ContentStatusSchema.optional(),
+  submittedAt: z.coerce.date().optional().nullable(),
+  submittedById: z.string().optional().nullable(),
+  reviewedAt: z.coerce.date().optional().nullable(),
+  reviewedById: z.string().optional().nullable(),
+  reviewNote: z.string().optional().nullable(),
+  publishedAt: z.coerce.date().optional().nullable(),
+  publishedById: z.string().optional().nullable()
 }).strict();
 export const WatchContentUncheckedCreateInputObjectSchema: z.ZodType<Prisma.WatchContentUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchContentUncheckedCreateInput>;
 export const WatchContentUncheckedCreateInputObjectZodSchema = makeSchema();

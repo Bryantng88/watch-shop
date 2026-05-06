@@ -13,7 +13,15 @@ export const WatchContentFindManyResultSchema = z.object({
   aiMetaJson: z.unknown().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  watch: z.unknown()
+  watch: z.unknown(),
+  contentStatus: z.unknown(),
+  submittedAt: z.date().optional(),
+  submittedById: z.string().optional(),
+  reviewedAt: z.date().optional(),
+  reviewedById: z.string().optional(),
+  reviewNote: z.string().optional(),
+  publishedAt: z.date().optional(),
+  publishedById: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

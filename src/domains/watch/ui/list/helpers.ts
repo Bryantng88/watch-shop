@@ -46,12 +46,7 @@ export function mapWatchImage(row: any) {
 
     if (!picked) return null;
 
-    const fileKey =
-        picked?.fileKey ??
-        picked?.key ??
-        picked?.path ??
-        null;
-
+    const fileKey = picked?.fileKey ?? picked?.key ?? picked?.path ?? null;
     if (!fileKey) return picked?.url ?? null;
 
     return buildMediaUrl(fileKey);
@@ -61,14 +56,17 @@ export function hasValidContent(row: any) {
     const content = row?.watchContent ?? row?.content;
     if (!content) return false;
 
+    const hasTitle = Boolean(String(content?.titleOverride ?? "").trim());
     const hasHook = Boolean(String(content?.hookText ?? "").trim());
     const hasBody = Boolean(String(content?.body ?? "").trim());
     const hasSummary = Boolean(String(content?.summary ?? "").trim());
     const hasBulletSpecs =
         Array.isArray(content?.bulletSpecs) &&
-        content.bulletSpecs.some((item: any) => Boolean(String(item ?? "").trim()));
+        content.bulletSpecs.some((item: any) =>
+            Boolean(String(item ?? "").trim())
+        );
 
-    return hasHook || hasBody || hasSummary || hasBulletSpecs;
+    return hasTitle || hasHook || hasBody || hasSummary || hasBulletSpecs;
 }
 
 export function normalizeNumber(value: any) {
@@ -77,12 +75,65 @@ export function normalizeNumber(value: any) {
     return Number.isFinite(n) ? n : null;
 }
 
+function getOpenServiceIssuesCount(row: any) {
+    const requests = row?.product?.serviceRequest ?? row?.serviceRequest ?? [];
+
+    if (!Array.isArray(requests)) return 0;
+
+    return requests.reduce((total: number, request: any) => {
+        const issues = Array.isArray(request?.technicalIssue)
+            ? request.technicalIssue
+            : [];
+
+        const openIssues = issues.filter((issue: any) => {
+            const status = String(issue?.executionStatus ?? "").toUpperCase();
+            return !["DONE", "COMPLETED", "CLOSED", "CANCELLED"].includes(status);
+        });
+
+        return total + openIssues.length;
+    }, 0);
+}
+
+function normalizeContentStatus(row: any) {
+    return (
+        row?.watchContent?.contentStatus ??
+        row?.content?.contentStatus ??
+        row?.product?.contentStatus ??
+        "DRAFT"
+    );
+}
+export function formatDateTime(
+    value?: string | Date | null
+): string {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    return new Intl.DateTimeFormat("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(date);
+}
 export function mapWatchRow(row: any): WatchRow {
     const product = row?.product ?? row ?? {};
     const galleryImages = getGalleryImages(row);
     const imagesCount = galleryImages.length;
     const hasImages = imagesCount > 0;
     const hasContent = hasValidContent(row);
+    const contentStatus = normalizeContentStatus(row);
+    const serviceIssuesCount = getOpenServiceIssuesCount(row);
+    const serviceState = String(row?.serviceState ?? "").toUpperCase();
+
+    const serviceReady =
+        !serviceState ||
+        serviceState === "NONE" ||
+        serviceState === "NO_SERVICE" ||
+        serviceState === "NOT_REQUIRED" ||
+        serviceState === "COMPLETED" ||
+        serviceState === "DONE";
 
     const price = row?.watchPrice ?? row?.price ?? {};
 
@@ -100,15 +151,15 @@ export function mapWatchRow(row: any): WatchRow {
             row?.spec?.brand ??
             null,
 
-        vendorName:
-            product?.vendor?.name ??
-            row?.vendor?.name ??
-            null,
+        vendorName: product?.vendor?.name ?? row?.vendor?.name ?? null,
 
         imageUrl: mapWatchImage(row),
         imagesCount,
         hasImages,
         hasContent,
+        contentStatus,
+
+        serviceIssuesCount,
 
         serviceState: row?.serviceState ?? null,
         stockState: row?.stockState ?? null,
@@ -127,8 +178,8 @@ export function mapWatchRow(row: any): WatchRow {
 
         contentReady: hasContent,
         imageReady: hasImages,
-        serviceReady: !row?.serviceRequest || row?.serviceState === "DONE",
-
+        serviceReady,
+        createdAt: row.createdAt ?? null,
         specStatus: row?.specStatus ?? "PENDING",
     };
 }
@@ -174,13 +225,29 @@ export function specStatusTone(row: WatchRow) {
 }
 
 export function contentStatusText(row: WatchRow) {
-    return row.contentReady ? "Đã có" : "Chưa có";
+    const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
+
+    const map: Record<string, string> = {
+        DRAFT: "Draft",
+        SUBMITTED: "Chờ duyệt",
+        APPROVED: "Đã duyệt",
+        REJECTED: "Trả về",
+        PUBLISHED: "Đã đăng",
+        ARCHIVED: "Lưu trữ",
+        PROCESSING: "Đang xử lý",
+    };
+
+    return map[status] ?? status;
 }
 
-export function imageStatusText(row: WatchRow) {
-    return row.imageReady ? `Đã có (${row.imagesCount})` : "Chưa có";
-}
+export function contentStatusTone(row: WatchRow) {
+    const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
 
-export function serviceStatusText(row: WatchRow) {
-    return row.serviceReady ? "Không cần service" : "Cần xử lý";
+    if (status === "APPROVED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+    if (status === "PUBLISHED") return "bg-blue-50 text-blue-700 ring-blue-200";
+    if (status === "SUBMITTED") return "bg-amber-50 text-amber-700 ring-amber-200";
+    if (status === "REJECTED") return "bg-rose-50 text-rose-700 ring-rose-200";
+    if (status === "PROCESSING") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+
+    return "bg-slate-50 text-slate-600 ring-slate-200";
 }

@@ -15,7 +15,15 @@ const makeSchema = () => z.object({
   aiMetaJson: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
-  watch: z.union([z.boolean(), z.lazy(() => WatchArgsObjectSchema)]).optional()
+  watch: z.union([z.boolean(), z.lazy(() => WatchArgsObjectSchema)]).optional(),
+  contentStatus: z.boolean().optional(),
+  submittedAt: z.boolean().optional(),
+  submittedById: z.boolean().optional(),
+  reviewedAt: z.boolean().optional(),
+  reviewedById: z.boolean().optional(),
+  reviewNote: z.boolean().optional(),
+  publishedAt: z.boolean().optional(),
+  publishedById: z.boolean().optional()
 }).strict();
 export const WatchContentSelectObjectSchema: z.ZodType<Prisma.WatchContentSelect> = makeSchema() as unknown as z.ZodType<Prisma.WatchContentSelect>;
 export const WatchContentSelectObjectZodSchema = makeSchema();

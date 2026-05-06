@@ -104,7 +104,9 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             bulletSpecs: Array.isArray(detail?.content?.bulletSpecs)
                 ? detail.content.bulletSpecs.map((x: any) => String(x))
                 : [],
-            hashtags: s(detail?.content?.hashtags)
+            hashtags: s(detail?.content?.hashtags),
+            contentStatus: s(detail?.content?.contentStatus) || "DRAFT",
+            reviewNote: s(detail?.content?.reviewNote),
         },
 
         pricing: {

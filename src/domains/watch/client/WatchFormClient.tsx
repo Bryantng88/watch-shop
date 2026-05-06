@@ -26,6 +26,7 @@ type Props = {
     categories?: SimpleOption[];
     canViewCost?: boolean;
     canEditPrice?: boolean;
+    canReviewContent?: boolean;
 };
 
 export default function WatchFormClient({
@@ -35,6 +36,7 @@ export default function WatchFormClient({
     categories = [],
     canViewCost = false,
     canEditPrice = false,
+    canReviewContent = false,
 }: Props) {
     const initialValues = useMemo(
         () => mapWatchDetailToFormValues(detail),
