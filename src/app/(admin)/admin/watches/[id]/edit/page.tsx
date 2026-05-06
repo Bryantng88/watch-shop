@@ -8,38 +8,42 @@ import {
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 
-function canViewCost(user: {
-    roles?: string[] | null;
-    permissions?: string[] | null;
-} | null) {
-    const roles = (user?.roles ?? []).map((x) =>
-        String(x).trim().toUpperCase()
-    );
-    const permissions = (user?.permissions ?? []).map((x) =>
-        String(x).trim().toUpperCase()
-    );
+type AuthUser = {
+    roles?: any[] | null;
+    permissions?: any[] | null;
+} | null;
+
+function normalizeAuthValues(items?: any[] | null) {
+    return (items ?? [])
+        .map((item) => {
+            if (typeof item === "string") return item;
+            return item?.name ?? item?.code ?? item?.key ?? item?.slug ?? "";
+        })
+        .filter(Boolean)
+        .map((x) => String(x).trim().toUpperCase());
+}
+
+function hasAdmin(user: AuthUser) {
+    const roles = normalizeAuthValues(user?.roles);
+    const permissions = normalizeAuthValues(user?.permissions);
+
+    return roles.includes("ADMIN") || permissions.includes("ADMIN");
+}
+
+function canViewCost(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
 
     return (
-        roles.includes("ADMIN") ||
-        permissions.includes("ADMIN") ||
+        hasAdmin(user) ||
         permissions.includes("PRODUCT_COST_VIEW")
     );
 }
 
-function canEditPrice(user: {
-    roles?: string[] | null;
-    permissions?: string[] | null;
-} | null) {
-    const roles = (user?.roles ?? []).map((x) =>
-        String(x).trim().toUpperCase()
-    );
-    const permissions = (user?.permissions ?? []).map((x) =>
-        String(x).trim().toUpperCase()
-    );
+function canEditPrice(user: AuthUser) {
+    const permissions = normalizeAuthValues(user?.permissions);
 
     return (
-        roles.includes("ADMIN") ||
-        permissions.includes("ADMIN") ||
+        hasAdmin(user) ||
         permissions.includes("PRODUCT_PRICE_EDIT")
     );
 }
@@ -54,7 +58,6 @@ export default async function WatchEditPage({
     params: Promise<{ id: string }>;
 }) {
     const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
-
     const { id } = await params;
 
     const [detail, options] = await Promise.all([
@@ -73,6 +76,7 @@ export default async function WatchEditPage({
                 categories={serialize(options.categories)}
                 canViewCost={canViewCost(user)}
                 canEditPrice={canEditPrice(user)}
+                canReviewContent={hasAdmin(user)}
             />
         </div>
     );
