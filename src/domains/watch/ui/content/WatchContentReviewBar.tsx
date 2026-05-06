@@ -86,10 +86,12 @@ export default function WatchContentReviewBar({
     const [rejectOpen, setRejectOpen] = useState(false);
     const [note, setNote] = useState("");
 
-    const meta = statusMeta(status);
     const currentStatus = String(status ?? "DRAFT").toUpperCase();
+    const meta = statusMeta(currentStatus);
 
-    async function submitAction(action: "submit" | "approve" | "reject" | "draft") {
+    async function submitAction(
+        action: "submit" | "approve" | "reject" | "draft"
+    ) {
         try {
             setPendingAction(action);
 
@@ -108,7 +110,9 @@ export default function WatchContentReviewBar({
             const json = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(json?.error || "Không cập nhật được trạng thái content.");
+                throw new Error(
+                    json?.error || "Không cập nhật được trạng thái content."
+                );
             }
 
             setRejectOpen(false);
@@ -128,7 +132,7 @@ export default function WatchContentReviewBar({
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
+                <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
                         Content review
                     </div>
@@ -142,7 +146,7 @@ export default function WatchContentReviewBar({
                         </span>
 
                         {reviewNote ? (
-                            <span className="text-sm text-rose-600">
+                            <span className="text-sm font-medium text-rose-600">
                                 Note: {reviewNote}
                             </span>
                         ) : null}
@@ -151,7 +155,8 @@ export default function WatchContentReviewBar({
 
                 <div className="flex flex-wrap items-center gap-2">
                     {canSubmit &&
-                        (currentStatus === "DRAFT" || currentStatus === "REJECTED") ? (
+                        (currentStatus === "DRAFT" ||
+                            currentStatus === "REJECTED") ? (
                         <button
                             type="button"
                             onClick={() => submitAction("submit")}
@@ -196,9 +201,9 @@ export default function WatchContentReviewBar({
                     ) : null}
 
                     {canReview &&
-                        (currentStatus === "SUBMITTED" ||
-                            currentStatus === "APPROVED" ||
-                            currentStatus === "PUBLISHED") ? (
+                        ["SUBMITTED", "APPROVED", "PUBLISHED"].includes(
+                            currentStatus
+                        ) ? (
                         <button
                             type="button"
                             onClick={() => submitAction("draft")}

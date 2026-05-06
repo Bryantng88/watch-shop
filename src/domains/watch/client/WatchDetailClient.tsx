@@ -17,8 +17,8 @@ type Props = {
     serviceHistory?: any[];
     tradeHistory?: { acquisitions?: any[]; orders?: any[] } | any[];
     canViewTradeFinancials?: boolean;
+    canReviewContent?: boolean;
 };
-
 function normalizeRole(value: any) {
     return String(value ?? "").toUpperCase();
 }
@@ -35,6 +35,7 @@ export default function WatchDetailClient({
     serviceHistory = [],
     tradeHistory,
     canViewTradeFinancials = false,
+    canReviewContent = false,
 }: Props) {
     const sortedImages = sortImages(images ?? []);
 
@@ -57,6 +58,7 @@ export default function WatchDetailClient({
                         inlineImage={inlineImage}
                         galleryImages={galleryImages}
                         canViewTradeFinancials={canViewTradeFinancials}
+                        canReviewContent={canReviewContent}
                     />
 
                     <WatchOverviewPanel detail={detail} />

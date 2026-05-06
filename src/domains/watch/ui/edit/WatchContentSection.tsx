@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, WandSparkles, AlertTriangle } from "lucide-react";
+import { AlertTriangle, BookOpen, WandSparkles } from "lucide-react";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import WatchContentReviewBar from "../content/WatchContentReviewBar";
 import {
@@ -17,19 +17,21 @@ import {
 } from "@/domains/watch/shared/watch-content.helpers";
 
 type Props = {
+    productId: string;
     values: WatchFormValues["content"];
     watchValues: WatchFormValues;
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
-    canReview?: boolean;
+    canReviewContent?: boolean;
 };
 
 export default function WatchContentSection({
+    productId,
     values,
     watchValues,
     onChange,
     onOpenSpecModal,
-    canReview
+    canReviewContent = false,
 }: Props) {
     const [generation, setGeneration] =
         useState<WatchContentGenerationResult | null>(null);
@@ -70,27 +72,28 @@ export default function WatchContentSection({
     };
 
     return (
-
         <SectionCard
             icon={<BookOpen className="h-5 w-5" />}
             title="Content"
             subtitle="Gen hook & bullet specs từ dữ liệu spec hiện có."
         >
-            <WatchContentReviewBar
-                productId={productId}
-                status={values.contentStatus}
-                reviewNote={values.reviewNote}
-                canReview={canReview}
-                canSubmit
-            />
             <div className="space-y-5">
+                <WatchContentReviewBar
+                    productId={productId}
+                    status={values.contentStatus}
+                    reviewNote={values.reviewNote}
+                    canReview={canReviewContent}
+                    canSubmit
+                />
+
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
                     <div>
                         <div className="text-sm font-semibold text-slate-900">
                             Gen nhanh nội dung bán hàng
                         </div>
                         <div className="mt-1 text-sm text-slate-600">
-                            Hệ thống sẽ dùng brand, movement, size, dial, material và giá bán để tạo hook + bullet specs.
+                            Hệ thống sẽ dùng brand, movement, size, dial,
+                            material và giá bán để tạo hook + bullet specs.
                         </div>
                     </div>
 
@@ -103,27 +106,27 @@ export default function WatchContentSection({
                         Gen hook & bullet specs
                     </Button>
                 </div>
+
                 <div>
-                    <FieldLabel>TITLE</FieldLabel>
+                    <FieldLabel>Title</FieldLabel>
                     <input
                         value={values.titleOverride}
                         onChange={(e) =>
-                            onChange({
-                                titleOverride: e.target.value,
-                            })
+                            onChange({ titleOverride: e.target.value })
                         }
                         placeholder="Title bài đăng sau khi gen"
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
                     />
                 </div>
+
                 {generation?.warnings?.length ? (
                     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-inset ring-amber-200">
                         <div className="flex items-start gap-3">
                             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-
                             <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold text-amber-800">
-                                    Content đã được gen, nhưng còn thiếu dữ liệu spec.
+                                    Content đã được gen, nhưng còn thiếu dữ liệu
+                                    spec.
                                 </div>
 
                                 <div className="mt-2 space-y-1 text-sm text-amber-800/90">
@@ -152,9 +155,7 @@ export default function WatchContentSection({
                     <Textarea
                         rows={3}
                         value={values.hookText}
-                        onChange={(e) =>
-                            onChange({ hookText: e.target.value })
-                        }
+                        onChange={(e) => onChange({ hookText: e.target.value })}
                         placeholder="Hook"
                     />
                 </div>
@@ -172,7 +173,6 @@ export default function WatchContentSection({
                 <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <FieldLabel>Bullet specs</FieldLabel>
-
                         <button
                             type="button"
                             onClick={addBullet}
