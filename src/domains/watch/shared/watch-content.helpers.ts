@@ -1,4 +1,5 @@
 import type { WatchFormValues } from "@/domains/watch/client/form/watch-form.types";
+import { WATCH_POST_FOOTER } from "@/domains/shared/content/WatchPost";
 
 type GenWarning = {
     field: string;
@@ -309,6 +310,8 @@ function buildBodyText(body?: string | null) {
         .join("\n");
 }
 
+
+
 export function buildPostText(input: {
     title: string;
     body?: string | null;
@@ -316,10 +319,7 @@ export function buildPostText(input: {
     hookText?: string | null;
     hashTags?: string | null;
 }) {
-    const titleText = clean(input.title)
-        ? `**${clean(input.title)}**`
-        : "";
-
+    const titleText = clean(input.title);
     const bodyText = buildBodyText(input.body);
 
     const specText = input.bulletSpecs?.length
@@ -332,6 +332,7 @@ export function buildPostText(input: {
         specText ? `Thông số nổi bật:\n${specText}` : "",
         clean(input.hookText),
         clean(input.hashTags),
+        WATCH_POST_FOOTER,
     ]
         .filter(Boolean)
         .join("\n\n");

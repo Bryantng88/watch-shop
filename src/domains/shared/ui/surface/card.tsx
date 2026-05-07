@@ -10,12 +10,14 @@ export function SectionCard({
     subtitle,
     children,
     defaultOpen = true,
+    actions
 }: {
     icon: React.ReactNode;
     title: string;
     subtitle?: string;
     children: React.ReactNode;
     defaultOpen?: boolean;
+    actions?: React.ReactNode;
 }) {
     const [open, setOpen] = useState(defaultOpen);
 
@@ -26,33 +28,47 @@ export function SectionCard({
                 onClick={() => setOpen((v) => !v)}
                 className="flex w-full items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 text-left"
             >
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                         {icon}
                     </div>
-                    <div>
-                        <div className="text-base font-semibold text-slate-900">
+
+                    <div className="min-w-0">
+                        <div className="text-base font-semibold text-slate-950">
                             {title}
                         </div>
+
                         {subtitle ? (
-                            <div className="text-sm text-slate-500">
+                            <div className="mt-0.5 text-sm text-slate-500">
                                 {subtitle}
                             </div>
                         ) : null}
                     </div>
                 </div>
 
-                <ChevronDown
-                    className={cx(
-                        "h-5 w-5 text-slate-400 transition-transform",
-                        open && "rotate-180"
-                    )}
-                />
+                <div className="flex shrink-0 items-center gap-2">
+                    {actions ? (
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2"
+                        >
+                            {actions}
+                        </div>
+                    ) : null}
+
+                    <ChevronDown
+                        className={cx(
+                            "h-4 w-4 text-slate-400 transition-transform",
+                            open && "rotate-180"
+                        )}
+                    />
+                </div>
             </button>
 
             {open ? <div className="p-5">{children}</div> : null}
         </section>
     );
+
 }
 
 export function Dialog({

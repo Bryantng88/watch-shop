@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, BookOpen, WandSparkles } from "lucide-react";
-
+import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
     Button,
@@ -72,7 +72,7 @@ export default function WatchContentSection({
     const currentReviewStatus = normalizeStatus(contentReviewStatus);
     const locked =
         currentReviewStatus === "APPROVED" ||
-        currentReviewStatus === "SUBMITTED";
+        (currentReviewStatus === "SUBMITTED" && !canReviewContent);
 
     const bulletSpecs = Array.isArray(values.bulletSpecs)
         ? values.bulletSpecs
@@ -190,11 +190,20 @@ export default function WatchContentSection({
         >
             <div className="space-y-5">
                 {locked ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        {currentReviewStatus === "APPROVED"
-                            ? "Nội dung đã được duyệt. Muốn chỉnh sửa lại cần admin mở về Draft."
-                            : "Nội dung đang chờ duyệt nên tạm khóa chỉnh sửa."}
-                    </div>
+                    <GuardNotice
+                        tone="locked"
+                        icon="lock"
+                        title={
+                            currentReviewStatus === "APPROVED"
+                                ? "Nội dung đã được duyệt"
+                                : "Nội dung đang chờ duyệt"
+                        }
+                        message={
+                            currentReviewStatus === "APPROVED"
+                                ? "Muốn chỉnh sửa lại cần admin mở về Draft."
+                                : "Nội dung đang chờ admin duyệt nên sale tạm thời không thể chỉnh sửa."
+                        }
+                    />
                 ) : null}
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">

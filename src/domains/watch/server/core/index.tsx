@@ -1,5 +1,5 @@
-export * from "./watch-list.repo";
-export * from "./watch-list.service";
+export * from "./read/watch-list.repo";
+export * from "./read/watch-list.service";
 export * from "./watch-detail.repo";
 export * from "./watch-detail.service";
 export * from "./write/watch-write.repo";

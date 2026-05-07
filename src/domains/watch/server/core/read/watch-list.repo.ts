@@ -4,8 +4,8 @@ import type {
   WatchListFilters,
   WatchListResult,
   WatchListView,
-} from "../../ui/list/types";
-import { mapWatchRow } from "../../ui/list/helpers";
+} from "../../../ui/list/types";
+import { mapWatchRow } from "../../../ui/list/helpers";
 
 function toPositiveInt(value: any, fallback: number) {
   const n = Number(value);
@@ -268,6 +268,7 @@ export async function listAdminWatches(
         watchSpecV2: true,
         watchPrice: true,
         watchContent: true,
+        reviewStates: true,
       },
     }),
 
@@ -305,7 +306,34 @@ export async function listAdminWatches(
     }),
   ]);
 
-  const items = rows.map(mapWatchRow);
+  const actorIds = Array.from(
+    new Set(
+      rows
+        .flatMap((row: any) =>
+          (row.reviewStates ?? []).flatMap((state: any) => [
+            state.reviewedById,
+            state.submittedById,
+          ])
+        )
+        .filter(Boolean)
+    )
+  );
+
+  const users = actorIds.length
+    ? await prisma.user.findMany({
+      where: { id: { in: actorIds } },
+      select: { id: true, name: true, email: true },
+    })
+    : [];
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
+  const items = rows.map((row: any) =>
+    mapWatchRow({
+      ...row,
+      __userMap: userMap,
+    })
+  );
 
   return {
     items,

@@ -71,7 +71,91 @@ async function writeReviewLog(input: {
         },
     });
 }
+async function getReviewPair(productId: string) {
+    const watch = await prisma.watch.findUnique({
+        where: { productId },
+        include: {
+            product: true,
+            reviewStates: true,
+        },
+    });
 
+    if (!watch) return null;
+
+    const content = watch.reviewStates.find((x) => x.targetType === "CONTENT");
+    const image = watch.reviewStates.find((x) => x.targetType === "IMAGE");
+
+    return { watch, content, image };
+}
+
+async function notifyReviewRejected(input: {
+    state: any;
+    productId: string;
+    targetType: ReviewTargetType;
+    note?: string | null;
+}) {
+    const userId = input.state.submittedById;
+    if (!userId) return;
+
+    await prisma.notification.create({
+        data: {
+            userId,
+            type:
+                input.targetType === "CONTENT"
+                    ? "WATCH_CONTENT_REJECTED"
+                    : "WATCH_IMAGE_REJECTED",
+            title:
+                input.targetType === "CONTENT"
+                    ? "Content watch bị trả về"
+                    : "Hình ảnh watch bị trả về",
+            message: input.note || "Admin đã trả về hạng mục cần chỉnh lại.",
+            priority: "NORMAL",
+            metadata: {
+                route: `/admin/watches/${input.productId}/edit`,
+                productId: input.productId,
+                targetType: input.targetType,
+            },
+        } as any,
+    });
+}
+
+async function notifyFullyApprovedIfReady(productId: string) {
+    const pair = await getReviewPair(productId);
+    if (!pair?.content || !pair?.image) return;
+
+    if (
+        pair.content.status !== "APPROVED" ||
+        pair.image.status !== "APPROVED"
+    ) {
+        return;
+    }
+
+    const userIds = Array.from(
+        new Set(
+            [
+                pair.content.submittedById,
+                pair.image.submittedById,
+            ].filter(Boolean)
+        )
+    );
+
+    if (userIds.length === 0) return;
+
+    await prisma.notification.createMany({
+        data: userIds.map((userId) => ({
+            userId,
+            type: "WATCH_REVIEW_APPROVED",
+            title: "Watch đã được duyệt hoàn toàn",
+            message: `${pair.watch.product.title || "Watch"} đã được duyệt cả content và hình ảnh.`,
+            priority: "NORMAL",
+            metadata: {
+                route: `/admin/watches/${productId}`,
+                productId,
+            },
+        })) as any,
+        skipDuplicates: false,
+    });
+}
 export async function submitWatchReview(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
@@ -105,11 +189,11 @@ export async function submitWatchReview(input: ReviewInput) {
 export async function approveWatchReview(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
-    if (current.status !== "SUBMITTED") {
+    if (!["DRAFT", "SUBMITTED", "REJECTED"].includes(current.status)) {
         throw new Error(
             input.targetType === "CONTENT"
-                ? "Chỉ nội dung đã gửi duyệt mới được duyệt."
-                : "Chỉ hình ảnh đã gửi duyệt mới được duyệt."
+                ? "Nội dung hiện không thể duyệt."
+                : "Hình ảnh hiện không thể duyệt."
         );
     }
 
@@ -130,10 +214,9 @@ export async function approveWatchReview(input: ReviewInput) {
         toStatus: "APPROVED",
         actorId: input.userId,
     });
-
+    await notifyFullyApprovedIfReady(input.productId);
     return state;
 }
-
 export async function rejectWatchReview(input: RejectInput) {
     const current = await ensureReviewState(input);
 
@@ -163,7 +246,12 @@ export async function rejectWatchReview(input: RejectInput) {
         actorId: input.userId,
         note: input.note,
     });
-
+    await notifyReviewRejected({
+        state,
+        productId: input.productId,
+        targetType: input.targetType,
+        note: input.note,
+    });
     return state;
 }
 

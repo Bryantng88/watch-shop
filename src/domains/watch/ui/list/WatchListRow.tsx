@@ -262,6 +262,13 @@ export default function WatchListRow({
                     {formatDateTime(product.updatedAt)}
                 </div>
             </td>
+            <td className="px-4 py-4 align-middle">
+                <div className="text-sm font-medium text-slate-700">
+                    {product.lastUpdatedBy?.name ||
+                        product.lastUpdatedBy?.email ||
+                        "-"}
+                </div>
+            </td>
             <td className="px-4 py-4 text-right">
                 <RowActions
                     row={product}

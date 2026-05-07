@@ -79,12 +79,13 @@ export default function WatchImageSection({
     const dialog = useAppDialog();
     const notify = useNotify();
 
-    const currentStatus = normalizeStatus(imageReviewStatus);
+    const currentReviewStatus = normalizeStatus(imageReviewStatus);
     const locked =
-        currentStatus === "APPROVED" || currentStatus === "SUBMITTED";
+        currentReviewStatus === "APPROVED" ||
+        (currentReviewStatus === "SUBMITTED" && !canReviewContent);
 
     const handleBeforeOpen = async () => {
-        if (currentStatus !== "APPROVED") return true;
+        if (currentReviewStatus !== "APPROVED") return true;
 
         if (!canReviewContent) {
             await dialog.alert({
@@ -167,7 +168,7 @@ export default function WatchImageSection({
             <div className="space-y-4">
                 {locked ? (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        {currentStatus === "APPROVED"
+                        {currentReviewStatus === "APPROVED"
                             ? "Hình ảnh đã được duyệt. Muốn chỉnh sửa lại cần admin mở về Draft."
                             : "Hình ảnh đang chờ duyệt nên tạm khóa chỉnh sửa."}
                     </div>

@@ -1,24 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, FileText } from "lucide-react";
+import { Check, Copy, FileText, Lock } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
-import WatchContentReviewBar from "../content/WatchContentReviewBar";
+import ReviewStatusBadge from "../review/ReviewStatusBadge";
 
-export default function WatchContentPanel({
-  detail,
-  canReviewContent = false,
-}: {
-  detail: any;
-  canReviewContent?: boolean;
-}) {
+export default function WatchContentPanel({ detail }: { detail: any }) {
   const [copied, setCopied] = useState(false);
 
   const content = detail?.content ?? {};
-  const contentStatus = String(content?.contentStatus ?? "DRAFT").toUpperCase();
-  const canCopy = contentStatus === "APPROVED" || contentStatus === "PUBLISHED";
+  const contentStatus = String(
+    detail?.review?.content?.status ?? "DRAFT"
+  ).toUpperCase();
+
+  const canCopy = contentStatus === "APPROVED";
 
   const bulletSpecs = Array.isArray(content?.bulletSpecs)
     ? content.bulletSpecs.filter(Boolean)
@@ -31,11 +28,11 @@ export default function WatchContentPanel({
         body: content?.body,
         bulletSpecs,
         hookText: content?.hookText,
-        hashtags: content?.hashtags,
+        hashTags: content?.hashTags,
       }),
     [content, detail?.title, bulletSpecs]
   );
-
+  const [postTitle, ...postRest] = fullPost.split("\n\n");
   const handleCopy = async () => {
     if (!canCopy) return;
 
@@ -50,16 +47,9 @@ export default function WatchContentPanel({
       subtitle="Nội dung hoàn chỉnh để sale copy đăng mạng xã hội."
       icon={<FileText className="h-5 w-5" />}
       defaultOpen
+      actions={<ReviewStatusBadge status={contentStatus} />}
     >
       <div className="space-y-4">
-        <WatchContentReviewBar
-          productId={detail.productId}
-          status={detail.content?.contentStatus}
-          reviewNote={detail.content?.reviewNote}
-          canReview={canReviewContent}
-          canSubmit={false}
-        />
-
         {!fullPost ? (
           <SectionEmpty text="Chưa có nội dung cho watch này." />
         ) : (
@@ -99,9 +89,34 @@ export default function WatchContentPanel({
               </Button>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-              <div className="whitespace-pre-wrap text-sm leading-7 text-slate-900">
-                {fullPost}
+            {!canCopy ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                <Lock className="mr-2 inline h-4 w-4" />
+                Content chưa được duyệt nên chưa cho copy.
+              </div>
+            ) : null}
+
+            <div
+              onCopy={(e) => {
+                if (!canCopy) e.preventDefault();
+              }}
+              onCut={(e) => {
+                if (!canCopy) e.preventDefault();
+              }}
+              onContextMenu={(e) => {
+                if (!canCopy) e.preventDefault();
+              }}
+              onSelect={(e) => {
+                if (!canCopy) e.preventDefault();
+              }}
+              className={[
+                "rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200",
+                !canCopy ? "select-none cursor-not-allowed" : "select-text",
+              ].join(" ")}
+            >
+              <div className="space-y-5 text-sm leading-7 text-slate-900">
+                <div className="font-bold uppercase">{postTitle}</div>
+                <div className="whitespace-pre-wrap">{postRest.join("\n\n")}</div>
               </div>
             </div>
           </>

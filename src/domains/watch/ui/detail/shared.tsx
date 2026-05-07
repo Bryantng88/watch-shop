@@ -90,3 +90,4 @@ export function SectionEmpty({ text }: { text: string }) {
     </div>
   );
 }
+

@@ -37,7 +37,11 @@ export type WatchRow = {
     imagesCount: number;
     hasImages: boolean;
     hasContent: boolean;
-
+    lastUpdatedBy?: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+    } | null;
     contentStatus?:
     | "DRAFT"
     | "SUBMITTED"

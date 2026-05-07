@@ -1,4 +1,4 @@
-export * from "@/domains/watch/server/core/watch-list.repo";
+export * from "@/domains/watch/server/core/read/watch-list.repo";
 export * from "@/domains/watch/server/core/watch-detail.repo";
 export * from "@/domains/watch/server/core/write/watch-write.repo";
 export * from "@/domains/watch/server/spec/watch-spec.repo";

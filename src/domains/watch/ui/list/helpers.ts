@@ -94,13 +94,42 @@ function getOpenServiceIssuesCount(row: any) {
     }, 0);
 }
 
-function normalizeContentStatus(row: any) {
-    return (
-        row?.watchContent?.contentStatus ??
-        row?.content?.contentStatus ??
-        row?.product?.contentStatus ??
-        "DRAFT"
+type ReviewStatus =
+    | "DRAFT"
+    | "SUBMITTED"
+    | "APPROVED"
+    | "REJECTED"
+    | "PARTIAL";
+
+function getReviewStatus(row: any, targetType: "CONTENT" | "IMAGE") {
+    const found = row?.reviewStates?.find(
+        (item: any) => String(item?.targetType).toUpperCase() === targetType
     );
+
+    return String(found?.status ?? "DRAFT").toUpperCase();
+}
+
+function normalizeContentStatus(row: any): ReviewStatus {
+    const contentStatus = getReviewStatus(row, "CONTENT");
+    const imageStatus = getReviewStatus(row, "IMAGE");
+
+    if (contentStatus === "REJECTED" || imageStatus === "REJECTED") {
+        return "REJECTED";
+    }
+
+    if (contentStatus === "SUBMITTED" || imageStatus === "SUBMITTED") {
+        return "SUBMITTED";
+    }
+
+    if (contentStatus === "APPROVED" && imageStatus === "APPROVED") {
+        return "APPROVED";
+    }
+
+    if (contentStatus === "APPROVED" || imageStatus === "APPROVED") {
+        return "PARTIAL";
+    }
+
+    return "DRAFT";
 }
 export function formatDateTime(
     value?: string | Date | null
@@ -175,7 +204,7 @@ export function mapWatchRow(row: any): WatchRow {
         minPrice: normalizeNumber(price?.minPrice),
 
         updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null,
-
+        lastUpdatedBy: getLastReviewActor(row),
         contentReady: hasContent,
         imageReady: hasImages,
         serviceReady,
@@ -223,7 +252,40 @@ export function specStatusTone(row: WatchRow) {
             return "text-slate-500";
     }
 }
+function getLastReviewActor(row: any) {
+    const states = row?.reviewStates ?? [];
+    const events = states
+        .flatMap((state: any) => [
+            state.reviewedAt
+                ? {
+                    at: state.reviewedAt,
+                    userId: state.reviewedById,
+                }
+                : null,
+            state.submittedAt
+                ? {
+                    at: state.submittedAt,
+                    userId: state.submittedById,
+                }
+                : null,
+        ])
+        .filter((x: any) => x?.userId && x?.at)
+        .sort(
+            (a: any, b: any) =>
+                new Date(b.at).getTime() - new Date(a.at).getTime()
+        );
 
+    const latest = events[0];
+    if (!latest) return null;
+
+    const user = row.__userMap?.get(latest.userId);
+
+    return {
+        id: latest.userId,
+        name: user?.name ?? null,
+        email: user?.email ?? null,
+    };
+}
 export function contentStatusText(row: WatchRow) {
     const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
 
@@ -232,6 +294,7 @@ export function contentStatusText(row: WatchRow) {
         SUBMITTED: "Chờ duyệt",
         APPROVED: "Đã duyệt",
         REJECTED: "Trả về",
+        PARTIAL: "Duyệt một phần",
         PUBLISHED: "Đã đăng",
         ARCHIVED: "Lưu trữ",
         PROCESSING: "Đang xử lý",
@@ -243,11 +306,29 @@ export function contentStatusText(row: WatchRow) {
 export function contentStatusTone(row: WatchRow) {
     const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
 
-    if (status === "APPROVED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-    if (status === "PUBLISHED") return "bg-blue-50 text-blue-700 ring-blue-200";
-    if (status === "SUBMITTED") return "bg-amber-50 text-amber-700 ring-amber-200";
-    if (status === "REJECTED") return "bg-rose-50 text-rose-700 ring-rose-200";
-    if (status === "PROCESSING") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+    if (status === "APPROVED") {
+        return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+    }
+
+    if (status === "PARTIAL") {
+        return "bg-blue-50 text-blue-700 ring-blue-200";
+    }
+
+    if (status === "PUBLISHED") {
+        return "bg-blue-50 text-blue-700 ring-blue-200";
+    }
+
+    if (status === "SUBMITTED") {
+        return "bg-amber-50 text-amber-700 ring-amber-200";
+    }
+
+    if (status === "REJECTED") {
+        return "bg-rose-50 text-rose-700 ring-rose-200";
+    }
+
+    if (status === "PROCESSING") {
+        return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+    }
 
     return "bg-slate-50 text-slate-600 ring-slate-200";
 }

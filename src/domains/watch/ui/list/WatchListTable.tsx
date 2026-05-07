@@ -193,7 +193,7 @@ export default function WatchListTable({
                             <th className="px-4 py-4">Giá bán</th>
                             <th className="px-4 py-4">Tạo lúc</th>
                             <th className="px-4 py-4">Cập nhật</th>
-
+                            <th className="px-4 py-4">Người cập nhật</th>
                             <th className="px-4 py-4 text-right">Hành động</th>
                         </tr>
                     </thead>
@@ -202,7 +202,7 @@ export default function WatchListTable({
                         {safeItems.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={5}
+                                    colSpan={8}
                                     className="px-4 py-12 text-center text-sm text-slate-500"
                                 >
                                     Chưa có watch nào khớp bộ lọc hiện tại.
