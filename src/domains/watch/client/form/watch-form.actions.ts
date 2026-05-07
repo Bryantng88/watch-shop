@@ -1,5 +1,7 @@
 "use server";
 
+import { headers } from "next/headers";
+
 import { prisma } from "@/server/db/client";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -7,7 +9,10 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import type { WatchFormValues } from "./watch-form.types";
 import { replaceWatchGalleryImages } from "@/domains/watch/server";
 import { updateWatchPricingWithDiff } from "@/domains/watch/server/pricing";
-import { autoApproveWatchReview, resetWatchReviewToDraft } from "@/domains/watch/server/review";
+import {
+    autoApproveWatchReview,
+    resetWatchReviewToDraft,
+} from "@/domains/watch/server/review";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 import {
     WatchFormEnums,
@@ -17,6 +22,12 @@ import {
     pickGoldColors,
     toDecimal,
 } from "./watch-form.server.utils";
+
+type MediaFormItem = {
+    key?: string | null;
+    url?: string | null;
+    name?: string | null;
+};
 
 function textOrUndefined(value?: string | null) {
     const text = String(value ?? "").trim();
@@ -51,6 +62,134 @@ function authHasPermission(auth: any, permission: string) {
         [];
 
     return Array.isArray(permissions) && permissions.includes(permission);
+}
+
+function fileNameFromKey(key: string) {
+    return key.split("/").pop() ?? key;
+}
+
+function dedupeMediaItems(items: MediaFormItem[]) {
+    const map = new Map<string, MediaFormItem>();
+
+    for (const item of items) {
+        const key = String(item?.key ?? "").trim();
+        if (!key) continue;
+
+        map.set(key, {
+            ...item,
+            key,
+            name: item.name ?? fileNameFromKey(key),
+        });
+    }
+
+    return Array.from(map.values());
+}
+
+async function getInternalRequestContext() {
+    const h = await headers();
+
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "http";
+    const cookie = h.get("cookie") ?? "";
+
+    if (!host) {
+        throw new Error("Không xác định được host để move media.");
+    }
+
+    return {
+        baseUrl: `${proto}://${host}`,
+        cookie,
+    };
+}
+
+async function moveMediaToChosenViaApi(
+    ctx: { baseUrl: string; cookie: string },
+    item: MediaFormItem
+): Promise<MediaFormItem> {
+    const key = String(item.key ?? "").trim();
+
+    if (!key) {
+        throw new Error("Ảnh không có key hợp lệ.");
+    }
+
+    if (key.startsWith("products/edit/chosen/")) {
+        return {
+            ...item,
+            key,
+            name: item.name ?? fileNameFromKey(key),
+        };
+    }
+
+    const res = await fetch(`${ctx.baseUrl}/api/media/move`, {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+            "Content-Type": "application/json",
+            Cookie: ctx.cookie,
+        },
+        body: JSON.stringify({
+            fromKey: key,
+            toPrefix: "products/edit/chosen",
+            deleteSource: true,
+            overwrite: false,
+        }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        throw new Error(json?.error || `Không thể chuyển ảnh: ${key}`);
+    }
+
+    const movedKey = String(json?.key ?? key);
+
+    return {
+        ...item,
+        key: movedKey,
+        url: json?.url ?? item.url ?? null,
+        name: item.name ?? fileNameFromKey(movedKey),
+    };
+}
+
+async function moveGalleryImagesToChosen(items: MediaFormItem[]) {
+    const normalized = dedupeMediaItems(items);
+
+    if (normalized.length === 0) {
+        return [];
+    }
+
+    const ctx = await getInternalRequestContext();
+    const result: MediaFormItem[] = [];
+
+    for (const item of normalized) {
+        result.push(await moveMediaToChosenViaApi(ctx, item));
+    }
+
+    return result;
+}
+
+function remapChosenImagesAfterMove(input: {
+    chosenImages?: MediaFormItem[];
+    beforeGalleryImages?: MediaFormItem[];
+    movedGalleryImages: MediaFormItem[];
+}) {
+    const movedByOriginalKey = new Map<string, MediaFormItem>();
+
+    input.beforeGalleryImages?.forEach((before, index) => {
+        const beforeKey = String(before.key ?? "").trim();
+        const moved = input.movedGalleryImages[index];
+
+        if (beforeKey && moved) {
+            movedByOriginalKey.set(beforeKey, moved);
+        }
+    });
+
+    return dedupeMediaItems(
+        (input.chosenImages ?? []).map((item) => {
+            const key = String(item.key ?? "").trim();
+            return movedByOriginalKey.get(key) ?? item;
+        })
+    );
 }
 
 export async function submitWatchForm(values: WatchFormValues) {
@@ -88,7 +227,7 @@ export async function submitWatchForm(values: WatchFormValues) {
         hookText: normalizeText(current.watchContent?.hookText),
         body: normalizeText(current.watchContent?.body),
         bulletSpecs: normalizeArray(current.watchContent?.bulletSpecs as any),
-        hashTags: normalizeText((current.watchContent as any)?.hashTags ?? (current.watchContent as any)?.hashTags),
+        hashTags: normalizeText((current.watchContent as any)?.hashTags),
     };
 
     const afterContent = {
@@ -103,11 +242,14 @@ export async function submitWatchForm(values: WatchFormValues) {
         current.product.productImage.map((x: any) => ({ key: x.fileKey }))
     );
 
-    const afterImageKeys = normalizeImageKeys(values.media.galleryImages);
+    const requestedGalleryImages = dedupeMediaItems(
+        values.media.galleryImages ?? []
+    );
+
+    const afterImageKeysBeforeMove = normalizeImageKeys(requestedGalleryImages);
 
     const contentChanged = !sameJson(beforeContent, afterContent);
-    const imagesChanged = !sameJson(beforeImageKeys, afterImageKeys);
-
+    const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);
 
     await prisma.$transaction(async (tx) => {
         const brand = values.basic.brandId
@@ -175,6 +317,7 @@ export async function submitWatchForm(values: WatchFormValues) {
             model: values.spec.model || null,
             referenceNumber: values.spec.referenceNumber || null,
             nickname: values.spec.nickname || null,
+
             strapSetType: pickEnumOrNull(
                 values.spec.strapSetType,
                 WatchFormEnums.WatchStrapSetType
@@ -183,6 +326,7 @@ export async function submitWatchForm(values: WatchFormValues) {
                 values.spec.strapComponentSource,
                 WatchFormEnums.WatchStrapComponentSource
             ),
+
             caseShape: pickEnumOrNull(
                 values.spec.caseShape,
                 WatchFormEnums.CaseType
@@ -190,14 +334,17 @@ export async function submitWatchForm(values: WatchFormValues) {
             caseSizeMM: toDecimal(values.spec.caseSizeMM),
             lugToLugMM: toDecimal(values.spec.lugToLugMM),
             thicknessMM: toDecimal(values.spec.thicknessMM),
+
             crystal: pickEnumOrNull(values.spec.crystal, WatchFormEnums.Glass),
             dialColor: values.spec.dialColor || null,
             dialFinish: values.spec.dialFinish || null,
+
             movementType: pickEnumOrNull(
                 values.basic.movementType,
                 WatchFormEnums.MovementType
             ),
             calibre: values.spec.calibre || null,
+
             materialProfile: pickEnumOrDefault(
                 values.spec.materialProfile,
                 WatchFormEnums.WatchMaterialProfile,
@@ -220,6 +367,7 @@ export async function submitWatchForm(values: WatchFormValues) {
             goldKarat: values.spec.goldKarat
                 ? Number(values.spec.goldKarat)
                 : null,
+
             braceletType: pickEnumOrNull(
                 values.spec.braceletType,
                 WatchFormEnums.Strap
@@ -228,6 +376,11 @@ export async function submitWatchForm(values: WatchFormValues) {
             waterResistance: values.spec.waterResistance || null,
             powerReserve: values.spec.powerReserve || null,
             buckleType: values.spec.buckleType || null,
+
+            boxIncluded: Boolean((values.spec as any).boxIncluded),
+            bookletIncluded: Boolean((values.spec as any).bookletIncluded),
+            cardIncluded: Boolean((values.spec as any).cardIncluded),
+
             materialNote: values.spec.materialNote || null,
         };
 
@@ -261,9 +414,19 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
     });
 
+    const normalizedGalleryImages = imagesChanged
+        ? await moveGalleryImagesToChosen(requestedGalleryImages)
+        : requestedGalleryImages;
+
+    const normalizedChosenImages = remapChosenImagesAfterMove({
+        chosenImages: values.media.chosenImages ?? [],
+        beforeGalleryImages: requestedGalleryImages,
+        movedGalleryImages: normalizedGalleryImages,
+    });
+
     await replaceWatchGalleryImages({
         productId,
-        images: (values.media.galleryImages ?? []).map((item, index) => ({
+        images: normalizedGalleryImages.map((item, index) => ({
             fileKey: String(item.key),
             isForAdmin: true,
             isForStorefront: true,
@@ -352,24 +515,28 @@ export async function submitWatchForm(values: WatchFormValues) {
         imagesChanged,
         hasContentData,
 
-        reviewSubmitTargets:
-            !canReviewContent
-                ? ([
-                    contentChanged && hasContentData ? "CONTENT" : null,
-                    imagesChanged ? "IMAGE" : null,
-                ].filter(Boolean) as Array<"CONTENT" | "IMAGE">)
-                : [],
+        media: {
+            chosenImages: normalizedChosenImages,
+            galleryImages: normalizedGalleryImages,
+        },
+
+        reviewSubmitTargets: !canReviewContent
+            ? ([
+                contentChanged && hasContentData ? "CONTENT" : null,
+                imagesChanged ? "IMAGE" : null,
+            ].filter(Boolean) as Array<"CONTENT" | "IMAGE">)
+            : [],
 
         askSubmitReview:
             !canReviewContent &&
             ((contentChanged && hasContentData) || imagesChanged),
 
         askContinueContent:
-            !canReviewContent &&
-            imagesChanged &&
-            !hasContentData,
+            !canReviewContent && imagesChanged && !hasContentData,
 
-        contentReviewStatus: canReviewContent && contentChanged ? "APPROVED" : undefined,
-        imageReviewStatus: canReviewContent && imagesChanged ? "APPROVED" : undefined,
+        contentReviewStatus:
+            canReviewContent && contentChanged ? "APPROVED" : undefined,
+        imageReviewStatus:
+            canReviewContent && imagesChanged ? "APPROVED" : undefined,
     };
 }

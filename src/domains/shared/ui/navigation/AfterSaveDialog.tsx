@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     CheckCircle2,
@@ -7,6 +8,7 @@ import {
     Eye,
     PenLine,
     Send,
+    Loader2,
 } from "lucide-react";
 
 type Props = {
@@ -33,10 +35,22 @@ export default function AfterSaveDialog({
     onContinue,
 }: Props) {
     const router = useRouter();
+    const [pending, setPending] = useState(false);
 
     if (!open) return null;
 
     const ContinueIcon = continueIcon === "send" ? Send : PenLine;
+
+    async function handleContinue() {
+        if (pending) return;
+
+        try {
+            setPending(true);
+            await onContinue();
+        } finally {
+            setPending(false);
+        }
+    }
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/40 p-4">
@@ -59,15 +73,21 @@ export default function AfterSaveDialog({
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                     <button
                         type="button"
-                        onClick={onContinue}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        onClick={handleContinue}
+                        disabled={pending}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <ContinueIcon className="h-4 w-4" />
+                        {pending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <ContinueIcon className="h-4 w-4" />
+                        )}
                         {continueLabel}
                     </button>
 
                     <button
                         type="button"
+                        disabled={pending}
                         onClick={() => {
                             if (window.history.length > 1) {
                                 router.back();
@@ -75,7 +95,7 @@ export default function AfterSaveDialog({
                                 router.push(fallbackBackHref);
                             }
                         }}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Quay lại
@@ -83,8 +103,9 @@ export default function AfterSaveDialog({
 
                     <button
                         type="button"
+                        disabled={pending}
                         onClick={() => router.push(detailHref)}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <Eye className="h-4 w-4" />
                         Xem detail
