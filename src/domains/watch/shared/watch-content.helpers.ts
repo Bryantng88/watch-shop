@@ -15,9 +15,36 @@ export type WatchContentGenerationResult = {
     warnings: GenWarning[];
 };
 
-function clean(value?: string | null) {
+function isOneDimensionCase(caseShape?: string | null) {
+    const shape = String(caseShape ?? "").toUpperCase();
+
+    return [
+        "ROUND",
+        "CIRCLE",
+        "OVAL",
+    ].includes(shape);
+}
+function clean(value?: string | number | null) {
     return String(value ?? "").trim();
 }
+
+export function buildCaseSizeText(input: {
+    caseShape?: string | null;
+    caseSizeMM?: string | number | null;
+    lugToLugMM?: string | number | null;
+}) {
+    const caseSize = clean(input.caseSizeMM);
+    const lugToLug = clean(input.lugToLugMM);
+
+    if (!caseSize) return "";
+
+    if (!isOneDimensionCase(input.caseShape) && lugToLug) {
+        return `${caseSize}x${lugToLug}mm`;
+    }
+
+    return `${caseSize}mm`;
+}
+
 
 function normalizeEnum(value?: string | null) {
     return clean(value).toUpperCase();
@@ -262,10 +289,15 @@ export function buildBulletSpecs(values: WatchFormValues) {
         );
     }
 
-    if (caseSize) {
-        bulletSpecs.push(`Kích thước ${caseSize}mm.`);
-    }
+    const caseSizeText = buildCaseSizeText({
+        caseShape: values.spec.caseShape,
+        caseSizeMM: values.spec.caseSizeMM,
+        lugToLugMM: values.spec.lugToLugMM,
+    });
 
+    if (caseSizeText) {
+        bulletSpecs.push(`Kích thước ${caseSizeText}.`);
+    }
     if (primaryMaterial) {
         const materialText =
             materialProfile === "BIMETAL" && secondaryMaterial
