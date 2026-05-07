@@ -21,6 +21,14 @@ type Props = {
     description?: string;
 };
 
+type PreviewState = {
+    src: string;
+    label?: string | null;
+    x: number;
+    y: number;
+    size: number;
+} | null;
+
 function dedupeItems(items: PickedMediaItem[]) {
     const map = new Map<string, PickedMediaItem>();
 
@@ -122,6 +130,7 @@ async function moveToChosen(key: string): Promise<PickedMediaItem> {
         overwrite: false,
     });
 }
+
 async function moveBackToActive(key: string): Promise<PickedMediaItem> {
     const cleanKey = String(key || "").trim();
 
@@ -137,6 +146,85 @@ async function moveBackToActive(key: string): Promise<PickedMediaItem> {
     });
 }
 
+function getImageSrc(item: PickedMediaItem) {
+    return item.url || resolveMediaPreviewSrc(item.key) || "";
+}
+
+function getLabel(item: PickedMediaItem) {
+    return item.name ?? item.key.split("/").pop() ?? item.key;
+}
+
+function computePreviewPosition(input: {
+    x: number;
+    y: number;
+    size: number;
+}) {
+    const padding = 18;
+    const labelHeight = 38;
+    const width = input.size;
+    const height = input.size + labelHeight;
+
+    let left = input.x + 24;
+    let top = input.y - height / 2;
+
+    if (typeof window !== "undefined") {
+        if (left + width + padding > window.innerWidth) {
+            left = input.x - width - 24;
+        }
+
+        if (left < padding) {
+            left = padding;
+        }
+
+        if (top < padding) {
+            top = padding;
+        }
+
+        if (top + height + padding > window.innerHeight) {
+            top = window.innerHeight - height - padding;
+        }
+    }
+
+    return { left, top };
+}
+
+function FloatingPreview({ preview }: { preview: PreviewState }) {
+    if (!preview?.src) return null;
+
+    const { left, top } = computePreviewPosition({
+        x: preview.x,
+        y: preview.y,
+        size: preview.size,
+    });
+
+    return (
+        <div
+            className="pointer-events-none fixed z-[99999]"
+            style={{ left, top }}
+        >
+            <div
+                className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-2 shadow-2xl"
+                style={{ width: preview.size }}
+            >
+                <img
+                    src={preview.src}
+                    alt={preview.label ?? "Preview"}
+                    className="w-full rounded-2xl object-cover"
+                    style={{
+                        height: preview.size,
+                    }}
+                />
+
+                {preview.label ? (
+                    <div className="truncate px-2 py-2 text-xs font-medium text-slate-600">
+                        {preview.label}
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
 function ChosenGrid({
     items,
     selectedItems,
@@ -144,6 +232,9 @@ function ChosenGrid({
     onRemoveChosen,
     maxFinalSelection,
     movingBackKey,
+    onPreview,
+    onPreviewMove,
+    onPreviewClose,
 }: {
     items: PickedMediaItem[];
     selectedItems: PickedMediaItem[];
@@ -151,6 +242,13 @@ function ChosenGrid({
     onRemoveChosen: (key: string) => void | Promise<void>;
     maxFinalSelection: number;
     movingBackKey?: string | null;
+    onPreview: (payload: {
+        item: PickedMediaItem;
+        event: React.MouseEvent;
+        size: number;
+    }) => void;
+    onPreviewMove: (event: React.MouseEvent) => void;
+    onPreviewClose: () => void;
 }) {
     const selectedKeySet = new Set(selectedItems.map((item) => item.key));
 
@@ -167,18 +265,25 @@ function ChosenGrid({
             ) : (
                 <div className="grid grid-cols-3 gap-3 md:grid-cols-4 xl:grid-cols-5">
                     {items.map((item) => {
-                        const src =
-                            item.url || resolveMediaPreviewSrc(item.key) || "";
+                        const src = getImageSrc(item);
                         const active = selectedKeySet.has(item.key);
                         const isMovingBack = movingBackKey === item.key;
+                        const label = getLabel(item);
 
                         return (
                             <div
                                 key={item.key}
-                                className={`group relative overflow-hidden rounded-2xl border bg-white ${active
-                                    ? "border-blue-500 ring-2 ring-blue-100"
-                                    : "border-slate-200"
-                                    }`}
+                                className={[
+                                    "relative overflow-hidden rounded-2xl border bg-white",
+                                    active
+                                        ? "border-blue-500 ring-2 ring-blue-100"
+                                        : "border-slate-200",
+                                ].join(" ")}
+                                onMouseEnter={(event) =>
+                                    onPreview({ item, event, size: 420 })
+                                }
+                                onMouseMove={onPreviewMove}
+                                onMouseLeave={onPreviewClose}
                             >
                                 <button
                                     type="button"
@@ -191,22 +296,20 @@ function ChosenGrid({
                                             : `Đưa vào danh sách sẽ lưu (tối đa ${maxFinalSelection})`
                                     }
                                 >
-                                    <div className="aspect-square w-full overflow-hidden bg-slate-100">
+                                    <div className="aspect-square w-full overflow-hidden rounded-t-2xl bg-slate-100">
                                         <img
                                             src={src}
-                                            alt={item.name ?? item.key}
+                                            alt={label}
                                             loading="lazy"
                                             decoding="async"
-                                            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                                            className="h-full w-full object-cover transition-transform duration-200 hover:scale-[1.04]"
                                         />
                                     </div>
                                 </button>
 
                                 <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-2 py-2">
                                     <div className="min-w-0 flex-1 truncate text-[11px] text-slate-500">
-                                        {item.name ??
-                                            item.key.split("/").pop() ??
-                                            item.key}
+                                        {label}
                                     </div>
 
                                     <div className="flex items-center gap-1">
@@ -214,10 +317,12 @@ function ChosenGrid({
                                             type="button"
                                             disabled={isMovingBack}
                                             onClick={() => onToggleSelect(item)}
-                                            className={`rounded-full px-2 py-1 text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-60 ${active
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-slate-100 text-slate-700"
-                                                }`}
+                                            className={[
+                                                "rounded-full px-2 py-1 text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-60",
+                                                active
+                                                    ? "bg-blue-600 text-white"
+                                                    : "bg-slate-100 text-slate-700",
+                                            ].join(" ")}
                                         >
                                             {active ? "Đã chọn" : "Chọn"}
                                         </button>
@@ -225,9 +330,7 @@ function ChosenGrid({
                                         <button
                                             type="button"
                                             disabled={isMovingBack}
-                                            onClick={() =>
-                                                onRemoveChosen(item.key)
-                                            }
+                                            onClick={() => onRemoveChosen(item.key)}
                                             className="rounded-full bg-black px-2 py-1 text-[11px] text-white disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {isMovingBack ? "..." : "X"}
@@ -246,9 +349,19 @@ function ChosenGrid({
 function SelectedStrip({
     items,
     onRemove,
+    onPreview,
+    onPreviewMove,
+    onPreviewClose,
 }: {
     items: PickedMediaItem[];
     onRemove: (key: string) => void;
+    onPreview: (payload: {
+        item: PickedMediaItem;
+        event: React.MouseEvent;
+        size: number;
+    }) => void;
+    onPreviewMove: (event: React.MouseEvent) => void;
+    onPreviewClose: () => void;
 }) {
     return (
         <div className="space-y-3">
@@ -263,21 +376,28 @@ function SelectedStrip({
             ) : (
                 <div className="flex flex-wrap gap-3">
                     {items.map((item) => {
-                        const src =
-                            item.url || resolveMediaPreviewSrc(item.key) || "";
+                        const src = getImageSrc(item);
+                        const label = getLabel(item);
 
                         return (
                             <div
                                 key={item.key}
                                 className="relative h-24 w-24 overflow-hidden rounded-2xl border border-blue-200 bg-white"
+                                onMouseEnter={(event) =>
+                                    onPreview({ item, event, size: 360 })
+                                }
+                                onMouseMove={onPreviewMove}
+                                onMouseLeave={onPreviewClose}
                             >
-                                <img
-                                    src={src}
-                                    alt={item.name ?? item.key}
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="h-full w-full object-cover"
-                                />
+                                <div className="h-full w-full overflow-hidden rounded-2xl">
+                                    <img
+                                        src={src}
+                                        alt={label}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="h-full w-full object-cover transition-transform duration-200 hover:scale-[1.05]"
+                                    />
+                                </div>
 
                                 <button
                                     type="button"
@@ -310,6 +430,7 @@ export default function MediaPickerMulti({
     const [movingBackKey, setMovingBackKey] = React.useState<string | null>(
         null
     );
+    const [preview, setPreview] = React.useState<PreviewState>(null);
 
     const chosenItems = React.useMemo(
         () => normalizeItems(chosenValue),
@@ -325,6 +446,46 @@ export default function MediaPickerMulti({
         () => new Set(selectedItems.map((item) => item.key)),
         [selectedItems]
     );
+
+    const handlePreview = React.useCallback(
+        ({
+            item,
+            event,
+            size,
+        }: {
+            item: PickedMediaItem;
+            event: React.MouseEvent;
+            size: number;
+        }) => {
+            const src = getImageSrc(item);
+            if (!src) return;
+
+            setPreview({
+                src,
+                label: getLabel(item),
+                x: event.clientX,
+                y: event.clientY,
+                size,
+            });
+        },
+        []
+    );
+
+    const handlePreviewMove = React.useCallback((event: React.MouseEvent) => {
+        setPreview((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      x: event.clientX,
+                      y: event.clientY,
+                  }
+                : null
+        );
+    }, []);
+
+    const handlePreviewClose = React.useCallback(() => {
+        setPreview(null);
+    }, []);
 
     const handleDialogSubmit = React.useCallback(
         async (keys: string[]) => {
@@ -428,6 +589,8 @@ export default function MediaPickerMulti({
 
     return (
         <div className="space-y-4">
+            <FloatingPreview preview={preview} />
+
             {(title || description) && (
                 <div className="space-y-1">
                     {title ? (
@@ -470,11 +633,17 @@ export default function MediaPickerMulti({
                 onRemoveChosen={handleRemoveChosen}
                 maxFinalSelection={maxFinalSelection}
                 movingBackKey={movingBackKey}
+                onPreview={handlePreview}
+                onPreviewMove={handlePreviewMove}
+                onPreviewClose={handlePreviewClose}
             />
 
             <SelectedStrip
                 items={selectedItems}
                 onRemove={handleRemoveSelected}
+                onPreview={handlePreview}
+                onPreviewMove={handlePreviewMove}
+                onPreviewClose={handlePreviewClose}
             />
 
             <MediaBrowserDialog
