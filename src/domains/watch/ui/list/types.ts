@@ -1,12 +1,7 @@
-export type ViewKey =
-    | "draft"
-    | "processing"
-    | "ready"
-    | "hold"
-    | "sold"
-    | "all";
+import type { WatchListView } from "../../shared/watch-status";
 
-export type WatchListView = ViewKey;
+export type ViewKey = WatchListView;
+export type { WatchListView };
 
 export type WatchListCounts = {
     draft: number;
@@ -37,6 +32,9 @@ export type WatchRow = {
     imagesCount: number;
     hasImages: boolean;
     hasContent: boolean;
+    isContentDownloaded?: boolean;
+    isImageDownloaded?: boolean;
+    isPosted?: boolean;
     lastUpdatedBy?: {
         id: string;
         name?: string | null;

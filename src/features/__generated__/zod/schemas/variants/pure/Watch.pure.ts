@@ -25,6 +25,8 @@ export const WatchModelSchema = z.object({
     hasBox: z.boolean(),
     hasPapers: z.boolean(),
     specStatus: WatchSpecStatusSchema,
+    isImageDownloaded: z.boolean(),
+    isContentDownloaded: z.boolean(),
     notes: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),

@@ -47,6 +47,14 @@ export function WatchOverviewPanel({ detail }: { detail: any }) {
 export function WatchOpsPanel({ detail }: { detail: any }) {
   const watch = detail?.watch ?? {};
 
+  const isImageDownloaded = Boolean(
+    watch.isImageDownloaded ?? detail?.isImageDownloaded
+  );
+  const isContentDownloaded = Boolean(
+    watch.isContentDownloaded ?? detail?.isContentDownloaded
+  );
+  const isPosted = isImageDownloaded && isContentDownloaded;
+
   return (
     <SectionCard
       title="Tổng quan vận hành"
@@ -55,6 +63,8 @@ export function WatchOpsPanel({ detail }: { detail: any }) {
       defaultOpen
     >
       <div className="space-y-3">
+        <SidebarStat label="Post status" value={isPosted ? "ĐÃ ĐĂNG" : "CHƯA ĐĂNG"} />
+
         <SidebarStat label="Product status" value={detail?.status || "-"} />
         <SidebarStat label="Sale state" value={watch.saleState || "-"} />
         <SidebarStat label="Service state" value={watch.serviceState || "-"} />

@@ -27,6 +27,8 @@ const makeSchema = () => z.object({
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
   specStatus: SortOrderSchema.optional(),
+  isImageDownloaded: SortOrderSchema.optional(),
+  isContentDownloaded: SortOrderSchema.optional(),
   notes: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),

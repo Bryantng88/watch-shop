@@ -54,7 +54,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
         header: {
             sku: s(detail?.sku),
             status: s(detail?.status || "DRAFT"),
-            serviceState: s(detail?.watch?.serviceState || "DRAFT"),
+            serviceState: s(detail?.watch?.serviceState || "NOT_REQUIRED"),
         },
 
         basic: {
@@ -65,8 +65,9 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             categoryId: s(detail?.category?.id),
             gender: s(detail?.watch?.gender || "MEN"),
             siteChannel: s(detail?.watch?.siteChannel || "AFFORDABLE"),
-            stockState: s(detail?.watch?.stockState),
-            saleState: s(detail?.watch?.saleState),
+            stockState: s(detail?.watch?.stockState || "IN_STOCK"),
+            saleState: s(detail?.watch?.saleState || "DRAFT"),
+            serviceState: s(detail?.watch?.serviceState || "NOT_REQUIRED"),
             conditionGrade: s(detail?.watch?.conditionGrade),
             movementType: s(detail?.watch?.movementType),
             movementCalibre: s(detail?.watch?.movementCalibre),

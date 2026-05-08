@@ -5,6 +5,7 @@ import type {
   QuickOrderWatchInput,
 } from "../shared";
 import { getWatchBridgeRow } from "./watch-bridge.repo";
+import { markWatchConsignedTo, markWatchReady, markWatchServicePending } from "../core/state";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
 import * as orderService from "@/app/(admin)/admin/orders/_servers/order.service";
@@ -64,14 +65,11 @@ export async function buyBackFromWatch(input: BuyBackFromWatchInput) {
     needService: Boolean(input.needService),
   });
 
-  // Đồng bộ watch state mới
-  await prisma.watch.updateMany({
-    where: { productId: input.productId },
-    data: {
-      saleState: input.needService ? "IN_SERVICE" : "READY",
-      serviceState: input.needService ? "PENDING" : null,
-    },
-  });
+  if (input.needService) {
+    await markWatchServicePending(input.productId);
+  } else {
+    await markWatchReady(input.productId);
+  }
 
   if (input.needService) {
     await serviceRequestService.ensurePriorityTechnicalCheckForBuyBack({
@@ -104,12 +102,7 @@ export async function consignWatch(input: ConsignWatchInput) {
     notes: input.notes ?? null,
   });
 
-  await prisma.watch.updateMany({
-    where: { productId: input.productId },
-    data: {
-      saleState: "CONSIGNED_TO",
-    },
-  });
+  await markWatchConsignedTo(input.productId);
 
   return result;
 }

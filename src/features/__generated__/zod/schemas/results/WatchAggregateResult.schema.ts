@@ -18,6 +18,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     hasBox: z.number(),
     hasPapers: z.number(),
     specStatus: z.number(),
+    isImageDownloaded: z.number(),
+    isContentDownloaded: z.number(),
     notes: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),

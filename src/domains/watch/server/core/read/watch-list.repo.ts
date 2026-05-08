@@ -1,207 +1,19 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import type {
-  WatchListFilters,
-  WatchListResult,
-  WatchListView,
-} from "../../../ui/list/types";
+import { normalizeWatchListView } from "../../../shared/watch-status";
+import type { WatchListFilters, WatchListResult } from "../../../ui/list/types";
 import { mapWatchRow } from "../../../ui/list/helpers";
+import {
+  buildWatchListBaseWhere,
+  buildWatchListSegmentWhere,
+  buildWatchListSummaryWhere,
+  buildWatchListWhere,
+  mergeWatchWhere,
+} from "./watch-list.query";
 
-function toPositiveInt(value: any, fallback: number) {
+function toPositiveInt(value: unknown, fallback: number) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}
-
-function buildHasContentWhere(): Prisma.WatchWhereInput {
-  return {
-    OR: [
-      {
-        watchContent: {
-          is: {
-            hookText: { not: null },
-          },
-        },
-      },
-      {
-        watchContent: {
-          is: {
-            body: { not: null },
-          },
-        },
-      },
-      {
-        watchContent: {
-          is: {
-            summary: { not: null },
-          },
-        },
-      },
-    ],
-  };
-}
-
-function buildHasGalleryWhere(): Prisma.WatchWhereInput {
-  return {
-    product: {
-      is: {
-        productImage: {
-          some: {
-            role: "GALLERY" as any,
-          },
-        },
-      },
-    },
-  };
-}
-
-function buildBaseWhere(input: WatchListFilters): Prisma.WatchWhereInput {
-  const and: Prisma.WatchWhereInput[] = [];
-
-  if (input.q?.trim()) {
-    const q = input.q.trim();
-
-    and.push({
-      OR: [
-        {
-          product: {
-            is: {
-              title: { contains: q, mode: "insensitive" },
-            },
-          },
-        },
-        {
-          product: {
-            is: {
-              sku: { contains: q, mode: "insensitive" },
-            },
-          },
-        },
-        {
-          product: {
-            is: {
-              brand: {
-                is: {
-                  name: { contains: q, mode: "insensitive" },
-                },
-              },
-            },
-          },
-        },
-        {
-          watchSpecV2: {
-            is: {
-              model: { contains: q, mode: "insensitive" },
-            },
-          },
-        },
-        {
-          watchSpecV2: {
-            is: {
-              referenceNumber: {
-                contains: q,
-                mode: "insensitive",
-              },
-            },
-          },
-        },
-      ],
-    });
-  }
-
-  if (input.sku?.trim()) {
-    and.push({
-      product: {
-        is: {
-          sku: {
-            contains: input.sku.trim(),
-            mode: "insensitive",
-          },
-        },
-      },
-    });
-  }
-
-  if (input.brandId) {
-    and.push({
-      product: {
-        is: {
-          brandId: input.brandId,
-        },
-      },
-    });
-  }
-
-  if (input.vendorId) {
-    and.push({
-      product: {
-        is: {
-          vendorId: input.vendorId,
-        },
-      },
-    });
-  }
-
-  return and.length ? { AND: and } : {};
-}
-
-function buildSegmentWhere(view?: WatchListView): Prisma.WatchWhereInput {
-  switch (view) {
-    case "draft":
-      return {
-        AND: [
-          { NOT: buildHasContentWhere() },
-          { NOT: buildHasGalleryWhere() },
-        ],
-      };
-
-    case "processing":
-      return {
-        OR: [
-          {
-            AND: [
-              buildHasContentWhere(),
-              { NOT: buildHasGalleryWhere() },
-            ],
-          },
-          {
-            AND: [
-              { NOT: buildHasContentWhere() },
-              buildHasGalleryWhere(),
-            ],
-          },
-        ],
-      };
-
-    case "ready":
-      return {
-        AND: [
-          buildHasContentWhere(),
-          buildHasGalleryWhere(),
-        ],
-      };
-
-    case "hold":
-      return { saleState: "HOLD" as any };
-
-    case "sold":
-      return { saleState: "SOLD" as any };
-
-    case "all":
-    default:
-      return {};
-  }
-}
-function mergeWhere(
-  baseWhere: Prisma.WatchWhereInput,
-  segmentWhere: Prisma.WatchWhereInput
-): Prisma.WatchWhereInput {
-  const hasBase = Object.keys(baseWhere).length > 0;
-  const hasSegment = Object.keys(segmentWhere).length > 0;
-
-  if (hasBase && hasSegment) return { AND: [baseWhere, segmentWhere] };
-  if (hasBase) return baseWhere;
-  if (hasSegment) return segmentWhere;
-  return {};
 }
 
 function buildSort(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
@@ -226,12 +38,14 @@ export async function listAdminWatches(
   const page = toPositiveInt(input.page, 1);
   const pageSize = toPositiveInt(input.pageSize, 20);
   const skip = (page - 1) * pageSize;
+  const activeView = normalizeWatchListView(input.view);
 
-  const activeView: WatchListView = input.view ?? "draft";
-
-  const baseWhere = buildBaseWhere(input);
-  const listWhere = mergeWhere(baseWhere, buildSegmentWhere(activeView));
+  const baseWhere = buildWatchListBaseWhere(input);
+  const listWhere = buildWatchListWhere(input, activeView);
   const orderBy = buildSort(input.sort);
+
+  const buildCountWhere = (view: typeof activeView) =>
+    mergeWatchWhere(baseWhere, buildWatchListSegmentWhere(view));
 
   const [
     rows,
@@ -273,37 +87,14 @@ export async function listAdminWatches(
     }),
 
     prisma.watch.count({ where: listWhere }),
-
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("draft")),
-    }),
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("processing")),
-    }),
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("ready")),
-    }),
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("hold")),
-    }),
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("sold")),
-    }),
-    prisma.watch.count({
-      where: mergeWhere(baseWhere, buildSegmentWhere("all")),
-    }),
-
-    prisma.watch.count({
-      where: {
-        AND: [listWhere, buildHasContentWhere()],
-      },
-    }),
-
-    prisma.watch.count({
-      where: {
-        AND: [listWhere, buildHasGalleryWhere()],
-      },
-    }),
+    prisma.watch.count({ where: buildCountWhere("draft") }),
+    prisma.watch.count({ where: buildCountWhere("processing") }),
+    prisma.watch.count({ where: buildCountWhere("ready") }),
+    prisma.watch.count({ where: buildCountWhere("hold") }),
+    prisma.watch.count({ where: buildCountWhere("sold") }),
+    prisma.watch.count({ where: buildCountWhere("all") }),
+    prisma.watch.count({ where: buildWatchListSummaryWhere(listWhere, "content") }),
+    prisma.watch.count({ where: buildWatchListSummaryWhere(listWhere, "image") }),
   ]);
 
   const actorIds = Array.from(

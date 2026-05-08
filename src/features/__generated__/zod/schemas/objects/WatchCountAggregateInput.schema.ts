@@ -21,6 +21,8 @@ const makeSchema = () => z.object({
   hasBox: z.literal(true).optional(),
   hasPapers: z.literal(true).optional(),
   specStatus: z.literal(true).optional(),
+  isImageDownloaded: z.literal(true).optional(),
+  isContentDownloaded: z.literal(true).optional(),
   notes: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),

@@ -299,8 +299,8 @@ export async function submitWatchForm(values: WatchFormValues) {
                     values.basic.siteChannel,
                     WatchFormEnums.WatchSiteChannel
                 ),
-                stockState: values.basic.stockState || null,
-                saleState: values.basic.saleState || null,
+                // saleState / stockState / serviceState are workflow fields.
+                // They are updated through watch-state transition actions only.
                 conditionGrade: values.basic.conditionGrade || null,
                 movementType: pickEnumOrNull(
                     values.basic.movementType,

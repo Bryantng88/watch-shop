@@ -17,6 +17,7 @@ import WatchContentSection from "../ui/edit/WatchContentSection";
 import WatchPricingSidebar from "../ui/edit/WatchPricingSidebar";
 import WatchImageSection from "../ui/edit/WatchImageSection";
 import WatchMediaSidebar from "../ui/edit/WatchMediaSidebar";
+import WatchStateSection from "../ui/edit/WatchStateSection";
 
 type SimpleOption = {
     id: string;
@@ -385,6 +386,27 @@ export default function WatchFormClient({
                 </div>
 
                 <div className="space-y-6 xl:col-span-4">
+                    <WatchStateSection
+                        productId={values.productId}
+                        saleState={values.basic.saleState}
+                        serviceState={values.basic.serviceState}
+                        stockState={values.basic.stockState}
+                        productStatus={values.header.status}
+                        onChange={(patch) => {
+                            setValues((prev) => ({
+                                ...prev,
+                                header: {
+                                    ...prev.header,
+                                    ...(patch.header ?? {}),
+                                },
+                                basic: {
+                                    ...prev.basic,
+                                    ...(patch.basic ?? {}),
+                                },
+                            }));
+                        }}
+                    />
+
                     <div
                         ref={pricingRef}
                         className={

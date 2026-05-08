@@ -155,24 +155,6 @@ export default function WatchBasicSection({
                     />
                 </div>
                 <div>
-                    <FieldLabel>Stock state</FieldLabel>
-                    <Input
-                        value={values.stockState}
-                        onChange={(e) => onChange({ stockState: e.target.value })}
-                        placeholder="IN_STOCK / RESERVED / ..."
-                    />
-                </div>
-
-                <div>
-                    <FieldLabel>Sale state</FieldLabel>
-                    <Input
-                        value={values.saleState}
-                        onChange={(e) => onChange({ saleState: e.target.value })}
-                        placeholder="DRAFT / LIVE / ..."
-                    />
-                </div>
-
-                <div>
                     <FieldLabel>Condition grade</FieldLabel>
                     <Input
                         value={values.conditionGrade}

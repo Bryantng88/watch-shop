@@ -21,6 +21,8 @@ const makeSchema = () => z.object({
   hasBox: SortOrderSchema.optional(),
   hasPapers: SortOrderSchema.optional(),
   specStatus: SortOrderSchema.optional(),
+  isImageDownloaded: SortOrderSchema.optional(),
+  isContentDownloaded: SortOrderSchema.optional(),
   notes: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()

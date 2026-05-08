@@ -1,3 +1,4 @@
+import { isWatchServiceReady } from "../../shared/watch-status";
 import type { WatchListCounts, WatchRow } from "./types";
 
 export function formatMoney(value?: number | null) {
@@ -28,21 +29,37 @@ function sortImages(images: any[]) {
     );
 }
 
-function getInlineImages(row: any) {
+const WATCH_THUMBNAIL_IMAGE_ROLES = ["INLINE", "GALLERY"];
+const WATCH_READY_IMAGE_ROLES = ["GALLERY"];
+
+function getThumbnailImages(row: any) {
     return sortImages(
-        pickImages(row).filter((img: any) => normalizeRole(img?.role) === "INLINE")
+        pickImages(row).filter((img: any) =>
+            WATCH_THUMBNAIL_IMAGE_ROLES.includes(normalizeRole(img?.role))
+        )
     );
 }
 
-function getGalleryImages(row: any) {
+function getReadyImages(row: any) {
     return sortImages(
-        pickImages(row).filter((img: any) => normalizeRole(img?.role) === "GALLERY")
+        pickImages(row).filter((img: any) =>
+            WATCH_READY_IMAGE_ROLES.includes(normalizeRole(img?.role))
+        )
+    );
+}
+
+function getPreferredListImage(row: any) {
+    const images = getThumbnailImages(row);
+    return (
+        images.find((img: any) => normalizeRole(img?.role) === "INLINE") ??
+        images.find((img: any) => normalizeRole(img?.role) === "GALLERY") ??
+        images[0] ??
+        null
     );
 }
 
 export function mapWatchImage(row: any) {
-    const inlineImages = getInlineImages(row);
-    const picked = inlineImages[0];
+    const picked = getPreferredListImage(row);
 
     if (!picked) return null;
 
@@ -50,6 +67,10 @@ export function mapWatchImage(row: any) {
     if (!fileKey) return picked?.url ?? null;
 
     return buildMediaUrl(fileKey);
+}
+
+export function countListImages(row: any) {
+    return getReadyImages(row).length;
 }
 
 export function hasValidContent(row: any) {
@@ -109,7 +130,11 @@ function getReviewStatus(row: any, targetType: "CONTENT" | "IMAGE") {
     return String(found?.status ?? "DRAFT").toUpperCase();
 }
 
-function normalizeContentStatus(row: any): ReviewStatus {
+function normalizeContentStatus(row: any): ReviewStatus | "PUBLISHED" {
+    if (row?.isContentDownloaded && row?.isImageDownloaded) {
+        return "PUBLISHED";
+    }
+
     const contentStatus = getReviewStatus(row, "CONTENT");
     const imageStatus = getReviewStatus(row, "IMAGE");
 
@@ -148,21 +173,12 @@ export function formatDateTime(
 }
 export function mapWatchRow(row: any): WatchRow {
     const product = row?.product ?? row ?? {};
-    const galleryImages = getGalleryImages(row);
-    const imagesCount = galleryImages.length;
+    const imagesCount = countListImages(row);
     const hasImages = imagesCount > 0;
     const hasContent = hasValidContent(row);
     const contentStatus = normalizeContentStatus(row);
     const serviceIssuesCount = getOpenServiceIssuesCount(row);
-    const serviceState = String(row?.serviceState ?? "").toUpperCase();
-
-    const serviceReady =
-        !serviceState ||
-        serviceState === "NONE" ||
-        serviceState === "NO_SERVICE" ||
-        serviceState === "NOT_REQUIRED" ||
-        serviceState === "COMPLETED" ||
-        serviceState === "DONE";
+    const serviceReady = isWatchServiceReady(row?.serviceState);
 
     const price = row?.watchPrice ?? row?.price ?? {};
 
@@ -187,6 +203,9 @@ export function mapWatchRow(row: any): WatchRow {
         hasImages,
         hasContent,
         contentStatus,
+        isContentDownloaded: Boolean(row?.isContentDownloaded),
+        isImageDownloaded: Boolean(row?.isImageDownloaded),
+        isPosted: Boolean(row?.isContentDownloaded && row?.isImageDownloaded),
 
         serviceIssuesCount,
 
@@ -306,6 +325,10 @@ export function contentStatusText(row: WatchRow) {
 export function contentStatusTone(row: WatchRow) {
     const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
 
+    if (status === "PUBLISHED") {
+        return "bg-violet-50 text-violet-700 ring-violet-200";
+    }
+
     if (status === "APPROVED") {
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     }
@@ -314,9 +337,6 @@ export function contentStatusTone(row: WatchRow) {
         return "bg-blue-50 text-blue-700 ring-blue-200";
     }
 
-    if (status === "PUBLISHED") {
-        return "bg-blue-50 text-blue-700 ring-blue-200";
-    }
 
     if (status === "SUBMITTED") {
         return "bg-amber-50 text-amber-700 ring-amber-200";

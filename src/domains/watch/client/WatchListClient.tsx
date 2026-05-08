@@ -7,15 +7,13 @@ import WatchListViewTabs from "../ui/list/WatchListViewTabs";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
 import { buildCounts } from "../ui/list/helpers";
+import { normalizeWatchListView } from "../shared/watch-status";
 import type { ViewKey, WatchListPageProps, WatchRow } from "../ui/list/types";
 
 function normalizeView(value: string | null | undefined): ViewKey {
-    const view = String(value ?? "").toLowerCase();
-    if (["draft", "processing", "ready", "hold", "sold", "all"].includes(view)) {
-        return view as ViewKey;
-    }
-    return "draft";
+    return normalizeWatchListView(value);
 }
+
 
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
     if (!value) next.delete(key);

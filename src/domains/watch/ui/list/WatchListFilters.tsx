@@ -35,18 +35,21 @@ const sortOptions: Option[] = [
 ];
 
 const saleStageOptions: Option[] = [
-    { label: "Sale stage: tất cả", value: "" },
+    { label: "Sale: tất cả", value: "" },
+    { label: "Draft", value: "DRAFT" },
     { label: "Ready", value: "READY" },
     { label: "Hold", value: "HOLD" },
     { label: "Sold", value: "SOLD" },
+    { label: "Ký gửi đi", value: "CONSIGNED_TO" },
+    { label: "Đang service", value: "IN_SERVICE" },
 ];
 
 const opsStageOptions: Option[] = [
-    { label: "Ops stage: tất cả", value: "" },
-    { label: "DONE", value: "DONE" },
-    { label: "IN_PROGRESS", value: "IN_PROGRESS" },
-    { label: "PENDING", value: "PENDING" },
-    { label: "NOT_REQUIRED", value: "NOT_REQUIRED" },
+    { label: "Service: tất cả", value: "" },
+    { label: "Không cần service", value: "NOT_REQUIRED" },
+    { label: "Chờ service", value: "PENDING" },
+    { label: "Đang service", value: "IN_SERVICE" },
+    { label: "Đã xong", value: "DONE" },
 ];
 
 function Input({ value, placeholder, onChange }: { value: string; placeholder?: string; onChange: (value: string) => void }) {

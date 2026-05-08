@@ -1,2 +1,4 @@
 export * from "./watch-content.service";
-export type { WatchContentReviewAction } from "./watch-content.repo";
+export * from "./watch-content.repo";
+export * from "./watch-download-gallery.service";
+export * from "./watch-download-gallery.repo";

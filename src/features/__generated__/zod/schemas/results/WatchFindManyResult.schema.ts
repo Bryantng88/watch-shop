@@ -19,6 +19,8 @@ export const WatchFindManyResultSchema = z.object({
   hasBox: z.boolean(),
   hasPapers: z.boolean(),
   specStatus: z.unknown(),
+  isImageDownloaded: z.boolean(),
+  isContentDownloaded: z.boolean(),
   notes: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),

@@ -1,3 +1,4 @@
+import { WatchSaleState, WatchServiceState, WatchStockState } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
@@ -10,9 +11,9 @@ export async function createWatchDraftRepo(
     gender?: any;
     siteChannel?: any;
     conditionGrade?: string | null;
-    stockState?: string | null;
-    saleState?: string | null;
-    serviceState?: string | null;
+    stockState?: WatchStockState | null;
+    saleState?: WatchSaleState | null;
+    serviceState?: WatchServiceState | null;
     notes?: string | null;
   }
 ) {
@@ -23,9 +24,9 @@ export async function createWatchDraftRepo(
       gender: input.gender ?? "MEN",
       siteChannel: input.siteChannel ?? "AFFORDABLE",
       conditionGrade: input.conditionGrade ?? null,
-      stockState: input.stockState ?? "IN_STOCK",
-      saleState: input.saleState ?? "DRAFT",
-      serviceState: input.serviceState ?? "DRAFT",
+      stockState: input.stockState ?? WatchStockState.IN_STOCK,
+      saleState: input.saleState ?? WatchSaleState.DRAFT,
+      serviceState: input.serviceState ?? WatchServiceState.NOT_REQUIRED,
       notes: input.notes ?? null,
       updatedAt: new Date(),
     } as any,
@@ -39,9 +40,9 @@ export async function updateWatchCoreRepo(
     gender?: any;
     siteChannel?: any;
     conditionGrade?: string | null;
-    stockState?: string | null;
-    saleState?: string | null;
-    serviceState?: string | null;
+    stockState?: WatchStockState | null;
+    saleState?: WatchSaleState | null;
+    serviceState?: WatchServiceState | null;
     serialNumber?: string | null;
     yearText?: string | null;
     movementType?: any;
@@ -60,10 +61,14 @@ export async function updateWatchCoreRepo(
       ...(input.conditionGrade !== undefined
         ? { conditionGrade: input.conditionGrade ?? null }
         : {}),
-      ...(input.stockState !== undefined ? { stockState: input.stockState ?? null } : {}),
-      ...(input.saleState !== undefined ? { saleState: input.saleState ?? null } : {}),
+      ...(input.stockState !== undefined
+        ? { stockState: input.stockState ?? WatchStockState.IN_STOCK }
+        : {}),
+      ...(input.saleState !== undefined
+        ? { saleState: input.saleState ?? WatchSaleState.DRAFT }
+        : {}),
       ...(input.serviceState !== undefined
-        ? { serviceState: input.serviceState ?? null }
+        ? { serviceState: input.serviceState ?? WatchServiceState.NOT_REQUIRED }
         : {}),
       ...(input.serialNumber !== undefined
         ? { serialNumber: input.serialNumber ?? null }

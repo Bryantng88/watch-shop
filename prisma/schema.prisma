@@ -911,9 +911,10 @@ model Watch {
   hasBox          Boolean       @default(false)
   hasPapers       Boolean       @default(false)
 
-  specStatus WatchSpecStatus @default(PENDING)
-
-  notes String?
+  specStatus          WatchSpecStatus @default(PENDING)
+  isImageDownloaded   Boolean         @default(false)
+  isContentDownloaded Boolean         @default(false)
+  notes               String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @db.Timestamptz(6)
@@ -1859,4 +1860,26 @@ enum WatchReviewAction {
   REJECT
   RESET_DRAFT
   AUTO_APPROVE
+}
+
+enum WatchSaleState {
+  DRAFT
+  READY
+  HOLD
+  SOLD
+  CONSIGNED_TO
+  IN_SERVICE
+}
+
+enum WatchServiceState {
+  NOT_REQUIRED
+  PENDING
+  IN_SERVICE
+  DONE
+}
+
+enum WatchStockState {
+  IN_STOCK
+  OUT_OF_STOCK
+  RESERVED
 }

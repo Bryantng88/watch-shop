@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "generatorVersion": "0.1.0",
-  "generatedAt": "2026-05-06T10:40:49.572Z",
-  "outputPath": "D:\\workspace\\project\\watch-shop\\src\\features\\__generated__\\zod",
+  "generatedAt": "2026-05-08T03:00:11.532Z",
+  "outputPath": "D:\\workspace\\project\\watch-shop\\watch-shop\\src\\features\\__generated__\\zod",
   "files": [
     "schemas\\enums\\TransactionIsolationLevel.schema.ts",
     "schemas\\enums\\AcquisitionScalarFieldEnum.schema.ts",
@@ -135,6 +135,9 @@
     "schemas\\enums\\VendorType.schema.ts",
     "schemas\\enums\\ServiceRequestStatus_New.schema.ts",
     "schemas\\enums\\ServicePriorityLevel.schema.ts",
+    "schemas\\enums\\WatchSaleState.schema.ts",
+    "schemas\\enums\\WatchServiceState.schema.ts",
+    "schemas\\enums\\WatchStockState.schema.ts",
     "schemas\\objects\\AcquisitionWhereInput.schema.ts",
     "schemas\\objects\\AcquisitionOrderByWithRelationInput.schema.ts",
     "schemas\\objects\\AcquisitionWhereUniqueInput.schema.ts",

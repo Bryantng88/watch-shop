@@ -28,6 +28,7 @@ export type WatchFormValues = {
         siteChannel: string;
         stockState: string;
         saleState: string;
+        serviceState: string;
         conditionGrade: string;
         movementType: string;
         movementCalibre: string;

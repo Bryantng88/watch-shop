@@ -7,8 +7,41 @@ import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 
-export default function WatchContentPanel({ detail }: { detail: any }) {
+async function markContentCopied(productId: string) {
+  const res = await fetch(`/api/admin/watches/${productId}/post-usage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "CONTENT_COPIED" }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.error || "Không thể đánh dấu đã copy content.");
+  }
+
+  return json as {
+    isContentDownloaded: boolean;
+    isImageDownloaded: boolean;
+    isPosted: boolean;
+  };
+}
+
+type Props = {
+  detail: any;
+  canReviewContent?: boolean;
+};
+
+export default function WatchContentPanel({ detail }: Props) {
   const [copied, setCopied] = useState(false);
+  const [usage, setUsage] = useState({
+    isContentDownloaded: Boolean(
+      detail?.review?.isContentDownloaded ?? detail?.watch?.isContentDownloaded
+    ),
+    isImageDownloaded: Boolean(
+      detail?.review?.isImageDownloaded ?? detail?.watch?.isImageDownloaded
+    ),
+    isPosted: Boolean(detail?.review?.isPosted ?? detail?.watch?.isPosted),
+  });
 
   const content = detail?.content ?? {};
   const contentStatus = String(
@@ -33,11 +66,20 @@ export default function WatchContentPanel({ detail }: { detail: any }) {
     [content, detail?.title, bulletSpecs]
   );
   const [postTitle, ...postRest] = fullPost.split("\n\n");
+
   const handleCopy = async () => {
-    if (!canCopy) return;
+    if (!canCopy || !detail?.productId) return;
 
     await navigator.clipboard.writeText(fullPost);
     setCopied(true);
+
+    try {
+      const next = await markContentCopied(detail.productId);
+      setUsage(next);
+    } catch (error) {
+      console.error(error);
+    }
+
     window.setTimeout(() => setCopied(false), 1600);
   };
 
@@ -62,6 +104,13 @@ export default function WatchContentPanel({ detail }: { detail: any }) {
                 <div className="mt-1 text-sm text-slate-500">
                   Title → Body → Spec → Hook → Hashtag.
                 </div>
+                <div className="text-xs font-semibold">
+                  {usage.isContentDownloaded ? (
+                    <span className="text-emerald-600">Đã copy content</span>
+                  ) : (
+                    <span className="text-slate-500">Chưa copy content</span>
+                  )}
+                </div>
               </div>
 
               <Button
@@ -83,7 +132,7 @@ export default function WatchContentPanel({ detail }: { detail: any }) {
                 ) : (
                   <>
                     <Copy className="mr-2 h-4 w-4" />
-                    Copy nội dung
+                    {usage.isContentDownloaded ? "Copy lại" : "Copy nội dung"}
                   </>
                 )}
               </Button>

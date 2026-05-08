@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { Download, ImageIcon, Loader2, Lock } from "lucide-react";
+
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import InlineImage from "@/domains/shared/ui/image/InlineImage";
-import { SectionCard, SectionEmpty } from "./shared";
+
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
+import { SectionCard, SectionEmpty } from "./shared";
 
 type Props = {
   detail: any;
@@ -17,55 +21,64 @@ function sortImages(items: any[]) {
   );
 }
 
-function zipName(detail: any) {
-  const raw = detail?.sku || detail?.title || "watch-gallery";
-  return `${String(raw).replace(/[^\w.\-()[\] ]+/g, "_")}-gallery-jpeg.zip`;
-}
-
 export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
-  const [downloading, setDownloading] = useState(false);
-  const gallery = sortImages(galleryImages);
+  const progress = useAppProgress();
+  const notify = useNotify();
 
+  const [downloading, setDownloading] = useState(false);
+  const [usage, setUsage] = useState({
+    isContentDownloaded: Boolean(
+      detail?.isContentDownloaded ??
+      detail?.review?.isContentDownloaded ??
+      detail?.watch?.isContentDownloaded
+    ),
+    isImageDownloaded: Boolean(
+      detail?.isImageDownloaded ??
+      detail?.review?.isImageDownloaded ??
+      detail?.watch?.isImageDownloaded
+    ),
+  });
+
+  const gallery = sortImages(galleryImages);
   const imageStatus = String(
     detail?.review?.image?.status ?? "DRAFT"
   ).toUpperCase();
 
   const canViewAndDownload = imageStatus === "APPROVED";
+  const isPosted = usage.isImageDownloaded && usage.isContentDownloaded;
 
-  async function handleDownloadAll() {
-    if (!detail?.productId || downloading || !canViewAndDownload) return;
+  function handleDownloadAll() {
+    const productId = String(detail?.productId ?? detail?.id ?? "").trim();
 
-    try {
-      setDownloading(true);
+    if (!productId || downloading || !canViewAndDownload) return;
 
-      const res = await fetch(
-        `/api/admin/watches/${detail.productId}/download-gallery`,
-        { method: "GET", cache: "no-store" }
-      );
+    setDownloading(true);
 
-      const contentType = res.headers.get("content-type") || "";
+    progress.show({
+      title: "Đang tải gallery",
+      message: "Hệ thống đang đóng gói ảnh GALLERY thành file zip.",
+    });
 
-      if (!res.ok) {
-        const json = contentType.includes("application/json")
-          ? await res.json().catch(() => ({}))
-          : {};
-        throw new Error(json?.error || "Không thể tải gallery.");
-      }
+    const url = `/api/admin/watches/${productId}/download-gallery`;
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+    window.location.href = url;
 
-      a.href = url;
-      a.download = zipName(detail);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    setUsage((prev) => ({
+      ...prev,
+      isImageDownloaded: true,
+    }));
 
-      URL.revokeObjectURL(url);
-    } finally {
+    notify.success({
+      title: "Đang tải gallery",
+      message: usage.isContentDownloaded
+        ? "Ảnh đã được tải, watch đã đủ điều kiện Đã đăng."
+        : "Ảnh đã được tải và hệ thống đã ghi nhận.",
+    });
+
+    window.setTimeout(() => {
+      progress.hide();
       setDownloading(false);
-    }
+    }, 1200);
   }
 
   return (
@@ -85,7 +98,15 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs font-semibold">
+              {usage.isImageDownloaded ? (
+                <span className="text-emerald-600">Đã tải ảnh</span>
+              ) : (
+                <span className="text-slate-500">Chưa tải ảnh</span>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handleDownloadAll}
@@ -100,7 +121,7 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  Tải tất cả JPEG
+                  {usage.isImageDownloaded ? "Tải lại gallery" : "Tải gallery"}
                 </>
               )}
             </button>

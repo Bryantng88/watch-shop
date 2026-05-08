@@ -48,7 +48,12 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         productId: row.productId,
         title: row?.product?.title ?? null,
         status,
-        contentStatus: (row?.reviewStates ?? []).find((x: any) => String(x.targetType) === "CONTENT")?.status ?? row?.watchContent?.contentStatus ?? "DRAFT",
+        contentStatus: row?.isContentDownloaded && row?.isImageDownloaded
+            ? "PUBLISHED"
+            : (row?.reviewStates ?? []).find((x: any) => String(x.targetType) === "CONTENT")?.status ?? row?.watchContent?.contentStatus ?? "DRAFT",
+        isContentDownloaded: Boolean(row?.isContentDownloaded),
+        isImageDownloaded: Boolean(row?.isImageDownloaded),
+        isPosted: Boolean(row?.isContentDownloaded && row?.isImageDownloaded),
         images,
         imagesCount,
         hasImages,
@@ -146,6 +151,9 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             specStatus: row.specStatus ?? "PENDING",
             notes: row.notes ?? null,
             conditionGrade: row.conditionGrade ?? null,
+            isContentDownloaded: Boolean(row.isContentDownloaded),
+            isImageDownloaded: Boolean(row.isImageDownloaded),
+            isPosted: Boolean(row.isContentDownloaded && row.isImageDownloaded),
             serialNumber: row.serialNumber ?? null,
         },
         spec: row.watchSpecV2
@@ -225,6 +233,9 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             },
             readyForPublish:
                 contentStatus === "APPROVED" && imageStatus === "APPROVED",
+            isContentDownloaded: Boolean(row.isContentDownloaded),
+            isImageDownloaded: Boolean(row.isImageDownloaded),
+            isPosted: Boolean(row.isContentDownloaded && row.isImageDownloaded),
         },
         images: (row.product.productImage ?? []).map((img: any) => ({
             id: img.id,

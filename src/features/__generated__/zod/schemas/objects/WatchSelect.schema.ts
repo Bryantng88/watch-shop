@@ -26,6 +26,8 @@ const makeSchema = () => z.object({
   hasBox: z.boolean().optional(),
   hasPapers: z.boolean().optional(),
   specStatus: z.boolean().optional(),
+  isImageDownloaded: z.boolean().optional(),
+  isContentDownloaded: z.boolean().optional(),
   notes: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
