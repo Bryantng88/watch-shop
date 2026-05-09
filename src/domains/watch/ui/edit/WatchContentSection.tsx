@@ -36,6 +36,7 @@ type Props = {
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
+    onBeforeSubmitReview?: () => Promise<boolean>;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -62,6 +63,7 @@ export default function WatchContentSection({
     onChange,
     onOpenSpecModal,
     onReviewStatusChange,
+    onBeforeSubmitReview,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -182,6 +184,8 @@ export default function WatchContentSection({
                     status={contentReviewStatus}
                     reviewNote={contentReviewNote}
                     canReviewContent={canReviewContent}
+                    onBeforeSubmit={onBeforeSubmitReview}
+
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}

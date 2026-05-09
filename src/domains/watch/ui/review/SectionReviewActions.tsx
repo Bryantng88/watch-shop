@@ -23,6 +23,7 @@ type Props = {
     status?: string | null;
     reviewNote?: string | null;
     canReviewContent?: boolean;
+    onBeforeSubmit?: () => Promise<boolean>;
     onStatusChange?: (next: {
         status: ReviewStatus;
         reviewNote?: string | null;
@@ -90,6 +91,7 @@ export default function SectionReviewActions({
     reviewNote,
     canReviewContent = false,
     onStatusChange,
+    onBeforeSubmit,
 }: Props) {
     const router = useRouter();
     const dialog = useAppDialog();
@@ -166,6 +168,14 @@ export default function SectionReviewActions({
 
         try {
             setPending("submit");
+
+            if (onBeforeSubmit) {
+                const saved = await onBeforeSubmit();
+
+                if (!saved) {
+                    return;
+                }
+            }
 
             await callSubmitApi();
 

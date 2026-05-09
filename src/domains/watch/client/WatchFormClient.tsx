@@ -300,7 +300,31 @@ export default function WatchFormClient({
             }
         });
     };
+    const saveBeforeSubmitReview = async () => {
+        setMessage("");
 
+        try {
+            const result = await submitWatchForm(values);
+
+            updateValuesAfterSave(result);
+
+            setMessage(result?.message || "Đã lưu watch trước khi gửi duyệt.");
+
+            return true;
+        } catch (error: any) {
+            const message =
+                error?.message || "Không thể lưu watch trước khi gửi duyệt.";
+
+            setMessage(message);
+
+            notify.error({
+                title: "Chưa thể gửi duyệt",
+                message,
+            });
+
+            return false;
+        }
+    };
     return (
         <div className="space-y-6">
             <WatchEditHeader
@@ -354,6 +378,7 @@ export default function WatchFormClient({
                             canReviewContent={canReviewContent}
                             onChange={updateContent}
                             onOpenSpecModal={() => setSpecModalOpen(true)}
+                            onBeforeSubmitReview={saveBeforeSubmitReview}
                             onReviewStatusChange={(next) =>
                                 handleReviewStatusChange("content", next)
                             }
@@ -367,6 +392,7 @@ export default function WatchFormClient({
                         imageReviewStatus={values.imageReviewStatus}
                         imageReviewNote={values.imageReviewNote}
                         canReviewContent={canReviewContent}
+                        onBeforeSubmitReview={saveBeforeSubmitReview}
                         onChosenImagesChange={(items) => {
                             updateMedia({
                                 chosenImages: [...items],

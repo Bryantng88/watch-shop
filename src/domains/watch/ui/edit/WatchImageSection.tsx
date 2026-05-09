@@ -21,6 +21,7 @@ type Props = {
     imageReviewStatus?: string | null;
     imageReviewNote?: string | null;
     canReviewContent?: boolean;
+    onBeforeSubmitReview?: () => Promise<boolean>;
     onReviewStatusChange?: (next: {
         status: ReviewStatus;
         reviewNote?: string | null;
@@ -75,6 +76,7 @@ export default function WatchImageSection({
     imageReviewNote,
     canReviewContent = false,
     onReviewStatusChange,
+    onBeforeSubmitReview,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -159,6 +161,7 @@ export default function WatchImageSection({
                     status={imageReviewStatus}
                     reviewNote={imageReviewNote}
                     canReviewContent={canReviewContent}
+                    onBeforeSubmit={onBeforeSubmitReview}
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}
