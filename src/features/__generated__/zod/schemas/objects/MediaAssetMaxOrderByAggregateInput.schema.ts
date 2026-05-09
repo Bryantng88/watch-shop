@@ -12,6 +12,15 @@ const makeSchema = () => z.object({
   etag: SortOrderSchema.optional(),
   lastModified: SortOrderSchema.optional(),
   profile: SortOrderSchema.optional(),
+  status: SortOrderSchema.optional(),
+  productId: SortOrderSchema.optional(),
+  acquisitionId: SortOrderSchema.optional(),
+  role: SortOrderSchema.optional(),
+  sortOrder: SortOrderSchema.optional(),
+  isMissing: SortOrderSchema.optional(),
+  missingAt: SortOrderSchema.optional(),
+  lastSeenAt: SortOrderSchema.optional(),
+  movedFromKey: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();

@@ -181,7 +181,7 @@ export default function WatchImageSection({
                     />
                     <InfoChip
                         label="Gallery sẽ lưu"
-                        value={`${galleryImages.length}/8`}
+                        value={`${galleryImages.length}/10`}
                         tone="primary"
                     />
                 </div>
@@ -197,8 +197,8 @@ export default function WatchImageSection({
                         selectedValue={galleryImages}
                         onChosenChange={handleChosenImagesChange}
                         onSelectedChange={handleGalleryImagesChange}
+                        maxFinalSelection={10}
                         profile="edit"
-                        maxFinalSelection={8}
                         title="Ảnh gallery"
                         description="Chỉ chọn ảnh gallery. Ảnh đại diện INLINE được quản lý riêng cho header/list thumbnail."
                     />

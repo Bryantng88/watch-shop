@@ -42,6 +42,7 @@ export const WatchSpecV2ResultSchema = z.object({
     buckleType: z.string().nullable(),
     bookletIncluded: z.boolean(),
     cardIncluded: z.boolean(),
+    boxIncluded: z.boolean(),
     strapSetType: WatchStrapSetTypeSchema.nullable(),
     strapComponentSource: WatchStrapComponentSourceSchema.nullable(),
     featuresJson: z.unknown().nullable(),

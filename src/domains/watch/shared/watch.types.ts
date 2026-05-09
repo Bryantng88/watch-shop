@@ -75,7 +75,7 @@ export type WatchDetailModel = {
 
         hasBox?: boolean | null;
         hasPapers?: boolean | null;
-
+        isDownloadedContent?: boolean | null;
         notes?: string | null;
         conditionGrade?: string | null;
         serialNumber?: string | null;

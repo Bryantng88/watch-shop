@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { mapWatchDetail } from "../shared";
+import { listWatchChosenMediaPool } from "@/domains/media/server";
 import {
   getAdminEditWatchDetail,
   getAdminWatchDetail,
@@ -57,9 +58,17 @@ export async function getWatchEditDetail(productId: string) {
 
   const mapped = mapWatchDetail(row);
   const acq = await getLatestAcquisitionUnitCost(productId, row.acquisitionId);
+  const chosenImages = await listWatchChosenMediaPool({
+    productId,
+    acquisitionId: row.acquisitionId,
+  });
 
   return {
     ...mapped,
+    media: {
+      ...((mapped as any).media ?? {}),
+      chosenImages,
+    },
     acquisition: acq,
     price: {
       ...(mapped.price ?? {}),

@@ -1,13 +1,12 @@
 "use server";
 
-import { headers } from "next/headers";
-
 import { prisma } from "@/server/db/client";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/server/auth/requirePermission";
 
 import type { WatchFormValues } from "./watch-form.types";
-import { replaceWatchGalleryImages } from "@/domains/watch/server";
+import { replaceWatchGalleryImagesRepo } from "../../server";
+import { moveMediaAssetToWatchChosen, markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { updateWatchPricingWithDiff } from "@/domains/watch/server/pricing";
 import {
     autoApproveWatchReview,
@@ -85,112 +84,41 @@ function dedupeMediaItems(items: MediaFormItem[]) {
     return Array.from(map.values());
 }
 
-async function getInternalRequestContext() {
-    const h = await headers();
-
-    const host = h.get("x-forwarded-host") ?? h.get("host");
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    const cookie = h.get("cookie") ?? "";
-
-    if (!host) {
-        throw new Error("Không xác định được host để move media.");
-    }
-
-    return {
-        baseUrl: `${proto}://${host}`,
-        cookie,
-    };
-}
-
-async function moveMediaToChosenViaApi(
-    ctx: { baseUrl: string; cookie: string },
-    item: MediaFormItem
-): Promise<MediaFormItem> {
-    const key = String(item.key ?? "").trim();
-
-    if (!key) {
-        throw new Error("Ảnh không có key hợp lệ.");
-    }
-
-    if (key.startsWith("products/edit/chosen/")) {
-        return {
-            ...item,
-            key,
-            name: item.name ?? fileNameFromKey(key),
-        };
-    }
-
-    const res = await fetch(`${ctx.baseUrl}/api/media/move`, {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-            "Content-Type": "application/json",
-            Cookie: ctx.cookie,
-        },
-        body: JSON.stringify({
-            fromKey: key,
-            toPrefix: "products/edit/chosen",
-            deleteSource: true,
-            overwrite: false,
-        }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-        throw new Error(json?.error || `Không thể chuyển ảnh: ${key}`);
-    }
-
-    const movedKey = String(json?.key ?? key);
-
-    return {
-        ...item,
-        key: movedKey,
-        url: json?.url ?? item.url ?? null,
-        name: item.name ?? fileNameFromKey(movedKey),
-    };
-}
-
-async function moveGalleryImagesToChosen(items: MediaFormItem[]) {
+async function moveGalleryImagesToChosen(
+    items: MediaFormItem[],
+    input: { productId: string; acquisitionId?: string | null }
+) {
     const normalized = dedupeMediaItems(items);
 
     if (normalized.length === 0) {
         return [];
     }
 
-    const ctx = await getInternalRequestContext();
     const result: MediaFormItem[] = [];
 
-    for (const item of normalized) {
-        result.push(await moveMediaToChosenViaApi(ctx, item));
+    for (let index = 0; index < normalized.length; index += 1) {
+        const item = normalized[index];
+        const key = String(item.key ?? "").trim();
+        if (!key) continue;
+
+        const moved = await moveMediaAssetToWatchChosen({
+            key,
+            productId: input.productId,
+            acquisitionId: input.acquisitionId ?? null,
+            sortOrder: index,
+        });
+
+        result.push({
+            ...item,
+            key: moved.key,
+            url: moved.url ?? item.url ?? null,
+            name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
+        });
     }
 
     return result;
 }
 
-function remapChosenImagesAfterMove(input: {
-    chosenImages?: MediaFormItem[];
-    beforeGalleryImages?: MediaFormItem[];
-    movedGalleryImages: MediaFormItem[];
-}) {
-    const movedByOriginalKey = new Map<string, MediaFormItem>();
-
-    input.beforeGalleryImages?.forEach((before, index) => {
-        const beforeKey = String(before.key ?? "").trim();
-        const moved = input.movedGalleryImages[index];
-
-        if (beforeKey && moved) {
-            movedByOriginalKey.set(beforeKey, moved);
-        }
-    });
-
-    return dedupeMediaItems(
-        (input.chosenImages ?? []).map((item) => {
-            const key = String(item.key ?? "").trim();
-            return movedByOriginalKey.get(key) ?? item;
-        })
-    );
-}
 
 export async function submitWatchForm(values: WatchFormValues) {
     const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
@@ -414,24 +342,50 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
     });
 
-    const normalizedGalleryImages = imagesChanged
-        ? await moveGalleryImagesToChosen(requestedGalleryImages)
-        : requestedGalleryImages;
+    const requestedChosenImages = dedupeMediaItems(
+        values.media.chosenImages ?? []
+    );
 
-    const normalizedChosenImages = remapChosenImagesAfterMove({
-        chosenImages: values.media.chosenImages ?? [],
-        beforeGalleryImages: requestedGalleryImages,
-        movedGalleryImages: normalizedGalleryImages,
+    const normalizedChosenImages = await moveGalleryImagesToChosen(
+        requestedChosenImages,
+        {
+            productId,
+            acquisitionId: current.acquisitionId,
+        }
+    );
+
+    const movedByOriginalKey = new Map<string, MediaFormItem>();
+
+    requestedChosenImages.forEach((before, index) => {
+        const beforeKey = String(before.key ?? "").trim();
+        const moved = normalizedChosenImages[index];
+
+        if (beforeKey && moved) {
+            movedByOriginalKey.set(beforeKey, moved);
+        }
     });
 
-    await replaceWatchGalleryImages({
+    const normalizedGalleryImages = dedupeMediaItems(
+        requestedGalleryImages.map((item) => {
+            const key = String(item.key ?? "").trim();
+            return movedByOriginalKey.get(key) ?? item;
+        })
+    );
+    const galleryImageInputs = normalizedGalleryImages.map((item, index) => ({
+        fileKey: String(item.key),
+        isForAdmin: true,
+        isForStorefront: true,
+        sortOrder: index,
+    }));
+
+    await replaceWatchGalleryImagesRepo(prisma, {
         productId,
-        images: normalizedGalleryImages.map((item, index) => ({
-            fileKey: String(item.key),
-            isForAdmin: true,
-            isForStorefront: true,
-            sortOrder: index,
-        })),
+        images: galleryImageInputs,
+    });
+
+    await markGalleryMediaAssetsAttached({
+        productId,
+        images: galleryImageInputs,
     });
 
     if (canReviewContent) {

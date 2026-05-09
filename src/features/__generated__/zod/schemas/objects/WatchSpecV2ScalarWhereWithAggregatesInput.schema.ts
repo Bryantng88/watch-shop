@@ -62,6 +62,7 @@ const watchspecv2scalarwherewithaggregatesinputSchema = z.object({
   buckleType: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   bookletIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   cardIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
+  boxIncluded: z.union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()]).optional(),
   strapSetType: z.union([z.lazy(() => EnumWatchStrapSetTypeNullableWithAggregatesFilterObjectSchema), WatchStrapSetTypeSchema]).optional().nullable(),
   strapComponentSource: z.union([z.lazy(() => EnumWatchStrapComponentSourceNullableWithAggregatesFilterObjectSchema), WatchStrapComponentSourceSchema]).optional().nullable(),
   featuresJson: z.lazy(() => JsonNullableWithAggregatesFilterObjectSchema).optional(),

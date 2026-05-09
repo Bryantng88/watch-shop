@@ -3,6 +3,9 @@
 import * as React from "react";
 import MediaBrowserDialog from "./MediaBrowserDialog";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+
+
 
 export type PickedMediaItem = {
     key: string;
@@ -166,7 +169,7 @@ function ChosenGrid({
     selectedItems: PickedMediaItem[];
     onToggleSelect: (item: PickedMediaItem) => void;
     onRemoveChosen: (key: string) => void;
-    maxFinalSelection: number;
+    maxFinalSelection?: number;
     onPreview: (payload: {
         item: PickedMediaItem;
         event: React.MouseEvent;
@@ -217,7 +220,9 @@ function ChosenGrid({
                                         title={
                                             active
                                                 ? "Bỏ khỏi danh sách sẽ lưu"
-                                                : `Đưa vào danh sách sẽ lưu (tối đa ${maxFinalSelection})`
+                                                : typeof maxFinalSelection === "number" && maxFinalSelection > 0
+                                                    ? `Đưa vào danh sách sẽ lưu (tối đa ${maxFinalSelection})`
+                                                    : "Đưa vào danh sách sẽ lưu"
                                         }
                                     >
                                         <div className="aspect-square w-full overflow-hidden bg-slate-100">
@@ -348,13 +353,13 @@ export default function MediaPickerMulti({
     onChosenChange,
     onSelectedChange,
     profile = "inline",
-    maxFinalSelection = 8,
+    maxFinalSelection,
     title,
     description,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
-
+    const notify = useNotify();
     const chosenItems = React.useMemo(
         () => normalizeItems(chosenValue),
         [chosenValue]
@@ -419,22 +424,10 @@ export default function MediaPickerMulti({
                 ...pickedItems,
             ]);
 
-            const nextSelected = dedupeItems([
-                ...selectedItems,
-                ...pickedItems,
-            ]).slice(0, maxFinalSelection);
-
             onChosenChange(nextChosen);
-            onSelectedChange(nextSelected);
             setOpen(false);
         },
-        [
-            chosenItems,
-            selectedItems,
-            maxFinalSelection,
-            onChosenChange,
-            onSelectedChange,
-        ]
+        [chosenItems, onChosenChange]
     );
 
     const handleToggleSelect = React.useCallback(
@@ -443,20 +436,34 @@ export default function MediaPickerMulti({
 
             if (exists) {
                 onSelectedChange(
-                    selectedItems.filter(
-                        (selected) => selected.key !== item.key
-                    )
+                    selectedItems.filter((x) => x.key !== item.key)
                 );
+
                 return;
             }
 
-            if (selectedItems.length >= maxFinalSelection) return;
+            const next = dedupeItems([...selectedItems, item]);
 
-            onSelectedChange(dedupeItems([...selectedItems, item]));
+            if (
+                typeof maxFinalSelection === "number" &&
+                next.length > maxFinalSelection
+            ) {
+                window.alert(
+                    `Chỉ được lưu tối đa ${maxFinalSelection} ảnh gallery.`
+                );
+
+                return;
+            }
+
+            onSelectedChange(next);
         },
-        [maxFinalSelection, onSelectedChange, selectedItems, selectedKeySet]
+        [
+            maxFinalSelection,
+            onSelectedChange,
+            selectedItems,
+            selectedKeySet,
+        ]
     );
-
     const handleRemoveChosen = React.useCallback(
         (key: string) => {
             const nextChosen = chosenItems.filter((item) => item.key !== key);
@@ -511,7 +518,10 @@ export default function MediaPickerMulti({
                 </div>
 
                 <div className="inline-flex items-center rounded-2xl bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                    Sẽ lưu: {selectedItems.length}/{maxFinalSelection}
+                    Sẽ lưu:{" "}
+                    {typeof maxFinalSelection === "number" && maxFinalSelection > 0
+                        ? `${selectedItems.length}/${maxFinalSelection}`
+                        : selectedItems.length}
                 </div>
             </div>
 

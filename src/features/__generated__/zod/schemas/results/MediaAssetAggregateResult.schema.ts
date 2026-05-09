@@ -9,14 +9,25 @@ export const MediaAssetAggregateResultSchema = z.object({  _count: z.object({
     etag: z.number(),
     lastModified: z.number(),
     profile: z.number(),
+    status: z.number(),
+    productId: z.number(),
+    acquisitionId: z.number(),
+    role: z.number(),
+    sortOrder: z.number(),
+    isMissing: z.number(),
+    missingAt: z.number(),
+    lastSeenAt: z.number(),
+    movedFromKey: z.number(),
     createdAt: z.number(),
     updatedAt: z.number()
   }).optional(),
   _sum: z.object({
-    sizeBytes: z.number().nullable()
+    sizeBytes: z.number().nullable(),
+    sortOrder: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    sizeBytes: z.number().nullable()
+    sizeBytes: z.number().nullable(),
+    sortOrder: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -28,6 +39,12 @@ export const MediaAssetAggregateResultSchema = z.object({  _count: z.object({
     etag: z.string().nullable(),
     lastModified: z.date().nullable(),
     profile: z.string().nullable(),
+    productId: z.string().nullable(),
+    acquisitionId: z.string().nullable(),
+    sortOrder: z.number().int().nullable(),
+    missingAt: z.date().nullable(),
+    lastSeenAt: z.date().nullable(),
+    movedFromKey: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -41,6 +58,12 @@ export const MediaAssetAggregateResultSchema = z.object({  _count: z.object({
     etag: z.string().nullable(),
     lastModified: z.date().nullable(),
     profile: z.string().nullable(),
+    productId: z.string().nullable(),
+    acquisitionId: z.string().nullable(),
+    sortOrder: z.number().int().nullable(),
+    missingAt: z.date().nullable(),
+    lastSeenAt: z.date().nullable(),
+    movedFromKey: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()});

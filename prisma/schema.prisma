@@ -1107,6 +1107,7 @@ model WatchSpecV2 {
   // Accessories / papers detail
   bookletIncluded      Boolean                    @default(false)
   cardIncluded         Boolean                    @default(false)
+  boxIncluded          Boolean                    @default(false)
   strapSetType         WatchStrapSetType?
   strapComponentSource WatchStrapComponentSource?
   // Flexible structured / raw data
@@ -1284,6 +1285,17 @@ model AcquisitionSpecJobLog {
   @@index([stage, createdAt])
 }
 
+// Add near other enums
+
+enum MediaAssetStatus {
+  ACTIVE
+  CHOSEN
+  ATTACHED
+  ARCHIVED
+  MISSING
+}
+
+// Replace current model MediaAsset with this shape
 model MediaAsset {
   id           String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   key          String    @unique
@@ -1294,11 +1306,27 @@ model MediaAsset {
   etag         String?
   lastModified DateTime?
   profile      String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+
+  status        MediaAssetStatus @default(ACTIVE)
+  productId     String?
+  acquisitionId String?
+  role          ImageRole?
+  sortOrder     Int              @default(0)
+
+  isMissing    Boolean   @default(false)
+  missingAt    DateTime?
+  lastSeenAt   DateTime?
+  movedFromKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([parentPrefix, lastModified])
   @@index([profile, parentPrefix])
+  @@index([status, productId])
+  @@index([status, acquisitionId])
+  @@index([productId, role, sortOrder])
+  @@index([isMissing, parentPrefix])
 }
 
 enum AcquisitionItemKind {

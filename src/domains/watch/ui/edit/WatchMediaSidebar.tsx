@@ -9,8 +9,13 @@ type Props = {
 };
 
 export default function WatchMediaSidebar({ values }: Props) {
-    const chosenImages = Array.isArray(values.chosenImages) ? values.chosenImages : [];
-    const selectedImages = Array.isArray(values.selectedImages) ? values.selectedImages : [];
+    const chosenImages = Array.isArray(values.chosenImages)
+        ? values.chosenImages
+        : [];
+
+    const galleryImages = Array.isArray(values.galleryImages)
+        ? values.galleryImages
+        : [];
 
     return (
         <SectionCard
@@ -20,7 +25,7 @@ export default function WatchMediaSidebar({ values }: Props) {
         >
             <div className="grid grid-cols-1 gap-3">
                 <SidebarStat label="Trong chosen" value={chosenImages.length} />
-                <SidebarStat label="Sẽ lưu" value={`${selectedImages.length}/8`} />
+                <SidebarStat label="Sẽ lưu" value={galleryImages.length} />
                 <SidebarStat label="Has box" value={values.hasBox ? "Có" : "Không"} />
                 <SidebarStat label="Has papers" value={values.hasPapers ? "Có" : "Không"} />
                 <SidebarStat label="Booklet" value={values.bookletIncluded ? "Có" : "Không"} />

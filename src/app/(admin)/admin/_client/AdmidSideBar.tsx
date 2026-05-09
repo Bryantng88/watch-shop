@@ -16,7 +16,8 @@ import {
     Warehouse,
     CreditCard,
     LayoutList,
-    MonitorCog
+    MonitorCog,
+    CameraIcon
 } from "lucide-react";
 import ActiveLink from "./AdminActiveLink";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -57,7 +58,8 @@ const NAV: NavItem[] = [
     { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
     { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW, notificationKey: "invoices" },
     { href: "/admin/payments", label: "Payment", icon: CreditCard, permission: PERMISSIONS.PAYMENT_VIEW, notificationKey: "payments" },
-    { href: "/admin/system/jobs", label: "Jobs", icon: MonitorCog, permission: PERMISSIONS.SYSTEM_JOB_VIEW, notificationKey: "payments" },
+    { href: "/admin/system/jobs", label: "Jobs", icon: MonitorCog, permission: PERMISSIONS.SYSTEM_JOB_VIEW },
+    { href: "/admin/media", label: "Media", icon: CameraIcon, permission: PERMISSIONS.MEDIA_VIEW },
 
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },

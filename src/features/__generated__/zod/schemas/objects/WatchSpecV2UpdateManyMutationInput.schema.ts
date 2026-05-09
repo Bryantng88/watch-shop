@@ -61,6 +61,7 @@ const makeSchema = () => z.object({
   buckleType: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   bookletIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   cardIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  boxIncluded: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   strapSetType: z.union([WatchStrapSetTypeSchema, z.lazy(() => NullableEnumWatchStrapSetTypeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   strapComponentSource: z.union([WatchStrapComponentSourceSchema, z.lazy(() => NullableEnumWatchStrapComponentSourceFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),

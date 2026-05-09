@@ -12,6 +12,15 @@ const makeSchema = () => z.object({
   etag: z.boolean().optional(),
   lastModified: z.boolean().optional(),
   profile: z.boolean().optional(),
+  status: z.boolean().optional(),
+  productId: z.boolean().optional(),
+  acquisitionId: z.boolean().optional(),
+  role: z.boolean().optional(),
+  sortOrder: z.boolean().optional(),
+  isMissing: z.boolean().optional(),
+  missingAt: z.boolean().optional(),
+  lastSeenAt: z.boolean().optional(),
+  movedFromKey: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional()
 }).strict();

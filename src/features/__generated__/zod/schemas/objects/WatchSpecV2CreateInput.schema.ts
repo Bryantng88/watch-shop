@@ -46,6 +46,7 @@ const makeSchema = () => z.object({
   buckleType: z.string().optional().nullable(),
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
+  boxIncluded: z.boolean().optional(),
   strapSetType: WatchStrapSetTypeSchema.optional().nullable(),
   strapComponentSource: WatchStrapComponentSourceSchema.optional().nullable(),
   featuresJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),

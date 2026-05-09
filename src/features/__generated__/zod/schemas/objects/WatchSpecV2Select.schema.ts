@@ -33,6 +33,7 @@ const makeSchema = () => z.object({
   buckleType: z.boolean().optional(),
   bookletIncluded: z.boolean().optional(),
   cardIncluded: z.boolean().optional(),
+  boxIncluded: z.boolean().optional(),
   strapSetType: z.boolean().optional(),
   strapComponentSource: z.boolean().optional(),
   featuresJson: z.boolean().optional(),
