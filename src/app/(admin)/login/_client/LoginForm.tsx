@@ -23,7 +23,7 @@ export default function LoginForm() {
             return;
         }
 
-        window.location.href = "/admin/orders";
+        window.location.href = "/admin/watches";
     }
 
     return (
