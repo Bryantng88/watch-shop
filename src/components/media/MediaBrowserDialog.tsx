@@ -159,8 +159,41 @@ export default function MediaBrowserDialog({
 
     React.useEffect(() => {
         if (!open) return;
-        setPrefix(getRootPrefix(profile));
-        resetPagination();
+
+        let cancelled = false;
+
+        async function resolveInitialPrefix() {
+            const fallbackRoot = getRootPrefix(profile);
+
+            if (profile !== "edit") {
+                setPrefix(fallbackRoot);
+                resetPagination();
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/media/batches/latest?_t=${Date.now()}`, {
+                    cache: "no-store",
+                });
+                const json = await res.json().catch(() => ({}));
+
+                if (!cancelled) {
+                    setPrefix(String(json?.prefix || fallbackRoot));
+                    resetPagination();
+                }
+            } catch {
+                if (!cancelled) {
+                    setPrefix(fallbackRoot);
+                    resetPagination();
+                }
+            }
+        }
+
+        resolveInitialPrefix();
+
+        return () => {
+            cancelled = true;
+        };
     }, [open, profile, resetPagination]);
 
     const helpText =
@@ -178,7 +211,8 @@ export default function MediaBrowserDialog({
                 const qs = new URLSearchParams({
                     profile,
                     prefix,
-                    limit: "48",
+                    maxKeys: "1000",
+                    _t: String(Date.now()),
                 });
 
                 if (mode === "more" && cursor) {
@@ -235,7 +269,10 @@ export default function MediaBrowserDialog({
 
                 setNextCursor(json?.nextCursor ?? null);
                 setHasMore(Boolean(json?.hasMore));
-                setTotalCount(Number(json?.totalCount ?? 0));
+                setTotalCount((prev) => {
+                    const loaded = mode === "more" ? prev + nextFiles.length : nextFiles.length;
+                    return Number(json?.totalCount ?? json?.total ?? loaded);
+                });
             } catch (e: any) {
                 setError(e?.message || "Không tải được thư viện ảnh");
             } finally {
@@ -317,6 +354,9 @@ export default function MediaBrowserDialog({
                         <button
                             type="button"
                             onClick={() => {
+                                setItems([]);
+                                setFolders([]);
+                                setTotalCount(0);
                                 resetPagination();
                                 loadItems("reset");
                             }}
@@ -342,17 +382,11 @@ export default function MediaBrowserDialog({
                         <span>Đang duyệt: {prefix}</span>
                         <span>•</span>
                         <span>
-                            Tổng ảnh:{" "}
-                            <strong className="font-semibold text-slate-600">
-                                {totalCount}
-                            </strong>
-                        </span>
-                        <span>•</span>
-                        <span>
                             Đã tải:{" "}
                             <strong className="font-semibold text-slate-600">
-                                {items.length}/{totalCount}
+                                {items.length}
                             </strong>
+                            {hasMore ? " · còn ảnh khác" : ""}
                         </span>
                     </div>
                     {selectionMode === "multiple" ? (

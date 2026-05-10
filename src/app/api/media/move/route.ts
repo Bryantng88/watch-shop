@@ -1,6 +1,8 @@
+// src/app/api/media/move/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 
-import { moveMediaFile } from "@/domains/media/server";
+import { moveMediaToChosen } from "@/domains/media/server";
 
 export const dynamic = "force-dynamic";
 
@@ -8,35 +10,38 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
 
-        const fromKey = String(
-            body?.fromKey || body?.key || ""
-        ).trim();
+        const fromKey = String(body?.fromKey || body?.key || "").trim();
+        const productId = String(body?.productId || "").trim();
+        const role = String(body?.role || "GALLERY").trim();
 
-        const toKey = String(
-            body?.toKey || ""
-        ).trim();
-
-        if (!fromKey || !toKey) {
+        if (!fromKey) {
             return NextResponse.json(
                 {
-                    error: "Thiếu fromKey hoặc toKey.",
+                    success: false,
+                    error: "Thiếu fromKey.",
                 },
                 { status: 400 }
             );
         }
 
-        const result = await moveMediaFile({
+        const result = await moveMediaToChosen({
             fromKey,
-            toKey,
+            productId: productId || null,
+            role,
         });
 
-        return NextResponse.json(result);
-    } catch (error: any) {
+        return NextResponse.json({
+            success: true,
+            item: result,
+        });
+    } catch (error) {
         return NextResponse.json(
             {
+                success: false,
                 error:
-                    error?.message ||
-                    "Không thể move media.",
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể move media.",
             },
             { status: 500 }
         );

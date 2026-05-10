@@ -221,6 +221,9 @@ export default function WatchListRow({
 
                         <div className="mt-1 text-xs text-slate-400">
                             SKU: {product.sku || "-"}
+                            <div className="font-mono text-[11px] text-slate-400">
+                                PID: {product.productId || "-"}
+                            </div>
                         </div>
 
 

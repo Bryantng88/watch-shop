@@ -1,11 +1,44 @@
 import { Prisma } from "@prisma/client";
 import type { WatchListComputedItem } from "./watch.types";
 import { WatchDetailModel } from "../../shared/watch.types";
-import { getReviewByTarget } from "../review";
 
 function decimalToString(value: Prisma.Decimal | null | undefined) {
     if (value == null) return null;
     return value.toString();
+}
+
+function buildMediaUrl(fileKey?: string | null) {
+    const key = String(fileKey ?? "").trim();
+    if (!key) return null;
+
+    if (
+        key.startsWith("http://") ||
+        key.startsWith("https://") ||
+        key.startsWith("/")
+    ) {
+        return key;
+    }
+
+    return `/api/media/sign?key=${encodeURIComponent(key)}`;
+}
+
+function mapProductImage(img: any) {
+    const fileKey = img?.fileKey ?? null;
+    const url = buildMediaUrl(fileKey);
+
+    return {
+        id: img.id,
+        fileKey,
+        key: fileKey,
+        url,
+        imageUrl: url,
+        src: url,
+        role: img.role ?? null,
+        isForAdmin: img.isForAdmin ?? null,
+        isForStorefront: img.isForStorefront ?? null,
+        sortOrder: img.sortOrder ?? null,
+        alt: img.alt ?? null,
+    };
 }
 
 function hasMeaningfulContent(row: any) {
@@ -17,14 +50,7 @@ function hasMeaningfulContent(row: any) {
 }
 
 export function mapAdminWatchListItem(row: any): WatchListComputedItem {
-    const images = (row?.product?.productImage ?? []).map((img: any) => ({
-        id: img.id,
-        fileKey: img.fileKey ?? null,
-        role: img.role ?? null,
-        isForAdmin: img.isForAdmin ?? null,
-        isForStorefront: img.isForStorefront ?? null,
-        sortOrder: img.sortOrder ?? null,
-    }));
+    const images = (row?.product?.productImage ?? []).map(mapProductImage);
 
     const galleryImages = images.filter((img: any) => img?.role === "GALLERY");
     const imagesCount = galleryImages.length;
@@ -33,7 +59,9 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
     const hasPrice = Boolean(row?.watchPrice?.salePrice || row?.watchPrice?.listPrice);
 
     const status = row?.product?.status ?? "AVAILABLE";
-    const isHold = ["HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"].includes(String(status).toUpperCase());
+    const isHold = ["HOLD", "CONSIGNED_FROM", "CONSIGNED_TO"].includes(
+        String(status).toUpperCase()
+    );
     const isSold = String(status).toUpperCase() === "SOLD";
 
     const publishMissing = [
@@ -50,10 +78,13 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
         status,
         contentStatus: row?.isContentDownloaded && row?.isImageDownloaded
             ? "PUBLISHED"
-            : (row?.reviewStates ?? []).find((x: any) => String(x.targetType) === "CONTENT")?.status ?? row?.watchContent?.contentStatus ?? "DRAFT",
+            : (row?.reviewStates ?? []).find(
+                (x: any) => String(x.targetType) === "CONTENT"
+            )?.status ?? row?.watchContent?.contentStatus ?? "DRAFT",
         isContentDownloaded: Boolean(row?.isContentDownloaded),
         isImageDownloaded: Boolean(row?.isImageDownloaded),
         isPosted: Boolean(row?.isContentDownloaded && row?.isImageDownloaded),
+
         images,
         imagesCount,
         hasImages,
@@ -64,7 +95,7 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
 
         sku: row?.product?.sku ?? null,
         brand: row?.product?.brand?.name ?? row?.watchSpecV2?.brand ?? null,
-        primaryImageUrl: galleryImages[0]?.fileKey ?? null,
+        primaryImageUrl: galleryImages[0]?.url ?? null,
 
         salePrice: decimalToString(row?.watchPrice?.salePrice),
         listPrice: decimalToString(row?.watchPrice?.listPrice),
@@ -104,6 +135,8 @@ export function mapWatchDetail(row: any): WatchDetailModel {
     const contentStatus = contentReview?.status ?? "DRAFT";
     const imageStatus = imageReview?.status ?? "DRAFT";
 
+    const images = (row.product.productImage ?? []).map(mapProductImage);
+
     return {
         id: row.product.id,
         productId: row.product.id,
@@ -112,10 +145,11 @@ export function mapWatchDetail(row: any): WatchDetailModel {
         slug: row.product.slug ?? null,
         status: row.product.status,
         sku: row.product.sku ?? null,
-        primaryImageUrl: row.product.primaryImageUrl ?? null,
+        primaryImageUrl: buildMediaUrl(row.product.primaryImageUrl),
         storefrontImageKey: row.product.storefrontImageKey ?? null,
         seoTitle: row.product.seoTitle ?? null,
         seoDescription: row.product.seoDescription ?? null,
+
         brand: row.product.brand
             ? {
                 id: row.product.brand.id,
@@ -123,18 +157,21 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 slug: row.product.brand.slug,
             }
             : null,
+
         vendor: row.product.vendor
             ? {
                 id: row.product.vendor.id,
                 name: row.product.vendor.name,
             }
             : null,
+
         category: row.product.productCategory
             ? {
                 id: row.product.productCategory.id,
                 name: row.product.productCategory.name,
             }
             : null,
+
         watch: {
             id: row.id,
             gender: row.gender,
@@ -156,6 +193,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             isPosted: Boolean(row.isContentDownloaded && row.isImageDownloaded),
             serialNumber: row.serialNumber ?? null,
         },
+
         spec: row.watchSpecV2
             ? {
                 id: row.watchSpecV2.id,
@@ -190,6 +228,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 cardIncluded: row.watchSpecV2.cardIncluded ?? null,
             }
             : null,
+
         price: row.watchPrice
             ? {
                 costPrice: decimalToString(row.watchPrice.costPrice),
@@ -201,6 +240,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 pricingNote: row.watchPrice.pricingNote ?? null,
             }
             : null,
+
         content: row.watchContent
             ? {
                 titleOverride: row.watchContent.titleOverride ?? null,
@@ -209,11 +249,11 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 body: row.watchContent.body ?? null,
                 bulletSpecs: row.watchContent.bulletSpecs ?? [],
                 hashtags: row.watchContent.hashtags ?? null,
-
                 seoTitle: row.watchContent.seoTitle ?? null,
                 seoDescription: row.watchContent.seoDescription ?? null,
             }
             : null,
+
         review: {
             content: {
                 status: contentStatus,
@@ -237,13 +277,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
             isImageDownloaded: Boolean(row.isImageDownloaded),
             isPosted: Boolean(row.isContentDownloaded && row.isImageDownloaded),
         },
-        images: (row.product.productImage ?? []).map((img: any) => ({
-            id: img.id,
-            fileKey: img.fileKey ?? null,
-            role: img.role ?? null,
-            isForAdmin: img.isForAdmin ?? null,
-            isForStorefront: img.isForStorefront ?? null,
-            sortOrder: img.sortOrder ?? null,
-        })),
+
+        images,
     };
 }

@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { ImageIcon, Pencil } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
-import InlineImage from "@/domains/shared/ui/image/InlineImage";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { fmtDate, StatusBadge } from "./shared";
 
@@ -12,9 +11,14 @@ type Props = {
   inlineImage?: any | null;
 };
 
+function getImageSrc(image: any) {
+  return image?.src ?? image?.url ?? image?.imageUrl ?? null;
+}
+
 export default function WatchHeader({ detail, inlineImage }: Props) {
   const title = detail?.title || "Untitled watch";
   const productId = detail?.productId;
+  const imageSrc = getImageSrc(inlineImage);
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -28,7 +32,17 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
           />
 
           <div className="mt-4 flex items-start gap-4">
-            <InlineImage image={inlineImage} title={title} size="xl" />
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+              {imageSrc ? (
+                <img
+                  src={imageSrc}
+                  alt={title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-slate-400" />
+              )}
+            </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">

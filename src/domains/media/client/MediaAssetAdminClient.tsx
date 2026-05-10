@@ -292,6 +292,84 @@ export default function MediaAssetAdminClient() {
     }
   }
 
+  async function runOrganizeActive() {
+    progress.show({
+      title: "Đang organize active folder",
+      message: "Hệ thống đang gom ảnh lẻ trong products/edit/active vào batch theo ngày.",
+    });
+
+    try {
+      const res = await fetch("/api/media/assets/organize-active", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          maxFiles: 500,
+          dryRun: false,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json?.error || "Không thể organize active folder");
+      }
+
+      notify.success({
+        title: "Đã organize active",
+        message: `Đã move ${json?.movedCount ?? 0}/${json?.processed ?? 0} ảnh vào batch.`,
+      });
+
+      await load();
+    } catch (error) {
+      notify.error({
+        title: "Organize active thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      progress.hide();
+    }
+  }
+
+  async function runMigrateChosen(dryRun = true) {
+    progress.show({
+      title: dryRun ? "Đang kiểm tra chosen" : "Đang migrate chosen",
+      message: dryRun
+        ? "Hệ thống đang kiểm tra ảnh chosen flat folder."
+        : "Hệ thống đang move chosen vào folder watch/{productId}.",
+    });
+
+    try {
+      const res = await fetch("/api/media/assets/migrate-chosen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dryRun,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json?.error || "Không thể migrate chosen");
+      }
+
+      notify.success({
+        title: dryRun ? "Dry run migrate chosen" : "Đã migrate chosen",
+        message: dryRun
+          ? `Tìm thấy ${json?.scanned ?? 0} ảnh flat chosen, matched ${json?.matchedProductImages ?? 0}.`
+          : `Đã move ${json?.moved ?? 0}/${json?.scanned ?? 0} ảnh chosen.`,
+      });
+
+      await load();
+    } catch (error) {
+      notify.error({
+        title: "Migrate chosen thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+      });
+    } finally {
+      progress.hide();
+    }
+  }
   async function runReconcile() {
     progress.show({
       title: "Đang kiểm tra NAS",
@@ -350,24 +428,63 @@ export default function MediaAssetAdminClient() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => runReconcile()}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <ServerCrash className="h-4 w-4" />
-                Check NAS
-              </button>
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => runReconcile()}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <ServerCrash className="h-4 w-4" />
+                  Check NAS
+                </button>
 
-              <button
-                type="button"
-                onClick={() => runRebuild(true)}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Rebuild index
-              </button>
+                <button
+                  type="button"
+                  onClick={() => runOrganizeActive()}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Organize active
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => runRebuild(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Rebuild index
+                </button>
+              </div>
+
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => runMigrateChosen(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Check chosen
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Migrate chosen sẽ move file trên NAS và update ProductImage.fileKey. Bạn chắc chắn muốn chạy?"
+                      )
+                    ) {
+                      runMigrateChosen(false);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Migrate chosen
+                </button>
+              </div>
             </div>
           </div>
         </div>

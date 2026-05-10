@@ -5,7 +5,6 @@ import { Download, ImageIcon, Loader2, Lock } from "lucide-react";
 
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import InlineImage from "@/domains/shared/ui/image/InlineImage";
 
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 import { SectionCard, SectionEmpty } from "./shared";
@@ -19,6 +18,10 @@ function sortImages(items: any[]) {
   return [...(items ?? [])].sort(
     (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
   );
+}
+
+function getImageSrc(image: any) {
+  return image?.src ?? image?.url ?? image?.imageUrl ?? null;
 }
 
 export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
@@ -45,7 +48,6 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
   ).toUpperCase();
 
   const canViewAndDownload = imageStatus === "APPROVED";
-  const isPosted = usage.isImageDownloaded && usage.isContentDownloaded;
 
   function handleDownloadAll() {
     const productId = String(detail?.productId ?? detail?.id ?? "").trim();
@@ -59,9 +61,7 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
       message: "Hệ thống đang đóng gói ảnh GALLERY thành file zip.",
     });
 
-    const url = `/api/admin/watches/${productId}/download-gallery`;
-
-    window.location.href = url;
+    window.location.href = `/api/admin/watches/${productId}/download-gallery`;
 
     setUsage((prev) => ({
       ...prev,
@@ -128,19 +128,29 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {gallery.map((image, index) => (
-              <div
-                key={image.id ?? image.fileKey ?? index}
-                className="rounded-2xl bg-slate-50 p-2 ring-1 ring-inset ring-slate-200"
-              >
-                <InlineImage
-                  image={image}
-                  title={`${detail?.title || "Watch"} ${index + 1}`}
-                  size="xl"
-                  className="h-36 w-full rounded-xl"
-                />
-              </div>
-            ))}
+            {gallery.map((image, index) => {
+              const src = getImageSrc(image);
+              const title = `${detail?.title || "Watch"} ${index + 1}`;
+
+              return (
+                <div
+                  key={image.id ?? image.fileKey ?? image.key ?? index}
+                  className="rounded-2xl bg-slate-50 p-2 ring-1 ring-inset ring-slate-200"
+                >
+                  <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                    {src ? (
+                      <img
+                        src={src}
+                        alt={title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

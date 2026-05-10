@@ -22,6 +22,7 @@ import {
   markMissingMediaAssetsNotInKeysRepo,
   upsertMediaAssetRepo,
 } from "./media-asset.repo";
+import { organizeActiveLooseNasFiles } from "./nas-media.service";
 
 export function getMediaProfile(value: string | null): MediaProfile {
   if (value === "edit") return "edit";
@@ -167,13 +168,18 @@ export async function moveMediaAssetToWatchChosen(input: {
   sortOrder?: number | null;
 }) {
   const key = normalizeKey(input.key);
+  const fileName = key.split("/").pop() ?? key;
 
-  if (key.startsWith("products/edit/chosen/")) {
+  const targetPrefix = `products/edit/chosen/watch/${input.productId}/gallery`;
+  const targetKey = `${targetPrefix}/${fileName}`;
+
+  if (key.startsWith(`${targetPrefix}/`)) {
     const asset = await upsertMediaAssetRepo(prisma as any, {
       key,
       status: "CHOSEN",
       productId: input.productId,
       acquisitionId: input.acquisitionId ?? null,
+      role: ImageRole.GALLERY,
       sortOrder: input.sortOrder ?? 0,
     });
 
@@ -188,12 +194,13 @@ export async function moveMediaAssetToWatchChosen(input: {
 
   const moved = await moveAndTrackMediaAsset({
     fromKey: key,
-    toPrefix: "products/edit/chosen",
+    toPrefix: targetPrefix,
     deleteSource: true,
     overwrite: false,
     productId: input.productId,
     acquisitionId: input.acquisitionId ?? null,
     status: "CHOSEN",
+    role: ImageRole.GALLERY,
     sortOrder: input.sortOrder ?? 0,
   });
 
@@ -205,7 +212,6 @@ export async function moveMediaAssetToWatchChosen(input: {
     sortOrder: moved.asset.sortOrder,
   };
 }
-
 export async function listWatchChosenMediaPool(input: {
   productId: string;
   acquisitionId?: string | null;
@@ -428,6 +434,49 @@ export async function listMediaAssets(input: {
     pageSize,
     total,
     pageCount: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+export async function organizeActiveMediaAssets(input: {
+  dryRun?: boolean;
+  maxFiles?: number;
+} = {}) {
+  const result = await organizeActiveLooseNasFiles({
+    dryRun: input.dryRun,
+    maxFiles: input.maxFiles,
+  });
+
+  if (!input.dryRun) {
+    for (const item of result.moved) {
+      await upsertMediaAssetRepo(prisma as any, {
+        key: item.toKey,
+        profile: "edit",
+        sizeBytes: item.sizeBytes ?? null,
+        etag: item.etag ?? null,
+        lastModified: item.lastModifiedDate ?? null,
+        status: "ACTIVE",
+        movedFromKey: item.fromKey,
+      });
+
+      await markMediaAssetArchivedRepo(prisma as any, item.fromKey);
+    }
+  }
+
+  return {
+    success: true,
+    scanned: result.scanned,
+    processed: result.processed,
+    movedCount: result.moved.length,
+    skippedCount: result.skipped.length,
+    dryRun: result.dryRun,
+    root: result.root,
+    moved: result.moved.map((item) => ({
+      fromKey: item.fromKey,
+      toKey: item.toKey,
+      batchPrefix: item.batchPrefix,
+      date: item.date,
+    })),
+    skipped: result.skipped,
   };
 }
 

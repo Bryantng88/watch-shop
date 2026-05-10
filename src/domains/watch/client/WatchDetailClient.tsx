@@ -14,7 +14,6 @@ import WatchTradePanel from "../ui/detail/WatchTradePanel";
 type Props = {
     detail: any;
     images?: any[];
-    pricing?: any;
     serviceHistory?: any[];
     tradeHistory?: { acquisitions?: any[]; orders?: any[] } | any[];
     canViewTradeFinancials?: boolean;
@@ -25,24 +24,76 @@ function normalizeRole(value: any) {
     return String(value ?? "").toUpperCase();
 }
 
+function buildMediaUrl(value: any) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+
+    if (
+        raw.startsWith("http://") ||
+        raw.startsWith("https://") ||
+        raw.startsWith("blob:") ||
+        raw.startsWith("data:") ||
+        raw.startsWith("/api/media/sign")
+    ) {
+        return raw;
+    }
+
+    const key = raw.replace(/^\/+/, "");
+    return `/api/media/sign?key=${encodeURIComponent(key)}`;
+}
+
+function normalizeImage(image: any) {
+    if (!image) return null;
+
+    const raw =
+        image.url ??
+        image.imageUrl ??
+        image.src ??
+        image.fileKey ??
+        image.key ??
+        image.path ??
+        null;
+
+    const src = buildMediaUrl(raw);
+
+    return {
+        ...image,
+        key: image.key ?? image.fileKey ?? null,
+        url: src,
+        imageUrl: src,
+        src,
+    };
+}
+
 function sortImages(items: any[]) {
-    return [...items].sort(
+    return [...(items ?? [])].sort(
         (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
     );
 }
 
 export default function WatchDetailClient({
     detail,
-    images = [],
+    images,
     serviceHistory = [],
     tradeHistory,
     canViewTradeFinancials = false,
     canReviewContent = false,
 }: Props) {
-    const sortedImages = sortImages(images ?? []);
+    const sourceImages = Array.isArray(images) && images.length > 0
+        ? images
+        : Array.isArray(detail?.images)
+            ? detail.images
+            : [];
+
+    const sortedImages = sortImages(sourceImages)
+        .map(normalizeImage)
+        .filter(Boolean);
 
     const inlineImage =
         sortedImages.find((img) => normalizeRole(img?.role) === "INLINE") ??
+        sortedImages.find((img) => normalizeRole(img?.role) === "COVER") ??
+        sortedImages.find((img) => normalizeRole(img?.role) === "THUMB") ??
+        sortedImages.find((img) => normalizeRole(img?.role) === "GALLERY") ??
         null;
 
     const galleryImages = sortedImages.filter(
