@@ -9,10 +9,9 @@ type Props = {
 };
 
 export default function WatchMediaSidebar({ values }: Props) {
-    const chosenImages = Array.isArray(values.chosenImages)
-        ? values.chosenImages
+    const poolImages = Array.isArray(values.poolImages)
+        ? values.poolImages
         : [];
-
     const galleryImages = Array.isArray(values.galleryImages)
         ? values.galleryImages
         : [];
@@ -24,7 +23,7 @@ export default function WatchMediaSidebar({ values }: Props) {
             subtitle="Hiển thị nhanh, không edit tại đây."
         >
             <div className="grid grid-cols-1 gap-3">
-                <SidebarStat label="Trong chosen" value={chosenImages.length} />
+                <SidebarStat label="Trong chosen" value={poolImages.length} />
                 <SidebarStat label="Sẽ lưu" value={galleryImages.length} />
                 <SidebarStat label="Has box" value={values.hasBox ? "Có" : "Không"} />
                 <SidebarStat label="Has papers" value={values.hasPapers ? "Có" : "Không"} />

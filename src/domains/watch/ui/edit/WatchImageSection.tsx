@@ -12,9 +12,9 @@ import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type Props = {
-    chosenImages: PickedMediaItem[];
+    poolImages: PickedMediaItem[];
     galleryImages: PickedMediaItem[];
-    onChosenImagesChange: (items: PickedMediaItem[]) => void;
+    onPoolImagesChange: (items: PickedMediaItem[]) => void;
     onGalleryImagesChange: (items: PickedMediaItem[]) => void;
     error?: string | null;
     productId: string;
@@ -68,9 +68,9 @@ function InfoChip({
 }
 
 export default function WatchImageSection({
-    chosenImages,
+    poolImages,
     galleryImages,
-    onChosenImagesChange,
+    onPoolImagesChange,
     onGalleryImagesChange,
     error,
     productId,
@@ -144,7 +144,7 @@ export default function WatchImageSection({
 
     const handleChosenImagesChange = (items: PickedMediaItem[]) => {
         if (locked) return;
-        onChosenImagesChange(items);
+        onPoolImagesChange(items);
     };
 
     const handleGalleryImagesChange = (items: PickedMediaItem[]) => {
@@ -184,7 +184,7 @@ export default function WatchImageSection({
                 <div className="flex flex-wrap gap-2">
                     <InfoChip
                         label="Trong chosen"
-                        value={String(chosenImages.length)}
+                        value={String(poolImages.length)}
                     />
                     <InfoChip
                         label="Gallery sẽ lưu"
@@ -200,7 +200,7 @@ export default function WatchImageSection({
                     ].join(" ")}
                 >
                     <MediaPickerMulti
-                        chosenValue={chosenImages}
+                        chosenValue={poolImages}
                         selectedValue={galleryImages}
                         onChosenChange={handleChosenImagesChange}
                         onSelectedChange={handleGalleryImagesChange}

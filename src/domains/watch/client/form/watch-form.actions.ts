@@ -6,7 +6,11 @@ import { requirePermission } from "@/server/auth/requirePermission";
 
 import type { WatchFormValues } from "./watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server";
-import { moveMediaAssetToWatchChosen, markGalleryMediaAssetsAttached } from "@/domains/media/server";
+import {
+    moveMediaAssetToWatchChosen,
+    moveMediaToWatchPool,
+    markGalleryMediaAssetsAttached,
+} from "@/domains/media/server";
 import { updateWatchPricingWithDiff } from "@/domains/watch/server/pricing";
 import {
     autoApproveWatchReview,
@@ -21,8 +25,6 @@ import {
     pickGoldColors,
     toDecimal,
 } from "./watch-form.server.utils";
-import { moveMediaToWatchPool } from "@/domains/media/server";
-
 
 type MediaFormItem = {
     key?: string | null;
@@ -30,6 +32,7 @@ type MediaFormItem = {
     url?: string | null;
     name?: string | null;
 };
+
 function textOrUndefined(value?: string | null) {
     const text = String(value ?? "").trim();
     return text || undefined;
@@ -43,8 +46,10 @@ function normalizeArray(value?: unknown[]) {
     return (value ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
 }
 
-function normalizeImageKeys(items?: { key?: string | null }[]) {
-    return (items ?? []).map((x) => String(x.key ?? "").trim()).filter(Boolean);
+function normalizeImageKeys(items?: { key?: string | null; fileKey?: string | null }[]) {
+    return (items ?? [])
+        .map((x) => String(x.key ?? x.fileKey ?? "").trim())
+        .filter(Boolean);
 }
 
 function sameJson(a: unknown, b: unknown) {
@@ -76,7 +81,7 @@ function mediaKey(item: MediaFormItem) {
 function dedupeMediaItems(items: MediaFormItem[]) {
     const map = new Map<string, MediaFormItem>();
 
-    for (const item of items) {
+    for (const item of items ?? []) {
         const key = mediaKey(item);
         if (!key) continue;
 
@@ -90,12 +95,12 @@ function dedupeMediaItems(items: MediaFormItem[]) {
 
     return Array.from(map.values());
 }
+
 async function movePoolImagesToChosenPool(
     items: MediaFormItem[],
     input: { productId: string }
 ) {
     const normalized = dedupeMediaItems(items);
-
     const result: MediaFormItem[] = [];
 
     for (const item of normalized) {
@@ -110,6 +115,7 @@ async function movePoolImagesToChosenPool(
         result.push({
             ...item,
             key: moved.key,
+            fileKey: moved.key,
             url: moved.url ?? item.url ?? null,
             name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
         });
@@ -117,21 +123,17 @@ async function movePoolImagesToChosenPool(
 
     return result;
 }
+
 async function moveGalleryImagesToChosen(
     items: MediaFormItem[],
     input: { productId: string; acquisitionId?: string | null }
 ) {
     const normalized = dedupeMediaItems(items);
-
-    if (normalized.length === 0) {
-        return [];
-    }
-
     const result: MediaFormItem[] = [];
 
     for (let index = 0; index < normalized.length; index += 1) {
         const item = normalized[index];
-        const key = String(item.key ?? "").trim();
+        const key = mediaKey(item);
         if (!key) continue;
 
         const moved = await moveMediaAssetToWatchChosen({
@@ -144,6 +146,7 @@ async function moveGalleryImagesToChosen(
         result.push({
             ...item,
             key: moved.key,
+            fileKey: moved.key,
             url: moved.url ?? item.url ?? null,
             name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
         });
@@ -151,7 +154,6 @@ async function moveGalleryImagesToChosen(
 
     return result;
 }
-
 
 export async function submitWatchForm(values: WatchFormValues) {
     const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
@@ -203,8 +205,8 @@ export async function submitWatchForm(values: WatchFormValues) {
         current.product.productImage.map((x: any) => ({ key: x.fileKey }))
     );
 
-    const requestedChosenImages = dedupeMediaItems(
-        values.media.chosenImages ?? []
+    const requestedPoolImages = dedupeMediaItems(
+        values.media.poolImages ?? []
     );
 
     const requestedGalleryImages = dedupeMediaItems(
@@ -381,7 +383,7 @@ export async function submitWatchForm(values: WatchFormValues) {
         requestedGalleryImages.map(mediaKey).filter(Boolean)
     );
 
-    const requestedPoolImages = requestedChosenImages.filter((item) => {
+    const remainingPoolImages = requestedPoolImages.filter((item) => {
         const key = mediaKey(item);
         return key && !galleryOriginalKeys.has(key);
     });
@@ -395,7 +397,7 @@ export async function submitWatchForm(values: WatchFormValues) {
     );
 
     const normalizedPoolImages = await movePoolImagesToChosenPool(
-        requestedPoolImages,
+        remainingPoolImages,
         { productId }
     );
 
@@ -498,7 +500,7 @@ export async function submitWatchForm(values: WatchFormValues) {
         hasContentData,
 
         media: {
-            chosenImages: [...normalizedGalleryImages, ...normalizedPoolImages],
+            poolImages: normalizedPoolImages,
             galleryImages: normalizedGalleryImages,
         },
 

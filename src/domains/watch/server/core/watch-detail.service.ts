@@ -58,7 +58,7 @@ export async function getWatchEditDetail(productId: string) {
 
   const mapped = mapWatchDetail(row);
   const acq = await getLatestAcquisitionUnitCost(productId, row.acquisitionId);
-  const chosenImages = await listWatchChosenMediaPool({
+  const poolImages = await listWatchChosenMediaPool({
     productId,
     acquisitionId: row.acquisitionId,
   });
@@ -67,7 +67,7 @@ export async function getWatchEditDetail(productId: string) {
     ...mapped,
     media: {
       ...((mapped as any).media ?? {}),
-      chosenImages,
+      poolImages,
     },
     acquisition: acq,
     price: {

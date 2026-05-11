@@ -232,7 +232,7 @@ export default function WatchFormClient({
         setValues((prev): WatchFormValues => {
             const serverChosenImages =
                 result?.media?.chosenImages as
-                | WatchFormValues["media"]["chosenImages"]
+                | WatchFormValues["media"]["poolImages"]
                 | undefined;
 
             const serverGalleryImages =
@@ -250,8 +250,8 @@ export default function WatchFormClient({
                     prev.imageReviewStatus,
                 media: {
                     ...prev.media,
-                    chosenImages:
-                        serverChosenImages ?? prev.media.chosenImages,
+                    poolImages:
+                        serverChosenImages ?? prev.media.poolImages,
                     galleryImages:
                         serverGalleryImages ?? prev.media.galleryImages,
                     imageCount:
@@ -387,7 +387,7 @@ export default function WatchFormClient({
 
                     <WatchImageSection
                         productId={values.productId}
-                        chosenImages={values.media.chosenImages || []}
+                        chosenImages={values.media.poolImages || []}
                         galleryImages={values.media.galleryImages || []}
                         imageReviewStatus={values.imageReviewStatus}
                         imageReviewNote={values.imageReviewNote}
@@ -395,7 +395,7 @@ export default function WatchFormClient({
                         onBeforeSubmitReview={saveBeforeSubmitReview}
                         onChosenImagesChange={(items) => {
                             updateMedia({
-                                chosenImages: [...items],
+                                poolImages: [...items],
                             });
                         }}
                         onGalleryImagesChange={(items) => {

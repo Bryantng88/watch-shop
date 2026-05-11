@@ -43,11 +43,9 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
     const contentReviewNote = s(detail?.review?.content?.reviewNote);
     const imageReviewStatus = s(detail?.review?.image?.status) || "DRAFT";
     const imageReviewNote = s(detail?.review?.image?.reviewNote);
-    const chosenImages = Array.isArray(detail?.media?.chosenImages)
-        ? detail.media.chosenImages
-            .map(toPickedMediaItem)
-            .filter(Boolean)
-        : galleryImages;
+    const poolImages = Array.isArray(detail?.media?.poolImages)
+        ? detail.media.poolImages.map(toPickedMediaItem).filter(Boolean)
+        : [];
     return {
         productId: s(detail?.productId),
         contentReviewStatus,
@@ -133,7 +131,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
 
         media: {
             inlineImage: inlineImage as PickedMediaItem | null,
-            chosenImages: chosenImages as PickedMediaItem[],
+            poolImages: poolImages as PickedMediaItem[],
             galleryImages,
             imageCount: galleryImages.length,
             hasBox: Boolean(detail?.watch?.hasBox ?? detail?.spec?.boxIncluded),
