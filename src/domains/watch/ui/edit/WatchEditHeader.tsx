@@ -146,6 +146,12 @@ export default function WatchEditHeader({
                                         {brandName}
                                     </span>
                                 </span>
+                                <span>
+                                    Product ID:{" "}
+                                    <span className="font-mono text-xs font-medium text-slate-700">
+                                        {productId}
+                                    </span>
+                                </span>
                             </div>
 
                             <div className="mt-3 max-w-3xl text-sm text-slate-600">

@@ -1,6 +1,9 @@
 import { WatchSaleState } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
-import type { WatchListFilters } from "../../../ui/list/types";
+import type {
+    WatchListFilters,
+    WatchListSubFilter,
+} from "../../../ui/list/types";
 import type { WatchListView } from "../../../shared/watch-status";
 
 export const WATCH_LIST_THUMBNAIL_IMAGE_ROLES = ["INLINE", "GALLERY"] as const;
@@ -60,6 +63,68 @@ export function buildWatchNonTerminalSaleWhere(): Prisma.WatchWhereInput {
         },
     };
 }
+function reviewSubmittedWhere(): Prisma.WatchWhereInput {
+    return {
+        AND: [
+            notPostedWhere(),
+            {
+                OR: [
+                    {
+                        reviewStates: {
+                            some: {
+                                targetType: "CONTENT" as any,
+                                status: "SUBMITTED" as any,
+                            },
+                        },
+                    },
+                    {
+                        reviewStates: {
+                            some: {
+                                targetType: "IMAGE" as any,
+                                status: "SUBMITTED" as any,
+                            },
+                        },
+                    },
+                ],
+            },
+        ],
+    };
+}
+function reviewApprovedWhere(targetType: "CONTENT" | "IMAGE"): Prisma.WatchWhereInput {
+    return {
+        reviewStates: {
+            some: {
+                targetType: targetType as any,
+                status: "APPROVED" as any,
+            },
+        },
+    };
+}
+
+function reviewNotApprovedWhere(
+    targetType: "CONTENT" | "IMAGE"
+): Prisma.WatchWhereInput {
+    return {
+        NOT: reviewApprovedWhere(targetType),
+    };
+}
+
+function notPostedWhere(): Prisma.WatchWhereInput {
+    return {
+        OR: [
+            { isContentDownloaded: false },
+            { isImageDownloaded: false },
+
+        ],
+    };
+}
+
+function postedWhere(): Prisma.WatchWhereInput {
+    return {
+        isContentDownloaded: true,
+        isImageDownloaded: true,
+    };
+}
 
 export function buildWatchListBaseWhere(
     input: WatchListFilters
@@ -84,11 +149,20 @@ export function buildWatchListBaseWhere(
                         },
                     },
                 },
-                { watchSpecV2: { is: { model: { contains: q, mode: "insensitive" } } } },
                 {
                     watchSpecV2: {
                         is: {
-                            referenceNumber: { contains: q, mode: "insensitive" },
+                            model: { contains: q, mode: "insensitive" },
+                        },
+                    },
+                },
+                {
+                    watchSpecV2: {
+                        is: {
+                            referenceNumber: {
+                                contains: q,
+                                mode: "insensitive",
+                            },
                         },
                     },
                 },
@@ -198,13 +272,87 @@ export function buildWatchListSegmentWhere(
     }
 }
 
+export function buildWatchListSubFilterWhere(
+    subFilter?: WatchListSubFilter
+): Prisma.WatchWhereInput {
+    switch (subFilter) {
+        case "MISSING_CONTENT":
+            return {
+                AND: [
+                    { NOT: buildWatchHasContentWhere() },
+                    buildWatchHasGalleryImageWhere(),
+                ],
+            };
+
+        case "MISSING_IMAGE":
+            return {
+                AND: [
+                    buildWatchHasContentWhere(),
+                    { NOT: buildWatchHasGalleryImageWhere() },
+                ],
+            };
+
+        case "REVIEW_DRAFT":
+            return {
+                AND: [
+                    notPostedWhere(),
+                    reviewNotApprovedWhere("CONTENT"),
+                    reviewNotApprovedWhere("IMAGE"),
+                    {
+                        NOT: reviewSubmittedWhere(),
+                    },
+                ],
+            };
+        case "REVIEW_SUBMITTED":
+            return reviewSubmittedWhere();
+        case "PARTIAL_APPROVED":
+            return {
+                AND: [
+                    notPostedWhere(),
+                    {
+                        OR: [
+                            {
+                                AND: [
+                                    reviewApprovedWhere("CONTENT"),
+                                    reviewNotApprovedWhere("IMAGE"),
+                                ],
+                            },
+                            {
+                                AND: [
+                                    reviewNotApprovedWhere("CONTENT"),
+                                    reviewApprovedWhere("IMAGE"),
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            };
+
+        case "APPROVED":
+            return {
+                AND: [
+                    notPostedWhere(),
+                    reviewApprovedWhere("CONTENT"),
+                    reviewApprovedWhere("IMAGE"),
+                ],
+            };
+
+        case "POSTED":
+            return postedWhere();
+
+        default:
+            return {};
+    }
+}
+
 export function buildWatchListWhere(
     input: WatchListFilters,
     view: WatchListView
 ): Prisma.WatchWhereInput {
     return mergeWatchWhere(
         buildWatchListBaseWhere(input),
-        buildWatchListSegmentWhere(view)
+        buildWatchListSegmentWhere(view),
+        buildWatchListSubFilterWhere(input.subFilter)
     );
 }
 
@@ -214,6 +362,8 @@ export function buildWatchListSummaryWhere(
 ): Prisma.WatchWhereInput {
     return mergeWatchWhere(
         listWhere,
-        target === "content" ? buildWatchHasContentWhere() : buildWatchHasGalleryImageWhere()
+        target === "content"
+            ? buildWatchHasContentWhere()
+            : buildWatchHasGalleryImageWhere()
     );
 }

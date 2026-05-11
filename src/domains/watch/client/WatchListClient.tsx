@@ -8,12 +8,58 @@ import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
 import { buildCounts } from "../ui/list/helpers";
 import { normalizeWatchListView } from "../shared/watch-status";
-import type { ViewKey, WatchListPageProps, WatchRow } from "../ui/list/types";
+import type {
+    ViewKey,
+    WatchListPageProps,
+    WatchRow,
+    WatchListSubFilter,
+} from "../ui/list/types";
 
 function normalizeView(value: string | null | undefined): ViewKey {
     return normalizeWatchListView(value);
 }
 
+function normalizeSubFilter(value: string | null | undefined): WatchListSubFilter {
+    const text = String(value ?? "").trim().toUpperCase();
+
+    const allowed: WatchListSubFilter[] = [
+        "",
+        "MISSING_CONTENT",
+        "MISSING_IMAGE",
+        "REVIEW_DRAFT",
+        "REVIEW_SUBMITTED",
+        "PARTIAL_APPROVED",
+        "APPROVED",
+        "POSTED",
+    ];
+
+    return allowed.includes(text as WatchListSubFilter)
+        ? (text as WatchListSubFilter)
+        : "";
+}
+
+function subFilterAllowedForView(
+    view: ViewKey,
+    subFilter: WatchListSubFilter
+) {
+    if (!subFilter) return true;
+
+    if (view === "processing") {
+        return subFilter === "MISSING_CONTENT" || subFilter === "MISSING_IMAGE";
+    }
+
+    if (view === "ready") {
+        return [
+            "REVIEW_DRAFT",
+            "REVIEW_SUBMITTED",
+            "PARTIAL_APPROVED",
+            "APPROVED",
+            "POSTED",
+        ].includes(subFilter);
+    }
+
+    return false;
+}
 
 function setParam(next: URLSearchParams, key: string, value?: string | null) {
     if (!value) next.delete(key);
@@ -34,9 +80,9 @@ function Pagination({
     return (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
             <div>
-                Tổng: <span className="font-semibold text-slate-950">{total}</span> • Trang{" "}
-                <span className="font-semibold text-slate-950">{page}</span>/
-                <span className="font-semibold text-slate-950">{totalPages}</span>
+                Tổng: <span className="font-semibold text-slate-950">{total}</span>{" "}
+                • Trang <span className="font-semibold text-slate-950">{page}</span>
+                /<span className="font-semibold text-slate-950">{totalPages}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -48,6 +94,7 @@ function Pagination({
                 >
                     ← Trước
                 </button>
+
                 <button
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
@@ -69,6 +116,11 @@ export default function WatchListClient(props: WatchListPageProps) {
     const rows = props.items ?? [];
     const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
 
+    const currentSubFilter = useMemo(() => {
+        const value = normalizeSubFilter(sp.get("subFilter"));
+        return subFilterAllowedForView(currentView, value) ? value : "";
+    }, [sp, currentView]);
+
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [filters, setFilters] = useState({
         q: sp.get("q") ?? "",
@@ -86,13 +138,6 @@ export default function WatchListClient(props: WatchListPageProps) {
         () => buildCounts(rows, props.counts),
         [rows, props.counts]
     );
-    const activeQuickFilters = useMemo(
-        () => ({
-            hasContent: filters.hasContent === "yes",
-            hasImages: filters.hasImages === "yes",
-        }),
-        [filters.hasContent, filters.hasImages]
-    );
 
     function pushParams(mutator: (next: URLSearchParams) => void) {
         const next = new URLSearchParams(sp.toString());
@@ -103,6 +148,16 @@ export default function WatchListClient(props: WatchListPageProps) {
     function handleViewChange(view: ViewKey) {
         pushParams((next) => {
             setParam(next, "view", view === "all" ? null : view);
+            next.delete("subFilter");
+            setParam(next, "page", "1");
+        });
+    }
+
+    function handleSubFilterChange(subFilter: WatchListSubFilter) {
+        const nextValue = currentSubFilter === subFilter ? "" : subFilter;
+
+        pushParams((next) => {
+            setParam(next, "subFilter", nextValue || null);
             setParam(next, "page", "1");
         });
     }
@@ -145,38 +200,10 @@ export default function WatchListClient(props: WatchListPageProps) {
                 "hasImages",
                 "saleStage",
                 "opsStage",
+                "subFilter",
             ].forEach((key) => next.delete(key));
 
             setParam(next, "sort", "updatedDesc");
-            setParam(next, "page", "1");
-        });
-    }
-
-    function handleQuickFilterClick(key: "all" | "hasContent" | "hasImages") {
-        if (key === "all") {
-            setFilters((prev) => ({
-                ...prev,
-                hasContent: "",
-                hasImages: "",
-            }));
-
-            pushParams((next) => {
-                next.delete("hasContent");
-                next.delete("hasImages");
-                setParam(next, "page", "1");
-            });
-            return;
-        }
-
-        const nextValue = filters[key] === "yes" ? "" : "yes";
-
-        setFilters((prev) => ({
-            ...prev,
-            [key]: nextValue,
-        }));
-
-        pushParams((next) => {
-            setParam(next, key, nextValue || null);
             setParam(next, "page", "1");
         });
     }
@@ -187,7 +214,9 @@ export default function WatchListClient(props: WatchListPageProps) {
 
     function onToggleOne(watchId: string, checked: boolean) {
         setSelectedIds((prev) =>
-            checked ? [...new Set([...prev, watchId])] : prev.filter((x) => x !== watchId)
+            checked
+                ? [...new Set([...prev, watchId])]
+                : prev.filter((x) => x !== watchId)
         );
     }
 
@@ -196,6 +225,7 @@ export default function WatchListClient(props: WatchListPageProps) {
             setSelectedIds([]);
             return;
         }
+
         setSelectedIds(rows.map((x) => x.id));
     }
 
@@ -247,7 +277,9 @@ export default function WatchListClient(props: WatchListPageProps) {
                 filters={filters}
                 brandOptions={brandOptions}
                 vendorOptions={vendorOptions}
-                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+                onChange={(patch) =>
+                    setFilters((prev) => ({ ...prev, ...patch }))
+                }
                 onApply={handleApplyFilters}
                 onClear={handleClearFilters}
             />
@@ -256,16 +288,15 @@ export default function WatchListClient(props: WatchListPageProps) {
                 items={rows}
                 selectedIds={selectedIds}
                 canViewCost={props.canViewCost}
-                counts={{
-                    ...counts,
-                    hasContent: props.summary?.hasContent ?? 0,
-                    hasImages: props.summary?.hasImages ?? 0,
-                }}
-                activeQuickFilters={activeQuickFilters}
-                onQuickFilterClick={handleQuickFilterClick}
+                currentView={currentView}
+                subFilter={currentSubFilter}
+                subCounts={props.summary?.subCounts}
+                total={props.total}
+                onSubFilterChange={handleSubFilterChange}
                 onToggleOne={onToggleOne}
                 onToggleAll={onToggleAll}
                 onView={onView}
+                segmentTotal={props.summary?.items}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onService={onService}

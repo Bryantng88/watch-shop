@@ -1,27 +1,23 @@
 "use client";
 
-import type { WatchRow, WatchListCounts } from "./types";
+import type {
+    ViewKey,
+    WatchListSubCounts,
+    WatchListSubFilter,
+    WatchRow,
+} from "./types";
 import WatchListRow from "./WatchListRow";
-
-type QuickFilterKey = "all" | "hasContent" | "hasImages";
-type LegacyQuickFilters = {
-    hasContent?: boolean;
-    hasImages?: boolean;
-};
 
 type Props = {
     items?: WatchRow[];
     selectedIds?: string[];
     canViewCost?: boolean;
-
-    counts?: Partial<WatchListCounts> & {
-        all?: number;
-        hasContent?: number;
-        hasImages?: number;
-    };
-
-    activeQuickFilters?: QuickFilterKey[] | LegacyQuickFilters;
-    onQuickFilterClick?: (key: QuickFilterKey) => void;
+    segmentTotal?: number;
+    currentView: ViewKey;
+    subFilter?: WatchListSubFilter;
+    subCounts?: Partial<WatchListSubCounts>;
+    total?: number;
+    onSubFilterChange?: (key: WatchListSubFilter) => void;
 
     onToggleOne?: (id: string, checked: boolean) => void;
     onToggleAll?: (checked: boolean) => void;
@@ -36,42 +32,6 @@ type Props = {
 
 function cn(...parts: Array<string | false | null | undefined>) {
     return parts.filter(Boolean).join(" ");
-}
-
-function deriveSummary(
-    items: WatchRow[],
-    counts?: Partial<WatchListCounts> & {
-        all?: number;
-        hasContent?: number;
-        hasImages?: number;
-    }
-) {
-    return {
-        items: Number(counts?.all ?? items.length),
-        hasContent: Number(
-            counts?.hasContent ?? items.filter((item) => item?.hasContent).length
-        ),
-        hasImages: Number(
-            counts?.hasImages ?? items.filter((item) => item?.hasImages).length
-        ),
-    };
-}
-
-function isQuickFilterActive(
-    activeQuickFilters: QuickFilterKey[] | LegacyQuickFilters | undefined,
-    key: QuickFilterKey
-) {
-    if (!activeQuickFilters) return false;
-
-    if (Array.isArray(activeQuickFilters)) {
-        return activeQuickFilters.includes(key);
-    }
-
-    if (key === "all") {
-        return !activeQuickFilters.hasContent && !activeQuickFilters.hasImages;
-    }
-
-    return Boolean(activeQuickFilters[key]);
 }
 
 function FilterChip({
@@ -102,13 +62,88 @@ function FilterChip({
     );
 }
 
+function MiniFilters({
+    view,
+    subFilter,
+    subCounts,
+    onChange,
+}: {
+    view: ViewKey;
+    subFilter?: WatchListSubFilter;
+    subCounts?: Partial<WatchListSubCounts>;
+    onChange?: (key: WatchListSubFilter) => void;
+}) {
+    if (view === "processing") {
+        return (
+            <>
+                <FilterChip
+                    active={subFilter === "MISSING_CONTENT"}
+                    label="thiếu content"
+                    value={Number(subCounts?.missingContent ?? 0)}
+                    onClick={() => onChange?.("MISSING_CONTENT")}
+                />
+
+                <FilterChip
+                    active={subFilter === "MISSING_IMAGE"}
+                    label="thiếu image"
+                    value={Number(subCounts?.missingImage ?? 0)}
+                    onClick={() => onChange?.("MISSING_IMAGE")}
+                />
+            </>
+        );
+    }
+
+    if (view === "ready") {
+        return (
+            <>
+                <FilterChip
+                    active={subFilter === "REVIEW_DRAFT"}
+                    label="Draft"
+                    value={Number(subCounts?.reviewDraft ?? 0)}
+                    onClick={() => onChange?.("REVIEW_DRAFT")}
+                />
+                <FilterChip
+                    active={subFilter === "REVIEW_SUBMITTED"}
+                    label="Chờ duyệt"
+                    value={Number(subCounts?.reviewSubmitted ?? 0)}
+                    onClick={() => onChange?.("REVIEW_SUBMITTED")}
+                />
+                <FilterChip
+                    active={subFilter === "PARTIAL_APPROVED"}
+                    label="Duyệt 1 phần"
+                    value={Number(subCounts?.partialApproved ?? 0)}
+                    onClick={() => onChange?.("PARTIAL_APPROVED")}
+                />
+
+                <FilterChip
+                    active={subFilter === "APPROVED"}
+                    label="Đã duyệt"
+                    value={Number(subCounts?.approved ?? 0)}
+                    onClick={() => onChange?.("APPROVED")}
+                />
+
+                <FilterChip
+                    active={subFilter === "POSTED"}
+                    label="Đã đăng"
+                    value={Number(subCounts?.posted ?? 0)}
+                    onClick={() => onChange?.("POSTED")}
+                />
+            </>
+        );
+    }
+
+    return null;
+}
+
 export default function WatchListTable({
     items = [],
     selectedIds = [],
     canViewCost = true,
-    counts,
-    activeQuickFilters,
-    onQuickFilterClick,
+    currentView,
+    subFilter = "",
+    subCounts,
+    total,
+    onSubFilterChange,
     onToggleOne,
     onToggleAll,
     onView,
@@ -117,11 +152,10 @@ export default function WatchListTable({
     onService,
     onQuickOrder,
     onConsign,
+    segmentTotal
 }: Props) {
     const safeItems = Array.isArray(items) ? items : [];
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
-
-    const summary = deriveSummary(safeItems, counts);
 
     const allChecked =
         safeItems.length > 0 &&
@@ -135,45 +169,18 @@ export default function WatchListTable({
                 </div>
 
                 <FilterChip
-                    active={isQuickFilterActive(activeQuickFilters, "all")}
+                    active={!subFilter}
                     label="mục"
-                    value={summary.items}
-                    onClick={() => onQuickFilterClick?.("all")}
+                    value={Number(segmentTotal ?? total ?? safeItems.length)}
+                    onClick={() => onSubFilterChange?.("")}
                 />
 
-                <div className="text-xs text-slate-500">
-                    <button
-                        type="button"
-                        onClick={() => onQuickFilterClick?.("hasContent")}
-                        className={cn(
-                            "transition hover:text-slate-700",
-                            isQuickFilterActive(activeQuickFilters, "hasContent") &&
-                            "font-medium text-emerald-600"
-                        )}
-                    >
-                        <span className="font-medium text-emerald-600">
-                            {summary.hasContent}
-                        </span>{" "}
-                        có content
-                    </button>
-                </div>
-
-                <div className="text-xs text-slate-500">
-                    <button
-                        type="button"
-                        onClick={() => onQuickFilterClick?.("hasImages")}
-                        className={cn(
-                            "transition hover:text-slate-700",
-                            isQuickFilterActive(activeQuickFilters, "hasImages") &&
-                            "font-medium text-blue-600"
-                        )}
-                    >
-                        <span className="font-medium text-blue-600">
-                            {summary.hasImages}
-                        </span>{" "}
-                        có image
-                    </button>
-                </div>
+                <MiniFilters
+                    view={currentView}
+                    subFilter={subFilter}
+                    subCounts={subCounts}
+                    onChange={onSubFilterChange}
+                />
             </div>
 
             <div className="overflow-x-auto">

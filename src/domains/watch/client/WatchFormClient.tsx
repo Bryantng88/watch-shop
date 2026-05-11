@@ -231,7 +231,7 @@ export default function WatchFormClient({
     const updateValuesAfterSave = (result: Awaited<ReturnType<typeof submitWatchForm>>) => {
         setValues((prev): WatchFormValues => {
             const serverChosenImages =
-                result?.media?.chosenImages as
+                result?.media?.poolImages as
                 | WatchFormValues["media"]["poolImages"]
                 | undefined;
 
@@ -325,6 +325,56 @@ export default function WatchFormClient({
             return false;
         }
     };
+    function getMediaKey(item: any) {
+        return String(item?.key ?? item?.fileKey ?? "").trim();
+    }
+
+    function handlePoolImagesChange(items: WatchFormValues["media"]["poolImages"]) {
+        updateMedia({
+            poolImages: [...items],
+        });
+    }
+
+    function handleGalleryImagesChange(
+        items: WatchFormValues["media"]["galleryImages"]
+    ) {
+        setValues((prev) => {
+            const nextGalleryImages = [...items];
+
+            const nextGalleryKeys = new Set(
+                nextGalleryImages.map(getMediaKey).filter(Boolean)
+            );
+
+            const removedFromGallery = (prev.media.galleryImages || []).filter(
+                (item: any) => {
+                    const key = getMediaKey(item);
+                    return key && !nextGalleryKeys.has(key);
+                }
+            );
+
+            const poolMap = new Map<string, any>();
+
+            for (const item of prev.media.poolImages || []) {
+                const key = getMediaKey(item);
+                if (key) poolMap.set(key, item);
+            }
+
+            for (const item of removedFromGallery) {
+                const key = getMediaKey(item);
+                if (key) poolMap.set(key, item);
+            }
+
+            return {
+                ...prev,
+                media: {
+                    ...prev.media,
+                    poolImages: Array.from(poolMap.values()),
+                    galleryImages: nextGalleryImages,
+                    imageCount: nextGalleryImages.length,
+                },
+            };
+        });
+    }
     return (
         <div className="space-y-6">
             <WatchEditHeader
@@ -389,23 +439,14 @@ export default function WatchFormClient({
                         watchTitle={values.basic.title}
                         inlineImage={inlineImage}
                         productId={values.productId}
-                        chosenImages={values.media.poolImages || []}
+                        poolImages={values.media.poolImages || []}
                         galleryImages={values.media.galleryImages || []}
                         imageReviewStatus={values.imageReviewStatus}
                         imageReviewNote={values.imageReviewNote}
                         canReviewContent={canReviewContent}
                         onBeforeSubmitReview={saveBeforeSubmitReview}
-                        onChosenImagesChange={(items) => {
-                            updateMedia({
-                                poolImages: [...items],
-                            });
-                        }}
-                        onGalleryImagesChange={(items) => {
-                            updateMedia({
-                                galleryImages: [...items],
-                                imageCount: items.length,
-                            });
-                        }}
+                        onPoolImagesChange={handlePoolImagesChange}
+                        onGalleryImagesChange={handleGalleryImagesChange}
                         onReviewStatusChange={(next) =>
                             handleReviewStatusChange("image", next)
                         }

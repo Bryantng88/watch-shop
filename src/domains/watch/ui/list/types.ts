@@ -3,6 +3,16 @@ import type { WatchListView } from "../../shared/watch-status";
 export type ViewKey = WatchListView;
 export type { WatchListView };
 
+export type WatchListSubFilter =
+    | ""
+    | "MISSING_CONTENT"
+    | "MISSING_IMAGE"
+    | "REVIEW_DRAFT"
+    | "REVIEW_SUBMITTED"
+    | "PARTIAL_APPROVED"
+    | "APPROVED"
+    | "POSTED";
+
 export type WatchListCounts = {
     draft: number;
     processing: number;
@@ -12,10 +22,21 @@ export type WatchListCounts = {
     all: number;
 };
 
+export type WatchListSubCounts = {
+    missingContent: number;
+    missingImage: number;
+    reviewDraft: number;
+    reviewSubmitted: number;
+    partialApproved: number;
+    approved: number;
+    posted: number;
+};
+
 export type WatchListSummary = {
     items: number;
     hasContent: number;
     hasImages: number;
+    subCounts?: WatchListSubCounts;
 };
 
 export type WatchRow = {
@@ -40,6 +61,7 @@ export type WatchRow = {
         name?: string | null;
         email?: string | null;
     } | null;
+
     contentStatus?:
     | "DRAFT"
     | "SUBMITTED"
@@ -75,6 +97,7 @@ export type WatchRow = {
 
     specStatus?: "PENDING" | "PARTIAL" | "READY" | "FAILED" | null;
 };
+
 export type WatchListResult = {
     items: WatchRow[];
     total: number;
@@ -87,6 +110,7 @@ export type WatchListResult = {
 
 export type WatchListFilters = {
     view?: WatchListView;
+    subFilter?: WatchListSubFilter;
     q?: string;
     sku?: string;
     brandId?: string;

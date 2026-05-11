@@ -69,7 +69,12 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
                     {detail?.brand?.name || "-"}
                   </span>
                 </span>
-
+                <span>
+                  Product ID:{" "}
+                  <span className="font-mono text-xs font-medium text-slate-700">
+                    {detail?.productId || detail?.id || "-"}
+                  </span>
+                </span>
                 <span>
                   Updated:{" "}
                   <span className="font-medium text-slate-700">

@@ -90,7 +90,7 @@ export default function WatchImageSection({
         currentReviewStatus === "APPROVED" ||
         (currentReviewStatus === "SUBMITTED" && !canReviewContent);
 
-    const handleBeforeOpen = async () => {
+    const ensureEditable = async () => {
         if (currentReviewStatus !== "APPROVED") return true;
 
         if (!canReviewContent) {
@@ -142,13 +142,21 @@ export default function WatchImageSection({
         return true;
     };
 
-    const handleChosenImagesChange = (items: PickedMediaItem[]) => {
+    const handlePoolImagesChange = async (items: PickedMediaItem[]) => {
         if (locked) return;
+
+        const ok = await ensureEditable();
+        if (!ok) return;
+
         onPoolImagesChange(items);
     };
 
-    const handleGalleryImagesChange = (items: PickedMediaItem[]) => {
+    const handleGalleryImagesChange = async (items: PickedMediaItem[]) => {
         if (locked) return;
+
+        const ok = await ensureEditable();
+        if (!ok) return;
+
         onGalleryImagesChange(items);
     };
 
@@ -157,7 +165,6 @@ export default function WatchImageSection({
             icon={<ImageIcon className="h-5 w-5" />}
             title="Hình ảnh"
             subtitle="Chỉ quản lý ảnh gallery của watch. Ảnh đại diện dùng role INLINE riêng."
-            onBeforeOpen={handleBeforeOpen}
             actions={
                 <SectionReviewActions
                     productId={productId}
@@ -174,24 +181,24 @@ export default function WatchImageSection({
         >
             <div className="space-y-4">
                 {locked ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        {currentReviewStatus === "APPROVED"
-                            ? "Hình ảnh đã được duyệt. Muốn chỉnh sửa lại cần admin mở về Draft."
-                            : "Hình ảnh đang chờ duyệt nên tạm khóa chỉnh sửa."}
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <div>
+                            {currentReviewStatus === "APPROVED"
+                                ? "Hình ảnh đã được duyệt. Muốn chỉnh sửa lại cần admin mở về Draft."
+                                : "Hình ảnh đang chờ duyệt nên tạm khóa chỉnh sửa."}
+                        </div>
+
+                        {currentReviewStatus === "APPROVED" && canReviewContent ? (
+                            <button
+                                type="button"
+                                onClick={ensureEditable}
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                            >
+                                Mở chỉnh sửa
+                            </button>
+                        ) : null}
                     </div>
                 ) : null}
-
-                <div className="flex flex-wrap gap-2">
-                    <InfoChip
-                        label="Trong chosen"
-                        value={String(poolImages.length)}
-                    />
-                    <InfoChip
-                        label="Gallery sẽ lưu"
-                        value={`${galleryImages.length}/10`}
-                        tone="primary"
-                    />
-                </div>
 
                 <div
                     className={[
@@ -202,8 +209,9 @@ export default function WatchImageSection({
                     <MediaPickerMulti
                         chosenValue={poolImages}
                         selectedValue={galleryImages}
-                        onChosenChange={handleChosenImagesChange}
+                        onChosenChange={handlePoolImagesChange}
                         onSelectedChange={handleGalleryImagesChange}
+
                         maxFinalSelection={10}
                         profile="edit"
                         title="Ảnh gallery"

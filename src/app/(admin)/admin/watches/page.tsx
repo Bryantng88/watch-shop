@@ -70,6 +70,8 @@ export default async function WatchesPage({
             | "hold"
             | "sold"
             | "all",
+        subFilter: firstValue(resolvedSearchParams.subFilter) as any,
+
         q: firstValue(resolvedSearchParams.q),
         sku: firstValue(resolvedSearchParams.sku),
         brandId: firstValue(resolvedSearchParams.brandId),

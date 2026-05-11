@@ -6,6 +6,7 @@ import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 async function markContentCopied(productId: string) {
   const res = await fetch(`/api/admin/watches/${productId}/post-usage`, {
@@ -66,23 +67,32 @@ export default function WatchContentPanel({ detail }: Props) {
     [content, detail?.title, bulletSpecs]
   );
   const [postTitle, ...postRest] = fullPost.split("\n\n");
-
+  const notify = useNotify();
   const handleCopy = async () => {
     if (!canCopy || !detail?.productId) return;
 
-    await navigator.clipboard.writeText(fullPost);
-    setCopied(true);
-
     try {
+      await navigator.clipboard.writeText(fullPost);
+      setCopied(true);
+
       const next = await markContentCopied(detail.productId);
       setUsage(next);
-    } catch (error) {
-      console.error(error);
+
+      notify.success({
+        title: "Đã copy content",
+        message: next.isPosted
+          ? "Content đã được copy và gallery đã được tải. Watch sẽ được ghi nhận là Đã đăng."
+          : "Content đã được copy và hệ thống đã ghi nhận.",
+      });
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể copy content",
+        message: error?.message || "Có lỗi xảy ra khi copy content.",
+      });
+    } finally {
+      window.setTimeout(() => setCopied(false), 1600);
     }
-
-    window.setTimeout(() => setCopied(false), 1600);
   };
-
   return (
     <SectionCard
       title="Content"

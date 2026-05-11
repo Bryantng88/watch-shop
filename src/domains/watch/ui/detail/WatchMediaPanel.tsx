@@ -48,8 +48,31 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
   ).toUpperCase();
 
   const canViewAndDownload = imageStatus === "APPROVED";
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
 
-  function handleDownloadAll() {
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function filenameFromDisposition(value: string | null) {
+    if (!value) return "watch-gallery.zip";
+
+    const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      return decodeURIComponent(utf8Match[1]);
+    }
+
+    const normalMatch = value.match(/filename="?([^"]+)"?/i);
+    return normalMatch?.[1] || "watch-gallery.zip";
+  }
+  async function handleDownloadAll() {
     const productId = String(detail?.productId ?? detail?.id ?? "").trim();
 
     if (!productId || downloading || !canViewAndDownload) return;
@@ -61,24 +84,55 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
       message: "Hệ thống đang đóng gói ảnh GALLERY thành file zip.",
     });
 
-    window.location.href = `/api/admin/watches/${productId}/download-gallery`;
+    try {
+      const res = await fetch(`/api/admin/watches/${productId}/download-gallery`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-    setUsage((prev) => ({
-      ...prev,
-      isImageDownloaded: true,
-    }));
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || "Không thể tải gallery.");
+      }
 
-    notify.success({
-      title: "Đang tải gallery",
-      message: usage.isContentDownloaded
-        ? "Ảnh đã được tải, watch đã đủ điều kiện Đã đăng."
-        : "Ảnh đã được tải và hệ thống đã ghi nhận.",
-    });
+      const blob = await res.blob();
+      const filename = filenameFromDisposition(
+        res.headers.get("content-disposition")
+      );
 
-    window.setTimeout(() => {
+      downloadBlob(blob, filename);
+
+      const nextUsage = {
+        isImageDownloaded:
+          res.headers.get("x-watch-is-image-downloaded") === "true",
+
+        isContentDownloaded:
+          res.headers.get("x-watch-is-content-downloaded") === "true",
+
+        isPosted:
+          res.headers.get("x-watch-is-posted") === "true",
+      };
+
+      setUsage({
+        isContentDownloaded: Boolean(nextUsage.isContentDownloaded),
+        isImageDownloaded: Boolean(nextUsage.isImageDownloaded),
+      });
+
+      notify.success({
+        title: "Đã tải gallery",
+        message: nextUsage.isPosted
+          ? "Gallery đã được tải và content đã được copy. Watch sẽ được ghi nhận là Đã đăng."
+          : "Gallery đã được tải và hệ thống đã ghi nhận.",
+      });
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể tải gallery",
+        message: error?.message || "Có lỗi xảy ra khi tải gallery.",
+      });
+    } finally {
       progress.hide();
       setDownloading(false);
-    }, 1200);
+    }
   }
 
   return (
