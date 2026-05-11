@@ -26,6 +26,8 @@ type Props = {
         status: ReviewStatus;
         reviewNote?: string | null;
     }) => void;
+    inlineImage?: PickedMediaItem | null;
+    watchTitle?: string | null;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -72,6 +74,8 @@ export default function WatchImageSection({
     onGalleryImagesChange,
     error,
     productId,
+    inlineImage,
+    watchTitle,
     imageReviewStatus,
     imageReviewNote,
     canReviewContent = false,
@@ -204,6 +208,15 @@ export default function WatchImageSection({
                         profile="edit"
                         title="Ảnh gallery"
                         description="Chỉ chọn ảnh gallery. Ảnh đại diện INLINE được quản lý riêng cho header/list thumbnail."
+                        contextImage={{
+                            src:
+                                inlineImage?.url ??
+                                (inlineImage as any)?.imageUrl ??
+                                (inlineImage as any)?.src ??
+                                null,
+                            title: watchTitle || "Watch đang chỉnh",
+                            subtitle: "Ảnh đại diện INLINE của watch hiện tại",
+                        }}
                     />
                 </div>
 

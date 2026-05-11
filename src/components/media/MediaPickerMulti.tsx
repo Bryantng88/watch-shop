@@ -12,7 +12,11 @@ export type PickedMediaItem = {
     url?: string | null;
     name?: string | null;
 };
-
+type ContextImage = {
+    src?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+};
 type Props = {
     chosenValue?: PickedMediaItem[];
     selectedValue?: PickedMediaItem[];
@@ -22,6 +26,7 @@ type Props = {
     maxFinalSelection?: number;
     title?: string;
     description?: string;
+    contextImage?: ContextImage | null;
 };
 
 type PreviewState = {
@@ -356,6 +361,7 @@ export default function MediaPickerMulti({
     maxFinalSelection,
     title,
     description,
+    contextImage,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [preview, setPreview] = React.useState<PreviewState>(null);
@@ -552,6 +558,7 @@ export default function MediaPickerMulti({
                 selectedKeys={chosenItems.map((item) => item.key)}
                 onSubmit={handleDialogSubmit}
                 submitLabel="Xác nhận ảnh đã chọn"
+                contextImage={contextImage}
             />
         </div>
     );

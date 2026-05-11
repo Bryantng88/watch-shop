@@ -29,7 +29,11 @@ type FolderItem = {
 type BrowseFolderPayload = {
     prefix?: unknown;
 };
-
+type ContextImage = {
+    src?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+};
 type BrowseFilePayload = {
     key?: unknown;
     url?: unknown;
@@ -47,6 +51,7 @@ type Props = {
     title?: string;
     description?: string;
     submitLabel?: string;
+    contextImage?: ContextImage | null;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -116,6 +121,7 @@ export default function MediaBrowserDialog({
     onClose,
     onSelect,
     onSubmit,
+    contextImage,
     profile = "inline",
     selectedKey,
     selectedKeys = [],
@@ -347,6 +353,15 @@ export default function MediaBrowserDialog({
                         </div>
                         <div className="mt-1 text-sm text-slate-500">
                             {profileLabel}
+                        </div>
+                        {contextImage?.title ? (
+                            <div className="mt-0.5 truncate text-sm font-medium text-slate-700">
+                                {contextImage.title}
+                            </div>
+                        ) : null}
+
+                        <div className="mt-1 text-sm text-slate-500">
+                            {contextImage?.subtitle ?? profileLabel}
                         </div>
                     </div>
 

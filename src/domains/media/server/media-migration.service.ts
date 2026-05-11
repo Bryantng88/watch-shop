@@ -277,7 +277,77 @@ export async function organizeActiveMedia() {
         errors,
     };
 }
+export async function moveMediaToWatchPool(input: {
+    fromKey: string;
+    productId: string;
+}) {
+    const fromKey = normalizeKey(input.fromKey);
+    const fileName = nameFromKey(fromKey);
 
+    const targetPrefix = `products/edit/chosen/watch/${input.productId}/pool`;
+    const toKey = `${targetPrefix}/${fileName}`;
+
+    if (fromKey === toKey) {
+        return {
+            key: toKey,
+            fileKey: toKey,
+            name: fileName,
+            url: `/api/media/sign?key=${encodeURIComponent(toKey)}`,
+        };
+    }
+
+    await moveMediaFile({
+        fromKey,
+        toKey,
+    });
+
+    await prisma.mediaAsset.upsert({
+        where: { key: toKey },
+        create: {
+            key: toKey,
+            parentPrefix: targetPrefix,
+            fileName,
+            ext: getExtFromName(fileName),
+            profile: "edit",
+            status: "CHOSEN",
+            productId: input.productId,
+            role: "GALLERY",
+            isMissing: false,
+            missingAt: null,
+            lastSeenAt: new Date(),
+            movedFromKey: fromKey,
+        },
+        update: {
+            parentPrefix: targetPrefix,
+            fileName,
+            ext: getExtFromName(fileName),
+            profile: "edit",
+            status: "CHOSEN",
+            productId: input.productId,
+            role: "GALLERY",
+            isMissing: false,
+            missingAt: null,
+            lastSeenAt: new Date(),
+            movedFromKey: fromKey,
+        },
+    });
+
+    await prisma.mediaAsset.updateMany({
+        where: { key: fromKey },
+        data: {
+            status: "MISSING",
+            isMissing: true,
+            missingAt: new Date(),
+        },
+    });
+
+    return {
+        key: toKey,
+        fileKey: toKey,
+        name: fileName,
+        url: `/api/media/sign?key=${encodeURIComponent(toKey)}`,
+    };
+}
 export async function moveMediaToChosen(input: {
     fromKey: string;
     productId?: string | null;

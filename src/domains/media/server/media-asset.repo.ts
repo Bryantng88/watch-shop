@@ -162,13 +162,25 @@ export async function listWatchChosenMediaAssetsRepo(
 ) {
   const client = dbOrTx(db);
 
+  const editChosenPrefix = `products/edit/chosen/watch/${input.productId}/`;
+
   return client.mediaAsset.findMany({
     where: {
       status: "CHOSEN",
       isMissing: false,
+      productId: input.productId,
+      key: {
+        startsWith: editChosenPrefix,
+      },
       OR: [
-        { productId: input.productId },
-        ...(input.acquisitionId ? [{ acquisitionId: input.acquisitionId }] : []),
+        {
+          parentPrefix: `${editChosenPrefix}gallery`,
+          role: "GALLERY",
+        },
+        {
+          parentPrefix: `${editChosenPrefix}pool`,
+          role: null,
+        },
       ],
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],

@@ -21,13 +21,15 @@ import {
     pickGoldColors,
     toDecimal,
 } from "./watch-form.server.utils";
+import { moveMediaToWatchPool } from "@/domains/media/server";
+
 
 type MediaFormItem = {
     key?: string | null;
+    fileKey?: string | null;
     url?: string | null;
     name?: string | null;
 };
-
 function textOrUndefined(value?: string | null) {
     const text = String(value ?? "").trim();
     return text || undefined;
@@ -67,23 +69,54 @@ function fileNameFromKey(key: string) {
     return key.split("/").pop() ?? key;
 }
 
+function mediaKey(item: MediaFormItem) {
+    return String(item?.key ?? item?.fileKey ?? "").trim();
+}
+
 function dedupeMediaItems(items: MediaFormItem[]) {
     const map = new Map<string, MediaFormItem>();
 
     for (const item of items) {
-        const key = String(item?.key ?? "").trim();
+        const key = mediaKey(item);
         if (!key) continue;
 
         map.set(key, {
             ...item,
             key,
+            fileKey: key,
             name: item.name ?? fileNameFromKey(key),
         });
     }
 
     return Array.from(map.values());
 }
+async function movePoolImagesToChosenPool(
+    items: MediaFormItem[],
+    input: { productId: string }
+) {
+    const normalized = dedupeMediaItems(items);
 
+    const result: MediaFormItem[] = [];
+
+    for (const item of normalized) {
+        const key = mediaKey(item);
+        if (!key) continue;
+
+        const moved = await moveMediaToWatchPool({
+            fromKey: key,
+            productId: input.productId,
+        });
+
+        result.push({
+            ...item,
+            key: moved.key,
+            url: moved.url ?? item.url ?? null,
+            name: moved.name ?? item.name ?? fileNameFromKey(moved.key),
+        });
+    }
+
+    return result;
+}
 async function moveGalleryImagesToChosen(
     items: MediaFormItem[],
     input: { productId: string; acquisitionId?: string | null }
@@ -170,6 +203,10 @@ export async function submitWatchForm(values: WatchFormValues) {
         current.product.productImage.map((x: any) => ({ key: x.fileKey }))
     );
 
+    const requestedChosenImages = dedupeMediaItems(
+        values.media.chosenImages ?? []
+    );
+
     const requestedGalleryImages = dedupeMediaItems(
         values.media.galleryImages ?? []
     );
@@ -227,8 +264,6 @@ export async function submitWatchForm(values: WatchFormValues) {
                     values.basic.siteChannel,
                     WatchFormEnums.WatchSiteChannel
                 ),
-                // saleState / stockState / serviceState are workflow fields.
-                // They are updated through watch-state transition actions only.
                 conditionGrade: values.basic.conditionGrade || null,
                 movementType: pickEnumOrNull(
                     values.basic.movementType,
@@ -342,35 +377,28 @@ export async function submitWatchForm(values: WatchFormValues) {
         });
     });
 
-    const requestedChosenImages = dedupeMediaItems(
-        values.media.chosenImages ?? []
+    const galleryOriginalKeys = new Set(
+        requestedGalleryImages.map(mediaKey).filter(Boolean)
     );
 
-    const normalizedChosenImages = await moveGalleryImagesToChosen(
-        requestedChosenImages,
+    const requestedPoolImages = requestedChosenImages.filter((item) => {
+        const key = mediaKey(item);
+        return key && !galleryOriginalKeys.has(key);
+    });
+
+    const normalizedGalleryImages = await moveGalleryImagesToChosen(
+        requestedGalleryImages,
         {
             productId,
             acquisitionId: current.acquisitionId,
         }
     );
 
-    const movedByOriginalKey = new Map<string, MediaFormItem>();
-
-    requestedChosenImages.forEach((before, index) => {
-        const beforeKey = String(before.key ?? "").trim();
-        const moved = normalizedChosenImages[index];
-
-        if (beforeKey && moved) {
-            movedByOriginalKey.set(beforeKey, moved);
-        }
-    });
-
-    const normalizedGalleryImages = dedupeMediaItems(
-        requestedGalleryImages.map((item) => {
-            const key = String(item.key ?? "").trim();
-            return movedByOriginalKey.get(key) ?? item;
-        })
+    const normalizedPoolImages = await movePoolImagesToChosenPool(
+        requestedPoolImages,
+        { productId }
     );
+
     const galleryImageInputs = normalizedGalleryImages.map((item, index) => ({
         fileKey: String(item.key),
         isForAdmin: true,
@@ -470,7 +498,7 @@ export async function submitWatchForm(values: WatchFormValues) {
         hasContentData,
 
         media: {
-            chosenImages: normalizedChosenImages,
+            chosenImages: [...normalizedGalleryImages, ...normalizedPoolImages],
             galleryImages: normalizedGalleryImages,
         },
 
