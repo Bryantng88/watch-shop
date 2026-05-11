@@ -386,6 +386,8 @@ export default function WatchFormClient({
                     </div>
 
                     <WatchImageSection
+                        watchTitle={values.basic.title}
+                        inlineImage={inlineImage}
                         productId={values.productId}
                         chosenImages={values.media.chosenImages || []}
                         galleryImages={values.media.galleryImages || []}

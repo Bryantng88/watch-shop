@@ -162,26 +162,17 @@ export async function listWatchChosenMediaAssetsRepo(
 ) {
   const client = dbOrTx(db);
 
-  const editChosenPrefix = `products/edit/chosen/watch/${input.productId}/`;
+  const poolPrefix = `products/edit/chosen/watch/${input.productId}/pool`;
 
   return client.mediaAsset.findMany({
     where: {
       status: "CHOSEN",
       isMissing: false,
       productId: input.productId,
+      parentPrefix: poolPrefix,
       key: {
-        startsWith: editChosenPrefix,
+        startsWith: `${poolPrefix}/`,
       },
-      OR: [
-        {
-          parentPrefix: `${editChosenPrefix}gallery`,
-          role: "GALLERY",
-        },
-        {
-          parentPrefix: `${editChosenPrefix}pool`,
-          role: null,
-        },
-      ],
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: mediaAssetSelect(),
