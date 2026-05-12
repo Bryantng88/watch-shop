@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { bulkPostAcquisitionApplication } from "@/domains/acquisition/application";
+import { postMultipleAcquisitionsApplication } from "@/domains/acquisition/application";
 
 export async function POST(req: NextRequest) {
     try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const result = await bulkPostAcquisitionApplication({ acquisitionIds });
+        const result = await postMultipleAcquisitionsApplication(acquisitionIds);
 
         if (result.failed.length > 0 && result.posted.length === 0) {
             return NextResponse.json(

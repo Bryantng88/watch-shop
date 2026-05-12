@@ -2,7 +2,7 @@ import { ProductType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
 import {
     stringifyAcquisitionItemMeta,
-} from "./metadata";
+} from "../shared/acquisition-item-metadata";
 
 export type CreateOrUpdateAcqItemInput = {
     id?: string;

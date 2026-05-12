@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
     AcquisitionListTabs,
@@ -31,6 +33,8 @@ export default function AcquisitionListClient(
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
+    const notify = useNotify();
+    const progress = useAppProgress();
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
     const [showBulkBar, setShowBulkBar] = React.useState(false);
@@ -45,6 +49,66 @@ export default function AcquisitionListClient(
     }, [selectedIds.length]);
 
     const displayItems = props.items;
+
+    async function handleBulkPost() {
+        progress.show({
+            title: "Đang duyệt phiếu",
+            message: `Đang xử lý ${selectedIds.length} phiếu nhập đã chọn.`,
+        });
+
+        try {
+            const payload = displayItems
+                .filter((x) => selectedIds.includes(x.id))
+                .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
+
+            const res = await fetch("/api/admin/acquisitions/bulk-post", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items: payload }),
+            });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                notify.error({
+                    title: "Duyệt phiếu thất bại",
+                    message: getBulkPostErrorMessage(data),
+                    duration: 7000,
+                });
+                return;
+            }
+
+            const postedCount = Number(data?.posted?.length ?? 0);
+            const failedCount = Number(data?.failed?.length ?? 0);
+
+            if (failedCount > 0) {
+                notify.warning({
+                    title: "Duyệt phiếu chưa hoàn tất",
+                    message: `Đã duyệt ${postedCount} phiếu, có ${failedCount} phiếu lỗi.\n\n${getBulkPostErrorMessage(data)}`,
+                    duration: 7000,
+                });
+            } else {
+                notify.success({
+                    title: "Đã duyệt phiếu nhập",
+                    message: `Đã duyệt thành công ${postedCount} phiếu.`,
+                });
+            }
+
+            setSelectedIds([]);
+            setShowBulkBar(false);
+            router.refresh();
+        } catch (error) {
+            notify.error({
+                title: "Duyệt phiếu thất bại",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Có lỗi khi duyệt phiếu!",
+            });
+        } finally {
+            progress.hide();
+        }
+    }
 
     return (
         <div className="space-y-4">
@@ -68,45 +132,7 @@ export default function AcquisitionListClient(
 
                     <button
                         className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50"
-                        onClick={async () => {
-                            try {
-                                const payload = displayItems
-                                    .filter((x) => selectedIds.includes(x.id))
-                                    .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
-
-                                const res = await fetch("/api/admin/acquisitions/bulk-post", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ items: payload }),
-                                });
-
-                                const data = await res.json().catch(() => null);
-
-                                if (!res.ok) {
-                                    alert(getBulkPostErrorMessage(data));
-                                    return;
-                                }
-
-                                const postedCount = Number(data?.posted?.length ?? 0);
-                                const failedCount = Number(data?.failed?.length ?? 0);
-
-                                if (failedCount > 0) {
-                                    alert(
-                                        `Đã duyệt ${postedCount} phiếu, có ${failedCount} phiếu lỗi:\n\n${getBulkPostErrorMessage(
-                                            data
-                                        )}`
-                                    );
-                                } else {
-                                    alert(`Đã duyệt thành công ${postedCount} phiếu`);
-                                }
-
-                                setSelectedIds([]);
-                                setShowBulkBar(false);
-                                router.refresh();
-                            } catch (error: any) {
-                                alert(error?.message || "Có lỗi khi duyệt phiếu!");
-                            }
-                        }}
+                        onClick={handleBulkPost}
                         type="button"
                     >
                         Duyệt phiếu
@@ -133,10 +159,7 @@ export default function AcquisitionListClient(
                     </div>
                 </div>
 
-                <AcquisitionListTable
-                    items={props.items}
-
-                />
+                <AcquisitionListTable items={props.items} />
 
                 <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm text-slate-600">
                     <div>

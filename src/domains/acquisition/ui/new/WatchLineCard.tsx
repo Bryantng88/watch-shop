@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import type { AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
 
 type Props = {
@@ -41,6 +42,7 @@ export default function WatchLineCard({
     onRemove,
     canRemove = true,
 }: Props) {
+    const notify = useNotify();
     const [previewOpen, setPreviewOpen] = useState(false);
 
     const previewSrc = useMemo(() => getPreviewSrc(line), [line]);
@@ -56,12 +58,21 @@ export default function WatchLineCard({
     function handlePickImage(nextFileKey: string) {
         const key = String(nextFileKey ?? "").trim();
 
+        if (!key) {
+            notify.warning({
+                title: "Chưa chọn ảnh",
+                message: "Vui lòng chọn một ảnh hợp lệ.",
+            });
+            return;
+        }
+
         onChange({
             ...line,
-            imageKey: key || null,
-            imageUrl: key ? `/api/media/sign?key=${encodeURIComponent(key)}` : null,
+            imageKey: key,
+            imageUrl: `/api/media/sign?key=${encodeURIComponent(key)}`,
         });
     }
+
     const handleCostChange = (raw: string) => {
         setField("cost", parseMoneyInput(raw) as AcquisitionWatchLine["cost"]);
     };
@@ -80,7 +91,6 @@ export default function WatchLineCard({
                                 Trống
                             </div>
                         ) : null}
-
 
                     </div>
 
@@ -112,6 +122,7 @@ export default function WatchLineCard({
                                 compact
                                 className="h-[72px] w-[72px] rounded-xl"
                             />
+
                             {previewSrc ? (
                                 <button
                                     type="button"

@@ -1,18 +1,23 @@
 "use server";
 
 import { prisma } from "@/server/db/client";
-import * as repoAcq from "../serverOld/core/write/acquisition-write.repo";
+import * as repoAcq from "../server";
 
-export async function cancelAcquisitionApplication(id: string) {
-    const acq = await repoAcq.getAcqtById(id);
-    if (!acq) throw new Error("Không tìm thấy phiếu nhập");
+export async function cancelAcquisitionApplication(
+    input: string | { acquisitionId: string }
+) {
+    const id = typeof input === "string" ? input : input.acquisitionId;
 
-    if (acq.accquisitionStt === "POSTED") {
-        throw new Error("Không thể hủy phiếu đã đăng");
-    }
+    return prisma.$transaction(async (tx) => {
+        const acq = await repoAcq.getAcqtById(id, tx as any);
+        if (!acq) throw new Error("Không tìm thấy phiếu nhập");
 
-    return prisma.acquisition.update({
-        where: { id },
-        data: { accquisitionStt: "CANCELED" as any },
+        if (acq.accquisitionStt === "POSTED") {
+            throw new Error("Không thể hủy phiếu đã đăng");
+        }
+
+        return repoAcq.cancelDraftAcquisition(tx as any, id);
     });
 }
+
+export const cancelAcquisition = cancelAcquisitionApplication;

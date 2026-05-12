@@ -5,7 +5,7 @@ import type {
   QuickOrderWatchInput,
 } from "../shared";
 import { getWatchBridgeRow } from "./watch-bridge.repo";
-import { markWatchConsignedTo, markWatchReady, markWatchServicePending } from "../core/state";
+import { markWatchConsignedTo, markWatchReady, markWatchServicePending } from "../state";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
 import * as orderService from "@/app/(admin)/admin/orders/_servers/order.service";

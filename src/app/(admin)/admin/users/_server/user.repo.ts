@@ -116,6 +116,69 @@ export async function getAllPermissionsRepo() {
         },
     });
 }
+
+export async function findPermissionByCodeRepo(code: string) {
+    return prisma.permission.findUnique({
+        where: { code },
+        select: {
+            id: true,
+            code: true,
+            description: true,
+        },
+    });
+}
+
+export async function findPermissionByIdRepo(id: string) {
+    return prisma.permission.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            code: true,
+            description: true,
+        },
+    });
+}
+
+export async function createPermissionRepo(input: {
+    code: string;
+    description?: string | null;
+}) {
+    return prisma.permission.create({
+        data: {
+            code: input.code,
+            description: input.description?.trim() || null,
+        },
+        select: {
+            id: true,
+            code: true,
+            description: true,
+        },
+    });
+}
+
+export async function updatePermissionRepo(
+    id: string,
+    input: {
+        code?: string;
+        description?: string | null;
+    }
+) {
+    return prisma.permission.update({
+        where: { id },
+        data: {
+            ...(input.code !== undefined ? { code: input.code } : {}),
+            ...(input.description !== undefined
+                ? { description: input.description?.trim() || null }
+                : {}),
+        },
+        select: {
+            id: true,
+            code: true,
+            description: true,
+        },
+    });
+}
+
 export async function findUsersByRoleNames(roleNames: string[]) {
     const normalized = Array.from(
         new Set(

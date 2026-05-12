@@ -6,6 +6,7 @@ type AcquisitionAiImage = {
 export type AcquisitionAiMeta = {
     images?: AcquisitionAiImage[];
     aiHint?: string | null;
+    ai?: unknown;
 };
 
 export type AcquisitionWatchFlags = {
@@ -57,11 +58,14 @@ function normalizeAiMeta(value: unknown): AcquisitionAiMeta | undefined {
             ? value.aiHint.trim()
             : null;
 
-    if (!images.length && !aiHint) return undefined;
+    const ai = value.ai !== undefined ? value.ai : undefined;
+
+    if (!images.length && !aiHint && ai === undefined) return undefined;
 
     return {
         ...(images.length ? { images } : {}),
         ...(aiHint ? { aiHint } : {}),
+        ...(ai !== undefined ? { ai } : {}),
     };
 }
 
@@ -166,4 +170,14 @@ export function getQuickSpecFromDescription(
     description: string | null | undefined
 ): AcquisitionQuickSpec {
     return parseAcquisitionItemMeta(description).quickSpec;
+}
+
+export function cleanAcquisitionItemDescription(
+    description: string | null | undefined
+) {
+    const text = String(description ?? "").trim();
+    if (!text) return "";
+    if (text.startsWith(META_PREFIX)) return "";
+    if (extractLegacyJsonBlock(text)) return "";
+    return text;
 }

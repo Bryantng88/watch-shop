@@ -1,8 +1,6 @@
 import { runAcquisitionSpecProcessorNow } from "./acquisition-spec.processor";
 
-export async function runSystemJobs(input?: {
-    triggerSource?: string;
-}) {
+export async function runSystemJobs(input?: { triggerSource?: string }) {
     const triggerSource = input?.triggerSource ?? "system";
 
     const acquisitionSpec = await runAcquisitionSpecProcessorNow({
@@ -10,7 +8,5 @@ export async function runSystemJobs(input?: {
         includeFailed: false,
     });
 
-    return {
-        acquisitionSpec,
-    };
+    return { acquisitionSpec };
 }

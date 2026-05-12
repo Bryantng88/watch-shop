@@ -3,12 +3,38 @@
 import { prisma } from "@/server/db/client";
 import * as dto from "../shared/acquisition.dto";
 import { toDraftItem } from "../shared/acquisition.mapper";
-import * as repoAcq from "../serverOld/core/write/acquisition-write.repo";
+import * as repoAcq from "../server";
+import {
+    attachInlineImageToAcquisitionWatchDraft,
+    pickFirstAcquisitionInlineImage,
+    type AcquisitionInlineImageInput,
+} from "../server/acquisition-media.service";
+
+type PendingInlineImageAttach = {
+    acquisitionId: string;
+    productId: string;
+    image: AcquisitionInlineImageInput;
+    sortOrder: number;
+};
+
+function parseLocalDateVN(value?: string | null) {
+    const text = String(value ?? "").trim();
+    if (!text) return undefined;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        return new Date(`${text}T00:00:00+07:00`);
+    }
+
+    const date = new Date(text);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+}
 
 export async function createAcquisitionWithItemApplication(
     input: dto.CreateAcquisitionInput
 ) {
-    return prisma.$transaction(async (tx) => {
+    const pendingInlineImages: PendingInlineImageAttach[] = [];
+
+    const result = await prisma.$transaction(async (tx) => {
         let vendorId = input.vendorId;
 
         if (!vendorId && input.quickVendorName) {
@@ -26,33 +52,47 @@ export async function createAcquisitionWithItemApplication(
             vendorId,
             currency: input.currency,
             type: input.type,
-            createdAt: input.createdAt ? new Date(input.createdAt) : undefined,
+            createdAt: parseLocalDateVN(input.createdAt),
             notes: input.notes,
         });
 
         let total = 0;
 
-        for (const raw of input.items) {
+        for (const [index, raw] of input.items.entries()) {
             const item = toDraftItem(raw);
             const createdItem = await repoAcq.createAcqItem(tx, acq.id, item);
             total += Number(item.unitCost ?? 0);
 
-            const aiMeta = item.aiMeta ?? {};
-            const firstImage = Array.isArray(aiMeta?.images) ? aiMeta.images[0] : null;
-
-            await repoAcq.createWatchDraftForAcquisitionItem(tx, {
+            const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx, {
                 acquisitionItemId: createdItem.id,
                 acquisitionId: acq.id,
                 vendorId,
                 title: item.productTitle ?? "Watch draft",
                 unitCost: Number(item.unitCost ?? 0),
-                imageKey: firstImage?.key ?? null,
-                imageUrl: firstImage?.url ?? null,
             });
+
+            const firstImage = pickFirstAcquisitionInlineImage(item.aiMeta?.images);
+            if (firstImage) {
+                pendingInlineImages.push({
+                    acquisitionId: acq.id,
+                    productId: draft.productId,
+                    image: firstImage,
+                    sortOrder: index,
+                });
+            }
         }
 
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
 
         return { id: acq.id };
     });
+
+    for (const pending of pendingInlineImages) {
+        await attachInlineImageToAcquisitionWatchDraft(pending);
+    }
+
+    return result;
 }
+
+export const createAcquisitionWithItem = createAcquisitionWithItemApplication;
+export const createAcquisitionApplication = createAcquisitionWithItemApplication;

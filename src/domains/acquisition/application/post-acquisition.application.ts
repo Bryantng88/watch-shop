@@ -6,9 +6,9 @@ import { createTechnicalCheckFromAcquisitionTx } from "@/app/(admin)/admin/servi
 import {
     enqueueAcquisitionSpecJob,
     processAcquisitionSpecJobsByItemIds,
-} from "../serverOld/ai/acquisition-spec-job.service";
-import { getWatchFlagsFromDescription } from "../serverOld/metadata";
-import * as repoAcq from "../serverOld/core/write/acquisition-write.repo";
+} from "../server/acquisition-spec-job.service";
+import { getWatchFlagsFromDescription } from "../shared/acquisition-item-metadata";
+import * as repoAcq from "../server";
 
 async function resolveVendorIdForPosting(
     acq: Awaited<ReturnType<typeof repoAcq.getAcqtById>>,
@@ -49,9 +49,13 @@ async function maybeCreateTechnicalCheckForPostedWatch(
 }
 
 export async function postAcquisitionApplication(
-    acqId: string,
-    vendorName?: string | null
+    input: string | { acquisitionId: string; vendorName?: string | null },
+    legacyVendorName?: string | null
 ) {
+    const acqId = typeof input === "string" ? input : input.acquisitionId;
+    const vendorName =
+        typeof input === "string" ? legacyVendorName ?? "" : input.vendorName ?? "";
+
     const acq = await repoAcq.getAcqtById(acqId);
     if (!acq) {
         throw new Error("Không tìm thấy phiếu nhập");
@@ -61,7 +65,7 @@ export async function postAcquisitionApplication(
         throw new Error("Chỉ phiếu DRAFT mới được duyệt");
     }
 
-    const vendorId = await resolveVendorIdForPosting(acq, vendorName ?? "");
+    const vendorId = await resolveVendorIdForPosting(acq, vendorName);
     if (!vendorId) {
         throw new Error("Không tìm thấy vendor để post phiếu");
     }
@@ -134,7 +138,10 @@ export async function postAcquisitionApplication(
     return result;
 }
 
-export async function postMultipleAcquisitionsApplication(acquisitionIds: string[]) {
+export async function postMultipleAcquisitionsApplication(
+    input: string[] | { acquisitionIds: string[] }
+) {
+    const acquisitionIds = Array.isArray(input) ? input : input.acquisitionIds;
     const posted: string[] = [];
     const failed: { id: string; error: string }[] = [];
 
@@ -152,7 +159,7 @@ export async function postMultipleAcquisitionsApplication(acquisitionIds: string
                 continue;
             }
 
-            await postAcquisitionApplication(acqId, "");
+            await postAcquisitionApplication({ acquisitionId: acqId });
             posted.push(acqId);
         } catch (error) {
             failed.push({
@@ -164,3 +171,6 @@ export async function postMultipleAcquisitionsApplication(acquisitionIds: string
 
     return { posted, failed };
 }
+
+export const postAcquisition = postAcquisitionApplication;
+export const postMultipleAcquisitions = postMultipleAcquisitionsApplication;

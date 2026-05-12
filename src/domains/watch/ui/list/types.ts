@@ -36,7 +36,7 @@ export type WatchListSummary = {
     items: number;
     hasContent: number;
     hasImages: number;
-    subCounts?: WatchListSubCounts;
+    subCounts: WatchListSubCounts;
 };
 
 export type WatchRow = {
@@ -50,6 +50,7 @@ export type WatchRow = {
     vendorName?: string | null;
 
     imageUrl?: string | null;
+    imageKey?: string | null;
     imagesCount: number;
     hasImages: boolean;
     hasContent: boolean;

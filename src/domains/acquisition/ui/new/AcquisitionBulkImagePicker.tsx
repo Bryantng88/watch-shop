@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Folder, Image as ImageIcon, RefreshCw, X } from "lucide-react";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import type { AcquisitionPreparedImage } from "../../client/form/acquisition-form.types";
 
 type BrowseFolder = { prefix: string };
@@ -13,11 +14,6 @@ type BrowseResponse = {
     prefix: string;
     folders: BrowseFolder[];
     files: BrowseFile[];
-};
-
-type FailedImage = {
-    fileKey: string;
-    error: string;
 };
 
 type Props = {
@@ -41,6 +37,8 @@ export default function AcquisitionBulkImagePicker({
     onImport,
     disabled,
 }: Props) {
+    const notify = useNotify();
+
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<BrowseResponse | null>(null);
@@ -64,8 +62,14 @@ export default function AcquisitionBulkImagePicker({
 
             setData(json);
             setPrefix(json.prefix || target);
-        } catch (error: any) {
-            alert(error?.message || "Không thể duyệt thư mục ảnh.");
+        } catch (error) {
+            notify.error({
+                title: "Không thể duyệt thư mục ảnh",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể duyệt thư mục ảnh.",
+            });
         } finally {
             setLoading(false);
         }
@@ -90,7 +94,10 @@ export default function AcquisitionBulkImagePicker({
 
     function submit() {
         if (!selectedKeys.length) {
-            alert("Bạn chưa chọn ảnh nào.");
+            notify.warning({
+                title: "Chưa chọn ảnh",
+                message: "Bạn cần chọn ít nhất một ảnh để đưa vào phiếu nhập.",
+            });
             return;
         }
 
@@ -101,8 +108,16 @@ export default function AcquisitionBulkImagePicker({
         }));
 
         onImport(items);
+
+        notify.success({
+            title: "Đã chọn ảnh",
+            message: `Đã đưa ${items.length} ảnh vào các dòng watch. Ảnh sẽ được move sang chosen khi lưu phiếu.`,
+        });
+
         setSelectedKeys([]);
         setOpen(false);
+        setData(null);
+        setPrefix("products/inline/active");
     }
 
     const currentPrefix = data?.prefix || prefix;
@@ -131,7 +146,7 @@ export default function AcquisitionBulkImagePicker({
                                     Chọn nhiều ảnh cho phiếu nhập
                                 </div>
                                 <div className="mt-1 text-sm text-slate-500">
-                                    Ảnh được chọn sẽ đổ vào các dòng watch đang trống, từ trên xuống dưới.
+                                    Ảnh được chọn sẽ đổ vào các dòng watch đang trống. Hệ thống chỉ move ảnh khi lưu phiếu.
                                 </div>
                             </div>
 
@@ -139,6 +154,7 @@ export default function AcquisitionBulkImagePicker({
                                 type="button"
                                 onClick={() => setOpen(false)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                                aria-label="Đóng trình chọn ảnh"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -160,6 +176,7 @@ export default function AcquisitionBulkImagePicker({
                                         type="button"
                                         onClick={() => void load(currentPrefix)}
                                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                                        aria-label="Tải lại thư mục"
                                     >
                                         <RefreshCw className="h-4 w-4" />
                                     </button>

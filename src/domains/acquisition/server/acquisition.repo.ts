@@ -13,6 +13,39 @@ function getDb(tx?: DB) {
     return dbOrTx(tx);
 }
 
+function formatRefNoDatePart(date: Date) {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+    }).formatToParts(date);
+
+    const day = parts.find((part) => part.type === "day")?.value ?? "00";
+    const month = parts.find((part) => part.type === "month")?.value ?? "00";
+    const year = parts.find((part) => part.type === "year")?.value ?? "00";
+
+    return `${day}${month}${year}`;
+}
+
+async function generatePostedRefNo(tx: DB, date: Date) {
+    const db = getDb(tx);
+    const prefix = `PN-${formatRefNoDatePart(date)}-`;
+
+    const latest = await db.acquisition.findFirst({
+        where: {
+            refNo: { startsWith: prefix },
+        },
+        select: { refNo: true },
+        orderBy: { refNo: "desc" },
+    });
+
+    const currentSeq = Number(latest?.refNo?.slice(prefix.length) ?? 0);
+    const nextSeq = Number.isFinite(currentSeq) ? currentSeq + 1 : 1;
+
+    return `${prefix}${String(nextSeq).padStart(6, "0")}`;
+}
+
 export async function ensureVendorExists(tx: DB, vendorId: string) {
     const db = getDb(tx);
 
@@ -97,6 +130,8 @@ export async function changeDraftToPost(tx: DB, acqId: string) {
             id: true,
             refNo: true,
             accquisitionStt: true,
+            acquiredAt: true,
+            createdAt: true,
         },
     });
 
@@ -108,15 +143,10 @@ export async function changeDraftToPost(tx: DB, acqId: string) {
         return current;
     }
 
-    const postedCount = await db.acquisition.count({
-        where: {
-            refNo: {
-                startsWith: "PN-",
-            },
-        },
-    });
-
-    const refNo = current.refNo ?? `PN-${String(postedCount + 1).padStart(6, "0")}`;
+    const refNo = current.refNo ?? (await generatePostedRefNo(
+        tx,
+        current.acquiredAt ?? current.createdAt ?? new Date()
+    ));
 
     return db.acquisition.update({
         where: { id: acqId },

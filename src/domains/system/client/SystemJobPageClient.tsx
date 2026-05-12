@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import AcquisitionSpecLogViewer from "@/domains/system/ui/jobs/AcquisitionSpecLogViewer";
-import JobProcessorCard from "@/domains/system/ui/jobs/JobProcessorCard";
 import JobSummaryCard from "@/domains/system/ui/jobs/JobSummaryCard";
 
 type JobControl = {
-    id: string;
-    processorKey: string;
+    id?: string;
+    key?: string;
+    processorKey?: string;
     label?: string | null;
-    isEnabled: boolean;
+    enabled?: boolean;
+    isEnabled?: boolean;
     batchSize: number | null;
+    pausedReason?: string | null;
+    updatedAt?: string | null;
+};
+
+type NormalizedControl = {
+    processorKey: string;
+    label: string;
+    isEnabled: boolean;
+    batchSize: number;
     pausedReason?: string | null;
     updatedAt?: string | null;
 };
@@ -25,6 +34,7 @@ type JobRunLog = {
     startedAt?: string | null;
     finishedAt?: string | null;
     note?: string | null;
+    detail?: unknown;
     createdAt?: string | null;
 };
 
@@ -44,11 +54,34 @@ type Props = {
 
 function fmtDateTime(value?: string | null) {
     if (!value) return "-";
-    try {
-        return new Date(value).toLocaleString("vi-VN");
-    } catch {
-        return value;
-    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return new Intl.DateTimeFormat("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(date);
+}
+
+function fmtDuration(startedAt?: string | null, finishedAt?: string | null) {
+    if (!startedAt || !finishedAt) return "-";
+
+    const start = new Date(startedAt).getTime();
+    const end = new Date(finishedAt).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return "-";
+
+    const ms = end - start;
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = Math.round(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}m ${rest}s`;
 }
 
 function runStatusTone(status?: string | null) {
@@ -61,13 +94,92 @@ function runStatusTone(status?: string | null) {
         case "FAILED":
         case "ERROR":
             return "border-rose-200 bg-rose-50 text-rose-700";
+        case "PARTIAL":
+            return "border-amber-200 bg-amber-50 text-amber-700";
         case "RUNNING":
             return "border-blue-200 bg-blue-50 text-blue-700";
         case "SKIPPED":
-            return "border-amber-200 bg-amber-50 text-amber-700";
+            return "border-slate-200 bg-slate-50 text-slate-600";
         default:
             return "border-slate-200 bg-slate-50 text-slate-700";
     }
+}
+
+function normalizeControl(item: JobControl): NormalizedControl {
+    const processorKey = item.processorKey || item.key || item.id || "unknown";
+
+    return {
+        processorKey,
+        label: item.label || processorKey,
+        isEnabled:
+            typeof item.isEnabled === "boolean"
+                ? item.isEnabled
+                : Boolean(item.enabled),
+        batchSize:
+            typeof item.batchSize === "number" && item.batchSize > 0
+                ? item.batchSize
+                : 1,
+        pausedReason: item.pausedReason ?? null,
+        updatedAt: item.updatedAt ?? null,
+    };
+}
+
+
+function SystemRunDetailPanel({ log }: { log: JobRunLog | null }) {
+    if (!log) {
+        return (
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">
+                Chọn một run ở bảng phía trên để xem detail.
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h2 className="text-lg font-semibold text-slate-950">Run Detail</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {log.processorKey} • {log.triggerSource || "manual"} • {fmtDuration(log.startedAt, log.finishedAt)}
+                    </p>
+                </div>
+                <span className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-medium ${runStatusTone(log.status)}`}>
+                    {log.status}
+                </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="text-xs text-slate-500">Processed</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900">{log.processedCount ?? 0}</div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="text-xs text-slate-500">Errors</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900">{log.errorCount ?? 0}</div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="text-xs text-slate-500">Started</div>
+                    <div className="mt-1 text-sm font-medium text-slate-900">{fmtDateTime(log.startedAt)}</div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="text-xs text-slate-500">Finished</div>
+                    <div className="mt-1 text-sm font-medium text-slate-900">{fmtDateTime(log.finishedAt)}</div>
+                </div>
+            </div>
+
+            {log.note ? (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    {log.note}
+                </div>
+            ) : null}
+
+            {log.detail ? (
+                <pre className="mt-4 max-h-[420px] overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">
+                    {JSON.stringify(log.detail, null, 2)}
+                </pre>
+            ) : null}
+        </div>
+    );
 }
 
 function RecentRunsMonitorTable({
@@ -82,46 +194,26 @@ function RecentRunsMonitorTable({
     return (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="max-h-[520px] overflow-auto">
-                <table className="min-w-full border-separate border-spacing-0 text-sm">
+                <table className="min-w-[1080px] border-separate border-spacing-0 text-sm">
                     <thead className="sticky top-0 z-10 bg-slate-50">
                         <tr>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Processor
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Trigger
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Status
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-right font-medium text-slate-500">
-                                Processed
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-right font-medium text-slate-500">
-                                Errors
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Started
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Finished
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">
-                                Note
-                            </th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-center font-medium text-slate-500">
-                                Xem log
-                            </th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Processor</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Trigger</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Status</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-right font-medium text-slate-500">Processed</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-right font-medium text-slate-500">Errors</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Started</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Finished</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-right font-medium text-slate-500">Duration</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-500">Note</th>
+                            <th className="border-b border-slate-200 px-4 py-3 text-center font-medium text-slate-500">Xem log</th>
                         </tr>
                     </thead>
 
                     <tbody className="bg-white">
                         {rows.length === 0 ? (
                             <tr>
-                                <td
-                                    colSpan={9}
-                                    className="px-4 py-8 text-center text-sm text-slate-500"
-                                >
+                                <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-500">
                                     Chưa có run log nào.
                                 </td>
                             </tr>
@@ -131,56 +223,36 @@ function RecentRunsMonitorTable({
                             const selected = selectedRunId === log.id;
 
                             return (
-                                <tr
-                                    key={log.id}
-                                    className={
-                                        selected
-                                            ? "bg-slate-50"
-                                            : "hover:bg-slate-50/70"
-                                    }
-                                >
+                                <tr key={log.id} className={selected ? "bg-slate-50" : "hover:bg-slate-50/70"}>
                                     <td className="border-b border-slate-100 px-4 py-3 align-top text-slate-900">
-                                        <div className="font-medium">
-                                            {log.processorKey}
-                                        </div>
+                                        <div className="font-medium">{log.processorKey}</div>
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 align-top text-slate-600">
                                         {log.triggerSource || "manual"}
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 align-top">
-                                        <span
-                                            className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${runStatusTone(
-                                                log.status
-                                            )}`}
-                                        >
+                                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${runStatusTone(log.status)}`}>
                                             {log.status}
                                         </span>
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 text-right align-top text-slate-900">
                                         {log.processedCount ?? 0}
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 text-right align-top text-slate-900">
                                         {log.errorCount ?? 0}
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 align-top whitespace-nowrap text-slate-600">
                                         {fmtDateTime(log.startedAt)}
                                     </td>
-
                                     <td className="border-b border-slate-100 px-4 py-3 align-top whitespace-nowrap text-slate-600">
                                         {fmtDateTime(log.finishedAt)}
                                     </td>
-
-                                    <td className="border-b border-slate-100 px-4 py-3 align-top text-slate-600">
-                                        <div className="max-w-[260px] truncate">
-                                            {log.note || "-"}
-                                        </div>
+                                    <td className="border-b border-slate-100 px-4 py-3 text-right align-top whitespace-nowrap text-slate-600">
+                                        {fmtDuration(log.startedAt, log.finishedAt)}
                                     </td>
-
+                                    <td className="border-b border-slate-100 px-4 py-3 align-top text-slate-600">
+                                        <div className="max-w-[280px] truncate">{log.note || "-"}</div>
+                                    </td>
                                     <td className="border-b border-slate-100 px-4 py-3 text-center align-top">
                                         <button
                                             type="button"
@@ -208,7 +280,9 @@ export default function SystemJobPageClient({
     initialLogs = [],
     initialStats = null,
 }: Props) {
-    const [controls, setControls] = useState<JobControl[]>(initialControls);
+    const [controls, setControls] = useState<NormalizedControl[]>(
+        initialControls.map(normalizeControl)
+    );
     const [logs, setLogs] = useState<JobRunLog[]>(initialLogs);
     const [stats, setStats] = useState<JobStats>({
         processorCount: initialStats?.processorCount ?? initialControls.length ?? 0,
@@ -231,6 +305,11 @@ export default function SystemJobPageClient({
     const acquisitionRuns = useMemo(
         () => logs.filter((x) => x.processorKey === "acquisition_spec"),
         [logs]
+    );
+
+    const selectedRun = useMemo(
+        () => acquisitionRuns.find((x) => x.id === selectedRunId) || null,
+        [acquisitionRuns, selectedRunId]
     );
 
     useEffect(() => {
@@ -269,19 +348,20 @@ export default function SystemJobPageClient({
             if (!controlsRes.ok || !controlsData?.ok) {
                 throw new Error(controlsData?.error || "Không thể tải job controls");
             }
-
             if (!logsRes.ok || !logsData?.ok) {
                 throw new Error(logsData?.error || "Không thể tải job logs");
             }
-
             if (!statsRes.ok || !statsData?.ok) {
                 throw new Error(statsData?.error || "Không thể tải job stats");
             }
 
-            setControls(
-                Array.isArray(controlsData.controls) ? controlsData.controls : []
-            );
+            const nextControls = Array.isArray(controlsData.controls)
+                ? controlsData.controls
+                : Array.isArray(controlsData.items)
+                    ? controlsData.items
+                    : [];
 
+            setControls(nextControls.map(normalizeControl));
             setLogs(
                 Array.isArray(logsData.items)
                     ? logsData.items
@@ -289,10 +369,9 @@ export default function SystemJobPageClient({
                         ? logsData.logs
                         : []
             );
-
             setStats(
-                statsData.item || {
-                    processorCount: 0,
+                statsData.item || statsData.stats || {
+                    processorCount: nextControls.length,
                     pendingSpecCount: 0,
                     failedSpecCount: 0,
                     latestRunStatus: null,
@@ -307,21 +386,18 @@ export default function SystemJobPageClient({
     }
 
     async function runAcquisitionSpec(includeFailed = false) {
-        setBusyKey(includeFailed ? "retry_failed_spec" : "run_acq_spec");
+        const key = includeFailed ? "retry_failed_spec" : "run_acq_spec";
+        setBusyKey(key);
         setError("");
 
         try {
-            const res = await fetch(
-                "/api/admin/system/jobs/system-jobs/run-acquisition-spec",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ includeFailed }),
-                }
-            );
+            const res = await fetch("/api/admin/system/jobs/system-jobs/run-acquisition-spec", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ includeFailed }),
+            });
 
             const data = await res.json().catch(() => ({}));
-
             if (!res.ok || !data?.ok) {
                 throw new Error(data?.error || "Không thể chạy acquisition spec");
             }
@@ -334,36 +410,21 @@ export default function SystemJobPageClient({
         }
     }
 
-    async function runAllJobs() {
-        setBusyKey("run_all_jobs");
-        setError("");
-
-        try {
-            await runAcquisitionSpec(false);
-        } finally {
-            setBusyKey("");
-        }
-    }
-
-    async function toggleProcessor(control: JobControl) {
+    async function toggleProcessor(control: NormalizedControl) {
         setBusyKey(`toggle_${control.processorKey}`);
         setError("");
 
         try {
-            const res = await fetch(
-                "/api/admin/system/jobs/system-job-controls/toggle",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        processorKey: control.processorKey,
-                        isEnabled: !control.isEnabled,
-                    }),
-                }
-            );
+            const res = await fetch("/api/admin/system/jobs/system-job-controls/toggle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    processorKey: control.processorKey,
+                    isEnabled: !control.isEnabled,
+                }),
+            });
 
             const data = await res.json().catch(() => ({}));
-
             if (!res.ok || !data?.ok) {
                 throw new Error(data?.error || "Không thể cập nhật processor");
             }
@@ -377,16 +438,15 @@ export default function SystemJobPageClient({
     }
 
     useEffect(() => {
-        if (
-            initialControls.length === 0 &&
-            initialLogs.length === 0 &&
-            !initialStats
-        ) {
+        if (initialControls.length === 0 && initialLogs.length === 0 && !initialStats) {
             startTransition(() => {
                 void loadAll();
             });
         }
     }, [initialControls.length, initialLogs.length, initialStats, startTransition]);
+
+    const enabledCount = controls.filter((x) => x.isEnabled).length;
+    const pausedCount = controls.length - enabledCount;
 
     return (
         <div className="space-y-6">
@@ -404,18 +464,9 @@ export default function SystemJobPageClient({
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             type="button"
-                            onClick={runAllJobs}
-                            disabled={busyKey === "run_all_jobs"}
-                            className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {busyKey === "run_all_jobs" ? "Đang chạy..." : "Run All Jobs Now"}
-                        </button>
-
-                        <button
-                            type="button"
                             onClick={() => runAcquisitionSpec(false)}
                             disabled={busyKey === "run_acq_spec"}
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {busyKey === "run_acq_spec" ? "Đang chạy..." : "Run Acquisition Spec"}
                         </button>
@@ -441,23 +492,19 @@ export default function SystemJobPageClient({
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <JobSummaryCard
                     title="Processors"
-                    value={String(stats.processorCount)}
-                    description={`Enabled ${controls.filter((x) => x.enabled).length} • Paused ${controls.filter((x) => !x.enabled).length
-                        }`}
+                    value={String(stats.processorCount || controls.length)}
+                    description={`Enabled ${enabledCount} • Paused ${pausedCount}`}
                 />
-
                 <JobSummaryCard
                     title="Spec Pending"
                     value={String(stats.pendingSpecCount)}
                     description="Đang chờ run hoặc trigger sau post"
                 />
-
                 <JobSummaryCard
                     title="Spec Failed"
                     value={String(stats.failedSpecCount)}
                     description="Nên retry hoặc kiểm tra input AI"
                 />
-
                 <JobSummaryCard
                     title="Latest Run"
                     value={String(stats.latestRunStatus || "-")}
@@ -469,57 +516,47 @@ export default function SystemJobPageClient({
                 <div className="xl:col-span-12">
                     {acquisitionControl ? (
                         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="mb-3">
-                                <h2 className="text-lg font-semibold text-slate-950">
-                                    {acquisitionControl.label || "Acquisition Spec Processor"}
-                                </h2>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    {acquisitionControl.processorKey} • {fmtDateTime(acquisitionControl.updatedAt)}
-                                </p>
-                            </div>
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-950">
+                                        {acquisitionControl.label || "Acquisition Spec Processor"}
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        {acquisitionControl.processorKey} • cập nhật {fmtDateTime(acquisitionControl.updatedAt)}
+                                    </p>
+                                </div>
 
-                            <div className="flex items-center justify-between rounded-2xl border px-4 py-3">
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <span
-                                        className={`rounded-full px-2 py-0.5 text-xs ${acquisitionControl.isEnabled
-                                            ? "bg-green-50 text-green-700"
-                                            : "bg-slate-100 text-slate-600"
+                                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${acquisitionControl.isEnabled
+                                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                                            : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
                                             }`}
                                     >
                                         {acquisitionControl.isEnabled ? "Enabled" : "Paused"}
                                     </span>
-
-                                    <span className="text-sm text-slate-500">
-                                        Batch: {acquisitionControl.batchSize ?? 0}
+                                    <span className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                                        Batch {acquisitionControl.batchSize}
                                     </span>
-                                </div>
-
-                                <div className="flex gap-2">
                                     <button
-                                        onClick={() => runAcquisitionSpec(false)}
-                                        className="rounded-xl bg-black px-4 py-2 text-sm text-white"
-                                    >
-                                        Run now
-                                    </button>
-
-                                    <button
-                                        onClick={() => runAcquisitionSpec(true)}
-                                        className="rounded-xl border px-4 py-2 text-sm"
-                                    >
-                                        Retry failed
-                                    </button>
-
-                                    <button
+                                        type="button"
                                         onClick={() => toggleProcessor(acquisitionControl)}
-                                        className="rounded-xl border px-4 py-2 text-sm"
+                                        disabled={busyKey === `toggle_${acquisitionControl.processorKey}`}
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                     >
                                         {acquisitionControl.isEnabled ? "Pause" : "Resume"}
                                     </button>
                                 </div>
                             </div>
+
+                            {!acquisitionControl.isEnabled && acquisitionControl.pausedReason ? (
+                                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                                    {acquisitionControl.pausedReason}
+                                </div>
+                            ) : null}
                         </div>
                     ) : (
-                        <div className="rounded-3xl border border-dashed p-6 text-sm text-slate-500">
+                        <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">
                             Chưa có processor nào.
                         </div>
                     )}
@@ -528,9 +565,7 @@ export default function SystemJobPageClient({
                 <div className="xl:col-span-12">
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <div className="mb-4">
-                            <h2 className="text-lg font-semibold text-slate-950">
-                                Recent Runs
-                            </h2>
+                            <h2 className="text-lg font-semibold text-slate-950">Recent Runs</h2>
                             <p className="mt-1 text-sm text-slate-500">
                                 Monitor lịch sử run theo dạng bảng, chọn một dòng để xem log chi tiết.
                             </p>
@@ -545,13 +580,7 @@ export default function SystemJobPageClient({
                 </div>
 
                 <div className="xl:col-span-12">
-                    {selectedRunId ? (
-                        <AcquisitionSpecLogViewer jobId={selectedRunId} />
-                    ) : (
-                        <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">
-                            Chọn một run ở bảng phía trên để xem logs chi tiết.
-                        </div>
-                    )}
+                    <SystemRunDetailPanel log={selectedRun} />
                 </div>
             </div>
         </div>

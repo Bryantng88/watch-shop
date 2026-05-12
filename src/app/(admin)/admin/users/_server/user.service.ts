@@ -136,6 +136,30 @@ function normalizeRoleName(name: string) {
         .toUpperCase();
 }
 
+function normalizePermissionCode(code: string) {
+    return String(code ?? "")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .replace(/_+/g, "_")
+        .toUpperCase();
+}
+
+async function assertPermissionIdsExist(permissionIds: string[]) {
+    const ids = Array.from(new Set(permissionIds.filter(Boolean)));
+    if (!ids.length) return ids;
+
+    const count = await prisma.permission.count({
+        where: { id: { in: ids } },
+    });
+
+    if (count !== ids.length) {
+        throw new Error("Một số permission không tồn tại");
+    }
+
+    return ids;
+}
+
 export async function createRoleService(input: {
     name: string;
     description?: string | null;
@@ -153,7 +177,7 @@ export async function createRoleService(input: {
         throw new Error("Role đã tồn tại");
     }
 
-    const permissionIds = Array.from(new Set((input.permissionIds ?? []).filter(Boolean)));
+    const permissionIds = await assertPermissionIdsExist(input.permissionIds ?? []);
 
     return prisma.role.create({
         data: {
@@ -212,16 +236,23 @@ export async function updateRoleService(
         }
     }
 
-    const permissionIds = Array.from(new Set((input.permissionIds ?? []).filter(Boolean)));
+    const shouldUpdatePermissions = Array.isArray(input.permissionIds);
+    const permissionIds = shouldUpdatePermissions
+        ? await assertPermissionIdsExist(input.permissionIds ?? [])
+        : [];
 
     return prisma.role.update({
         where: { id: roleId },
         data: {
             name: nextName,
             description: input.description?.trim() || null,
-            permissions: {
-                set: permissionIds.map((id) => ({ id })),
-            },
+            ...(shouldUpdatePermissions
+                ? {
+                    permissions: {
+                        set: permissionIds.map((id) => ({ id })),
+                    },
+                }
+                : {}),
         },
         select: {
             id: true,
@@ -236,5 +267,63 @@ export async function updateRoleService(
                 orderBy: { code: "asc" },
             },
         },
+    });
+}
+
+export async function createPermissionService(input: {
+    code: string;
+    description?: string | null;
+}) {
+    const code = normalizePermissionCode(input.code);
+
+    if (!code) {
+        throw new Error("Thiếu mã permission");
+    }
+
+    if (code.length < 3) {
+        throw new Error("Mã permission quá ngắn");
+    }
+
+    const existed = await userRepo.findPermissionByCodeRepo(code);
+    if (existed) {
+        throw new Error("Permission đã tồn tại");
+    }
+
+    return userRepo.createPermissionRepo({
+        code,
+        description: input.description?.trim() || null,
+    });
+}
+
+export async function updatePermissionService(
+    permissionId: string,
+    input: {
+        code?: string;
+        description?: string | null;
+    }
+) {
+    const current = await userRepo.findPermissionByIdRepo(permissionId);
+    if (!current) {
+        throw new Error("Không tìm thấy permission");
+    }
+
+    const nextCode = input.code === undefined
+        ? current.code
+        : normalizePermissionCode(input.code);
+
+    if (!nextCode) {
+        throw new Error("Thiếu mã permission");
+    }
+
+    if (nextCode !== current.code) {
+        const dup = await userRepo.findPermissionByCodeRepo(nextCode);
+        if (dup && dup.id !== permissionId) {
+            throw new Error("Permission đã tồn tại");
+        }
+    }
+
+    return userRepo.updatePermissionRepo(permissionId, {
+        code: nextCode,
+        description: input.description,
     });
 }

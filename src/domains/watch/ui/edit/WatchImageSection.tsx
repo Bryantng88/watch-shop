@@ -66,6 +66,25 @@ function InfoChip({
         </div>
     );
 }
+function getMediaKey(item: PickedMediaItem) {
+    return String(
+        (item as any)?.key ??
+        (item as any)?.fileKey ??
+        ""
+    ).trim();
+}
+
+function dedupeMediaItems(items: PickedMediaItem[]) {
+    const map = new Map<string, PickedMediaItem>();
+
+    for (const item of items) {
+        const key = getMediaKey(item);
+        if (!key) continue;
+        map.set(key, item);
+    }
+
+    return Array.from(map.values());
+}
 
 export default function WatchImageSection({
     poolImages,
@@ -157,7 +176,23 @@ export default function WatchImageSection({
         const ok = await ensureEditable();
         if (!ok) return;
 
+        const nextGalleryKeys = new Set(items.map(getMediaKey).filter(Boolean));
+
+        const removedFromGallery = galleryImages.filter((item) => {
+            const key = getMediaKey(item);
+            return key && !nextGalleryKeys.has(key);
+        });
+
+        const nextPoolImages = dedupeMediaItems([
+            ...poolImages.filter((item) => {
+                const key = getMediaKey(item);
+                return key && !nextGalleryKeys.has(key);
+            }),
+            ...removedFromGallery,
+        ]);
+
         onGalleryImagesChange(items);
+        onPoolImagesChange(nextPoolImages);
     };
 
     return (

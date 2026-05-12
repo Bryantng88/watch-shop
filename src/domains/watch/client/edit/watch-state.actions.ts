@@ -2,24 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 
-import { transitionWatchState } from "../../server/core/state";
-import type { WatchStateAction } from "../../server/core/state";
+import { transitionWatchStateApplication } from "../../application";
+import type { WatchStateAction } from "../../server/state";
 
 export async function transitionWatchStateAction(input: {
     productId: string;
     action: WatchStateAction;
 }) {
-    const productId = String(input.productId ?? "").trim();
-
-    if (!productId) {
-        throw new Error("Thiếu productId.");
-    }
-
-    const result = await transitionWatchState(productId, input.action);
+    const result = await transitionWatchStateApplication(input);
 
     revalidatePath("/admin/watches");
-    revalidatePath(`/admin/watches/${productId}`);
-    revalidatePath(`/admin/watches/${productId}/edit`);
+    revalidatePath(`/admin/watches/${result.productId}`);
+    revalidatePath(`/admin/watches/${result.productId}/edit`);
 
     return {
         productId: result.productId,

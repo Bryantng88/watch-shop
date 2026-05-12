@@ -36,6 +36,8 @@ export async function getSystemJobControlsOverview() {
     return {
         controls: controls.map((item) => ({
             ...item,
+            processorKey: item.key,
+            isEnabled: item.enabled,
             batchSize:
                 typeof item.batchSize === "number" && item.batchSize > 0
                     ? item.batchSize
@@ -60,6 +62,8 @@ export async function getSystemJobControlDetail(key: string) {
 
     return {
         ...item,
+        processorKey: item.key,
+        isEnabled: item.enabled,
         batchSize:
             typeof item.batchSize === "number" && item.batchSize > 0
                 ? item.batchSize
@@ -92,6 +96,7 @@ export async function updateSystemJobControl(
                 ? { pausedReason: input.pausedReason }
                 : {}),
             ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+            updatedAt: new Date(),
             updatedBy: input.updatedBy ?? undefined,
         },
     });

@@ -1,7 +1,5 @@
-import { randomUUID } from "crypto";
 import { ContentStatus, Prisma, ProductStatus, ProductType } from "@prisma/client";
 import { type DB, dbOrTx } from "@/server/db/client";
-import { getAiMetaFromDescription } from "./metadata";
 
 function getDb(tx?: DB) {
     return dbOrTx(tx);
@@ -15,8 +13,6 @@ export async function createWatchDraftForAcquisitionItem(
         vendorId: string;
         title: string;
         unitCost?: number | null;
-        imageKey?: string | null;
-        imageUrl?: string | null;
     }
 ) {
     const db = getDb(tx);
@@ -31,13 +27,11 @@ export async function createWatchDraftForAcquisitionItem(
             contentStatus: ContentStatus.DRAFT,
             specStatus: "PENDING",
             sku: null,
-            primaryImageUrl: input.imageUrl ?? null,
-            storefrontImageKey: input.imageKey ?? null,
+            primaryImageUrl: null,
+            storefrontImageKey: null,
         },
         select: {
             id: true,
-            primaryImageUrl: true,
-            storefrontImageKey: true,
         },
     });
 
@@ -79,21 +73,6 @@ export async function createWatchDraftForAcquisitionItem(
         update: {},
     });
 
-    if (input.imageKey) {
-        await db.productImage.create({
-            data: {
-                id: randomUUID(),
-                productId: product.id,
-                fileKey: input.imageKey,
-                role: "INLINE" as any,
-                sortOrder: 0,
-                isPrimary: true,
-                isForAdmin: true,
-                isForStorefront: true,
-            },
-        });
-    }
-
     await db.acquisitionItem.update({
         where: { id: input.acquisitionItemId },
         data: {
@@ -113,22 +92,19 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
 
     const item = await db.acquisitionItem.findUnique({
         where: { id: itemId },
-        include: {
-            product: true,
+        select: {
+            productId: true,
+            productTitle: true,
+            unitCost: true,
         },
     });
 
-    if (!item?.productId) return;
-
-    const aiMeta = getAiMetaFromDescription(item.description);
-    const firstImage = Array.isArray(aiMeta?.images) ? aiMeta.images[0] : null;
+    if (!item?.productId) return null;
 
     await db.product.update({
         where: { id: item.productId },
         data: {
             title: item.productTitle ?? "Untitled watch",
-            primaryImageUrl: firstImage?.url ?? undefined,
-            storefrontImageKey: firstImage?.key ?? undefined,
         },
     });
 
@@ -152,26 +128,5 @@ export async function syncLinkedProductFromAcquisitionItem(tx: DB, itemId: strin
         });
     }
 
-    await db.productImage.deleteMany({
-        where: {
-            productId: item.productId,
-            role: "INLINE" as any,
-            isPrimary: true,
-        },
-    });
-
-    if (firstImage?.key) {
-        await db.productImage.create({
-            data: {
-                id: randomUUID(),
-                productId: item.productId,
-                fileKey: firstImage.key,
-                role: "INLINE" as any,
-                sortOrder: 0,
-                isPrimary: true,
-                isForAdmin: true,
-                isForStorefront: true,
-            },
-        });
-    }
+    return { productId: item.productId };
 }

@@ -63,13 +63,21 @@ export function mapWatchImage(row: any) {
 
     if (!picked) return null;
 
-    const fileKey = picked?.fileKey ?? picked?.key ?? picked?.path ?? null;
+    const fileKey =
+        picked?.fileKey ??
+        picked?.imageKey ??
+        picked?.key ??
+        picked?.path ??
+        null;
     if (!fileKey) return picked?.url ?? null;
 
     return buildMediaUrl(fileKey);
 }
 
 export function countListImages(row: any) {
+    const precomputed = Number(row?.__imagesCount);
+    if (Number.isFinite(precomputed) && precomputed >= 0) return precomputed;
+
     return getReadyImages(row).length;
 }
 
@@ -199,6 +207,11 @@ export function mapWatchRow(row: any): WatchRow {
         vendorName: product?.vendor?.name ?? row?.vendor?.name ?? null,
 
         imageUrl: mapWatchImage(row),
+        imageKey:
+            getPreferredListImage(row)?.fileKey ??
+            getPreferredListImage(row)?.imageKey ??
+            getPreferredListImage(row)?.key ??
+            null,
         imagesCount,
         hasImages,
         hasContent,

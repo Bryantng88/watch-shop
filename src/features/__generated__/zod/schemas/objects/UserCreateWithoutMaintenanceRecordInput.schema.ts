@@ -14,7 +14,7 @@ const makeSchema = () => z.object({
   avatarUrl: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   roleId: z.string().optional().nullable(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutUserInputObjectSchema).optional(),
   notification: z.lazy(() => NotificationCreateNestedManyWithoutUserInputObjectSchema).optional(),

@@ -1,5 +1,5 @@
 //import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
-import { getAdminAcquisitionList } from "@/domains/acquisition/serverOld/core/list/acquisition-list.service";
+import { getAdminAcquisitionList } from "@/domains/acquisition/server/acquisition-list.service";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
 
@@ -8,7 +8,7 @@ import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListC
 
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { parseAcquisitionListSearchParams } from "@/domains/acquisition/serverOld/shared/search-params";
+import { parseAcquisitionListSearchParams } from "@/domains/acquisitionOld/server/shared/search-params";
 import { getListVendors } from "../vendors/_server/vendor.repo";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

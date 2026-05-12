@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { regenerateWatchTitleAndSku } from "@/domains/watch/server/core/write/watch-write.service";
+import { regenerateWatchTitleAndSku } from "@/domains/watch/server/write/watch-write.service";
 
 export async function POST(req: NextRequest) {
     try {

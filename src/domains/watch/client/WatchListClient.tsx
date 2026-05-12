@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { WatchListToolbar } from "../ui/list";
 import WatchListViewTabs from "../ui/list/WatchListViewTabs";
@@ -11,9 +11,22 @@ import { normalizeWatchListView } from "../shared/watch-status";
 import type {
     ViewKey,
     WatchListPageProps,
-    WatchRow,
+    WatchListResult,
     WatchListSubFilter,
+    WatchRow,
 } from "../ui/list/types";
+
+const listCache = new Map<string, WatchListResult>();
+
+const EMPTY_SUB_COUNTS = {
+    missingContent: 0,
+    missingImage: 0,
+    reviewDraft: 0,
+    reviewSubmitted: 0,
+    partialApproved: 0,
+    approved: 0,
+    posted: 0,
+};
 
 function normalizeView(value: string | null | undefined): ViewKey {
     return normalizeWatchListView(value);
@@ -38,10 +51,7 @@ function normalizeSubFilter(value: string | null | undefined): WatchListSubFilte
         : "";
 }
 
-function subFilterAllowedForView(
-    view: ViewKey,
-    subFilter: WatchListSubFilter
-) {
+function subFilterAllowedForView(view: ViewKey, subFilter: WatchListSubFilter) {
     if (!subFilter) return true;
 
     if (view === "processing") {
@@ -66,15 +76,51 @@ function setParam(next: URLSearchParams, key: string, value?: string | null) {
     else next.set(key, value);
 }
 
+function buildInitialParams(sp: URLSearchParams) {
+    const params = new URLSearchParams(sp.toString());
+    if (!params.get("sort")) params.set("sort", "updatedDesc");
+    if (!params.get("page")) params.set("page", "1");
+    return params;
+}
+
+function cacheKey(params: URLSearchParams) {
+    const normalized = new URLSearchParams(params.toString());
+    Array.from(normalized.keys()).forEach((key) => {
+        const value = normalized.get(key);
+        if (!value) normalized.delete(key);
+    });
+    normalized.sort();
+    return normalized.toString();
+}
+
+function dataFromProps(props: WatchListPageProps): WatchListResult {
+    return {
+        items: props.items ?? [],
+        total: props.total ?? 0,
+        page: props.page ?? 1,
+        pageSize: props.pageSize ?? 20,
+        totalPages: props.totalPages ?? 1,
+        counts: props.counts,
+        summary: props.summary ?? {
+            items: props.total ?? 0,
+            hasContent: 0,
+            hasImages: 0,
+            subCounts: EMPTY_SUB_COUNTS,
+        },
+    };
+}
+
 function Pagination({
     page,
     totalPages,
     total,
+    loading,
     onPage,
 }: {
     page: number;
     totalPages: number;
     total: number;
+    loading?: boolean;
     onPage: (page: number) => void;
 }) {
     return (
@@ -83,13 +129,14 @@ function Pagination({
                 Tổng: <span className="font-semibold text-slate-950">{total}</span>{" "}
                 • Trang <span className="font-semibold text-slate-950">{page}</span>
                 /<span className="font-semibold text-slate-950">{totalPages}</span>
+                {loading ? <span className="ml-2 text-slate-400">Đang tải...</span> : null}
             </div>
 
             <div className="flex items-center gap-2">
                 <button
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page <= 1}
+                    disabled={loading || page <= 1}
                     onClick={() => onPage(Math.max(1, page - 1))}
                 >
                     ← Trước
@@ -98,7 +145,7 @@ function Pagination({
                 <button
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={page >= totalPages}
+                    disabled={loading || page >= totalPages}
                     onClick={() => onPage(Math.min(totalPages, page + 1))}
                 >
                     Sau →
@@ -112,37 +159,86 @@ export default function WatchListClient(props: WatchListPageProps) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
+    const [isPending, startTransition] = useTransition();
 
-    const rows = props.items ?? [];
-    const currentView = useMemo(() => normalizeView(sp.get("view")), [sp]);
+    const initialParams = useMemo(() => buildInitialParams(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
+    const [params, setParams] = useState(initialParams);
+    const [listData, setListData] = useState<WatchListResult>(() => {
+        const data = dataFromProps(props);
+        listCache.set(cacheKey(initialParams), data);
+        return data;
+    });
+    const [isLoading, setIsLoading] = useState(false);
+
+    const rows = listData.items ?? [];
+    const currentView = useMemo(() => normalizeView(params.get("view")), [params]);
 
     const currentSubFilter = useMemo(() => {
-        const value = normalizeSubFilter(sp.get("subFilter"));
+        const value = normalizeSubFilter(params.get("subFilter"));
         return subFilterAllowedForView(currentView, value) ? value : "";
-    }, [sp, currentView]);
+    }, [params, currentView]);
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [filters, setFilters] = useState({
-        q: sp.get("q") ?? "",
-        sku: sp.get("sku") ?? "",
-        brandId: sp.get("brandId") ?? "",
-        vendorId: sp.get("vendorId") ?? "",
-        hasContent: sp.get("hasContent") ?? "",
-        hasImages: sp.get("hasImages") ?? "",
-        saleStage: sp.get("saleStage") ?? "",
-        opsStage: sp.get("opsStage") ?? "",
-        sort: sp.get("sort") ?? "updatedDesc",
+        q: params.get("q") ?? "",
+        sku: params.get("sku") ?? "",
+        brandId: params.get("brandId") ?? "",
+        vendorId: params.get("vendorId") ?? "",
+        hasContent: params.get("hasContent") ?? "",
+        hasImages: params.get("hasImages") ?? "",
+        saleStage: params.get("saleStage") ?? "",
+        opsStage: params.get("opsStage") ?? "",
+        sort: params.get("sort") ?? "updatedDesc",
     });
 
     const counts = useMemo(
-        () => buildCounts(rows, props.counts),
-        [rows, props.counts]
+        () => buildCounts(rows, listData.counts),
+        [rows, listData.counts]
     );
 
+    async function loadList(next: URLSearchParams) {
+        const key = cacheKey(next);
+        const cached = listCache.get(key);
+
+        window.history.pushState(null, "", `${pathname}?${next.toString()}`);
+        setParams(new URLSearchParams(next.toString()));
+        setSelectedIds([]);
+
+        if (cached) {
+            setListData(cached);
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const res = await fetch(`/api/admin/watches/list?${next.toString()}`, {
+                method: "GET",
+                headers: { Accept: "application/json" },
+                cache: "no-store",
+            });
+
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json?.ok) {
+                throw new Error(json?.error || "Không tải được danh sách watch");
+            }
+
+            listCache.set(key, json.data);
+            setListData(json.data);
+        } catch (error) {
+            console.error("[WATCH_LIST][LOAD_ERROR]", error);
+            router.refresh();
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     function pushParams(mutator: (next: URLSearchParams) => void) {
-        const next = new URLSearchParams(sp.toString());
+        const next = new URLSearchParams(params.toString());
         mutator(next);
-        router.push(`${pathname}?${next.toString()}`);
+        startTransition(() => {
+            void loadList(next);
+        });
     }
 
     function handleViewChange(view: ViewKey) {
@@ -178,7 +274,7 @@ export default function WatchListClient(props: WatchListPageProps) {
     }
 
     function handleClearFilters() {
-        setFilters({
+        const emptyFilters = {
             q: "",
             sku: "",
             brandId: "",
@@ -188,7 +284,9 @@ export default function WatchListClient(props: WatchListPageProps) {
             saleStage: "",
             opsStage: "",
             sort: "updatedDesc",
-        });
+        };
+
+        setFilters(emptyFilters);
 
         pushParams((next) => {
             [
@@ -263,6 +361,8 @@ export default function WatchListClient(props: WatchListPageProps) {
         value: vendor.id,
     }));
 
+    const loading = isLoading || isPending;
+
     return (
         <div className="space-y-5">
             <WatchListToolbar selectedCount={selectedIds.length} />
@@ -284,30 +384,33 @@ export default function WatchListClient(props: WatchListPageProps) {
                 onClear={handleClearFilters}
             />
 
-            <WatchListTable
-                items={rows}
-                selectedIds={selectedIds}
-                canViewCost={props.canViewCost}
-                currentView={currentView}
-                subFilter={currentSubFilter}
-                subCounts={props.summary?.subCounts}
-                total={props.total}
-                onSubFilterChange={handleSubFilterChange}
-                onToggleOne={onToggleOne}
-                onToggleAll={onToggleAll}
-                onView={onView}
-                segmentTotal={props.summary?.items}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onService={onService}
-                onQuickOrder={onQuickOrder}
-                onConsign={onConsign}
-            />
+            <div className={loading ? "opacity-60 transition" : "transition"}>
+                <WatchListTable
+                    items={rows}
+                    selectedIds={selectedIds}
+                    canViewCost={props.canViewCost}
+                    currentView={currentView}
+                    subFilter={currentSubFilter}
+                    subCounts={listData.summary?.subCounts}
+                    total={listData.total}
+                    onSubFilterChange={handleSubFilterChange}
+                    onToggleOne={onToggleOne}
+                    onToggleAll={onToggleAll}
+                    onView={onView}
+                    segmentTotal={listData.summary?.items}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onService={onService}
+                    onQuickOrder={onQuickOrder}
+                    onConsign={onConsign}
+                />
+            </div>
 
             <Pagination
-                page={props.page}
-                totalPages={props.totalPages}
-                total={props.total}
+                page={listData.page}
+                totalPages={listData.totalPages}
+                total={listData.total}
+                loading={loading}
                 onPage={handlePage}
             />
         </div>

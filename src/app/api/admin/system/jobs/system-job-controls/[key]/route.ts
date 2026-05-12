@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
     getSystemJobControlDetail,
     updateSystemJobControl,
-} from "@/domains/system/server/jobs/system-job-control.service";
+} from "@/domains/system/server/jobs1/system-job-control.service";
 
 export async function GET(
     _req: Request,

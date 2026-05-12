@@ -16,6 +16,7 @@ type AlertOptions = {
     title?: string;
     message: React.ReactNode;
     confirmText?: string;
+    secondaryText?: string;
     tone?: DialogTone;
 };
 
@@ -93,6 +94,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                 title: options.title,
                 message: options.message,
                 confirmText: options.confirmText ?? "Đã hiểu",
+                secondaryText: options.secondaryText,
                 tone: options.tone ?? "default",
             });
         });
@@ -100,21 +102,25 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
 
     const handleCancel = React.useCallback(() => {
         if (!dialog) return;
+
         if (dialog.type === "confirm") {
             dialog.resolve(false);
         } else {
             dialog.resolve();
         }
+
         setDialog(null);
     }, [dialog]);
 
     const handleConfirm = React.useCallback(() => {
         if (!dialog) return;
+
         if (dialog.type === "confirm") {
             dialog.resolve(true);
         } else {
             dialog.resolve();
         }
+
         setDialog(null);
     }, [dialog]);
 
@@ -139,6 +145,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                         className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"
                         onClick={handleCancel}
                     />
+
                     <div className="relative z-[1] w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
                         <div className="p-5">
                             <div
@@ -166,6 +173,14 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                                     >
                                         {dialog.cancelText ?? "Hủy"}
                                     </button>
+                                ) : dialog.secondaryText ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancel}
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        {dialog.secondaryText}
+                                    </button>
                                 ) : null}
 
                                 <button
@@ -186,8 +201,10 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
 
 export function useAppDialog() {
     const context = React.useContext(AppDialogContext);
+
     if (!context) {
         throw new Error("useAppDialog must be used inside <AppDialogProvider>");
     }
+
     return context;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Box, Plus, Save } from "lucide-react";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AcquisitionBulkImagePicker from "../ui/new/AcquisitionBulkImagePicker";
 import {
     applyPreparedImagesTopDown,
@@ -19,14 +20,23 @@ type Props = {
     vendors: AcquisitionFormVendor[];
 };
 
+function toLocalDateTimeInputValue(date: Date) {
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+}
+
 export default function AcquisitionFormClient({ vendors }: Props) {
+    const notify = useNotify();
+
     const [vendorId, setVendorId] = useState("");
-    const [createdAt, setCreatedAt] = useState(() => {
-        const now = new Date();
-        return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-            .toISOString()
-            .slice(0, 16);
-    });
+    const [createdAt, setCreatedAt] = useState(() =>
+        toLocalDateTimeInputValue(new Date())
+    );
     const [currency, setCurrency] = useState("VND");
     const [type, setType] = useState("PURCHASE");
     const [notes, setNotes] = useState("");
@@ -63,12 +73,18 @@ export default function AcquisitionFormClient({ vendors }: Props) {
 
     async function submit() {
         if (!vendorId) {
-            alert("Vui lòng chọn vendor.");
+            notify.warning({
+                title: "Thiếu vendor",
+                message: "Vui lòng chọn vendor trước khi lưu phiếu nhập.",
+            });
             return;
         }
 
         if (!watchLines.length) {
-            alert("Cần ít nhất một dòng đồng hồ.");
+            notify.warning({
+                title: "Thiếu dòng watch",
+                message: "Cần ít nhất một dòng đồng hồ để tạo phiếu nhập.",
+            });
             return;
         }
 
@@ -82,7 +98,10 @@ export default function AcquisitionFormClient({ vendors }: Props) {
         );
 
         if (!validLines.length) {
-            alert("Phiếu nhập chưa có dữ liệu watch hợp lệ.");
+            notify.warning({
+                title: "Phiếu nhập chưa có dữ liệu",
+                message: "Vui lòng nhập thông tin watch, giá hoặc chọn ảnh trước khi lưu.",
+            });
             return;
         }
 
@@ -98,9 +117,15 @@ export default function AcquisitionFormClient({ vendors }: Props) {
                 items: validLines,
             });
 
-            alert("Đã lưu phiếu nhập");
-        } catch (e: any) {
-            alert(e?.message || "Lưu phiếu nhập thất bại");
+            notify.success({
+                title: "Đã lưu phiếu nhập",
+                message: "Phiếu nhập đã được lưu ở trạng thái draft.",
+            });
+        } catch (error) {
+            notify.error({
+                title: "Lưu phiếu nhập thất bại",
+                message: getErrorMessage(error, "Không thể lưu phiếu nhập."),
+            });
         } finally {
             setSubmitting(false);
         }

@@ -1,9 +1,14 @@
-import { prisma } from "@/server/db/client";
-import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/serverOld/ai/acquisition-spec-job.service";
+import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/server/acquisition-spec-job.service";
 import { createSystemJobRunLog } from "./system-job-log.service";
 import { getSystemJobControlDetail } from "./system-job-control.service";
 
 const PROCESSOR_KEY = "acquisition_spec";
+
+function statusFromResult(result: { processed: number; failed: number }) {
+    if (result.failed > 0 && result.processed > 0) return "PARTIAL";
+    if (result.failed > 0) return "FAILED";
+    return "DONE";
+}
 
 export async function runAcquisitionSpecProcessorNow(input?: {
     triggerSource?: string;
@@ -12,6 +17,7 @@ export async function runAcquisitionSpecProcessorNow(input?: {
 }) {
     const triggerSource = input?.triggerSource ?? "manual";
     const control = await getSystemJobControlDetail(PROCESSOR_KEY);
+    const startedAt = new Date();
 
     if (!control?.enabled) {
         const log = await createSystemJobRunLog({
@@ -21,23 +27,17 @@ export async function runAcquisitionSpecProcessorNow(input?: {
             processedCount: 0,
             errorCount: 0,
             note: control?.pausedReason || "Processor is disabled",
-            startedAt: new Date(),
+            detail: { reason: control?.pausedReason || "Processor is disabled" },
+            startedAt,
             finishedAt: new Date(),
         });
 
         return {
             control,
-            result: {
-                total: 0,
-                processed: 0,
-                failed: 0,
-                errors: [],
-            },
+            result: { total: 0, processed: 0, failed: 0, errors: [] },
             log,
         };
     }
-
-    const startedAt = new Date();
 
     try {
         const result = await processQueuedAcquisitionSpecJobs({
@@ -48,12 +48,13 @@ export async function runAcquisitionSpecProcessorNow(input?: {
             includeFailed: input?.includeFailed ?? false,
         });
 
-        const status =
-            result.failed > 0
-                ? result.processed > 0
-                    ? "PARTIAL"
-                    : "FAILED"
-                : "DONE";
+        const status = statusFromResult(result);
+        const note =
+            result.total === 0
+                ? "Không có job nào cần xử lý"
+                : result.failed > 0
+                  ? `Đã xử lý ${result.processed}/${result.total}, lỗi ${result.failed}`
+                  : `Đã xử lý ${result.processed} job`;
 
         const log = await createSystemJobRunLog({
             processorKey: PROCESSOR_KEY,
@@ -61,37 +62,34 @@ export async function runAcquisitionSpecProcessorNow(input?: {
             status,
             processedCount: result.processed,
             errorCount: result.failed,
-            note:
-                result.failed > 0
-                    ? `Có ${result.failed} job lỗi`
-                    : `Đã xử lý ${result.processed} job`,
-            detail: result.errors,
+            note,
+            detail: {
+                total: result.total,
+                processed: result.processed,
+                failed: result.failed,
+                errors: result.errors,
+                includeFailed: Boolean(input?.includeFailed),
+            },
             startedAt,
             finishedAt: new Date(),
         });
 
-        return {
-            control,
-            result,
-            log,
-        };
+        return { control, result, log };
     } catch (error: any) {
+        const message = error?.message || "Run acquisition spec failed";
+
         const log = await createSystemJobRunLog({
             processorKey: PROCESSOR_KEY,
             triggerSource,
             status: "FAILED",
             processedCount: 0,
             errorCount: 1,
-            note: error?.message || "Run acquisition spec failed",
-            detail: {
-                error: error?.message || "Run acquisition spec failed",
-            },
+            note: message,
+            detail: { error: message, stack: error?.stack ?? null },
             startedAt,
             finishedAt: new Date(),
         });
 
-        throw Object.assign(new Error(error?.message || "Run acquisition spec failed"), {
-            log,
-        });
+        throw Object.assign(new Error(message), { log });
     }
 }
