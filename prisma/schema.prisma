@@ -873,7 +873,7 @@ model Vendor {
   address             String?
   note                String?
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime              @updatedAt
   bankName            String?
   bankAcc             String?
   isActive            Boolean               @default(true)

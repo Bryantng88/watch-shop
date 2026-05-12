@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   address: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   bankAcc: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   Acquisition: z.lazy(() => AcquisitionCreateNestedManyWithoutVendorInputObjectSchema).optional(),

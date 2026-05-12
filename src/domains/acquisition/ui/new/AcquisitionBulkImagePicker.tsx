@@ -43,7 +43,6 @@ export default function AcquisitionBulkImagePicker({
 }: Props) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
     const [data, setData] = useState<BrowseResponse | null>(null);
     const [prefix, setPrefix] = useState<string>("products/inline/active");
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -89,61 +88,21 @@ export default function AcquisitionBulkImagePicker({
         setSelectedKeys([]);
     }
 
-    async function submit() {
+    function submit() {
         if (!selectedKeys.length) {
             alert("Bạn chưa chọn ảnh nào.");
             return;
         }
 
-        setSubmitting(true);
+        const items: AcquisitionPreparedImage[] = selectedKeys.map((key) => ({
+            key,
+            fromKey: key,
+            url: `/api/media/sign?key=${encodeURIComponent(key)}`,
+        }));
 
-        try {
-            const res = await fetch("/api/admin/acquisitions/prepare-inline-images", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fileKeys: selectedKeys }),
-            });
-
-            const json = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(json?.error || "Không thể xử lý ảnh đã chọn.");
-            }
-
-            const items: AcquisitionPreparedImage[] = Array.isArray(json?.items)
-                ? json.items
-                : [];
-            const failed: FailedImage[] = Array.isArray(json?.failed)
-                ? json.failed
-                : [];
-
-            if (items.length) {
-                onImport(items);
-            }
-
-            if (failed.length) {
-                alert(
-                    `Đã xử lý ${items.length} ảnh, nhưng có ${failed.length} ảnh lỗi:\n` +
-                    failed
-                        .slice(0, 8)
-                        .map((item) => `- ${nameFromKey(item.fileKey)}: ${item.error}`)
-                        .join("\n")
-                );
-            }
-
-            if (!items.length && !failed.length) {
-                alert("Không có ảnh nào được xử lý.");
-                return;
-            }
-
-            setSelectedKeys([]);
-            setOpen(false);
-            setData(null);
-            setPrefix("products/inline/active");
-        } catch (error: any) {
-            alert(error?.message || "Không thể xử lý ảnh đã chọn.");
-        } finally {
-            setSubmitting(false);
-        }
+        onImport(items);
+        setSelectedKeys([]);
+        setOpen(false);
     }
 
     const currentPrefix = data?.prefix || prefix;
@@ -262,11 +221,11 @@ export default function AcquisitionBulkImagePicker({
 
                                         <button
                                             type="button"
-                                            disabled={submitting || !selectedKeys.length}
+                                            disabled={!selectedKeys.length}
                                             onClick={submit}
                                             className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                                         >
-                                            {submitting ? "Đang xử lý..." : "Xác nhận ảnh đã chọn"}
+                                            Xác nhận ảnh đã chọn
                                         </button>
                                     </div>
                                 </div>

@@ -170,7 +170,7 @@ export default function WatchListTable({
 
                 <FilterChip
                     active={!subFilter}
-                    label="mục"
+                    label="tổng"
                     value={Number(segmentTotal ?? total ?? safeItems.length)}
                     onClick={() => onSubFilterChange?.("")}
                 />

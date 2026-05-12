@@ -1,3 +1,6 @@
+export * from "./acquisition.repo";
+export * from "./acquisition-item.repo";
+export * from "./acquisition-watch.repo";
 export * from "./core";
 export * from "./shared";
 export * from "./ai";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Expand, Loader2, Trash2, X } from "lucide-react";
+import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
 import type { AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
 
@@ -41,7 +41,6 @@ export default function WatchLineCard({
     onRemove,
     canRemove = true,
 }: Props) {
-    const [movingImage, setMovingImage] = useState(false);
     const [previewOpen, setPreviewOpen] = useState(false);
 
     const previewSrc = useMemo(() => getPreviewSrc(line), [line]);
@@ -54,39 +53,15 @@ export default function WatchLineCard({
         onChange({ ...line, [key]: value });
     };
 
-    async function handlePickImage(nextFileKey: string) {
-        if (!nextFileKey?.trim()) return;
+    function handlePickImage(nextFileKey: string) {
+        const key = String(nextFileKey ?? "").trim();
 
-        setMovingImage(true);
-        try {
-            const res = await fetch("/api/admin/acquisitions/prepare-inline-images", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fileKeys: [nextFileKey] }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.error || "Không thể xử lý ảnh đã chọn.");
-            }
-
-            const first = Array.isArray(data?.items) ? data.items[0] : null;
-            if (!first?.key) {
-                throw new Error("Không nhận được ảnh sau khi xử lý.");
-            }
-
-            onChange({
-                ...line,
-                imageKey: first.key ?? null,
-                imageUrl: first.url ?? null,
-            });
-        } catch (error: any) {
-            alert(error?.message || "Không thể xử lý ảnh đã chọn.");
-        } finally {
-            setMovingImage(false);
-        }
+        onChange({
+            ...line,
+            imageKey: key || null,
+            imageUrl: key ? `/api/media/sign?key=${encodeURIComponent(key)}` : null,
+        });
     }
-
     const handleCostChange = (raw: string) => {
         setField("cost", parseMoneyInput(raw) as AcquisitionWatchLine["cost"]);
     };
@@ -106,12 +81,7 @@ export default function WatchLineCard({
                             </div>
                         ) : null}
 
-                        {movingImage ? (
-                            <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                Đang xử lý ảnh
-                            </div>
-                        ) : null}
+
                     </div>
 
                     {canRemove ? (
@@ -136,13 +106,12 @@ export default function WatchLineCard({
                             <MediaPickerInline
                                 value={line.imageKey ?? ""}
                                 onChange={handlePickImage}
-                                pending={movingImage}
-                                disabled={movingImage}
+                                pending={false}
+                                disabled={false}
                                 profile="inline"
                                 compact
                                 className="h-[72px] w-[72px] rounded-xl"
                             />
-
                             {previewSrc ? (
                                 <button
                                     type="button"

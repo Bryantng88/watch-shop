@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { cancelAcquisition } from "@/old_files/Acquisition_server/acquisition.service";
+
+import { cancelAcquisitionApplication } from "@/domains/acquisition/application";
 
 export async function POST(
     _req: Request,
@@ -7,11 +8,16 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
+
         if (!id) {
-            return NextResponse.json({ error: "Thiếu id phiếu nhập" }, { status: 400 });
+            return NextResponse.json(
+                { error: "Thiếu id phiếu nhập" },
+                { status: 400 }
+            );
         }
 
-        const data = await cancelAcquisition(id);
+        const data = await cancelAcquisitionApplication({ acquisitionId: id });
+
         return NextResponse.json({ ok: true, data });
     } catch (e: any) {
         return NextResponse.json(

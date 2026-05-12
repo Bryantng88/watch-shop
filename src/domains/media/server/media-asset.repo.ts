@@ -178,3 +178,43 @@ export async function listWatchChosenMediaAssetsRepo(
     select: mediaAssetSelect(),
   });
 }
+
+export async function updateMediaAssetFromProductImageRepo(
+  db: DB,
+  input: {
+    key: string;
+    productId: string;
+    role?: ImageRole | null;
+    sortOrder?: number | null;
+  }
+) {
+  const client = dbOrTx(db);
+
+  return client.mediaAsset.updateMany({
+    where: { key: input.key },
+    data: {
+      status: "ATTACHED",
+      productId: input.productId,
+      role: input.role ?? null,
+      sortOrder: input.sortOrder ?? 0,
+      isMissing: false,
+      missingAt: null,
+      lastSeenAt: new Date(),
+    },
+  });
+}
+
+export async function detachAttachedMediaAssetRepo(db: DB, input: { id: string; fallbackStatus: MediaAssetStatus }) {
+  const client = dbOrTx(db);
+
+  return client.mediaAsset.update({
+    where: { id: input.id },
+    data: {
+      status: input.fallbackStatus,
+      productId: null,
+      role: null,
+      sortOrder: 0,
+    },
+    select: mediaAssetSelect(),
+  });
+}

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import * as acquisitionService from "@/domains/acquisition/server/core/write/acquisition-write.service";
+import { createAcquisitionApplication } from "@/domains/acquisition/application";
 
 const WatchLineSchema = z.object({
     id: z.string(),
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = BodySchema.parse(await req.json());
 
-        const result = await acquisitionService.createAcquisitionWithItem({
+        const result = await createAcquisitionApplication({
             vendorId: body.vendorId,
             currency: body.currency,
             type: body.type as any,

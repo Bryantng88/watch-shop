@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/client";
-import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/server/ai/acquisition-spec-job.service";
+import { processQueuedAcquisitionSpecJobs } from "@/domains/acquisition/serverOld/ai/acquisition-spec-job.service";
 import { createSystemJobRunLog } from "./system-job-log.service";
 import { getSystemJobControlDetail } from "./system-job-control.service";
 

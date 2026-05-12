@@ -1,19 +1,30 @@
-import prisma from "@/server/db/client";
-import * as serviceAqc from "@/old_files/Acquisition_server/acquisition.service"
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
-    const { id: acqId } = await context.params;
-    const { items } = await req.json();
+import { updateAcquisitionItemsApplication } from "@/domains/acquisition/application";
 
+export async function POST(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        const result = await prisma.$transaction(tx =>
-            serviceAqc.updateAcquisitionItems(tx, acqId, items)
-        );
+        const { id } = await params;
+        const body = await req.json();
 
-        return Response.json(result, { status: 200 });
+        if (!id) {
+            return NextResponse.json(
+                { error: "Thiếu id phiếu nhập" },
+                { status: 400 }
+            );
+        }
+
+        const result = await updateAcquisitionItemsApplication({
+            acquisitionId: id,
+            items: body?.items ?? [],
+        });
+
+        return NextResponse.json(result, { status: 200 });
     } catch (err: any) {
-        console.error(err);
-        return Response.json(
+        return NextResponse.json(
             { error: err?.message ?? "Failed to update acquisition items" },
             { status: 500 }
         );

@@ -480,3 +480,56 @@ export async function organizeActiveMediaAssets(input: {
   };
 }
 
+export async function moveMediaAssetToAcquisitionInlineChosen(input: {
+  key: string;
+  productId: string;
+  acquisitionId: string;
+  sortOrder?: number | null;
+}) {
+  const key = normalizeKey(input.key);
+
+  if (!key) {
+    throw new Error("Media key không hợp lệ");
+  }
+
+  if (key.startsWith("products/inline/chosen/")) {
+    const asset = await upsertMediaAssetRepo(prisma, {
+      key,
+      profile: "inline",
+      status: "CHOSEN",
+      productId: input.productId,
+      acquisitionId: input.acquisitionId,
+      role: ImageRole.INLINE,
+      sortOrder: input.sortOrder ?? 0,
+    });
+
+    return {
+      key: asset.key,
+      fileKey: asset.key,
+      url: `/api/media/sign?key=${encodeURIComponent(asset.key)}`,
+      name: asset.fileName,
+      sortOrder: asset.sortOrder,
+    };
+  }
+
+  const moved = await moveAndTrackMediaAsset({
+    fromKey: key,
+    toPrefix: "products/inline/chosen/watch/inline",
+    deleteSource: true,
+    overwrite: false,
+    productId: input.productId,
+    acquisitionId: input.acquisitionId,
+    role: ImageRole.INLINE,
+    status: "CHOSEN",
+    sortOrder: input.sortOrder ?? 0,
+
+  });
+
+  return {
+    key: moved.key,
+    fileKey: moved.key,
+    url: moved.url,
+    name: moved.asset.fileName,
+    sortOrder: moved.asset.sortOrder,
+  };
+}
