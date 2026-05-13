@@ -16,7 +16,7 @@ export function getReviewStatusMeta(status?: string | null) {
         return {
             label: "Chờ duyệt",
             Icon: Clock3,
-            className: "bg-amber-50 text-amber-700 ring-amber-200",
+            className: "bg-amber-50 text-amber-700",
         };
     }
 
@@ -24,7 +24,7 @@ export function getReviewStatusMeta(status?: string | null) {
         return {
             label: "Đã duyệt",
             Icon: CheckCircle2,
-            className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+            className: "bg-emerald-50 text-emerald-700",
         };
     }
 
@@ -32,14 +32,14 @@ export function getReviewStatusMeta(status?: string | null) {
         return {
             label: "Trả về",
             Icon: XCircle,
-            className: "bg-rose-50 text-rose-700 ring-rose-200",
+            className: "bg-rose-50 text-rose-700",
         };
     }
 
     return {
         label: "Draft",
         Icon: FileText,
-        className: "bg-slate-50 text-slate-600 ring-slate-200",
+        className: "bg-slate-100 text-slate-600",
     };
 }
 
@@ -50,12 +50,12 @@ export default function ReviewStatusBadge({ status, size = "sm" }: Props) {
     return (
         <span
             className={[
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium ring-1",
+                "inline-flex shrink-0 items-center gap-1 rounded-md font-medium",
                 meta.className,
-                size === "md" ? "px-3 py-1.5 text-sm" : "px-2.5 py-1 text-xs",
+                size === "md" ? "px-2 py-1 text-sm" : "px-1.5 py-0.5 text-xs",
             ].join(" ")}
         >
-            <Icon className={size === "md" ? "h-4 w-4" : "h-3.5 w-3.5"} />
+            <Icon className={size === "md" ? "h-3.5 w-3.5" : "h-3 w-3"} />
             {meta.label}
         </span>
     );
