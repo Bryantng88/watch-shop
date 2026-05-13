@@ -28,6 +28,7 @@ type Props = {
     }) => void;
     inlineImage?: PickedMediaItem | null;
     watchTitle?: string | null;
+    isFormDirty?: boolean;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -100,6 +101,7 @@ export default function WatchImageSection({
     canReviewContent = false,
     onReviewStatusChange,
     onBeforeSubmitReview,
+    isFormDirty
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();

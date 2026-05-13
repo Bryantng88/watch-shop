@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { requirePermission } from "@/server/auth/requirePermission";
 import {
     approveWatchReview,
     rejectWatchReview,
+    resetWatchReviewToDraft,
 } from "@/domains/watch/server/review";
 
 export const dynamic = "force-dynamic";
-
-const BodySchema = z.object({
-    action: z.enum(["approve", "reject"]),
-    note: z.string().optional().nullable(),
-});
 
 function getAuthUserId(auth: any) {
     return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
@@ -21,44 +16,58 @@ function getAuthUserId(auth: any) {
 
 export async function POST(
     req: NextRequest,
-    context: { params: Promise<{ id: string }> }
+    {
+        params,
+    }: { params: Promise<{ productId: string }> | { productId: string } },
 ) {
     try {
-        const params = await context.params;
-        const body = BodySchema.parse(await req.json());
+        const auth = await requirePermission(PERMISSIONS.PRODUCT_CONTENT_REVIEW);
+        const { productId } = await params;
+        const body = await req.json().catch(() => ({}));
+        const action = String(body?.action ?? "").toLowerCase();
 
-        const auth = await requirePermissionApi(
-            PERMISSIONS.PRODUCT_CONTENT_REVIEW
+        if (action === "approve") {
+            const state = await approveWatchReview({
+                productId,
+                targetType: "CONTENT",
+                userId: getAuthUserId(auth),
+            });
+            return NextResponse.json({ ok: true, item: state });
+        }
+
+        if (action === "reject") {
+            const state = await rejectWatchReview({
+                productId,
+                targetType: "CONTENT",
+                userId: getAuthUserId(auth),
+                note: body?.note ?? null,
+            });
+            return NextResponse.json({ ok: true, item: state });
+        }
+
+        if (action === "reset") {
+            const state = await resetWatchReviewToDraft({
+                productId,
+                targetType: "CONTENT",
+                userId: getAuthUserId(auth),
+            });
+            return NextResponse.json({ ok: true, item: state });
+        }
+
+        return NextResponse.json(
+            { ok: false, error: "Review action không hợp lệ." },
+            { status: 400 },
         );
-        if (auth instanceof Response) return auth;
-
-        const input = {
-            productId: params.id,
-            targetType: "CONTENT" as const,
-            userId: getAuthUserId(auth),
-        };
-
-        const state =
-            body.action === "approve"
-                ? await approveWatchReview(input)
-                : await rejectWatchReview({
-                    ...input,
-                    note: body.note,
-                });
-
-        return NextResponse.json({
-            success: true,
-            targetType: state.targetType,
-            status: state.status,
-            reviewNote: state.reviewNote,
-        });
-    } catch (error: any) {
+    } catch (error) {
         return NextResponse.json(
             {
-                success: false,
-                error: error?.message || "Không thể duyệt nội dung.",
+                ok: false,
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể cập nhật duyệt nội dung.",
             },
-            { status: 400 }
+            { status: 500 },
         );
     }
 }

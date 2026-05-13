@@ -7,35 +7,14 @@ import { getListVendors } from "../vendors/_server/vendor.repo";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-function serialize(obj: any) {
+function serialize(obj: unknown) {
     return JSON.parse(
         JSON.stringify(obj, (_key, value) => {
             if (value instanceof Date) return value.toISOString();
             if (typeof value === "object" && value?._isDecimal) return Number(value);
             return value;
-        })
+        }),
     );
-}
-
-function hasRole(user: any, roleName: string) {
-    const roles = user?.roles ?? [];
-    return roles.some((r: any) => {
-        if (typeof r === "string") return r === roleName;
-        if (typeof r?.name === "string") return r.name === roleName;
-        if (typeof r?.code === "string") return r.code === roleName;
-        return false;
-    });
-}
-
-function hasPermission(user: any, permission: string) {
-    const permissions = user?.permissions ?? [];
-    return permissions.some((p: any) => {
-        if (typeof p === "string") return p === permission;
-        if (typeof p?.name === "string") return p.name === permission;
-        if (typeof p?.code === "string") return p.code === permission;
-        if (typeof p?.key === "string") return p.key === permission;
-        return false;
-    });
 }
 
 function firstValue(value: string | string[] | undefined) {
@@ -46,6 +25,60 @@ function firstValue(value: string | string[] | undefined) {
 function toPositiveInt(value: string | undefined, fallback: number) {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+function hasRole(user: any, roleName: string) {
+    const roles = user?.roles ?? [];
+
+    return roles.some((r: any) => {
+        if (typeof r === "string") return r === roleName;
+        if (typeof r?.name === "string") return r.name === roleName;
+        if (typeof r?.code === "string") return r.code === roleName;
+        return false;
+    });
+}
+
+function hasPermission(user: any, permission: string) {
+    const permissions = user?.permissions ?? [];
+
+    return permissions.some((p: any) => {
+        if (typeof p === "string") return p === permission;
+        if (typeof p?.name === "string") return p.name === permission;
+        if (typeof p?.code === "string") return p.code === permission;
+        if (typeof p?.key === "string") return p.key === permission;
+        return false;
+    });
+}
+
+function buildInitialWatchListInput(searchParams: SearchParams) {
+    const view = (firstValue(searchParams.view) || "draft") as
+        | "draft"
+        | "processing"
+        | "ready"
+        | "hold"
+        | "sold"
+        | "all";
+    return {
+        view,
+
+        subFilter: firstValue(searchParams.subFilter) as any,
+
+        q: firstValue(searchParams.q),
+        sku: firstValue(searchParams.sku),
+        brandId: firstValue(searchParams.brandId),
+        vendorId: firstValue(searchParams.vendorId),
+
+        hasContent: firstValue(searchParams.hasContent) as "" | "yes" | "no",
+        hasImages: firstValue(searchParams.hasImages) as "" | "yes" | "no",
+
+        saleStage: firstValue(searchParams.saleStage),
+        opsStage: firstValue(searchParams.opsStage),
+
+        sort: firstValue(searchParams.sort) || "updatedDesc",
+
+        page: toPositiveInt(firstValue(searchParams.page), 1),
+        pageSize: toPositiveInt(firstValue(searchParams.pageSize), 20),
+    };
 }
 
 export default async function WatchesPage({
@@ -62,53 +95,16 @@ export default async function WatchesPage({
     const canViewCost =
         isAdmin || hasPermission(user, PERMISSIONS.PRODUCT_COST_VIEW);
 
-    const input = {
-        view: (firstValue(resolvedSearchParams.view) || "draft") as
-            | "draft"
-            | "processing"
-            | "ready"
-            | "hold"
-            | "sold"
-            | "all",
-        subFilter: firstValue(resolvedSearchParams.subFilter) as any,
+    const input = buildInitialWatchListInput(resolvedSearchParams);
 
-        q: firstValue(resolvedSearchParams.q),
-        sku: firstValue(resolvedSearchParams.sku),
-        brandId: firstValue(resolvedSearchParams.brandId),
-        vendorId: firstValue(resolvedSearchParams.vendorId),
-        hasContent: firstValue(resolvedSearchParams.hasContent) as "" | "yes" | "no",
-        hasImages: firstValue(resolvedSearchParams.hasImages) as "" | "yes" | "no",
-        saleStage: firstValue(resolvedSearchParams.saleStage),
-        opsStage: firstValue(resolvedSearchParams.opsStage),
-        sort: firstValue(resolvedSearchParams.sort) || "updatedDesc",
-        page: toPositiveInt(firstValue(resolvedSearchParams.page), 1),
-        pageSize: toPositiveInt(firstValue(resolvedSearchParams.pageSize), 20),
-    };
-
-    const [result, vendors] = await Promise.all([
+    const [initialResult, vendors] = await Promise.all([
         getAdminWatchList(input),
         getListVendors(),
     ]);
 
-    const {
-        items,
-        total,
-        page,
-        pageSize,
-        totalPages,
-        counts,
-        summary,
-    } = result;
-
     return (
         <WatchListClient
-            items={serialize(items)}
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            totalPages={totalPages}
-            counts={counts}
-            summary={summary}
+            initialResult={serialize(initialResult)}
             vendors={serialize(vendors)}
             canViewCost={canViewCost}
         />

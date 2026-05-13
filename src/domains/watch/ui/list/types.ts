@@ -48,7 +48,17 @@ export type WatchRow = {
 
     brandName?: string | null;
     vendorName?: string | null;
+    reviewStatus?:
+    | "DRAFT"
+    | "SUBMITTED"
+    | "PARTIAL_APPROVED"
+    | "APPROVED"
+    | "POSTED"
+    | "PUBLISHED"
+    | string
+    | null;
 
+    postReadiness?: string | null;
     imageUrl?: string | null;
     imageKey?: string | null;
     imagesCount: number;

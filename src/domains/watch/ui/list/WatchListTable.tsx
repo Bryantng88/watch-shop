@@ -70,7 +70,11 @@ function deriveSummary(
         ),
     };
 }
-
+function subFilterClass(active: boolean) {
+    return active
+        ? "rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white"
+        : "rounded-full px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100";
+}
 function isQuickFilterActive(
     activeQuickFilters: QuickFilterKey[] | LegacyQuickFilters | undefined,
     key: QuickFilterKey
@@ -132,19 +136,11 @@ function InlineCountButton({
     onClick?: () => void;
 }) {
     const activeClass: Record<MiniTone, string> = {
-        emerald: "font-semibold text-emerald-600",
-        blue: "font-semibold text-blue-600",
-        amber: "font-semibold text-amber-600",
-        violet: "font-semibold text-violet-600",
-        slate: "font-semibold text-slate-800",
-    };
-
-    const numberClass: Record<MiniTone, string> = {
-        emerald: "text-emerald-600",
-        blue: "text-blue-600",
-        amber: "text-amber-600",
-        violet: "text-violet-600",
-        slate: "text-slate-700",
+        emerald: "border-emerald-200 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+        blue: "border-blue-200 bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+        amber: "border-amber-200 bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+        violet: "border-violet-200 bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+        slate: "border-slate-300 bg-slate-900 text-white ring-1 ring-slate-900",
     };
 
     return (
@@ -152,12 +148,14 @@ function InlineCountButton({
             type="button"
             onClick={onClick}
             className={cn(
-                "text-xs text-slate-500 transition hover:text-slate-700",
-                active && activeClass[tone]
+                "inline-flex items-center gap-1 rounded-full border border-transparent px-2.5 py-1 text-xs font-medium transition",
+                active
+                    ? activeClass[tone]
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
             )}
         >
-            <span className={cn("font-medium", numberClass[tone])}>{value}</span>{" "}
-            {label}
+            <span>{value}</span>
+            <span>{label}</span>
         </button>
     );
 }

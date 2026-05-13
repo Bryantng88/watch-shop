@@ -7,11 +7,13 @@ import {
     FileText,
     Loader2,
     Send,
+    Undo2,
     XCircle,
 } from "lucide-react";
 import { useState } from "react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type ReviewTarget = "content" | "image";
@@ -24,6 +26,7 @@ type Props = {
     reviewNote?: string | null;
     canReviewContent?: boolean;
     onBeforeSubmit?: () => Promise<boolean>;
+    isFormDirty?: boolean;
     onStatusChange?: (next: {
         status: ReviewStatus;
         reviewNote?: string | null;
@@ -33,11 +36,7 @@ type Props = {
 function normalizeStatus(status?: string | null): ReviewStatus {
     const value = String(status ?? "DRAFT").toUpperCase();
 
-    if (
-        value === "SUBMITTED" ||
-        value === "APPROVED" ||
-        value === "REJECTED"
-    ) {
+    if (value === "SUBMITTED" || value === "APPROVED" || value === "REJECTED") {
         return value;
     }
 
@@ -92,9 +91,11 @@ export default function SectionReviewActions({
     canReviewContent = false,
     onStatusChange,
     onBeforeSubmit,
+    isFormDirty = false,
 }: Props) {
     const router = useRouter();
     const dialog = useAppDialog();
+    const progress = useAppProgress();
     const notify = useNotify();
 
     const [pending, setPending] = useState<string | null>(null);
@@ -105,18 +106,16 @@ export default function SectionReviewActions({
     const isAdmin = canReviewContent;
     const isUser = !canReviewContent;
 
-    const canSubmit =
-        isUser && ["DRAFT", "REJECTED"].includes(currentStatus);
+    const canSubmit = isUser && ["DRAFT", "REJECTED"].includes(currentStatus);
 
-    const canApprove =
-        isAdmin && ["DRAFT", "SUBMITTED", "REJECTED"].includes(currentStatus);
-
+    const canApprove = isAdmin && currentStatus === "SUBMITTED";
     const canReject = isAdmin && currentStatus === "SUBMITTED";
+    const canResetDraft = isAdmin && currentStatus === "APPROVED";
 
     async function callSubmitApi() {
         const res = await fetch(
             `/api/admin/watches/${productId}/${target}-submit`,
-            { method: "POST" }
+            { method: "POST" },
         );
 
         const json = await res.json().catch(() => ({}));
@@ -129,8 +128,8 @@ export default function SectionReviewActions({
     }
 
     async function callReviewApi(
-        action: "approve" | "reject",
-        note?: string | null
+        action: "approve" | "reject" | "reset",
+        note?: string | null,
     ) {
         const res = await fetch(
             `/api/admin/watches/${productId}/${target}-review`,
@@ -141,7 +140,7 @@ export default function SectionReviewActions({
                     action,
                     note: note ?? null,
                 }),
-            }
+            },
         );
 
         const json = await res.json().catch(() => ({}));
@@ -168,6 +167,10 @@ export default function SectionReviewActions({
 
         try {
             setPending("submit");
+            progress.show({
+                title: `Đang gửi duyệt ${label}`,
+                message: "Hệ thống đang chuyển trạng thái review.",
+            });
 
             if (onBeforeSubmit) {
                 const saved = await onBeforeSubmit();
@@ -197,25 +200,29 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể gửi duyệt",
                 message:
-                    error instanceof Error
-                        ? error.message
-                        : "Không thể gửi duyệt.",
+                    error instanceof Error ? error.message : "Không thể gửi duyệt.",
                 tone: "danger",
             });
         } finally {
+            progress.hide();
             setPending(null);
         }
     }
 
     async function handleApprove() {
+        if (isFormDirty) {
+            await dialog.alert({
+                title: "Watch có thay đổi chưa lưu",
+                message: "Bạn cần lưu watch trước khi duyệt để tránh duyệt dữ liệu cũ.",
+                tone: "warning",
+            });
+            return;
+        }
         const label = targetLabel(target);
 
         const ok = await dialog.confirm({
             title: `Duyệt ${label}?`,
-            message:
-                currentStatus === "DRAFT"
-                    ? `Hạng mục ${label} đang ở Draft. Admin vẫn có thể duyệt manual sau khi tự chỉnh sửa.`
-                    : `Hạng mục ${label} sẽ được đánh dấu là đã duyệt.`,
+            message: `Hạng mục ${label} sẽ được đánh dấu là đã duyệt.`,
             confirmText: "Duyệt",
             cancelText: "Hủy",
             tone: "success",
@@ -225,6 +232,10 @@ export default function SectionReviewActions({
 
         try {
             setPending("approve");
+            progress.show({
+                title: `Đang duyệt ${label}`,
+                message: "Hệ thống đang cập nhật trạng thái duyệt.",
+            });
 
             await callReviewApi("approve");
 
@@ -236,9 +247,7 @@ export default function SectionReviewActions({
             notify.success({
                 title: "Đã duyệt",
                 message:
-                    target === "content"
-                        ? "Đã duyệt nội dung."
-                        : "Đã duyệt hình ảnh.",
+                    target === "content" ? "Đã duyệt nội dung." : "Đã duyệt hình ảnh.",
             });
 
             router.refresh();
@@ -246,12 +255,60 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể duyệt",
                 message:
-                    error instanceof Error
-                        ? error.message
-                        : "Không thể cập nhật duyệt.",
+                    error instanceof Error ? error.message : "Không thể cập nhật duyệt.",
                 tone: "danger",
             });
         } finally {
+            progress.hide();
+            setPending(null);
+        }
+    }
+
+    async function handleResetDraft() {
+        const label = targetLabel(target);
+
+        const ok = await dialog.confirm({
+            title: `Mở chỉnh sửa ${label}?`,
+            message: `Hạng mục ${label} đã được duyệt. Khi mở chỉnh sửa, trạng thái sẽ chuyển về Draft và phải duyệt lại sau khi cập nhật.`,
+            confirmText: "Mở chỉnh sửa",
+            cancelText: "Hủy",
+            tone: "warning",
+        });
+
+        if (!ok) return;
+
+        try {
+            setPending("reset");
+            progress.show({
+                title: `Đang mở chỉnh sửa ${label}`,
+                message: "Hệ thống đang đưa hạng mục về Draft.",
+            });
+
+            await callReviewApi("reset");
+
+            onStatusChange?.({
+                status: "DRAFT",
+                reviewNote: null,
+            });
+
+            notify.success({
+                title: "Đã mở chỉnh sửa",
+                message:
+                    target === "content"
+                        ? "Nội dung đã chuyển về Draft."
+                        : "Hình ảnh đã chuyển về Draft.",
+            });
+
+            router.refresh();
+        } catch (error) {
+            await dialog.alert({
+                title: "Không thể mở chỉnh sửa",
+                message:
+                    error instanceof Error ? error.message : "Không thể chuyển về Draft.",
+                tone: "danger",
+            });
+        } finally {
+            progress.hide();
             setPending(null);
         }
     }
@@ -271,6 +328,10 @@ export default function SectionReviewActions({
 
         try {
             setPending("reject");
+            progress.show({
+                title: `Đang trả về ${label}`,
+                message: "Hệ thống đang cập nhật trạng thái review.",
+            });
 
             const rejectNote = "Cần chỉnh lại trước khi duyệt.";
             await callReviewApi("reject", rejectNote);
@@ -283,9 +344,7 @@ export default function SectionReviewActions({
             notify.warning({
                 title: "Đã trả về",
                 message:
-                    target === "content"
-                        ? "Đã trả về nội dung."
-                        : "Đã trả về hình ảnh.",
+                    target === "content" ? "Đã trả về nội dung." : "Đã trả về hình ảnh.",
             });
 
             router.refresh();
@@ -293,69 +352,108 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể trả về",
                 message:
-                    error instanceof Error
-                        ? error.message
-                        : "Không thể cập nhật duyệt.",
+                    error instanceof Error ? error.message : "Không thể cập nhật duyệt.",
                 tone: "danger",
             });
         } finally {
+            progress.hide();
             setPending(null);
         }
     }
 
+    const hasPrimaryActions = canSubmit || canResetDraft || canApprove || canReject;
+
     return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-            <span
-                title={reviewNote ? `Note: ${reviewNote}` : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(
-                    currentStatus
-                )}`}
-            >
-                <StatusIcon className="h-3.5 w-3.5" />
-                {statusLabel(currentStatus)}
-            </span>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Trạng thái
+                </span>
+                <span
+                    title={reviewNote ? `Note: ${reviewNote}` : undefined}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(
+                        currentStatus,
+                    )}`}
+                >
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {statusLabel(currentStatus)}
+                </span>
+            </div>
 
-            {canSubmit ? (
-                <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={Boolean(pending)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"                >
-                    {pending === "submit" ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                        <Send className="h-3.5 w-3.5" />
-                    )}
-                    Gửi duyệt
-                </button>
+            {hasPrimaryActions ? (
+                <div className="h-6 w-px bg-slate-200" aria-hidden="true" />
             ) : null}
 
-            {canApprove ? (
-                <button
-                    type="button"
-                    onClick={handleApprove}
-                    disabled={Boolean(pending)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                    {pending === "approve" ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                    )}
-                    Duyệt
-                </button>
-            ) : null}
+            {hasPrimaryActions ? (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    {canSubmit ? (
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={Boolean(pending)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                            title="Chuyển hạng mục sang trạng thái chờ admin duyệt."
+                        >
+                            {pending === "submit" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <Send className="h-3.5 w-3.5" />
+                            )}
+                            Gửi duyệt
+                        </button>
+                    ) : null}
 
-            {canReject ? (
-                <button
-                    type="button"
-                    onClick={handleReject}
-                    disabled={Boolean(pending)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                >
-                    <XCircle className="h-3.5 w-3.5" />
-                    Trả về
-                </button>
+                    {canResetDraft ? (
+                        <button
+                            type="button"
+                            onClick={handleResetDraft}
+                            disabled={Boolean(pending)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                            title="Đưa hạng mục đã duyệt về Draft để chỉnh sửa lại."
+                        >
+                            {pending === "reset" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <Undo2 className="h-3.5 w-3.5" />
+                            )}
+                            Mở chỉnh sửa
+                        </button>
+                    ) : null}
+
+                    {canReject ? (
+                        <button
+                            type="button"
+                            onClick={handleReject}
+                            disabled={Boolean(pending)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                            title="Trả hạng mục về để editor chỉnh sửa lại."
+                        >
+                            {pending === "reject" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <XCircle className="h-3.5 w-3.5" />
+                            )}
+                            Trả về
+                        </button>
+                    ) : null}
+
+                    {canApprove ? (
+                        <button
+                            type="button"
+                            onClick={handleApprove}
+                            disabled={Boolean(pending)}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                            title="Duyệt hạng mục và khóa chỉnh sửa cho đến khi admin mở lại."
+                        >
+                            {pending === "approve" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            Duyệt
+                        </button>
+                    ) : null}
+                </div>
             ) : null}
         </div>
     );

@@ -37,6 +37,7 @@ type Props = {
     onOpenSpecModal: () => void;
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
     onBeforeSubmitReview?: () => Promise<boolean>;
+    isFormDirty?: boolean;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -64,6 +65,7 @@ export default function WatchContentSection({
     onOpenSpecModal,
     onReviewStatusChange,
     onBeforeSubmitReview,
+    isFormDirty
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
+import { requirePermission } from "@/server/auth/requirePermission";
 import { submitWatchReview } from "@/domains/watch/server/review";
 
 export const dynamic = "force-dynamic";
@@ -11,34 +11,32 @@ function getAuthUserId(auth: any) {
 }
 
 export async function POST(
-    _req: NextRequest,
-    context: { params: Promise<{ id: string }> }
+    _req: Request,
+    {
+        params,
+    }: { params: Promise<{ productId: string }> | { productId: string } },
 ) {
     try {
-        const params = await context.params;
-
-        const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
-        if (auth instanceof Response) return auth;
+        const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+        const { productId } = await params;
 
         const state = await submitWatchReview({
-            productId: params.id,
+            productId,
             targetType: "IMAGE",
             userId: getAuthUserId(auth),
         });
 
-        return NextResponse.json({
-            success: true,
-            targetType: state.targetType,
-            status: state.status,
-            reviewNote: state.reviewNote,
-        });
-    } catch (error: any) {
+        return NextResponse.json({ ok: true, item: state });
+    } catch (error) {
         return NextResponse.json(
             {
-                success: false,
-                error: error?.message || "Không thể gửi duyệt hình ảnh.",
+                ok: false,
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể gửi duyệt hình ảnh.",
             },
-            { status: 400 }
+            { status: 500 },
         );
     }
 }

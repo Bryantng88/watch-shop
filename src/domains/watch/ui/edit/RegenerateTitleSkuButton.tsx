@@ -1,46 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { regenerateWatchTitleSku } from "@/domains/watch/client/edit/watch-edit.actions";
+import { WandSparkles } from "lucide-react";
+
+import type { WatchFormValues } from "@/domains/watch/client/form/watch-form.types";
+import { buildWatchTitleSkuSuggestion } from "@/domains/watch/shared/watch-title-sku.helpers";
+
+type SimpleOption = {
+    id: string;
+    name: string;
+    slug?: string | null;
+};
 
 type Props = {
-    productId: string;
+    values: WatchFormValues;
+    brands?: SimpleOption[];
     onDone?: (result: { title: string; sku: string | null }) => void;
 };
 
 export default function RegenerateTitleSkuButton({
-    productId,
+    values,
+    brands = [],
     onDone,
 }: Props) {
-    const router = useRouter();
-    const [loading, setLoading] = useState(false);
-
-    async function handleClick() {
-        if (loading) return;
-
-        try {
-            setLoading(true);
-            const result = await regenerateWatchTitleSku({ productId });
-
-            onDone?.(result);
-            router.refresh();
-            alert("Đã gen lại title & SKU");
-        } catch (error: any) {
-            alert(error?.message || "Không thể gen lại title & SKU");
-        } finally {
-            setLoading(false);
-        }
+    function handleClick() {
+        const result = buildWatchTitleSkuSuggestion(values, brands);
+        onDone?.(result);
     }
 
     return (
         <button
             type="button"
             onClick={handleClick}
-            disabled={loading}
-            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            title="Gen từ form state hiện tại, không cần lưu DB trước."
         >
-            {loading ? "Đang gen..." : "Gen lại title & SKU"}
+            <WandSparkles className="h-4 w-4" />
+            Gen lại title & SKU
         </button>
     );
 }

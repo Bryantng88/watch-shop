@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
 
@@ -49,6 +51,84 @@ type AfterSaveMode =
     | "submitBoth"
     | "continueContent";
 
+function stableStringify(value: unknown) {
+    return JSON.stringify(value, (_key, v) => {
+        if (Array.isArray(v)) return v;
+        if (v && typeof v === "object") {
+            return Object.keys(v as Record<string, unknown>)
+                .sort()
+                .reduce((acc: Record<string, unknown>, key) => {
+                    acc[key] = (v as Record<string, unknown>)[key];
+                    return acc;
+                }, {});
+        }
+        return v ?? null;
+    });
+}
+
+function getReviewStatus(value?: string | null) {
+    const status = String(value ?? "DRAFT").toUpperCase();
+    if (["SUBMITTED", "APPROVED", "REJECTED"].includes(status)) return status;
+    return "DRAFT";
+}
+
+function useUnsavedChangesGuard({
+    enabled,
+    message,
+    onConfirmLeave,
+    onNavigate,
+}: {
+    enabled: boolean;
+    message: string;
+    onConfirmLeave: () => Promise<boolean>;
+    onNavigate: (href: string) => void;
+}) {
+    useEffect(() => {
+        if (!enabled) return;
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = message;
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [enabled, message]);
+
+    useEffect(() => {
+        if (!enabled) return;
+
+        const handleDocumentClick = async (event: MouseEvent) => {
+            if (event.defaultPrevented) return;
+            if (event.button !== 0) return;
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+            const target = event.target as HTMLElement | null;
+            const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
+            if (!anchor) return;
+            if (anchor.target && anchor.target !== "_self") return;
+            if (anchor.hasAttribute("download")) return;
+
+            const nextUrl = new URL(anchor.href, window.location.href);
+            const currentUrl = new URL(window.location.href);
+
+            if (nextUrl.href === currentUrl.href) return;
+            if (nextUrl.origin !== currentUrl.origin) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const ok = await onConfirmLeave();
+            if (ok) {
+                onNavigate(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+            }
+        };
+
+        document.addEventListener("click", handleDocumentClick, true);
+        return () => document.removeEventListener("click", handleDocumentClick, true);
+    }, [enabled, onConfirmLeave, onNavigate]);
+}
+
 export default function WatchFormClient({
     detail,
     brands = [],
@@ -60,14 +140,18 @@ export default function WatchFormClient({
 }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const dialog = useAppDialog();
+    const progress = useAppProgress();
     const notify = useNotify();
 
     const initialValues = useMemo(
         () => mapWatchDetailToFormValues(detail),
-        [detail]
+        [detail],
     );
 
     const [values, setValues] = useState<WatchFormValues>(initialValues);
+    const [savedValues, setSavedValues] =
+        useState<WatchFormValues>(initialValues);
     const [pending, startTransition] = useTransition();
 
     const [message, setMessage] = useState("");
@@ -76,14 +160,15 @@ export default function WatchFormClient({
     const [brandOptions, setBrandOptions] = useState<SimpleOption[]>(brands);
 
     const [afterSaveOpen, setAfterSaveOpen] = useState(false);
-    const [afterSaveMode, setAfterSaveMode] =
-        useState<AfterSaveMode>("normal");
+    const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
 
     const contentRef = useRef<HTMLDivElement | null>(null);
     const pricingRef = useRef<HTMLDivElement | null>(null);
 
     const focus = searchParams.get("focus");
+    const returnTo = searchParams.get("returnTo") || "/admin/watches";
     const inlineImage = values.media.inlineImage;
+    const isDirty = stableStringify(values) !== stableStringify(savedValues);
 
     useEffect(() => {
         if (focus !== "pricing") return;
@@ -100,6 +185,47 @@ export default function WatchFormClient({
             });
         }, 250);
     }, [focus, notify]);
+
+    const unsavedChangesMessage =
+        "Bạn có thay đổi chưa lưu. Thoát khỏi trang này sẽ mất các chỉnh sửa hiện tại. Bạn vẫn muốn thoát?";
+
+    const confirmLeaveIfDirty = async () => {
+        if (!isDirty) return true;
+
+        return dialog.confirm({
+            title: "Bạn có thay đổi chưa lưu",
+            message: unsavedChangesMessage,
+            confirmText: "Thoát khỏi trang",
+            cancelText: "Ở lại chỉnh tiếp",
+            tone: "warning",
+        });
+    };
+
+    useUnsavedChangesGuard({
+        enabled: isDirty,
+        message: unsavedChangesMessage,
+        onConfirmLeave: confirmLeaveIfDirty,
+        onNavigate: (href) => {
+            progress.show({
+                title: "Đang chuyển trang",
+                message: "Hệ thống đang điều hướng sang màn hình mới.",
+            });
+            router.push(href);
+            window.setTimeout(() => progress.hide(), 1200);
+        },
+    });
+
+    const handleBack = async () => {
+        if (!(await confirmLeaveIfDirty())) return;
+
+        progress.show({
+            title: "Đang quay lại",
+            message: "Hệ thống đang đưa bạn về danh sách trước đó.",
+        });
+
+        router.push(returnTo);
+        window.setTimeout(() => progress.hide(), 1200);
+    };
 
     const updateBasic = (patch: Partial<WatchFormValues["basic"]>) => {
         setValues((prev) => ({
@@ -158,31 +284,35 @@ export default function WatchFormClient({
         }));
     };
 
-    const handleReviewStatusChange = (
+    const patchReviewState = (
+        current: WatchFormValues,
         target: "content" | "image",
-        next: ReviewStatusChange
-    ) => {
-        setValues((prev) => {
-            if (target === "content") {
-                return {
-                    ...prev,
-                    contentReviewStatus: next.status,
-                    contentReviewNote: next.reviewNote ?? null,
-                };
+        next: ReviewStatusChange,
+    ): WatchFormValues =>
+        target === "content"
+            ? {
+                ...current,
+                contentReviewStatus: next.status,
+                contentReviewNote: next.reviewNote ?? null,
             }
-
-            return {
-                ...prev,
+            : {
+                ...current,
                 imageReviewStatus: next.status,
                 imageReviewNote: next.reviewNote ?? null,
             };
-        });
+
+    const handleReviewStatusChange = (
+        target: "content" | "image",
+        next: ReviewStatusChange,
+    ) => {
+        setValues((prev) => patchReviewState(prev, target, next));
+        setSavedValues((prev) => patchReviewState(prev, target, next));
     };
 
     const submitReviewTarget = async (target: "content" | "image") => {
         const res = await fetch(
             `/api/admin/watches/${values.productId}/${target}-submit`,
-            { method: "POST" }
+            { method: "POST" },
         );
 
         const json = await res.json().catch(() => ({}));
@@ -209,38 +339,47 @@ export default function WatchFormClient({
     };
 
     const submitReviewByMode = async () => {
-        if (afterSaveMode === "submitContent") {
-            await submitReviewTarget("content");
-            setMessage("Đã lưu watch và gửi duyệt nội dung.");
-        }
+        progress.show({
+            title: "Đang gửi duyệt",
+            message: "Hệ thống đang chuyển hạng mục sang trạng thái chờ duyệt.",
+        });
 
-        if (afterSaveMode === "submitImage") {
-            await submitReviewTarget("image");
-            setMessage("Đã lưu watch và gửi duyệt hình ảnh.");
-        }
+        try {
+            if (afterSaveMode === "submitContent") {
+                await submitReviewTarget("content");
+                setMessage("Đã lưu watch và gửi duyệt nội dung.");
+            }
 
-        if (afterSaveMode === "submitBoth") {
-            await submitReviewTarget("content");
-            await submitReviewTarget("image");
-            setMessage("Đã lưu watch và gửi duyệt nội dung + hình ảnh.");
-        }
+            if (afterSaveMode === "submitImage") {
+                await submitReviewTarget("image");
+                setMessage("Đã lưu watch và gửi duyệt hình ảnh.");
+            }
 
-        router.refresh();
+            if (afterSaveMode === "submitBoth") {
+                await submitReviewTarget("content");
+                await submitReviewTarget("image");
+                setMessage("Đã lưu watch và gửi duyệt nội dung + hình ảnh.");
+            }
+
+            router.refresh();
+        } finally {
+            progress.hide();
+        }
     };
 
-    const updateValuesAfterSave = (result: Awaited<ReturnType<typeof submitWatchForm>>) => {
+    const updateValuesAfterSave = (
+        result: Awaited<ReturnType<typeof submitWatchForm>>,
+    ) => {
         setValues((prev): WatchFormValues => {
-            const serverChosenImages =
-                result?.media?.poolImages as
+            const serverChosenImages = result?.media?.poolImages as
                 | WatchFormValues["media"]["poolImages"]
                 | undefined;
 
-            const serverGalleryImages =
-                result?.media?.galleryImages as
+            const serverGalleryImages = result?.media?.galleryImages as
                 | WatchFormValues["media"]["galleryImages"]
                 | undefined;
 
-            return {
+            const next: WatchFormValues = {
                 ...prev,
                 contentReviewStatus:
                     (result?.contentReviewStatus as ReviewStatus | undefined) ??
@@ -250,14 +389,14 @@ export default function WatchFormClient({
                     prev.imageReviewStatus,
                 media: {
                     ...prev.media,
-                    poolImages:
-                        serverChosenImages ?? prev.media.poolImages,
-                    galleryImages:
-                        serverGalleryImages ?? prev.media.galleryImages,
-                    imageCount:
-                        serverGalleryImages?.length ?? prev.media.imageCount,
+                    poolImages: serverChosenImages ?? prev.media.poolImages,
+                    galleryImages: serverGalleryImages ?? prev.media.galleryImages,
+                    imageCount: serverGalleryImages?.length ?? prev.media.imageCount,
                 },
             };
+
+            setSavedValues(next);
+            return next;
         });
     };
 
@@ -267,6 +406,11 @@ export default function WatchFormClient({
         setAfterSaveMode("normal");
 
         startTransition(async () => {
+            progress.show({
+                title: "Đang lưu watch",
+                message: "Hệ thống đang cập nhật dữ liệu watch.",
+            });
+
             try {
                 const result = await submitWatchForm(values);
 
@@ -275,13 +419,10 @@ export default function WatchFormClient({
 
                 if (result?.askContinueContent) {
                     setAfterSaveMode("continueContent");
-                } else if (result?.askSubmitReview) {
+                } else if (!canReviewContent && result?.askSubmitReview) {
                     const targets = result?.reviewSubmitTargets ?? [];
 
-                    if (
-                        targets.includes("CONTENT") &&
-                        targets.includes("IMAGE")
-                    ) {
+                    if (targets.includes("CONTENT") && targets.includes("IMAGE")) {
                         setAfterSaveMode("submitBoth");
                     } else if (targets.includes("CONTENT")) {
                         setAfterSaveMode("submitContent");
@@ -297,11 +438,18 @@ export default function WatchFormClient({
                 setAfterSaveOpen(true);
             } catch (error: any) {
                 setMessage(error?.message || "Không thể lưu watch.");
+            } finally {
+                progress.hide();
             }
         });
     };
     const saveBeforeSubmitReview = async () => {
         setMessage("");
+
+        progress.show({
+            title: "Đang lưu trước khi gửi duyệt",
+            message: "Hệ thống đang lưu thay đổi mới nhất trước khi chuyển trạng thái.",
+        });
 
         try {
             const result = await submitWatchForm(values);
@@ -323,6 +471,8 @@ export default function WatchFormClient({
             });
 
             return false;
+        } finally {
+            progress.hide();
         }
     };
     return (
@@ -334,9 +484,10 @@ export default function WatchFormClient({
                 pending={pending}
                 message={message}
                 onSubmit={onSubmit}
+                onBack={handleBack}
                 canReviewContent={canReviewContent}
                 breadcrumbs={[
-                    { label: "Watches", href: "/admin/watches" },
+                    { label: "Watches", href: returnTo },
                     { label: values.basic.title || "Edit" },
                 ]}
                 onChange={(patch) => {
@@ -376,6 +527,7 @@ export default function WatchFormClient({
                             contentReviewStatus={values.contentReviewStatus}
                             contentReviewNote={values.contentReviewNote}
                             canReviewContent={canReviewContent}
+                            isFormDirty={isDirty}
                             onChange={updateContent}
                             onOpenSpecModal={() => setSpecModalOpen(true)}
                             onBeforeSubmitReview={saveBeforeSubmitReview}
@@ -394,6 +546,7 @@ export default function WatchFormClient({
                         imageReviewStatus={values.imageReviewStatus}
                         imageReviewNote={values.imageReviewNote}
                         canReviewContent={canReviewContent}
+                        isFormDirty={isDirty}
                         onBeforeSubmitReview={saveBeforeSubmitReview}
                         onPoolImagesChange={(items) => {
                             updateMedia({
@@ -448,9 +601,7 @@ export default function WatchFormClient({
                             canViewCost={canViewCost}
                             canEditPrice={canEditPrice}
                             notificationDiff={
-                                focus === "pricing"
-                                    ? searchParams.get("notificationId")
-                                    : null
+                                focus === "pricing" ? searchParams.get("notificationId") : null
                             }
                             onChange={updatePricing}
                         />
@@ -464,8 +615,8 @@ export default function WatchFormClient({
                                 </div>
 
                                 <div className="mt-1 text-xs text-slate-500">
-                                    Sau khi bổ sung spec cần thiết, bấm để gen
-                                    lại title và SKU theo rule hệ thống.
+                                    Sau khi bổ sung spec cần thiết, bấm để gen lại title và SKU
+                                    theo rule hệ thống.
                                 </div>
 
                                 <div className="mt-4 space-y-3">
@@ -504,8 +655,8 @@ export default function WatchFormClient({
 
             <AfterSaveDialog
                 open={afterSaveOpen}
-                detailHref={`/admin/watches/${values.productId}`}
-                fallbackBackHref="/admin/watches"
+                detailHref={`/admin/watches/${values.productId}?returnTo=${encodeURIComponent(returnTo)}`}
+                fallbackBackHref={returnTo}
                 title={
                     afterSaveMode === "submitImage"
                         ? "Đã lưu hình ảnh"

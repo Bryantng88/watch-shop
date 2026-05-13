@@ -16,7 +16,7 @@ type Props = {
 
 function sortImages(items: any[]) {
   return [...(items ?? [])].sort(
-    (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+    (a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0),
   );
 }
 
@@ -33,18 +33,18 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
     isContentDownloaded: Boolean(
       detail?.isContentDownloaded ??
       detail?.review?.isContentDownloaded ??
-      detail?.watch?.isContentDownloaded
+      detail?.watch?.isContentDownloaded,
     ),
     isImageDownloaded: Boolean(
       detail?.isImageDownloaded ??
       detail?.review?.isImageDownloaded ??
-      detail?.watch?.isImageDownloaded
+      detail?.watch?.isImageDownloaded,
     ),
   });
 
   const gallery = sortImages(galleryImages);
   const imageStatus = String(
-    detail?.review?.image?.status ?? "DRAFT"
+    detail?.review?.image?.status ?? "DRAFT",
   ).toUpperCase();
 
   const canViewAndDownload = imageStatus === "APPROVED";
@@ -85,10 +85,13 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
     });
 
     try {
-      const res = await fetch(`/api/admin/watches/${productId}/download-gallery`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/admin/watches/${productId}/download-gallery`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -97,7 +100,7 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
 
       const blob = await res.blob();
       const filename = filenameFromDisposition(
-        res.headers.get("content-disposition")
+        res.headers.get("content-disposition"),
       );
 
       downloadBlob(blob, filename);
@@ -109,8 +112,7 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
         isContentDownloaded:
           res.headers.get("x-watch-is-content-downloaded") === "true",
 
-        isPosted:
-          res.headers.get("x-watch-is-posted") === "true",
+        isPosted: res.headers.get("x-watch-is-posted") === "true",
       };
 
       setUsage({
@@ -140,18 +142,23 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
       title="Gallery"
       subtitle="Chỉ hiển thị ảnh product image có role GALLERY."
       icon={<ImageIcon className="h-5 w-5" />}
-      defaultOpen={canViewAndDownload}
+      defaultOpen={gallery.length > 0}
       actions={<ReviewStatusBadge status={imageStatus} />}
     >
       {gallery.length === 0 ? (
         <SectionEmpty text="Chưa có ảnh gallery cho watch này." />
-      ) : !canViewAndDownload ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-          <Lock className="mx-auto mb-2 h-5 w-5 text-slate-400" />
-          Hình ảnh chưa được duyệt nên chưa mở gallery và chưa cho tải ảnh.
-        </div>
       ) : (
         <div className="space-y-4">
+          {!canViewAndDownload ? (
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                Hình ảnh chưa được duyệt nên chỉ cho xem preview, chưa mở nút
+                tải gallery.
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs font-semibold">
               {usage.isImageDownloaded ? (
@@ -161,24 +168,28 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleDownloadAll}
-              disabled={downloading}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {downloading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tải...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  {usage.isImageDownloaded ? "Tải lại gallery" : "Tải gallery"}
-                </>
-              )}
-            </button>
+            {canViewAndDownload ? (
+              <button
+                type="button"
+                onClick={handleDownloadAll}
+                disabled={downloading}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {downloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tải...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    {usage.isImageDownloaded
+                      ? "Tải lại gallery"
+                      : "Tải gallery"}
+                  </>
+                )}
+              </button>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

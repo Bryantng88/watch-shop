@@ -12,7 +12,8 @@ export function buildMediaUrl(fileKey?: string | null) {
 }
 
 function pickImages(row: any) {
-    if (Array.isArray(row?.product?.productImage)) return row.product.productImage;
+    if (Array.isArray(row?.product?.productImage))
+        return row.product.productImage;
     if (Array.isArray(row?.productImage)) return row.productImage;
     if (Array.isArray(row?.images)) return row.images;
     return [];
@@ -24,8 +25,7 @@ function normalizeRole(value: any) {
 
 function sortImages(images: any[]) {
     return [...images].sort(
-        (a: any, b: any) =>
-            Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0)
+        (a: any, b: any) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0),
     );
 }
 
@@ -35,16 +35,16 @@ const WATCH_READY_IMAGE_ROLES = ["GALLERY"];
 function getThumbnailImages(row: any) {
     return sortImages(
         pickImages(row).filter((img: any) =>
-            WATCH_THUMBNAIL_IMAGE_ROLES.includes(normalizeRole(img?.role))
-        )
+            WATCH_THUMBNAIL_IMAGE_ROLES.includes(normalizeRole(img?.role)),
+        ),
     );
 }
 
 function getReadyImages(row: any) {
     return sortImages(
         pickImages(row).filter((img: any) =>
-            WATCH_READY_IMAGE_ROLES.includes(normalizeRole(img?.role))
-        )
+            WATCH_READY_IMAGE_ROLES.includes(normalizeRole(img?.role)),
+        ),
     );
 }
 
@@ -64,11 +64,7 @@ export function mapWatchImage(row: any) {
     if (!picked) return null;
 
     const fileKey =
-        picked?.fileKey ??
-        picked?.imageKey ??
-        picked?.key ??
-        picked?.path ??
-        null;
+        picked?.fileKey ?? picked?.imageKey ?? picked?.key ?? picked?.path ?? null;
     if (!fileKey) return picked?.url ?? null;
 
     return buildMediaUrl(fileKey);
@@ -91,9 +87,7 @@ export function hasValidContent(row: any) {
     const hasSummary = Boolean(String(content?.summary ?? "").trim());
     const hasBulletSpecs =
         Array.isArray(content?.bulletSpecs) &&
-        content.bulletSpecs.some((item: any) =>
-            Boolean(String(item ?? "").trim())
-        );
+        content.bulletSpecs.some((item: any) => Boolean(String(item ?? "").trim()));
 
     return hasTitle || hasHook || hasBody || hasSummary || hasBulletSpecs;
 }
@@ -123,16 +117,11 @@ function getOpenServiceIssuesCount(row: any) {
     }, 0);
 }
 
-type ReviewStatus =
-    | "DRAFT"
-    | "SUBMITTED"
-    | "APPROVED"
-    | "REJECTED"
-    | "PARTIAL";
+type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "PARTIAL";
 
 function getReviewStatus(row: any, targetType: "CONTENT" | "IMAGE") {
     const found = row?.reviewStates?.find(
-        (item: any) => String(item?.targetType).toUpperCase() === targetType
+        (item: any) => String(item?.targetType).toUpperCase() === targetType,
     );
 
     return String(found?.status ?? "DRAFT").toUpperCase();
@@ -150,10 +139,6 @@ function normalizeContentStatus(row: any): ReviewStatus | "PUBLISHED" {
         return "REJECTED";
     }
 
-    if (contentStatus === "SUBMITTED" || imageStatus === "SUBMITTED") {
-        return "SUBMITTED";
-    }
-
     if (contentStatus === "APPROVED" && imageStatus === "APPROVED") {
         return "APPROVED";
     }
@@ -162,11 +147,13 @@ function normalizeContentStatus(row: any): ReviewStatus | "PUBLISHED" {
         return "PARTIAL";
     }
 
+    if (contentStatus === "SUBMITTED" || imageStatus === "SUBMITTED") {
+        return "SUBMITTED";
+    }
+
     return "DRAFT";
 }
-export function formatDateTime(
-    value?: string | Date | null
-): string {
+export function formatDateTime(value?: string | Date | null): string {
     if (!value) return "-";
 
     const date = new Date(value);
@@ -179,6 +166,41 @@ export function formatDateTime(
         year: "numeric",
     }).format(date);
 }
+function buildReadyReviewStatus(row: any): WatchRow["reviewStatus"] {
+    if (Boolean(row?.isContentDownloaded && row?.isImageDownloaded)) {
+        return "POSTED";
+    }
+
+    const contentStatus =
+        getReviewStateStatus(row, "CONTENT") ||
+        String(row?.contentReviewStatus ?? row?.contentStatus ?? "").toUpperCase();
+
+    const imageStatus =
+        getReviewStateStatus(row, "IMAGE") ||
+        String(row?.imageReviewStatus ?? row?.imageStatus ?? "").toUpperCase();
+
+    if (contentStatus === "APPROVED" && imageStatus === "APPROVED") {
+        return "APPROVED";
+    }
+
+    if (contentStatus === "APPROVED" || imageStatus === "APPROVED") {
+        return "PARTIAL_APPROVED";
+    }
+
+    if (contentStatus === "SUBMITTED" || imageStatus === "SUBMITTED") {
+        return "SUBMITTED";
+    }
+
+    return "DRAFT";
+}
+
+function getReviewStateStatus(row: any, targetType: "CONTENT" | "IMAGE") {
+    return String(
+        row?.reviewStates?.find((item: any) => item?.targetType === targetType)
+            ?.status ?? "",
+    ).toUpperCase();
+}
+
 export function mapWatchRow(row: any): WatchRow {
     const product = row?.product ?? row ?? {};
     const imagesCount = countListImages(row);
@@ -187,7 +209,7 @@ export function mapWatchRow(row: any): WatchRow {
     const contentStatus = normalizeContentStatus(row);
     const serviceIssuesCount = getOpenServiceIssuesCount(row);
     const serviceReady = isWatchServiceReady(row?.serviceState);
-
+    const reviewStatus = buildReadyReviewStatus(row);
     const price = row?.watchPrice ?? row?.price ?? {};
 
     return {
@@ -221,7 +243,8 @@ export function mapWatchRow(row: any): WatchRow {
         isPosted: Boolean(row?.isContentDownloaded && row?.isImageDownloaded),
 
         serviceIssuesCount,
-
+        reviewStatus,
+        postReadiness: reviewStatus,
         serviceState: row?.serviceState ?? null,
         stockState: row?.stockState ?? null,
         saleState: row?.saleState ?? null,
@@ -247,7 +270,7 @@ export function mapWatchRow(row: any): WatchRow {
 
 export function buildCounts(
     rows: WatchRow[],
-    counts?: Partial<WatchListCounts> | null
+    counts?: Partial<WatchListCounts> | null,
 ): WatchListCounts {
     return {
         draft: Number(counts?.draft ?? 0),
@@ -303,8 +326,7 @@ function getLastReviewActor(row: any) {
         ])
         .filter((x: any) => x?.userId && x?.at)
         .sort(
-            (a: any, b: any) =>
-                new Date(b.at).getTime() - new Date(a.at).getTime()
+            (a: any, b: any) => new Date(b.at).getTime() - new Date(a.at).getTime(),
         );
 
     const latest = events[0];
@@ -349,7 +371,6 @@ export function contentStatusTone(row: WatchRow) {
     if (status === "PARTIAL") {
         return "bg-blue-50 text-blue-700 ring-blue-200";
     }
-
 
     if (status === "SUBMITTED") {
         return "bg-amber-50 text-amber-700 ring-amber-200";

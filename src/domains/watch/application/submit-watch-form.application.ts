@@ -9,10 +9,7 @@ import {
     moveWatchPoolImagesToChosenPool,
 } from "../server/media";
 import { updateWatchPricingWithDiff } from "../server/pricing";
-import {
-    autoApproveWatchReview,
-    resetWatchReviewToDraft,
-} from "../server/review";
+import { resetWatchReviewToDraft } from "../server/review";
 import {
     WatchFormEnums,
     dedupeMediaItems,
@@ -50,7 +47,9 @@ function buildContentSnapshot(input: {
     };
 }
 
-function hasContentSnapshotData(content: ReturnType<typeof buildContentSnapshot>) {
+function hasContentSnapshotData(
+    content: ReturnType<typeof buildContentSnapshot>,
+) {
     return (
         Boolean(content.titleOverride) ||
         Boolean(content.hookText) ||
@@ -62,7 +61,7 @@ function hasContentSnapshotData(content: ReturnType<typeof buildContentSnapshot>
 
 export async function submitWatchFormApplication(
     values: WatchFormValues,
-    context: SubmitWatchFormContext
+    context: SubmitWatchFormContext,
 ) {
     const productId = values.productId;
 
@@ -79,6 +78,7 @@ export async function submitWatchFormApplication(
             },
             watchSpecV2: true,
             watchContent: true,
+            reviewStates: true,
         },
     });
 
@@ -97,22 +97,45 @@ export async function submitWatchFormApplication(
     const afterContent = buildContentSnapshot(values.content);
 
     const beforeImageKeys = normalizeImageKeys(
-        current.product.productImage.map((x: any) => ({ key: x.fileKey }))
+        current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
 
     const requestedPoolImages = dedupeMediaItems(values.media.poolImages ?? []);
-    const requestedGalleryImages = dedupeMediaItems(values.media.galleryImages ?? []);
+    const requestedGalleryImages = dedupeMediaItems(
+        values.media.galleryImages ?? [],
+    );
     const afterImageKeysBeforeMove = normalizeImageKeys(requestedGalleryImages);
 
     const contentChanged = !sameJson(beforeContent, afterContent);
     const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);
 
+    const contentReviewStatus = String(
+        current.reviewStates.find((item: any) => item.targetType === "CONTENT")
+            ?.status ?? "DRAFT",
+    ).toUpperCase();
+    const imageReviewStatus = String(
+        current.reviewStates.find((item: any) => item.targetType === "IMAGE")
+            ?.status ?? "DRAFT",
+    ).toUpperCase();
+
+    if (contentChanged && contentReviewStatus === "APPROVED") {
+        throw new Error(
+            "Nội dung đã được duyệt. Admin cần bấm Mở chỉnh sửa để chuyển về Draft trước khi lưu thay đổi.",
+        );
+    }
+
+    if (imagesChanged && imageReviewStatus === "APPROVED") {
+        throw new Error(
+            "Hình ảnh đã được duyệt. Admin cần bấm Mở chỉnh sửa để chuyển về Draft trước khi lưu thay đổi.",
+        );
+    }
+
     await prisma.$transaction(async (tx) => {
         const brand = values.basic.brandId
             ? await tx.brand.findUnique({
-                  where: { id: values.basic.brandId },
-                  select: { id: true, name: true },
-              })
+                where: { id: values.basic.brandId },
+                select: { id: true, name: true },
+            })
             : null;
 
         if (values.basic.brandId && !brand) {
@@ -144,12 +167,12 @@ export async function submitWatchFormApplication(
                 style: pickEnumOrNull(values.basic.style, WatchFormEnums.WatchStyle),
                 siteChannel: pickEnumOrUndefined(
                     values.basic.siteChannel,
-                    WatchFormEnums.WatchSiteChannel
+                    WatchFormEnums.WatchSiteChannel,
                 ),
                 conditionGrade: values.basic.conditionGrade || null,
                 movementType: pickEnumOrNull(
                     values.basic.movementType,
-                    WatchFormEnums.MovementType
+                    WatchFormEnums.MovementType,
                 ),
                 movementCalibre: values.basic.movementCalibre || null,
                 serialNumber: values.basic.serialNumber || null,
@@ -164,11 +187,11 @@ export async function submitWatchFormApplication(
             nickname: values.spec.nickname || null,
             strapSetType: pickEnumOrNull(
                 values.spec.strapSetType,
-                WatchFormEnums.WatchStrapSetType
+                WatchFormEnums.WatchStrapSetType,
             ),
             strapComponentSource: pickEnumOrNull(
                 values.spec.strapComponentSource,
-                WatchFormEnums.WatchStrapComponentSource
+                WatchFormEnums.WatchStrapComponentSource,
             ),
             caseShape: pickEnumOrNull(values.spec.caseShape, WatchFormEnums.CaseType),
             caseSizeMM: toDecimal(values.spec.caseSizeMM),
@@ -179,30 +202,33 @@ export async function submitWatchFormApplication(
             dialFinish: values.spec.dialFinish || null,
             movementType: pickEnumOrNull(
                 values.basic.movementType,
-                WatchFormEnums.MovementType
+                WatchFormEnums.MovementType,
             ),
             calibre: values.spec.calibre || null,
             materialProfile: pickEnumOrDefault(
                 values.spec.materialProfile,
                 WatchFormEnums.WatchMaterialProfile,
-                WatchFormEnums.WatchMaterialProfile.SINGLE_MATERIAL
+                WatchFormEnums.WatchMaterialProfile.SINGLE_MATERIAL,
             ),
             primaryCaseMaterial: pickEnumOrDefault(
                 values.spec.primaryCaseMaterial,
                 WatchFormEnums.WatchCaseMaterialFamily,
-                WatchFormEnums.WatchCaseMaterialFamily.STAINLESS_STEEL
+                WatchFormEnums.WatchCaseMaterialFamily.STAINLESS_STEEL,
             ),
             secondaryCaseMaterial: pickEnumOrNull(
                 values.spec.secondaryCaseMaterial,
-                WatchFormEnums.WatchCaseMaterialFamily
+                WatchFormEnums.WatchCaseMaterialFamily,
             ),
             goldTreatment: pickEnumOrNull(
                 values.spec.goldTreatment,
-                WatchFormEnums.WatchGoldTreatment
+                WatchFormEnums.WatchGoldTreatment,
             ),
             goldColors: pickGoldColors(values.spec.goldColors),
             goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
-            braceletType: pickEnumOrNull(values.spec.braceletType, WatchFormEnums.Strap),
+            braceletType: pickEnumOrNull(
+                values.spec.braceletType,
+                WatchFormEnums.Strap,
+            ),
             strapMaterialText: values.spec.strapMaterialText || null,
             waterResistance: values.spec.waterResistance || null,
             powerReserve: values.spec.powerReserve || null,
@@ -240,7 +266,9 @@ export async function submitWatchFormApplication(
         });
     });
 
-    const galleryOriginalKeys = new Set(requestedGalleryImages.map(mediaKey).filter(Boolean));
+    const galleryOriginalKeys = new Set(
+        requestedGalleryImages.map(mediaKey).filter(Boolean),
+    );
     const remainingPoolImages = requestedPoolImages.filter((item) => {
         const key = mediaKey(item);
         return key && !galleryOriginalKeys.has(key);
@@ -248,12 +276,12 @@ export async function submitWatchFormApplication(
 
     const normalizedGalleryImages = await moveWatchGalleryImagesToChosen(
         requestedGalleryImages,
-        { productId, acquisitionId: current.acquisitionId }
+        { productId, acquisitionId: current.acquisitionId },
     );
 
     const normalizedPoolImages = await moveWatchPoolImagesToChosenPool(
         remainingPoolImages,
-        { productId }
+        { productId },
     );
 
     const galleryImageInputs = normalizedGalleryImages.map((item, index) => ({
@@ -268,40 +296,25 @@ export async function submitWatchFormApplication(
         images: galleryImageInputs,
     });
 
-    await markGalleryMediaAssetsAttached({ productId, images: galleryImageInputs });
+    await markGalleryMediaAssetsAttached({
+        productId,
+        images: galleryImageInputs,
+    });
 
-    if (context.canReviewContent) {
-        if (contentChanged) {
-            await autoApproveWatchReview({
-                productId,
-                targetType: "CONTENT",
-                userId: context.userId,
-            });
-        }
+    if (contentChanged) {
+        await resetWatchReviewToDraft({
+            productId,
+            targetType: "CONTENT",
+            userId: context.userId,
+        });
+    }
 
-        if (imagesChanged) {
-            await autoApproveWatchReview({
-                productId,
-                targetType: "IMAGE",
-                userId: context.userId,
-            });
-        }
-    } else {
-        if (contentChanged) {
-            await resetWatchReviewToDraft({
-                productId,
-                targetType: "CONTENT",
-                userId: context.userId,
-            });
-        }
-
-        if (imagesChanged) {
-            await resetWatchReviewToDraft({
-                productId,
-                targetType: "IMAGE",
-                userId: context.userId,
-            });
-        }
+    if (imagesChanged) {
+        await resetWatchReviewToDraft({
+            productId,
+            targetType: "IMAGE",
+            userId: context.userId,
+        });
     }
 
     const pricingResult = await updateWatchPricingWithDiff(productId, {
@@ -336,8 +349,8 @@ export async function submitWatchFormApplication(
     return {
         ok: true,
         message:
-            context.canReviewContent && (contentChanged || imagesChanged)
-                ? "Đã lưu watch và tự động duyệt phần vừa thay đổi."
+            contentChanged || imagesChanged
+                ? "Đã lưu watch. Phần vừa thay đổi đã ở trạng thái Draft và cần duyệt lại."
                 : "Đã lưu watch.",
         contentChanged,
         imagesChanged,
@@ -348,18 +361,16 @@ export async function submitWatchFormApplication(
         },
         reviewSubmitTargets: !context.canReviewContent
             ? ([
-                  contentChanged && hasContentData ? "CONTENT" : null,
-                  imagesChanged ? "IMAGE" : null,
-              ].filter(Boolean) as Array<"CONTENT" | "IMAGE">)
+                contentChanged && hasContentData ? "CONTENT" : null,
+                imagesChanged ? "IMAGE" : null,
+            ].filter(Boolean) as Array<"CONTENT" | "IMAGE">)
             : [],
         askSubmitReview:
             !context.canReviewContent &&
             ((contentChanged && hasContentData) || imagesChanged),
         askContinueContent:
             !context.canReviewContent && imagesChanged && !hasContentData,
-        contentReviewStatus:
-            context.canReviewContent && contentChanged ? "APPROVED" : undefined,
-        imageReviewStatus:
-            context.canReviewContent && imagesChanged ? "APPROVED" : undefined,
+        contentReviewStatus: contentChanged ? "DRAFT" : undefined,
+        imageReviewStatus: imagesChanged ? "DRAFT" : undefined,
     };
 }
