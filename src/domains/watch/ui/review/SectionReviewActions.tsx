@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-
+import ReviewStatusBadge from "./ReviewStatusBadge";
 type ReviewTarget = "content" | "image";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -365,19 +365,12 @@ export default function SectionReviewActions({
 
     return (
         <div className="flex flex-wrap items-center justify-end gap-3">
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="uppercase tracking-wide">
                     Trạng thái
                 </span>
-                <span
-                    title={reviewNote ? `Note: ${reviewNote}` : undefined}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(
-                        currentStatus,
-                    )}`}
-                >
-                    <StatusIcon className="h-3.5 w-3.5" />
-                    {statusLabel(currentStatus)}
-                </span>
+
+                <ReviewStatusBadge status={status} />
             </div>
 
             {hasPrimaryActions ? (
