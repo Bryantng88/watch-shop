@@ -31,6 +31,7 @@ type Props = {
         status: ReviewStatus;
         reviewNote?: string | null;
     }) => void;
+
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -103,14 +104,23 @@ export default function SectionReviewActions({
     const currentStatus = normalizeStatus(status);
     const StatusIcon = statusIcon(currentStatus);
 
-    const isAdmin = canReviewContent;
-    const isUser = !canReviewContent;
+    const isAdmin = Boolean(canReviewContent);
 
-    const canSubmit = isUser && ["DRAFT", "REJECTED"].includes(currentStatus);
+    const canSubmit =
+        !isAdmin &&
+        ["DRAFT", "REJECTED"].includes(currentStatus);
 
-    const canApprove = isAdmin && currentStatus === "SUBMITTED";
-    const canReject = isAdmin && currentStatus === "SUBMITTED";
-    const canResetDraft = isAdmin && currentStatus === "APPROVED";
+    const canApprove =
+        isAdmin &&
+        ["DRAFT", "REJECTED", "SUBMITTED"].includes(
+            currentStatus,
+        );
+
+    const canReject =
+        isAdmin && currentStatus === "SUBMITTED";
+
+    const canResetDraft =
+        isAdmin && currentStatus === "APPROVED";
 
     async function callSubmitApi() {
         const res = await fetch(
@@ -366,11 +376,11 @@ export default function SectionReviewActions({
     return (
         <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <span className="uppercase tracking-wide">
+                <span className="font-semibold uppercase tracking-wide">
                     Trạng thái
                 </span>
 
-                <ReviewStatusBadge status={status} />
+                <ReviewStatusBadge status={currentStatus} />
             </div>
 
             {hasPrimaryActions ? (

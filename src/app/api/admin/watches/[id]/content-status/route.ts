@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { updateWatchContentReviewStatus } from "@/domains/watch/server/content";
 
+
 export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
@@ -21,7 +22,7 @@ export async function POST(
         const body = BodySchema.parse(await req.json());
 
         const permission = REVIEW_ACTIONS.has(body.action)
-            ? PERMISSIONS.PRODUCT_CONTENT_REVIEW;
+            ? PERMISSIONS.PRODUCT_APPROVE
             : PERMISSIONS.PRODUCT_UPDATE;
 
         const auth = await requirePermissionApi(permission);

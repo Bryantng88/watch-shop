@@ -5,7 +5,7 @@ import { Download, ImageIcon, Loader2, Lock } from "lucide-react";
 
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-
+import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 import { SectionCard, SectionEmpty } from "./shared";
 
@@ -150,13 +150,12 @@ export default function WatchMediaPanel({ detail, galleryImages = [] }: Props) {
       ) : (
         <div className="space-y-4">
           {!canViewAndDownload ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                Hình ảnh chưa được duyệt nên chỉ cho xem preview, chưa mở nút
-                tải gallery.
-              </div>
-            </div>
+            <GuardNotice
+              tone="warning"
+              icon="lock"
+              title="Gallery chưa được duyệt"
+              message="Bạn vẫn có thể xem preview ảnh, nhưng chưa thể tải gallery cho đến khi hình ảnh được duyệt."
+            />
           ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3">

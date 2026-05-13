@@ -110,13 +110,13 @@ export default function WatchDetailClient({
                         detail={detail}
                         galleryImages={galleryImages}
                     />
-
-                    <WatchOverviewPanel detail={detail} />
-
                     <WatchContentPanel
                         detail={detail}
                         canReviewContent={canReviewContent}
                     />
+                    <WatchOverviewPanel detail={detail} />
+
+
 
                     <WatchServicePanel serviceHistory={serviceHistory} />
 

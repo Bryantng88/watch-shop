@@ -21,7 +21,7 @@ export async function POST(
     }: { params: Promise<{ productId: string }> | { productId: string } },
 ) {
     try {
-        const auth = await requirePermission(PERMISSIONS.PRODUCT_CONTENT_REVIEW);
+        const auth = await requirePermission(PERMISSIONS.PRODUCT_APPROVE);
         const { productId } = await params;
         const body = await req.json().catch(() => ({}));
         const action = String(body?.action ?? "").toLowerCase();

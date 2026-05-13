@@ -7,6 +7,7 @@ import { SectionCard, SectionEmpty } from "./shared";
 import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 
 async function markContentCopied(productId: string) {
   const res = await fetch(`/api/admin/watches/${productId}/post-usage`, {
@@ -149,10 +150,12 @@ export default function WatchContentPanel({ detail }: Props) {
             </div>
 
             {!canCopy ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                <Lock className="mr-2 inline h-4 w-4" />
-                Content chưa được duyệt nên chưa cho copy.
-              </div>
+              <GuardNotice
+                tone="warning"
+                icon="lock"
+                title="Content chưa được duyệt"
+                message="Bạn vẫn có thể xem preview nội dung, nhưng chưa thể tải content được duyệt."
+              />
             ) : null}
 
             <div

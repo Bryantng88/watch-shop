@@ -8,7 +8,7 @@ import { SectionCard } from "./shared";
 import SectionReviewActions from "../review/SectionReviewActions";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-
+import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type Props = {
@@ -218,23 +218,31 @@ export default function WatchImageSection({
         >
             <div className="space-y-4">
                 {locked ? (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        <div>
-                            {currentReviewStatus === "APPROVED"
-                                ? "Hình ảnh đã được duyệt. Muốn chỉnh sửa lại cần admin mở về Draft."
-                                : "Hình ảnh đang chờ duyệt nên tạm khóa chỉnh sửa."}
-                        </div>
-
-                        {currentReviewStatus === "APPROVED" && canReviewContent ? (
-                            <button
-                                type="button"
-                                onClick={ensureEditable}
-                                className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                            >
-                                Mở chỉnh sửa
-                            </button>
-                        ) : null}
-                    </div>
+                    <GuardNotice
+                        tone={currentReviewStatus === "APPROVED" ? "warning" : "locked"}
+                        icon={currentReviewStatus === "APPROVED" ? "warning" : "lock"}
+                        title={
+                            currentReviewStatus === "APPROVED"
+                                ? "Hình ảnh đã được duyệt"
+                                : "Hình ảnh đang chờ duyệt"
+                        }
+                        message={
+                            currentReviewStatus === "APPROVED"
+                                ? "Muốn chỉnh sửa gallery, cần mở lại trạng thái Draft."
+                                : "Hình ảnh đang chờ admin duyệt nên tạm thời không thể chỉnh sửa."
+                        }
+                        action={
+                            currentReviewStatus === "APPROVED" && canReviewContent ? (
+                                <button
+                                    type="button"
+                                    onClick={ensureEditable}
+                                    className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                >
+                                    Mở chỉnh sửa
+                                </button>
+                            ) : null
+                        }
+                    />
                 ) : null}
 
                 <div

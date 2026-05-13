@@ -27,7 +27,7 @@ export async function submitWatchForm(values: WatchFormValues) {
         userId: getAuthUserId(auth),
         canReviewContent: authHasPermission(
             auth,
-            PERMISSIONS.PRODUCT_CONTENT_REVIEW
+            PERMISSIONS.PRODUCT_APPROVE
         ),
     });
 }
