@@ -209,6 +209,7 @@ export default function WatchImageSection({
                     status={imageReviewStatus}
                     reviewNote={imageReviewNote}
                     canReviewContent={canReviewContent}
+                    isFormDirty={isFormDirty}
                     onBeforeSubmit={onBeforeSubmitReview}
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);

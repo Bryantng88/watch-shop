@@ -445,12 +445,14 @@ export default function WatchFormClient({
             }
         });
     };
-    const saveBeforeSubmitReview = async () => {
+    const saveBeforeReview = async () => {
+        if (!isDirty) return true;
+
         setMessage("");
 
         progress.show({
-            title: "Đang lưu trước khi gửi duyệt",
-            message: "Hệ thống đang lưu thay đổi mới nhất trước khi chuyển trạng thái.",
+            title: "Đang lưu watch",
+            message: "Hệ thống đang lưu thay đổi mới nhất trước khi duyệt.",
         });
 
         try {
@@ -458,17 +460,20 @@ export default function WatchFormClient({
 
             updateValuesAfterSave(result);
 
-            setMessage(result?.message || "Đã lưu watch trước khi gửi duyệt.");
+            setMessage(
+                result?.message ||
+                "Đã lưu watch. Dữ liệu mới nhất đã sẵn sàng để duyệt.",
+            );
 
             return true;
         } catch (error: any) {
             const message =
-                error?.message || "Không thể lưu watch trước khi gửi duyệt.";
+                error?.message || "Không thể lưu watch trước khi duyệt.";
 
             setMessage(message);
 
             notify.error({
-                title: "Chưa thể gửi duyệt",
+                title: "Không thể duyệt",
                 message,
             });
 
@@ -532,7 +537,7 @@ export default function WatchFormClient({
                             isFormDirty={isDirty}
                             onChange={updateContent}
                             onOpenSpecModal={() => setSpecModalOpen(true)}
-                            onBeforeSubmitReview={saveBeforeSubmitReview}
+                            onBeforeSubmitReview={saveBeforeReview}
                             onReviewStatusChange={(next) =>
                                 handleReviewStatusChange("content", next)
                             }
@@ -549,7 +554,7 @@ export default function WatchFormClient({
                         imageReviewNote={values.imageReviewNote}
                         canReviewContent={canReviewContent}
                         isFormDirty={isDirty}
-                        onBeforeSubmitReview={saveBeforeSubmitReview}
+                        onBeforeSubmitReview={saveBeforeReview}
                         onPoolImagesChange={(items) => {
                             updateMedia({
                                 poolImages: [...items],

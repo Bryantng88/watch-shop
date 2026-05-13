@@ -16,6 +16,7 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import ReviewStatusBadge from "./ReviewStatusBadge";
+
 type ReviewTarget = "content" | "image";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -31,7 +32,6 @@ type Props = {
         status: ReviewStatus;
         reviewNote?: string | null;
     }) => void;
-
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -44,15 +44,6 @@ function normalizeStatus(status?: string | null): ReviewStatus {
     return "DRAFT";
 }
 
-function statusLabel(status?: string | null) {
-    const current = normalizeStatus(status);
-
-    if (current === "SUBMITTED") return "Chờ duyệt";
-    if (current === "APPROVED") return "Đã duyệt";
-    if (current === "REJECTED") return "Trả về";
-    return "Draft";
-}
-
 function statusIcon(status?: string | null) {
     const current = normalizeStatus(status);
 
@@ -60,24 +51,6 @@ function statusIcon(status?: string | null) {
     if (current === "APPROVED") return CheckCircle2;
     if (current === "REJECTED") return XCircle;
     return FileText;
-}
-
-function statusClass(status?: string | null) {
-    const current = normalizeStatus(status);
-
-    if (current === "SUBMITTED") {
-        return "border-amber-200 bg-amber-50 text-amber-700";
-    }
-
-    if (current === "APPROVED") {
-        return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    }
-
-    if (current === "REJECTED") {
-        return "border-rose-200 bg-rose-50 text-rose-700";
-    }
-
-    return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 function targetLabel(target: ReviewTarget) {
@@ -106,21 +79,14 @@ export default function SectionReviewActions({
 
     const isAdmin = Boolean(canReviewContent);
 
-    const canSubmit =
-        !isAdmin &&
-        ["DRAFT", "REJECTED"].includes(currentStatus);
+    const canSubmit = !isAdmin && ["DRAFT", "REJECTED"].includes(currentStatus);
 
     const canApprove =
-        isAdmin &&
-        ["DRAFT", "REJECTED", "SUBMITTED"].includes(
-            currentStatus,
-        );
+        isAdmin && ["DRAFT", "REJECTED", "SUBMITTED"].includes(currentStatus);
 
-    const canReject =
-        isAdmin && currentStatus === "SUBMITTED";
+    const canReject = isAdmin && currentStatus === "SUBMITTED";
 
-    const canResetDraft =
-        isAdmin && currentStatus === "APPROVED";
+    const canResetDraft = isAdmin && currentStatus === "APPROVED";
 
     async function callSubmitApi() {
         const res = await fetch(
@@ -162,6 +128,36 @@ export default function SectionReviewActions({
         return json;
     }
 
+    async function ensureSavedBeforeReview() {
+        if (!isFormDirty) return true;
+
+        if (!onBeforeSubmit) {
+            await dialog.alert({
+                title: "Watch có thay đổi chưa lưu",
+                message:
+                    "Bạn cần lưu watch trước khi duyệt để đảm bảo ảnh/content đã được gán và xử lý đúng.",
+                tone: "warning",
+            });
+
+            return false;
+        }
+
+        const saved = await onBeforeSubmit();
+
+        if (!saved) {
+            await dialog.alert({
+                title: "Không thể duyệt",
+                message:
+                    "Watch chưa được lưu thành công nên hệ thống đã dừng thao tác duyệt.",
+                tone: "danger",
+            });
+
+            return false;
+        }
+
+        return true;
+    }
+
     async function handleSubmit() {
         const label = targetLabel(target);
 
@@ -179,15 +175,12 @@ export default function SectionReviewActions({
             setPending("submit");
             progress.show({
                 title: `Đang gửi duyệt ${label}`,
-                message: "Hệ thống đang chuyển trạng thái review.",
+                message: "Hệ thống đang lưu dữ liệu và chuyển trạng thái review.",
             });
 
             if (onBeforeSubmit) {
                 const saved = await onBeforeSubmit();
-
-                if (!saved) {
-                    return;
-                }
+                if (!saved) return;
             }
 
             await callSubmitApi();
@@ -210,7 +203,9 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể gửi duyệt",
                 message:
-                    error instanceof Error ? error.message : "Không thể gửi duyệt.",
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể gửi duyệt.",
                 tone: "danger",
             });
         } finally {
@@ -220,20 +215,14 @@ export default function SectionReviewActions({
     }
 
     async function handleApprove() {
-        if (isFormDirty) {
-            await dialog.alert({
-                title: "Watch có thay đổi chưa lưu",
-                message: "Bạn cần lưu watch trước khi duyệt để tránh duyệt dữ liệu cũ.",
-                tone: "warning",
-            });
-            return;
-        }
         const label = targetLabel(target);
 
         const ok = await dialog.confirm({
-            title: `Duyệt ${label}?`,
-            message: `Hạng mục ${label} sẽ được đánh dấu là đã duyệt.`,
-            confirmText: "Duyệt",
+            title: isFormDirty ? `Lưu & duyệt ${label}?` : `Duyệt ${label}?`,
+            message: isFormDirty
+                ? `Watch đang có thay đổi chưa lưu. Hệ thống sẽ lưu watch trước để đảm bảo dữ liệu mới nhất đã được gán, sau đó mới duyệt ${label}.`
+                : `Hạng mục ${label} sẽ được đánh dấu là đã duyệt.`,
+            confirmText: isFormDirty ? "Lưu & duyệt" : "Duyệt",
             cancelText: "Hủy",
             tone: "success",
         });
@@ -243,9 +232,16 @@ export default function SectionReviewActions({
         try {
             setPending("approve");
             progress.show({
-                title: `Đang duyệt ${label}`,
-                message: "Hệ thống đang cập nhật trạng thái duyệt.",
+                title: isFormDirty
+                    ? `Đang lưu & duyệt ${label}`
+                    : `Đang duyệt ${label}`,
+                message: isFormDirty
+                    ? "Hệ thống đang lưu watch trước khi cập nhật trạng thái duyệt."
+                    : "Hệ thống đang cập nhật trạng thái duyệt.",
             });
+
+            const saved = await ensureSavedBeforeReview();
+            if (!saved) return;
 
             await callReviewApi("approve");
 
@@ -257,7 +253,9 @@ export default function SectionReviewActions({
             notify.success({
                 title: "Đã duyệt",
                 message:
-                    target === "content" ? "Đã duyệt nội dung." : "Đã duyệt hình ảnh.",
+                    target === "content"
+                        ? "Đã duyệt nội dung."
+                        : "Đã duyệt hình ảnh.",
             });
 
             router.refresh();
@@ -265,7 +263,62 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể duyệt",
                 message:
-                    error instanceof Error ? error.message : "Không thể cập nhật duyệt.",
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể cập nhật duyệt.",
+                tone: "danger",
+            });
+        } finally {
+            progress.hide();
+            setPending(null);
+        }
+    }
+
+    async function handleReject() {
+        const label = targetLabel(target);
+
+        const ok = await dialog.confirm({
+            title: `Trả về ${label}?`,
+            message: `Hạng mục ${label} sẽ được chuyển sang trạng thái cần chỉnh.`,
+            confirmText: "Trả về",
+            cancelText: "Hủy",
+            tone: "danger",
+        });
+
+        if (!ok) return;
+
+        try {
+            setPending("reject");
+            progress.show({
+                title: `Đang trả về ${label}`,
+                message: "Hệ thống đang cập nhật trạng thái review.",
+            });
+
+            const rejectNote = reviewNote || "Cần chỉnh lại trước khi duyệt.";
+
+            await callReviewApi("reject", rejectNote);
+
+            onStatusChange?.({
+                status: "REJECTED",
+                reviewNote: rejectNote,
+            });
+
+            notify.warning({
+                title: "Đã trả về",
+                message:
+                    target === "content"
+                        ? "Đã trả về nội dung."
+                        : "Đã trả về hình ảnh.",
+            });
+
+            router.refresh();
+        } catch (error) {
+            await dialog.alert({
+                title: "Không thể trả về",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể cập nhật duyệt.",
                 tone: "danger",
             });
         } finally {
@@ -314,7 +367,9 @@ export default function SectionReviewActions({
             await dialog.alert({
                 title: "Không thể mở chỉnh sửa",
                 message:
-                    error instanceof Error ? error.message : "Không thể chuyển về Draft.",
+                    error instanceof Error
+                        ? error.message
+                        : "Không thể chuyển về Draft.",
                 tone: "danger",
             });
         } finally {
@@ -323,55 +378,7 @@ export default function SectionReviewActions({
         }
     }
 
-    async function handleReject() {
-        const label = targetLabel(target);
-
-        const ok = await dialog.confirm({
-            title: `Trả về ${label}?`,
-            message: `Hạng mục ${label} sẽ được chuyển sang trạng thái cần chỉnh.`,
-            confirmText: "Trả về",
-            cancelText: "Hủy",
-            tone: "danger",
-        });
-
-        if (!ok) return;
-
-        try {
-            setPending("reject");
-            progress.show({
-                title: `Đang trả về ${label}`,
-                message: "Hệ thống đang cập nhật trạng thái review.",
-            });
-
-            const rejectNote = "Cần chỉnh lại trước khi duyệt.";
-            await callReviewApi("reject", rejectNote);
-
-            onStatusChange?.({
-                status: "REJECTED",
-                reviewNote: rejectNote,
-            });
-
-            notify.warning({
-                title: "Đã trả về",
-                message:
-                    target === "content" ? "Đã trả về nội dung." : "Đã trả về hình ảnh.",
-            });
-
-            router.refresh();
-        } catch (error) {
-            await dialog.alert({
-                title: "Không thể trả về",
-                message:
-                    error instanceof Error ? error.message : "Không thể cập nhật duyệt.",
-                tone: "danger",
-            });
-        } finally {
-            progress.hide();
-            setPending(null);
-        }
-    }
-
-    const hasPrimaryActions = canSubmit || canResetDraft || canApprove || canReject;
+    const hasPrimaryActions = canSubmit || canResetDraft || canReject || canApprove;
 
     return (
         <div className="flex flex-wrap items-center justify-end gap-3">
@@ -381,10 +388,19 @@ export default function SectionReviewActions({
                 </span>
 
                 <ReviewStatusBadge status={currentStatus} />
+
+                {reviewNote ? (
+                    <span
+                        title={reviewNote}
+                        className="max-w-[160px] truncate text-xs text-slate-400"
+                    >
+                        {reviewNote}
+                    </span>
+                ) : null}
             </div>
 
             {hasPrimaryActions ? (
-                <div className="h-6 w-px bg-slate-200" aria-hidden="true" />
+                <div className="h-5 w-px bg-slate-200" aria-hidden="true" />
             ) : null}
 
             {hasPrimaryActions ? (
@@ -395,7 +411,6 @@ export default function SectionReviewActions({
                             onClick={handleSubmit}
                             disabled={Boolean(pending)}
                             className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
-                            title="Chuyển hạng mục sang trạng thái chờ admin duyệt."
                         >
                             {pending === "submit" ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -412,7 +427,6 @@ export default function SectionReviewActions({
                             onClick={handleResetDraft}
                             disabled={Boolean(pending)}
                             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                            title="Đưa hạng mục đã duyệt về Draft để chỉnh sửa lại."
                         >
                             {pending === "reset" ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -429,7 +443,6 @@ export default function SectionReviewActions({
                             onClick={handleReject}
                             disabled={Boolean(pending)}
                             className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                            title="Trả hạng mục về để editor chỉnh sửa lại."
                         >
                             {pending === "reject" ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -446,14 +459,13 @@ export default function SectionReviewActions({
                             onClick={handleApprove}
                             disabled={Boolean(pending)}
                             className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                            title="Duyệt hạng mục và khóa chỉnh sửa cho đến khi admin mở lại."
                         >
                             {pending === "approve" ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                             )}
-                            Duyệt
+                            {isFormDirty ? "Lưu & duyệt" : "Duyệt"}
                         </button>
                     ) : null}
                 </div>

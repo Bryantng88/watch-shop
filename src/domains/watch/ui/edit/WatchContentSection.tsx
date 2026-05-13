@@ -187,7 +187,7 @@ export default function WatchContentSection({
                     reviewNote={contentReviewNote}
                     canReviewContent={canReviewContent}
                     onBeforeSubmit={onBeforeSubmitReview}
-
+                    isFormDirty={isFormDirty}
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}
