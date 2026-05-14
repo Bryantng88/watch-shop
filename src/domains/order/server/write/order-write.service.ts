@@ -1,0 +1,241 @@
+import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma } from "@prisma/client";
+import { prisma } from "@/server/db/client";
+import { assertCanEditOrderDraftRepo } from "../detail";
+import type { CreateOrderInput, OrderDraftInput, OrderItemInput, ResolvedProductOrderItem } from "../shared";
+import { assertPositiveQuantity, calcUnitPriceAgreed, norm, toNumberPrice, toPlain } from "../shared";
+import {
+  createCustomerRepo,
+  createOrderItemsRepo,
+  createOrderRepo,
+  findCustomerByIdRepo,
+  findCustomerByPhoneRepo,
+  getProductsForOrderResolutionRepo,
+  replaceOrderDraftRepo,
+  reserveVariantIdsForOrderRepo,
+  updateCustomerAddressRepo,
+  updateOrderSubtotalRepo,
+} from "./order-write.repo";
+import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
+
+async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
+  const shipPhone = norm(input.shipPhone);
+  const address = {
+    city: norm(input.shipCity),
+    district: norm(input.shipDistrict),
+    ward: norm(input.shipWard),
+    address: norm(input.shipAddress),
+  };
+
+  if (input.customerId) {
+    const existing = await findCustomerByIdRepo(tx as any, input.customerId);
+    if (!existing) return null;
+    await updateCustomerAddressRepo(tx as any, existing.id, address);
+    return existing.id;
+  }
+
+  if (!shipPhone) return null;
+  const existing = await findCustomerByPhoneRepo(tx as any, shipPhone);
+  if (existing) {
+    await updateCustomerAddressRepo(tx as any, existing.id, address);
+    return existing.id;
+  }
+
+  const created = await createCustomerRepo(tx as any, {
+    name: input.customerName,
+    phone: shipPhone,
+    ...address,
+  });
+  return created.id;
+}
+
+async function resolveProductItems(
+  tx: Prisma.TransactionClient,
+  items: Array<{ productId: string; quantity: number }>,
+  opts?: { strictActiveOnly?: boolean },
+): Promise<ResolvedProductOrderItem[]> {
+  if (!items.length) return [];
+
+  const strictActiveOnly = opts?.strictActiveOnly !== false;
+  const qtyByProductId = new Map<string, number>();
+
+  for (const item of items) {
+    const productId = String(item.productId ?? "").trim();
+    if (!productId) throw new Error("Thiếu productId");
+    const qty = assertPositiveQuantity(productId, item.quantity);
+    qtyByProductId.set(productId, (qtyByProductId.get(productId) ?? 0) + qty);
+  }
+
+  const productIds = Array.from(qtyByProductId.keys());
+  const products = await getProductsForOrderResolutionRepo(tx as any, productIds);
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const missing = productIds.filter((id) => !productById.has(id));
+  if (missing.length) throw new Error(`Không tìm thấy sản phẩm: ${missing.join(", ")}`);
+
+  return productIds.map((productId) => {
+    const product = productById.get(productId)!;
+    const productStatus = String(product.status ?? "").toUpperCase();
+    if (productStatus === "SOLD") throw new Error(`Sản phẩm đã SOLD: ${productId}`);
+    if (productStatus === "CONSIGNED_TO") throw new Error(`Sản phẩm đang consign: ${productId}`);
+
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const variant = strictActiveOnly
+      ? variants.find((v) => String(v.availabilityStatus ?? "").toUpperCase() === "ACTIVE")
+      : variants.find((v) => ["ACTIVE", "HIDDEN"].includes(String(v.availabilityStatus ?? "").toUpperCase())) ?? variants[0];
+
+    if (!variant) throw new Error(`Không có variant khả dụng cho productId=${productId}`);
+
+    const qty = qtyByProductId.get(productId)!;
+    if (variant.stockQty != null && Number(variant.stockQty) > 0 && Number(variant.stockQty) < qty) {
+      throw new Error(`Không đủ tồn kho cho productId=${productId}. Cần ${qty}, còn ${variant.stockQty}`);
+    }
+
+    return {
+      kind: "PRODUCT" as const,
+      productId: product.id,
+      variantId: variant.id,
+      title: product.title ?? "",
+      quantity: qty,
+      listPrice: toNumberPrice(variant.salePrice ?? variant.price ?? variant.listPrice),
+      primaryImageUrl: product.primaryImageUrl ?? null,
+      productType: product.type ?? null,
+    };
+  });
+}
+
+function normalizeCreateInput(raw: any): CreateOrderInput {
+  return {
+    customerId: raw.customerId ?? null,
+    customerName: norm(raw.customerName),
+    shipPhone: raw.shipPhone ?? "",
+    hasShipment: Boolean(raw.hasShipment),
+    shipAddress: raw.shipAddress ?? "",
+    shipCity: raw.shipCity ?? "",
+    shipDistrict: raw.shipDistrict ?? null,
+    shipWard: raw.shipWard ?? null,
+    paymentMethod: raw.paymentMethod ?? PaymentMethod.BANK_TRANSFER,
+    notes: raw.notes ?? null,
+    orderDate: raw.createdAt ?? raw.orderDate ?? new Date(),
+    status: raw.status ?? OrderStatus.DRAFT,
+    source: raw.source ?? OrderSource.ADMIN,
+    verificationStatus: raw.verificationStatus ?? OrderVerificationStatus.VERIFIED,
+    quickFromProductId: raw.quickFromProductId ?? null,
+    quickFlowType: raw.quickFlowType ?? OrderFlowType.STANDARD,
+    reserve: raw.reserve
+      ? {
+          type: raw.reserve.type,
+          amount: Number(raw.reserve.amount ?? 0),
+          expiresAt: raw.reserve.expiresAt ?? null,
+        }
+      : null,
+    items: (raw.items ?? []).map((item: any) => ({
+      id: item.id,
+      kind: item.kind ?? "PRODUCT",
+      productId: item.productId ?? null,
+      variantId: item.variantId ?? null,
+      title: item.title ?? "",
+      quantity: Number(item.quantity ?? 1),
+      listPrice: Number(item.listPrice ?? 0),
+      unitPriceAgreed: item.unitPriceAgreed == null ? null : Number(item.unitPriceAgreed),
+      img: item.img ?? null,
+      serviceCatalogId: item.serviceCatalogId ?? null,
+      serviceScope: item.serviceScope ?? null,
+      linkedOrderItemId: item.linkedOrderItemId ?? null,
+      customerItemNote: item.customerItemNote ?? null,
+      taxRate: item.taxRate == null ? null : Number(item.taxRate),
+      createdFromFlow: item.createdFromFlow ?? raw.quickFlowType ?? "STANDARD",
+    })),
+  };
+}
+
+export async function createOrderWithItems(raw: any) {
+  const input = normalizeCreateInput(raw);
+  if (!input.customerName) throw new Error("Thiếu tên khách hàng");
+  if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
+
+  return prisma.$transaction(async (tx) => {
+    const customerId = await resolveCustomer(tx, input);
+    const strictActiveOnly = input.quickFlowType === "QUICK_ORDER" ? false : true;
+
+    const rawProductItems = input.items
+      .filter((item) => item.kind === "PRODUCT" && item.productId)
+      .map((item) => ({ productId: item.productId!, quantity: Number(item.quantity ?? 1) }));
+
+    const resolvedProducts = await resolveProductItems(tx, rawProductItems, { strictActiveOnly });
+    await reserveVariantIdsForOrderRepo(tx as any, {
+      variantIds: resolvedProducts.map((item) => item.variantId),
+      strictActiveOnly,
+    });
+
+    const order = await createOrderRepo(tx as any, {
+      customerId,
+      customerName: input.customerName,
+      shipPhone: input.shipPhone ?? "",
+      shipAddress: input.shipAddress ?? "",
+      shipCity: input.shipCity ?? "",
+      shipWard: input.shipWard ?? null,
+      shipDistrict: input.shipDistrict ?? null,
+      paymentMethod: input.paymentMethod,
+      hasShipment: input.hasShipment,
+      notes: input.notes ?? null,
+      createdAt: input.orderDate ? new Date(input.orderDate) : new Date(),
+      updatedAt: new Date(),
+      status: input.status ?? OrderStatus.DRAFT,
+      source: input.source ?? OrderSource.ADMIN,
+      verificationStatus: input.verificationStatus ?? OrderVerificationStatus.VERIFIED,
+      subtotal: new Prisma.Decimal(0),
+      reserveType: input.reserve?.type ?? null,
+      depositRequired: input.reserve ? new Prisma.Decimal(Number(input.reserve.amount ?? 0)) : null,
+      reserveUntil: input.reserve?.expiresAt ? new Date(input.reserve.expiresAt) : null,
+      quickFromProductId: input.quickFromProductId ?? null,
+      quickFlowType: (input.quickFlowType ?? "STANDARD") as any,
+    });
+
+    const productItems: OrderItemInput[] = resolvedProducts.map((product) => {
+      const matched = input.items.find((item) => item.kind === "PRODUCT" && item.productId === product.productId);
+      const listPrice = Number(matched?.listPrice ?? 0) > 0 ? Number(matched?.listPrice) : product.listPrice;
+      return {
+        kind: "PRODUCT",
+        productId: product.productId,
+        variantId: product.variantId,
+        title: product.title,
+        img: product.primaryImageUrl ?? null,
+        quantity: product.quantity,
+        listPrice,
+        unitPriceAgreed: calcUnitPriceAgreed({ listPrice, unitPriceAgreed: matched?.unitPriceAgreed }),
+        createdFromFlow: matched?.createdFromFlow ?? input.quickFlowType ?? "STANDARD",
+      };
+    });
+
+    const serviceItems = input.items.filter((item) => item.kind === "SERVICE");
+    const discountItems = input.items.filter((item) => item.kind === "DISCOUNT");
+    const rows = await createOrderItemsRepo(tx as any, order.id, [...productItems, ...serviceItems, ...discountItems]);
+    const subtotal = rows.reduce((sum, row: any) => sum + Number(row.subtotal ?? 0), 0);
+    await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
+    await syncWatchInventoryFromOrders(
+      tx,
+      rows.map((row: any) => row.productId),
+    );
+
+    return toPlain({ id: order.id, status: input.status ?? OrderStatus.DRAFT });
+  });
+}
+
+export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
+  return prisma.$transaction(async (tx) => {
+    await assertCanEditOrderDraftRepo(tx as any, orderId);
+
+    const beforeItems = await tx.orderItem.findMany({
+      where: { orderId },
+      select: { productId: true },
+    });
+
+    const result = await replaceOrderDraftRepo(tx as any, orderId, input);
+
+    await syncWatchInventoryFromOrders(tx, [
+      ...beforeItems.map((item) => item.productId),
+      ...input.items.map((item) => item.productId),
+    ]);
+
+    return result;
+  });
+}

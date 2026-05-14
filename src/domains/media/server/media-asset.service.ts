@@ -533,3 +533,149 @@ export async function moveMediaAssetToAcquisitionInlineChosen(input: {
     sortOrder: moved.asset.sortOrder,
   };
 }
+
+
+function parentPrefixFromKey(key: string) {
+  const index = key.lastIndexOf("/");
+  return index >= 0 ? key.slice(0, index) : "";
+}
+
+function fileNameFromKey(key: string) {
+  return key.split("/").pop() ?? key;
+}
+
+function extFromFileName(fileName: string) {
+  const index = fileName.lastIndexOf(".");
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : null;
+}
+
+export async function releaseMediaAssetToActive(input: {
+  key: string;
+  productId?: string | null;
+}) {
+  const key = normalizeKey(input.key);
+
+  if (!key) {
+    throw new Error("Thiếu media key để trả ảnh về ACTIVE.");
+  }
+
+  const asset = await prisma.mediaAsset.findUnique({
+    where: { key },
+    select: {
+      id: true,
+      key: true,
+      movedFromKey: true,
+      status: true,
+      productId: true,
+    },
+  });
+
+  if (!asset) return null;
+  if (asset.status !== "CHOSEN") return asset;
+  if (input.productId && asset.productId !== input.productId) return asset;
+
+  const targetKey = normalizeKey(asset.movedFromKey);
+
+  if (!targetKey) {
+    throw new Error(
+      `Không thể trả media ${asset.key} về ACTIVE vì thiếu movedFromKey.`,
+    );
+  }
+
+  const targetPrefix = parentPrefixFromKey(targetKey);
+  const targetFileName = fileNameFromKey(targetKey);
+
+  const existingTarget = await prisma.mediaAsset.findUnique({
+    where: { key: targetKey },
+    select: { id: true },
+  });
+
+  if (existingTarget && existingTarget.id !== asset.id) {
+    await moveMediaObject({
+      fromKey: asset.key,
+      toPrefix: targetPrefix,
+      deleteSource: true,
+      overwrite: true,
+    });
+
+    await prisma.mediaAsset.delete({
+      where: { id: asset.id },
+    });
+
+    return prisma.mediaAsset.update({
+      where: { id: existingTarget.id },
+      data: {
+        key: targetKey,
+        parentPrefix: targetPrefix,
+        fileName: targetFileName,
+        ext: extFromFileName(targetFileName),
+        status: "ACTIVE",
+        productId: null,
+        acquisitionId: null,
+        role: null,
+        sortOrder: 0,
+        movedFromKey: null,
+        isMissing: false,
+        missingAt: null,
+        lastSeenAt: new Date(),
+      },
+    });
+  }
+
+  if (normalizeKey(asset.key) !== targetKey) {
+    const moved = await moveMediaObject({
+      fromKey: asset.key,
+      toPrefix: targetPrefix,
+      deleteSource: true,
+      overwrite: false,
+    });
+
+    const movedKey = normalizeKey(moved.key);
+
+    if (movedKey !== targetKey) {
+      throw new Error(
+        `Media trả về sai key. Expected ${targetKey}, got ${movedKey}`,
+      );
+    }
+  }
+
+  return prisma.mediaAsset.update({
+    where: { id: asset.id },
+    data: {
+      key: targetKey,
+      parentPrefix: targetPrefix,
+      fileName: targetFileName,
+      ext: extFromFileName(targetFileName),
+      status: "ACTIVE",
+      productId: null,
+      acquisitionId: null,
+      role: null,
+      sortOrder: 0,
+      movedFromKey: null,
+      isMissing: false,
+      missingAt: null,
+      lastSeenAt: new Date(),
+    },
+  });
+}
+export async function releaseMediaAssetsToActive(input: {
+  keys: string[];
+  productId?: string | null;
+}) {
+  const keys = Array.from(
+    new Set((input.keys ?? []).map((key) => String(key ?? "").trim()).filter(Boolean)),
+  );
+
+  const result = [];
+
+  for (const key of keys) {
+    result.push(
+      await releaseMediaAssetToActive({
+        key,
+        productId: input.productId ?? null,
+      }),
+    );
+  }
+
+  return result.filter(Boolean);
+}

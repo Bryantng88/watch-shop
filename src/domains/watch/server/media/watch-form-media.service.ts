@@ -1,7 +1,9 @@
 import {
     moveMediaAssetToWatchChosen,
     moveMediaToWatchPool,
+    releaseMediaAssetsToActive,
 } from "@/domains/media/server";
+import { prisma } from "@/server/db/client";
 
 import {
     dedupeMediaItems,
@@ -67,4 +69,52 @@ export async function moveWatchGalleryImagesToChosen(
     }
 
     return result;
+}
+
+
+export async function releaseRemovedWatchPoolImagesToActive(input: {
+    productId: string;
+    keepItems: WatchFormMediaItem[];
+}) {
+    const keepKeys = new Set(
+        dedupeMediaItems(input.keepItems)
+            .map(mediaKey)
+            .filter(Boolean),
+    );
+
+    const currentPoolAssets = await prisma.mediaAsset.findMany({
+        where: {
+            productId: input.productId,
+            status: "CHOSEN" as any,
+        },
+        select: {
+            key: true,
+            movedFromKey: true,
+        },
+    });
+
+    const removedKeys = currentPoolAssets
+        .filter((asset) => {
+            const key = String(asset.key ?? "").trim();
+            const movedFromKey = String(asset.movedFromKey ?? "").trim();
+
+            if (!key) return false;
+
+            // Keep if UI still references either the current pool key
+            // or the original active key stored in movedFromKey.
+            if (keepKeys.has(key)) return false;
+            if (movedFromKey && keepKeys.has(movedFromKey)) return false;
+
+            return true;
+        })
+        .map((asset) => asset.key);
+
+    if (removedKeys.length === 0) {
+        return [];
+    }
+
+    return releaseMediaAssetsToActive({
+        keys: removedKeys,
+        productId: input.productId,
+    });
 }

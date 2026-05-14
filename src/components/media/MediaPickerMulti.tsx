@@ -67,7 +67,9 @@ function normalizeItems(items?: PickedMediaItem[]) {
             .filter((item) => item.key)
     );
 }
-
+function getItemKey(item: PickedMediaItem) {
+    return String((item as any)?.key ?? (item as any)?.fileKey ?? "").trim();
+}
 function toPickedItem(input: string | PickedMediaItem): PickedMediaItem {
     if (typeof input === "string") {
         const key = input.trim();
@@ -264,9 +266,12 @@ function ChosenGrid({
 
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    onRemoveChosen(item.key)
-                                                }
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    onPreviewClose();
+                                                    onRemoveChosen(getItemKey(item));
+                                                }}
                                                 className="rounded-full bg-black px-2 py-1 text-[11px] text-white"
                                             >
                                                 X
@@ -338,7 +343,12 @@ function SelectedStrip({
 
                                 <button
                                     type="button"
-                                    onClick={() => onRemove(item.key)}
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        onPreviewClose();
+                                        onRemove(getItemKey(item));
+                                    }}
                                     className="absolute right-1 top-1 rounded-full bg-black/80 px-2 py-0.5 text-[11px] text-white"
                                 >
                                     X
@@ -472,24 +482,44 @@ export default function MediaPickerMulti({
     );
     const handleRemoveChosen = React.useCallback(
         (key: string) => {
-            const nextChosen = chosenItems.filter((item) => item.key !== key);
-            const nextSelected = selectedItems.filter(
-                (item) => item.key !== key
+            setPreview(null);
+
+            const normalizedKey = String(key ?? "").trim();
+
+            const isSelected = selectedItems.some(
+                (item) => getItemKey(item) === normalizedKey,
             );
 
-            onChosenChange(nextChosen);
-            onSelectedChange(nextSelected);
-        },
-        [chosenItems, selectedItems, onChosenChange, onSelectedChange]
-    );
+            const nextChosen = chosenItems.filter(
+                (item) => getItemKey(item) !== normalizedKey,
+            );
 
+            const nextSelected = selectedItems.filter(
+                (item) => getItemKey(item) !== normalizedKey,
+            );
+
+            if (isSelected) {
+                onSelectedChange(nextSelected);
+            }
+
+            onChosenChange(nextChosen);
+        },
+        [chosenItems, selectedItems, onChosenChange, onSelectedChange],
+    );
     const handleRemoveSelected = React.useCallback(
         (key: string) => {
-            onSelectedChange(selectedItems.filter((item) => item.key !== key));
-        },
-        [onSelectedChange, selectedItems]
-    );
+            setPreview(null);
 
+            const normalizedKey = String(key ?? "").trim();
+
+            onSelectedChange(
+                selectedItems.filter(
+                    (item) => getItemKey(item) !== normalizedKey,
+                ),
+            );
+        },
+        [onSelectedChange, selectedItems],
+    );
     return (
         <div className="space-y-4">
             <FloatingPreview preview={preview} />

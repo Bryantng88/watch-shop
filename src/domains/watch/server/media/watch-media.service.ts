@@ -10,7 +10,6 @@ import {
   setWatchStorefrontImageRepo,
   replaceWatchGalleryImagesRepo
 } from "./watch-media.repo";
-import { withDbTransaction, DB } from "@/server/db/client";
 
 export async function replaceWatchGalleryImages(input: {
   productId: string;
@@ -39,3 +38,4 @@ export async function setWatchStorefrontImage(
 export async function getWatchImages(productId: string) {
   return getWatchImagesRepo(prisma as any, productId);
 }
+

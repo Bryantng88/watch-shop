@@ -7,6 +7,7 @@ import { replaceWatchGalleryImagesRepo } from "../server/media";
 import {
     moveWatchGalleryImagesToChosen,
     moveWatchPoolImagesToChosenPool,
+    releaseRemovedWatchPoolImagesToActive,
 } from "../server/media";
 import { updateWatchPricingWithDiff } from "../server/pricing";
 import { resetWatchReviewToDraft } from "../server/review";
@@ -272,6 +273,13 @@ export async function submitWatchFormApplication(
     const remainingPoolImages = requestedPoolImages.filter((item) => {
         const key = mediaKey(item);
         return key && !galleryOriginalKeys.has(key);
+    });
+
+    // Release persisted pool images that the user removed before moving/saving
+    // the new gallery/pool state. This keeps MediaAsset + NAS in sync.
+    await releaseRemovedWatchPoolImagesToActive({
+        productId,
+        keepItems: [...remainingPoolImages, ...requestedGalleryImages],
     });
 
     const normalizedGalleryImages = await moveWatchGalleryImagesToChosen(

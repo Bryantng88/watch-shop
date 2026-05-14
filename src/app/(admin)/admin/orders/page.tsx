@@ -1,19 +1,12 @@
 // app/(admin)/admin/orders/page.tsx
-import { parseOrderSearchParams } from "./utils/search-params";
-import { getAdminOrderList } from "./_servers/order.service";
-import OrderListPageClient from "./_client/ListOrder";
+import OrderListClient from "@/domains/order/client/OrderListClient";
+import { getOrderListQuery } from "@/domains/order/application/queries/order-list.query";
+import { parseOrderSearchParams } from "@/domains/order/shared/search-params";
+import { serializeForClient } from "@/shared/utils/serialize-for-client";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-function serialize(obj: any) {
-    return JSON.parse(
-        JSON.stringify(obj, (key, value) => {
-            if (value instanceof Date) return value.toISOString();
-            if (typeof value === "object" && value?._isDecimal) return Number(value);
-            return value;
-        })
-    );
-}
+export const dynamic = "force-dynamic";
 
 export default async function OrderListPage({
     searchParams,
@@ -21,24 +14,28 @@ export default async function OrderListPage({
     searchParams: SearchParams;
 }) {
     const sp = new URLSearchParams(
-        Object.entries(searchParams).flatMap(([k, v]) =>
-            Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v ?? ""]]
-        )
+        Object.entries(searchParams).flatMap(([key, value]) => {
+            if (Array.isArray(value)) {
+                return value.map((item) => [key, item]);
+            }
+
+            return [[key, value ?? ""]];
+        })
     );
 
     const input = parseOrderSearchParams(sp);
-    const { items, total, counts, page, pageSize } = await getAdminOrderList(input);
 
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const normalizedItems = serialize(items);
+    const result = await getOrderListQuery(input);
+
+    const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
     return (
-        <OrderListPageClient
-            items={normalizedItems}
-            total={total}
-            counts={counts}
-            page={page}
-            pageSize={pageSize}
+        <OrderListClient
+            items={serializeForClient(result.items)}
+            total={result.total}
+            counts={result.counts}
+            page={result.page}
+            pageSize={result.pageSize}
             totalPages={totalPages}
             rawSearchParams={searchParams}
         />
