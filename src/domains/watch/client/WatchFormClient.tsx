@@ -54,6 +54,7 @@ type AfterSaveMode =
 function stableStringify(value: unknown) {
     return JSON.stringify(value, (_key, v) => {
         if (Array.isArray(v)) return v;
+
         if (v && typeof v === "object") {
             return Object.keys(v as Record<string, unknown>)
                 .sort()
@@ -62,14 +63,9 @@ function stableStringify(value: unknown) {
                     return acc;
                 }, {});
         }
+
         return v ?? null;
     });
-}
-
-function getReviewStatus(value?: string | null) {
-    const status = String(value ?? "DRAFT").toUpperCase();
-    if (["SUBMITTED", "APPROVED", "REJECTED"].includes(status)) return status;
-    return "DRAFT";
 }
 
 function useUnsavedChangesGuard({
@@ -105,6 +101,7 @@ function useUnsavedChangesGuard({
 
             const target = event.target as HTMLElement | null;
             const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
+
             if (!anchor) return;
             if (anchor.target && anchor.target !== "_self") return;
             if (anchor.hasAttribute("download")) return;
@@ -119,6 +116,7 @@ function useUnsavedChangesGuard({
             event.stopPropagation();
 
             const ok = await onConfirmLeave();
+
             if (ok) {
                 onNavigate(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
             }
@@ -128,8 +126,6 @@ function useUnsavedChangesGuard({
         return () => document.removeEventListener("click", handleDocumentClick, true);
     }, [enabled, onConfirmLeave, onNavigate]);
 }
-
-
 
 export default function WatchFormClient({
     detail,
@@ -154,9 +150,10 @@ export default function WatchFormClient({
     const [values, setValues] = useState<WatchFormValues>(initialValues);
     const [savedValues, setSavedValues] =
         useState<WatchFormValues>(initialValues);
-    const [pending, startTransition] = useTransition();
 
-    const [message, setMessage] = useState("");
+    const valuesRef = useRef<WatchFormValues>(initialValues);
+
+    const [pending, startTransition] = useTransition();
     const [mediaError] = useState<string | null>(null);
     const [specModalOpen, setSpecModalOpen] = useState(false);
     const [brandOptions, setBrandOptions] = useState<SimpleOption[]>(brands);
@@ -171,6 +168,18 @@ export default function WatchFormClient({
     const returnTo = searchParams.get("returnTo") || "/admin/watches";
     const inlineImage = values.media.inlineImage;
     const isDirty = stableStringify(values) !== stableStringify(savedValues);
+
+    const setFormValues = (updater: (prev: WatchFormValues) => WatchFormValues) => {
+        setValues((prev) => {
+            const next = updater(prev);
+            valuesRef.current = next;
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        valuesRef.current = values;
+    }, [values]);
 
     useEffect(() => {
         if (focus !== "pricing") return;
@@ -212,6 +221,7 @@ export default function WatchFormClient({
                 title: "Đang chuyển trang",
                 message: "Hệ thống đang điều hướng sang màn hình mới.",
             });
+
             router.push(href);
             window.setTimeout(() => progress.hide(), 1200);
         },
@@ -229,8 +239,17 @@ export default function WatchFormClient({
         window.setTimeout(() => progress.hide(), 1200);
     };
 
+    const buildSubmitValues = (): WatchFormValues => {
+        const current = valuesRef.current;
+
+        return {
+            ...current,
+            productId: current.productId || initialValues.productId,
+        };
+    };
+
     const updateBasic = (patch: Partial<WatchFormValues["basic"]>) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             basic: {
                 ...prev.basic,
@@ -240,7 +259,7 @@ export default function WatchFormClient({
     };
 
     const updateSpec = (patch: Partial<WatchFormValues["spec"]>) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             spec: {
                 ...prev.spec,
@@ -250,14 +269,14 @@ export default function WatchFormClient({
     };
 
     const replaceSpec = (next: WatchFormValues["spec"]) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             spec: next,
         }));
     };
 
     const updateContent = (patch: Partial<WatchFormValues["content"]>) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             content: {
                 ...prev.content,
@@ -267,7 +286,7 @@ export default function WatchFormClient({
     };
 
     const updatePricing = (patch: Partial<WatchFormValues["pricing"]>) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             pricing: {
                 ...prev.pricing,
@@ -277,7 +296,7 @@ export default function WatchFormClient({
     };
 
     const updateMedia = (patch: Partial<WatchFormValues["media"]>) => {
-        setValues((prev) => ({
+        setFormValues((prev) => ({
             ...prev,
             media: {
                 ...prev.media,
@@ -307,13 +326,19 @@ export default function WatchFormClient({
         target: "content" | "image",
         next: ReviewStatusChange,
     ) => {
-        setValues((prev) => patchReviewState(prev, target, next));
-        setSavedValues((prev) => patchReviewState(prev, target, next));
+        setFormValues((prev) => patchReviewState(prev, target, next));
+
+        setSavedValues((prev) => {
+            const nextSaved = patchReviewState(prev, target, next);
+            return nextSaved;
+        });
     };
 
     const submitReviewTarget = async (target: "content" | "image") => {
+        const productId = valuesRef.current.productId || initialValues.productId;
+
         const res = await fetch(
-            `/api/admin/watches/${values.productId}/${target}-submit`,
+            `/api/admin/watches/${productId}/${target}-submit`,
             { method: "POST" },
         );
 
@@ -323,7 +348,7 @@ export default function WatchFormClient({
             throw new Error(json?.error || "Không thể gửi duyệt.");
         }
 
-        setValues((prev): WatchFormValues => {
+        setFormValues((prev): WatchFormValues => {
             if (target === "content") {
                 return {
                     ...prev,
@@ -349,18 +374,30 @@ export default function WatchFormClient({
         try {
             if (afterSaveMode === "submitContent") {
                 await submitReviewTarget("content");
-                setMessage("Đã lưu watch và gửi duyệt nội dung.");
+
+                notify.success({
+                    title: "Đã gửi duyệt",
+                    message: "Đã lưu watch và gửi duyệt nội dung.",
+                });
             }
 
             if (afterSaveMode === "submitImage") {
                 await submitReviewTarget("image");
-                setMessage("Đã lưu watch và gửi duyệt hình ảnh.");
+
+                notify.success({
+                    title: "Đã gửi duyệt",
+                    message: "Đã lưu watch và gửi duyệt hình ảnh.",
+                });
             }
 
             if (afterSaveMode === "submitBoth") {
                 await submitReviewTarget("content");
                 await submitReviewTarget("image");
-                setMessage("Đã lưu watch và gửi duyệt nội dung + hình ảnh.");
+
+                notify.success({
+                    title: "Đã gửi duyệt",
+                    message: "Đã lưu watch và gửi duyệt nội dung + hình ảnh.",
+                });
             }
 
             router.refresh();
@@ -397,13 +434,14 @@ export default function WatchFormClient({
                 },
             };
 
+            valuesRef.current = next;
             setSavedValues(next);
+
             return next;
         });
     };
 
     const onSubmit = () => {
-        setMessage("");
         setAfterSaveOpen(false);
         setAfterSaveMode("normal");
 
@@ -414,10 +452,14 @@ export default function WatchFormClient({
             });
 
             try {
-                const result = await submitWatchForm(values);
+                const result = await submitWatchForm(buildSubmitValues());
 
                 updateValuesAfterSave(result);
-                setMessage(result?.message || "Đã lưu watch.");
+
+                notify.success({
+                    title: "Đã lưu watch",
+                    message: result?.message || "Thông tin watch đã được cập nhật.",
+                });
 
                 if (result?.askContinueContent) {
                     setAfterSaveMode("continueContent");
@@ -439,38 +481,38 @@ export default function WatchFormClient({
 
                 setAfterSaveOpen(true);
             } catch (error: any) {
-                setMessage(error?.message || "Không thể lưu watch.");
+                notify.error({
+                    title: "Không thể lưu watch",
+                    message: error?.message || "Có lỗi xảy ra khi lưu watch.",
+                });
             } finally {
                 progress.hide();
             }
         });
     };
+
     const saveBeforeReview = async () => {
-        if (!isDirty) return true;
-
-        setMessage("");
-
         progress.show({
             title: "Đang lưu watch",
             message: "Hệ thống đang lưu thay đổi mới nhất trước khi duyệt.",
         });
 
         try {
-            const result = await submitWatchForm(values);
+            const result = await submitWatchForm(buildSubmitValues());
 
             updateValuesAfterSave(result);
 
-            setMessage(
-                result?.message ||
-                "Đã lưu watch. Dữ liệu mới nhất đã sẵn sàng để duyệt.",
-            );
+            notify.success({
+                title: "Đã lưu watch",
+                message:
+                    result?.message ||
+                    "Dữ liệu mới nhất đã được lưu trước khi duyệt.",
+            });
 
             return true;
         } catch (error: any) {
             const message =
                 error?.message || "Không thể lưu watch trước khi duyệt.";
-
-            setMessage(message);
 
             notify.error({
                 title: "Không thể duyệt",
@@ -482,6 +524,7 @@ export default function WatchFormClient({
             progress.hide();
         }
     };
+
     return (
         <div className="space-y-6">
             <WatchEditHeader
@@ -489,7 +532,7 @@ export default function WatchFormClient({
                 brands={brandOptions}
                 inlineImage={inlineImage}
                 pending={pending}
-                message={message}
+                message=""
                 onSubmit={onSubmit}
                 onBack={handleBack}
                 canReviewContent={canReviewContent}
@@ -498,7 +541,7 @@ export default function WatchFormClient({
                     { label: values.basic.title || "Edit" },
                 ]}
                 onChange={(patch) => {
-                    setValues((prev) => ({
+                    setFormValues((prev) => ({
                         ...prev,
                         ...patch,
                         header: {
@@ -581,7 +624,7 @@ export default function WatchFormClient({
                         stockState={values.basic.stockState}
                         productStatus={values.header.status}
                         onChange={(patch) => {
-                            setValues((prev) => ({
+                            setFormValues((prev) => ({
                                 ...prev,
                                 header: {
                                     ...prev.header,
@@ -608,7 +651,9 @@ export default function WatchFormClient({
                             canViewCost={canViewCost}
                             canEditPrice={canEditPrice}
                             notificationDiff={
-                                focus === "pricing" ? searchParams.get("notificationId") : null
+                                focus === "pricing"
+                                    ? searchParams.get("notificationId")
+                                    : null
                             }
                             onChange={updatePricing}
                         />
@@ -622,8 +667,8 @@ export default function WatchFormClient({
                                 </div>
 
                                 <div className="mt-1 text-xs text-slate-500">
-                                    Sau khi bổ sung spec cần thiết, bấm để gen lại title và SKU
-                                    theo rule hệ thống.
+                                    Sau khi bổ sung spec cần thiết, bấm để gen lại title
+                                    và SKU theo rule hệ thống.
                                 </div>
 
                                 <div className="mt-4 space-y-3">
@@ -662,7 +707,9 @@ export default function WatchFormClient({
 
             <AfterSaveDialog
                 open={afterSaveOpen}
-                detailHref={`/admin/watches/${values.productId}?returnTo=${encodeURIComponent(returnTo)}`}
+                detailHref={`/admin/watches/${values.productId}?returnTo=${encodeURIComponent(
+                    returnTo,
+                )}`}
                 fallbackBackHref={returnTo}
                 title={
                     afterSaveMode === "submitImage"

@@ -1,5 +1,5 @@
-import { transitionWatchState } from "../server/state";
-import type { WatchStateAction } from "../server/state";
+import { transitionWatchState } from "../../server/state";
+import type { WatchStateAction } from "../../server/state";
 
 export async function transitionWatchStateApplication(input: {
     productId: string;

@@ -2,15 +2,15 @@ import { prisma } from "@/server/db/client";
 import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-import type { WatchFormValues } from "../client/form/watch-form.types";
-import { replaceWatchGalleryImagesRepo } from "../server/media";
+import type { WatchFormValues } from "../../client/form/watch-form.types";
+import { replaceWatchGalleryImagesRepo } from "../../server/media";
 import {
     moveWatchGalleryImagesToChosen,
     moveWatchPoolImagesToChosenPool,
     releaseRemovedWatchPoolImagesToActive,
-} from "../server/media";
-import { updateWatchPricingWithDiff } from "../server/pricing";
-import { resetWatchReviewToDraft } from "../server/review";
+} from "../../server/media";
+import { updateWatchPricingWithDiff } from "../../server/pricing";
+import { resetWatchReviewToDraft } from "../../server/review";
 import {
     WatchFormEnums,
     dedupeMediaItems,
@@ -25,7 +25,7 @@ import {
     sameJson,
     textOrUndefined,
     toDecimal,
-} from "../server/shared";
+} from "../../server/shared";
 
 type SubmitWatchFormContext = {
     userId?: string | null;
@@ -64,8 +64,11 @@ export async function submitWatchFormApplication(
     values: WatchFormValues,
     context: SubmitWatchFormContext,
 ) {
-    const productId = values.productId;
+    const productId = String(values.productId || "").trim();
 
+    if (!productId) {
+        throw new Error("Thiếu productId khi lưu watch.");
+    }
     const current = await prisma.watch.findUnique({
         where: { productId },
         include: {

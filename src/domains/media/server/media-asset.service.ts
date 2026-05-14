@@ -589,7 +589,28 @@ export async function releaseMediaAssetToActive(input: {
     where: { key: targetKey },
     select: { id: true },
   });
+  const usedByProductImage = await prisma.productImage.findFirst({
+    where: {
+      fileKey: asset.key,
+    },
+    select: {
+      id: true,
+      role: true,
+      productId: true,
+    },
+  });
 
+  if (usedByProductImage) {
+    return asset;
+  }
+
+  if (!asset.key.startsWith("products/edit/chosen/watch/")) {
+    return asset;
+  }
+
+  if (!asset.key.includes(`/${input.productId}/pool/`)) {
+    return asset;
+  }
   if (existingTarget && existingTarget.id !== asset.id) {
     await moveMediaObject({
       fromKey: asset.key,

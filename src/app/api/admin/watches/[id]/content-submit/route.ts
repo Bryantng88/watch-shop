@@ -14,11 +14,17 @@ export async function POST(
     _req: Request,
     {
         params,
-    }: { params: Promise<{ productId: string }> | { productId: string } },
+    }: { params: Promise<{ id: string }> | { id: string } },
 ) {
     try {
         const auth = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
-        const { productId } = await params;
+
+        const { id } = await params;
+        const productId = String(id ?? "").trim();
+
+        if (!productId) {
+            throw new Error("Thiếu productId khi gửi duyệt nội dung.");
+        }
 
         const state = await submitWatchReview({
             productId,

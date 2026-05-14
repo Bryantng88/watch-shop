@@ -14,7 +14,7 @@ import {
 import {
     generateWatchContent,
     type WatchContentGenerationResult,
-} from "@/domains/watch/shared/watch-content.helpers";
+} from "@/old_files/watchOld/watch-content.helpers";
 import SectionReviewActions from "../review/SectionReviewActions";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";

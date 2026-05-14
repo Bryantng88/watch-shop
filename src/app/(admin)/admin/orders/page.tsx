@@ -1,10 +1,13 @@
 // app/(admin)/admin/orders/page.tsx
+
 import OrderListClient from "@/domains/order/client/OrderListClient";
-import { getOrderListQuery } from "@/domains/order/application/queries/order-list.query";
+import { getAdminOrderList } from "@/domains/order/server";
 import { parseOrderSearchParams } from "@/domains/order/shared/search-params";
 import { serializeForClient } from "@/shared/utils/serialize-for-client";
 
-type SearchParams = { [key: string]: string | string[] | undefined };
+type SearchParams = {
+    [key: string]: string | string[] | undefined;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +28,12 @@ export default async function OrderListPage({
 
     const input = parseOrderSearchParams(sp);
 
-    const result = await getOrderListQuery(input);
+    const result = await getAdminOrderList(input);
 
-    const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
+    const totalPages = Math.max(
+        1,
+        Math.ceil(result.total / result.pageSize)
+    );
 
     return (
         <OrderListClient

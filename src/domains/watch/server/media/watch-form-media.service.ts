@@ -82,10 +82,18 @@ export async function releaseRemovedWatchPoolImagesToActive(input: {
             .filter(Boolean),
     );
 
+    const poolPrefix = `products/edit/chosen/watch/${input.productId}/pool/`;
+
     const currentPoolAssets = await prisma.mediaAsset.findMany({
         where: {
             productId: input.productId,
             status: "CHOSEN" as any,
+
+            // Chỉ release ảnh pool tạm.
+            // Tuyệt đối không đụng INLINE/GALLERY.
+            key: {
+                startsWith: poolPrefix,
+            },
         },
         select: {
             key: true,
@@ -100,8 +108,6 @@ export async function releaseRemovedWatchPoolImagesToActive(input: {
 
             if (!key) return false;
 
-            // Keep if UI still references either the current pool key
-            // or the original active key stored in movedFromKey.
             if (keepKeys.has(key)) return false;
             if (movedFromKey && keepKeys.has(movedFromKey)) return false;
 

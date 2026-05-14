@@ -18,11 +18,18 @@ export async function POST(
     req: NextRequest,
     {
         params,
-    }: { params: Promise<{ productId: string }> | { productId: string } },
+    }: { params: Promise<{ id: string }> | { id: string } },
 ) {
     try {
         const auth = await requirePermission(PERMISSIONS.PRODUCT_APPROVE);
-        const { productId } = await params;
+
+        const { id } = await params;
+        const productId = String(id ?? "").trim();
+
+        if (!productId) {
+            throw new Error("Thiếu productId khi duyệt nội dung.");
+        }
+
         const body = await req.json().catch(() => ({}));
         const action = String(body?.action ?? "").toLowerCase();
 

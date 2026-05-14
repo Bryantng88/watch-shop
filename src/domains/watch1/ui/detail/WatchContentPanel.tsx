@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Copy, FileText, Lock } from "lucide-react";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { SectionCard, SectionEmpty } from "./shared";
-import { buildPostText } from "@/domains/watch/shared/watch-content.helpers";
+import { buildPostText } from "@/old_files/watchOld/watch-content.helpers";
 import ReviewStatusBadge from "../review/ReviewStatusBadge";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 

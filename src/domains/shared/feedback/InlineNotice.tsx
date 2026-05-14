@@ -6,7 +6,8 @@ import {
     XCircle,
 } from "lucide-react";
 
-import { cn } from "@/shared/lib/cn";
+
+import { cn } from "@/lib/utils";
 
 type Tone = "info" | "success" | "warning" | "danger";
 
