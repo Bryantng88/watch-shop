@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-
-import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { markNotificationAsRead } from "@/app/(admin)/admin/notifications/notification.repo";
+import { getCurrentUser } from "@/server/auth/getCurrentUser";
 
 export async function POST(req: Request) {
     const user = await getCurrentUser();

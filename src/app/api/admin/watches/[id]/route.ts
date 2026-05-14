@@ -8,6 +8,7 @@ export async function GET(
     _req: NextRequest,
     { params }: { params: { id: string } }
 ) {
+
     const items = await getWatchImages(params.id);
     return NextResponse.json({ ok: true, items });
 }

@@ -23,7 +23,7 @@ import {
     specStatusTone,
     formatDateTime
 } from "./helpers";
-
+import RowActions from "@/domains/shared/ui/list/RowActions";
 type Props = {
     product: WatchRow;
     checked: boolean;
@@ -81,103 +81,7 @@ function WatchReadinessSummary({ row }: { row: WatchRow }) {
         </div>
     );
 }
-function RowActions({
-    row,
-    onView,
-    onEdit,
-    onDelete,
-    onService,
-    onQuickOrder,
-    onConsign,
-}: {
-    row: WatchRow;
-    onView?: (row: WatchRow) => void;
-    onEdit?: (row: WatchRow) => void;
-    onDelete?: (row: WatchRow) => void;
-    onService?: (row: WatchRow) => void;
-    onQuickOrder?: (row: WatchRow) => void;
-    onConsign?: (row: WatchRow) => void;
-}) {
-    const actions = [
-        onView
-            ? {
-                key: "view",
-                label: "Xem",
-                icon: <Eye className="h-4 w-4" />,
-                onClick: () => onView(row),
-            }
-            : null,
-        onEdit
-            ? {
-                key: "edit",
-                label: "Sửa",
-                icon: <Pencil className="h-4 w-4" />,
-                onClick: () => onEdit(row),
-            }
-            : null,
-        onQuickOrder
-            ? {
-                key: "quick-order",
-                label: "Quick order",
-                icon: <ShoppingCart className="h-4 w-4" />,
-                onClick: () => onQuickOrder(row),
-            }
-            : null,
-        onService
-            ? {
-                key: "service",
-                label: "Service",
-                icon: <Hammer className="h-4 w-4" />,
-                onClick: () => onService(row),
-            }
-            : null,
-        onConsign
-            ? {
-                key: "consign",
-                label: "Consign",
-                icon: <HandCoins className="h-4 w-4" />,
-                onClick: () => onConsign(row),
-            }
-            : null,
-        onDelete
-            ? {
-                key: "delete",
-                label: "Xóa",
-                icon: <Trash2 className="h-4 w-4" />,
-                onClick: () => onDelete(row),
-            }
-            : null,
-    ].filter(Boolean) as Array<{
-        key: string;
-        label: string;
-        icon: React.ReactNode;
-        onClick: () => void;
-    }>;
 
-    return (
-        <div className="flex justify-end">
-            <details className="relative">
-                <summary className="list-none cursor-pointer rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
-                    <MoreHorizontal className="h-5 w-5" />
-                </summary>
-
-                <div className="absolute right-0 z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    {actions.map((action) => (
-                        <button
-                            key={action.key}
-                            type="button"
-                            onClick={action.onClick}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                            {action.icon}
-                            <span>{action.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </details>
-        </div>
-    );
-}
 
 export default function WatchListRow({
     product,
@@ -275,12 +179,46 @@ export default function WatchListRow({
             <td className="px-4 py-4 text-right">
                 <RowActions
                     row={product}
-                    onView={onView}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onService={onService}
-                    onQuickOrder={onQuickOrder}
-                    onConsign={onConsign}
+                    actions={[
+                        onView && {
+                            key: "view",
+                            label: "Xem",
+                            icon: <Eye className="h-4 w-4" />,
+                            onClick: onView,
+                        },
+                        onEdit && {
+                            key: "edit",
+                            label: "Sửa",
+                            icon: <Pencil className="h-4 w-4" />,
+                            onClick: onEdit,
+                        },
+                        onQuickOrder && {
+                            key: "quick-order",
+                            label: "Quick order",
+                            icon: <ShoppingCart className="h-4 w-4" />,
+                            onClick: onQuickOrder,
+                        },
+                        onService && {
+                            key: "service",
+                            label: "Service",
+                            icon: <Hammer className="h-4 w-4" />,
+                            onClick: onService,
+                        },
+                        onConsign && {
+                            key: "consign",
+                            label: "Consign",
+                            icon: <HandCoins className="h-4 w-4" />,
+                            onClick: onConsign,
+                        },
+                        onDelete && {
+                            key: "delete",
+                            label: "Xóa",
+                            icon: <Trash2 className="h-4 w-4" />,
+                            tone: "danger",
+                            separatorBefore: true,
+                            onClick: onDelete,
+                        },
+                    ]}
                 />
             </td>
         </tr>

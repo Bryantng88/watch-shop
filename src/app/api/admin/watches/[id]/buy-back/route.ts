@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buyBackFromWatch } from "@/src/domains/watch/server";
+import { buyBackFromWatch } from "@/domains/watch/server/bridge";
 
 export async function POST(
     req: NextRequest,

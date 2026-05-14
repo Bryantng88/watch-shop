@@ -9,7 +9,6 @@ export async function GET(req: Request) {
 
   const items = await searchCustomerService(phone);
 
-  console.log('in ra test khach hang tu phone : ' + JSON.stringify(items))
 
 
   return NextResponse.json(items);
