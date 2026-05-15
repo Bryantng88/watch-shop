@@ -26,7 +26,7 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     subtotal: toNumberPrice(order.subtotal),
     currency: "VND",
     hasShipment: order.hasShipment,
-    itemCount: order._count?.OrderItem ?? 0,
+    itemCount: order._count?.orderItem ?? 0,
     notes: order.notes,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,

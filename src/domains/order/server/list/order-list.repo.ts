@@ -78,7 +78,7 @@ const orderListSelect = {
   hasShipment: true,
   createdAt: true,
   updatedAt: true,
-  _count: { select: { OrderItem: true } },
+  _count: { select: { orderItem: true } },
 } satisfies Prisma.OrderSelect;
 
 export async function listAdminOrdersRepo(
