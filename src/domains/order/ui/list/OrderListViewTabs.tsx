@@ -1,7 +1,8 @@
 "use client";
 
 import type { OrderListCounts, OrderViewKey } from "./types";
-import { cx, ORDER_LIST_VIEWS } from "./helpers";
+import { ORDER_LIST_VIEWS } from "./types";
+import { cn } from "@/lib/utils";
 
 type Props = {
   currentView: OrderViewKey;
@@ -25,7 +26,7 @@ export default function OrderListViewTabs({
               key={view.key}
               type="button"
               onClick={() => onViewChange(view.key)}
-              className={cx(
+              className={cn(
                 "relative inline-flex h-12 shrink-0 items-center whitespace-nowrap text-sm transition",
                 active
                   ? "font-semibold text-slate-950"
@@ -34,7 +35,7 @@ export default function OrderListViewTabs({
             >
               <span>{view.label}</span>
               <span
-                className={cx(
+                className={cn(
                   "ml-2 rounded-full px-2 py-0.5 text-[11px]",
                   active
                     ? "bg-slate-100 text-slate-700"

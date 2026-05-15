@@ -77,7 +77,7 @@ async function resolveProductItems(
     if (productStatus === "SOLD") throw new Error(`Sản phẩm đã SOLD: ${productId}`);
     if (productStatus === "CONSIGNED_TO") throw new Error(`Sản phẩm đang consign: ${productId}`);
 
-    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const variants = Array.isArray(product.productVariant) ? product.productVariant : [];
     const variant = strictActiveOnly
       ? variants.find((v) => String(v.availabilityStatus ?? "").toUpperCase() === "ACTIVE")
       : variants.find((v) => ["ACTIVE", "HIDDEN"].includes(String(v.availabilityStatus ?? "").toUpperCase())) ?? variants[0];
@@ -122,10 +122,10 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
     quickFlowType: raw.quickFlowType ?? OrderFlowType.STANDARD,
     reserve: raw.reserve
       ? {
-          type: raw.reserve.type,
-          amount: Number(raw.reserve.amount ?? 0),
-          expiresAt: raw.reserve.expiresAt ?? null,
-        }
+        type: raw.reserve.type,
+        amount: Number(raw.reserve.amount ?? 0),
+        expiresAt: raw.reserve.expiresAt ?? null,
+      }
       : null,
     items: (raw.items ?? []).map((item: any) => ({
       id: item.id,

@@ -8,11 +8,11 @@ import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '..
 import { CustomerCountOutputTypeArgsObjectSchema as CustomerCountOutputTypeArgsObjectSchema } from './CustomerCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
-  Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
-  User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
+  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
-  Order: z.union([z.boolean(), z.lazy(() => OrderFindManySchema)]).optional(),
-  ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
+  order: z.union([z.boolean(), z.lazy(() => OrderFindManySchema)]).optional(),
+  serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => CustomerCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const CustomerIncludeObjectSchema: z.ZodType<Prisma.CustomerInclude> = makeSchema() as unknown as z.ZodType<Prisma.CustomerInclude>;

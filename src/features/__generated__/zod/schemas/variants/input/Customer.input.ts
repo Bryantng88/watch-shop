@@ -13,11 +13,11 @@ export const CustomerInputSchema = z.object({
     updatedAt: z.date(),
     address: z.string().optional().nullable(),
     district: z.string().optional().nullable(),
-    Acquisition: z.array(z.unknown()),
-    User: z.unknown().optional().nullable(),
+    acquisition: z.array(z.unknown()),
+    user: z.unknown().optional().nullable(),
     Invoice: z.array(z.unknown()),
-    Order: z.array(z.unknown()),
-    ServiceRequest: z.array(z.unknown())
+    order: z.array(z.unknown()),
+    serviceRequest: z.array(z.unknown())
 }).strict();
 
 export type CustomerInputType = z.infer<typeof CustomerInputSchema>;

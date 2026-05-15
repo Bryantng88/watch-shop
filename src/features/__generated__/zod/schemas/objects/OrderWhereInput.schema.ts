@@ -60,9 +60,9 @@ const orderwhereinputSchema = z.object({
   quickFromProductId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   quickFlowType: z.union([z.lazy(() => EnumOrderFlowTypeFilterObjectSchema), OrderFlowTypeSchema]).optional(),
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
-  Customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
-  OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
-  Shipment: z.union([z.lazy(() => ShipmentNullableScalarRelationFilterObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema)]).optional()
+  customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
+  orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  shipment: z.union([z.lazy(() => ShipmentNullableScalarRelationFilterObjectSchema), z.lazy(() => ShipmentWhereInputObjectSchema)]).optional()
 }).strict();
 export const OrderWhereInputObjectSchema: z.ZodType<Prisma.OrderWhereInput> = orderwhereinputSchema as unknown as z.ZodType<Prisma.OrderWhereInput>;
 export const OrderWhereInputObjectZodSchema = orderwhereinputSchema;

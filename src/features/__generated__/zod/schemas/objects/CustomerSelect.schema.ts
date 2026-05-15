@@ -19,11 +19,11 @@ const makeSchema = () => z.object({
   updatedAt: z.boolean().optional(),
   address: z.boolean().optional(),
   district: z.boolean().optional(),
-  Acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
-  User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  acquisition: z.union([z.boolean(), z.lazy(() => AcquisitionFindManySchema)]).optional(),
+  user: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
-  Order: z.union([z.boolean(), z.lazy(() => OrderFindManySchema)]).optional(),
-  ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
+  order: z.union([z.boolean(), z.lazy(() => OrderFindManySchema)]).optional(),
+  serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => CustomerCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const CustomerSelectObjectSchema: z.ZodType<Prisma.CustomerSelect> = makeSchema() as unknown as z.ZodType<Prisma.CustomerSelect>;

@@ -34,7 +34,7 @@ export async function getProductsForOrderResolutionRepo(db: DB, productIds: stri
       primaryImageUrl: true,
       type: true,
       status: true,
-      variants: {
+      productVariant: {
         orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
         select: {
           id: true,

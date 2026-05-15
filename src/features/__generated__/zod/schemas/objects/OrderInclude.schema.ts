@@ -8,9 +8,9 @@ import { OrderCountOutputTypeArgsObjectSchema as OrderCountOutputTypeArgsObjectS
 
 const makeSchema = () => z.object({
   Invoice: z.union([z.boolean(), z.lazy(() => InvoiceFindManySchema)]).optional(),
-  Customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
-  Shipment: z.union([z.boolean(), z.lazy(() => ShipmentArgsObjectSchema)]).optional(),
+  customer: z.union([z.boolean(), z.lazy(() => CustomerArgsObjectSchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  shipment: z.union([z.boolean(), z.lazy(() => ShipmentArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrderCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrderIncludeObjectSchema: z.ZodType<Prisma.OrderInclude> = makeSchema() as unknown as z.ZodType<Prisma.OrderInclude>;

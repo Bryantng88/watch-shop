@@ -149,14 +149,14 @@ model Customer {
   city           String?
   userId         String?          @unique
   createdAt      DateTime         @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime         @updatedAt
   address        String?
   district       String?
-  Acquisition    Acquisition[]
-  User           User?            @relation(fields: [userId], references: [id])
+  acquisition    Acquisition[]
+  user           User?            @relation(fields: [userId], references: [id])
   Invoice        Invoice[]
-  Order          Order[]
-  ServiceRequest ServiceRequest[]
+  order          Order[]
+  serviceRequest ServiceRequest[]
 
   @@index([phone])
 }
@@ -346,7 +346,7 @@ model Order {
   paymentStatus         PaymentStatus           @default(UNPAID)
   paymentMethod         PaymentMethod?
   createdAt             DateTime                @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime                @updatedAt
   customerName          String?
   notes                 String?
   shipDistrict          String?
@@ -361,9 +361,9 @@ model Order {
   quickFromProductId    String?
   quickFlowType         OrderFlowType           @default(STANDARD)
   Invoice               Invoice[]
-  Customer              Customer?               @relation(fields: [customerId], references: [id])
-  OrderItem             OrderItem[]
-  Shipment              Shipment?
+  customer              Customer?               @relation(fields: [customerId], references: [id])
+  orderItem             OrderItem[]
+  shipment              Shipment?
 
   @@index([createdAt])
   @@index([customerId])
@@ -396,7 +396,7 @@ model OrderItem {
   linkedOrderItemId String?
   customerItemNote  String?
   createdFromFlow   OrderFlowType     @default(STANDARD)
-  updatedAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   AcquisitionItem   AcquisitionItem[]
   OrderItem         OrderItem?        @relation("OrderItemToOrderItem", fields: [linkedOrderItemId], references: [id], onUpdate: NoAction)
   other_OrderItem   OrderItem[]       @relation("OrderItemToOrderItem")

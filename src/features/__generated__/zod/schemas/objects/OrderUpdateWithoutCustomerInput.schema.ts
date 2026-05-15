@@ -53,8 +53,8 @@ const makeSchema = () => z.object({
   quickFromProductId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  Shipment: z.lazy(() => ShipmentUpdateOneWithoutOrderNestedInputObjectSchema).optional()
+  orderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
+  shipment: z.lazy(() => ShipmentUpdateOneWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUpdateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.OrderUpdateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUpdateWithoutCustomerInput>;
 export const OrderUpdateWithoutCustomerInputObjectZodSchema = makeSchema();

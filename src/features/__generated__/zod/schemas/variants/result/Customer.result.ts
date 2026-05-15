@@ -13,11 +13,11 @@ export const CustomerResultSchema = z.object({
     updatedAt: z.date(),
     address: z.string().nullable(),
     district: z.string().nullable(),
-    Acquisition: z.array(z.unknown()),
-    User: z.unknown().nullable(),
+    acquisition: z.array(z.unknown()),
+    user: z.unknown().nullable(),
     Invoice: z.array(z.unknown()),
-    Order: z.array(z.unknown()),
-    ServiceRequest: z.array(z.unknown())
+    order: z.array(z.unknown()),
+    serviceRequest: z.array(z.unknown())
 }).strict();
 
 export type CustomerResultType = z.infer<typeof CustomerResultSchema>;

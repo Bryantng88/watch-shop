@@ -3,8 +3,9 @@
 import Link from "next/link";
 
 import type { OrderListItem } from "./types";
-import { buildHref, cx, isOrderSelectable } from "./helpers";
+import { buildHref, isOrderSelectable } from "./helpers";
 import OrderListRow from "./OrderListRow";
+import { cn } from "@/lib/utils";
 
 type Props = {
   items: OrderListItem[];
@@ -84,7 +85,7 @@ export default function OrderListTable({
             {items.map((order) => (
               <OrderListRow
                 key={order.id}
-                order={order}
+                item={order}
                 checked={selectedIds.includes(order.id)}
                 onCheckedChange={(checked) => onToggleOne(order.id, checked)}
                 onView={onView}
@@ -118,7 +119,7 @@ export default function OrderListTable({
             href={buildHref(pathname, searchParams, {
               page: String(Math.max(1, page - 1)),
             })}
-            className={cx(
+            className={cn(
               "rounded-xl border border-slate-200 px-3 py-2",
               page <= 1 && "pointer-events-none opacity-40",
             )}
@@ -131,7 +132,7 @@ export default function OrderListTable({
             href={buildHref(pathname, searchParams, {
               page: String(Math.min(totalPages, page + 1)),
             })}
-            className={cx(
+            className={cn(
               "rounded-xl border border-slate-200 px-3 py-2",
               page >= totalPages && "pointer-events-none opacity-40",
             )}

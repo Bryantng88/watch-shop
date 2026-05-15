@@ -31,7 +31,6 @@ const makeSchema = () => z.object({
   serviceScope: ServiceScopeSchema.optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
-  updatedAt: z.coerce.date().optional(),
   AcquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutOrderItemInputObjectSchema),
   OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema).optional(),
   other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema),

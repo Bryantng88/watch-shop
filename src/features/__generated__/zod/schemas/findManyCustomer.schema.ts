@@ -21,11 +21,11 @@ export const CustomerFindManySelectSchema: z.ZodType<Prisma.CustomerSelect> = z.
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
     district: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    User: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    user: z.boolean().optional(),
     Invoice: z.boolean().optional(),
-    Order: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
+    order: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.CustomerSelect>;
 
@@ -41,11 +41,11 @@ export const CustomerFindManySelectZodSchema = z.object({
     updatedAt: z.boolean().optional(),
     address: z.boolean().optional(),
     district: z.boolean().optional(),
-    Acquisition: z.boolean().optional(),
-    User: z.boolean().optional(),
+    acquisition: z.boolean().optional(),
+    user: z.boolean().optional(),
     Invoice: z.boolean().optional(),
-    Order: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
+    order: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

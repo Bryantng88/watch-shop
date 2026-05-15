@@ -24,7 +24,7 @@ const makeSchema = () => z.object({
   paymentStatus: PaymentStatusSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   shipDistrict: z.string().optional().nullable(),
@@ -39,8 +39,8 @@ const makeSchema = () => z.object({
   quickFromProductId: z.string().optional().nullable(),
   quickFlowType: OrderFlowTypeSchema.optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema).optional(),
-  Customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
-  Shipment: z.lazy(() => ShipmentCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
+  shipment: z.lazy(() => ShipmentCreateNestedOneWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderCreateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutOrderItemInput>;
 export const OrderCreateWithoutOrderItemInputObjectZodSchema = makeSchema();

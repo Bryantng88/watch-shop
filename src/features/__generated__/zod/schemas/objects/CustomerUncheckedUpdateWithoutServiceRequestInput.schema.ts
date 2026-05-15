@@ -19,9 +19,9 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   address: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   district: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  Acquisition: z.lazy(() => AcquisitionUncheckedUpdateManyWithoutCustomerNestedInputObjectSchema).optional(),
+  acquisition: z.lazy(() => AcquisitionUncheckedUpdateManyWithoutCustomerNestedInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutCustomerNestedInputObjectSchema).optional(),
-  Order: z.lazy(() => OrderUncheckedUpdateManyWithoutCustomerNestedInputObjectSchema).optional()
+  order: z.lazy(() => OrderUncheckedUpdateManyWithoutCustomerNestedInputObjectSchema).optional()
 }).strict();
 export const CustomerUncheckedUpdateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.CustomerUncheckedUpdateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerUncheckedUpdateWithoutServiceRequestInput>;
 export const CustomerUncheckedUpdateWithoutServiceRequestInputObjectZodSchema = makeSchema();

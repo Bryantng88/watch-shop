@@ -13,13 +13,13 @@ const makeSchema = () => z.object({
   ward: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
   address: z.string().optional().nullable(),
   district: z.string().optional().nullable(),
-  Acquisition: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
+  acquisition: z.lazy(() => AcquisitionUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
-  Order: z.lazy(() => OrderUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional()
+  order: z.lazy(() => OrderUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutCustomerInputObjectSchema).optional()
 }).strict();
 export const CustomerUncheckedCreateWithoutUserInputObjectSchema: z.ZodType<Prisma.CustomerUncheckedCreateWithoutUserInput> = makeSchema() as unknown as z.ZodType<Prisma.CustomerUncheckedCreateWithoutUserInput>;
 export const CustomerUncheckedCreateWithoutUserInputObjectZodSchema = makeSchema();

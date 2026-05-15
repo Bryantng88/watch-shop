@@ -29,9 +29,9 @@ export const OrderFindManyResultSchema = z.object({
   quickFromProductId: z.string().optional(),
   quickFlowType: z.unknown(),
   Invoice: z.array(z.unknown()),
-  Customer: z.unknown().optional(),
-  OrderItem: z.array(z.unknown()),
-  Shipment: z.unknown().optional()
+  customer: z.unknown().optional(),
+  orderItem: z.array(z.unknown()),
+  shipment: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

@@ -37,9 +37,9 @@ export const OrderResultSchema = z.object({
     quickFromProductId: z.string().nullable(),
     quickFlowType: OrderFlowTypeSchema,
     Invoice: z.array(z.unknown()),
-    Customer: z.unknown().nullable(),
-    OrderItem: z.array(z.unknown()),
-    Shipment: z.unknown().nullable()
+    customer: z.unknown().nullable(),
+    orderItem: z.array(z.unknown()),
+    shipment: z.unknown().nullable()
 }).strict();
 
 export type OrderResultType = z.infer<typeof OrderResultSchema>;

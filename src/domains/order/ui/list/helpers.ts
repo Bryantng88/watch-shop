@@ -1,85 +1,139 @@
-import type { OrderListCounts, OrderListItem, OrderListSort, OrderViewKey } from "./types";
-import { cx, fmtDate, fmtMoney, sourceLabel, verificationLabel } from "../order-ui.helpers";
+import type { OrderListCounts, OrderListItem, OrderViewKey } from "./types";
 
-export { cx, fmtDate, fmtMoney, sourceLabel, verificationLabel };
-
-export const ORDER_LIST_VIEWS: Array<{ key: OrderViewKey; label: string }> = [
-  { key: "all", label: "Tất cả" },
-  { key: "web_pending", label: "Chờ xác minh" },
-  { key: "need_action", label: "Cần xử lý" },
-  { key: "processing", label: "Đang xử lý" },
-  { key: "delivered", label: "Đã giao" },
-  { key: "completed", label: "Hoàn tất" },
-  { key: "cancelled", label: "Đã hủy" },
+export const ORDER_SORT_OPTIONS = [
+  { label: "Cập nhật ↓", value: "updatedDesc" },
+  { label: "Cập nhật ↑", value: "updatedAsc" },
+  { label: "Tổng tiền ↓", value: "totalDesc" },
+  { label: "Tổng tiền ↑", value: "totalAsc" },
 ];
 
-export const ORDER_SORT_OPTIONS: Array<{ value: OrderListSort; label: string }> = [
-  { value: "updatedDesc", label: "Cập nhật ↓" },
-  { value: "updatedAsc", label: "Cập nhật ↑" },
-  { value: "createdDesc", label: "Tạo mới ↓" },
-  { value: "createdAsc", label: "Tạo mới ↑" },
+export const ORDER_PAGE_SIZE_OPTIONS = [
+  { label: "20", value: "20" },
+  { label: "50", value: "50" },
+  { label: "100", value: "100" },
 ];
-
-export const ORDER_PAGE_SIZE_OPTIONS = ["10", "20", "50"].map((value) => ({
-  value,
-  label: value,
-}));
 
 export function normalizeOrderView(value?: string | null): OrderViewKey {
-  const found = ORDER_LIST_VIEWS.find((view) => view.key === value);
-  return found?.key ?? "all";
+  const v = String(value ?? "all").trim();
+
+  const allowed: OrderViewKey[] = [
+    "all",
+    "pending",
+    "need_action",
+    "processing",
+    "delivered",
+    "completed",
+    "cancelled",
+  ];
+
+  return allowed.includes(v as OrderViewKey) ? (v as OrderViewKey) : "all";
 }
 
-export function normalizeOrderSort(value?: string | null): OrderListSort {
-  return ORDER_SORT_OPTIONS.some((item) => item.value === value)
-    ? (value as OrderListSort)
-    : "updatedDesc";
+export function normalizeOrderSort(value?: string | null, fallback = "updatedDesc") {
+  const v = String(value ?? "").trim();
+  return v || fallback;
+}
+
+export function isOrderSelectable(_item: OrderListItem) {
+  return true;
+}
+
+export function buildCounts(input: {
+  counts?: OrderListCounts;
+  currentView: OrderViewKey;
+  total: number;
+}): OrderListCounts {
+  return {
+    all: input.total,
+    ...(input.counts ?? {}),
+  };
+}
+
+export function formatMoney(value?: number | string | null) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "-";
+
+  return `${new Intl.NumberFormat("vi-VN").format(n)} VND`;
+}
+
+export function formatDateTime(value?: string | Date | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+export function formatOrderSource(item: OrderListItem) {
+  const source = String(item.source ?? "").toUpperCase();
+
+  if (item.sourceLabel) return item.sourceLabel;
+  if (source === "WEB") return "Web";
+  if (source === "WATCH_QUICK_ORDER") return "Tạo từ watch";
+  if (source === "ADMIN" || source === "INTERNAL") return "Nội bộ";
+
+  return "Nội bộ";
+}
+
+export function sourceTone(item: OrderListItem) {
+  const source = String(item.source ?? "").toUpperCase();
+
+  if (source === "WEB") {
+    return "bg-blue-50 text-blue-700 ring-blue-200";
+  }
+
+  if (source === "WATCH_QUICK_ORDER") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+
+  return "bg-slate-100 text-slate-700 ring-slate-200";
+}
+
+export function orderStatusLabel(status?: string | null) {
+  const s = String(status ?? "").toUpperCase();
+
+  if (s === "CONFIRMED") return "Đã chốt đơn";
+  if (s === "PENDING") return "Chờ xác minh";
+  if (s === "PROCESSING") return "Đang xử lý";
+  if (s === "DELIVERED") return "Đã giao";
+  if (s === "COMPLETED") return "Hoàn tất";
+  if (s === "CANCELLED") return "Đã huỷ";
+
+  return status || "-";
+}
+
+export function orderStatusTone(status?: string | null) {
+  const s = String(status ?? "").toUpperCase();
+
+  if (s === "CONFIRMED") return "bg-rose-50 text-rose-700 ring-rose-200";
+  if (s === "COMPLETED" || s === "DELIVERED") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+  if (s === "PROCESSING") return "bg-blue-50 text-blue-700 ring-blue-200";
+  if (s === "CANCELLED") return "bg-slate-100 text-slate-500 ring-slate-200";
+
+  return "bg-amber-50 text-amber-700 ring-amber-200";
 }
 
 export function buildHref(
   pathname: string,
   sp: URLSearchParams,
-  patch: Record<string, string | null>,
+  patch: Record<string, string | null | undefined>,
 ) {
   const next = new URLSearchParams(sp.toString());
 
   Object.entries(patch).forEach(([key, value]) => {
-    if (value == null || value === "") next.delete(key);
+    if (!value) next.delete(key);
     else next.set(key, value);
   });
 
   const qs = next.toString();
   return qs ? `${pathname}?${qs}` : pathname;
-}
-
-export function buildCounts(input: {
-  counts?: Partial<OrderListCounts>;
-  currentView: OrderViewKey;
-  total: number;
-}): OrderListCounts {
-  return {
-    all: input.counts?.all ?? (input.currentView === "all" ? input.total : 0),
-    web_pending:
-      input.counts?.web_pending ??
-      (input.currentView === "web_pending" ? input.total : 0),
-    need_action:
-      input.counts?.need_action ??
-      (input.currentView === "need_action" ? input.total : 0),
-    processing:
-      input.counts?.processing ??
-      (input.currentView === "processing" ? input.total : 0),
-    delivered:
-      input.counts?.delivered ??
-      (input.currentView === "delivered" ? input.total : 0),
-    completed:
-      input.counts?.completed ??
-      (input.currentView === "completed" ? input.total : 0),
-    cancelled:
-      input.counts?.cancelled ??
-      (input.currentView === "cancelled" ? input.total : 0),
-  };
-}
-
-export function isOrderSelectable(order: OrderListItem) {
-  return order.status === "DRAFT" || order.status === "RESERVED";
 }

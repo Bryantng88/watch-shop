@@ -11,11 +11,11 @@ export const CustomerAggregateResultSchema = z.object({  _count: z.object({
     updatedAt: z.number(),
     address: z.number(),
     district: z.number(),
-    Acquisition: z.number(),
-    User: z.number(),
+    acquisition: z.number(),
+    user: z.number(),
     Invoice: z.number(),
-    Order: z.number(),
-    ServiceRequest: z.number()
+    order: z.number(),
+    serviceRequest: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

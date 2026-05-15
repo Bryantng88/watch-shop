@@ -28,9 +28,9 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     quickFromProductId: z.number(),
     quickFlowType: z.number(),
     Invoice: z.number(),
-    Customer: z.number(),
-    OrderItem: z.number(),
-    Shipment: z.number()
+    customer: z.number(),
+    orderItem: z.number(),
+    shipment: z.number()
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),

@@ -11,9 +11,9 @@ export const CustomerUpdateResultSchema = z.nullable(z.object({
   updatedAt: z.date(),
   address: z.string().optional(),
   district: z.string().optional(),
-  Acquisition: z.array(z.unknown()),
-  User: z.unknown().optional(),
+  acquisition: z.array(z.unknown()),
+  user: z.unknown().optional(),
   Invoice: z.array(z.unknown()),
-  Order: z.array(z.unknown()),
-  ServiceRequest: z.array(z.unknown())
+  order: z.array(z.unknown()),
+  serviceRequest: z.array(z.unknown())
 }));
