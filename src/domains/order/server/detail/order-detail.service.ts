@@ -6,10 +6,18 @@ export async function getAdminOrderDetail(id: string) {
   const row = await getOrderDetailRepo(prisma, id);
   if (!row) throw new Error("Order không tồn tại");
 
+  const subtotal = toNumberPrice(row.subtotal);
+  const shippingFee = toNumberPrice((row as any).shippingFee);
+  const depositPaid = toNumberPrice(row.depositPaid);
+
   return toPlain({
     ...row,
     currency: "VND",
-    items: row.OrderItem.map((item) => ({
+    subtotal,
+    shippingFee,
+    totalAmount: subtotal + shippingFee,
+    remainingAmount: Math.max(0, subtotal + shippingFee - depositPaid),
+    items: row.orderItem.map((item) => ({
       ...item,
       listPrice: toNumberPrice(item.listPrice),
       unitPriceAgreed: toNumberPrice(item.unitPriceAgreed),
@@ -29,12 +37,12 @@ export async function getOrderDraftForEdit(orderId: string) {
     ...row,
     reserve: row.reserveType
       ? {
-          type: row.reserveType,
-          amount: toNumberPrice(row.depositRequired),
-          expiresAt: row.reserveUntil,
-        }
+        type: row.reserveType,
+        amount: toNumberPrice(row.depositRequired),
+        expiresAt: row.reserveUntil,
+      }
       : null,
-    items: row.OrderItem.map((item) => ({
+    items: row.orderItem.map((item) => ({
       ...item,
       listPrice: toNumberPrice(item.listPrice),
       unitPriceAgreed: toNumberPrice(item.unitPriceAgreed),

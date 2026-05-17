@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrderWithItems } from "@/app/(admin)/admin/orders/_servers/order.service";
+import { createOrderWithItems } from "@/domains/order/server";
+
 
 export async function POST(req: NextRequest) {
     let body: any;

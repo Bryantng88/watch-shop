@@ -11,12 +11,19 @@ import type {
 
 export type OrderViewKey =
   | "all"
-  | "web_pending"
+  | "pending"
   | "need_action"
   | "processing"
-  | "delivered"
   | "completed"
   | "cancelled";
+
+export type OrderProcessingSubFilter =
+  | ""
+  | "awaiting_payment"
+  | "remaining_payment"
+  | "awaiting_shipment"
+  | "shipping"
+  | "delivered_remaining";
 
 export type OrderListSort =
   | "updatedDesc"
@@ -27,6 +34,7 @@ export type OrderListSort =
 export type OrderSearchInput = {
   q?: string;
   view?: OrderViewKey;
+  subFilter?: OrderProcessingSubFilter;
   sort?: OrderListSort;
   page?: number;
   pageSize?: number;

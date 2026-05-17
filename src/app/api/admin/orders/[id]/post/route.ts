@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { postOneOrder } from "@/app/(admin)/admin/orders/_servers/order.service";
+import { postOneOrder } from "@/domains/order/server";
 
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     try {

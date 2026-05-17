@@ -1,4 +1,3 @@
-// src/domains/order/client/OrderListClient.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -7,9 +6,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { PaymentCompleteModal, PaymentCreateModal } from "@/domains/payment/ui";
 import {
   OrderListBulkActions,
   OrderListFilters,
+  OrderListSubFilters,
   OrderListTable,
   OrderListToolbar,
   OrderListViewTabs,
@@ -19,30 +20,26 @@ import type {
   OrderListFiltersValue,
   OrderListItem,
   OrderListPageProps,
+  OrderProcessingSubFilter,
   OrderViewKey,
 } from "../ui/list";
 import {
   buildCounts,
   buildHref,
   isOrderSelectable,
+  normalizeOrderProcessingSubFilter,
   normalizeOrderSort,
   normalizeOrderView,
 } from "../ui/list/helpers";
 
 type Props = OrderListPageProps;
 
-function firstRaw(
-  value: string | string[] | undefined,
-  fallback = "",
-): string {
+function firstRaw(value: string | string[] | undefined, fallback = ""): string {
   if (Array.isArray(value)) return String(value[0] ?? fallback);
   return String(value ?? fallback);
 }
 
-function buildInitialFilters(input: {
-  rawSearchParams: Props["rawSearchParams"];
-  pageSize: number;
-}): OrderListFiltersValue {
+function buildInitialFilters(input: { rawSearchParams: Props["rawSearchParams"]; pageSize: number }): OrderListFiltersValue {
   return {
     q: firstRaw(input.rawSearchParams.q),
     sort: normalizeOrderSort(firstRaw(input.rawSearchParams.sort, "updatedDesc")),
@@ -67,170 +64,284 @@ export default function OrderListClient({
   const progress = useAppProgress();
 
   const currentView = normalizeOrderView(sp.get("view"));
+  const currentSubFilter = normalizeOrderProcessingSubFilter(sp.get("subFilter"));
 
-  const [filters, setFilters] = useState<OrderListFiltersValue>(() =>
-    buildInitialFilters({ rawSearchParams, pageSize }),
-  );
-
+  const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [paymentCreateOrder, setPaymentCreateOrder] = useState<OrderListItem | null>(null);
+  const [paymentCompleteOrder, setPaymentCompleteOrder] = useState<OrderListItem | null>(null);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   const countsByView: OrderListCounts = useMemo(
     () => buildCounts({ counts, currentView, total }),
     [counts, currentView, total],
   );
 
-  const selectableIds = useMemo(
-    () => items.filter(isOrderSelectable).map((item) => item.id),
-    [items],
-  );
+  const selectableIds = useMemo(() => items.filter(isOrderSelectable).map((item) => item.id), [items]);
+
+  function navigateWithLoading(patch: Record<string, string | null | undefined>) {
+    progress.show({ title: "Đang tải đơn hàng", message: "Hệ thống đang cập nhật danh sách." });
+    router.push(buildHref(pathname, sp, patch));
+    window.setTimeout(() => progress.hide(), 700);
+  }
 
   function setView(view: OrderViewKey) {
     setSelectedIds([]);
-
-    progress.show({
-      title: "Đang lọc đơn hàng",
-      message: "Hệ thống đang tải danh sách theo trạng thái.",
+    navigateWithLoading({
+      view: view === "all" ? null : view,
+      subFilter: null,
+      page: "1",
+      pageSize: String(pageSize),
     });
+  }
 
-    router.push(
-      buildHref(pathname, sp, {
-        view: view === "all" ? null : view,
-        page: "1",
-        pageSize: String(pageSize),
-      }),
-    );
-
-    window.setTimeout(() => progress.hide(), 700);
+  function setSubFilter(subFilter: OrderProcessingSubFilter) {
+    setSelectedIds([]);
+    navigateWithLoading({
+      view: "processing",
+      subFilter: subFilter || null,
+      page: "1",
+      pageSize: String(pageSize),
+    });
   }
 
   function applyFilters() {
     setSelectedIds([]);
-
-    progress.show({
-      title: "Đang lọc đơn hàng",
-      message: "Hệ thống đang áp dụng bộ lọc.",
+    navigateWithLoading({
+      q: filters.q.trim() || null,
+      sort: filters.sort,
+      pageSize: filters.pageSize,
+      page: "1",
     });
-
-    router.push(
-      buildHref(pathname, sp, {
-        q: filters.q.trim() || null,
-        sort: filters.sort,
-        pageSize: filters.pageSize,
-        page: "1",
-      }),
-    );
-
-    window.setTimeout(() => progress.hide(), 700);
   }
 
   function clearFilters() {
     setSelectedIds([]);
     setFilters({ q: "", sort: "updatedDesc", pageSize: String(pageSize) });
-
-    progress.show({
-      title: "Đang xóa lọc",
-      message: "Hệ thống đang tải lại danh sách đơn hàng.",
-    });
-
-    router.push(
-      buildHref(pathname, sp, {
-        q: null,
-        sort: null,
-        pageSize: null,
-        page: "1",
-      }),
-    );
-
-    window.setTimeout(() => progress.hide(), 700);
+    navigateWithLoading({ q: null, sort: null, pageSize: null, page: "1" });
   }
 
   function toggleOne(id: string, checked: boolean) {
-    setSelectedIds((prev) =>
-      checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id),
-    );
+    setSelectedIds((prev) => (checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id)));
   }
 
   function toggleAll(checked: boolean) {
     setSelectedIds(checked ? selectableIds : []);
   }
 
-  async function bulkPost() {
-    if (!selectedIds.length) return;
-
+  async function runOrderAction(input: {
+    row: OrderListItem;
+    action: "post" | "mark-shipment-delivered" | "cancel";
+    title: string;
+    message: string;
+    confirmText: string;
+    tone?: "warning" | "danger" | "success";
+  }) {
     const ok = await dialog.confirm({
-      tone: "warning",
-      title: "Duyệt các đơn đã chọn?",
-      message: (
-        <>
-          Sau khi duyệt, watch trong các đơn này sẽ được sync sang trạng thái{" "}
-          <b>SOLD</b>.
-        </>
-      ),
-      confirmText: "Duyệt đơn",
+      title: input.title,
+      message: input.message,
+      confirmText: input.confirmText,
+      cancelText: "Hủy",
+      tone: input.tone ?? "warning",
     });
 
     if (!ok) return;
 
     progress.show({
-      title: "Đang duyệt đơn",
-      message: "Đang đồng bộ Order → Watch.",
+      title: input.title,
+      message: "Hệ thống đang cập nhật đơn hàng.",
     });
 
     try {
-      const res = await fetch("/api/admin/orders/bulk-post", {
+      const res = await fetch(`/api/admin/orders/${input.row.id}/${input.action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderIds: selectedIds }),
       });
 
-      if (!res.ok) {
-        throw new Error(await res.text().catch(() => "Duyệt đơn thất bại"));
-      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Không thể cập nhật đơn hàng.");
 
       notify.success({
-        title: "Đã duyệt đơn",
-        message: "Order đã được xử lý và đồng bộ tồn kho watch.",
+        title: "Đã cập nhật đơn hàng",
+        message: json?.message || "Thao tác đã hoàn tất.",
       });
 
-      setSelectedIds([]);
       router.refresh();
     } catch (error: any) {
       notify.error({
-        title: "Không thể duyệt đơn",
-        message: error?.message || "Thao tác thất bại",
+        title: "Không thể cập nhật đơn hàng",
+        message: error?.message || "Có lỗi xảy ra.",
       });
     } finally {
       progress.hide();
     }
   }
 
+  function handlePost(row: OrderListItem) {
+    return runOrderAction({
+      row,
+      action: "post",
+      title: "Post đơn hàng?",
+      message: "Đơn hàng sẽ bắt đầu vận hành. Hệ thống sẽ tạo payment, shipment và chuyển watch sang HOLD nếu có.",
+      confirmText: "Post đơn",
+      tone: "success",
+    });
+  }
+
+  function handleCreatePayment(row: OrderListItem) {
+    setPaymentCreateOrder(row);
+  }
+
+  function handleMarkPaymentPaid(row: OrderListItem) {
+    setPaymentCompleteOrder(row);
+  }
+
+  function handleMarkShipmentDelivered(row: OrderListItem) {
+    return runOrderAction({
+      row,
+      action: "mark-shipment-delivered",
+      title: "Đánh dấu đã giao hàng?",
+      message:
+        "Shipment sẽ được đánh dấu đã giao. Nếu đơn có COD, payment COD sẽ chuyển sang trạng thái đã thu bởi đơn vị vận chuyển / chờ đối soát. Shop vẫn cần bấm Hoàn tất payment khi thật sự nhận tiền.",
+      confirmText: "Đã giao",
+      tone: "success",
+    });
+  }
+
+  function handleCancel(row: OrderListItem) {
+    return runOrderAction({
+      row,
+      action: "cancel",
+      title: "Hủy đơn hàng?",
+      message: "Đơn hàng sẽ bị hủy. Nếu watch đang HOLD bởi đơn này, hệ thống sẽ trả watch về trạng thái trước đó.",
+      confirmText: "Hủy đơn",
+      tone: "danger",
+    });
+  }
+
+  async function postOrders(orderIds: string[]) {
+    if (!orderIds.length) return;
+
+    const ok = await dialog.confirm({
+      tone: "warning",
+      title: orderIds.length > 1 ? "Post các đơn đã chọn?" : "Post đơn hàng?",
+      message: "Khi post, hệ thống sẽ tạo payment/shipment vận hành và chuyển watch liên quan sang HOLD.",
+      confirmText: "Post đơn",
+    });
+
+    if (!ok) return;
+
+    progress.show({ title: "Đang post đơn", message: "Đang tạo payment/shipment và đồng bộ watch." });
+
+    try {
+      const res = await fetch(orderIds.length > 1 ? "/api/admin/orders/bulk-post" : `/api/admin/orders/${orderIds[0]}/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: orderIds.length > 1 ? JSON.stringify({ orderIds }) : undefined,
+      });
+
+      if (!res.ok) throw new Error(await res.text().catch(() => "Post đơn thất bại"));
+
+      notify.success({ title: "Đã post đơn", message: "Order đã vào luồng vận hành." });
+      setSelectedIds([]);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({ title: "Không thể post đơn", message: error?.message || "Thao tác thất bại" });
+    } finally {
+      progress.hide();
+    }
+  }
+
+  async function createPayment(payload: {
+    ownerType: "ORDER";
+    ownerId: string;
+    amount: number;
+    method: string;
+    note?: string | null;
+    markPaidNow: boolean;
+  }) {
+    setPaymentSubmitting(true);
+    progress.show({ title: "Đang tạo payment", message: "Payment domain đang ghi nhận khoản cần thu." });
+
+    try {
+      const res = await fetch(`/api/admin/orders/${payload.ownerId}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Tạo payment thất bại.");
+
+      notify.success({
+        title: payload.markPaidNow ? "Đã tạo và hoàn tất payment" : "Đã tạo payment",
+        message: "Danh sách đơn hàng sẽ được cập nhật.",
+      });
+
+      setPaymentCreateOrder(null);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({ title: "Không thể tạo payment", message: error?.message || "Thao tác thất bại." });
+    } finally {
+      progress.hide();
+      setPaymentSubmitting(false);
+    }
+  }
+
+  async function completePayment(payload: { paymentId: string; reference?: string | null; note?: string | null }) {
+    setPaymentSubmitting(true);
+    progress.show({ title: "Đang hoàn tất payment", message: "Payment domain đang xác nhận shop đã nhận tiền." });
+
+    try {
+      const res = await fetch(`/api/admin/payments/${payload.paymentId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Hoàn tất payment thất bại.");
+
+      notify.success({ title: "Đã hoàn tất payment", message: "Order đã được tính lại trạng thái thanh toán." });
+      setPaymentCompleteOrder(null);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({ title: "Không thể hoàn tất payment", message: error?.message || "Thao tác thất bại." });
+    } finally {
+      progress.hide();
+      setPaymentSubmitting(false);
+    }
+  }
+
+  function handleView(row: OrderListItem) {
+    router.push(`/admin/orders/${row.id}`);
+  }
+
+  function handleEdit(row: OrderListItem) {
+    router.push(`/admin/orders/${row.id}/edit`);
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6">
       <OrderListToolbar selectedCount={selectedIds.length} />
 
-      <OrderListViewTabs
+      <OrderListViewTabs currentView={currentView} counts={countsByView} onViewChange={setView} />
+
+      <OrderListSubFilters
         currentView={currentView}
+        currentSubFilter={currentSubFilter}
         counts={countsByView}
-        onViewChange={setView}
+        onChange={setSubFilter}
       />
 
       <OrderListFilters
         filters={filters}
-        onChange={(patch) =>
-          setFilters((prev) => ({
-            ...prev,
-            ...patch,
-          }))
-        }
+        onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
         onApply={applyFilters}
         onClear={clearFilters}
       />
 
-      <OrderListBulkActions
-        selectedCount={selectedIds.length}
-        onBulkPost={bulkPost}
-        onClearSelection={() => setSelectedIds([])}
-      />
+      <OrderListBulkActions selectedCount={selectedIds.length} onBulkPost={() => postOrders(selectedIds)} onClearSelection={() => setSelectedIds([])} />
 
       <OrderListTable
         items={items}
@@ -242,22 +353,29 @@ export default function OrderListClient({
         selectedIds={selectedIds}
         onToggleOne={toggleOne}
         onToggleAll={toggleAll}
-        onView={(row: OrderListItem) => {
-          progress.show({
-            title: "Đang mở đơn hàng",
-            message: "Hệ thống đang tải chi tiết đơn.",
-          });
-          router.push(`/admin/orders/${row.id}`);
-          window.setTimeout(() => progress.hide(), 1000);
-        }}
-        onEdit={(row: OrderListItem) => {
-          progress.show({
-            title: "Đang mở chỉnh sửa",
-            message: "Hệ thống đang tải form đơn hàng.",
-          });
-          router.push(`/admin/orders/${row.id}/edit`);
-          window.setTimeout(() => progress.hide(), 1000);
-        }}
+        onView={handleView}
+        onEdit={handleEdit}
+        onPost={handlePost}
+        onCreatePayment={handleCreatePayment}
+        onMarkPaymentPaid={handleMarkPaymentPaid}
+        onMarkShipmentDelivered={handleMarkShipmentDelivered}
+        onCancel={handleCancel}
+      />
+
+      <PaymentCreateModal
+        open={Boolean(paymentCreateOrder)}
+        order={paymentCreateOrder}
+        submitting={paymentSubmitting}
+        onClose={() => setPaymentCreateOrder(null)}
+        onSubmit={createPayment}
+      />
+
+      <PaymentCompleteModal
+        open={Boolean(paymentCompleteOrder)}
+        order={paymentCompleteOrder}
+        submitting={paymentSubmitting}
+        onClose={() => setPaymentCompleteOrder(null)}
+        onSubmit={completePayment}
       />
     </div>
   );

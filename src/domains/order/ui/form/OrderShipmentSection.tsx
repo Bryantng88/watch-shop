@@ -1,8 +1,10 @@
+// order/ui/form/OrderShipmentSection.tsx
+
 "use client";
 
-import { Truck } from "lucide-react";
+import { Plus, Truck, X } from "lucide-react";
 
-import { Input, Toggle } from "@/domains/shared/ui/form/fields";
+import { Button, Input } from "@/domains/shared/ui/form/fields";
 import { SectionCard } from "@/domains/shared/ui/surface/card";
 
 import OrderFormField from "./OrderFormField";
@@ -23,14 +25,28 @@ export default function OrderShipmentSection({
         <SectionCard
             icon={<Truck className="h-5 w-5" />}
             title="Giao hàng"
-            subtitle="Bật khi đơn có vận chuyển."
+            subtitle={
+                values.hasShipment
+                    ? "Đơn có vận chuyển."
+                    : "Bật khi đơn cần giao hàng."
+            }
         >
             <div className="space-y-4">
-                <Toggle
-                    checked={values.hasShipment}
-                    onChange={(next) => onChange({ hasShipment: next })}
-                    label="Có giao hàng"
-                />
+                <div className="flex justify-end">
+                    <Button
+                        type="button"
+                        variant={values.hasShipment ? "outline" : "default"}
+                        onClick={() => onChange({ hasShipment: !values.hasShipment })}
+                        disabled={disabled}
+                    >
+                        {values.hasShipment ? (
+                            <X className="mr-2 h-4 w-4" />
+                        ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                        )}
+                        {values.hasShipment ? "Bỏ giao hàng" : "Có giao hàng"}
+                    </Button>
+                </div>
 
                 {values.hasShipment ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

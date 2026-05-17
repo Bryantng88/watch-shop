@@ -9,12 +9,11 @@ import type {
 export const PAYMENT_METHOD_OPTIONS = [
     { value: "BANK_TRANSFER", label: "Chuyển khoản" },
     { value: "CASH", label: "Tiền mặt" },
-    { value: "COD", label: "COD" },
+    { value: "COD", label: "COD - thu phần còn lại khi giao hàng" },
 ];
 
 export const RESERVE_TYPE_OPTIONS = [
-    { value: "DEPOSIT", label: "Cọc giữ hàng" },
-    { value: "COD", label: "COD" },
+    { value: "DEPOSIT", label: "Có đặt cọc" },
 ];
 
 export function numberValue(value: string) {
@@ -43,7 +42,7 @@ export function normalizeInitialItems(
         variantId: it.variantId ?? null,
         title: it.title ?? "",
         sku: it.sku ?? null,
-        quantity: Number(it.quantity ?? 1),
+        quantity: it.createdFromFlow === "QUICK_ORDER" || it.source === "WATCH_QUICK_ORDER" ? 1 : Number(it.quantity ?? 1),
         listPrice: Number(it.listPrice ?? it.unitPriceAgreed ?? 0),
         unitPriceAgreed: Number(it.unitPriceAgreed ?? it.listPrice ?? 0),
         img: it.img ?? null,
@@ -58,10 +57,13 @@ export function normalizeInitialItems(
     }));
 }
 
+// order/ui/form/helpers.ts
+
 export function buildInitialOrderFormValues(
     initialData?: OrderFormInitialData | null,
 ): OrderFormValues {
     return {
+        customerId: (initialData as any)?.customerId ?? null,
         customerName: initialData?.customerName ?? "",
         shipPhone: initialData?.shipPhone ?? "",
 
@@ -81,6 +83,7 @@ export function buildInitialOrderFormValues(
         items: normalizeInitialItems(initialData),
     };
 }
+
 
 export function createProductFormItem(
     product: ProductSearchItem | QuickOrderProduct,
@@ -128,10 +131,12 @@ export function buildOrderPayload(input: {
     quickMode: boolean;
     quickProductId?: string | null;
     status?: string | null;
+    submitAs?: "DRAFT" | "POSTED";
 }) {
     const values = input.values;
 
     return {
+        customerId: values.customerId ?? null,
         customerName: values.customerName.trim(),
         shipPhone: values.shipPhone.trim(),
         hasShipment: values.hasShipment,
@@ -141,15 +146,15 @@ export function buildOrderPayload(input: {
         shipWard: values.shipWard.trim(),
         paymentMethod: values.paymentMethod,
         notes: values.notes.trim() || null,
-        status: input.status ?? "DRAFT",
+        status: input.submitAs ?? input.status ?? "DRAFT",
         reserve: values.reserveType
             ? {
-                  type: values.reserveType,
-                  amount: Number(values.reserveAmount || 0),
-                  expiresAt: values.reserveExpiresAt
-                      ? new Date(values.reserveExpiresAt).toISOString()
-                      : null,
-              }
+                type: values.reserveType,
+                amount: Number(values.reserveAmount || 0),
+                expiresAt: values.reserveExpiresAt
+                    ? new Date(values.reserveExpiresAt).toISOString()
+                    : null,
+            }
             : null,
         quickFromProductId: input.quickMode ? input.quickProductId ?? null : null,
         quickFlowType: input.quickMode ? "QUICK_ORDER" : "STANDARD",
@@ -159,7 +164,7 @@ export function buildOrderPayload(input: {
             productId: item.productId ?? null,
             variantId: item.variantId ?? null,
             title: item.title,
-            quantity: Number(item.quantity || 1),
+            quantity: item.source === "WATCH_QUICK_ORDER" || input.quickMode ? 1 : Number(item.quantity || 1),
             listPrice: Number(item.listPrice || 0),
             unitPriceAgreed: Number(item.unitPriceAgreed || 0),
             img: item.img ?? null,
@@ -192,8 +197,10 @@ export function validateOrderForm(values: OrderFormValues) {
         return "Vui lòng thêm ít nhất một sản phẩm hoặc dịch vụ.";
     }
 
-    if (values.hasShipment && !values.shipCity.trim()) {
-        return "Vui lòng nhập tỉnh/thành phố khi có giao hàng.";
+    if (values.hasShipment) {
+        if (!values.shipPhone.trim()) return "Vui lòng nhập số điện thoại giao hàng.";
+        if (!values.shipAddress.trim()) return "Vui lòng nhập địa chỉ giao hàng.";
+        if (!values.shipCity.trim()) return "Vui lòng nhập tỉnh/thành phố khi có giao hàng.";
     }
 
     return null;

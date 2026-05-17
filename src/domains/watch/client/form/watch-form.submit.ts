@@ -3,7 +3,7 @@ import type {
     UpdateWatchCoreInput,
     UpdateWatchPricingInput,
     UpsertWatchSpecInput,
-} from "../server";
+} from "../../server";
 import type { WatchFormValues } from "./watch-form.types";
 
 function nullable(v: string) {

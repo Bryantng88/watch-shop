@@ -6,3 +6,4 @@ export { default as OrderListTable } from "./OrderListTable";
 export { default as OrderListRow } from "./OrderListRow";
 export * from "./types";
 export * from "./helpers";
+export { default as OrderListSubFilters } from "./OrderListSubFilters";

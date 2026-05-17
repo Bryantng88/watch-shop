@@ -14,11 +14,18 @@ type Props = {
   totalPages: number;
   pathname: string;
   searchParams: URLSearchParams;
+
   selectedIds: string[];
   onToggleOne: (id: string, checked: boolean) => void;
   onToggleAll: (checked: boolean) => void;
+
   onView?: (row: OrderListItem) => void;
   onEdit?: (row: OrderListItem) => void;
+  onPost?: (row: OrderListItem) => void;
+  onCreatePayment?: (row: OrderListItem) => void;
+  onMarkPaymentPaid?: (row: OrderListItem) => void;
+  onMarkShipmentDelivered?: (row: OrderListItem) => void;
+  onCancel?: (row: OrderListItem) => void;
 };
 
 export default function OrderListTable({
@@ -33,6 +40,11 @@ export default function OrderListTable({
   onToggleAll,
   onView,
   onEdit,
+  onPost,
+  onCreatePayment,
+  onMarkPaymentPaid,
+  onMarkShipmentDelivered,
+  onCancel,
 }: Props) {
   const selectableIds = items.filter(isOrderSelectable).map((item) => item.id);
 
@@ -73,6 +85,7 @@ export default function OrderListTable({
               </th>
               <th className="px-4 py-4">Đơn hàng</th>
               <th className="px-4 py-4">Khách hàng</th>
+              <th className="px-4 py-4">Thanh toán</th>
               <th className="px-4 py-4">Status</th>
               <th className="px-4 py-4">Nguồn</th>
               <th className="px-4 py-4 text-right">Tổng tiền</th>
@@ -90,6 +103,11 @@ export default function OrderListTable({
                 onCheckedChange={(checked) => onToggleOne(order.id, checked)}
                 onView={onView}
                 onEdit={onEdit}
+                onPost={onPost}
+                onCreatePayment={onCreatePayment}
+                onMarkPaymentPaid={onMarkPaymentPaid}
+                onMarkShipmentDelivered={onMarkShipmentDelivered}
+                onCancel={onCancel}
               />
             ))}
 

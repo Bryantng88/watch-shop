@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrderDetail } from "@/app/(admin)/admin/orders/_servers/order.service";
+import { getOrderDetail } from "@/domains/order/server";
 
 export async function GET(
     _req: Request,

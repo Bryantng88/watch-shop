@@ -1,5 +1,7 @@
-import { getAdminOrderDetail } from "../_servers/order.service";
-import OrderDetailClient from "./_client/OrderDetailClient";
+import { getAdminOrderDetail } from "@/domains/order/server";
+import OrderDetailClient from "@/domains/order/client/OrderDetailClient";
+import type { OrderDetailData } from "@/domains/order/OrderDetailClient";
+import { serializeForClient } from "@/shared/utils/serialize-for-client";
 
 export default async function OrderDetailPage({
     params,
@@ -9,9 +11,11 @@ export default async function OrderDetailPage({
     const { id } = await params;
     const data = await getAdminOrderDetail(id);
 
+    const clientData = serializeForClient(data) as OrderDetailData;
+
     return (
         <div className="mx-auto w-full max-w-[1500px] px-4 pt-6 lg:px-6">
-            <OrderDetailClient data={data} />
+            <OrderDetailClient data={clientData} />
         </div>
     );
 }

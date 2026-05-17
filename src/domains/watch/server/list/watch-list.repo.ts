@@ -82,22 +82,27 @@ function buildSort(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
 function normalizeSubFilter(value: unknown): WatchListSubFilter {
   const text = normalizeText(value).toUpperCase();
 
-  const allowed: WatchListSubFilter[] = [
-    "",
-    "MISSING_CONTENT",
-    "MISSING_IMAGE",
-    "REVIEW_DRAFT",
-    "REVIEW_SUBMITTED",
-    "PARTIAL_APPROVED",
-    "APPROVED",
-    "POSTED",
-  ];
+  const aliasMap: Record<string, WatchListSubFilter> = {
+    DRAFT: "REVIEW_DRAFT",
+    REVIEW_DRAFT: "REVIEW_DRAFT",
 
-  return allowed.includes(text as WatchListSubFilter)
-    ? (text as WatchListSubFilter)
-    : "";
+    PENDING: "REVIEW_SUBMITTED",
+    SUBMITTED: "REVIEW_SUBMITTED",
+    REVIEW_SUBMITTED: "REVIEW_SUBMITTED",
+
+    PARTIAL: "PARTIAL_APPROVED",
+    PARTIAL_APPROVED: "PARTIAL_APPROVED",
+
+    APPROVED: "APPROVED",
+
+    POSTED: "POSTED",
+
+    MISSING_CONTENT: "MISSING_CONTENT",
+    MISSING_IMAGE: "MISSING_IMAGE",
+  };
+
+  return aliasMap[text] ?? "";
 }
-
 function sanitizeSubFilterForView(
   view: ReturnType<typeof normalizeWatchListView>,
   subFilter: WatchListSubFilter
@@ -141,7 +146,12 @@ function buildCurrentSegmentWhere(input: NormalizedWatchListInput) {
     buildWatchListSegmentWhere(input.view)
   );
 }
-
+function buildCurrentListWhere(input: NormalizedWatchListInput) {
+  return mergeWatchWhere(
+    buildCurrentSegmentWhere(input),
+    buildWatchListSubFilterWhere(input.subFilter)
+  );
+}
 function buildCountWhere(input: NormalizedWatchListInput, view: NormalizedWatchListInput["view"]) {
   return mergeWatchWhere(
     buildWatchListBaseWhere(input),
@@ -274,8 +284,8 @@ export async function listAdminWatches(
 ): Promise<WatchListResult> {
   const normalizedInput = normalizeInput(input);
   const skip = (normalizedInput.page - 1) * normalizedInput.pageSize;
-  const listWhere = buildWatchListWhere(normalizedInput, normalizedInput.view);
   const currentSegmentWhere = buildCurrentSegmentWhere(normalizedInput);
+  const listWhere = buildCurrentListWhere(normalizedInput);
   const orderBy = buildSort(normalizedInput.sort);
 
   const [rows, total, segmentTotal, counts, subCounts, hasContent, hasImages] = await Promise.all([

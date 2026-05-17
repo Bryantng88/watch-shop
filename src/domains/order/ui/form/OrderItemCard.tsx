@@ -36,6 +36,8 @@ export default function OrderItemCard({
     onChange,
     onRemove,
 }: Props) {
+    const isWatchItem = item.kind === "PRODUCT" && item.source === "WATCH_QUICK_ORDER";
+
     return (
         <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -107,17 +109,19 @@ export default function OrderItemCard({
                 </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <OrderFormField label="Số lượng">
-                    <Input
-                        inputMode="numeric"
-                        value={String(item.quantity)}
-                        onChange={(event) =>
-                            onChange({ quantity: numberValue(event.target.value) || 1 })
-                        }
-                        disabled={disabled}
-                    />
-                </OrderFormField>
+            <div className={["mt-4 grid grid-cols-1 gap-4", isWatchItem ? "md:grid-cols-2" : "md:grid-cols-3"].join(" ")}>
+                {!isWatchItem ? (
+                    <OrderFormField label="Số lượng">
+                        <Input
+                            inputMode="numeric"
+                            value={String(item.quantity)}
+                            onChange={(event) =>
+                                onChange({ quantity: numberValue(event.target.value) || 1 })
+                            }
+                            disabled={disabled}
+                        />
+                    </OrderFormField>
+                ) : null}
 
                 <OrderFormField label="Giá niêm yết">
                     <Input

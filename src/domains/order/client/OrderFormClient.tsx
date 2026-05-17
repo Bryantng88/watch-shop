@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Rocket, Save } from "lucide-react";
 
 import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -25,7 +25,9 @@ import {
   getSubtotal,
   validateOrderForm,
 } from "../ui/form";
+
 import type {
+  CustomerSearchItem,
   OrderFormInitialData,
   OrderFormItem,
   OrderFormValues,
@@ -79,21 +81,62 @@ export default function OrderFormClient({
   }, [initialData, quickProduct]);
 
   const [values, setValues] = useState<OrderFormValues>(initialValues);
+
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<ProductSearchItem[]>([]);
   const [searching, setSearching] = useState(false);
+
+  const [customerResults, setCustomerResults] = useState<CustomerSearchItem[]>(
+    [],
+  );
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
 
   const subtotal = useMemo(() => getSubtotal(values.items), [values.items]);
   const canEdit = canEditOrder(initialData?.status);
 
-  function patchValues(patch: Partial<OrderFormValues>) {
+  const patchValues = useCallback((patch: Partial<OrderFormValues>) => {
     setValues((prev) => ({
       ...prev,
       ...patch,
     }));
-  }
+  }, []);
 
+  const applyCustomer = useCallback((customer: CustomerSearchItem) => {
+    setValues((prev) => ({
+      ...prev,
+      customerId: customer.id,
+      customerName: customer.name ?? "",
+      shipPhone: customer.phone ?? prev.shipPhone,
+      shipAddress: customer.address ?? "",
+      shipCity: customer.city ?? "",
+      shipDistrict: customer.district ?? "",
+      shipWard: customer.ward ?? "",
+    }));
+
+    setCustomerResults([]);
+  }, []);
+  const handleCustomerPhoneChange = useCallback((phone: string) => {
+    setValues((prev) => {
+      const shouldClearPickedCustomer = Boolean(prev.customerId);
+
+      return {
+        ...prev,
+        customerId: null,
+        shipPhone: phone,
+        ...(shouldClearPickedCustomer
+          ? {
+            customerName: "",
+            shipAddress: "",
+            shipCity: "",
+            shipDistrict: "",
+            shipWard: "",
+          }
+          : {}),
+      };
+    });
+  }, []);
   function updateItem(index: number, patch: Partial<OrderFormItem>) {
     setValues((prev) => ({
       ...prev,
@@ -110,18 +153,23 @@ export default function OrderFormClient({
     }));
   }
 
-  async function searchProduct() {
+  const searchProduct = useCallback(async () => {
     const q = productQuery.trim();
-    if (!q) return;
+
+    if (q.length < 2) {
+      setProductResults([]);
+      return;
+    }
 
     setSearching(true);
 
     try {
       const res = await fetch(
-        `/api/admin/products/search?q=${encodeURIComponent(q)}`,
+        `/api/admin/orders/catalog/products?q=${encodeURIComponent(q)}`,
       );
 
       const json = await res.json().catch(() => null);
+
       setProductResults(Array.isArray(json?.items) ? json.items : []);
     } catch {
       notify.error({
@@ -131,8 +179,91 @@ export default function OrderFormClient({
     } finally {
       setSearching(false);
     }
-  }
+  }, [notify, productQuery]);
 
+  useEffect(() => {
+    const q = productQuery.trim();
+
+    if (q.length < 2) {
+      setProductResults([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+
+      try {
+        const res = await fetch(
+          `/api/admin/orders/catalog/products?q=${encodeURIComponent(q)}`,
+        );
+
+        const json = await res.json().catch(() => null);
+
+        if (cancelled) return;
+
+        setProductResults(Array.isArray(json?.items) ? json.items : []);
+      } catch {
+        if (!cancelled) {
+          notify.error({
+            title: "Không thể tìm sản phẩm",
+            message: "Vui lòng thử lại sau.",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setSearching(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [notify, productQuery]);
+
+  useEffect(() => {
+    const q = values.shipPhone.trim();
+
+    if (q.length < 3 || values.customerId) {
+      setCustomerResults([]);
+      setSearchingCustomer(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = window.setTimeout(async () => {
+      setSearchingCustomer(true);
+
+      try {
+        const res = await fetch(
+          `/api/admin/orders/catalog/customers?q=${encodeURIComponent(q)}`,
+        );
+
+        const json = await res.json().catch(() => null);
+
+        if (cancelled) return;
+
+        setCustomerResults(Array.isArray(json?.items) ? json.items : []);
+      } catch {
+        if (!cancelled) {
+          setCustomerResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchingCustomer(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [values.customerId, values.shipPhone]);
   function addProduct(product: ProductSearchItem) {
     if (values.items.some((item) => item.productId === product.id)) {
       notify.warning({
@@ -145,6 +276,9 @@ export default function OrderFormClient({
     patchValues({
       items: [...values.items, createProductFormItem(product)],
     });
+
+    setProductQuery("");
+    setProductResults([]);
   }
 
   function addService(service: ServiceOption) {
@@ -166,7 +300,9 @@ export default function OrderFormClient({
     });
   }
 
-  async function submit() {
+  async function submit(
+    submitAs: "DRAFT" | "POSTED" = isEdit ? "DRAFT" : "POSTED",
+  ) {
     if (!canEdit) {
       notify.warning({
         title: "Đơn đã khóa",
@@ -186,16 +322,28 @@ export default function OrderFormClient({
     }
 
     const ok = await dialog.confirm({
-      title: isEdit ? "Lưu thay đổi đơn hàng?" : "Tạo đơn hàng?",
-      message: quickMode
-        ? "Đơn này được tạo từ Watch bridge. Sau khi duyệt/chốt đơn, trạng thái watch sẽ được đồng bộ từ order."
-        : "Order sẽ là nguồn trạng thái HOLD/SOLD cho watch liên quan.",
-      confirmText: isEdit ? "Lưu thay đổi" : "Tạo đơn",
+      title: isEdit
+        ? "Lưu thay đổi đơn hàng?"
+        : submitAs === "DRAFT"
+          ? "Lưu nháp đơn hàng?"
+          : "Tạo & post đơn hàng?",
+      message:
+        submitAs === "DRAFT"
+          ? "Đơn sẽ được lưu nháp, chưa tạo payment/shipment và chưa HOLD watch."
+          : quickMode
+            ? "Đơn sẽ được post ngay. Hệ thống tạo payment/shipment và HOLD watch liên quan."
+            : "Đơn sẽ được post ngay. Hệ thống tạo payment/shipment và đưa đơn vào vận hành.",
+      confirmText: isEdit
+        ? "Lưu thay đổi"
+        : submitAs === "DRAFT"
+          ? "Lưu nháp"
+          : "Tạo & post",
     });
 
     if (!ok) return;
 
     setSubmitting(true);
+
     progress.show({
       title: "Đang lưu đơn hàng",
       message: "Hệ thống đang xử lý qua order domain.",
@@ -207,6 +355,7 @@ export default function OrderFormClient({
         quickMode,
         quickProductId: quickProduct?.id ?? null,
         status: initialData?.status ?? null,
+        submitAs: isEdit ? undefined : submitAs,
       });
 
       const res = await fetch(
@@ -255,20 +404,39 @@ export default function OrderFormClient({
         }
         description={
           quickMode
-            ? `Quick order từ watch · ${quickProduct?.sku ? `SKU ${quickProduct.sku} · ` : ""}Order sẽ đồng bộ HOLD/SOLD cho watch liên quan.`
+            ? `Quick order từ watch · ${quickProduct?.sku ? `SKU ${quickProduct.sku} · ` : ""
+            }Order sẽ đồng bộ HOLD/SOLD cho watch liên quan.`
             : "Form order đã tách UI theo section, nhẹ hơn và đồng bộ với kiến trúc watch."
         }
         backHref={backHref}
         backLabel={backLabel}
         actions={
-          <Button
-            type="button"
-            onClick={submit}
-            disabled={submitting || !canEdit}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {submitting ? "Đang lưu..." : "Lưu đơn"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => submit("DRAFT")}
+                disabled={submitting || !canEdit}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Lưu nháp
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              onClick={() => submit(isEdit ? "DRAFT" : "POSTED")}
+              disabled={submitting || !canEdit}
+            >
+              {isEdit ? (
+                <Save className="mr-2 h-4 w-4" />
+              ) : (
+                <Rocket className="mr-2 h-4 w-4" />
+              )}
+              {submitting ? "Đang lưu..." : isEdit ? "Lưu đơn" : "Tạo & post"}
+            </Button>
+          </div>
         }
       />
 
@@ -279,7 +447,7 @@ export default function OrderFormClient({
       {!canEdit ? (
         <GuardNotice
           title="Đơn đã khóa chỉnh sửa"
-          message="Đơn không còn ở DRAFT/RESERVED. Hãy thao tác qua action của order để giữ đồng bộ tồn kho watch."
+          message="Đơn không còn ở trạng thái nháp. Hãy thao tác qua action của order để giữ đồng bộ payment/shipment/watch."
           tone="locked"
           icon="lock"
         />
@@ -289,8 +457,29 @@ export default function OrderFormClient({
         <div className="space-y-5">
           <OrderCustomerSection
             values={values}
+            customers={customerResults}
+            searchingCustomer={searchingCustomer}
             disabled={!canEdit}
-            onChange={patchValues}
+            onChange={(patch) => {
+              if ("shipPhone" in patch) {
+                handleCustomerPhoneChange(patch.shipPhone ?? "");
+                return;
+              }
+
+              if ("customerName" in patch && values.customerId) {
+                patchValues({
+                  customerId: null,
+                  customerName: patch.customerName ?? "",
+                  shipAddress: "",
+                  shipCity: "",
+                  shipDistrict: "",
+                  shipWard: "",
+                });
+                return;
+              }
+
+              patchValues(patch);
+            }} onPickCustomer={applyCustomer}
           />
 
           <OrderShipmentSection

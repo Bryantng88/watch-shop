@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
     getOrderDraftForEdit,
     updateOrderDraft,
-} from "@/app/(admin)/admin/orders/_servers/order.service";
+} from "@/domains/order//server";
 
 export async function GET(
     _req: NextRequest,

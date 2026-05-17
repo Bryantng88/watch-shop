@@ -25,7 +25,7 @@ export default function OrderListViewTabs({
             <button
               key={view.key}
               type="button"
-              onClick={() => onViewChange(view.key)}
+              onClick={() => onViewChange(view.key as OrderViewKey)}
               className={cn(
                 "relative inline-flex h-12 shrink-0 items-center whitespace-nowrap text-sm transition",
                 active

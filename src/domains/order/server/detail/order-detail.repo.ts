@@ -10,6 +10,7 @@ export async function getOrderDetailRepo(db: DB, id: string) {
       id: true,
       refNo: true,
       status: true,
+      paymentStatus: true,
       source: true,
       verificationStatus: true,
       reserveType: true,
@@ -26,9 +27,11 @@ export async function getOrderDetailRepo(db: DB, id: string) {
       hasShipment: true,
       notes: true,
       subtotal: true,
+      shippingFee: true,
+      shipment: { select: { id: true, status: true } },
       createdAt: true,
       updatedAt: true,
-      OrderItem: {
+      orderItem: {
         orderBy: [{ createdAt: "asc" }],
         select: {
           id: true,
@@ -74,7 +77,7 @@ export async function getOrderDraftForEditRepo(db: DB, orderId: string) {
       reserveType: true,
       depositRequired: true,
       reserveUntil: true,
-      OrderItem: {
+      orderItem: {
         orderBy: { createdAt: "asc" },
         select: {
           id: true,

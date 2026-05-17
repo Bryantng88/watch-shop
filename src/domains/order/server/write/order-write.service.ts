@@ -1,5 +1,6 @@
 import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
+import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
 import type { CreateOrderInput, OrderDraftInput, OrderItemInput, ResolvedProductOrderItem } from "../shared";
 import { assertPositiveQuantity, calcUnitPriceAgreed, norm, toNumberPrice, toPlain } from "../shared";
@@ -11,11 +12,11 @@ import {
   findCustomerByPhoneRepo,
   getProductsForOrderResolutionRepo,
   replaceOrderDraftRepo,
-  reserveVariantIdsForOrderRepo,
   updateCustomerAddressRepo,
   updateOrderSubtotalRepo,
 } from "./order-write.repo";
 import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
+import { postOneOrderTx } from "../post/order-post.service";
 
 async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
   const shipPhone = norm(input.shipPhone);
@@ -102,7 +103,22 @@ async function resolveProductItems(
   });
 }
 
+function normalizeReserve(rawReserve: any) {
+  if (!rawReserve) return null;
+  const amount = Number(rawReserve.amount ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  // COD is not a reserve/deposit type anymore. COD is only the payment method of the remaining amount.
+  return {
+    type: "DEPOSIT" as const,
+    amount,
+    expiresAt: rawReserve.expiresAt ?? null,
+  };
+}
+
 function normalizeCreateInput(raw: any): CreateOrderInput {
+  const reserve = normalizeReserve(raw.reserve);
+
   return {
     customerId: raw.customerId ?? null,
     customerName: norm(raw.customerName),
@@ -120,20 +136,14 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
     verificationStatus: raw.verificationStatus ?? OrderVerificationStatus.VERIFIED,
     quickFromProductId: raw.quickFromProductId ?? null,
     quickFlowType: raw.quickFlowType ?? OrderFlowType.STANDARD,
-    reserve: raw.reserve
-      ? {
-        type: raw.reserve.type,
-        amount: Number(raw.reserve.amount ?? 0),
-        expiresAt: raw.reserve.expiresAt ?? null,
-      }
-      : null,
+    reserve,
     items: (raw.items ?? []).map((item: any) => ({
       id: item.id,
       kind: item.kind ?? "PRODUCT",
       productId: item.productId ?? null,
       variantId: item.variantId ?? null,
       title: item.title ?? "",
-      quantity: Number(item.quantity ?? 1),
+      quantity: item.source === "WATCH_QUICK_ORDER" || raw.quickFlowType === "QUICK_ORDER" ? 1 : Number(item.quantity ?? 1),
       listPrice: Number(item.listPrice ?? 0),
       unitPriceAgreed: item.unitPriceAgreed == null ? null : Number(item.unitPriceAgreed),
       img: item.img ?? null,
@@ -158,15 +168,26 @@ export async function createOrderWithItems(raw: any) {
 
     const rawProductItems = input.items
       .filter((item) => item.kind === "PRODUCT" && item.productId)
-      .map((item) => ({ productId: item.productId!, quantity: Number(item.quantity ?? 1) }));
+      .map((item) => ({
+        productId: item.productId!,
+        quantity: input.quickFlowType === "QUICK_ORDER" ? 1 : Number(item.quantity ?? 1),
+      }));
 
     const resolvedProducts = await resolveProductItems(tx, rawProductItems, { strictActiveOnly });
-    await reserveVariantIdsForOrderRepo(tx as any, {
-      variantIds: resolvedProducts.map((item) => item.variantId),
-      strictActiveOnly,
+    // DRAFT order không tạo inventory effect.
+    // Không reserve variant / không HOLD watch ở bước tạo nháp.
+
+    const requestedStatus = input.status ?? OrderStatus.DRAFT;
+    const shouldPostAfterCreate = requestedStatus === OrderStatus.POSTED;
+    const refNo = await genRefNo(tx, {
+      model: tx.order,
+      prefix: "OD",
+      field: "refNo",
+      padding: 6,
     });
 
     const order = await createOrderRepo(tx as any, {
+      refNo,
       customerId,
       customerName: input.customerName,
       shipPhone: input.shipPhone ?? "",
@@ -179,7 +200,7 @@ export async function createOrderWithItems(raw: any) {
       notes: input.notes ?? null,
       createdAt: input.orderDate ? new Date(input.orderDate) : new Date(),
       updatedAt: new Date(),
-      status: input.status ?? OrderStatus.DRAFT,
+      status: OrderStatus.DRAFT,
       source: input.source ?? OrderSource.ADMIN,
       verificationStatus: input.verificationStatus ?? OrderVerificationStatus.VERIFIED,
       subtotal: new Prisma.Decimal(0),
@@ -211,12 +232,13 @@ export async function createOrderWithItems(raw: any) {
     const rows = await createOrderItemsRepo(tx as any, order.id, [...productItems, ...serviceItems, ...discountItems]);
     const subtotal = rows.reduce((sum, row: any) => sum + Number(row.subtotal ?? 0), 0);
     await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
-    await syncWatchInventoryFromOrders(
-      tx,
-      rows.map((row: any) => row.productId),
-    );
 
-    return toPlain({ id: order.id, status: input.status ?? OrderStatus.DRAFT });
+    if (shouldPostAfterCreate) {
+      const posted = await postOneOrderTx(tx, order.id);
+      return toPlain(posted);
+    }
+
+    return toPlain({ id: order.id, status: OrderStatus.DRAFT, refNo });
   });
 }
 

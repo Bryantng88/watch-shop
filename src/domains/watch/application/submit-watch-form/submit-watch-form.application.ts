@@ -122,15 +122,23 @@ export async function submitWatchFormApplication(
             ?.status ?? "DRAFT",
     ).toUpperCase();
 
-    if (contentChanged && contentReviewStatus === "APPROVED") {
+    if (
+        contentChanged &&
+        contentReviewStatus === "APPROVED" &&
+        !context.canReviewContent
+    ) {
         throw new Error(
-            "Nội dung đã được duyệt. Admin cần bấm Mở chỉnh sửa để chuyển về Draft trước khi lưu thay đổi.",
+            "Nội dung đã được duyệt. Bạn không có quyền chỉnh sửa nội dung đã duyệt.",
         );
     }
 
-    if (imagesChanged && imageReviewStatus === "APPROVED") {
+    if (
+        imagesChanged &&
+        imageReviewStatus === "APPROVED" &&
+        !context.canReviewContent
+    ) {
         throw new Error(
-            "Hình ảnh đã được duyệt. Admin cần bấm Mở chỉnh sửa để chuyển về Draft trước khi lưu thay đổi.",
+            "Hình ảnh đã được duyệt. Bạn không có quyền chỉnh sửa hình ảnh đã duyệt.",
         );
     }
 

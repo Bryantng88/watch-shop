@@ -20,12 +20,12 @@ export default function OrderListBulkActions({
       <div className="text-sm text-slate-600">
         Đang chọn{" "}
         <span className="font-semibold text-slate-950">{selectedCount}</span>{" "}
-        đơn có thể duyệt.
+        đơn nháp có thể post.
       </div>
 
       <div className="flex items-center gap-2">
         <Button type="button" onClick={onBulkPost}>
-          Duyệt các đơn đã chọn
+          Post các đơn đã chọn
         </Button>
 
         <Button type="button" variant="outline" onClick={onClearSelection}>

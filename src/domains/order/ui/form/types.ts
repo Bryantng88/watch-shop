@@ -5,7 +5,38 @@ export type ServiceOption = {
     defaultPrice?: number | null;
     isActive?: boolean;
 };
+// order/ui/form/types.ts
 
+export type CustomerSearchItem = {
+    id: string;
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+    city?: string | null;
+    district?: string | null;
+    ward?: string | null;
+};
+
+export type OrderFormValues = {
+    customerId?: string | null;
+    customerName: string;
+    shipPhone: string;
+
+    hasShipment: boolean;
+    shipAddress: string;
+    shipCity: string;
+    shipDistrict: string;
+    shipWard: string;
+
+    paymentMethod: string;
+    notes: string;
+
+    reserveType: string;
+    reserveAmount: number;
+    reserveExpiresAt: string;
+
+    items: OrderFormItem[];
+};
 export type ProductSearchItem = {
     id: string;
     title: string;
@@ -51,25 +82,7 @@ export type OrderFormItem = {
     customerItemNote?: string | null;
 };
 
-export type OrderFormValues = {
-    customerName: string;
-    shipPhone: string;
 
-    hasShipment: boolean;
-    shipAddress: string;
-    shipCity: string;
-    shipDistrict: string;
-    shipWard: string;
-
-    paymentMethod: string;
-    notes: string;
-
-    reserveType: string;
-    reserveAmount: number;
-    reserveExpiresAt: string;
-
-    items: OrderFormItem[];
-};
 
 export type OrderFormMode = "create" | "edit";
 
