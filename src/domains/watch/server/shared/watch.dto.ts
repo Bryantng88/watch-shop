@@ -7,9 +7,9 @@ import type {
     WatchGoldTreatment,
     WatchMaterialProfile,
     WatchSiteChannel,
-    WatchSaleState,
-    WatchServiceState,
-    WatchStockState,
+    WatchSaleStage,
+    WatchServiceStage,
+    WatchStockStage,
     CaseType,
     Glass,
     Strap,
@@ -41,9 +41,9 @@ export type UpdateWatchCoreInput = {
 
     gender?: Gender;
     siteChannel?: WatchSiteChannel;
-    stockState?: WatchStockState | null;
-    saleState?: WatchSaleState | null;
-    serviceState?: WatchServiceState | null;
+    stockState?: WatchStockStage | null;
+    saleState?: WatchSaleStage | null;
+    serviceState?: WatchServiceStage | null;
     conditionGrade?: string | null;
     movementType?: MovementType | null;
     movementCalibre?: string | null;

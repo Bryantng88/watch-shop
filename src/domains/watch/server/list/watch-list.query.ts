@@ -1,4 +1,4 @@
-import { WatchSaleState } from "@prisma/client";
+import { WatchSaleStage } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import type { WatchListFilters, WatchListSubFilter } from "../../ui/list/types";
 import type { WatchListView } from "../../shared/watch-status";
@@ -55,8 +55,8 @@ export function buildWatchHasGalleryImageWhere(): Prisma.WatchWhereInput {
 
 export function buildWatchNonTerminalSaleWhere(): Prisma.WatchWhereInput {
     return {
-        saleState: {
-            notIn: [WatchSaleState.HOLD, WatchSaleState.SOLD],
+        saleStage: {
+            notIn: [WatchSaleStage.HOLD, WatchSaleStage.SOLD],
         },
     };
 }
@@ -265,11 +265,11 @@ export function buildWatchListBaseWhere(
     }
 
     if (input.saleStage) {
-        and.push({ saleState: input.saleStage as any });
+        and.push({ saleStage: input.saleStage as any });
     }
 
     if (input.opsStage) {
-        and.push({ serviceState: input.opsStage as any });
+        and.push({ serviceStage: input.opsStage as any });
     }
 
     return and.length ? { AND: and } : {};
@@ -280,63 +280,19 @@ export function buildWatchListSegmentWhere(
 ): Prisma.WatchWhereInput {
     switch (view) {
         case "draft":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    noReviewWorkflowWhere(),
-                    { NOT: buildWatchHasContentWhere() },
-                    { NOT: buildWatchHasGalleryImageWhere() },
-                ],
-            };
+            return { saleStage: WatchSaleStage.DRAFT };
 
         case "processing":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    noReviewWorkflowWhere(),
-                    {
-                        OR: [
-                            {
-                                AND: [
-                                    buildWatchHasContentWhere(),
-                                    { NOT: buildWatchHasGalleryImageWhere() },
-                                ],
-                            },
-                            {
-                                AND: [
-                                    { NOT: buildWatchHasContentWhere() },
-                                    buildWatchHasGalleryImageWhere(),
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            };
+            return { saleStage: WatchSaleStage.PROCESSING };
 
         case "ready":
-            return {
-                AND: [
-                    buildWatchNonTerminalSaleWhere(),
-                    {
-                        OR: [
-                            {
-                                AND: [
-                                    buildWatchHasContentWhere(),
-                                    buildWatchHasGalleryImageWhere(),
-                                ],
-                            },
-                            reviewWorkflowWhere(),
-                            postedWhere(),
-                        ],
-                    },
-                ],
-            };
+            return { saleStage: WatchSaleStage.READY };
 
         case "hold":
-            return { saleState: WatchSaleState.HOLD };
+            return { saleStage: WatchSaleStage.HOLD };
 
         case "sold":
-            return { saleState: WatchSaleState.SOLD };
+            return { saleStage: WatchSaleStage.SOLD };
 
         case "all":
         default:

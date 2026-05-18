@@ -19,6 +19,7 @@ const makeSchema = () => z.object({
   status: z.boolean().optional(),
   paymentStatus: z.boolean().optional(),
   paymentMethod: z.boolean().optional(),
+  depositPaymentMethod: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   customerName: z.boolean().optional(),

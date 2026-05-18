@@ -2,6 +2,12 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema as EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchSaleStageFieldUpdateOperationsInput.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema as EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchServiceStageFieldUpdateOperationsInput.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { EnumWatchStockStageFieldUpdateOperationsInputObjectSchema as EnumWatchStockStageFieldUpdateOperationsInputObjectSchema } from './EnumWatchStockStageFieldUpdateOperationsInput.schema';
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema as EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema } from './EnumWatchSiteChannelFieldUpdateOperationsInput.schema';
 import { GenderSchema } from '../enums/Gender.schema';
@@ -23,9 +29,9 @@ const makeSchema = () => z.object({
   productId: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   legacyVariantId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   acquisitionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  stockState: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  saleState: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  serviceState: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  saleStage: z.union([WatchSaleStageSchema, z.lazy(() => EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema)]).optional(),
+  serviceStage: z.union([WatchServiceStageSchema, z.lazy(() => EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema)]).optional(),
+  stockState: z.union([WatchStockStageSchema, z.lazy(() => EnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   siteChannel: z.union([WatchSiteChannelSchema, z.lazy(() => EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema)]).optional(),
   gender: z.union([GenderSchema, z.lazy(() => EnumGenderFieldUpdateOperationsInputObjectSchema)]).optional(),
   conditionGrade: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

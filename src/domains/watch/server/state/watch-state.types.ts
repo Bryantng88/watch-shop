@@ -1,8 +1,8 @@
 import type {
   ProductStatus,
-  WatchSaleState,
-  WatchServiceState,
-  WatchStockState,
+  WatchSaleStage,
+  WatchServiceStage,
+  WatchStockStage,
 } from "@prisma/client";
 
 export type WatchStateAction =
@@ -17,9 +17,9 @@ export type WatchStateAction =
 
 export type WatchStateSnapshot = {
   productId: string;
-  saleState: WatchSaleState;
-  serviceState: WatchServiceState;
-  stockState: WatchStockState;
+  saleStage: WatchSaleStage;
+  serviceStage: WatchServiceStage;
+  stockStage: WatchStockStage;
   product: {
     id: string;
     status: ProductStatus;
@@ -27,9 +27,9 @@ export type WatchStateSnapshot = {
 };
 
 export type WatchStatePatch = {
-  saleState?: WatchSaleState;
-  serviceState?: WatchServiceState;
-  stockState?: WatchStockState;
+  saleStage?: WatchSaleStage;
+  serviceStage?: WatchServiceStage;
+  stockStage?: WatchStockStage;
   productStatus?: ProductStatus;
 };
 

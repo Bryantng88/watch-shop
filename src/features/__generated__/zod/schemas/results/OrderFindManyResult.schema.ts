@@ -13,6 +13,7 @@ export const OrderFindManyResultSchema = z.object({
   status: z.unknown(),
   paymentStatus: z.unknown(),
   paymentMethod: z.unknown().optional(),
+  depositPaymentMethod: z.unknown().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   customerName: z.string().optional(),

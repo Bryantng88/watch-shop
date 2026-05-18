@@ -344,7 +344,7 @@ export function contentStatusText(row: WatchRow) {
     const status = String(row.contentStatus ?? "DRAFT").toUpperCase();
 
     const map: Record<string, string> = {
-        DRAFT: "Draft",
+        DRAFT: "Chưa gửi duyệt",
         SUBMITTED: "Chờ duyệt",
         APPROVED: "Đã duyệt",
         REJECTED: "Trả về",

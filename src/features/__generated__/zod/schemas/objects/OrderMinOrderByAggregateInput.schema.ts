@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   status: SortOrderSchema.optional(),
   paymentStatus: SortOrderSchema.optional(),
   paymentMethod: SortOrderSchema.optional(),
+  depositPaymentMethod: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   customerName: SortOrderSchema.optional(),

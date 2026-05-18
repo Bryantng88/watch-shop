@@ -21,6 +21,7 @@ export const OrderInputSchema = z.object({
     status: OrderStatusSchema,
     paymentStatus: PaymentStatusSchema,
     paymentMethod: PaymentMethodSchema.optional().nullable(),
+    depositPaymentMethod: PaymentMethodSchema.optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
     customerName: z.string().optional().nullable(),

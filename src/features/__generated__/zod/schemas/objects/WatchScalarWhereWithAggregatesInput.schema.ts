@@ -2,6 +2,12 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
+import { EnumWatchSaleStageWithAggregatesFilterObjectSchema as EnumWatchSaleStageWithAggregatesFilterObjectSchema } from './EnumWatchSaleStageWithAggregatesFilter.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { EnumWatchServiceStageWithAggregatesFilterObjectSchema as EnumWatchServiceStageWithAggregatesFilterObjectSchema } from './EnumWatchServiceStageWithAggregatesFilter.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { EnumWatchStockStageWithAggregatesFilterObjectSchema as EnumWatchStockStageWithAggregatesFilterObjectSchema } from './EnumWatchStockStageWithAggregatesFilter.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
 import { EnumWatchSiteChannelWithAggregatesFilterObjectSchema as EnumWatchSiteChannelWithAggregatesFilterObjectSchema } from './EnumWatchSiteChannelWithAggregatesFilter.schema';
 import { WatchSiteChannelSchema } from '../enums/WatchSiteChannel.schema';
 import { EnumGenderWithAggregatesFilterObjectSchema as EnumGenderWithAggregatesFilterObjectSchema } from './EnumGenderWithAggregatesFilter.schema';
@@ -23,9 +29,9 @@ const watchscalarwherewithaggregatesinputSchema = z.object({
   productId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   legacyVariantId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   acquisitionId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  stockState: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  saleState: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  serviceState: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  saleStage: z.union([z.lazy(() => EnumWatchSaleStageWithAggregatesFilterObjectSchema), WatchSaleStageSchema]).optional(),
+  serviceStage: z.union([z.lazy(() => EnumWatchServiceStageWithAggregatesFilterObjectSchema), WatchServiceStageSchema]).optional(),
+  stockState: z.union([z.lazy(() => EnumWatchStockStageWithAggregatesFilterObjectSchema), WatchStockStageSchema]).optional(),
   siteChannel: z.union([z.lazy(() => EnumWatchSiteChannelWithAggregatesFilterObjectSchema), WatchSiteChannelSchema]).optional(),
   gender: z.union([z.lazy(() => EnumGenderWithAggregatesFilterObjectSchema), GenderSchema]).optional(),
   conditionGrade: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),

@@ -1,5 +1,8 @@
 import * as z from 'zod';
 
+import { WatchSaleStageSchema } from '../../enums/WatchSaleStage.schema';
+import { WatchServiceStageSchema } from '../../enums/WatchServiceStage.schema';
+import { WatchStockStageSchema } from '../../enums/WatchStockStage.schema';
 import { WatchSiteChannelSchema } from '../../enums/WatchSiteChannel.schema';
 import { GenderSchema } from '../../enums/Gender.schema';
 import { MovementTypeSchema } from '../../enums/MovementType.schema';
@@ -11,9 +14,9 @@ export const WatchResultSchema = z.object({
     productId: z.string(),
     legacyVariantId: z.string().nullable(),
     acquisitionId: z.string().nullable(),
-    stockState: z.string().nullable(),
-    saleState: z.string().nullable(),
-    serviceState: z.string().nullable(),
+    saleStage: WatchSaleStageSchema,
+    serviceStage: WatchServiceStageSchema,
+    stockState: WatchStockStageSchema,
     siteChannel: WatchSiteChannelSchema,
     gender: GenderSchema,
     conditionGrade: z.string().nullable(),

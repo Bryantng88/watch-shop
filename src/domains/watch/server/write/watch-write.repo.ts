@@ -1,4 +1,8 @@
-import { WatchSaleState, WatchServiceState, WatchStockState } from "@prisma/client";
+import {
+  WatchSaleStage,
+  WatchServiceStage,
+  WatchStockStage,
+} from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
@@ -11,9 +15,9 @@ export async function createWatchDraftRepo(
     gender?: any;
     siteChannel?: any;
     conditionGrade?: string | null;
-    stockState?: WatchStockState | null;
-    saleState?: WatchSaleState | null;
-    serviceState?: WatchServiceState | null;
+    stockStage?: WatchStockStage | null;
+    saleStage?: WatchSaleStage | null;
+    serviceStage?: WatchServiceStage | null;
     notes?: string | null;
   }
 ) {
@@ -24,9 +28,10 @@ export async function createWatchDraftRepo(
       gender: input.gender ?? "MEN",
       siteChannel: input.siteChannel ?? "AFFORDABLE",
       conditionGrade: input.conditionGrade ?? null,
-      stockState: input.stockState ?? WatchStockState.IN_STOCK,
-      saleState: input.saleState ?? WatchSaleState.DRAFT,
-      serviceState: input.serviceState ?? WatchServiceState.NOT_REQUIRED,
+      stockStage: input.stockStage ?? WatchStockStage.IN_STOCK,
+      saleStage: input.saleStage ?? WatchSaleStage.DRAFT,
+      serviceStage:
+        input.serviceStage ?? WatchServiceStage.NOT_REQUIRED,
       notes: input.notes ?? null,
       updatedAt: new Date(),
     } as any,
@@ -40,9 +45,9 @@ export async function updateWatchCoreRepo(
     gender?: any;
     siteChannel?: any;
     conditionGrade?: string | null;
-    stockState?: WatchStockState | null;
-    saleState?: WatchSaleState | null;
-    serviceState?: WatchServiceState | null;
+    stockStage?: WatchStockStage | null;
+    saleStage?: WatchSaleStage | null;
+    serviceStage?: WatchServiceStage | null;
     serialNumber?: string | null;
     yearText?: string | null;
     movementType?: any;
@@ -56,40 +61,86 @@ export async function updateWatchCoreRepo(
   return tx.watch.update({
     where: { productId },
     data: {
-      ...(input.gender !== undefined ? { gender: input.gender } : {}),
-      ...(input.siteChannel !== undefined ? { siteChannel: input.siteChannel } : {}),
+      ...(input.gender !== undefined
+        ? { gender: input.gender }
+        : {}),
+
+      ...(input.siteChannel !== undefined
+        ? { siteChannel: input.siteChannel }
+        : {}),
+
       ...(input.conditionGrade !== undefined
         ? { conditionGrade: input.conditionGrade ?? null }
         : {}),
-      ...(input.stockState !== undefined
-        ? { stockState: input.stockState ?? WatchStockState.IN_STOCK }
+
+      ...(input.stockStage !== undefined
+        ? {
+          stockStage:
+            input.stockStage ??
+            WatchStockStage.IN_STOCK,
+        }
         : {}),
-      ...(input.saleState !== undefined
-        ? { saleState: input.saleState ?? WatchSaleState.DRAFT }
+
+      ...(input.saleStage !== undefined
+        ? {
+          saleStage:
+            input.saleStage ??
+            WatchSaleStage.DRAFT,
+        }
         : {}),
-      ...(input.serviceState !== undefined
-        ? { serviceState: input.serviceState ?? WatchServiceState.NOT_REQUIRED }
+
+      ...(input.serviceStage !== undefined
+        ? {
+          serviceStage:
+            input.serviceStage ??
+            WatchServiceStage.NOT_REQUIRED,
+        }
         : {}),
+
       ...(input.serialNumber !== undefined
         ? { serialNumber: input.serialNumber ?? null }
         : {}),
-      ...(input.yearText !== undefined ? { yearText: input.yearText ?? null } : {}),
+
+      ...(input.yearText !== undefined
+        ? { yearText: input.yearText ?? null }
+        : {}),
+
       ...(input.movementType !== undefined
         ? { movementType: input.movementType ?? null }
         : {}),
+
       ...(input.movementCalibre !== undefined
-        ? { movementCalibre: input.movementCalibre ?? null }
+        ? {
+          movementCalibre:
+            input.movementCalibre ?? null,
+        }
         : {}),
-      ...(input.hasBox !== undefined ? { hasBox: Boolean(input.hasBox) } : {}),
-      ...(input.hasPapers !== undefined ? { hasPapers: Boolean(input.hasPapers) } : {}),
-      ...(input.specStatus !== undefined ? { specStatus: input.specStatus } : {}),
-      ...(input.notes !== undefined ? { notes: input.notes ?? null } : {}),
+
+      ...(input.hasBox !== undefined
+        ? { hasBox: Boolean(input.hasBox) }
+        : {}),
+
+      ...(input.hasPapers !== undefined
+        ? { hasPapers: Boolean(input.hasPapers) }
+        : {}),
+
+      ...(input.specStatus !== undefined
+        ? { specStatus: input.specStatus }
+        : {}),
+
+      ...(input.notes !== undefined
+        ? { notes: input.notes ?? null }
+        : {}),
+
       updatedAt: new Date(),
     } as any,
   });
 }
 
-export async function removeWatchRepo(tx: Tx, productId: string) {
+export async function removeWatchRepo(
+  tx: Tx,
+  productId: string
+) {
   return tx.watch.delete({
     where: { productId },
   });
@@ -107,6 +158,7 @@ export async function upsertWatchPriceRepo(
 ) {
   return tx.watchPrice.upsert({
     where: { watchId },
+
     create: {
       watchId,
       costPrice: input.costPrice ?? null,
@@ -115,25 +167,43 @@ export async function upsertWatchPriceRepo(
       minPrice: input.minPrice ?? null,
       updatedAt: new Date(),
     } as any,
+
     update: {
-      ...(input.costPrice !== undefined ? { costPrice: input.costPrice ?? null } : {}),
-      ...(input.salePrice !== undefined ? { salePrice: input.salePrice ?? null } : {}),
-      ...(input.listPrice !== undefined ? { listPrice: input.listPrice ?? null } : {}),
-      ...(input.minPrice !== undefined ? { minPrice: input.minPrice ?? null } : {}),
+      ...(input.costPrice !== undefined
+        ? { costPrice: input.costPrice ?? null }
+        : {}),
+
+      ...(input.salePrice !== undefined
+        ? { salePrice: input.salePrice ?? null }
+        : {}),
+
+      ...(input.listPrice !== undefined
+        ? { listPrice: input.listPrice ?? null }
+        : {}),
+
+      ...(input.minPrice !== undefined
+        ? { minPrice: input.minPrice ?? null }
+        : {}),
+
       updatedAt: new Date(),
     } as any,
   });
 }
 
-export async function getWatchForDerivedRepo(tx: Tx, productId: string) {
+export async function getWatchForDerivedRepo(
+  tx: Tx,
+  productId: string
+) {
   return tx.watch.findUnique({
     where: { productId },
+
     include: {
       product: {
         include: {
           brand: true,
         },
       },
+
       watchSpecV2: true,
     },
   });
@@ -152,9 +222,11 @@ export async function listProductSkusByPrefixRepo(
         startsWith: `${base}-`,
       },
     },
+
     select: {
       sku: true,
     },
+
     orderBy: {
       sku: "desc",
     },
@@ -172,10 +244,17 @@ export async function updateProductTitleSkuRepo(
 ) {
   return tx.product.update({
     where: { id: input.productId },
+
     data: {
       title: input.title,
-      ...(input.sku ? { sku: input.sku } : {}),
-      ...(input.brandId ? { brandId: input.brandId } : {}),
+
+      ...(input.sku
+        ? { sku: input.sku }
+        : {}),
+
+      ...(input.brandId
+        ? { brandId: input.brandId }
+        : {}),
     },
   });
 }

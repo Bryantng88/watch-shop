@@ -10,9 +10,9 @@ import {
     WatchMaterialProfile,
     WatchSiteChannel,
     WatchStyle,
-    WatchSaleState,
-    WatchServiceState,
-    WatchStockState,
+    WatchSaleStage,
+    WatchServiceStage,
+    WatchStockStage,
     WatchStrapSetType,
     WatchStrapComponentSource
 } from "@prisma/client";
@@ -72,9 +72,9 @@ export const WatchFormEnums = {
     WatchGoldTreatment,
     Strap,
     WatchStyle,
-    WatchSaleState,
-    WatchServiceState,
-    WatchStockState,
+    WatchSaleStage,
+    WatchServiceStage,
+    WatchStockStage,
     WatchStrapSetType,
     WatchStrapComponentSource,
 };

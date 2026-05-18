@@ -38,6 +38,7 @@ const orderscalarwhereinputSchema = z.object({
   status: z.union([z.lazy(() => EnumOrderStatusFilterObjectSchema), OrderStatusSchema]).optional(),
   paymentStatus: z.union([z.lazy(() => EnumPaymentStatusFilterObjectSchema), PaymentStatusSchema]).optional(),
   paymentMethod: z.union([z.lazy(() => EnumPaymentMethodNullableFilterObjectSchema), PaymentMethodSchema]).optional().nullable(),
+  depositPaymentMethod: z.union([z.lazy(() => EnumPaymentMethodNullableFilterObjectSchema), PaymentMethodSchema]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

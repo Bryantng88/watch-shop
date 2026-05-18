@@ -24,6 +24,7 @@ const makeSchema = () => z.object({
   status: OrderStatusSchema.optional(),
   paymentStatus: PaymentStatusSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional().nullable(),
+  depositPaymentMethod: PaymentMethodSchema.optional().nullable(),
   createdAt: z.coerce.date().optional(),
   customerName: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),

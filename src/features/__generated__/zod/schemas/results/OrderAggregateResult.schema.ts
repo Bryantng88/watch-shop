@@ -12,6 +12,7 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     status: z.number(),
     paymentStatus: z.number(),
     paymentMethod: z.number(),
+    depositPaymentMethod: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     customerName: z.number(),

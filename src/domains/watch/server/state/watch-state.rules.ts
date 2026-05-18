@@ -1,8 +1,8 @@
 import {
   ProductStatus,
-  WatchSaleState,
-  WatchServiceState,
-  WatchStockState,
+  WatchSaleStage,
+  WatchServiceStage,
+  WatchStockStage,
 } from "@prisma/client";
 
 import type {
@@ -16,14 +16,17 @@ function fail(message: string): never {
 }
 
 function assertNotSold(current: WatchStateSnapshot) {
-  if (current.saleState === WatchSaleState.SOLD || current.product.status === ProductStatus.SOLD) {
+  if (
+    current.saleStage === WatchSaleStage.SOLD ||
+    current.product.status === ProductStatus.SOLD
+  ) {
     fail("Watch đã SOLD, không thể đổi trạng thái.");
   }
 }
 
 function assertNotConsignedTo(current: WatchStateSnapshot) {
   if (
-    current.saleState === WatchSaleState.CONSIGNED_TO ||
+    current.saleStage === WatchSaleStage.CONSIGNED_TO ||
     current.product.status === ProductStatus.CONSIGNED_TO
   ) {
     fail("Watch đang ký gửi đi, không thể đổi trạng thái này.");
@@ -32,16 +35,27 @@ function assertNotConsignedTo(current: WatchStateSnapshot) {
 
 function assertServiceReady(current: WatchStateSnapshot) {
   if (
-    current.serviceState === WatchServiceState.PENDING ||
-    current.serviceState === WatchServiceState.IN_SERVICE
+    current.serviceStage === WatchServiceStage.PENDING ||
+    current.serviceStage === WatchServiceStage.IN_SERVICE
   ) {
     fail("Watch đang trong luồng service, chưa thể chuyển READY/HOLD/SOLD.");
   }
 }
 
+function toProcessingIfNeeded(current: WatchStateSnapshot) {
+  if (
+    current.saleStage === WatchSaleStage.DRAFT ||
+    current.saleStage === WatchSaleStage.PROCESSING
+  ) {
+    return WatchSaleStage.PROCESSING;
+  }
+
+  return current.saleStage;
+}
+
 export function resolveWatchStateTransition(
   action: WatchStateAction,
-  current: WatchStateSnapshot
+  current: WatchStateSnapshot,
 ): WatchStatePatch {
   switch (action) {
     case "MARK_READY": {
@@ -50,8 +64,8 @@ export function resolveWatchStateTransition(
       assertServiceReady(current);
 
       return {
-        saleState: WatchSaleState.READY,
-        stockState: WatchStockState.IN_STOCK,
+        saleStage: WatchSaleStage.READY,
+        stockStage: WatchStockStage.IN_STOCK,
         productStatus: ProductStatus.AVAILABLE,
       };
     }
@@ -62,8 +76,8 @@ export function resolveWatchStateTransition(
       assertServiceReady(current);
 
       return {
-        saleState: WatchSaleState.HOLD,
-        stockState: WatchStockState.RESERVED,
+        saleStage: WatchSaleStage.HOLD,
+        stockStage: WatchStockStage.RESERVED,
         productStatus: ProductStatus.HOLD,
       };
     }
@@ -72,15 +86,15 @@ export function resolveWatchStateTransition(
       assertNotSold(current);
       assertNotConsignedTo(current);
 
-      if (current.saleState !== WatchSaleState.HOLD) {
+      if (current.saleStage !== WatchSaleStage.HOLD) {
         fail("Chỉ watch đang HOLD mới được bỏ giữ.");
       }
 
       assertServiceReady(current);
 
       return {
-        saleState: WatchSaleState.READY,
-        stockState: WatchStockState.IN_STOCK,
+        saleStage: WatchSaleStage.READY,
+        stockStage: WatchStockStage.IN_STOCK,
         productStatus: ProductStatus.AVAILABLE,
       };
     }
@@ -91,8 +105,8 @@ export function resolveWatchStateTransition(
       assertServiceReady(current);
 
       return {
-        saleState: WatchSaleState.SOLD,
-        stockState: WatchStockState.OUT_OF_STOCK,
+        saleStage: WatchSaleStage.SOLD,
+        stockStage: WatchStockStage.OUT_OF_STOCK,
         productStatus: ProductStatus.SOLD,
       };
     }
@@ -102,8 +116,8 @@ export function resolveWatchStateTransition(
       assertServiceReady(current);
 
       return {
-        saleState: WatchSaleState.CONSIGNED_TO,
-        stockState: WatchStockState.OUT_OF_STOCK,
+        saleStage: WatchSaleStage.CONSIGNED_TO,
+        stockStage: WatchStockStage.OUT_OF_STOCK,
         productStatus: ProductStatus.CONSIGNED_TO,
       };
     }
@@ -113,9 +127,9 @@ export function resolveWatchStateTransition(
       assertNotConsignedTo(current);
 
       return {
-        saleState: WatchSaleState.IN_SERVICE,
-        serviceState: WatchServiceState.PENDING,
-        stockState: WatchStockState.OUT_OF_STOCK,
+        saleStage: toProcessingIfNeeded(current),
+        serviceStage: WatchServiceStage.PENDING,
+        stockStage: WatchStockStage.OUT_OF_STOCK,
         productStatus: ProductStatus.NEED_SERVICE,
       };
     }
@@ -125,9 +139,9 @@ export function resolveWatchStateTransition(
       assertNotConsignedTo(current);
 
       return {
-        saleState: WatchSaleState.IN_SERVICE,
-        serviceState: WatchServiceState.IN_SERVICE,
-        stockState: WatchStockState.OUT_OF_STOCK,
+        saleStage: toProcessingIfNeeded(current),
+        serviceStage: WatchServiceStage.IN_SERVICE,
+        stockStage: WatchStockStage.OUT_OF_STOCK,
         productStatus: ProductStatus.IN_SERVICE,
       };
     }
@@ -137,9 +151,9 @@ export function resolveWatchStateTransition(
       assertNotConsignedTo(current);
 
       return {
-        saleState: WatchSaleState.READY,
-        serviceState: WatchServiceState.DONE,
-        stockState: WatchStockState.IN_STOCK,
+        saleStage: WatchSaleStage.READY,
+        serviceStage: WatchServiceStage.DONE,
+        stockStage: WatchStockStage.IN_STOCK,
         productStatus: ProductStatus.AVAILABLE,
       };
     }

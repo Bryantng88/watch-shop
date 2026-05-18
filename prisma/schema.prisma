@@ -893,15 +893,14 @@ model Vendor {
 }
 
 model Watch {
-  id              String  @id @default(dbgenerated("(gen_random_uuid())::text"))
-  productId       String  @unique
-  legacyVariantId String? @unique
+  id              String            @id @default(dbgenerated("(gen_random_uuid())::text"))
+  productId       String            @unique
+  legacyVariantId String?           @unique
   acquisitionId   String?
-
-  stockState   String?
-  saleState    String?
-  serviceState String?
-  siteChannel  WatchSiteChannel @default(AFFORDABLE)
+  saleStage       WatchSaleStage    @default(DRAFT)
+  serviceStage    WatchServiceStage @default(NOT_REQUIRED)
+  stockState      WatchStockStage   @default(IN_STOCK)
+  siteChannel     WatchSiteChannel  @default(AFFORDABLE)
 
   gender          Gender        @default(MEN)
   conditionGrade  String?
@@ -929,8 +928,8 @@ model Watch {
   reviewStates WatchReviewState[]
 
   @@index([gender])
-  @@index([saleState])
-  @@index([serviceState])
+  @@index([saleStage])
+  @@index([serviceStage])
   @@index([siteChannel])
   @@index([stockState])
   @@index([specStatus])
@@ -1893,8 +1892,9 @@ enum WatchReviewAction {
   AUTO_APPROVE
 }
 
-enum WatchSaleState {
+enum WatchSaleStage {
   DRAFT
+  PROCESSING
   READY
   HOLD
   SOLD
@@ -1902,15 +1902,21 @@ enum WatchSaleState {
   IN_SERVICE
 }
 
-enum WatchServiceState {
+enum WatchServiceStage {
   NOT_REQUIRED
   PENDING
   IN_SERVICE
   DONE
 }
 
-enum WatchStockState {
+enum WatchStockStage {
   IN_STOCK
   OUT_OF_STOCK
   RESERVED
+}
+
+enum WatchPostStage {
+  PREPARING
+  READY
+  POSTED
 }

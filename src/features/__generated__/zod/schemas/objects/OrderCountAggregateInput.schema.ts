@@ -15,6 +15,7 @@ const makeSchema = () => z.object({
   status: z.literal(true).optional(),
   paymentStatus: z.literal(true).optional(),
   paymentMethod: z.literal(true).optional(),
+  depositPaymentMethod: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   customerName: z.literal(true).optional(),

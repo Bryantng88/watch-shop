@@ -6,9 +6,9 @@ type Tx = Prisma.TransactionClient;
 
 const WATCH_STATE_SELECT = {
   productId: true,
-  saleState: true,
-  serviceState: true,
-  stockState: true,
+  saleStage: true,
+  serviceStage: true,
+  stockStage: true,
   product: {
     select: {
       id: true,
@@ -16,7 +16,6 @@ const WATCH_STATE_SELECT = {
     },
   },
 } satisfies Prisma.WatchSelect;
-
 export async function getWatchStateSnapshotRepo(
   tx: Tx,
   productId: string
@@ -45,11 +44,11 @@ export async function applyWatchStatePatchRepo(
   return tx.watch.update({
     where: { productId },
     data: {
-      ...(patch.saleState !== undefined ? { saleState: patch.saleState } : {}),
-      ...(patch.serviceState !== undefined
-        ? { serviceState: patch.serviceState }
+      ...(patch.saleStage !== undefined ? { saleStage: patch.saleStage } : {}),
+      ...(patch.serviceStage !== undefined
+        ? { serviceStage: patch.serviceStage }
         : {}),
-      ...(patch.stockState !== undefined ? { stockState: patch.stockState } : {}),
+      ...(patch.stockStage !== undefined ? { stockStage: patch.stockStage } : {}),
       updatedAt: new Date(),
     },
     select: WATCH_STATE_SELECT,
