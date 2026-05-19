@@ -52,8 +52,8 @@ export async function postOneOrderTx(tx: Prisma.TransactionClient, orderId: stri
     });
   }
 
-  if (order.OrderItem.some((item) => item.kind === "SERVICE")) {
-    await serviceRequestService.createFromOrderTx(tx as any, { ...order, items: order.OrderItem } as any);
+  if (order.orderItem.some((item) => item.kind === "SERVICE")) {
+    await serviceRequestService.createFromOrderTx(tx as any, { ...order, items: order.orderItem } as any);
   }
 
   return { id: order.id, status: "POSTED" as const, refNo };

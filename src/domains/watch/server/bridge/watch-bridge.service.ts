@@ -8,8 +8,8 @@ import { getWatchBridgeRow } from "./watch-bridge.repo";
 import { markWatchConsignedTo, markWatchReady, markWatchServicePending } from "../state";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
-import * as orderService from "@/app/(admin)/admin/orders/_servers/order.service";
-import * as acquisitionService from "@/app/(admin)/admin/acquisitions/_server/core/acquisition.service";
+import * as orderService from "@/domains/order/server";
+import * as acquisitionService from "@/domains/acquisition/server";
 import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
 
 function normalizeStatus(value: unknown) {
@@ -27,7 +27,7 @@ export async function quickOrderWatch(input: QuickOrderWatchInput) {
     }
 
     const productStatus = normalizeStatus(watch.product.status);
-    const saleState = normalizeStatus(watch.saleState);
+    const saleState = normalizeStatus(watch.saleStage);
 
     if (productStatus === "SOLD" || saleState === "SOLD") {
       throw new Error("Watch đã SOLD, không thể tạo quick order");
@@ -90,7 +90,7 @@ export async function consignWatch(input: ConsignWatchInput) {
   }
 
   const productStatus = normalizeStatus(watch.product.status);
-  const saleState = normalizeStatus(watch.saleState);
+  const saleState = normalizeStatus(watch.saleStage);
 
   if (productStatus === "SOLD" || saleState === "SOLD") {
     throw new Error("Watch đã SOLD, không thể consign");

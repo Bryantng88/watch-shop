@@ -28,7 +28,7 @@ const makeSchema = () => z.object({
   acquisitionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   saleStage: z.union([WatchSaleStageSchema, z.lazy(() => EnumWatchSaleStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   serviceStage: z.union([WatchServiceStageSchema, z.lazy(() => EnumWatchServiceStageFieldUpdateOperationsInputObjectSchema)]).optional(),
-  stockState: z.union([WatchStockStageSchema, z.lazy(() => EnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional(),
+  stockStage: z.union([WatchStockStageSchema, z.lazy(() => EnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional(),
   siteChannel: z.union([WatchSiteChannelSchema, z.lazy(() => EnumWatchSiteChannelFieldUpdateOperationsInputObjectSchema)]).optional(),
   gender: z.union([GenderSchema, z.lazy(() => EnumGenderFieldUpdateOperationsInputObjectSchema)]).optional(),
   conditionGrade: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

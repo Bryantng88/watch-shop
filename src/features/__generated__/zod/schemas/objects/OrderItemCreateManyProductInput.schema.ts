@@ -4,7 +4,11 @@ import { DiscountTypeSchema } from '../enums/DiscountType.schema';
 import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
-import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema'
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -27,7 +31,11 @@ const makeSchema = () => z.object({
   linkedOrderItemId: z.string().optional().nullable(),
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  previousSaleStage: WatchSaleStageSchema.optional().nullable(),
+  previousServiceStage: WatchServiceStageSchema.optional().nullable(),
+  previousStockStage: WatchStockStageSchema.optional().nullable(),
+  previousProductStatus: ProductStatusSchema.optional().nullable()
 }).strict();
 export const OrderItemCreateManyProductInputObjectSchema: z.ZodType<Prisma.OrderItemCreateManyProductInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateManyProductInput>;
 export const OrderItemCreateManyProductInputObjectZodSchema = makeSchema();

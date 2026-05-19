@@ -15,7 +15,15 @@ import { EnumOrderItemKindFieldUpdateOperationsInputObjectSchema as EnumOrderIte
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
-import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema'
+import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchSaleStageFieldUpdateOperationsInput.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchServiceStageFieldUpdateOperationsInput.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchStockStageFieldUpdateOperationsInput.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema as NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema } from './NullableEnumProductStatusFieldUpdateOperationsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -35,7 +43,11 @@ const makeSchema = () => z.object({
   serviceScope: z.union([ServiceScopeSchema, z.lazy(() => NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  previousSaleStage: z.union([WatchSaleStageSchema, z.lazy(() => NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousServiceStage: z.union([WatchServiceStageSchema, z.lazy(() => NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousStockStage: z.union([WatchStockStageSchema, z.lazy(() => NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousProductStatus: z.union([ProductStatusSchema, z.lazy(() => NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const OrderItemUpdateManyMutationInputObjectSchema: z.ZodType<Prisma.OrderItemUpdateManyMutationInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUpdateManyMutationInput>;
 export const OrderItemUpdateManyMutationInputObjectZodSchema = makeSchema();

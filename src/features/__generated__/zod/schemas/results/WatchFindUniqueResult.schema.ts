@@ -6,7 +6,7 @@ export const WatchFindUniqueResultSchema = z.nullable(z.object({
   acquisitionId: z.string().optional(),
   saleStage: z.unknown(),
   serviceStage: z.unknown(),
-  stockState: z.unknown(),
+  stockStage: z.unknown(),
   siteChannel: z.unknown(),
   gender: z.unknown(),
   conditionGrade: z.string().optional(),

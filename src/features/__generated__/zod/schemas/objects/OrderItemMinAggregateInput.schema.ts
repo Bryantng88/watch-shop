@@ -24,7 +24,11 @@ const makeSchema = () => z.object({
   linkedOrderItemId: z.literal(true).optional(),
   customerItemNote: z.literal(true).optional(),
   createdFromFlow: z.literal(true).optional(),
-  updatedAt: z.literal(true).optional()
+  updatedAt: z.literal(true).optional(),
+  previousSaleStage: z.literal(true).optional(),
+  previousServiceStage: z.literal(true).optional(),
+  previousStockStage: z.literal(true).optional(),
+  previousProductStatus: z.literal(true).optional()
 }).strict();
 export const OrderItemMinAggregateInputObjectSchema: z.ZodType<Prisma.OrderItemMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemMinAggregateInputType>;
 export const OrderItemMinAggregateInputObjectZodSchema = makeSchema();

@@ -5,6 +5,10 @@ import { ProductTypeSchema } from '../../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../../enums/ServiceScope.schema';
 import { OrderFlowTypeSchema } from '../../enums/OrderFlowType.schema';
+import { WatchSaleStageSchema } from '../../enums/WatchSaleStage.schema';
+import { WatchServiceStageSchema } from '../../enums/WatchServiceStage.schema';
+import { WatchStockStageSchema } from '../../enums/WatchStockStage.schema';
+import { ProductStatusSchema } from '../../enums/ProductStatus.schema';
 // prettier-ignore
 export const OrderItemResultSchema = z.object({
     id: z.string(),
@@ -29,13 +33,17 @@ export const OrderItemResultSchema = z.object({
     customerItemNote: z.string().nullable(),
     createdFromFlow: OrderFlowTypeSchema,
     updatedAt: z.date(),
-    AcquisitionItem: z.array(z.unknown()),
-    OrderItem: z.unknown().nullable(),
-    other_OrderItem: z.array(z.unknown()),
-    Order: z.unknown(),
-    Product: z.unknown().nullable(),
+    previousSaleStage: WatchSaleStageSchema.nullable(),
+    previousServiceStage: WatchServiceStageSchema.nullable(),
+    previousStockStage: WatchStockStageSchema.nullable(),
+    previousProductStatus: ProductStatusSchema.nullable(),
+    acquisitionItem: z.array(z.unknown()),
+    linkedOrderItem: z.unknown().nullable(),
+    childOrderItems: z.array(z.unknown()),
+    order: z.unknown(),
+    product: z.unknown().nullable(),
     serviceCatalog: z.unknown().nullable(),
-    ServiceRequest: z.array(z.unknown())
+    serviceRequest: z.array(z.unknown())
 }).strict();
 
 export type OrderItemResultType = z.infer<typeof OrderItemResultSchema>;

@@ -40,13 +40,17 @@ export const OrderItemGroupByResultSchema = z.array(z.object({
     customerItemNote: z.number(),
     createdFromFlow: z.number(),
     updatedAt: z.number(),
-    AcquisitionItem: z.number(),
-    OrderItem: z.number(),
-    other_OrderItem: z.number(),
-    Order: z.number(),
-    Product: z.number(),
+    previousSaleStage: z.number(),
+    previousServiceStage: z.number(),
+    previousStockStage: z.number(),
+    previousProductStatus: z.number(),
+    acquisitionItem: z.number(),
+    linkedOrderItem: z.number(),
+    childOrderItems: z.number(),
+    order: z.number(),
+    product: z.number(),
     serviceCatalog: z.number(),
-    ServiceRequest: z.number()
+    serviceRequest: z.number()
   }).optional(),
   _sum: z.object({
     listPrice: z.number().nullable(),

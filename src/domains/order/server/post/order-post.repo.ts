@@ -2,13 +2,13 @@ import { dbOrTx, type DB } from "@/server/db/client";
 import type { OrderVerificationStatus } from "@prisma/client";
 
 export async function getOrderForPostRepo(db: DB, id: string) {
-  return dbOrTx(db).order.findUnique({ where: { id }, include: { OrderItem: true } });
+  return dbOrTx(db).order.findUnique({ where: { id }, include: { orderItem: true } });
 }
 
 export async function getOrdersForPostRepo(db: DB, ids: string[]) {
   return dbOrTx(db).order.findMany({
     where: { id: { in: ids }, status: "DRAFT" },
-    include: { OrderItem: true },
+    include: { orderItem: true },
   });
 }
 

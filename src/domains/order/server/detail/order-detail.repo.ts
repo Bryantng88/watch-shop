@@ -48,7 +48,7 @@ export async function getOrderDetailRepo(db: DB, id: string) {
           serviceScope: true,
           linkedOrderItemId: true,
           customerItemNote: true,
-          OrderItem: { select: { title: true } },
+          linkedOrderItem: { select: { title: true } },
         },
       },
     },

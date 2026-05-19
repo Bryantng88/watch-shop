@@ -74,10 +74,9 @@ async function resolveProductItems(
 
   return productIds.map((productId) => {
     const product = productById.get(productId)!;
-    const productStatus = String(product.status ?? "").toUpperCase();
-    if (productStatus === "SOLD") throw new Error(`Sản phẩm đã SOLD: ${productId}`);
-    if (productStatus === "CONSIGNED_TO") throw new Error(`Sản phẩm đang consign: ${productId}`);
-
+    // Quick order từ watch được phép tạo ở mọi saleStage.
+    // Không block theo product.status ở đây; trạng thái cũ sẽ được snapshot ở OrderItem
+    // và watch sẽ chuyển HOLD ngay khi order được tạo.
     const variants = Array.isArray(product.productVariant) ? product.productVariant : [];
     const variant = strictActiveOnly
       ? variants.find((v) => String(v.availabilityStatus ?? "").toUpperCase() === "ACTIVE")
@@ -174,8 +173,6 @@ export async function createOrderWithItems(raw: any) {
       }));
 
     const resolvedProducts = await resolveProductItems(tx, rawProductItems, { strictActiveOnly });
-    // DRAFT order không tạo inventory effect.
-    // Không reserve variant / không HOLD watch ở bước tạo nháp.
 
     const requestedStatus = input.status ?? OrderStatus.DRAFT;
     const shouldPostAfterCreate = requestedStatus === OrderStatus.POSTED;
@@ -233,6 +230,11 @@ export async function createOrderWithItems(raw: any) {
     const subtotal = rows.reduce((sum, row: any) => sum + Number(row.subtotal ?? 0), 0);
     await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
 
+    // Business mới: chỉ cần order được tạo, kể cả DRAFT, watch phải HOLD ngay.
+    await syncWatchInventoryFromOrders(
+      tx,
+      resolvedProducts.map((product) => product.productId),
+    );
     if (shouldPostAfterCreate) {
       const posted = await postOneOrderTx(tx, order.id);
       return toPlain(posted);

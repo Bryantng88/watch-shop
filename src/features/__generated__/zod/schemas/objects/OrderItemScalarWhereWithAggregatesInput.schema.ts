@@ -15,7 +15,15 @@ import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { EnumServiceScopeNullableWithAggregatesFilterObjectSchema as EnumServiceScopeNullableWithAggregatesFilterObjectSchema } from './EnumServiceScopeNullableWithAggregatesFilter.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { EnumOrderFlowTypeWithAggregatesFilterObjectSchema as EnumOrderFlowTypeWithAggregatesFilterObjectSchema } from './EnumOrderFlowTypeWithAggregatesFilter.schema';
-import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema'
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { EnumWatchSaleStageNullableWithAggregatesFilterObjectSchema as EnumWatchSaleStageNullableWithAggregatesFilterObjectSchema } from './EnumWatchSaleStageNullableWithAggregatesFilter.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { EnumWatchServiceStageNullableWithAggregatesFilterObjectSchema as EnumWatchServiceStageNullableWithAggregatesFilterObjectSchema } from './EnumWatchServiceStageNullableWithAggregatesFilter.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { EnumWatchStockStageNullableWithAggregatesFilterObjectSchema as EnumWatchStockStageNullableWithAggregatesFilterObjectSchema } from './EnumWatchStockStageNullableWithAggregatesFilter.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { EnumProductStatusNullableWithAggregatesFilterObjectSchema as EnumProductStatusNullableWithAggregatesFilterObjectSchema } from './EnumProductStatusNullableWithAggregatesFilter.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema'
 
 const orderitemscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => OrderItemScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -42,7 +50,11 @@ const orderitemscalarwherewithaggregatesinputSchema = z.object({
   linkedOrderItemId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   customerItemNote: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdFromFlow: z.union([z.lazy(() => EnumOrderFlowTypeWithAggregatesFilterObjectSchema), OrderFlowTypeSchema]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  previousSaleStage: z.union([z.lazy(() => EnumWatchSaleStageNullableWithAggregatesFilterObjectSchema), WatchSaleStageSchema]).optional().nullable(),
+  previousServiceStage: z.union([z.lazy(() => EnumWatchServiceStageNullableWithAggregatesFilterObjectSchema), WatchServiceStageSchema]).optional().nullable(),
+  previousStockStage: z.union([z.lazy(() => EnumWatchStockStageNullableWithAggregatesFilterObjectSchema), WatchStockStageSchema]).optional().nullable(),
+  previousProductStatus: z.union([z.lazy(() => EnumProductStatusNullableWithAggregatesFilterObjectSchema), ProductStatusSchema]).optional().nullable()
 }).strict();
 export const OrderItemScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput> = orderitemscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.OrderItemScalarWhereWithAggregatesInput>;
 export const OrderItemScalarWhereWithAggregatesInputObjectZodSchema = orderitemscalarwherewithaggregatesinputSchema;

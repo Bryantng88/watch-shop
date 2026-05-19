@@ -23,7 +23,7 @@ export async function getAdminOrderDetail(id: string) {
       unitPriceAgreed: toNumberPrice(item.unitPriceAgreed),
       subtotal: toNumberPrice(item.subtotal),
       taxRate: toNumberPrice(item.taxRate),
-      linkedProductTitle: item.OrderItem?.title ?? null,
+      linkedProductTitle: item.linkedOrderItem?.title ?? null,
     })),
     OrderItem: undefined,
   });

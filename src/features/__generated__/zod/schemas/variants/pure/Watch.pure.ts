@@ -16,7 +16,7 @@ export const WatchModelSchema = z.object({
     acquisitionId: z.string().nullable(),
     saleStage: WatchSaleStageSchema,
     serviceStage: WatchServiceStageSchema,
-    stockState: WatchStockStageSchema,
+    stockStage: WatchStockStageSchema,
     siteChannel: WatchSiteChannelSchema,
     gender: GenderSchema,
     conditionGrade: z.string().nullable(),

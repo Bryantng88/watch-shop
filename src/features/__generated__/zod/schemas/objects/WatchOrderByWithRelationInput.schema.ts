@@ -15,7 +15,7 @@ const makeSchema = () => z.object({
   acquisitionId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   saleStage: SortOrderSchema.optional(),
   serviceStage: SortOrderSchema.optional(),
-  stockState: SortOrderSchema.optional(),
+  stockStage: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
   gender: SortOrderSchema.optional(),
   conditionGrade: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

@@ -32,13 +32,17 @@ const orderitemorderbywithrelationinputSchema = z.object({
   customerItemNote: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdFromFlow: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
-  other_OrderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
-  Order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
+  previousSaleStage: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  previousServiceStage: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  previousStockStage: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  previousProductStatus: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  acquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
+  linkedOrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
+  childOrderItems: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
+  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
+  product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   serviceCatalog: z.lazy(() => ServiceCatalogOrderByWithRelationInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
+  serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const OrderItemOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.OrderItemOrderByWithRelationInput> = orderitemorderbywithrelationinputSchema as unknown as z.ZodType<Prisma.OrderItemOrderByWithRelationInput>;
 export const OrderItemOrderByWithRelationInputObjectZodSchema = orderitemorderbywithrelationinputSchema;

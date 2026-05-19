@@ -22,11 +22,15 @@ export const OrderItemCreateResultSchema = z.object({
   customerItemNote: z.string().optional(),
   createdFromFlow: z.unknown(),
   updatedAt: z.date(),
-  AcquisitionItem: z.array(z.unknown()),
-  OrderItem: z.unknown().optional(),
-  other_OrderItem: z.array(z.unknown()),
-  Order: z.unknown(),
-  Product: z.unknown().optional(),
+  previousSaleStage: z.unknown().optional(),
+  previousServiceStage: z.unknown().optional(),
+  previousStockStage: z.unknown().optional(),
+  previousProductStatus: z.unknown().optional(),
+  acquisitionItem: z.array(z.unknown()),
+  linkedOrderItem: z.unknown().optional(),
+  childOrderItems: z.array(z.unknown()),
+  order: z.unknown(),
+  product: z.unknown().optional(),
   serviceCatalog: z.unknown().optional(),
-  ServiceRequest: z.array(z.unknown())
+  serviceRequest: z.array(z.unknown())
 });

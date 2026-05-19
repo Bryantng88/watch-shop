@@ -6,7 +6,7 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     acquisitionId: z.number(),
     saleStage: z.number(),
     serviceStage: z.number(),
-    stockState: z.number(),
+    stockStage: z.number(),
     siteChannel: z.number(),
     gender: z.number(),
     conditionGrade: z.number(),

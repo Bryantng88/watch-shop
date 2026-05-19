@@ -85,9 +85,9 @@ export default function OrderListTable({
               </th>
               <th className="px-4 py-4">Đơn hàng</th>
               <th className="px-4 py-4">Khách hàng</th>
+              <th className="px-4 py-4">Loại thanh toán</th>
               <th className="px-4 py-4">Thanh toán</th>
               <th className="px-4 py-4">Status</th>
-              <th className="px-4 py-4">Nguồn</th>
               <th className="px-4 py-4 text-right">Tổng tiền</th>
               <th className="px-4 py-4">Cập nhật</th>
               <th className="px-4 py-4 text-right">Action</th>
@@ -114,7 +114,7 @@ export default function OrderListTable({
             {!items.length ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-5 py-12 text-center text-sm text-slate-500"
                 >
                   Không có đơn hàng phù hợp.

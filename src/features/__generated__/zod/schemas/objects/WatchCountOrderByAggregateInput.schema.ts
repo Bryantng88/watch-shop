@@ -9,7 +9,7 @@ const makeSchema = () => z.object({
   acquisitionId: SortOrderSchema.optional(),
   saleStage: SortOrderSchema.optional(),
   serviceStage: SortOrderSchema.optional(),
-  stockState: SortOrderSchema.optional(),
+  stockStage: SortOrderSchema.optional(),
   siteChannel: SortOrderSchema.optional(),
   gender: SortOrderSchema.optional(),
   conditionGrade: SortOrderSchema.optional(),

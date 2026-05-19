@@ -45,6 +45,7 @@ async function getOrderPaymentSeedTx(tx: Tx, orderId: string): Promise<OrderPaym
     select: {
       id: true,
       subtotal: true,
+      status: true,
       shippingFee: true,
       paymentMethod: true,
       depositRequired: true,
@@ -221,6 +222,8 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
   const rows = [];
   const hasDeposit = seed.depositAmount > 0 && seed.depositAmount < seed.totalDue;
 
+  // Full-payment order: tạo đúng 1 payment bằng tổng đơn.
+  // Sau đó user chỉ được action "hoàn tất payment", không tạo payment mới nữa.
   if (!hasDeposit) {
     const full = await createOrderPaymentTx(tx, {
       orderId,
@@ -233,23 +236,20 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
     return rows;
   }
 
+  // Deposit/COD đều có cọc trước. Ban đầu chỉ tạo payment cọc.
+  // Phần còn lại:
+  // - COD: tạo COLLECTED khi shipment DELIVERED.
+  // - Deposit thường: user tạo thêm qua modal multi-payment.
   const deposit = await createOrderPaymentTx(tx, {
     orderId,
     amount: seed.depositAmount,
     purpose: PaymentPurpose.ORDER_DEPOSIT,
     method: seed.depositMethod,
-    note: "Payment cọc đơn hàng",
+    note: seed.remainingMethod === PaymentMethod.COD
+      ? "Payment cọc đơn COD"
+      : "Payment cọc đơn hàng",
   });
   if (deposit) rows.push(deposit);
-
-  const remaining = await createOrderPaymentTx(tx, {
-    orderId,
-    amount: seed.totalDue - seed.depositAmount,
-    purpose: PaymentPurpose.ORDER_REMAIN,
-    method: seed.remainingMethod,
-    note: seed.remainingMethod === PaymentMethod.COD ? "COD phần còn lại - chờ giao hàng" : "Payment phần còn lại của đơn hàng",
-  });
-  if (remaining) rows.push(remaining);
 
   return rows;
 }
@@ -272,11 +272,29 @@ export async function createPayment(input: CreatePaymentInput) {
     const summary = await getOrderPaymentSummaryTx(tx, order.id);
     if (summary.remaining <= 0) throw new Error("Order đã thanh toán đủ.");
 
+    const existingFullPayment = await tx.payment.findFirst({
+      where: {
+        order_id: order.id,
+        type: PaymentType.ORDER,
+        direction: PaymentDirection.IN,
+        purpose: PaymentPurpose.ORDER_FULL,
+      },
+      select: { id: true, status: true },
+    });
+
+    if (existingFullPayment) {
+      throw new Error("Đơn thanh toán full đã có payment toàn bộ. Vui lòng dùng action hoàn tất payment, không tạo payment mới.");
+    }
+
+    const method = normalizePaymentMethod(input.method, order.paymentMethod ?? PaymentMethod.BANK_TRANSFER);
+    if (method === PaymentMethod.COD) {
+      throw new Error("Payment COD phần còn lại sẽ được tạo khi shipment được đánh dấu đã giao.");
+    }
+
     const amount = input.amount == null ? summary.remaining : Number(input.amount);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error("Số tiền payment không hợp lệ.");
     if (amount > summary.remaining) throw new Error("Số tiền payment vượt quá số còn lại cần thu.");
 
-    const method = normalizePaymentMethod(input.method, order.paymentMethod ?? PaymentMethod.BANK_TRANSFER);
     const purpose = (input.purpose as PaymentPurpose | null) ?? PaymentPurpose.ORDER_REMAIN;
 
     const payment = await createOrderPaymentTx(tx, {
@@ -338,7 +356,12 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: { orderId: 
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
-      select: { id: true, status: true, hasShipment: true },
+      select: {
+        id: true,
+        status: true,
+        hasShipment: true,
+        paymentMethod: true,
+      },
     });
 
     if (!order) throw new Error("Order không tồn tại.");
@@ -346,32 +369,60 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: { orderId: 
     if (order.status === OrderStatus.CANCELLED) throw new Error("Không thể giao order đã hủy.");
     if (!order.hasShipment) throw new Error("Order này không có shipment.");
 
-    await (tx as any).shipment.updateMany({
+    await (tx as any).shipment.upsert({
       where: { orderId: order.id },
-      data: {
+      create: {
+        orderId: order.id,
+        status: "DELIVERED",
+        deliveredAt: new Date(),
+        updatedAt: new Date(),
+      },
+      update: {
         status: "DELIVERED",
         deliveredAt: new Date(),
         updatedAt: new Date(),
       },
     });
 
-    await tx.payment.updateMany({
-      where: {
-        order_id: order.id,
-        type: PaymentType.ORDER,
-        direction: PaymentDirection.IN,
-        method: PaymentMethod.COD,
-        status: PaymentStatus.UNPAID,
-      },
-      data: {
-        status: COLLECTED,
-        note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
-        updatedAt: new Date(),
-      } as any,
-    });
+    const summary = await getOrderPaymentSummaryTx(tx, order.id);
+    const remainingCodAmount = Math.max(0, summary.totalDue - summary.paidTotal - summary.collectedTotal);
 
-    const summary = await recomputeOrderPaymentRollupTx(tx, order.id);
-    return toPlain({ orderId: order.id, summary });
+    if (order.paymentMethod === PaymentMethod.COD && remainingCodAmount > 0) {
+      const existingCodRemain = await tx.payment.findFirst({
+        where: {
+          order_id: order.id,
+          type: PaymentType.ORDER,
+          direction: PaymentDirection.IN,
+          purpose: PaymentPurpose.ORDER_REMAIN,
+          method: PaymentMethod.COD,
+          status: { in: [PaymentStatus.UNPAID, COLLECTED] as any },
+        },
+        select: { id: true },
+      });
+
+      if (existingCodRemain) {
+        await tx.payment.update({
+          where: { id: existingCodRemain.id },
+          data: {
+            status: COLLECTED,
+            note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+            updatedAt: new Date(),
+          } as any,
+        });
+      } else {
+        await createOrderPaymentTx(tx, {
+          orderId: order.id,
+          amount: remainingCodAmount,
+          purpose: PaymentPurpose.ORDER_REMAIN,
+          method: PaymentMethod.COD,
+          status: COLLECTED,
+          note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+        });
+      }
+    }
+
+    const nextSummary = await recomputeOrderPaymentRollupTx(tx, order.id);
+    return toPlain({ orderId: order.id, summary: nextSummary });
   });
 }
 

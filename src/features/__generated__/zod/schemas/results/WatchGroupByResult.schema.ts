@@ -22,7 +22,7 @@ export const WatchGroupByResultSchema = z.array(z.object({
     acquisitionId: z.number(),
     saleStage: z.number(),
     serviceStage: z.number(),
-    stockState: z.number(),
+    stockStage: z.number(),
     siteChannel: z.number(),
     gender: z.number(),
     conditionGrade: z.number(),

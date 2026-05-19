@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   acquisitionId: z.string().optional().nullable(),
   saleStage: WatchSaleStageSchema.optional(),
   serviceStage: WatchServiceStageSchema.optional(),
-  stockState: WatchStockStageSchema.optional(),
+  stockStage: WatchStockStageSchema.optional(),
   siteChannel: WatchSiteChannelSchema.optional(),
   gender: GenderSchema.optional(),
   conditionGrade: z.string().optional().nullable(),

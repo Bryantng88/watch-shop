@@ -5,8 +5,12 @@ import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
-import { OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema as OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema } from './OrderItemCreateNestedOneWithoutOther_OrderItemInput.schema';
-import { OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderItemInput.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { OrderItemCreateNestedOneWithoutChildOrderItemsInputObjectSchema as OrderItemCreateNestedOneWithoutChildOrderItemsInputObjectSchema } from './OrderItemCreateNestedOneWithoutChildOrderItemsInput.schema';
+import { OrderItemCreateNestedManyWithoutLinkedOrderItemInputObjectSchema as OrderItemCreateNestedManyWithoutLinkedOrderItemInputObjectSchema } from './OrderItemCreateNestedManyWithoutLinkedOrderItemInput.schema';
 import { OrderCreateNestedOneWithoutOrderItemInputObjectSchema as OrderCreateNestedOneWithoutOrderItemInputObjectSchema } from './OrderCreateNestedOneWithoutOrderItemInput.schema';
 import { ProductCreateNestedOneWithoutOrderItemInputObjectSchema as ProductCreateNestedOneWithoutOrderItemInputObjectSchema } from './ProductCreateNestedOneWithoutOrderItemInput.schema';
 import { ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema as ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutOrderItemInput.schema';
@@ -31,12 +35,16 @@ const makeSchema = () => z.object({
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
   updatedAt: z.coerce.date().optional(),
-  OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutOther_OrderItemInputObjectSchema).optional(),
-  other_OrderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
-  Order: z.lazy(() => OrderCreateNestedOneWithoutOrderItemInputObjectSchema),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
+  previousSaleStage: WatchSaleStageSchema.optional().nullable(),
+  previousServiceStage: WatchServiceStageSchema.optional().nullable(),
+  previousStockStage: WatchStockStageSchema.optional().nullable(),
+  previousProductStatus: ProductStatusSchema.optional().nullable(),
+  linkedOrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutChildOrderItemsInputObjectSchema).optional(),
+  childOrderItems: z.lazy(() => OrderItemCreateNestedManyWithoutLinkedOrderItemInputObjectSchema).optional(),
+  order: z.lazy(() => OrderCreateNestedOneWithoutOrderItemInputObjectSchema),
+  product: z.lazy(() => ProductCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
   serviceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutOrderItemInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema).optional()
+  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutOrderItemInputObjectSchema).optional()
 }).strict();
 export const OrderItemCreateWithoutAcquisitionItemInputObjectSchema: z.ZodType<Prisma.OrderItemCreateWithoutAcquisitionItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCreateWithoutAcquisitionItemInput>;
 export const OrderItemCreateWithoutAcquisitionItemInputObjectZodSchema = makeSchema();

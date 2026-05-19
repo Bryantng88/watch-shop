@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { OrderDraftInput, OrderItemInput } from "../shared";
+import { normalizeReserveType } from "../../shared/order-reserve-type";
 
 export async function findCustomerByIdRepo(db: DB, id: string) {
   return dbOrTx(db).customer.findUnique({ where: { id } });
@@ -55,14 +56,53 @@ export async function createOrderRepo(db: DB, data: Prisma.OrderUncheckedCreateI
   return dbOrTx(db).order.create({ data, select: { id: true } });
 }
 
+
+async function buildOrderItemInventorySnapshots(client: ReturnType<typeof dbOrTx>, productIds: string[]) {
+  const cleanIds = Array.from(new Set(productIds.map((id) => String(id ?? "").trim()).filter(Boolean)));
+  if (!cleanIds.length) return new Map<string, any>();
+
+  const rows = await client.product.findMany({
+    where: { id: { in: cleanIds } },
+    select: {
+      id: true,
+      status: true,
+      watch: {
+        select: {
+          saleStage: true,
+          stockStage: true,
+          serviceStage: true,
+        } as any,
+      },
+    },
+  } as any);
+
+  return new Map(
+    rows.map((row: any) => [
+      row.id,
+      {
+        previousProductStatus: row.status ?? null,
+        previousSaleStage: row.watch?.saleStage ?? null,
+        previousStockStage: row.watch?.stockStage ?? null,
+        previousServiceStage: row.watch?.serviceStage ?? null,
+      },
+    ]),
+  );
+}
+
 export async function createOrderItemsRepo(db: DB, orderId: string, items: OrderItemInput[]) {
   const client = dbOrTx(db);
   if (!items.length) return [];
+
+  const snapshotByProductId = await buildOrderItemInventorySnapshots(
+    client,
+    items.map((item) => item.productId ?? null).filter(Boolean) as string[],
+  );
 
   const rows = items.map((item) => {
     const quantity = Number(item.quantity ?? 1) || 1;
     const unitPriceAgreed = Number(item.unitPriceAgreed ?? item.listPrice ?? 0);
     const subtotal = unitPriceAgreed * quantity;
+    const snapshot = item.productId ? snapshotByProductId.get(item.productId) : null;
 
     return {
       orderId,
@@ -81,7 +121,10 @@ export async function createOrderItemsRepo(db: DB, orderId: string, items: Order
       customerItemNote: item.customerItemNote ?? null,
       linkedOrderItemId: item.linkedOrderItemId ?? null,
       createdFromFlow: (item.createdFromFlow ?? "STANDARD") as any,
-    };
+      previousProductStatus: snapshot?.productStatus ?? null,
+      previousStockStage: snapshot?.stockStage ?? null,
+      previousServiceStage: snapshot?.serviceStage ?? null,
+    } as any;
   });
 
   await client.orderItem.createMany({ data: rows });
@@ -123,7 +166,7 @@ export async function replaceOrderDraftRepo(db: DB, orderId: string, input: Orde
       createdAt: new Date(input.createdAt),
       paymentMethod: input.paymentMethod,
       notes: input.notes ?? null,
-      reserveType: input.reserve?.type ?? null,
+      reserveType: normalizeReserveType(input.reserveType),
       depositRequired: input.reserve ? new Prisma.Decimal(Number(input.reserve.amount ?? 0)) : new Prisma.Decimal(0),
       reserveUntil: input.reserve?.expiresAt ? new Date(input.reserve.expiresAt) : null,
     },

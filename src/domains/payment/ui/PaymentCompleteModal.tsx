@@ -56,7 +56,7 @@ export default function PaymentCompleteModal({ open, order, submitting, onClose,
     setReference("");
     setNote("");
 
-    fetch(`/api/admin/orders/${order.id}/payments`)
+    fetch(`/api/admin/orders/${order.id}/payment`)
       .then((res) => res.json())
       .then((json) => {
         if (cancelled) return;

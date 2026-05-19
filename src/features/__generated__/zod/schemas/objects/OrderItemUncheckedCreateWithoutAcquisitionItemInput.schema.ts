@@ -5,7 +5,11 @@ import { ProductTypeSchema } from '../enums/ProductType.schema';
 import { OrderItemKindSchema } from '../enums/OrderItemKind.schema';
 import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
-import { OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutOrderItemInput.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { OrderItemUncheckedCreateNestedManyWithoutLinkedOrderItemInputObjectSchema as OrderItemUncheckedCreateNestedManyWithoutLinkedOrderItemInputObjectSchema } from './OrderItemUncheckedCreateNestedManyWithoutLinkedOrderItemInput.schema';
 import { ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInput.schema'
 
 const makeSchema = () => z.object({
@@ -31,8 +35,12 @@ const makeSchema = () => z.object({
   customerItemNote: z.string().optional().nullable(),
   createdFromFlow: OrderFlowTypeSchema.optional(),
   updatedAt: z.coerce.date().optional(),
-  other_OrderItem: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional()
+  previousSaleStage: WatchSaleStageSchema.optional().nullable(),
+  previousServiceStage: WatchServiceStageSchema.optional().nullable(),
+  previousStockStage: WatchStockStageSchema.optional().nullable(),
+  previousProductStatus: ProductStatusSchema.optional().nullable(),
+  childOrderItems: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutLinkedOrderItemInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutOrderItemInputObjectSchema).optional()
 }).strict();
 export const OrderItemUncheckedCreateWithoutAcquisitionItemInputObjectSchema: z.ZodType<Prisma.OrderItemUncheckedCreateWithoutAcquisitionItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUncheckedCreateWithoutAcquisitionItemInput>;
 export const OrderItemUncheckedCreateWithoutAcquisitionItemInputObjectZodSchema = makeSchema();

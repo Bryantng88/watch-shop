@@ -1,5 +1,11 @@
 import type { OrderListCounts, OrderListItem, OrderProcessingSubFilter, OrderViewKey } from "./types";
-
+import { ReserveType } from "@prisma/client";
+import {
+  isCodReserveType,
+  isDepositReserveType,
+  isFullPaymentReserveType,
+  normalizeReserveType,
+} from "@/domains/order/shared/order-reserve-type";
 export const ORDER_SORT_OPTIONS = [
   { label: "Cập nhật ↓", value: "updatedDesc" },
   { label: "Cập nhật ↑", value: "updatedAsc" },
@@ -141,24 +147,42 @@ export function canCancelOrder(item: { status?: string | null }) {
 
 export function canCreatePayment(item: OrderListItem) {
   const status = String(item.status ?? "").toUpperCase();
-  if (status === "DRAFT" || status === "CANCELED") return false;
 
-  const depositRequired = Number(item.depositRequired ?? 0);
+  if (["DRAFT", "CANCELLED", "CANCELED", "COMPLETED"].includes(status)) {
+    return false;
+  }
+
   const remainingAmount = Number(item.remainingAmount ?? 0);
+  const depositRequired = Number(item.depositRequired ?? 0);
+  const paymentMethod = String(item.paymentMethod ?? "").toUpperCase();
   const paymentFlow = String(item.paymentFlowLabel ?? "").toUpperCase();
 
-  const hasDeposit = depositRequired > 0 || paymentFlow.includes("CỌC");
-  const isCod = paymentFlow.includes("COD");
+  const isCod = paymentMethod === "COD" || paymentFlow.includes("COD");
+  const isDepositOrder = depositRequired > 0 || paymentFlow.includes("CỌC");
 
-  return remainingAmount > 0 && (hasDeposit || isCod);
+  // Đơn full 100% đã được tạo payment khi post order.
+  // Không cho tạo thêm payment mới, chỉ cho hoàn tất payment pending.
+  if (!isDepositOrder && !isCod) {
+    return false;
+  }
+
+  // COD: phần COD còn lại đi theo shipment/delivered flow, không tạo payment thủ công từ menu.
+  if (isCod) {
+    return false;
+  }
+
+  // Deposit thường: cho multi-payment nếu còn phải thu và không có payment pending.
+  return remainingAmount > 0 && !item.hasPendingPayment;
 }
 
 export function canMarkPaymentPaid(item: {
   status?: string | null;
   hasPendingPayment?: boolean | null;
 }) {
+  const status = String(item.status ?? "").toUpperCase();
+
   return (
-    ["POSTED", "COMPLETED"].includes(String(item.status ?? "").toUpperCase()) &&
+    !["DRAFT", "CANCELLED", "CANCELED", "COMPLETED"].includes(status) &&
     Boolean(item.hasPendingPayment)
   );
 }
@@ -256,6 +280,99 @@ export function orderPaymentFlowTone(item: OrderListItem) {
   return "bg-slate-100 text-slate-700 ring-slate-200";
 }
 
+export function paymentDisplayLabel(item: OrderListItem) {
+  const paymentStatus = String(item.paymentStatus ?? "").toUpperCase();
+  const paidAmount = Number(item.paidAmount ?? 0);
+  const depositPaid = Number(item.depositPaid ?? 0);
+  const remainingAmount = Number(item.remainingAmount ?? 0);
+
+  if (item.isFullyPaid || paymentStatus === "PAID" || paymentStatus === "FULL_PAID") {
+    return "FULL PAID";
+  }
+
+  if (
+    paymentStatus === "PARTIAL" ||
+    paymentStatus === "PARTIALLY_PAID" ||
+    paymentStatus === "DEPOSIT_PAID" ||
+    paidAmount > 0 ||
+    depositPaid > 0
+  ) {
+    return "PARTIAL PAID";
+  }
+
+  if (remainingAmount <= 0) {
+    return "FULL PAID";
+  }
+
+  return "UNPAID";
+}
+
+export function paymentDisplayTone(item: OrderListItem) {
+  const label = paymentDisplayLabel(item);
+
+  if (label === "FULL PAID") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+
+  if (label === "PARTIAL PAID") {
+    return "bg-amber-50 text-amber-700 ring-amber-200";
+  }
+
+  return "bg-rose-50 text-rose-700 ring-rose-200";
+}
+
+export function paymentKindLabel(item: OrderListItem) {
+  const depositRequired = Number(item.depositRequired ?? 0);
+  const method = String(item.paymentMethod ?? "").toUpperCase();
+  const flow = String(item.paymentFlowLabel ?? "").toUpperCase();
+
+  if (method === "COD" || flow.includes("COD")) return "COD";
+  if (depositRequired > 0 || flow.includes("CỌC")) return "Deposit";
+  return "Thanh toán full";
+}
+
+export function paymentKindTone(item: OrderListItem) {
+  const kind = paymentKindLabel(item);
+
+  if (kind === "COD") return "bg-blue-50 text-blue-700 ring-blue-200";
+  if (kind === "Deposit") return "bg-amber-50 text-amber-700 ring-amber-200";
+  return "bg-slate-100 text-slate-700 ring-slate-200";
+}
+
+export function shipmentDisplayLabel(item: OrderListItem) {
+  const orderStatus = String(item.status ?? "").toUpperCase();
+  const status = String(item.fulfillmentStatus ?? "").toUpperCase();
+
+  if (orderStatus === "DRAFT") return "PENDING";
+  if (orderStatus === "CANCELLED" || orderStatus === "CANCELED") return "CANCELLED";
+  if (orderStatus === "COMPLETED" && status !== "DELIVERED") return "DELIVERED";
+
+  if (["DELIVERED", "COMPLETED"].includes(status)) return "DELIVERED";
+  if (["SHIPPING", "SHIPPED", "IN_TRANSIT", "DELIVERING"].includes(status)) {
+    return "DELIVERING";
+  }
+
+  return "PENDING";
+}
+
+export function shipmentDisplayTone(item: OrderListItem) {
+  const label = shipmentDisplayLabel(item);
+
+  if (label === "DELIVERED") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+
+  if (label === "DELIVERING") {
+    return "bg-blue-50 text-blue-700 ring-blue-200";
+  }
+
+  if (label === "CANCELLED") {
+    return "bg-slate-100 text-slate-500 ring-slate-200";
+  }
+
+  return "bg-amber-50 text-amber-700 ring-amber-200";
+}
+
 export function formatPaymentMethod(method?: string | null) {
   const value = String(method ?? "").toUpperCase();
 
@@ -266,4 +383,49 @@ export function formatPaymentMethod(method?: string | null) {
   if (value === "CREDIT_CARD") return "Thẻ";
 
   return method || "-";
+}
+
+export function getPaymentTypeLabel(reserveType?: string | null) {
+  const type = normalizeReserveType(reserveType);
+
+  if (type === ReserveType.COD) return "COD";
+  if (type === ReserveType.DEPOSIT) return "Deposit";
+
+  return "Thanh toán full";
+}
+
+export function getPaymentTypeTone(reserveType?: string | null) {
+  const type = normalizeReserveType(reserveType);
+
+  if (type === ReserveType.COD) return "purple";
+  if (type === ReserveType.DEPOSIT) return "amber";
+
+  return "slate";
+}
+
+export function getPaymentKind(item: {
+  reserveType?: string | null;
+  depositRequired?: number | null;
+  paymentMethod?: string | null;
+}) {
+  const type = normalizeReserveType(item.reserveType);
+
+  if (type === ReserveType.COD) {
+    return {
+      label: "COD",
+      tone: "purple" as const,
+    };
+  }
+
+  if (type === ReserveType.DEPOSIT) {
+    return {
+      label: "Deposit",
+      tone: "amber" as const,
+    };
+  }
+
+  return {
+    label: "Thanh toán full",
+    tone: "slate" as const,
+  };
 }

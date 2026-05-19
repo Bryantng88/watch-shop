@@ -9,7 +9,7 @@ const makeSchema = () => z.object({
   acquisitionId: z.literal(true).optional(),
   saleStage: z.literal(true).optional(),
   serviceStage: z.literal(true).optional(),
-  stockState: z.literal(true).optional(),
+  stockStage: z.literal(true).optional(),
   siteChannel: z.literal(true).optional(),
   gender: z.literal(true).optional(),
   conditionGrade: z.literal(true).optional(),

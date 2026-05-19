@@ -11,21 +11,20 @@ export const ORDER_STATUS = {
 
 export type OrderStatusValue = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
 
-// DRAFT chỉ là nháp, tuyệt đối không HOLD watch / inventory.
-// POSTED/RESERVED là trạng thái đã xác nhận đơn và cần giữ watch.
+// Business mới: order vừa được tạo, kể cả DRAFT, cũng phải giữ watch.
+// Chỉ CANCELLED mới release/restore watch; COMPLETED sẽ chuyển watch sang SOLD.
 export const ORDER_ACTIVE_HOLD_STATUSES = [
-  ORDER_STATUS.POSTED,
+  ORDER_STATUS.DRAFT,
   ORDER_STATUS.RESERVED,
+  ORDER_STATUS.POSTED,
   ORDER_STATUS.PAID,
   ORDER_STATUS.PROCESSING,
   ORDER_STATUS.SHIPPED,
 ] as const;
 
-// Flow mới: watch chỉ SOLD khi order thật sự hoàn tất.
-// Hoàn tất = thu đủ tiền + shipment delivered / hoặc không cần shipment.
-export const ORDER_ACTIVE_SOLD_STATUSES = [
-  ORDER_STATUS.COMPLETED,
-] as const;
+// Watch chỉ SOLD khi order thật sự completed.
+// Completed = thu đủ tiền + shipment delivered, hoặc không cần shipment.
+export const ORDER_ACTIVE_SOLD_STATUSES = [ORDER_STATUS.COMPLETED] as const;
 
 export const ORDER_INACTIVE_STATUSES = [ORDER_STATUS.CANCELLED] as const;
 
@@ -62,7 +61,7 @@ export function getOrderStatusLabel(value?: string | null) {
 
   switch (status) {
     case ORDER_STATUS.DRAFT:
-      return "Nháp";
+      return "Nháp / đang giữ watch";
     case ORDER_STATUS.RESERVED:
       return "Đang giữ";
     case ORDER_STATUS.POSTED:

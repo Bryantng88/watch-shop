@@ -16,9 +16,17 @@ import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema';
+import { WatchSaleStageSchema } from '../enums/WatchSaleStage.schema';
+import { NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchSaleStageFieldUpdateOperationsInput.schema';
+import { WatchServiceStageSchema } from '../enums/WatchServiceStage.schema';
+import { NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchServiceStageFieldUpdateOperationsInput.schema';
+import { WatchStockStageSchema } from '../enums/WatchStockStage.schema';
+import { NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema as NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema } from './NullableEnumWatchStockStageFieldUpdateOperationsInput.schema';
+import { ProductStatusSchema } from '../enums/ProductStatus.schema';
+import { NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema as NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema } from './NullableEnumProductStatusFieldUpdateOperationsInput.schema';
 import { AcquisitionItemUpdateManyWithoutOrderItemNestedInputObjectSchema as AcquisitionItemUpdateManyWithoutOrderItemNestedInputObjectSchema } from './AcquisitionItemUpdateManyWithoutOrderItemNestedInput.schema';
-import { OrderItemUpdateOneWithoutOther_OrderItemNestedInputObjectSchema as OrderItemUpdateOneWithoutOther_OrderItemNestedInputObjectSchema } from './OrderItemUpdateOneWithoutOther_OrderItemNestedInput.schema';
-import { OrderItemUpdateManyWithoutOrderItemNestedInputObjectSchema as OrderItemUpdateManyWithoutOrderItemNestedInputObjectSchema } from './OrderItemUpdateManyWithoutOrderItemNestedInput.schema';
+import { OrderItemUpdateOneWithoutChildOrderItemsNestedInputObjectSchema as OrderItemUpdateOneWithoutChildOrderItemsNestedInputObjectSchema } from './OrderItemUpdateOneWithoutChildOrderItemsNestedInput.schema';
+import { OrderItemUpdateManyWithoutLinkedOrderItemNestedInputObjectSchema as OrderItemUpdateManyWithoutLinkedOrderItemNestedInputObjectSchema } from './OrderItemUpdateManyWithoutLinkedOrderItemNestedInput.schema';
 import { OrderUpdateOneRequiredWithoutOrderItemNestedInputObjectSchema as OrderUpdateOneRequiredWithoutOrderItemNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutOrderItemNestedInput.schema';
 import { ProductUpdateOneWithoutOrderItemNestedInputObjectSchema as ProductUpdateOneWithoutOrderItemNestedInputObjectSchema } from './ProductUpdateOneWithoutOrderItemNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutOrderItemNestedInput.schema';
@@ -43,13 +51,17 @@ const makeSchema = () => z.object({
   customerItemNote: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdFromFlow: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  AcquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemUpdateOneWithoutOther_OrderItemNestedInputObjectSchema).optional(),
-  other_OrderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
-  Order: z.lazy(() => OrderUpdateOneRequiredWithoutOrderItemNestedInputObjectSchema).optional(),
-  Product: z.lazy(() => ProductUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
+  previousSaleStage: z.union([WatchSaleStageSchema, z.lazy(() => NullableEnumWatchSaleStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousServiceStage: z.union([WatchServiceStageSchema, z.lazy(() => NullableEnumWatchServiceStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousStockStage: z.union([WatchStockStageSchema, z.lazy(() => NullableEnumWatchStockStageFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  previousProductStatus: z.union([ProductStatusSchema, z.lazy(() => NullableEnumProductStatusFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  acquisitionItem: z.lazy(() => AcquisitionItemUpdateManyWithoutOrderItemNestedInputObjectSchema).optional(),
+  linkedOrderItem: z.lazy(() => OrderItemUpdateOneWithoutChildOrderItemsNestedInputObjectSchema).optional(),
+  childOrderItems: z.lazy(() => OrderItemUpdateManyWithoutLinkedOrderItemNestedInputObjectSchema).optional(),
+  order: z.lazy(() => OrderUpdateOneRequiredWithoutOrderItemNestedInputObjectSchema).optional(),
+  product: z.lazy(() => ProductUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
   serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutOrderItemNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutOrderItemNestedInputObjectSchema).optional()
+  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutOrderItemNestedInputObjectSchema).optional()
 }).strict();
 export const OrderItemUpdateInputObjectSchema: z.ZodType<Prisma.OrderItemUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemUpdateInput>;
 export const OrderItemUpdateInputObjectZodSchema = makeSchema();

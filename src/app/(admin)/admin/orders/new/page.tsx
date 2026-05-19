@@ -2,7 +2,7 @@ import OrderFormClient from "@/domains/order/client/OrderFormClient";
 import {
     getQuickOrderProductForOrderForm,
     getServiceCatalogOptions,
-} from "@/old_files/orderOLD/server/catalog";
+} from "@/domains/order/server";
 
 type SearchParams = {
     [key: string]: string | string[] | undefined;

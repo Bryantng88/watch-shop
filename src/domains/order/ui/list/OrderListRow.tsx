@@ -1,20 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
+  Banknote,
   Building2,
   CheckCircle2,
   CreditCard,
   Eye,
   Globe2,
+  Package,
+  PackageOpen,
   Pencil,
   Send,
   Truck,
+  WalletCards,
   Watch,
   XCircle,
 } from "lucide-react";
+import { ReserveType } from "@prisma/client";
 
 import RowActions from "@/domains/shared/ui/list/RowActions";
+import { normalizeReserveType } from "@/domains/order/shared/order-reserve-type";
 
 import type { OrderListItem } from "./types";
 import {
@@ -26,11 +33,10 @@ import {
   formatDateTime,
   formatMoney,
   formatOrderSource,
-  formatPaymentMethod,
-  orderOperationLabel,
-  orderOperationTone,
-  orderPaymentFlowTone,
-  sourceTone,
+  paymentDisplayLabel,
+  paymentDisplayTone,
+  shipmentDisplayLabel,
+  shipmentDisplayTone,
 } from "./helpers";
 
 type Props = {
@@ -56,6 +62,75 @@ function SourceIcon({ source }: { source?: string | null }) {
   return <Building2 className="h-3.5 w-3.5" />;
 }
 
+function ProductCountIcon({ count }: { count: number }) {
+  if (count > 1) return <PackageOpen className="h-3.5 w-3.5" />;
+  return <Package className="h-3.5 w-3.5" />;
+}
+
+function getPaymentKind(item: OrderListItem) {
+  const type = normalizeReserveType(item.reserveType);
+
+  if (type === ReserveType.COD) {
+    return {
+      label: "COD",
+      title: "Thanh toán COD",
+      tone: "bg-violet-50 text-violet-700 ring-violet-200",
+      icon: <Truck className="h-3.5 w-3.5" />,
+    };
+  }
+
+  if (type === ReserveType.DEPOSIT) {
+    return {
+      label: "Deposit",
+      title: "Đơn có cọc",
+      tone: "bg-amber-50 text-amber-700 ring-amber-200",
+      icon: <WalletCards className="h-3.5 w-3.5" />,
+    };
+  }
+
+  return {
+    label: "Thanh toán full",
+    title: "Thanh toán full",
+    tone: "bg-slate-50 text-slate-700 ring-slate-200",
+    icon: <CreditCard className="h-3.5 w-3.5" />,
+  };
+}
+
+function MiniIconBadge({
+  children,
+  title,
+  tone = "bg-slate-50 text-slate-500 ring-slate-200",
+}: {
+  children: ReactNode;
+  title: string;
+  tone?: string;
+}) {
+  return (
+    <span
+      title={title}
+      className={[
+        "inline-flex h-5 w-5 items-center justify-center rounded-full ring-1",
+        tone,
+      ].join(" ")}
+    >
+      {children}
+    </span>
+  );
+}
+
+function CleanBadge({ label, tone }: { label: string; tone: string }) {
+  return (
+    <span
+      className={[
+        "inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1",
+        tone,
+      ].join(" ")}
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function OrderListRow({
   item,
   checked,
@@ -69,13 +144,16 @@ export default function OrderListRow({
   onCancel,
 }: Props) {
   const itemsCount = Number(item.itemsCount ?? 0);
-  const depositRequired = Number(item.depositRequired ?? 0);
-  const collectedAmount = Number(item.collectedAmount ?? 0);
   const remainingAmount = Number(item.remainingAmount ?? 0);
+  const collectedAmount = Number(item.collectedAmount ?? 0);
 
   const isWebVerified =
     String(item.source ?? "").toUpperCase() === "WEB" &&
     String(item.verificationStatus ?? "").toUpperCase() === "VERIFIED";
+
+  const paymentKind = getPaymentKind(item);
+  const paymentLabel = paymentDisplayLabel(item);
+  const shipmentLabel = shipmentDisplayLabel(item);
 
   return (
     <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/50">
@@ -89,7 +167,7 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-4">
-        <div className="min-w-[240px]">
+        <div className="min-w-[250px]">
           <Link
             href={`/admin/orders/${item.id}`}
             className="font-semibold text-slate-950 hover:text-blue-700"
@@ -97,27 +175,25 @@ export default function OrderListRow({
             {item.refNo || item.id}
           </Link>
 
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            <span>
-              {itemsCount > 0
-                ? `${itemsCount} sản phẩm`
-                : "Chưa có sản phẩm"}
-            </span>
+          <div className="mt-1 text-xs text-slate-500">
+            {itemsCount > 0 ? `${itemsCount} sản phẩm` : "Chưa có sản phẩm"}
+          </div>
 
-            <span>•</span>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <MiniIconBadge
+              title={itemsCount > 1 ? "Nhiều sản phẩm" : "Một sản phẩm"}
+            >
+              <ProductCountIcon count={itemsCount} />
+            </MiniIconBadge>
 
-            <span className="inline-flex items-center gap-1">
+            <MiniIconBadge title={formatOrderSource(item)}>
               <SourceIcon source={item.source} />
-              {formatOrderSource(item)}
-            </span>
+            </MiniIconBadge>
 
             {isWebVerified ? (
-              <>
-                <span>•</span>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700 ring-1 ring-blue-200">
-                  Đã xác minh
-                </span>
-              </>
+              <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200">
+                Đã xác minh
+              </span>
             ) : null}
           </div>
         </div>
@@ -135,62 +211,33 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-4">
-        <div className="min-w-[160px] space-y-1.5">
-          <span
-            className={[
-              "inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1",
-              orderPaymentFlowTone(item),
-            ].join(" ")}
-          >
-            {item.paymentFlowLabel || "Không cọc"}
-          </span>
-
-          <div className="text-xs leading-5 text-slate-500">
-            <div>{formatPaymentMethod(item.paymentMethod)}</div>
-
-            {depositRequired > 0 ? (
-              <div>Cọc: {formatMoney(depositRequired)}</div>
-            ) : null}
-          </div>
-        </div>
-      </td>
-
-      <td className="px-4 py-4">
-        <div className="min-w-[180px] space-y-1.5">
-          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-            {String(item.status ?? "").toUpperCase() === "POSTED"
-              ? "Đang xử lý"
-              : orderOperationLabel(item)}
-          </span>
-
-          <div className="text-xs leading-5 text-slate-500">
-            <div>Payment: {item.paymentStatus || "-"}</div>
-            <div>Shipment: {item.fulfillmentStatus || "-"}</div>
-          </div>
-        </div>
-      </td>
-
-      <td className="px-4 py-4">
         <div className="min-w-[150px]">
           <span
+            title={paymentKind.title}
             className={[
-              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-              sourceTone(item),
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1",
+              paymentKind.tone,
             ].join(" ")}
           >
-            <SourceIcon source={item.source} />
-            {formatOrderSource(item)}
+            {paymentKind.icon}
+            {paymentKind.label}
           </span>
-
-          {item.createdByName ? (
-            <div className="mt-1 text-xs text-slate-500">
-              bởi {item.createdByName}
-            </div>
-          ) : null}
         </div>
       </td>
 
       <td className="px-4 py-4">
+        <div className="min-w-[130px]">
+          <CleanBadge label={paymentLabel} tone={paymentDisplayTone(item)} />
+        </div>
+      </td>
+
+      <td className="px-4 py-4">
+        <div className="min-w-[120px]">
+          <CleanBadge label={shipmentLabel} tone={shipmentDisplayTone(item)} />
+        </div>
+      </td>
+
+      <td className="px-4 py-4 text-right">
         <div className="min-w-[130px]">
           <div className="font-semibold text-slate-950">
             {formatMoney(item.totalAmount)}
@@ -239,7 +286,7 @@ export default function OrderListRow({
             onCreatePayment && {
               key: "create-payment",
               label: "Tạo payment",
-              icon: <CreditCard className="h-4 w-4" />,
+              icon: <Banknote className="h-4 w-4" />,
               onClick: onCreatePayment,
             },
 

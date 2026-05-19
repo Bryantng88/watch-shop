@@ -24,7 +24,11 @@ const makeSchema = () => z.object({
   linkedOrderItemId: SortOrderSchema.optional(),
   customerItemNote: SortOrderSchema.optional(),
   createdFromFlow: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  previousSaleStage: SortOrderSchema.optional(),
+  previousServiceStage: SortOrderSchema.optional(),
+  previousStockStage: SortOrderSchema.optional(),
+  previousProductStatus: SortOrderSchema.optional()
 }).strict();
 export const OrderItemCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.OrderItemCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemCountOrderByAggregateInput>;
 export const OrderItemCountOrderByAggregateInputObjectZodSchema = makeSchema();

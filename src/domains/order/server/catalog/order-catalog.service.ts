@@ -85,9 +85,9 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
       watch: {
         select: {
           id: true,
-          saleState: true,
-          stockState: true,
-          serviceState: true,
+          saleStage: true,
+          stockStage: true,
+          serviceStage: true,
           watchPrice: {
             select: {
               salePrice: true,
@@ -153,9 +153,9 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
     variantId: variant?.id ?? null,
     availabilityStatus: variant?.availabilityStatus ?? null,
     productStatus: product.status ?? null,
-    watchSaleState: product.watch?.saleState ?? null,
-    watchStockState: product.watch?.stockState ?? null,
-    watchServiceState: product.watch?.serviceState ?? null,
+    watchSaleState: product.watch?.saleStage ?? null,
+    watchStockState: product.watch?.stockStage ?? null,
+    watchServiceState: product.watch?.serviceStage ?? null,
     source: "WATCH_QUICK_ORDER" as const,
   };
 }
@@ -237,9 +237,9 @@ export async function searchOrderProducts(query: string) {
       },
       watch: {
         select: {
-          saleState: true,
-          stockState: true,
-          serviceState: true,
+          saleStage: true,
+          stockStage: true,
+          serviceStage: true,
           watchPrice: {
             select: {
               salePrice: true,
@@ -298,9 +298,9 @@ export async function searchOrderProducts(query: string) {
       variantId: variant?.id ?? null,
       availabilityStatus: variant?.availabilityStatus ?? null,
       productStatus: product.status ?? null,
-      watchSaleState: product.watch?.saleState ?? null,
-      watchStockState: product.watch?.stockState ?? null,
-      watchServiceState: product.watch?.serviceState ?? null,
+      watchSaleState: product.watch?.saleStage ?? null,
+      watchStockState: product.watch?.stockStage ?? null,
+      watchServiceState: product.watch?.serviceStage ?? null,
       source: "STANDARD" as const,
     };
   });

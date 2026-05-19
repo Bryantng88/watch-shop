@@ -10,13 +10,13 @@ import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '..
 import { OrderItemCountOutputTypeArgsObjectSchema as OrderItemCountOutputTypeArgsObjectSchema } from './OrderItemCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
-  AcquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
-  other_OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
-  Order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
-  Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
+  acquisitionItem: z.union([z.boolean(), z.lazy(() => AcquisitionItemFindManySchema)]).optional(),
+  linkedOrderItem: z.union([z.boolean(), z.lazy(() => OrderItemArgsObjectSchema)]).optional(),
+  childOrderItems: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
+  product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional(),
   serviceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
-  ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
+  serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => OrderItemCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const OrderItemIncludeObjectSchema: z.ZodType<Prisma.OrderItemInclude> = makeSchema() as unknown as z.ZodType<Prisma.OrderItemInclude>;

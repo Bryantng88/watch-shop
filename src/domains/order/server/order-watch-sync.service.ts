@@ -2,8 +2,8 @@ import {
   OrderStatus,
   Prisma,
   ProductStatus,
-  WatchSaleState,
-  WatchStockState,
+  WatchSaleStage,
+  WatchStockStage,
 } from "@prisma/client";
 
 import {
@@ -13,7 +13,14 @@ import {
 
 type Tx = Prisma.TransactionClient;
 
-type InventoryEffect = "READY" | "HOLD" | "SOLD";
+type InventoryEffect = "RESTORE" | "HOLD" | "SOLD";
+
+type Snapshot = {
+  productStatus?: ProductStatus | null;
+  saleStage?: WatchSaleStage | null;
+  stockStage?: WatchStockStage | null;
+  serviceStage?: string | null;
+};
 
 function uniqueClean(values: Array<string | null | undefined>) {
   return Array.from(
@@ -34,7 +41,7 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
   const rows = await tx.orderItem.findMany({
     where: {
       productId: { in: ids },
-      Order: {
+      order: {
         status: {
           not: OrderStatus.CANCELLED,
         },
@@ -42,7 +49,7 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
     },
     select: {
       productId: true,
-      Order: {
+      order: {
         select: {
           status: true,
         },
@@ -50,12 +57,12 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
     },
   });
 
-  for (const productId of ids) map.set(productId, "READY");
+  for (const productId of ids) map.set(productId, "RESTORE");
 
   for (const row of rows) {
     if (!row.productId) continue;
 
-    const status = row.Order?.status;
+    const status = row.order?.status;
 
     if ((ORDER_ACTIVE_SOLD_STATUSES as readonly string[]).includes(status)) {
       map.set(row.productId, "SOLD");
@@ -74,7 +81,42 @@ async function resolveEffectByProductId(tx: Tx, productIds: string[]) {
   return map;
 }
 
-async function applyInventoryEffect(tx: Tx, productId: string, effect: InventoryEffect) {
+async function getSnapshotFromOrderItem(
+  tx: Tx,
+  input: { orderId?: string | null; productId: string },
+): Promise<Snapshot | null> {
+  if (!input.orderId) return null;
+
+  const row = await tx.orderItem.findFirst({
+    where: {
+      orderId: input.orderId,
+      productId: input.productId,
+    },
+    orderBy: [{ createdAt: "desc" }],
+    select: {
+      previousProductStatus: true,
+      previousWatchSaleStage: true,
+      previousWatchStockStage: true,
+      previousWatchServiceStage: true,
+    } as any,
+  } as any);
+
+  if (!row) return null;
+
+  return {
+    productStatus: (row as any).previousProductStatus ?? null,
+    saleStage: (row as any).previousWatchSaleStage ?? null,
+    stockStage: (row as any).previousWatchStockStage ?? null,
+    serviceStage: (row as any).previousWatchServiceStage ?? null,
+  };
+}
+
+async function applyInventoryEffect(
+  tx: Tx,
+  productId: string,
+  effect: InventoryEffect,
+  opts?: { restoreFromOrderId?: string | null },
+) {
   const current = await tx.product.findUnique({
     where: { id: productId },
     select: {
@@ -83,9 +125,9 @@ async function applyInventoryEffect(tx: Tx, productId: string, effect: Inventory
       watch: {
         select: {
           productId: true,
-          saleState: true,
-          stockState: true,
-          serviceState: true,
+          saleStage: true,
+          stockStage: true,
+          serviceStage: true,
         },
       },
     },
@@ -102,8 +144,8 @@ async function applyInventoryEffect(tx: Tx, productId: string, effect: Inventory
     await tx.watch.update({
       where: { productId },
       data: {
-        saleState: WatchSaleState.SOLD,
-        stockState: WatchStockState.OUT_OF_STOCK,
+        saleStage: WatchSaleStage.SOLD,
+        stockStage: WatchStockStage.OUT_OF_STOCK,
       },
     });
 
@@ -111,18 +153,6 @@ async function applyInventoryEffect(tx: Tx, productId: string, effect: Inventory
   }
 
   if (effect === "HOLD") {
-    if (
-      current.status === ProductStatus.SOLD ||
-      current.status === ProductStatus.CONSIGNED_TO ||
-      current.status === ProductStatus.IN_SERVICE ||
-      current.status === ProductStatus.NEED_SERVICE ||
-      current.watch.saleState === WatchSaleState.SOLD ||
-      current.watch.saleState === WatchSaleState.CONSIGNED_TO ||
-      current.watch.saleState === WatchSaleState.IN_SERVICE
-    ) {
-      return;
-    }
-
     await tx.product.update({
       where: { id: productId },
       data: { status: ProductStatus.HOLD },
@@ -131,32 +161,36 @@ async function applyInventoryEffect(tx: Tx, productId: string, effect: Inventory
     await tx.watch.update({
       where: { productId },
       data: {
-        saleState: WatchSaleState.HOLD,
-        stockState: WatchStockState.RESERVED,
+        saleStage: WatchSaleStage.HOLD,
+        stockStage: WatchStockStage.RESERVED,
       },
     });
 
     return;
   }
 
-  // READY: chỉ release những watch đang HOLD do order. Không đụng service/consign/sold.
-  if (
-    current.status === ProductStatus.HOLD &&
-    current.watch.saleState === WatchSaleState.HOLD
-  ) {
-    await tx.product.update({
-      where: { id: productId },
-      data: { status: ProductStatus.AVAILABLE },
-    });
+  const snapshot = await getSnapshotFromOrderItem(tx, {
+    orderId: opts?.restoreFromOrderId ?? null,
+    productId,
+  });
 
-    await tx.watch.update({
-      where: { productId },
-      data: {
-        saleState: WatchSaleState.READY,
-        stockState: WatchStockState.IN_STOCK,
-      },
-    });
-  }
+  await tx.product.update({
+    where: { id: productId },
+    data: {
+      status: snapshot?.productStatus ?? ProductStatus.AVAILABLE,
+    },
+  });
+
+  await tx.watch.update({
+    where: { productId },
+    data: {
+      saleStage: snapshot?.saleStage ?? WatchSaleStage.READY,
+      stockStage: snapshot?.stockStage ?? WatchStockStage.IN_STOCK,
+      ...(snapshot?.serviceStage
+        ? { serviceStage: snapshot.serviceStage as any }
+        : {}),
+    },
+  });
 }
 
 export async function syncWatchInventoryFromOrders(
@@ -169,7 +203,11 @@ export async function syncWatchInventoryFromOrders(
   const effectByProductId = await resolveEffectByProductId(tx, ids);
 
   for (const productId of ids) {
-    await applyInventoryEffect(tx, productId, effectByProductId.get(productId) ?? "READY");
+    await applyInventoryEffect(
+      tx,
+      productId,
+      effectByProductId.get(productId) ?? "RESTORE",
+    );
   }
 
   return { count: ids.length };
@@ -181,8 +219,17 @@ export async function syncWatchInventoryFromOrderId(tx: Tx, orderId: string) {
     select: { productId: true },
   });
 
-  return syncWatchInventoryFromOrders(
-    tx,
-    items.map((item) => item.productId),
-  );
+  const ids = uniqueClean(items.map((item) => item.productId));
+  const effectByProductId = await resolveEffectByProductId(tx, ids);
+
+  for (const productId of ids) {
+    await applyInventoryEffect(
+      tx,
+      productId,
+      effectByProductId.get(productId) ?? "RESTORE",
+      { restoreFromOrderId: orderId },
+    );
+  }
+
+  return { count: ids.length };
 }
