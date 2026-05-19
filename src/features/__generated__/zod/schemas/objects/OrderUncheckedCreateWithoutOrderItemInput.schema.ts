@@ -8,7 +8,7 @@ import { OrderSourceSchema } from '../enums/OrderSource.schema';
 import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutOrderInput.schema';
-import { ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema as ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema } from './ShipmentUncheckedCreateNestedOneWithoutOrderInput.schema'
+import { ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema as ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentUncheckedCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -40,7 +40,7 @@ const makeSchema = () => z.object({
   quickFromProductId: z.string().optional().nullable(),
   quickFlowType: OrderFlowTypeSchema.optional(),
   Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutOrderInputObjectSchema).optional(),
-  shipment: z.lazy(() => ShipmentUncheckedCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentUncheckedCreateNestedManyWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedCreateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.OrderUncheckedCreateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedCreateWithoutOrderItemInput>;
 export const OrderUncheckedCreateWithoutOrderItemInputObjectZodSchema = makeSchema();

@@ -23,7 +23,7 @@ import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema';
 import { CustomerUpdateOneWithoutOrderNestedInputObjectSchema as CustomerUpdateOneWithoutOrderNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrderNestedInput.schema';
 import { OrderItemUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUpdateManyWithoutOrderNestedInput.schema';
-import { ShipmentUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateOneWithoutOrderNestedInput.schema'
+import { ShipmentUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateManyWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -55,7 +55,7 @@ const makeSchema = () => z.object({
   quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutOrderNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  shipment: z.lazy(() => ShipmentUpdateOneWithoutOrderNestedInputObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentUpdateManyWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUpdateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.OrderUpdateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUpdateWithoutInvoiceInput>;
 export const OrderUpdateWithoutInvoiceInputObjectZodSchema = makeSchema();

@@ -23,7 +23,7 @@ import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema';
 import { InvoiceUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as InvoiceUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './InvoiceUncheckedUpdateManyWithoutOrderNestedInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutOrderNestedInput.schema';
-import { ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateOneWithoutOrderNestedInput.schema'
+import { ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateManyWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -55,7 +55,7 @@ const makeSchema = () => z.object({
   quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   Invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  shipment: z.lazy(() => ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedUpdateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateWithoutCustomerInput>;
 export const OrderUncheckedUpdateWithoutCustomerInputObjectZodSchema = makeSchema();

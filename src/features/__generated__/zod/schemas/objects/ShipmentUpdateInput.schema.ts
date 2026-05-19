@@ -7,7 +7,7 @@ import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateT
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
 import { EnumShipmentStatusFieldUpdateOperationsInputObjectSchema as EnumShipmentStatusFieldUpdateOperationsInputObjectSchema } from './EnumShipmentStatusFieldUpdateOperationsInput.schema';
-import { OrderUpdateOneRequiredWithoutShipmentNestedInputObjectSchema as OrderUpdateOneRequiredWithoutShipmentNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutShipmentNestedInput.schema'
+import { OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema as OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutShipmentsNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -29,7 +29,7 @@ const makeSchema = () => z.object({
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   orderRefNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  Order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentNestedInputObjectSchema).optional()
+  Order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema).optional()
 }).strict();
 export const ShipmentUpdateInputObjectSchema: z.ZodType<Prisma.ShipmentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUpdateInput>;
 export const ShipmentUpdateInputObjectZodSchema = makeSchema();

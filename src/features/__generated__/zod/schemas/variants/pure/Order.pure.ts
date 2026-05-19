@@ -40,7 +40,7 @@ export const OrderModelSchema = z.object({
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     orderItem: z.array(z.unknown()),
-    shipment: z.unknown().nullable()
+    shipments: z.array(z.unknown())
 }).strict();
 
 export type OrderPureType = z.infer<typeof OrderModelSchema>;

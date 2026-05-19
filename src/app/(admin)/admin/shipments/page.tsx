@@ -1,67 +1,49 @@
-// app/(admin)/admin/shipments/page.tsx
-import ShipmentsClient from "./_client/ListShipment";
-import { getAdminShipmentList } from "./_server/shipment.service";
+import { listShipmentsApplication } from "@/domains/shipment/application";
+import { ShipmentListClient } from "@/domains/shipment/client";
 
-type SearchParams = { [key: string]: string | string[] | undefined };
+export const dynamic = "force-dynamic";
 
-function serialize(obj: any) {
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (value instanceof Date) return value.toISOString();
-            if (typeof value === "object" && value?._isDecimal) return Number(value);
-            return value;
-        })
-    );
+function firstRaw(value: string | string[] | undefined, fallback = "") {
+    if (Array.isArray(value)) return String(value[0] ?? fallback);
+    return String(value ?? fallback);
 }
 
-function toStr(v: string | string[] | undefined) {
-    if (Array.isArray(v)) return v[0] ?? "";
-    return v ?? "";
-}
-
-function toInt(v: string | string[] | undefined, fallback: number) {
-    const n = Number(toStr(v));
+function toPositiveInt(value: string | string[] | undefined, fallback: number) {
+    const n = Number(firstRaw(value, String(fallback)));
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
-export default async function ShipmentListPage({
-    searchParams,
-}: {
-    searchParams: SearchParams;
-}) {
-    const page = toInt(searchParams.page, 1);
-    const pageSize = toInt(searchParams.pageSize, 20);
-    const q = toStr(searchParams.q) || undefined;
+function statusFromView(view: string) {
+    switch (String(view ?? "").toLowerCase()) {
+        case "ready": return "READY";
+        case "shipping": return "SHIPPED";
+        case "delivered": return "DELIVERED";
+        case "returned": return "RETURNED";
+        case "cancelled": return "CANCELLED";
+        default: return null;
+    }
+}
 
-    const viewRaw = toStr(searchParams.view).toLowerCase();
-    const view =
-        viewRaw === "all" ||
-            viewRaw === "draft" ||
-            viewRaw === "ready" ||
-            viewRaw === "shipped" ||
-            viewRaw === "delivered" ||
-            viewRaw === "cancelled"
-            ? viewRaw
-            : "all";
+export default async function AdminShipmentsPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+    const page = toPositiveInt(searchParams.page, 1);
+    const pageSize = toPositiveInt(searchParams.pageSize, 20);
+    const view = firstRaw(searchParams.view, "all");
+    const status = firstRaw(searchParams.status) || statusFromView(view);
 
-    const { items, total, counts } = await getAdminShipmentList({
+    const data = await listShipmentsApplication({
         page,
         pageSize,
-        q,
-        view: view as any,
+        q: firstRaw(searchParams.q) || null,
+        status,
     });
 
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const normalizedItems = serialize(items);
-
     return (
-        <ShipmentsClient
-            items={normalizedItems}
-            total={total}
-            counts={counts}
-            page={page}
-            pageSize={pageSize}
-            totalPages={totalPages}
+        <ShipmentListClient
+            items={data.rows ?? []}
+            total={data.total ?? 0}
+            page={data.page ?? page}
+            pageSize={data.pageSize ?? pageSize}
+            totalPages={Math.max(1, data.pageCount ?? 1)}
             rawSearchParams={searchParams}
         />
     );

@@ -62,9 +62,15 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
           positiveDecimal("depositPaid"),
           {
             OR: [
-              { shipment: null },
-              { shipment: { is: { status: { not: "DELIVERED" } } } },
-            ],
+              { shipments: { none: {} } },
+              {
+                shipments: {
+                  some: {
+                    status: { not: "DELIVERED" as any },
+                  },
+                },
+              },
+            ]
           },
         ],
       };
@@ -76,9 +82,17 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
           { paymentStatus: "PAID" },
           {
             OR: [
-              { shipment: null },
-              { shipment: { is: { status: { in: ["DRAFT", "READY"] as any } } } },
-            ],
+              { shipments: { none: {} } },
+              {
+                shipments: {
+                  some: {
+                    status: {
+                      in: ["DRAFT", "READY"] as any,
+                    },
+                  },
+                },
+              },
+            ]
           },
         ],
       };
@@ -87,7 +101,7 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
       return {
         AND: [
           { hasShipment: true },
-          { shipment: { is: { status: "SHIPPED" as any } } },
+          { shipments: { some: { status: "SHIPPED" as any } } },
         ],
       };
 
@@ -95,7 +109,7 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
       return {
         AND: [
           { hasShipment: true },
-          { shipment: { is: { status: "DELIVERED" as any } } },
+          { shipments: { some: { status: "DELIVERED" as any } } },
           { paymentStatus: "UNPAID" },
         ],
       };
@@ -122,7 +136,11 @@ function buildViewWhere(
             OR: [
               { status: "DRAFT" },
               { source: "WEB", verificationStatus: "PENDING" },
-              { status: "POSTED", paymentStatus: "UNPAID", shipment: null, hasShipment: true },
+              { status: "POSTED", paymentStatus: "UNPAID" },
+              {
+                shipments: { none: {} },
+                hasShipment: true,
+              },
             ],
           },
         ],
@@ -183,7 +201,7 @@ const orderListSelect = {
   hasShipment: true,
   createdAt: true,
   updatedAt: true,
-  shipment: { select: { id: true, status: true } },
+  shipments: { select: { id: true, status: true } },
   _count: { select: { orderItem: true } },
 } satisfies Prisma.OrderSelect;
 

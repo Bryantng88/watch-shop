@@ -4,7 +4,8 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   Invoice: z.boolean().optional(),
-  orderItem: z.boolean().optional()
+  orderItem: z.boolean().optional(),
+  shipments: z.boolean().optional()
 }).strict();
 export const OrderCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.OrderCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.OrderCountOutputTypeSelect>;
 export const OrderCountOutputTypeSelectObjectZodSchema = makeSchema();

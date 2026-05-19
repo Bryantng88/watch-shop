@@ -22,7 +22,7 @@ import { EnumOrderVerificationStatusFieldUpdateOperationsInputObjectSchema as En
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema } from './EnumOrderFlowTypeFieldUpdateOperationsInput.schema';
 import { OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUncheckedUpdateManyWithoutOrderNestedInput.schema';
-import { ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateOneWithoutOrderNestedInput.schema'
+import { ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUncheckedUpdateManyWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -54,7 +54,7 @@ const makeSchema = () => z.object({
   quickFromProductId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   quickFlowType: z.union([OrderFlowTypeSchema, z.lazy(() => EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   orderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  shipment: z.lazy(() => ShipmentUncheckedUpdateOneWithoutOrderNestedInputObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentUncheckedUpdateManyWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUncheckedUpdateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.OrderUncheckedUpdateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUncheckedUpdateWithoutInvoiceInput>;
 export const OrderUncheckedUpdateWithoutInvoiceInputObjectZodSchema = makeSchema();

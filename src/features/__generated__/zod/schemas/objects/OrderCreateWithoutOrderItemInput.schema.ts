@@ -9,7 +9,7 @@ import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.
 import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceCreateNestedManyWithoutOrderInput.schema';
 import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateNestedOneWithoutOrderInputObjectSchema } from './CustomerCreateNestedOneWithoutOrderInput.schema';
-import { ShipmentCreateNestedOneWithoutOrderInputObjectSchema as ShipmentCreateNestedOneWithoutOrderInputObjectSchema } from './ShipmentCreateNestedOneWithoutOrderInput.schema'
+import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -41,7 +41,7 @@ const makeSchema = () => z.object({
   quickFlowType: OrderFlowTypeSchema.optional(),
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
-  shipment: z.lazy(() => ShipmentCreateNestedOneWithoutOrderInputObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderCreateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutOrderItemInput>;
 export const OrderCreateWithoutOrderItemInputObjectZodSchema = makeSchema();

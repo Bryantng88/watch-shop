@@ -31,5 +31,5 @@ export const OrderFindFirstResultSchema = z.nullable(z.object({
   Invoice: z.array(z.unknown()),
   customer: z.unknown().optional(),
   orderItem: z.array(z.unknown()),
-  shipment: z.unknown().optional()
+  shipments: z.array(z.unknown())
 }));

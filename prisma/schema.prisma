@@ -365,7 +365,7 @@ model Order {
   Invoice               Invoice[]
   customer              Customer?               @relation(fields: [customerId], references: [id])
   orderItem             OrderItem[]
-  shipment              Shipment?
+  shipments             Shipment[]
 
   @@index([createdAt])
   @@index([customerId])
