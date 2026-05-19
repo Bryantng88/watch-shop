@@ -121,9 +121,10 @@ export async function createOrderItemsRepo(db: DB, orderId: string, items: Order
       customerItemNote: item.customerItemNote ?? null,
       linkedOrderItemId: item.linkedOrderItemId ?? null,
       createdFromFlow: (item.createdFromFlow ?? "STANDARD") as any,
-      previousProductStatus: snapshot?.productStatus ?? null,
-      previousStockStage: snapshot?.stockStage ?? null,
-      previousServiceStage: snapshot?.serviceStage ?? null,
+      previousProductStatus: snapshot?.previousProductStatus ?? null,
+      previousSaleStage: snapshot?.previousSaleStage ?? null,
+      previousStockStage: snapshot?.previousStockStage ?? null,
+      previousServiceStage: snapshot?.previousServiceStage ?? null,
     } as any;
   });
 
@@ -166,9 +167,18 @@ export async function replaceOrderDraftRepo(db: DB, orderId: string, input: Orde
       createdAt: new Date(input.createdAt),
       paymentMethod: input.paymentMethod,
       notes: input.notes ?? null,
-      reserveType: normalizeReserveType(input.reserveType),
-      depositRequired: input.reserve ? new Prisma.Decimal(Number(input.reserve.amount ?? 0)) : new Prisma.Decimal(0),
-      reserveUntil: input.reserve?.expiresAt ? new Date(input.reserve.expiresAt) : null,
+      reserveType: normalizeReserveType(input.reserve?.type),
+      depositRequired: new Prisma.Decimal(
+        normalizeReserveType(input.reserve?.type) === "NONE"
+          ? 0
+          : Number(input.reserve?.amount ?? 0),
+      ),
+      reserveUntil:
+        normalizeReserveType(input.reserve?.type) === "NONE"
+          ? null
+          : input.reserve?.expiresAt
+            ? new Date(input.reserve.expiresAt)
+            : null,
     },
     select: { id: true },
   });

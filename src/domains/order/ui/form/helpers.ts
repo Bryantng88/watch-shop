@@ -9,12 +9,27 @@ import type {
 export const PAYMENT_METHOD_OPTIONS = [
     { value: "BANK_TRANSFER", label: "Chuyển khoản" },
     { value: "CASH", label: "Tiền mặt" },
-    { value: "COD", label: "COD - thu phần còn lại khi giao hàng" },
 ];
 
 export const RESERVE_TYPE_OPTIONS = [
-    { value: "DEPOSIT", label: "Có đặt cọc" },
+    { value: "NONE", label: "Thanh toán full" },
+    { value: "DEPOSIT", label: "Deposit" },
+    { value: "COD", label: "COD" },
 ];
+
+export function normalizeOrderReserveType(value?: string | null) {
+    const type = String(value ?? "").toUpperCase();
+
+    if (type === "COD") return "COD";
+    if (type === "DEPOSIT") return "DEPOSIT";
+
+    return "NONE";
+}
+
+export function needsReserveAmount(value?: string | null) {
+    const type = normalizeOrderReserveType(value);
+    return type === "COD" || type === "DEPOSIT";
+}
 
 export function numberValue(value: string) {
     const n = Number(String(value).replace(/[^0-9.-]/g, ""));
@@ -73,10 +88,10 @@ export function buildInitialOrderFormValues(
         shipDistrict: initialData?.shipDistrict ?? "",
         shipWard: initialData?.shipWard ?? "",
 
-        paymentMethod: initialData?.paymentMethod ?? "BANK_TRANSFER",
+        paymentMethod: initialData?.paymentMethod === "COD" ? "BANK_TRANSFER" : initialData?.paymentMethod ?? "BANK_TRANSFER",
         notes: initialData?.notes ?? "",
 
-        reserveType: initialData?.reserve?.type ?? "",
+        reserveType: normalizeOrderReserveType(initialData?.reserve?.type ?? (initialData?.paymentMethod === "COD" ? "COD" : null)),
         reserveAmount: Number(initialData?.reserve?.amount ?? 0),
         reserveExpiresAt: toDateTimeLocal(initialData?.reserve?.expiresAt ?? null),
 
@@ -144,18 +159,22 @@ export function buildOrderPayload(input: {
         shipCity: values.shipCity.trim(),
         shipDistrict: values.shipDistrict.trim(),
         shipWard: values.shipWard.trim(),
-        paymentMethod: values.paymentMethod,
+        paymentMethod:
+            normalizeOrderReserveType(values.reserveType) === "COD"
+                ? "COD"
+                : values.paymentMethod,
         notes: values.notes.trim() || null,
         status: input.submitAs ?? input.status ?? "DRAFT",
-        reserve: values.reserveType
-            ? {
-                type: values.reserveType,
-                amount: Number(values.reserveAmount || 0),
-                expiresAt: values.reserveExpiresAt
+        reserve: {
+            type: normalizeOrderReserveType(values.reserveType),
+            amount: needsReserveAmount(values.reserveType)
+                ? Number(values.reserveAmount || 0)
+                : 0,
+            expiresAt:
+                needsReserveAmount(values.reserveType) && values.reserveExpiresAt
                     ? new Date(values.reserveExpiresAt).toISOString()
                     : null,
-            }
-            : null,
+        },
         quickFromProductId: input.quickMode ? input.quickProductId ?? null : null,
         quickFlowType: input.quickMode ? "QUICK_ORDER" : "STANDARD",
         items: values.items.map((item) => ({
@@ -195,6 +214,19 @@ export function validateOrderForm(values: OrderFormValues) {
 
     if (!values.items.length) {
         return "Vui lòng thêm ít nhất một sản phẩm hoặc dịch vụ.";
+    }
+
+    const reserveType = normalizeOrderReserveType(values.reserveType);
+    const reserveAmount = Number(values.reserveAmount ?? 0);
+
+    if ((reserveType === "COD" || reserveType === "DEPOSIT") && reserveAmount <= 0) {
+        return reserveType === "COD"
+            ? "Đơn COD phải có tiền cọc."
+            : "Đơn deposit phải có tiền cọc.";
+    }
+
+    if (reserveType === "COD" && !values.hasShipment) {
+        return "Đơn COD bắt buộc phải có giao hàng.";
     }
 
     if (values.hasShipment) {

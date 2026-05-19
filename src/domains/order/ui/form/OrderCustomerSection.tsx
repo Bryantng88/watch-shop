@@ -11,6 +11,8 @@ import OrderFormField from "./OrderFormField";
 import {
     PAYMENT_METHOD_OPTIONS,
     RESERVE_TYPE_OPTIONS,
+    needsReserveAmount,
+    normalizeOrderReserveType,
     numberValue,
 } from "./helpers";
 import type { CustomerSearchItem, OrderFormValues } from "./types";
@@ -32,11 +34,15 @@ export default function OrderCustomerSection({
     onChange,
     onPickCustomer,
 }: Props) {
+    const reserveType = normalizeOrderReserveType(values.reserveType);
+    const showReserveAmount = needsReserveAmount(reserveType);
+    const isCod = reserveType === "COD";
+
     return (
         <SectionCard
             icon={<UserRound className="h-5 w-5" />}
             title="Khách hàng & thanh toán"
-            subtitle="Nhập số điện thoại để gợi ý khách cũ. COD là phương thức thu phần còn lại, không phải trạng thái cọc."
+            subtitle="Loại thanh toán quyết định flow vận hành: full, deposit hoặc COD."
         >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <OrderFormField label="Tên khách hàng">
@@ -101,31 +107,47 @@ export default function OrderCustomerSection({
                     </div>
                 ) : null}
 
-                <OrderFormField label="Thu phần còn lại bằng">
+                <OrderFormField label="Loại thanh toán">
                     <Select
-                        value={values.paymentMethod}
-                        onChange={(event) =>
-                            onChange({ paymentMethod: event.target.value })
-                        }
-                        disabled={disabled}
-                        options={PAYMENT_METHOD_OPTIONS}
-                    />
-                </OrderFormField>
+                        value={reserveType}
+                        onChange={(event) => {
+                            const nextType = normalizeOrderReserveType(event.target.value);
 
-                <OrderFormField label="Đặt cọc">
-                    <Select
-                        value={values.reserveType}
-                        onChange={(event) =>
-                            onChange({ reserveType: event.target.value })
-                        }
+                            onChange({
+                                reserveType: nextType,
+                                reserveAmount: needsReserveAmount(nextType)
+                                    ? values.reserveAmount
+                                    : 0,
+                                reserveExpiresAt: needsReserveAmount(nextType)
+                                    ? values.reserveExpiresAt
+                                    : "",
+                                paymentMethod:
+                                    nextType === "COD"
+                                        ? "COD"
+                                        : values.paymentMethod === "COD"
+                                            ? "BANK_TRANSFER"
+                                            : values.paymentMethod,
+                                hasShipment: nextType === "COD" ? true : values.hasShipment,
+                            });
+                        }}
                         disabled={disabled}
-                        placeholder="Không cọc"
                         options={RESERVE_TYPE_OPTIONS}
                     />
                 </OrderFormField>
 
-                {values.reserveType ? (
-                    <OrderFormField label="Số tiền cọc">
+                <OrderFormField label={isCod ? "Phương thức nhận cọc" : "Phương thức thanh toán"}>
+                    <Select
+                        value={isCod ? "BANK_TRANSFER" : values.paymentMethod}
+                        onChange={(event) =>
+                            onChange({ paymentMethod: event.target.value })
+                        }
+                        disabled={disabled || isCod}
+                        options={PAYMENT_METHOD_OPTIONS}
+                    />
+                </OrderFormField>
+
+                {showReserveAmount ? (
+                    <OrderFormField label={isCod ? "Tiền cọc COD" : "Số tiền cọc"}>
                         <Input
                             inputMode="numeric"
                             value={String(values.reserveAmount)}
@@ -139,7 +161,7 @@ export default function OrderCustomerSection({
                     </OrderFormField>
                 ) : null}
 
-                {values.reserveType ? (
+                {showReserveAmount ? (
                     <OrderFormField label="Giữ đến">
                         <Input
                             type="datetime-local"

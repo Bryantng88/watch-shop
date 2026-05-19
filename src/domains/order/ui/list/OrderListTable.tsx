@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 
-import type { OrderListItem } from "./types";
+import { cn } from "@/lib/utils";
+
 import { buildHref, isOrderSelectable } from "./helpers";
 import OrderListRow from "./OrderListRow";
-import { cn } from "@/lib/utils";
+import type { OrderListItem } from "./types";
 
 type Props = {
   items: OrderListItem[];
@@ -76,8 +77,8 @@ export default function OrderListTable({
                 <input
                   type="checkbox"
                   checked={allChecked}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someChecked;
+                  ref={(element) => {
+                    if (element) element.indeterminate = someChecked;
                   }}
                   disabled={!selectableIds.length}
                   onChange={(event) => onToggleAll(event.target.checked)}
@@ -85,9 +86,8 @@ export default function OrderListTable({
               </th>
               <th className="px-4 py-4">Đơn hàng</th>
               <th className="px-4 py-4">Khách hàng</th>
-              <th className="px-4 py-4">Loại thanh toán</th>
               <th className="px-4 py-4">Thanh toán</th>
-              <th className="px-4 py-4">Status</th>
+              <th className="px-4 py-4">Giao hàng</th>
               <th className="px-4 py-4 text-right">Tổng tiền</th>
               <th className="px-4 py-4">Cập nhật</th>
               <th className="px-4 py-4 text-right">Action</th>
@@ -114,7 +114,7 @@ export default function OrderListTable({
             {!items.length ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={8}
                   className="px-5 py-12 text-center text-sm text-slate-500"
                 >
                   Không có đơn hàng phù hợp.

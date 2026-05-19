@@ -1,4 +1,4 @@
-import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma } from "@prisma/client";
+import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, ReserveType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
@@ -17,6 +17,7 @@ import {
 } from "./order-write.repo";
 import { syncWatchInventoryFromOrders } from "../order-watch-sync.service";
 import { postOneOrderTx } from "../post/order-post.service";
+import { normalizeReserveType } from "../../shared/order-reserve-type";
 
 async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderInput) {
   const shipPhone = norm(input.shipPhone);
@@ -103,31 +104,77 @@ async function resolveProductItems(
 }
 
 function normalizeReserve(rawReserve: any) {
-  if (!rawReserve) return null;
-  const amount = Number(rawReserve.amount ?? 0);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const type = normalizeReserveType(rawReserve?.type);
+  const amount = Number(rawReserve?.amount ?? 0);
 
-  // COD is not a reserve/deposit type anymore. COD is only the payment method of the remaining amount.
+  if (type === ReserveType.NONE) {
+    return {
+      type,
+      amount: 0,
+      expiresAt: null,
+    };
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(
+      type === ReserveType.COD
+        ? "Đơn COD phải có tiền cọc."
+        : "Đơn deposit phải có tiền cọc.",
+    );
+  }
+
   return {
-    type: "DEPOSIT" as const,
+    type,
     amount,
-    expiresAt: rawReserve.expiresAt ?? null,
+    expiresAt: rawReserve?.expiresAt ?? null,
   };
 }
 
+function normalizePaymentMethodForReserve(rawPaymentMethod: any, reserveType: ReserveType) {
+  if (reserveType === ReserveType.COD) return PaymentMethod.COD;
+
+  return rawPaymentMethod && rawPaymentMethod !== PaymentMethod.COD
+    ? rawPaymentMethod
+    : PaymentMethod.BANK_TRANSFER;
+}
+
+function assertValidReserveBusiness(input: {
+  reserve?: { type?: ReserveType | string | null; amount?: number | null } | null;
+  hasShipment?: boolean | null;
+}) {
+  const reserveType = normalizeReserveType(input.reserve?.type);
+  const amount = Number(input.reserve?.amount ?? 0);
+
+  if (reserveType === ReserveType.NONE) return;
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(
+      reserveType === ReserveType.COD
+        ? "Đơn COD phải có tiền cọc."
+        : "Đơn deposit phải có tiền cọc.",
+    );
+  }
+
+  if (reserveType === ReserveType.COD && !input.hasShipment) {
+    throw new Error("Đơn COD bắt buộc phải có giao hàng.");
+  }
+}
+
+
 function normalizeCreateInput(raw: any): CreateOrderInput {
   const reserve = normalizeReserve(raw.reserve);
+  const paymentMethod = normalizePaymentMethodForReserve(raw.paymentMethod, reserve.type);
 
   return {
     customerId: raw.customerId ?? null,
     customerName: norm(raw.customerName),
     shipPhone: raw.shipPhone ?? "",
-    hasShipment: Boolean(raw.hasShipment),
+    hasShipment: reserve.type === ReserveType.COD ? true : Boolean(raw.hasShipment),
     shipAddress: raw.shipAddress ?? "",
     shipCity: raw.shipCity ?? "",
     shipDistrict: raw.shipDistrict ?? null,
     shipWard: raw.shipWard ?? null,
-    paymentMethod: raw.paymentMethod ?? PaymentMethod.BANK_TRANSFER,
+    paymentMethod,
     notes: raw.notes ?? null,
     orderDate: raw.createdAt ?? raw.orderDate ?? new Date(),
     status: raw.status ?? OrderStatus.DRAFT,
@@ -158,6 +205,7 @@ function normalizeCreateInput(raw: any): CreateOrderInput {
 
 export async function createOrderWithItems(raw: any) {
   const input = normalizeCreateInput(raw);
+  assertValidReserveBusiness(input);
   if (!input.customerName) throw new Error("Thiếu tên khách hàng");
   if (!input.items.length) throw new Error("Phải có ít nhất 1 dòng sản phẩm / dịch vụ");
 
@@ -201,8 +249,8 @@ export async function createOrderWithItems(raw: any) {
       source: input.source ?? OrderSource.ADMIN,
       verificationStatus: input.verificationStatus ?? OrderVerificationStatus.VERIFIED,
       subtotal: new Prisma.Decimal(0),
-      reserveType: input.reserve?.type ?? null,
-      depositRequired: input.reserve ? new Prisma.Decimal(Number(input.reserve.amount ?? 0)) : null,
+      reserveType: input.reserve?.type ?? ReserveType.NONE,
+      depositRequired: new Prisma.Decimal(Number(input.reserve?.amount ?? 0)),
       reserveUntil: input.reserve?.expiresAt ? new Date(input.reserve.expiresAt) : null,
       quickFromProductId: input.quickFromProductId ?? null,
       quickFlowType: (input.quickFlowType ?? "STANDARD") as any,
@@ -245,6 +293,25 @@ export async function createOrderWithItems(raw: any) {
 }
 
 export async function updateOrderDraft(orderId: string, input: OrderDraftInput) {
+  assertValidReserveBusiness(input);
+
+  const reserveType = normalizeReserveType(input.reserve?.type);
+  const normalizedInput: OrderDraftInput = {
+    ...input,
+    hasShipment: reserveType === ReserveType.COD ? true : input.hasShipment,
+    paymentMethod:
+      reserveType === ReserveType.COD
+        ? PaymentMethod.COD
+        : input.paymentMethod === PaymentMethod.COD
+          ? PaymentMethod.BANK_TRANSFER
+          : input.paymentMethod,
+    reserve: {
+      type: reserveType,
+      amount: reserveType === ReserveType.NONE ? 0 : Number(input.reserve?.amount ?? 0),
+      expiresAt: reserveType === ReserveType.NONE ? null : input.reserve?.expiresAt ?? null,
+    },
+  };
+
   return prisma.$transaction(async (tx) => {
     await assertCanEditOrderDraftRepo(tx as any, orderId);
 
@@ -253,11 +320,11 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
       select: { productId: true },
     });
 
-    const result = await replaceOrderDraftRepo(tx as any, orderId, input);
+    const result = await replaceOrderDraftRepo(tx as any, orderId, normalizedInput);
 
     await syncWatchInventoryFromOrders(tx, [
       ...beforeItems.map((item) => item.productId),
-      ...input.items.map((item) => item.productId),
+      ...normalizedInput.items.map((item) => item.productId),
     ]);
 
     return result;
