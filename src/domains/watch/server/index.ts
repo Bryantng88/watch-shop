@@ -6,6 +6,6 @@ export * from "./state";
 export * from "./spec";
 export * from "./media";
 export * from "./content";
-//export * from "./pricing";
+export * from "./pricing";
 export * from "./review";
 export * from "./bridge";

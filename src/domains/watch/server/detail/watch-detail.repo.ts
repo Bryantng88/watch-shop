@@ -64,7 +64,7 @@ export async function getOpenServiceWatches(db: DB) {
 
   return client.watch.findMany({
     where: {
-      serviceState: {
+      serviceStage: {
         in: ["PENDING", "IN_SERVICE"],
       },
     },
