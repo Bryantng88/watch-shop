@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentDirection, PaymentMethod, PaymentStatus, PaymentType, ShipmentStatus } from "@prisma/client";
+import { OrderStatus, PaymentDirection, PaymentMethod, PaymentStatus, PaymentType, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { recomputeOrderPaymentRollupTx } from "@/domains/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
@@ -10,14 +10,21 @@ import {
   getShipmentListRepo,
   updateShipmentRepo,
   createManualShipmentRepo,
+  cancelActiveShipmentCostPaymentsRepo,
 } from "./shipment.repo";
 import { money, toPlain, type Tx } from "./shipment.utils";
 
 function assertEditable(status: ShipmentStatus | string) {
-  if (![ShipmentStatus.READY, ShipmentStatus.SHIPPED].includes(status as ShipmentStatus)) {
-    throw new Error(`Shipment không thể chỉnh sửa ở trạng thái ${status}.`);
-  }
+  const editableStatuses: ShipmentStatus[] = [
+    ShipmentStatus.READY,
+    ShipmentStatus.SHIPPED,
+  ];
+
+  if (editableStatuses.includes(status as ShipmentStatus)) return;
+
+  throw new Error(`Shipment không thể chỉnh sửa ở trạng thái ${status}.`);
 }
+
 
 async function requireShipmentTx(tx: Tx, shipmentId: string) {
   const shipment = await getShipmentByIdRepo(tx as any, shipmentId);
@@ -63,23 +70,45 @@ export async function updateShipment(input: { shipmentId: string; data: UpdateSh
 export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
   return prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
-    if (shipment.status !== ShipmentStatus.READY) {
-      throw new Error(`Chỉ được tạo phí ship khi shipment READY. Hiện tại: ${shipment.status}.`);
+
+    if (
+      !([ShipmentStatus.READY, ShipmentStatus.SHIPPED] as ShipmentStatus[]).includes(
+        shipment.status as ShipmentStatus
+      )
+    ) {
+      throw new Error("Không thể giao shipment của order đã hủy.");
     }
+
     if (shipment.Order?.status === OrderStatus.CANCELLED) {
       throw new Error("Không thể giao shipment của order đã hủy.");
     }
 
-    const payment = await createCompletedShipmentCostPaymentRepo(tx, shipment, input);
+    const amount = Number(input.amount ?? 0);
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error("Phí ship không hợp lệ.");
+    }
+
+    const payer =
+      String(input.payer ?? ShippingFeePayer.BUSINESS).toUpperCase() === ShippingFeePayer.CUSTOMER
+        ? ShippingFeePayer.CUSTOMER
+        : ShippingFeePayer.BUSINESS;
+
+    await cancelActiveShipmentCostPaymentsRepo(tx, shipment.id);
+
+    const payment =
+      payer === ShippingFeePayer.BUSINESS && amount > 0
+        ? await createCompletedShipmentCostPaymentRepo(tx, shipment, input)
+        : null;
 
     const updated = await (tx as any).shipment.update({
       where: { id: shipment.id },
       data: {
         status: ShipmentStatus.SHIPPED,
-        shippingFee: money(Number(input.amount)),
+        shippingFee: money(amount),
+        shippingFeePayer: payer,
         carrier: input.carrier ?? shipment.carrier ?? null,
         trackingCode: input.trackingCode ?? shipment.trackingCode ?? null,
-        shippedAt: new Date(),
+        shippedAt: shipment.shippedAt ?? new Date(),
         updatedAt: new Date(),
       },
     });
@@ -89,8 +118,10 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
       data: { status: OrderStatus.SHIPPED, updatedAt: new Date() },
     });
 
+    const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
     await syncWatchInventoryFromOrderId(tx, shipment.orderId);
-    return toPlain({ shipment: updated, payment });
+
+    return toPlain({ shipment: updated, payment, summary });
   });
 }
 
@@ -149,8 +180,15 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
 export async function markShipmentReturned(input: CompleteShipmentInput) {
   return prisma.$transaction(async (tx) => {
     const shipment = await requireShipmentTx(tx, input.shipmentId);
-    if (![ShipmentStatus.SHIPPED, ShipmentStatus.DELIVERED].includes(shipment.status as ShipmentStatus)) {
-      throw new Error(`Chỉ được trả về khi shipment đang giao/đã giao. Hiện tại: ${shipment.status}.`);
+    const returnableStatuses: ShipmentStatus[] = [
+      ShipmentStatus.SHIPPED,
+      ShipmentStatus.DELIVERED,
+    ];
+
+    if (!returnableStatuses.includes(shipment.status as ShipmentStatus)) {
+      throw new Error(
+        `Chỉ được trả về khi shipment đang giao/đã giao. Hiện tại: ${shipment.status}.`
+      );
     }
 
     const updated = await (tx as any).shipment.update({

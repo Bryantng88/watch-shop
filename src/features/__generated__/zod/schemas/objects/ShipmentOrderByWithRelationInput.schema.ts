@@ -22,10 +22,11 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
+  shippingFeePayer: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   orderRefNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   customerName: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  Order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional()
+  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional()
 }).strict();
 export const ShipmentOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ShipmentOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentOrderByWithRelationInput>;
 export const ShipmentOrderByWithRelationInputObjectZodSchema = makeSchema();

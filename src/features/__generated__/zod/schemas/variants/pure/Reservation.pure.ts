@@ -11,7 +11,7 @@ export const ReservationModelSchema = z.object({
     expiresAt: z.date().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    Product: z.unknown().nullable()
+    product: z.unknown().nullable()
 }).strict();
 
 export type ReservationPureType = z.infer<typeof ReservationModelSchema>;

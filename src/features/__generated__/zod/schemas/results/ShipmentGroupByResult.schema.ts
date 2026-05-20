@@ -37,10 +37,11 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
     createdAt: z.number(),
     updatedAt: z.number(),
     status: z.number(),
+    shippingFeePayer: z.number(),
     refNo: z.number(),
     orderRefNo: z.number(),
     customerName: z.number(),
-    Order: z.number()
+    order: z.number()
   }).optional(),
   _sum: z.object({
     shippingFee: z.number().nullable()

@@ -152,7 +152,7 @@ export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
       id: true,
       status: true,
       hasShipment: true,
-      shipment: { select: { status: true } },
+      shipments: { select: { status: true } },
     },
   });
 
@@ -160,8 +160,13 @@ export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
   if (order.status === OrderStatus.CANCELLED) return summary;
 
   const fullyPaid = summary.totalDue > 0 && summary.paidTotal >= summary.totalDue;
-  const shipmentCompleted = !order.hasShipment || String(order.shipment?.status ?? "").toUpperCase() === "DELIVERED";
-  const completed = fullyPaid && shipmentCompleted;
+  const shipments = order.shipments ?? [];
+
+  const shipmentCompleted =
+    !order.hasShipment ||
+    shipments.some((shipment) =>
+      ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(shipment.status))
+    ); const completed = fullyPaid && shipmentCompleted;
 
   await tx.order.update({
     where: { id: orderId },

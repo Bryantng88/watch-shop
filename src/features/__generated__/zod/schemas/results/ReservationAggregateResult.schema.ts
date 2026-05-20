@@ -8,7 +8,7 @@ export const ReservationAggregateResultSchema = z.object({  _count: z.object({
     expiresAt: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    Product: z.number()
+    product: z.number()
   }).optional(),
   _sum: z.object({
     depositAmt: z.number().nullable()

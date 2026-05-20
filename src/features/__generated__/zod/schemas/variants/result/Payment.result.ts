@@ -26,7 +26,7 @@ export const PaymentResultSchema = z.object({
     type: PaymentTypeSchema,
     refNo: z.string().nullable(),
     updatedAt: z.date(),
-    MaintenanceRecord: z.array(z.unknown())
+    maintenanceRecord: z.array(z.unknown())
 }).strict();
 
 export type PaymentResultType = z.infer<typeof PaymentResultSchema>;

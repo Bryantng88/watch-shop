@@ -38,7 +38,7 @@ export const ServiceRequestFindFirstResultSchema = z.nullable(z.object({
   invoice: z.array(z.unknown()),
   maintenanceRecord: z.array(z.unknown()),
   customer: z.unknown().optional(),
-  OrderItem: z.unknown().optional(),
+  orderItem: z.unknown().optional(),
   product: z.unknown().optional(),
   user: z.unknown().optional(),
   productVariant: z.unknown().optional(),

@@ -11,7 +11,7 @@ const makeSchema = () => z.object({
   expiresAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date(),
-  Product: z.lazy(() => ProductCreateNestedOneWithoutReservationInputObjectSchema).optional()
+  product: z.lazy(() => ProductCreateNestedOneWithoutReservationInputObjectSchema).optional()
 }).strict();
 export const ReservationCreateInputObjectSchema: z.ZodType<Prisma.ReservationCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ReservationCreateInput>;
 export const ReservationCreateInputObjectZodSchema = makeSchema();

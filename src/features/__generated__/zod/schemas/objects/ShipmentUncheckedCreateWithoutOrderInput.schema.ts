@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema'
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
+import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -19,6 +20,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   status: ShipmentStatusSchema.optional(),
+  shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
   refNo: z.string().optional().nullable(),
   orderRefNo: z.string().optional().nullable(),
   customerName: z.string().optional().nullable()

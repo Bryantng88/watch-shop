@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
   status: z.literal(true).optional(),
+  shippingFeePayer: z.literal(true).optional(),
   refNo: z.literal(true).optional(),
   orderRefNo: z.literal(true).optional(),
   customerName: z.literal(true).optional(),

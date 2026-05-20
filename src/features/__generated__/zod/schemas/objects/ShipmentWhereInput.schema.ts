@@ -8,6 +8,8 @@ import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchem
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumShipmentStatusFilterObjectSchema as EnumShipmentStatusFilterObjectSchema } from './EnumShipmentStatusFilter.schema';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
+import { EnumShippingFeePayerNullableFilterObjectSchema as EnumShippingFeePayerNullableFilterObjectSchema } from './EnumShippingFeePayerNullableFilter.schema';
+import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { OrderScalarRelationFilterObjectSchema as OrderScalarRelationFilterObjectSchema } from './OrderScalarRelationFilter.schema';
 import { OrderWhereInputObjectSchema as OrderWhereInputObjectSchema } from './OrderWhereInput.schema'
 
@@ -32,10 +34,11 @@ const shipmentwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   status: z.union([z.lazy(() => EnumShipmentStatusFilterObjectSchema), ShipmentStatusSchema]).optional(),
+  shippingFeePayer: z.union([z.lazy(() => EnumShippingFeePayerNullableFilterObjectSchema), ShippingFeePayerSchema]).optional().nullable(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   orderRefNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  Order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional()
+  order: z.union([z.lazy(() => OrderScalarRelationFilterObjectSchema), z.lazy(() => OrderWhereInputObjectSchema)]).optional()
 }).strict();
 export const ShipmentWhereInputObjectSchema: z.ZodType<Prisma.ShipmentWhereInput> = shipmentwhereinputSchema as unknown as z.ZodType<Prisma.ShipmentWhereInput>;
 export const ShipmentWhereInputObjectZodSchema = shipmentwhereinputSchema;

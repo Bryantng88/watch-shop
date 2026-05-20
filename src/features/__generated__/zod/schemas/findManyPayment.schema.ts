@@ -29,7 +29,7 @@ export const PaymentFindManySelectSchema: z.ZodType<Prisma.PaymentSelect> = z.ob
     type: z.boolean().optional(),
     refNo: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.PaymentSelect>;
 
@@ -53,7 +53,7 @@ export const PaymentFindManySelectZodSchema = z.object({
     type: z.boolean().optional(),
     refNo: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

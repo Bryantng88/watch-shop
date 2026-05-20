@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 import { ShipmentStatusSchema } from '../../enums/ShipmentStatus.schema';
+import { ShippingFeePayerSchema } from '../../enums/ShippingFeePayer.schema';
 // prettier-ignore
 export const ShipmentInputSchema = z.object({
     id: z.string(),
@@ -20,10 +21,11 @@ export const ShipmentInputSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     status: ShipmentStatusSchema,
+    shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
     refNo: z.string().optional().nullable(),
     orderRefNo: z.string().optional().nullable(),
     customerName: z.string().optional().nullable(),
-    Order: z.unknown()
+    order: z.unknown()
 }).strict();
 
 export type ShipmentInputType = z.infer<typeof ShipmentInputSchema>;

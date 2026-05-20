@@ -34,7 +34,7 @@ export const PaymentGroupByResultSchema = z.array(z.object({
     type: z.number(),
     refNo: z.number(),
     updatedAt: z.number(),
-    MaintenanceRecord: z.number()
+    maintenanceRecord: z.number()
   }).optional(),
   _sum: z.object({
     amount: z.number().nullable()

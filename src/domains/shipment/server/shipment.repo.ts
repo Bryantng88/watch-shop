@@ -1,4 +1,4 @@
-import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus } from "@prisma/client";
+import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import type { CreateShipmentFromOrderInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput } from "../shared";
 import { buildPaymentRef, buildShipmentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
@@ -7,7 +7,7 @@ export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
   return (db as any).shipment.findUnique({
     where: { id: shipmentId },
     include: {
-      Order: {
+      order: {
         select: {
           id: true,
           refNo: true,
@@ -55,7 +55,7 @@ export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput)
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
-        Order: {
+        order: {
           select: {
             id: true,
             refNo: true,
@@ -96,6 +96,7 @@ export async function createShipmentFromOrderRepo(tx: Tx, input: CreateShipmentF
       shipAddress: input.shipAddress ?? null,
       shipCity: input.shipCity ?? null,
       shipDistrict: input.shipDistrict ?? null,
+      shippingFeePayer: ShippingFeePayer.BUSINESS,
       shipWard: input.shipWard ?? null,
       shippingFee: money(0),
       currency: "VND",
@@ -125,18 +126,6 @@ export async function updateShipmentRepo(tx: Tx, shipmentId: string, input: Upda
 export async function createCompletedShipmentCostPaymentRepo(tx: Tx, shipment: any, input: CreateShipmentFeeInput) {
   const amount = toNumber(input.amount);
   if (amount <= 0) throw new Error("Phí ship phải lớn hơn 0.");
-
-  const duplicated = await tx.payment.findFirst({
-    where: {
-      shipment_id: shipment.id,
-      type: PaymentType.SHIPMENT,
-      purpose: PaymentPurpose.SHIPMENT_COST,
-      status: { not: PaymentStatus.CANCELED },
-    },
-    select: { id: true },
-  });
-  if (duplicated) throw new Error("Shipment này đã có payment phí ship.");
-
   return tx.payment.create({
     data: {
       refNo: await buildPaymentRef(tx),
@@ -207,6 +196,21 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
       shippingFee: money(0),
       currency: "VND",
       status: ShipmentStatus.READY,
+      updatedAt: new Date(),
+    },
+  });
+}
+export async function cancelActiveShipmentCostPaymentsRepo(tx: Tx, shipmentId: string) {
+  return tx.payment.updateMany({
+    where: {
+      shipment_id: shipmentId,
+      type: PaymentType.SHIPMENT,
+      purpose: PaymentPurpose.SHIPMENT_COST,
+      status: { not: PaymentStatus.CANCELED },
+    },
+    data: {
+      status: PaymentStatus.CANCELED,
+      note: "Payment phí ship đã bị hủy do cập nhật lại phí ship/người chịu phí.",
       updatedAt: new Date(),
     },
   });

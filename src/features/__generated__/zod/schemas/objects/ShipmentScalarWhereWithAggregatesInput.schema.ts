@@ -7,7 +7,9 @@ import { DecimalWithAggregatesFilterObjectSchema as DecimalWithAggregatesFilterO
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { EnumShipmentStatusWithAggregatesFilterObjectSchema as EnumShipmentStatusWithAggregatesFilterObjectSchema } from './EnumShipmentStatusWithAggregatesFilter.schema';
-import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema'
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
+import { EnumShippingFeePayerNullableWithAggregatesFilterObjectSchema as EnumShippingFeePayerNullableWithAggregatesFilterObjectSchema } from './EnumShippingFeePayerNullableWithAggregatesFilter.schema';
+import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema'
 
 const shipmentscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => ShipmentScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => ShipmentScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -30,6 +32,7 @@ const shipmentscalarwherewithaggregatesinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
   status: z.union([z.lazy(() => EnumShipmentStatusWithAggregatesFilterObjectSchema), ShipmentStatusSchema]).optional(),
+  shippingFeePayer: z.union([z.lazy(() => EnumShippingFeePayerNullableWithAggregatesFilterObjectSchema), ShippingFeePayerSchema]).optional().nullable(),
   refNo: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   orderRefNo: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   customerName: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
