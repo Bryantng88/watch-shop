@@ -46,7 +46,7 @@ const makeSchema = () => z.object({
   invoice: z.lazy(() => InvoiceCreateNestedManyWithoutServiceRequestInputObjectSchema),
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceRequestInputObjectSchema),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   product: z.lazy(() => ProductCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   user: z.lazy(() => UserCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   productVariant: z.lazy(() => ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),

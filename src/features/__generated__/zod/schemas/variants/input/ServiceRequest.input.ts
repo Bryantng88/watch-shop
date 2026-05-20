@@ -43,7 +43,7 @@ export const ServiceRequestInputSchema = z.object({
     invoice: z.array(z.unknown()),
     maintenanceRecord: z.array(z.unknown()),
     customer: z.unknown().optional().nullable(),
-    OrderItem: z.unknown().optional().nullable(),
+    orderItem: z.unknown().optional().nullable(),
     product: z.unknown().optional().nullable(),
     user: z.unknown().optional().nullable(),
     productVariant: z.unknown().optional().nullable(),

@@ -101,9 +101,10 @@ export function isCodShipment(item: ShipmentListItem) {
 export function canEditShipment(item: ShipmentListItem) {
   return ["READY", "SHIPPED"].includes(String(item.status ?? "").toUpperCase());
 }
-
 export function canCreateShipmentFee(item: ShipmentListItem) {
-  return String(item.status ?? "").toUpperCase() === "READY";
+  return ["READY", "SHIPPED"].includes(
+    String(item.status ?? "").toUpperCase()
+  );
 }
 
 export function canMarkDelivered(item: ShipmentListItem) {

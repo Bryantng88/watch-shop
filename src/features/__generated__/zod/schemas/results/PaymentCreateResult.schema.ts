@@ -19,5 +19,5 @@ export const PaymentCreateResultSchema = z.object({
   type: z.unknown(),
   refNo: z.string().optional(),
   updatedAt: z.date(),
-  MaintenanceRecord: z.array(z.unknown())
+  maintenanceRecord: z.array(z.unknown())
 });

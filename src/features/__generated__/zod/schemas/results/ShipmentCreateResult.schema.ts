@@ -17,8 +17,9 @@ export const ShipmentCreateResultSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   status: z.unknown(),
+  shippingFeePayer: z.unknown().optional(),
   refNo: z.string().optional(),
   orderRefNo: z.string().optional(),
   customerName: z.string().optional(),
-  Order: z.unknown()
+  order: z.unknown()
 });

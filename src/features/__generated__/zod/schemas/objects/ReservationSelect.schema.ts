@@ -11,7 +11,7 @@ const makeSchema = () => z.object({
   expiresAt: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
-  Product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
+  product: z.union([z.boolean(), z.lazy(() => ProductArgsObjectSchema)]).optional()
 }).strict();
 export const ReservationSelectObjectSchema: z.ZodType<Prisma.ReservationSelect> = makeSchema() as unknown as z.ZodType<Prisma.ReservationSelect>;
 export const ReservationSelectObjectZodSchema = makeSchema();

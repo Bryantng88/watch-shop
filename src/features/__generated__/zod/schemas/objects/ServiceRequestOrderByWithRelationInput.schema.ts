@@ -53,7 +53,7 @@ const makeSchema = () => z.object({
   invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemOrderByWithRelationInputObjectSchema).optional(),
   product: z.lazy(() => ProductOrderByWithRelationInputObjectSchema).optional(),
   user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   productVariant: z.lazy(() => ProductVariantOrderByWithRelationInputObjectSchema).optional(),

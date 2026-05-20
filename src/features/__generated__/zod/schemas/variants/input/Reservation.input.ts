@@ -11,7 +11,7 @@ export const ReservationInputSchema = z.object({
     expiresAt: z.date().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    Product: z.unknown().optional().nullable()
+    product: z.unknown().optional().nullable()
 }).strict();
 
 export type ReservationInputType = z.infer<typeof ReservationInputSchema>;

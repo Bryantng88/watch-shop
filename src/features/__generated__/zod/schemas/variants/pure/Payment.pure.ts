@@ -26,7 +26,7 @@ export const PaymentModelSchema = z.object({
     type: PaymentTypeSchema,
     refNo: z.string().nullable(),
     updatedAt: z.date(),
-    MaintenanceRecord: z.array(z.unknown())
+    maintenanceRecord: z.array(z.unknown())
 }).strict();
 
 export type PaymentPureType = z.infer<typeof PaymentModelSchema>;

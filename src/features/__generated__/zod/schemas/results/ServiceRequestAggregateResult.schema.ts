@@ -38,7 +38,7 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     invoice: z.number(),
     maintenanceRecord: z.number(),
     customer: z.number(),
-    OrderItem: z.number(),
+    orderItem: z.number(),
     product: z.number(),
     user: z.number(),
     productVariant: z.number(),

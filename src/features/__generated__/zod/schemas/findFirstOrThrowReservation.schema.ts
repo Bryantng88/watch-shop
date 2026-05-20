@@ -18,7 +18,7 @@ export const ReservationFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Reservati
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional()
+    product: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ReservationSelect>;
 
 export const ReservationFindFirstOrThrowSelectZodSchema = z.object({
@@ -30,7 +30,7 @@ export const ReservationFindFirstOrThrowSelectZodSchema = z.object({
     expiresAt: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    Product: z.boolean().optional()
+    product: z.boolean().optional()
   }).strict();
 
 export const ReservationFindFirstOrThrowSchema: z.ZodType<Prisma.ReservationFindFirstOrThrowArgs> = z.object({ select: ReservationFindFirstOrThrowSelectSchema.optional(), include: ReservationIncludeObjectSchema.optional(), orderBy: z.union([ReservationOrderByWithRelationInputObjectSchema, ReservationOrderByWithRelationInputObjectSchema.array()]).optional(), where: ReservationWhereInputObjectSchema.optional(), cursor: ReservationWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ReservationScalarFieldEnumSchema, ReservationScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ReservationFindFirstOrThrowArgs>;

@@ -27,10 +27,11 @@ export const ShipmentFindManySelectSchema: z.ZodType<Prisma.ShipmentSelect> = z.
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     status: z.boolean().optional(),
+    shippingFeePayer: z.boolean().optional(),
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
     customerName: z.boolean().optional(),
-    Order: z.boolean().optional()
+    order: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ShipmentSelect>;
 
 export const ShipmentFindManySelectZodSchema = z.object({
@@ -51,10 +52,11 @@ export const ShipmentFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     status: z.boolean().optional(),
+    shippingFeePayer: z.boolean().optional(),
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
     customerName: z.boolean().optional(),
-    Order: z.boolean().optional()
+    order: z.boolean().optional()
   }).strict();
 
 export const ShipmentFindManySchema: z.ZodType<Prisma.ShipmentFindManyArgs> = z.object({ select: ShipmentFindManySelectSchema.optional(), include: ShipmentIncludeObjectSchema.optional(), orderBy: z.union([ShipmentOrderByWithRelationInputObjectSchema, ShipmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ShipmentWhereInputObjectSchema.optional(), cursor: ShipmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ShipmentScalarFieldEnumSchema, ShipmentScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ShipmentFindManyArgs>;

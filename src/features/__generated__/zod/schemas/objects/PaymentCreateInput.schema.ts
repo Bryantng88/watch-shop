@@ -27,7 +27,7 @@ const makeSchema = () => z.object({
   type: PaymentTypeSchema.optional(),
   refNo: z.string().max(30).optional().nullable(),
   updatedAt: z.coerce.date().optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutPaymentInputObjectSchema)
+  maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutPaymentInputObjectSchema)
 }).strict();
 export const PaymentCreateInputObjectSchema: z.ZodType<Prisma.PaymentCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCreateInput>;
 export const PaymentCreateInputObjectZodSchema = makeSchema();

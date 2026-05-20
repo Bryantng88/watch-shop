@@ -7,7 +7,9 @@ import { DecimalFilterObjectSchema as DecimalFilterObjectSchema } from './Decima
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumShipmentStatusFilterObjectSchema as EnumShipmentStatusFilterObjectSchema } from './EnumShipmentStatusFilter.schema';
-import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema'
+import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
+import { EnumShippingFeePayerNullableFilterObjectSchema as EnumShippingFeePayerNullableFilterObjectSchema } from './EnumShippingFeePayerNullableFilter.schema';
+import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema'
 
 const shipmentscalarwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ShipmentScalarWhereInputObjectSchema), z.lazy(() => ShipmentScalarWhereInputObjectSchema).array()]).optional(),
@@ -30,6 +32,7 @@ const shipmentscalarwhereinputSchema = z.object({
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   status: z.union([z.lazy(() => EnumShipmentStatusFilterObjectSchema), ShipmentStatusSchema]).optional(),
+  shippingFeePayer: z.union([z.lazy(() => EnumShippingFeePayerNullableFilterObjectSchema), ShippingFeePayerSchema]).optional().nullable(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   orderRefNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   customerName: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()

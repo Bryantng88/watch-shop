@@ -20,6 +20,7 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
+  shippingFeePayer: SortOrderSchema.optional(),
   refNo: SortOrderSchema.optional(),
   orderRefNo: SortOrderSchema.optional(),
   customerName: SortOrderSchema.optional()

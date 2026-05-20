@@ -9,7 +9,7 @@ export const ReservationFindManyResultSchema = z.object({
   expiresAt: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  Product: z.unknown().optional()
+  product: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),
