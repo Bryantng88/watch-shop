@@ -201,10 +201,32 @@ const orderListSelect = {
   hasShipment: true,
   createdAt: true,
   updatedAt: true,
-  shipments: { select: { id: true, status: true } },
-  _count: { select: { orderItem: true } },
+  shipments: {
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      updatedAt: true,
+    },
+  }, _count: { select: { orderItem: true } },
 } satisfies Prisma.OrderSelect;
+type OrderListSelectedRow = Prisma.OrderGetPayload<{
+  select: typeof orderListSelect;
+}>;
 
+function resolveOrderShipmentStatus(row: OrderListSelectedRow) {
+  const shipments = row.shipments ?? [];
+
+  return (
+    shipments.find((shipment) => shipment.status === "SHIPPED")?.status ??
+    shipments.find((shipment) => shipment.status === "DELIVERED")?.status ??
+    shipments.find((shipment) => shipment.status === "READY")?.status ??
+    shipments.find((shipment) => shipment.status === "DRAFT")?.status ??
+    shipments.find((shipment) => shipment.status === "RETURNED")?.status ??
+    shipments.find((shipment) => shipment.status === "CANCELLED")?.status ??
+    null
+  );
+}
 export async function listAdminOrdersRepo(
   db: DB,
   input: {
@@ -253,7 +275,10 @@ export async function listAdminOrdersRepo(
   ]);
 
   return {
-    rows,
+    rows: rows.map((row) => ({
+      ...row,
+      shipmentStatus: resolveOrderShipmentStatus(row),
+    })),
     total,
     counts: {
       all: totalAll,

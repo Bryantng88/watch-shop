@@ -62,7 +62,7 @@ export type OrderListItem = {
 
   paymentStatus?: string | null;
   fulfillmentStatus?: string | null;
-
+  shipmentStatus?: string | null;
   source?: string | null;
   sourceLabel?: string | null;
   createdByName?: string | null;

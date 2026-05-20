@@ -10,13 +10,13 @@ import {
   Truck,
   XCircle,
 } from "lucide-react";
-
-import {
+import { PaymentStateIcon } from "@/domains/payment/ui/icon"; import {
   OrderReserveTypeIcon,
   OrderSourceIcon,
   ProductCountIcon,
 } from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
+import { ShipmentProgress } from "@/domains/shipment/ui/progress";
 
 import type { OrderListItem } from "./types";
 import {
@@ -29,8 +29,6 @@ import {
   formatMoney,
   paymentDisplayLabel,
   paymentDisplayTone,
-  shipmentDisplayLabel,
-  shipmentDisplayTone,
 } from "./helpers";
 
 type Props = {
@@ -60,6 +58,29 @@ function StatusBadge({ label, tone }: { label: string; tone: string }) {
   );
 }
 
+function resolveShipmentProgressStatus(item: OrderListItem) {
+  const direct =
+    (item as any).shipmentStatus ||
+    (item as any).shippingStatus ||
+    (item as any).deliveryStatus ||
+    (item as any).shipment?.status ||
+    (item as any).shipments?.[0]?.status;
+
+  if (direct) return direct;
+
+  // fallback theo trạng thái order/list hiện tại
+  if (String(item.status ?? "").toUpperCase() === "SHIPPED") {
+    return "SHIPPED";
+  }
+
+  if (String(item.status ?? "").toUpperCase() === "COMPLETED") {
+    return "DELIVERED";
+  }
+
+  if (!item.hasShipment) return "DELIVERED";
+
+  return "READY";
+}
 export default function OrderListRow({
   item,
   checked,
@@ -100,7 +121,6 @@ export default function OrderListRow({
             {item.refNo || item.id}
           </Link>
 
-
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <ProductCountIcon count={itemsCount} />
             <OrderSourceIcon source={item.source} />
@@ -125,21 +145,24 @@ export default function OrderListRow({
           </div>
         </div>
       </td>
-
       <td className="px-4 py-4">
-        <div className="min-w-[120px]">
-          <StatusBadge
-            label={paymentDisplayLabel(item)}
-            tone={paymentDisplayTone(item)}
+        <div className="flex min-w-[150px] items-center gap-2">
+          <PaymentStateIcon
+            status={item.paymentStatus}
+            totalAmount={item.totalAmount}
+            remainingAmount={item.remainingAmount}
+            collectedAmount={item.collectedAmount}
           />
+
+
         </div>
       </td>
 
       <td className="px-4 py-4">
-        <div className="min-w-[120px]">
-          <StatusBadge
-            label={shipmentDisplayLabel(item)}
-            tone={shipmentDisplayTone(item)}
+        <div className="min-w-[160px]">
+          <ShipmentProgress
+            status={resolveShipmentProgressStatus(item)}
+            compact
           />
         </div>
       </td>

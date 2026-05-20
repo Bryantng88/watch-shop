@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
-    MoreHorizontal,
     ImageIcon,
     FileText,
     Wrench,
@@ -13,17 +12,21 @@ import {
     Hammer,
     HandCoins,
     Trash2,
+    CircleDashed,
+    Clock3,
+    FileWarning,
+    CheckCircle2,
+    Send,
 } from "lucide-react";
 import type { WatchRow } from "./types";
 import {
     contentStatusText,
     contentStatusTone,
     formatMoney,
-    specStatusText,
-    specStatusTone,
-    formatDateTime
+    formatDateTime,
 } from "./helpers";
 import RowActions from "@/domains/shared/ui/list/RowActions";
+
 type Props = {
     product: WatchRow;
     checked: boolean;
@@ -54,7 +57,6 @@ function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     );
 }
 
-
 function WatchReadinessSummary({ row }: { row: WatchRow }) {
     return (
         <div className="mt-2 flex items-center gap-2.5">
@@ -82,6 +84,62 @@ function WatchReadinessSummary({ row }: { row: WatchRow }) {
     );
 }
 
+function normalizePostReadiness(row: WatchRow) {
+    const label = contentStatusText(row).toLowerCase();
+
+    if (label.includes("đã đăng")) return "POSTED";
+    if (label.includes("đã duyệt")) return "APPROVED";
+    if (label.includes("duyệt một phần")) return "PARTIAL";
+    if (label.includes("chờ duyệt")) return "PENDING";
+
+    return "NOT_SUBMITTED";
+}
+
+function WatchPostReadinessIcon({ row }: { row: WatchRow }) {
+    const state = normalizePostReadiness(row);
+
+    const config = {
+        NOT_SUBMITTED: {
+            title: "Chưa gửi duyệt",
+            icon: CircleDashed,
+            className: "bg-slate-50 text-slate-400 ring-slate-200",
+        },
+        PENDING: {
+            title: "Chờ duyệt",
+            icon: Clock3,
+            className: "bg-amber-50 text-amber-600 ring-amber-100",
+        },
+        PARTIAL: {
+            title: "Duyệt một phần",
+            icon: FileWarning,
+            className: "bg-orange-50 text-orange-600 ring-orange-100",
+        },
+        APPROVED: {
+            title: "Đã duyệt",
+            icon: CheckCircle2,
+            className: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+        },
+        POSTED: {
+            title: "Đã đăng",
+            icon: Send,
+            className: "bg-violet-50 text-violet-600 ring-violet-100",
+        },
+    }[state];
+
+    const Icon = config.icon;
+
+    return (
+        <span
+            title={config.title}
+            className={cn(
+                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1",
+                config.className
+            )}
+        >
+            <Icon className="h-4 w-4" />
+        </span>
+    );
+}
 
 export default function WatchListRow({
     product,
@@ -96,8 +154,8 @@ export default function WatchListRow({
 }: Props) {
     const isRecent =
         product.updatedAt &&
-        Date.now() - new Date(product.updatedAt).getTime() <
-        1000 * 60 * 60 * 24;
+        Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
+
     return (
         <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
             <td className="px-4 py-4">
@@ -121,8 +179,6 @@ export default function WatchListRow({
                             {product.title}
                         </Link>
 
-
-
                         <div className="mt-1 text-xs text-slate-400">
                             SKU: {product.sku || "-"}
                             <div className="font-mono text-[11px] text-slate-400">
@@ -130,20 +186,17 @@ export default function WatchListRow({
                             </div>
                         </div>
 
-
                         <WatchReadinessSummary row={product} />
                     </div>
                 </div>
             </td>
 
             <td className="px-4 py-4">
-                <span
-                    className={`inline-flex min-w-[96px] justify-center rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${contentStatusTone(
-                        product
-                    )}`}
-                >
-                    {contentStatusText(product)}
-                </span>
+                <div className="flex min-w-[150px] items-center gap-2">
+                    <WatchPostReadinessIcon row={product} />
+
+
+                </div>
             </td>
 
             <td className="px-4 py-4">
@@ -151,6 +204,7 @@ export default function WatchListRow({
                     {formatMoney(product.salePrice)}
                 </div>
             </td>
+
             <td className="px-4 py-4 align-middle">
                 <div className="text-sm text-slate-700">
                     {formatDateTime(product.createdAt)}
@@ -161,21 +215,19 @@ export default function WatchListRow({
                 <div
                     className={cn(
                         "text-sm",
-                        isRecent
-                            ? "font-semibold text-emerald-500"
-                            : "text-slate-700"
+                        isRecent ? "font-semibold text-emerald-500" : "text-slate-700"
                     )}
                 >
                     {formatDateTime(product.updatedAt)}
                 </div>
             </td>
+
             <td className="px-4 py-4 align-middle">
                 <div className="text-sm font-medium text-slate-700">
-                    {product.lastUpdatedBy?.name ||
-                        product.lastUpdatedBy?.email ||
-                        "-"}
+                    {product.lastUpdatedBy?.name || product.lastUpdatedBy?.email || "-"}
                 </div>
             </td>
+
             <td className="px-4 py-4 text-right">
                 <RowActions
                     row={product}

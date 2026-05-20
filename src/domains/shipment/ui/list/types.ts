@@ -30,6 +30,7 @@ export type ShipmentListItem = {
   shippingFee?: number | string | null;
   currency?: string | null;
   status: string;
+  shippingFeePayer?: string | null;
   shippedAt?: string | Date | null;
   deliveredAt?: string | Date | null;
   notes?: string | null;

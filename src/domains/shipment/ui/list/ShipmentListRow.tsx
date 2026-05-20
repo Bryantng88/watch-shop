@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Banknote, CheckCircle2, MapPin, Pencil, RotateCcw } from "lucide-react";
-
-import { OrderReserveTypeIcon, OrderSourceIcon } from "@/domains/shared/ui/icons";
+import { CreditCard, HandCoins } from "lucide-react";
+import { OrderSourceIcon } from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { ShipmentListItem } from "./types";
 import {
@@ -15,18 +15,33 @@ import {
   formatMoney,
   fullAddress,
   isCodShipment,
-  shipmentStatusLabel,
-  shipmentStatusTone,
-} from "./helpers";
 
-function StatusBadge({ label, tone }: { label: string; tone: string }) {
+} from "./helpers";
+import { ShipmentProgress } from "../progress";
+
+function ShipmentPaymentMethodIcon({ method }: { method?: string | null }) {
+  const key = String(method ?? "").toUpperCase();
+
+  if (key === "COD") {
+    return (
+      <span
+        title="COD"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-100"
+      >
+        <HandCoins className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+
   return (
-    <span className={["inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1", tone].join(" ")}>
-      {label}
+    <span
+      title="Thanh toán chuyển khoản / khác"
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"
+    >
+      <CreditCard className="h-3.5 w-3.5" />
     </span>
   );
 }
-
 export default function ShipmentListRow({
   item,
   onEdit,
@@ -53,7 +68,7 @@ export default function ShipmentListRow({
 
           <div className="flex items-center gap-1.5">
             <OrderSourceIcon source={item.Order?.source} />
-            <OrderReserveTypeIcon reserveType={item.Order?.reserveType || item.Order?.paymentMethod} />
+            <ShipmentPaymentMethodIcon method={item.Order?.paymentMethod} />
           </div>
         </div>
       </td>
@@ -87,17 +102,18 @@ export default function ShipmentListRow({
           {item.trackingCode || "Chưa có tracking"}
         </div>
       </td>
-
       <td className="px-5 py-4">
-        <StatusBadge label={shipmentStatusLabel(item.status)} tone={shipmentStatusTone(item.status)} />
+        <ShipmentProgress status={item.status} compact />
       </td>
-
       <td className="px-5 py-4 text-right">
         <div className="break-words font-semibold text-slate-950">
           {formatMoney(item.shippingFee, item.currency || "VND")}
         </div>
-      </td>
 
+        {String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER" ? (
+          <div className="mt-1 text-xs text-slate-500">Khách trả</div>
+        ) : null}
+      </td>
       <td className="px-5 py-4">
         <div className="break-words text-sm text-slate-600">
           {formatDateTime(item.updatedAt)}
