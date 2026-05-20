@@ -10,7 +10,7 @@ export async function getWatchPostUsageStateRepo(tx: Tx, productId: string) {
         select: {
             id: true,
             productId: true,
-            saleState: true,
+            saleStage: true,
             isContentDownloaded: true,
             isImageDownloaded: true,
             watchContent: {
