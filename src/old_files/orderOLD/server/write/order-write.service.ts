@@ -1,6 +1,6 @@
 import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
 import type { CreateOrderInput, OrderDraftInput, OrderItemInput, ResolvedProductOrderItem } from "../shared";
 import { assertPositiveQuantity, calcUnitPriceAgreed, norm, toNumberPrice, toPlain } from "../shared";

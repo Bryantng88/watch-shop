@@ -1,7 +1,7 @@
 import { Prisma, InvoiceStatus } from "@prisma/client";
 import { CreateInvoiceDTO, UpdateInvoiceDTO, InvoiceItemDTO, UpdateInvoiceItemDTO } from "./invoice.dto";
 import prisma, { DB, dbOrTx } from "@/server/db/client";
-import { genRefNo } from "../../__components/AutoGenRef";
+import { genRefNo } from "../../../../../domains/shared/utils/AutoGenRef";
 import z from "zod";
 
 

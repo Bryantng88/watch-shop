@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
-import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { toPlain } from "../shared";
 import { syncWatchInventoryFromOrderId } from "../order-watch-sync.service";
 

@@ -36,7 +36,7 @@ export type ShipmentListItem = {
   notes?: string | null;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
-  Order?: {
+  order?: {
     id: string;
     refNo?: string | null;
     status?: string | null;
@@ -46,6 +46,8 @@ export type ShipmentListItem = {
     source?: string | null;
     subtotal?: number | string | null;
     shippingFee?: number | string | null;
+    quickFromProductId?: string | null;
+    quickFlowType?: string | null;
   } | null;
 };
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import {
     ImageIcon,
@@ -18,14 +17,17 @@ import {
     CheckCircle2,
     Send,
 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import RowActions from "@/domains/shared/ui/list/RowActions";
+import { DomainSignalGroup, DomainSignalIcon } from "@/domains/shared/ui/icons";
+
 import type { WatchRow } from "./types";
 import {
     contentStatusText,
-    contentStatusTone,
     formatMoney,
     formatDateTime,
 } from "./helpers";
-import RowActions from "@/domains/shared/ui/list/RowActions";
 
 type Props = {
     product: WatchRow;
@@ -57,30 +59,27 @@ function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     );
 }
 
-function WatchReadinessSummary({ row }: { row: WatchRow }) {
+function WatchSignalSummary({ row }: { row: WatchRow }) {
+    const hasContent = Boolean(row.hasContent);
+    const hasImage = Boolean(row.hasImages || row.imagesCount > 0 || row.imageUrl);
+    const hasService = Number(row.serviceIssuesCount ?? 0) > 0;
+
+    if (!hasContent && !hasImage && !hasService) return null;
+
     return (
-        <div className="mt-2 flex items-center gap-2.5">
-            <span
-                title={row.contentReady ? "Đã có content" : "Chưa có content"}
-                className={row.contentReady ? "text-emerald-600" : "text-rose-500"}
-            >
-                <FileText className="h-4 w-4" />
-            </span>
+        <DomainSignalGroup>
+            {hasContent ? (
+                <DomainSignalIcon title="Có content" icon={<FileText />} />
+            ) : null}
 
-            <span
-                title={row.imageReady ? "Đã có ảnh" : "Chưa có ảnh"}
-                className={row.imageReady ? "text-emerald-600" : "text-rose-500"}
-            >
-                <ImageIcon className="h-4 w-4" />
-            </span>
+            {hasImage ? (
+                <DomainSignalIcon title="Có hình ảnh" icon={<ImageIcon />} />
+            ) : null}
 
-            <span
-                title={row.serviceReady ? "Không cần service / đã xong" : "Đang cần service"}
-                className={row.serviceReady ? "text-emerald-600" : "text-rose-500"}
-            >
-                <Wrench className="h-4 w-4" />
-            </span>
-        </div>
+            {hasService ? (
+                <DomainSignalIcon title="Có service / kỹ thuật" icon={<Wrench />} />
+            ) : null}
+        </DomainSignalGroup>
     );
 }
 
@@ -133,7 +132,7 @@ function WatchPostReadinessIcon({ row }: { row: WatchRow }) {
             title={config.title}
             className={cn(
                 "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1",
-                config.className
+                config.className,
             )}
         >
             <Icon className="h-4 w-4" />
@@ -186,7 +185,7 @@ export default function WatchListRow({
                             </div>
                         </div>
 
-                        <WatchReadinessSummary row={product} />
+                        <WatchSignalSummary row={product} />
                     </div>
                 </div>
             </td>
@@ -194,8 +193,6 @@ export default function WatchListRow({
             <td className="px-4 py-4">
                 <div className="flex min-w-[150px] items-center gap-2">
                     <WatchPostReadinessIcon row={product} />
-
-
                 </div>
             </td>
 
@@ -215,7 +212,7 @@ export default function WatchListRow({
                 <div
                     className={cn(
                         "text-sm",
-                        isRecent ? "font-semibold text-emerald-500" : "text-slate-700"
+                        isRecent ? "font-semibold text-emerald-500" : "text-slate-700",
                     )}
                 >
                     {formatDateTime(product.updatedAt)}

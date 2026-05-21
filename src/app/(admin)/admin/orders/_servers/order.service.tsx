@@ -19,7 +19,7 @@ import * as serviceReqtService from "../../services/_server/service_request.serv
 import * as shipmentService from "../../shipments/_server/shipment.service";
 import * as paymentService from "../../payments/_server/payment.service";
 import { OrderDraftInput } from "./order.type";
-import { genRefNo } from "../../__components/AutoGenRef";
+import { genRefNo } from "../../../../../domains/shared/utils/AutoGenRef";
 
 const prisma = new PrismaClient();
 

@@ -1,7 +1,15 @@
 import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import type { CreateShipmentFromOrderInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput } from "../shared";
-import { buildPaymentRef, buildShipmentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
+import { buildPaymentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
+
+function genShipmentRefNo(tx: Tx) {
+  return genRefNo(tx, {
+    model: (tx as any).shipment,
+    prefix: "SH",
+  });
+}
 
 export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
   return (db as any).shipment.findUnique({
@@ -20,6 +28,8 @@ export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
           subtotal: true,
           shippingFee: true,
           hasShipment: true,
+          quickFromProductId: true,
+          quickFlowType: true,
         },
       },
     },
@@ -84,11 +94,23 @@ export async function createShipmentFromOrderRepo(tx: Tx, input: CreateShipmentF
     },
     orderBy: { createdAt: "desc" },
   });
-  if (existing) return existing;
+  if (existing) {
+    if (!existing.refNo) {
+      return (tx as any).shipment.update({
+        where: { id: existing.id },
+        data: {
+          refNo: await genShipmentRefNo(tx),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return existing;
+  }
 
   return (tx as any).shipment.create({
     data: {
-      refNo: await buildShipmentRef(tx),
+      refNo: await genShipmentRefNo(tx),
       orderId: input.id,
       orderRefNo: input.orderRefNo ?? null,
       customerName: input.customerName ?? null,
@@ -181,7 +203,7 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
 
   return (tx as any).shipment.create({
     data: {
-      refNo: await buildShipmentRef(tx),
+      refNo: await genShipmentRefNo(tx),
       orderId: input.orderId,
       orderRefNo: order.refNo ?? null,
       customerName: order.customerName ?? null,

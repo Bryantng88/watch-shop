@@ -100,7 +100,7 @@ export type QuickOrderFromProductInput = {
 export type ResolvedProductOrderItem = {
   kind: "PRODUCT";
   productId: string;
-  variantId: string;
+  variantId: string | null;
   title: string;
   quantity: number;
   listPrice: number;

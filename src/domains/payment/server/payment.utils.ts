@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 
 export type Tx = Prisma.TransactionClient;
 

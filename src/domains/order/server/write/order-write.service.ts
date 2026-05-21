@@ -1,6 +1,6 @@
 import { OrderFlowType, OrderSource, OrderStatus, OrderVerificationStatus, PaymentMethod, Prisma, ReserveType } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { genRefNo } from "@/app/(admin)/admin/__components/AutoGenRef";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import { assertCanEditOrderDraftRepo } from "../detail";
 import type { CreateOrderInput, OrderDraftInput, OrderItemInput, ResolvedProductOrderItem } from "../shared";
 import { assertPositiveQuantity, calcUnitPriceAgreed, norm, toNumberPrice, toPlain } from "../shared";
@@ -75,29 +75,38 @@ async function resolveProductItems(
 
   return productIds.map((productId) => {
     const product = productById.get(productId)!;
-    // Quick order từ watch được phép tạo ở mọi saleStage.
-    // Không block theo product.status ở đây; trạng thái cũ sẽ được snapshot ở OrderItem
-    // và watch sẽ chuyển HOLD ngay khi order được tạo.
     const variants = Array.isArray(product.productVariant) ? product.productVariant : [];
+
     const variant = strictActiveOnly
       ? variants.find((v) => String(v.availabilityStatus ?? "").toUpperCase() === "ACTIVE")
-      : variants.find((v) => ["ACTIVE", "HIDDEN"].includes(String(v.availabilityStatus ?? "").toUpperCase())) ?? variants[0];
-
-    if (!variant) throw new Error(`Không có variant khả dụng cho productId=${productId}`);
+      : variants.find((v) =>
+        ["ACTIVE", "HIDDEN", "RESERVED"].includes(String(v.availabilityStatus ?? "").toUpperCase()),
+      ) ?? variants[0] ?? null;
 
     const qty = qtyByProductId.get(productId)!;
-    if (variant.stockQty != null && Number(variant.stockQty) > 0 && Number(variant.stockQty) < qty) {
+
+    if (variant?.stockQty != null && Number(variant.stockQty) > 0 && Number(variant.stockQty) < qty) {
       throw new Error(`Không đủ tồn kho cho productId=${productId}. Cần ${qty}, còn ${variant.stockQty}`);
     }
+
+    const watchPrice = product.watch?.watchPrice;
+    const listPrice = toNumberPrice(
+      watchPrice?.salePrice ??
+      watchPrice?.listPrice ??
+      variant?.salePrice ??
+      variant?.price ??
+      variant?.listPrice ??
+      0,
+    );
 
     return {
       kind: "PRODUCT" as const,
       productId: product.id,
-      variantId: variant.id,
+      variantId: variant?.id ?? null,
       title: product.title ?? "",
       quantity: qty,
-      listPrice: toNumberPrice(variant.salePrice ?? variant.price ?? variant.listPrice),
-      primaryImageUrl: product.primaryImageUrl ?? null,
+      listPrice,
+      primaryImageUrl: product.primaryImageUrl ?? product.storefrontImageKey ?? null,
       productType: product.type ?? null,
     };
   });

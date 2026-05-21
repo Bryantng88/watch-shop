@@ -8,7 +8,7 @@ import {
 } from "@prisma/client";
 import { DB, dbOrTx } from "@/server/db/client";
 import type { PaymentListInput, PaymentListSort } from "../_helper/SearchParams";
-import { genRefNo } from "../../__components/AutoGenRef";
+import { genRefNo } from "../../../../../domains/shared/utils/AutoGenRef";
 
 /**
  * Input chuẩn cho payment creation

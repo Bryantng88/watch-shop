@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Banknote, CheckCircle2, MapPin, Pencil, RotateCcw } from "lucide-react";
+import { Banknote, CheckCircle2, MapPin, Pencil, RotateCcw, Eye } from "lucide-react";
 import { CreditCard, HandCoins } from "lucide-react";
 import { OrderSourceIcon } from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
@@ -17,29 +17,25 @@ import {
   isCodShipment,
 
 } from "./helpers";
-import { ShipmentProgress } from "../progress";
-
+import ShipmentStatusBadge from "./ShipmentStatusBadge";
+import { DomainSignalIcon } from "@/domains/shared/ui/icons";
 function ShipmentPaymentMethodIcon({ method }: { method?: string | null }) {
   const key = String(method ?? "").toUpperCase();
 
   if (key === "COD") {
     return (
-      <span
+      <DomainSignalIcon
         title="COD"
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-100"
-      >
-        <HandCoins className="h-3.5 w-3.5" />
-      </span>
+        icon={<HandCoins />}
+      />
     );
   }
 
   return (
-    <span
+    <DomainSignalIcon
       title="Thanh toán chuyển khoản / khác"
-      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"
-    >
-      <CreditCard className="h-3.5 w-3.5" />
-    </span>
+      icon={<CreditCard />}
+    />
   );
 }
 export default function ShipmentListRow({
@@ -57,7 +53,11 @@ export default function ShipmentListRow({
 }) {
   const cod = isCodShipment(item);
   const address = fullAddress(item);
-
+  const order = item.order ?? null;
+  const shippingFee = Number(item.shippingFee ?? 0);
+  const isCustomerPaidShipping =
+    shippingFee > 0 &&
+    String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
   return (
     <tr className="group relative border-t border-slate-100 align-middle transition hover:bg-slate-50/60">
       <td className="px-5 py-4">
@@ -67,8 +67,9 @@ export default function ShipmentListRow({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <OrderSourceIcon source={item.Order?.source} />
-            <ShipmentPaymentMethodIcon method={item.Order?.paymentMethod} />
+            <OrderSourceIcon
+              source={order?.quickFromProductId ? "WATCH_QUICK_ORDER" : order?.source}
+            />            <ShipmentPaymentMethodIcon method={order?.paymentMethod} />
           </div>
         </div>
       </td>
@@ -78,7 +79,7 @@ export default function ShipmentListRow({
           href={`/admin/order/${item.orderId}`}
           className="break-words text-sm font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
         >
-          {item.orderRefNo || item.Order?.refNo || "-"}
+          {item.orderRefNo || order?.refNo || "-"}
         </Link>
       </td>
 
@@ -103,14 +104,14 @@ export default function ShipmentListRow({
         </div>
       </td>
       <td className="px-5 py-4">
-        <ShipmentProgress status={item.status} compact />
+        <ShipmentStatusBadge status={item.status} />
       </td>
       <td className="px-5 py-4 text-right">
         <div className="break-words font-semibold text-slate-950">
           {formatMoney(item.shippingFee, item.currency || "VND")}
         </div>
 
-        {String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER" ? (
+        {isCustomerPaidShipping ? (
           <div className="mt-1 text-xs text-slate-500">Khách trả</div>
         ) : null}
       </td>
@@ -151,9 +152,13 @@ export default function ShipmentListRow({
             },
             canEditShipment(item) &&
             onEdit && {
-              key: "edit",
-              label: "Chỉnh shipment",
-              icon: <Pencil className="h-4 w-4" />,
+              key: "view",
+              label: canEditShipment(item) ? "Chỉnh shipment" : "Xem shipment",
+              icon: canEditShipment(item) ? (
+                <Pencil className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              ),
               separatorBefore: true,
               onClick: onEdit,
             },

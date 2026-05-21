@@ -8,7 +8,7 @@ import {
 } from "@prisma/client";
 import * as serviceRequestRepo from "./service_request.repo";
 import * as maintRepo from "./maintenance.repo";
-import { genRefNo } from "../../__components/AutoGenRef";
+import { genRefNo } from "../../../../../domains/shared/utils/AutoGenRef";
 import type {
     ServiceRequestSearchInput,
     ServiceRequestListSort,

@@ -9,7 +9,7 @@ import {
     OrderSource,
     OrderVerificationStatus,
 } from "@prisma/client";
-import { genRefNo } from "../../__components/AutoGenRef";
+import { genRefNo } from "../../../../../domains/shared/utils/AutoGenRef";
 import { OrderDraftForEdit, OrderDraftInput } from "./order.type";
 
 /* ================================
