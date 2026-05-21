@@ -1,75 +1,69 @@
 "use client";
 
+import {
+    Ban,
+    Package,
+    PackageCheck,
+    RotateCcw,
+    Truck,
+} from "lucide-react";
+
+import { ShipmentStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
-type ShipmentStatus =
-    | "DRAFT"
-    | "READY"
-    | "SHIPPED"
-    | "DELIVERED"
-    | "RETURNED"
-    | "CANCELLED"
-    | string
-    | null
-    | undefined;
-
-type Props = {
-    status?: ShipmentStatus;
-};
-
-function normalize(status: ShipmentStatus) {
-    return String(status ?? "").toUpperCase();
-}
-
-const statusMap = {
-    READY: {
+const CONFIG = {
+    [ShipmentStatus.READY]: {
         label: "Chờ giao",
-        className:
-            "bg-amber-50 text-amber-700 ring-amber-200",
+        Icon: Package,
+        className: "bg-slate-50 text-slate-400 ring-slate-200",
     },
 
-    SHIPPED: {
+    [ShipmentStatus.SHIPPED]: {
         label: "Đang giao",
-        className:
-            "bg-blue-50 text-blue-700 ring-blue-200",
+        Icon: Truck,
+        className: "bg-blue-50 text-blue-600 ring-blue-200",
     },
 
-    DELIVERED: {
+    [ShipmentStatus.DELIVERED]: {
         label: "Đã giao",
-        className:
-            "bg-emerald-50 text-emerald-700 ring-emerald-200",
+        Icon: PackageCheck,
+        className: "bg-emerald-50 text-emerald-600 ring-emerald-200",
     },
 
-    RETURNED: {
+    [ShipmentStatus.RETURNED]: {
         label: "Hoàn trả",
-        className:
-            "bg-rose-50 text-rose-700 ring-rose-200",
+        Icon: RotateCcw,
+        className: "bg-orange-50 text-orange-600 ring-orange-200",
     },
 
-    CANCELLED: {
-        label: "Đã huỷ",
-        className:
-            "bg-slate-100 text-slate-500 ring-slate-200",
+    [ShipmentStatus.CANCELLED]: {
+        label: "Đã hủy",
+        Icon: Ban,
+        className: "bg-slate-100 text-slate-500 ring-slate-200",
     },
-} as const;
+};
 
 export default function ShipmentStatusBadge({
     status,
-}: Props) {
-    const key = normalize(status);
+}: {
+    status?: ShipmentStatus | string | null;
+}) {
+    const key = String(status ?? "").toUpperCase() as ShipmentStatus;
 
     const config =
-        statusMap[key as keyof typeof statusMap] ??
-        statusMap.READY;
+        CONFIG[key] ?? CONFIG[ShipmentStatus.READY];
+
+    const Icon = config.Icon;
 
     return (
-        <div
+        <span
+            title={config.label}
             className={cn(
-                "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1",
-                config.className
+                "inline-flex h-8 w-8 items-center justify-center rounded-full ring-1",
+                config.className,
             )}
         >
-            {config.label}
-        </div>
+            <Icon className="h-4 w-4" />
+        </span>
     );
 }

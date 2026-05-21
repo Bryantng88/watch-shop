@@ -1613,6 +1613,7 @@ enum PaymentPurpose {
   ACQUISITION_REMAIN
   ACQUISITION_FULL
   SHIPMENT_COST
+  SHIPMENT_RETURN_COST
 }
 
 enum PaymentStatus {

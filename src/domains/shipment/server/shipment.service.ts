@@ -2,7 +2,7 @@ import { OrderStatus, PaymentDirection, PaymentMethod, PaymentStatus, PaymentTyp
 import { prisma } from "@/server/db/client";
 import { recomputeOrderPaymentRollupTx } from "@/domains/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
-import type { CompleteShipmentInput, CreateShipmentFeeInput, CreateShipmentFromOrderInput, ShipmentListInput, UpdateShipmentInput, CreateManualShipmentInput } from "../shared";
+import type { CompleteShipmentInput, CreateShipmentFeeInput, CreateShipmentFromOrderInput, ShipmentListInput, UpdateShipmentInput, CreateManualShipmentInput, CreateShipmentReturnFeeInput } from "../shared";
 import {
   createCompletedShipmentCostPaymentRepo,
   createShipmentFromOrderRepo,
@@ -11,6 +11,8 @@ import {
   updateShipmentRepo,
   createManualShipmentRepo,
   cancelActiveShipmentCostPaymentsRepo,
+  createCompletedShipmentReturnCostPaymentRepo,
+  cancelActiveShipmentReturnCostPaymentsRepo,
 } from "./shipment.repo";
 import { money, toPlain, type Tx } from "./shipment.utils";
 
@@ -235,5 +237,28 @@ export async function createManualShipment(input: CreateManualShipmentInput) {
     });
     await syncWatchInventoryFromOrderId(tx, input.orderId);
     return toPlain(shipment);
+  });
+}
+export async function createShipmentReturnFee(input: CreateShipmentReturnFeeInput) {
+  return prisma.$transaction(async (tx) => {
+    const shipment = await requireShipmentTx(tx, input.shipmentId);
+
+    if (shipment.status !== ShipmentStatus.RETURNED) {
+      throw new Error(`Chỉ được ghi nhận phí hoàn hàng khi shipment đã RETURNED. Hiện tại: ${shipment.status}.`);
+    }
+
+    const amount = Number(input.amount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Phí hoàn hàng không hợp lệ.");
+    }
+
+    await cancelActiveShipmentReturnCostPaymentsRepo(tx, shipment.id);
+
+    const payment = await createCompletedShipmentReturnCostPaymentRepo(tx, shipment, input);
+
+    const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
+    await syncWatchInventoryFromOrderId(tx, shipment.orderId);
+
+    return toPlain({ shipment, payment, summary });
   });
 }

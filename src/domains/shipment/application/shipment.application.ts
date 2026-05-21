@@ -6,8 +6,9 @@ import {
   markShipmentReturned,
   updateShipment,
   createManualShipment,
+  createShipmentReturnFee,
 } from "../server";
-import type { CompleteShipmentInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput } from "../shared";
+import type { CompleteShipmentInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput, CreateShipmentReturnFeeInput, } from "../shared";
 
 export async function listShipmentsApplication(input: ShipmentListInput) {
   return listShipments(input);
@@ -35,4 +36,7 @@ export async function markShipmentReturnedApplication(input: CompleteShipmentInp
 
 export async function createManualShipmentApplication(input: import("../shared").CreateManualShipmentInput) {
   return createManualShipment(input);
+}
+export async function createShipmentReturnFeeApplication(input: CreateShipmentReturnFeeInput) {
+  return createShipmentReturnFee(input);
 }

@@ -56,3 +56,11 @@ export type CreateManualShipmentInput = {
   trackingCode?: string | null;
   notes?: string | null;
 };
+export type CreateShipmentReturnFeeInput = {
+  shipmentId: string;
+  amount: number;
+  method?: PaymentMethod | string | null;
+  reference?: string | null;
+  note?: string | null;
+  paidAt?: Date | string | null;
+};

@@ -237,3 +237,46 @@ export async function cancelActiveShipmentCostPaymentsRepo(tx: Tx, shipmentId: s
     },
   });
 }
+export async function cancelActiveShipmentReturnCostPaymentsRepo(tx: Tx, shipmentId: string) {
+  return tx.payment.updateMany({
+    where: {
+      shipment_id: shipmentId,
+      type: PaymentType.SHIPMENT,
+      purpose: PaymentPurpose.SHIPMENT_RETURN_COST,
+      status: { not: PaymentStatus.CANCELED },
+    },
+    data: {
+      status: PaymentStatus.CANCELED,
+      note: "Payment phí hoàn hàng đã bị hủy do cập nhật lại phí hoàn.",
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function createCompletedShipmentReturnCostPaymentRepo(
+  tx: Tx,
+  shipment: any,
+  input: import("../shared").CreateShipmentReturnFeeInput
+) {
+  const amount = toNumber(input.amount);
+  if (amount <= 0) throw new Error("Phí hoàn hàng phải lớn hơn 0.");
+
+  return tx.payment.create({
+    data: {
+      refNo: await buildPaymentRef(tx),
+      type: PaymentType.SHIPMENT,
+      direction: PaymentDirection.OUT,
+      purpose: PaymentPurpose.SHIPMENT_RETURN_COST,
+      method: normalizePaymentMethod(input.method, undefined as any) || normalizePaymentMethod(null),
+      amount: money(amount),
+      currency: shipment.currency ?? "VND",
+      status: PaymentStatus.PAID,
+      paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+      reference: input.reference ?? null,
+      note: input.note ?? "Chi phí vận chuyển hoàn hàng đã thanh toán",
+      order_id: shipment.orderId,
+      shipment_id: shipment.id,
+      updatedAt: new Date(),
+    },
+  });
+}

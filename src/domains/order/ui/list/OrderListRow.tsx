@@ -10,11 +10,14 @@ import {
   Truck,
   XCircle,
 } from "lucide-react";
-import { PaymentStateIcon } from "@/domains/payment/ui/icon"; import {
-  OrderReserveTypeIcon,
-  OrderSourceIcon,
-  ProductCountIcon,
+
+import {
+  OrderSourceSignalIcon,
+  PaymentStateSignalIcon,
+  ProductCountSignalIcon,
+  ReserveTypeSignalIcon,
 } from "@/domains/shared/ui/icons";
+
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import { ShipmentProgress } from "@/domains/shipment/ui/progress";
 
@@ -27,8 +30,6 @@ import {
   canPostOrder,
   formatDateTime,
   formatMoney,
-  paymentDisplayLabel,
-  paymentDisplayTone,
 } from "./helpers";
 
 type Props = {
@@ -45,19 +46,6 @@ type Props = {
   onCancel?: (row: OrderListItem) => void;
 };
 
-function StatusBadge({ label, tone }: { label: string; tone: string }) {
-  return (
-    <span
-      className={[
-        "inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1",
-        tone,
-      ].join(" ")}
-    >
-      {label}
-    </span>
-  );
-}
-
 function resolveShipmentProgressStatus(item: OrderListItem) {
   const direct =
     (item as any).shipmentStatus ||
@@ -68,19 +56,13 @@ function resolveShipmentProgressStatus(item: OrderListItem) {
 
   if (direct) return direct;
 
-  // fallback theo trạng thái order/list hiện tại
-  if (String(item.status ?? "").toUpperCase() === "SHIPPED") {
-    return "SHIPPED";
-  }
-
-  if (String(item.status ?? "").toUpperCase() === "COMPLETED") {
-    return "DELIVERED";
-  }
-
+  if (String(item.status ?? "").toUpperCase() === "SHIPPED") return "SHIPPED";
+  if (String(item.status ?? "").toUpperCase() === "COMPLETED") return "DELIVERED";
   if (!item.hasShipment) return "DELIVERED";
 
   return "READY";
 }
+
 export default function OrderListRow({
   item,
   checked,
@@ -100,6 +82,10 @@ export default function OrderListRow({
   const isWebVerified =
     String(item.source ?? "").toUpperCase() === "WEB" &&
     String(item.verificationStatus ?? "").toUpperCase() === "VERIFIED";
+
+  const sourceForIcon = item.quickFromProductId
+    ? "WATCH_QUICK_ORDER"
+    : item.source;
 
   return (
     <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/50">
@@ -122,9 +108,9 @@ export default function OrderListRow({
           </Link>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <ProductCountIcon count={itemsCount} />
-            <OrderSourceIcon source={item.source} />
-            <OrderReserveTypeIcon reserveType={item.reserveType} />
+            <ProductCountSignalIcon count={itemsCount} />
+            <OrderSourceSignalIcon source={sourceForIcon} />
+            <ReserveTypeSignalIcon reserveType={item.reserveType} />
 
             {isWebVerified ? (
               <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200">
@@ -145,25 +131,21 @@ export default function OrderListRow({
           </div>
         </div>
       </td>
+
       <td className="px-4 py-4">
         <div className="flex min-w-[150px] items-center gap-2">
-          <PaymentStateIcon
+          <PaymentStateSignalIcon
             status={item.paymentStatus}
             totalAmount={item.totalAmount}
             remainingAmount={item.remainingAmount}
             collectedAmount={item.collectedAmount}
           />
-
-
         </div>
       </td>
 
       <td className="px-4 py-4">
         <div className="min-w-[160px]">
-          <ShipmentProgress
-            status={resolveShipmentProgressStatus(item)}
-            compact
-          />
+          <ShipmentProgress status={resolveShipmentProgressStatus(item)} compact />
         </div>
       </td>
 
@@ -203,7 +185,6 @@ export default function OrderListRow({
               icon: <Eye className="h-4 w-4" />,
               onClick: onView,
             },
-
             canPostOrder(item) &&
             onPost && {
               key: "post",
@@ -211,7 +192,6 @@ export default function OrderListRow({
               icon: <Send className="h-4 w-4" />,
               onClick: onPost,
             },
-
             canCreatePayment(item) &&
             onCreatePayment && {
               key: "create-payment",
@@ -219,7 +199,6 @@ export default function OrderListRow({
               icon: <Banknote className="h-4 w-4" />,
               onClick: onCreatePayment,
             },
-
             canMarkPaymentPaid(item) &&
             onMarkPaymentPaid && {
               key: "mark-payment-paid",
@@ -227,7 +206,6 @@ export default function OrderListRow({
               icon: <CheckCircle2 className="h-4 w-4" />,
               onClick: onMarkPaymentPaid,
             },
-
             canMarkShipmentDelivered(item) &&
             onMarkShipmentDelivered && {
               key: "mark-shipment-delivered",
@@ -235,14 +213,12 @@ export default function OrderListRow({
               icon: <Truck className="h-4 w-4" />,
               onClick: onMarkShipmentDelivered,
             },
-
             onEdit && {
               key: "edit",
               label: "Chỉnh sửa",
               icon: <Pencil className="h-4 w-4" />,
               onClick: onEdit,
             },
-
             canCancelOrder(item) &&
             onCancel && {
               key: "cancel",

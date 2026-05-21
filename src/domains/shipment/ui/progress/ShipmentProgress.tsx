@@ -1,8 +1,13 @@
 "use client";
 
-import { CheckCircle2, PackageCheck, RotateCcw, Truck } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import {
+    inactiveShipmentSignalClass,
+    ShipmentStateSignalIcon,
+    shipmentSignalLineClass,
+} from "@/domains/shared/ui/icons";
 
 type ShipmentProgressStatus =
     | "PENDING"
@@ -22,21 +27,9 @@ type Props = {
 };
 
 const STAGES = [
-    {
-        key: "READY",
-        label: "Chuẩn bị",
-        icon: PackageCheck,
-    },
-    {
-        key: "SHIPPED",
-        label: "Đang giao",
-        icon: Truck,
-    },
-    {
-        key: "DELIVERED",
-        label: "Đã giao",
-        icon: CheckCircle2,
-    },
+    { key: "READY", label: "Chờ giao" },
+    { key: "SHIPPED", label: "Đang giao" },
+    { key: "DELIVERED", label: "Đã giao" },
 ] as const;
 
 function normalizeStatus(status: ShipmentProgressStatus) {
@@ -64,7 +57,7 @@ export default function ShipmentProgress({ status, compact = false }: Props) {
 
     if (current === "RETURNED") {
         return (
-            <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
+            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
                 <RotateCcw className="h-3.5 w-3.5" />
                 Hoàn trả
             </div>
@@ -80,28 +73,27 @@ export default function ShipmentProgress({ status, compact = false }: Props) {
     }
 
     return (
-        <div className={cn("w-full", compact ? "max-w-[170px]" : "max-w-[220px]")}>
+        <div className={cn("w-full", compact ? "max-w-[180px]" : "max-w-[230px]")}>
             <div className="flex items-center">
                 {STAGES.map((stage, index) => {
-                    const Icon = stage.icon;
                     const active = index === currentIndex;
 
                     return (
                         <div key={stage.key} className="flex flex-1 items-center last:flex-none">
-                            <div
-                                className={cn(
-                                    "flex h-7 w-7 items-center justify-center rounded-full ring-1 transition",
-                                    active
-                                        ? "bg-blue-50 text-blue-600 ring-blue-100"
-                                        : "bg-slate-50 text-slate-300 ring-slate-200"
-                                )}
-                                title={stage.label}
-                            >
-                                <Icon className="h-3.5 w-3.5" />
-                            </div>
+                            <ShipmentStateSignalIcon
+                                status={stage.key}
+                                className={active ? undefined : inactiveShipmentSignalClass}
+                            />
 
                             {index < STAGES.length - 1 ? (
-                                <div className="mx-1 h-px flex-1 bg-slate-200" />
+                                <div
+                                    className={cn(
+                                        "mx-1 h-px flex-1 transition",
+                                        currentIndex > index
+                                            ? shipmentSignalLineClass[STAGES[index + 1].key]
+                                            : "bg-slate-200",
+                                    )}
+                                />
                             ) : null}
                         </div>
                     );
@@ -110,9 +102,11 @@ export default function ShipmentProgress({ status, compact = false }: Props) {
 
             {!compact ? (
                 <div className="mt-1.5 text-xs font-semibold text-slate-600">
-                    {STAGES[currentIndex]?.label || "Chuẩn bị"}
+                    {STAGES[currentIndex]?.label || "Chờ giao"}
                 </div>
             ) : null}
         </div>
     );
 }
+
+export { ShipmentProgress };

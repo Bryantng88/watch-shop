@@ -20,6 +20,7 @@ import {
   type ShipmentListItem,
   type ShipmentListPageProps,
   type ShipmentViewKey,
+  ShipmentReturnFeeModal,
 } from "../ui";
 
 function firstRaw(value: string | string[] | undefined, fallback = "") {
@@ -41,7 +42,7 @@ export default function ShipmentListClient({ items, total, page, pageSize, total
   const notify = useNotify();
   const dialog = useAppDialog();
   const progress = useAppProgress();
-
+  const [returnFeeShipment, setReturnFeeShipment] = useState<ShipmentListItem | null>(null);
   const currentView = normalizeShipmentView(sp.get("view") || rawSearchParams.view as any);
   const [filters, setFilters] = useState<ShipmentListFiltersValue>(() => buildInitialFilters(rawSearchParams, pageSize));
   const [editShipment, setEditShipment] = useState<ShipmentListItem | null>(null);
@@ -68,7 +69,19 @@ export default function ShipmentListClient({ items, total, page, pageSize, total
     setFilters({ q: "", pageSize: String(pageSize) });
     navigateWithLoading({ q: null, pageSize: null, page: "1" });
   }
+  async function submitReturnFee(payload: unknown) {
+    if (!returnFeeShipment) return;
 
+    await mutate({
+      url: `/api/admin/shipments/${returnFeeShipment.id}/return-fee`,
+      body: payload,
+      progressTitle: "Đang ghi nhận phí hoàn hàng",
+      successTitle: "Đã ghi nhận phí hoàn hàng",
+      successMessage: "Payment phí ship hoàn về đã được ghi nhận.",
+      errorTitle: "Không thể ghi nhận phí hoàn hàng",
+      after: () => setReturnFeeShipment(null),
+    });
+  }
   async function mutate(input: {
     url: string;
     method?: "POST" | "PATCH";
@@ -200,10 +213,17 @@ export default function ShipmentListClient({ items, total, page, pageSize, total
         onCreateFee={setFeeShipment}
         onDelivered={markDelivered}
         onReturned={markReturned}
+        onCreateReturnFee={setReturnFeeShipment}
       />
 
       <ShipmentEditModal shipment={editShipment} submitting={submitting} onClose={() => setEditShipment(null)} onSubmit={submitEdit} />
       <ShipmentFeeModal shipment={feeShipment} submitting={submitting} onClose={() => setFeeShipment(null)} onSubmit={submitFee} />
+      <ShipmentReturnFeeModal
+        shipment={returnFeeShipment}
+        submitting={submitting}
+        onClose={() => setReturnFeeShipment(null)}
+        onSubmit={submitReturnFee}
+      />
     </div>
   );
 }

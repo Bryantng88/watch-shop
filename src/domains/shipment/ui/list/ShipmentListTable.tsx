@@ -20,6 +20,8 @@ export default function ShipmentListTable({
   onEdit,
   onDelivered,
   onReturned,
+  onCreateReturnFee,
+  onCreateFee
 }: {
   items: ShipmentListItem[];
   total: number;
@@ -27,9 +29,14 @@ export default function ShipmentListTable({
   totalPages: number;
   pathname: string;
   searchParams: URLSearchParams;
+
   onEdit?: (row: ShipmentListItem) => void;
+  onCreateFee?: (row: ShipmentListItem) => void;
+
   onDelivered?: (row: ShipmentListItem) => void;
   onReturned?: (row: ShipmentListItem) => void;
+
+  onCreateReturnFee?: (row: ShipmentListItem) => void;
 }) {
   const router = useRouter();
   const [feeShipment, setFeeShipment] = useState<ShipmentListItem | null>(null);
@@ -70,6 +77,7 @@ export default function ShipmentListTable({
                 onCreateFee={setFeeShipment}
                 onDelivered={onDelivered}
                 onReturned={onReturned}
+                onCreateReturnFee={onCreateReturnFee}
               />
             ))}
 

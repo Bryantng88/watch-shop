@@ -2,32 +2,27 @@
 
 import Link from "next/link";
 import {
-    ImageIcon,
-    FileText,
-    Wrench,
     Eye,
-    Pencil,
-    ShoppingCart,
     Hammer,
     HandCoins,
+    ImageIcon,
+    Pencil,
+    ShoppingCart,
     Trash2,
-    CircleDashed,
-    Clock3,
-    FileWarning,
-    CheckCircle2,
-    Send,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import RowActions from "@/domains/shared/ui/list/RowActions";
-import { DomainSignalGroup, DomainSignalIcon } from "@/domains/shared/ui/icons";
+import {
+    DomainSignalGroup,
+    WatchContentSignalIcon,
+    WatchGalleryImageSignalIcon,
+    WatchReadinessSignalIcon,
+    WatchServiceSignalIcon,
+} from "@/domains/shared/ui/icons";
 
 import type { WatchRow } from "./types";
-import {
-    contentStatusText,
-    formatMoney,
-    formatDateTime,
-} from "./helpers";
+import { contentStatusText, formatDateTime, formatMoney } from "./helpers";
 
 type Props = {
     product: WatchRow;
@@ -46,98 +41,59 @@ type Props = {
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
     if (!src) {
         return (
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                <ImageIcon className="h-5 w-5 text-slate-400" />
+            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <ImageIcon className="h-6 w-6 text-slate-400" />
             </div>
         );
     }
 
     return (
-        <div className="h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-            <img src={src} alt={alt} className="h-full w-full object-cover" />
+        <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <img src={src} alt={alt} className="h-full w-full object-cover object-center" />
         </div>
     );
 }
 
 function WatchSignalSummary({ row }: { row: WatchRow }) {
     const hasContent = Boolean(row.hasContent);
-    const hasImage = Boolean(row.hasImages || row.imagesCount > 0 || row.imageUrl);
+    const hasGalleryImage = Number(row.imagesCount ?? 0) > 0 || Boolean(row.hasImages);
     const hasService = Number(row.serviceIssuesCount ?? 0) > 0;
 
-    if (!hasContent && !hasImage && !hasService) return null;
+    if (!hasContent && !hasGalleryImage && !hasService) return null;
 
     return (
         <DomainSignalGroup>
-            {hasContent ? (
-                <DomainSignalIcon title="Có content" icon={<FileText />} />
-            ) : null}
-
-            {hasImage ? (
-                <DomainSignalIcon title="Có hình ảnh" icon={<ImageIcon />} />
-            ) : null}
-
-            {hasService ? (
-                <DomainSignalIcon title="Có service / kỹ thuật" icon={<Wrench />} />
-            ) : null}
+            {hasContent ? <WatchContentSignalIcon /> : null}
+            {hasGalleryImage ? <WatchGalleryImageSignalIcon /> : null}
+            {hasService ? <WatchServiceSignalIcon /> : null}
         </DomainSignalGroup>
     );
 }
-
 function normalizePostReadiness(row: WatchRow) {
+    const raw =
+        (row as any).reviewStatus ??
+        (row as any).postReadiness ??
+        (row as any).contentStatus ??
+        "";
+
+    const value = String(raw).toUpperCase();
+
+    if (["POSTED", "PUBLISHED"].includes(value)) return "POSTED";
+    if (["APPROVED", "READY_TO_POST"].includes(value)) return "APPROVED";
+    if (["PARTIAL", "PARTIALLY_APPROVED", "APPROVED_PARTIAL"].includes(value)) return "PARTIAL";
+    if (["PENDING", "PENDING_REVIEW", "SUBMITTED", "IN_REVIEW"].includes(value)) return "PENDING";
+
     const label = contentStatusText(row).toLowerCase();
 
     if (label.includes("đã đăng")) return "POSTED";
-    if (label.includes("đã duyệt")) return "APPROVED";
     if (label.includes("duyệt một phần")) return "PARTIAL";
+    if (label.includes("đã duyệt")) return "APPROVED";
     if (label.includes("chờ duyệt")) return "PENDING";
 
     return "NOT_SUBMITTED";
 }
-
 function WatchPostReadinessIcon({ row }: { row: WatchRow }) {
-    const state = normalizePostReadiness(row);
-
-    const config = {
-        NOT_SUBMITTED: {
-            title: "Chưa gửi duyệt",
-            icon: CircleDashed,
-            className: "bg-slate-50 text-slate-400 ring-slate-200",
-        },
-        PENDING: {
-            title: "Chờ duyệt",
-            icon: Clock3,
-            className: "bg-amber-50 text-amber-600 ring-amber-100",
-        },
-        PARTIAL: {
-            title: "Duyệt một phần",
-            icon: FileWarning,
-            className: "bg-orange-50 text-orange-600 ring-orange-100",
-        },
-        APPROVED: {
-            title: "Đã duyệt",
-            icon: CheckCircle2,
-            className: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-        },
-        POSTED: {
-            title: "Đã đăng",
-            icon: Send,
-            className: "bg-violet-50 text-violet-600 ring-violet-100",
-        },
-    }[state];
-
-    const Icon = config.icon;
-
-    return (
-        <span
-            title={config.title}
-            className={cn(
-                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1",
-                config.className,
-            )}
-        >
-            <Icon className="h-4 w-4" />
-        </span>
-    );
+    return <WatchReadinessSignalIcon state={normalizePostReadiness(row)} />;
 }
 
 export default function WatchListRow({
@@ -167,7 +123,7 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-4">
-                <div className="flex min-w-[460px] items-start gap-3">
+                <div className="flex min-w-[460px] items-center gap-3">
                     <Thumb src={product.imageUrl} alt={product.title} />
 
                     <div className="min-w-0 flex-1">

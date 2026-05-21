@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Banknote, CheckCircle2, MapPin, Pencil, RotateCcw, Eye } from "lucide-react";
-import { CreditCard, HandCoins } from "lucide-react";
-import { OrderSourceIcon } from "@/domains/shared/ui/icons";
+import { Banknote, CheckCircle2, Eye, MapPin, Pencil, RotateCcw } from "lucide-react";
+
+import {
+  OrderSourceSignalIcon,
+  ReserveTypeSignalIcon,
+  ShipmentStatusSignalIcon
+} from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
+
 import type { ShipmentListItem } from "./types";
 import {
   canCreateShipmentFee,
@@ -15,49 +20,40 @@ import {
   formatMoney,
   fullAddress,
   isCodShipment,
-
 } from "./helpers";
-import ShipmentStatusBadge from "./ShipmentStatusBadge";
-import { DomainSignalIcon } from "@/domains/shared/ui/icons";
 function ShipmentPaymentMethodIcon({ method }: { method?: string | null }) {
   const key = String(method ?? "").toUpperCase();
-
-  if (key === "COD") {
-    return (
-      <DomainSignalIcon
-        title="COD"
-        icon={<HandCoins />}
-      />
-    );
-  }
-
-  return (
-    <DomainSignalIcon
-      title="Thanh toán chuyển khoản / khác"
-      icon={<CreditCard />}
-    />
-  );
+  return <ReserveTypeSignalIcon reserveType={key === "COD" ? "COD" : "FULL"} />;
 }
+
 export default function ShipmentListRow({
   item,
   onEdit,
   onCreateFee,
   onDelivered,
   onReturned,
+  onCreateReturnFee
 }: {
   item: ShipmentListItem;
   onEdit?: (row: ShipmentListItem) => void;
   onCreateFee?: (row: ShipmentListItem) => void;
   onDelivered?: (row: ShipmentListItem) => void;
   onReturned?: (row: ShipmentListItem) => void;
+  onCreateReturnFee?: (row: ShipmentListItem) => void;
 }) {
   const cod = isCodShipment(item);
   const address = fullAddress(item);
   const order = item.order ?? null;
   const shippingFee = Number(item.shippingFee ?? 0);
+
   const isCustomerPaidShipping =
     shippingFee > 0 &&
     String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
+
+  const sourceForIcon = order?.quickFromProductId
+    ? "WATCH_QUICK_ORDER"
+    : order?.source;
+
   return (
     <tr className="group relative border-t border-slate-100 align-middle transition hover:bg-slate-50/60">
       <td className="px-5 py-4">
@@ -67,9 +63,8 @@ export default function ShipmentListRow({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <OrderSourceIcon
-              source={order?.quickFromProductId ? "WATCH_QUICK_ORDER" : order?.source}
-            />            <ShipmentPaymentMethodIcon method={order?.paymentMethod} />
+            <OrderSourceSignalIcon source={sourceForIcon} />
+            <ShipmentPaymentMethodIcon method={order?.paymentMethod} />
           </div>
         </div>
       </td>
@@ -84,8 +79,12 @@ export default function ShipmentListRow({
       </td>
 
       <td className="px-5 py-4">
-        <div className="font-semibold text-slate-900">{item.customerName || "-"}</div>
-        <div className="mt-1 break-words text-xs text-slate-500">{item.shipPhone || "-"}</div>
+        <div className="font-semibold text-slate-900">
+          {item.customerName || "-"}
+        </div>
+        <div className="mt-1 break-words text-xs text-slate-500">
+          {item.shipPhone || "-"}
+        </div>
       </td>
 
       <td className="px-5 py-4">
@@ -103,9 +102,11 @@ export default function ShipmentListRow({
           {item.trackingCode || "Chưa có tracking"}
         </div>
       </td>
+
       <td className="px-5 py-4">
-        <ShipmentStatusBadge status={item.status} />
+        <ShipmentStatusSignalIcon status={item.status} />
       </td>
+
       <td className="px-5 py-4 text-right">
         <div className="break-words font-semibold text-slate-950">
           {formatMoney(item.shippingFee, item.currency || "VND")}
@@ -115,6 +116,7 @@ export default function ShipmentListRow({
           <div className="mt-1 text-xs text-slate-500">Khách trả</div>
         ) : null}
       </td>
+
       <td className="px-5 py-4">
         <div className="break-words text-sm text-slate-600">
           {formatDateTime(item.updatedAt)}
@@ -150,7 +152,6 @@ export default function ShipmentListRow({
               tone: "danger",
               onClick: onReturned,
             },
-            canEditShipment(item) &&
             onEdit && {
               key: "view",
               label: canEditShipment(item) ? "Chỉnh shipment" : "Xem shipment",
@@ -161,6 +162,13 @@ export default function ShipmentListRow({
               ),
               separatorBefore: true,
               onClick: onEdit,
+            },
+            String(item.status ?? "").toUpperCase() === "RETURNED" &&
+            onCreateReturnFee && {
+              key: "return-fee",
+              label: "Ghi nhận phí hoàn hàng",
+              icon: <Banknote className="h-4 w-4" />,
+              onClick: onCreateReturnFee,
             },
           ]}
         />
