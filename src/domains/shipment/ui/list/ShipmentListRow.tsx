@@ -16,6 +16,7 @@ import {
   canEditShipment,
   canMarkDelivered,
   canMarkReturned,
+  canReceiveReturnedShipment,
   formatDateTime,
   formatMoney,
   fullAddress,
@@ -123,7 +124,7 @@ export default function ShipmentListRow({
         </div>
       </td>
 
-      <td className="relative z-50 px-5 py-4 text-right">
+      <td className="relative px-5 py-4 text-right">
         <RowActions
           row={item}
           actions={[
@@ -152,6 +153,14 @@ export default function ShipmentListRow({
               tone: "danger",
               onClick: onReturned,
             },
+            canReceiveReturnedShipment(item) &&
+            onCreateReturnFee && {
+              key: "receive-return",
+              label: status === "RETURNED" ? "Cập nhật phí hoàn" : "Nhận hàng hoàn",
+              icon: <Banknote className="h-4 w-4" />,
+              onClick: onCreateReturnFee,
+            },
+
             onEdit && {
               key: "view",
               label: canEditShipment(item) ? "Chỉnh shipment" : "Xem shipment",
@@ -163,13 +172,7 @@ export default function ShipmentListRow({
               separatorBefore: true,
               onClick: onEdit,
             },
-            String(item.status ?? "").toUpperCase() === "RETURNED" &&
-            onCreateReturnFee && {
-              key: "return-fee",
-              label: "Ghi nhận phí hoàn hàng",
-              icon: <Banknote className="h-4 w-4" />,
-              onClick: onCreateReturnFee,
-            },
+
           ]}
         />
       </td>

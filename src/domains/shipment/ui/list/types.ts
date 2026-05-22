@@ -1,18 +1,30 @@
-export type ShipmentViewKey = "all" | "ready" | "shipping" | "delivered" | "returned" | "cancelled";
+export type ShipmentViewKey =
+  | "all"
+  | "ready"
+  | "shipping"
+  | "returning"
+  | "delivered"
+  | "returned"
+  | "cancelled";
 
 export type ShipmentListFiltersValue = {
   q: string;
   pageSize: string;
 };
 
-export const SHIPMENT_LIST_VIEWS: Array<{ key: ShipmentViewKey; label: string; status: string | null }> = [
-  { key: "all", label: "Tất cả", status: null },
-  { key: "ready", label: "Chờ giao", status: "READY" },
-  { key: "shipping", label: "Đang giao", status: "SHIPPED" },
-  { key: "delivered", label: "Đã giao", status: "DELIVERED" },
-  { key: "returned", label: "Hoàn trả", status: "RETURNED" },
-  { key: "cancelled", label: "Đã huỷ", status: "CANCELLED" },
-];
+export const SHIPMENT_LIST_VIEWS: Array<{
+  key: ShipmentViewKey;
+  label: string;
+  status: string | null;
+}> = [
+    { key: "all", label: "Tất cả", status: null },
+    { key: "ready", label: "Chờ giao", status: "READY" },
+    { key: "shipping", label: "Đang giao", status: "SHIPPED" },
+    { key: "returning", label: "Đang hoàn", status: "RETURNING" },
+    { key: "delivered", label: "Đã giao", status: "DELIVERED" },
+    { key: "returned", label: "Hoàn trả", status: "RETURNED" },
+    { key: "cancelled", label: "Đã huỷ", status: "CANCELLED" },
+  ];
 
 export type ShipmentListItem = {
   id: string;

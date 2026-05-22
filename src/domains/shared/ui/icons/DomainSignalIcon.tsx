@@ -22,7 +22,8 @@ import {
     Watch,
     Wrench,
     Check,
-    DollarSign
+    DollarSign,
+    PackageX
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -185,6 +186,17 @@ export function WatchReadinessSignalIcon({ state }: { state?: string | null }) {
 export function ShipmentStatusSignalIcon({ status }: { status?: string | null }) {
     const value = String(status ?? "").toUpperCase();
 
+    if (value === "RETURNING") {
+        return (
+            <DomainSignalIcon
+                size="md"
+                title="Hoàn trả"
+                icon={<RotateCcw />}
+                className="bg-orange-50 text-orange-600 ring-orange-100"
+            />
+        );
+    }
+
     if (value === "DELIVERED") {
         return <DoneSignalIcon title="Đã giao" />;
     }
@@ -205,7 +217,7 @@ export function ShipmentStatusSignalIcon({ status }: { status?: string | null })
             <DomainSignalIcon
                 size="md"
                 title="Hoàn trả"
-                icon={<RotateCcw />}
+                icon={<PackageX />}
                 className="bg-orange-50 text-orange-600 ring-orange-100"
             />
         );

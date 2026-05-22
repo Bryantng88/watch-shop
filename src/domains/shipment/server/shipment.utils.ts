@@ -50,6 +50,7 @@ export function normalizeShipmentStatus(value: unknown): ShipmentStatus | null {
   if (raw === "READY") return ShipmentStatus.READY;
   if (raw === "SHIPPED") return ShipmentStatus.SHIPPED;
   if (raw === "DELIVERED") return ShipmentStatus.DELIVERED;
+  if (raw === "RETURNING") return "RETURNING" as ShipmentStatus;
   if (raw === "CANCELLED") return ShipmentStatus.CANCELLED;
   if (raw === "RETURNED") return "RETURNED" as ShipmentStatus;
   return null;

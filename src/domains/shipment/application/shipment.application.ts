@@ -1,14 +1,21 @@
 import {
+  createManualShipment,
   createShipmentFeeAndShip,
   getShipmentDetail,
   listShipments,
   markShipmentDelivered,
   markShipmentReturned,
+  receiveShipmentReturn,
   updateShipment,
-  createManualShipment,
-  createShipmentReturnFee,
 } from "../server";
-import type { CompleteShipmentInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput, CreateShipmentReturnFeeInput, } from "../shared";
+import type {
+  CompleteShipmentInput,
+  CreateManualShipmentInput,
+  CreateShipmentFeeInput,
+  ReceiveShipmentReturnInput,
+  ShipmentListInput,
+  UpdateShipmentInput,
+} from "../shared";
 
 export async function listShipmentsApplication(input: ShipmentListInput) {
   return listShipments(input);
@@ -18,7 +25,10 @@ export async function getShipmentDetailApplication(shipmentId: string) {
   return getShipmentDetail(shipmentId);
 }
 
-export async function updateShipmentApplication(input: { shipmentId: string; data: UpdateShipmentInput }) {
+export async function updateShipmentApplication(input: {
+  shipmentId: string;
+  data: UpdateShipmentInput;
+}) {
   return updateShipment(input);
 }
 
@@ -34,9 +44,13 @@ export async function markShipmentReturnedApplication(input: CompleteShipmentInp
   return markShipmentReturned(input);
 }
 
-export async function createManualShipmentApplication(input: import("../shared").CreateManualShipmentInput) {
+export async function receiveShipmentReturnApplication(input: ReceiveShipmentReturnInput) {
+  return receiveShipmentReturn(input);
+}
+
+export async function createManualShipmentApplication(input: CreateManualShipmentInput) {
   return createManualShipment(input);
 }
-export async function createShipmentReturnFeeApplication(input: CreateShipmentReturnFeeInput) {
-  return createShipmentReturnFee(input);
-}
+
+// Backward-compatible alias while old imports/routes are being removed.
+export const createShipmentReturnFeeApplication = receiveShipmentReturnApplication;

@@ -1566,6 +1566,8 @@ enum OrderStatus {
   CANCELLED
   POSTED
   RESERVED
+  RETURNING
+  RETURNED
 }
 
 enum OrderVerificationStatus {
@@ -1739,6 +1741,7 @@ enum ShipmentStatus {
   DELIVERED
   CANCELLED
   RETURNED
+  RETURNING
 }
 
 enum Strap {

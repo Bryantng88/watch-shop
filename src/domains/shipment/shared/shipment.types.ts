@@ -32,6 +32,7 @@ export type UpdateShipmentInput = {
 export type CreateShipmentFeeInput = {
   shipmentId: string;
   amount: number;
+  payer?: string | null;
   method?: PaymentMethod | string | null;
   carrier?: string | null;
   trackingCode?: string | null;
@@ -56,11 +57,15 @@ export type CreateManualShipmentInput = {
   trackingCode?: string | null;
   notes?: string | null;
 };
-export type CreateShipmentReturnFeeInput = {
+
+export type ReceiveShipmentReturnInput = {
   shipmentId: string;
-  amount: number;
+  amount?: number | null;
   method?: PaymentMethod | string | null;
   reference?: string | null;
   note?: string | null;
   paidAt?: Date | string | null;
 };
+
+// Backward-compatible alias while old imports are being removed.
+export type CreateShipmentReturnFeeInput = ReceiveShipmentReturnInput;
