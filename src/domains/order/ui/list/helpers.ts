@@ -29,7 +29,9 @@ export function normalizeOrderView(value?: string | null): OrderViewKey {
     "pending",
     "need_action",
     "processing",
+    "returning",
     "completed",
+    "returned",
     "cancelled",
   ];
 
@@ -148,7 +150,7 @@ export function canPostOrder(item: { status?: string | null }) {
 }
 
 export function canCancelOrder(item: { status?: string | null }) {
-  return !["COMPLETED", "CANCELLED", "CANCELED"].includes(
+  return !["COMPLETED", "RETURNED", "CANCELLED", "CANCELED"].includes(
     String(item.status ?? "").toUpperCase(),
   );
 }
@@ -156,7 +158,7 @@ export function canCancelOrder(item: { status?: string | null }) {
 export function canCreatePayment(item: OrderListItem) {
   const status = String(item.status ?? "").toUpperCase();
 
-  if (["DRAFT", "CANCELLED", "CANCELED", "COMPLETED"].includes(status)) {
+  if (["DRAFT", "CANCELLED", "CANCELED", "COMPLETED", "RETURNING", "RETURNED"].includes(status)) {
     return false;
   }
 
@@ -181,7 +183,7 @@ export function canMarkPaymentPaid(item: {
   const status = String(item.status ?? "").toUpperCase();
 
   return (
-    !["DRAFT", "CANCELLED", "CANCELED", "COMPLETED"].includes(status) &&
+    !["DRAFT", "CANCELLED", "CANCELED", "COMPLETED", "RETURNING", "RETURNED"].includes(status) &&
     Boolean(item.hasPendingPayment)
   );
 }
@@ -195,7 +197,7 @@ export function canMarkShipmentDelivered(item: {
   const fulfillment = String(item.fulfillmentStatus ?? "").toUpperCase();
 
   return (
-    !["DRAFT", "CANCELLED", "CANCELED", "COMPLETED"].includes(status) &&
+    !["DRAFT", "CANCELLED", "CANCELED", "COMPLETED", "RETURNING", "RETURNED"].includes(status) &&
     Boolean(item.hasShipment) &&
     !["DELIVERED", "COMPLETED"].includes(fulfillment)
   );
@@ -207,6 +209,8 @@ export function orderStatusLabel(status?: string | null) {
   if (value === "DRAFT") return "Nháp";
   if (["POSTED", "PROCESSING", "PAID"].includes(value)) return "Đang xử lý";
   if (["SHIPPED", "SHIPPING"].includes(value)) return "Đang giao";
+  if (value === "RETURNING") return "Đang hoàn";
+  if (value === "RETURNED") return "Đã hoàn";
   if (value === "COMPLETED") return "Hoàn tất";
   if (["CANCELLED", "CANCELED"].includes(value)) return "Đã huỷ";
   if (value === "RESERVED") return "Đang giữ";
@@ -217,6 +221,8 @@ export function orderStatusLabel(status?: string | null) {
 export function orderStatusTone(status?: string | null) {
   const value = String(status ?? "").toUpperCase();
 
+  if (value === "RETURNING") return "bg-orange-50 text-orange-700 ring-orange-200";
+  if (value === "RETURNED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (value === "COMPLETED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (["POSTED", "PAID", "PROCESSING", "SHIPPED", "SHIPPING", "RESERVED"].includes(value)) {
     return "bg-blue-50 text-blue-700 ring-blue-200";
@@ -244,6 +250,8 @@ export function shipmentLabel(value?: string | null, item?: OrderListItem) {
 
   const status = String(value ?? "").toUpperCase();
 
+  if (status === "RETURNING") return "Đang hoàn";
+  if (status === "RETURNED") return "Đã hoàn";
   if (["DELIVERED", "COMPLETED"].includes(status)) return "Đã giao";
   if (["SHIPPED", "SHIPPING", "IN_TRANSIT", "DELIVERING"].includes(status)) return "Đang giao";
   if (status === "READY") return "Sẵn sàng giao";
@@ -379,6 +387,12 @@ export function orderOperationLabel(item: {
 
   if (status === "DRAFT") return "Nháp";
   if (["CANCELLED", "CANCELED"].includes(status)) return "Đã hủy";
+  if (status === "RETURNING") return "Đang hoàn";
+  if (status === "RETURNED") return "Đã hoàn";
+  if (status === "RETURNING") return "Đang hoàn";
+  if (status === "RETURNED") return "Đã hoàn";
+  if (status === "RETURNING") return "Đang hoàn";
+  if (status === "RETURNED") return "Đã hoàn";
   if (status === "COMPLETED") return "Hoàn tất";
   if (fulfillment === "DELIVERED" && remaining > 0) return "Đã giao / chờ đối soát";
   if (fulfillment === "DELIVERED" && item.isFullyPaid) return "Chờ hoàn tất";
@@ -399,6 +413,10 @@ export function orderOperationTone(item: {
   const fulfillment = String(item.fulfillmentStatus ?? "").toUpperCase();
   const remaining = Number(item.remainingAmount ?? 0);
 
+  if (status === "RETURNING") return "bg-orange-50 text-orange-700 ring-orange-200";
+  if (status === "RETURNED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (status === "RETURNING") return "bg-orange-50 text-orange-700 ring-orange-200";
+  if (status === "RETURNED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (status === "COMPLETED") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (["CANCELLED", "CANCELED"].includes(status)) return "bg-slate-100 text-slate-500 ring-slate-200";
   if (status === "DRAFT") return "bg-amber-50 text-amber-700 ring-amber-200";

@@ -190,9 +190,9 @@ export function ShipmentStatusSignalIcon({ status }: { status?: string | null })
         return (
             <DomainSignalIcon
                 size="md"
-                title="Hoàn trả"
-                icon={<RotateCcw />}
-                className="bg-orange-50 text-orange-600 ring-orange-100"
+                title="Đang hoàn"
+                icon={<Truck className="-scale-x-100" />}
+                className="bg-amber-50 text-amber-600 ring-amber-100"
             />
         );
     }
@@ -382,7 +382,16 @@ export function ShipmentStateSignalIcon({
     className?: string;
 }) {
     const key = String(status ?? "").toUpperCase();
-
+    if (key === "RETURNING") {
+        return (
+            <DomainSignalIcon
+                size="md"
+                title="Đang hoàn"
+                icon={<RotateCcw className="h-3.5 w-3.5 stroke-[2.4]" />}
+                className="bg-orange-50 text-orange-600 ring-orange-100"
+            />
+        );
+    }
     if (key === "DELIVERED") {
         return <DoneSignalIcon title="Đã giao" className={className} />;
     }
@@ -403,7 +412,7 @@ export function ShipmentStateSignalIcon({
             <DomainSignalIcon
                 size="md"
                 title="Hoàn trả"
-                icon={<RotateCcw />}
+                icon={<PackageX />}
                 className={cn("bg-orange-50 text-orange-600 ring-orange-100", className)}
             />
         );

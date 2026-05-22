@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Banknote, CheckCircle2, Eye, MapPin, Pencil, RotateCcw } from "lucide-react";
+import { Banknote, CheckCircle2, Eye, MapPin, PackageCheck, Pencil, RotateCcw } from "lucide-react";
 
 import {
   OrderSourceSignalIcon,
   ReserveTypeSignalIcon,
-  ShipmentStatusSignalIcon
+  ShipmentStatusSignalIcon,
 } from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 
@@ -16,12 +16,13 @@ import {
   canEditShipment,
   canMarkDelivered,
   canMarkReturned,
-  canReceiveReturnedShipment,
+  canReceiveReturn,
   formatDateTime,
   formatMoney,
   fullAddress,
   isCodShipment,
 } from "./helpers";
+
 function ShipmentPaymentMethodIcon({ method }: { method?: string | null }) {
   const key = String(method ?? "").toUpperCase();
   return <ReserveTypeSignalIcon reserveType={key === "COD" ? "COD" : "FULL"} />;
@@ -33,14 +34,14 @@ export default function ShipmentListRow({
   onCreateFee,
   onDelivered,
   onReturned,
-  onCreateReturnFee
+  onReceiveReturn,
 }: {
   item: ShipmentListItem;
   onEdit?: (row: ShipmentListItem) => void;
   onCreateFee?: (row: ShipmentListItem) => void;
   onDelivered?: (row: ShipmentListItem) => void;
   onReturned?: (row: ShipmentListItem) => void;
-  onCreateReturnFee?: (row: ShipmentListItem) => void;
+  onReceiveReturn?: (row: ShipmentListItem) => void;
 }) {
   const cod = isCodShipment(item);
   const address = fullAddress(item);
@@ -51,9 +52,7 @@ export default function ShipmentListRow({
     shippingFee > 0 &&
     String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
 
-  const sourceForIcon = order?.quickFromProductId
-    ? "WATCH_QUICK_ORDER"
-    : order?.source;
+  const sourceForIcon = order?.quickFromProductId ? "WATCH_QUICK_ORDER" : order?.source;
 
   return (
     <tr className="group relative border-t border-slate-100 align-middle transition hover:bg-slate-50/60">
@@ -80,12 +79,8 @@ export default function ShipmentListRow({
       </td>
 
       <td className="px-5 py-4">
-        <div className="font-semibold text-slate-900">
-          {item.customerName || "-"}
-        </div>
-        <div className="mt-1 break-words text-xs text-slate-500">
-          {item.shipPhone || "-"}
-        </div>
+        <div className="font-semibold text-slate-900">{item.customerName || "-"}</div>
+        <div className="mt-1 break-words text-xs text-slate-500">{item.shipPhone || "-"}</div>
       </td>
 
       <td className="px-5 py-4">
@@ -96,9 +91,7 @@ export default function ShipmentListRow({
       </td>
 
       <td className="px-5 py-4">
-        <div className="break-words font-semibold text-slate-900">
-          {item.carrier || "-"}
-        </div>
+        <div className="break-words font-semibold text-slate-900">{item.carrier || "-"}</div>
         <div className="mt-1 break-words text-xs text-slate-500">
           {item.trackingCode || "Chưa có tracking"}
         </div>
@@ -119,9 +112,7 @@ export default function ShipmentListRow({
       </td>
 
       <td className="px-5 py-4">
-        <div className="break-words text-sm text-slate-600">
-          {formatDateTime(item.updatedAt)}
-        </div>
+        <div className="break-words text-sm text-slate-600">{formatDateTime(item.updatedAt)}</div>
       </td>
 
       <td className="relative px-5 py-4 text-right">
@@ -129,50 +120,41 @@ export default function ShipmentListRow({
           row={item}
           actions={[
             canCreateShipmentFee(item) &&
-            onCreateFee && {
-              key: "create-fee",
-              label:
-                item.shippingFee && Number(item.shippingFee) > 0
-                  ? "Cập nhật vận chuyển"
-                  : "Tạo phí ship & giao",
-              icon: <Banknote className="h-4 w-4" />,
-              onClick: onCreateFee,
-            },
+              onCreateFee && {
+                key: "create-fee",
+                label: item.shippingFee && Number(item.shippingFee) > 0 ? "Cập nhật vận chuyển" : "Tạo phí ship & giao",
+                icon: <Banknote className="h-4 w-4" />,
+                onClick: onCreateFee,
+              },
             canMarkDelivered(item) &&
-            onDelivered && {
-              key: "delivered",
-              label: cod ? "Đã giao COD" : "Đã giao hàng",
-              icon: <CheckCircle2 className="h-4 w-4" />,
-              onClick: onDelivered,
-            },
+              onDelivered && {
+                key: "delivered",
+                label: cod ? "Đã giao COD" : "Đã giao hàng",
+                icon: <CheckCircle2 className="h-4 w-4" />,
+                onClick: onDelivered,
+              },
             canMarkReturned(item) &&
-            onReturned && {
-              key: "returned",
-              label: "Hoàn trả",
-              icon: <RotateCcw className="h-4 w-4" />,
-              tone: "danger",
-              onClick: onReturned,
-            },
-            canReceiveReturnedShipment(item) &&
-            onCreateReturnFee && {
-              key: "receive-return",
-              label: status === "RETURNED" ? "Cập nhật phí hoàn" : "Nhận hàng hoàn",
-              icon: <Banknote className="h-4 w-4" />,
-              onClick: onCreateReturnFee,
-            },
-
+              onReturned && {
+                key: "returning",
+                label: "Hoàn trả",
+                icon: <RotateCcw className="h-4 w-4" />,
+                tone: "danger",
+                onClick: onReturned,
+              },
+            canReceiveReturn(item) &&
+              onReceiveReturn && {
+                key: "receive-return",
+                label: "Nhận hàng hoàn",
+                icon: <PackageCheck className="h-4 w-4" />,
+                onClick: onReceiveReturn,
+              },
             onEdit && {
               key: "view",
               label: canEditShipment(item) ? "Chỉnh shipment" : "Xem shipment",
-              icon: canEditShipment(item) ? (
-                <Pencil className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              ),
+              icon: canEditShipment(item) ? <Pencil className="h-4 w-4" /> : <Eye className="h-4 w-4" />,
               separatorBefore: true,
               onClick: onEdit,
             },
-
           ]}
         />
       </td>

@@ -1,7 +1,5 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import {
     inactiveShipmentSignalClass,
@@ -14,6 +12,7 @@ type ShipmentProgressStatus =
     | "DRAFT"
     | "READY"
     | "SHIPPED"
+    | "RETURNING"
     | "DELIVERED"
     | "RETURNED"
     | "CANCELLED"
@@ -26,10 +25,17 @@ type Props = {
     compact?: boolean;
 };
 
-const STAGES = [
+const NORMAL_STAGES = [
     { key: "READY", label: "Chờ giao" },
     { key: "SHIPPED", label: "Đang giao" },
     { key: "DELIVERED", label: "Đã giao" },
+] as const;
+
+const RETURN_STAGES = [
+    { key: "READY", label: "Chờ giao" },
+    { key: "SHIPPED", label: "Đang giao" },
+    { key: "RETURNING", label: "Đang hoàn" },
+    { key: "RETURNED", label: "Đã hoàn" },
 ] as const;
 
 function normalizeStatus(status: ShipmentProgressStatus) {
@@ -38,6 +44,7 @@ function normalizeStatus(status: ShipmentProgressStatus) {
     if (key === "PENDING" || key === "DRAFT") return "READY";
     if (key === "READY") return "READY";
     if (key === "SHIPPED") return "SHIPPED";
+    if (key === "RETURNING") return "RETURNING";
     if (key === "DELIVERED") return "DELIVERED";
     if (key === "RETURNED") return "RETURNED";
     if (key === "CANCELLED") return "CANCELLED";
@@ -45,38 +52,23 @@ function normalizeStatus(status: ShipmentProgressStatus) {
     return "READY";
 }
 
-function activeIndex(status: string) {
-    if (status === "DELIVERED") return 2;
-    if (status === "SHIPPED") return 1;
-    return 0;
-}
-
 export default function ShipmentProgress({ status, compact = false }: Props) {
     const current = normalizeStatus(status);
-    const currentIndex = activeIndex(current);
-
-    if (current === "RETURNED") {
-        return (
-            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-100">
-                <RotateCcw className="h-3.5 w-3.5" />
-                Hoàn trả
-            </div>
-        );
-    }
 
     if (current === "CANCELLED") {
-        return (
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                Đã huỷ
-            </div>
-        );
+        return <ShipmentStateSignalIcon status="CANCELLED" />;
     }
 
+    const stages = current === "RETURNING" || current === "RETURNED" ? RETURN_STAGES : NORMAL_STAGES;
+    const currentIndex = Math.max(0, stages.findIndex((stage) => stage.key === current));
+    const widthClass = stages.length > 3 ? (compact ? "max-w-[230px]" : "max-w-[280px]") : (compact ? "max-w-[180px]" : "max-w-[230px]");
+
     return (
-        <div className={cn("w-full", compact ? "max-w-[180px]" : "max-w-[230px]")}>
+        <div className={cn("w-full", widthClass)}>
             <div className="flex items-center">
-                {STAGES.map((stage, index) => {
+                {stages.map((stage, index) => {
                     const active = index === currentIndex;
+                    const nextStage = stages[index + 1]?.key as keyof typeof shipmentSignalLineClass | undefined;
 
                     return (
                         <div key={stage.key} className="flex flex-1 items-center last:flex-none">
@@ -85,12 +77,12 @@ export default function ShipmentProgress({ status, compact = false }: Props) {
                                 className={active ? undefined : inactiveShipmentSignalClass}
                             />
 
-                            {index < STAGES.length - 1 ? (
+                            {index < stages.length - 1 ? (
                                 <div
                                     className={cn(
                                         "mx-1 h-px flex-1 transition",
-                                        currentIndex > index
-                                            ? shipmentSignalLineClass[STAGES[index + 1].key]
+                                        currentIndex > index && nextStage
+                                            ? shipmentSignalLineClass[nextStage] ?? "bg-slate-200"
                                             : "bg-slate-200",
                                     )}
                                 />
@@ -102,11 +94,9 @@ export default function ShipmentProgress({ status, compact = false }: Props) {
 
             {!compact ? (
                 <div className="mt-1.5 text-xs font-semibold text-slate-600">
-                    {STAGES[currentIndex]?.label || "Chờ giao"}
+                    {stages[currentIndex]?.label || "Chờ giao"}
                 </div>
             ) : null}
         </div>
     );
 }
-
-export { ShipmentProgress };

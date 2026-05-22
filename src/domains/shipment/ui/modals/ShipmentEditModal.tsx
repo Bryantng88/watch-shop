@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, FieldLabel, Input, Textarea } from "@/domains/shared/ui/form/fields";
-import type { ShipmentListItem } from "../list";
+import type { ShipmentListItem } from "../list copy";
 
 type FormState = {
   shipPhone: string;

@@ -1,6 +1,7 @@
 import {
   createManualShipment,
   createShipmentFeeAndShip,
+  createShipmentReturnFee,
   getShipmentDetail,
   listShipments,
   markShipmentDelivered,
@@ -25,10 +26,7 @@ export async function getShipmentDetailApplication(shipmentId: string) {
   return getShipmentDetail(shipmentId);
 }
 
-export async function updateShipmentApplication(input: {
-  shipmentId: string;
-  data: UpdateShipmentInput;
-}) {
+export async function updateShipmentApplication(input: { shipmentId: string; data: UpdateShipmentInput }) {
   return updateShipment(input);
 }
 
@@ -48,9 +46,11 @@ export async function receiveShipmentReturnApplication(input: ReceiveShipmentRet
   return receiveShipmentReturn(input);
 }
 
+// Backward-compatible application name.
+export async function createShipmentReturnFeeApplication(input: ReceiveShipmentReturnInput) {
+  return createShipmentReturnFee(input);
+}
+
 export async function createManualShipmentApplication(input: CreateManualShipmentInput) {
   return createManualShipment(input);
 }
-
-// Backward-compatible alias while old imports/routes are being removed.
-export const createShipmentReturnFeeApplication = receiveShipmentReturnApplication;

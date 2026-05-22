@@ -1,32 +1,8 @@
-import {
-  PaymentDirection,
-  PaymentPurpose,
-  PaymentStatus,
-  PaymentType,
-  Prisma,
-  ShipmentStatus,
-  ShippingFeePayer,
-} from "@prisma/client";
+import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
 import type { DB } from "@/server/db/client";
-import type {
-  CreateShipmentFeeInput,
-  CreateShipmentFromOrderInput,
-  ReceiveShipmentReturnInput,
-  ShipmentListInput,
-  UpdateShipmentInput,
-} from "../shared";
-import {
-  buildPaymentRef,
-  money,
-  normalizePaymentMethod,
-  normalizeShipmentStatus,
-  nullableText,
-  toNumber,
-  type Tx,
-} from "./shipment.utils";
+import type { CreateShipmentFromOrderInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput, ReceiveShipmentReturnInput } from "../shared";
+import { buildPaymentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
-
-const SHIPMENT_STATUS_RETURNING = "RETURNING" as ShipmentStatus;
 
 function genShipmentRefNo(tx: Tx) {
   return genRefNo(tx, {
@@ -82,7 +58,30 @@ export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput)
       : {}),
   };
 
-  const [rows, total] = await Promise.all([
+  const countWhereBase: any = q
+    ? {
+      OR: [
+        { refNo: { contains: q, mode: "insensitive" } },
+        { orderRefNo: { contains: q, mode: "insensitive" } },
+        { customerName: { contains: q, mode: "insensitive" } },
+        { shipPhone: { contains: q, mode: "insensitive" } },
+        { carrier: { contains: q, mode: "insensitive" } },
+        { trackingCode: { contains: q, mode: "insensitive" } },
+      ],
+    }
+    : {};
+
+  const [
+    rows,
+    total,
+    all,
+    ready,
+    shipping,
+    returning,
+    delivered,
+    returned,
+    cancelled,
+  ] = await Promise.all([
     (db as any).shipment.findMany({
       where,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
@@ -98,29 +97,50 @@ export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput)
             paymentMethod: true,
             reserveType: true,
             source: true,
-            subtotal: true,
-            shippingFee: true,
             quickFromProductId: true,
             quickFlowType: true,
+            subtotal: true,
+            shippingFee: true,
           },
         },
       },
     }),
     (db as any).shipment.count({ where }),
+    (db as any).shipment.count({ where: countWhereBase }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: ShipmentStatus.READY } }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: ShipmentStatus.SHIPPED } }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: "RETURNING" as any } }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: ShipmentStatus.DELIVERED } }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: "RETURNED" as any } }),
+    (db as any).shipment.count({ where: { ...countWhereBase, status: ShipmentStatus.CANCELLED } }),
   ]);
 
-  return { rows, total, page, pageSize, pageCount: Math.ceil(total / pageSize) };
+  return {
+    rows,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.ceil(total / pageSize),
+    counts: {
+      all,
+      ready,
+      shipping,
+      returning,
+      delivered,
+      returned,
+      cancelled,
+    },
+  };
 }
 
 export async function createShipmentFromOrderRepo(tx: Tx, input: CreateShipmentFromOrderInput) {
   const existing = await (tx as any).shipment.findFirst({
     where: {
       orderId: input.id,
-      status: { notIn: [ShipmentStatus.RETURNED, ShipmentStatus.CANCELLED] as any },
+      status: { notIn: ["RETURNED", ShipmentStatus.CANCELLED] as any },
     },
     orderBy: { createdAt: "desc" },
   });
-
   if (existing) {
     if (!existing.refNo) {
       return (tx as any).shipment.update({
@@ -172,14 +192,9 @@ export async function updateShipmentRepo(tx: Tx, shipmentId: string, input: Upda
   });
 }
 
-export async function createCompletedShipmentCostPaymentRepo(
-  tx: Tx,
-  shipment: any,
-  input: CreateShipmentFeeInput,
-) {
+export async function createCompletedShipmentCostPaymentRepo(tx: Tx, shipment: any, input: CreateShipmentFeeInput) {
   const amount = toNumber(input.amount);
   if (amount <= 0) throw new Error("Phí ship phải lớn hơn 0.");
-
   return tx.payment.create({
     data: {
       refNo: await buildPaymentRef(tx),
@@ -223,21 +238,14 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
   const activeShipment = await (tx as any).shipment.findFirst({
     where: {
       orderId: input.orderId,
-      status: {
-        in: [
-          ShipmentStatus.READY,
-          ShipmentStatus.SHIPPED,
-          ShipmentStatus.DELIVERED,
-          SHIPMENT_STATUS_RETURNING,
-        ] as any,
-      },
+      status: { in: [ShipmentStatus.READY, ShipmentStatus.SHIPPED, "RETURNING", ShipmentStatus.DELIVERED] as any },
     },
     orderBy: { createdAt: "desc" },
     select: { id: true, status: true },
   });
 
   if (activeShipment) {
-    throw new Error("Order đang có shipment chưa kết thúc. Chỉ tạo shipment giao lại sau khi shipment cũ đã RETURNED/CANCELLED.");
+    throw new Error("Order đang có shipment chưa hoàn trả/hủy. Chỉ tạo shipment giao lại sau khi shipment cũ đã RETURNED/CANCELLED.");
   }
 
   return (tx as any).shipment.create({
@@ -262,7 +270,6 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
     },
   });
 }
-
 export async function cancelActiveShipmentCostPaymentsRepo(tx: Tx, shipmentId: string) {
   return tx.payment.updateMany({
     where: {
@@ -278,7 +285,6 @@ export async function cancelActiveShipmentCostPaymentsRepo(tx: Tx, shipmentId: s
     },
   });
 }
-
 export async function cancelActiveShipmentReturnCostPaymentsRepo(tx: Tx, shipmentId: string) {
   return tx.payment.updateMany({
     where: {
@@ -298,7 +304,7 @@ export async function cancelActiveShipmentReturnCostPaymentsRepo(tx: Tx, shipmen
 export async function createCompletedShipmentReturnCostPaymentRepo(
   tx: Tx,
   shipment: any,
-  input: ReceiveShipmentReturnInput,
+  input: ReceiveShipmentReturnInput
 ) {
   const amount = toNumber(input.amount);
   if (amount <= 0) throw new Error("Phí hoàn hàng phải lớn hơn 0.");

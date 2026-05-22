@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import ShipmentListRow from "./ShipmentListRow";
-import ShipmentFeeModal from "../modals/ShipmentFeeModal";
 import { buildHref } from "./helpers";
 import type { ShipmentListItem } from "./types";
 
@@ -20,8 +17,8 @@ export default function ShipmentListTable({
   onEdit,
   onDelivered,
   onReturned,
-  onCreateReturnFee,
-  onCreateFee
+  onReceiveReturn,
+  onCreateFee,
 }: {
   items: ShipmentListItem[];
   total: number;
@@ -29,18 +26,12 @@ export default function ShipmentListTable({
   totalPages: number;
   pathname: string;
   searchParams: URLSearchParams;
-
   onEdit?: (row: ShipmentListItem) => void;
   onCreateFee?: (row: ShipmentListItem) => void;
-
   onDelivered?: (row: ShipmentListItem) => void;
   onReturned?: (row: ShipmentListItem) => void;
-
-  onCreateReturnFee?: (row: ShipmentListItem) => void;
+  onReceiveReturn?: (row: ShipmentListItem) => void;
 }) {
-  const router = useRouter();
-  const [feeShipment, setFeeShipment] = useState<ShipmentListItem | null>(null);
-
   return (
     <div className="relative overflow-visible rounded-[28px] border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
@@ -74,10 +65,10 @@ export default function ShipmentListTable({
                 key={item.id}
                 item={item}
                 onEdit={onEdit}
-                onCreateFee={setFeeShipment}
+                onCreateFee={onCreateFee}
                 onDelivered={onDelivered}
                 onReturned={onReturned}
-                onCreateReturnFee={onCreateReturnFee}
+                onReceiveReturn={onReceiveReturn}
               />
             ))}
 
@@ -101,10 +92,7 @@ export default function ShipmentListTable({
           <Link
             aria-disabled={page <= 1}
             href={buildHref(pathname, searchParams, { page: String(Math.max(1, page - 1)) })}
-            className={cn(
-              "rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50",
-              page <= 1 && "pointer-events-none opacity-40"
-            )}
+            className={cn("rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50", page <= 1 && "pointer-events-none opacity-40")}
           >
             Trước
           </Link>
@@ -112,35 +100,12 @@ export default function ShipmentListTable({
           <Link
             aria-disabled={page >= totalPages}
             href={buildHref(pathname, searchParams, { page: String(Math.min(totalPages, page + 1)) })}
-            className={cn(
-              "rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50",
-              page >= totalPages && "pointer-events-none opacity-40"
-            )}
+            className={cn("rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50", page >= totalPages && "pointer-events-none opacity-40")}
           >
             Sau
           </Link>
         </div>
       </div>
-
-      <ShipmentFeeModal
-        shipment={feeShipment}
-        onClose={() => setFeeShipment(null)}
-        onSubmit={async (payload) => {
-          if (!feeShipment) return;
-
-          const res = await fetch(`/api/admin/shipments/${feeShipment.id}/fee`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-          const data = await res.json().catch(() => null);
-          if (!res.ok) throw new Error(data?.error || "Không thể tạo phí ship.");
-
-          setFeeShipment(null);
-          router.refresh();
-        }}
-      />
     </div>
   );
 }

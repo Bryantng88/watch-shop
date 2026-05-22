@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 
 import {
+  ReserveTypeSignalIcon,
   OrderSourceSignalIcon,
   PaymentStateSignalIcon,
   ProductCountSignalIcon,
-  ReserveTypeSignalIcon,
+  ShipmentStateSignalIcon
 } from "@/domains/shared/ui/icons";
-
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import { ShipmentProgress } from "@/domains/shipment/ui/progress";
 
@@ -47,17 +47,14 @@ type Props = {
 };
 
 function resolveShipmentProgressStatus(item: OrderListItem) {
-  const direct =
-    (item as any).shipmentStatus ||
-    (item as any).shippingStatus ||
-    (item as any).deliveryStatus ||
-    (item as any).shipment?.status ||
-    (item as any).shipments?.[0]?.status;
-
+  const direct = item.shipmentStatus || item.fulfillmentStatus;
   if (direct) return direct;
 
-  if (String(item.status ?? "").toUpperCase() === "SHIPPED") return "SHIPPED";
-  if (String(item.status ?? "").toUpperCase() === "COMPLETED") return "DELIVERED";
+  const status = String(item.status ?? "").toUpperCase();
+  if (status === "RETURNING") return "RETURNING";
+  if (status === "RETURNED") return "RETURNED";
+  if (status === "SHIPPED") return "SHIPPED";
+  if (status === "COMPLETED") return "DELIVERED";
   if (!item.hasShipment) return "DELIVERED";
 
   return "READY";
@@ -77,15 +74,10 @@ export default function OrderListRow({
 }: Props) {
   const itemsCount = Number(item.itemsCount ?? 0);
   const remainingAmount = Number(item.remainingAmount ?? 0);
-  const collectedAmount = Number(item.collectedAmount ?? 0);
 
   const isWebVerified =
     String(item.source ?? "").toUpperCase() === "WEB" &&
     String(item.verificationStatus ?? "").toUpperCase() === "VERIFIED";
-
-  const sourceForIcon = item.quickFromProductId
-    ? "WATCH_QUICK_ORDER"
-    : item.source;
 
   return (
     <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/50">
@@ -109,7 +101,7 @@ export default function OrderListRow({
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <ProductCountSignalIcon count={itemsCount} />
-            <OrderSourceSignalIcon source={sourceForIcon} />
+            <OrderSourceSignalIcon source={item.source} />
             <ReserveTypeSignalIcon reserveType={item.reserveType} />
 
             {isWebVerified ? (
@@ -123,17 +115,13 @@ export default function OrderListRow({
 
       <td className="px-4 py-4">
         <div className="min-w-[150px]">
-          <div className="font-semibold text-slate-900">
-            {item.customerName || "-"}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            {item.customerPhone || item.shipPhone || "-"}
-          </div>
+          <div className="font-semibold text-slate-900">{item.customerName || "-"}</div>
+          <div className="mt-1 text-xs text-slate-500">{item.customerPhone || item.shipPhone || "-"}</div>
         </div>
       </td>
 
       <td className="px-4 py-4">
-        <div className="flex min-w-[150px] items-center gap-2">
+        <div className="flex min-w-[90px] items-center">
           <PaymentStateSignalIcon
             status={item.paymentStatus}
             totalAmount={item.totalAmount}
@@ -145,34 +133,30 @@ export default function OrderListRow({
 
       <td className="px-4 py-4">
         <div className="min-w-[160px]">
-          <ShipmentProgress status={resolveShipmentProgressStatus(item)} compact />
+          {!item.hasShipment ? (
+            <ShipmentStateSignalIcon status="DELIVERED" />
+          ) : (
+            <ShipmentProgress
+              status={resolveShipmentProgressStatus(item)}
+              compact
+            />
+          )}
         </div>
       </td>
-
       <td className="px-4 py-4 text-right">
         <div className="min-w-[140px]">
-          <div className="font-semibold text-slate-950">
-            {formatMoney(item.totalAmount)}
-          </div>
+          <div className="font-semibold text-slate-950">{formatMoney(item.totalAmount)}</div>
 
           {remainingAmount > 0 ? (
             <div className="mt-1 text-xs text-rose-600">
               Còn thu: {formatMoney(remainingAmount)}
             </div>
           ) : null}
-
-          {collectedAmount > 0 ? (
-            <div className="mt-1 text-xs text-amber-700">
-              COD chờ đối soát: {formatMoney(collectedAmount)}
-            </div>
-          ) : null}
         </div>
       </td>
 
       <td className="px-4 py-4">
-        <div className="min-w-[120px] text-sm text-slate-600">
-          {formatDateTime(item.updatedAt)}
-        </div>
+        <div className="min-w-[120px] text-sm text-slate-600">{formatDateTime(item.updatedAt)}</div>
       </td>
 
       <td className="px-4 py-4 text-right">

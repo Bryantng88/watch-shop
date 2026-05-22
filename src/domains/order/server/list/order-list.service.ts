@@ -96,9 +96,10 @@ export async function getAdminOrderList(input: OrderSearchInput) {
 
       status: order.status,
       paymentStatus: order.paymentStatus,
-      shipmentStatus: order.shipment?.status ?? null,
+      shipmentStatus: (order as any).shipmentStatus ?? null,
+      activeShipmentId: (order as any).activeShipmentId ?? null,
       fulfillmentStatus: order.hasShipment
-        ? order.shipment?.status ?? "MISSING"
+        ? (order as any).shipmentStatus ?? "MISSING"
         : "NO_SHIPMENT",
 
       reserveType: order.reserveType,

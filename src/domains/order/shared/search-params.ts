@@ -19,7 +19,9 @@ const viewKeys = new Set<OrderViewKey>([
   "pending",
   "need_action",
   "processing",
+  "returning",
   "completed",
+  "returned",
   "cancelled",
 ]);
 

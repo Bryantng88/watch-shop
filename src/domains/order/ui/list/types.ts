@@ -3,7 +3,9 @@ export type OrderViewKey =
   | "pending"
   | "need_action"
   | "processing"
+  | "returning"
   | "completed"
+  | "returned"
   | "cancelled";
 
 export type OrderProcessingSubFilter =
@@ -25,7 +27,9 @@ export const ORDER_LIST_VIEWS = [
   { key: "pending", label: "Chờ xác minh" },
   { key: "need_action", label: "Cần xử lý" },
   { key: "processing", label: "Đang xử lý" },
+  { key: "returning", label: "Đang hoàn" },
   { key: "completed", label: "Hoàn tất" },
+  { key: "returned", label: "Đã hoàn" },
   { key: "cancelled", label: "Đã huỷ" },
 ] as const;
 
@@ -63,6 +67,8 @@ export type OrderListItem = {
   paymentStatus?: string | null;
   fulfillmentStatus?: string | null;
   shipmentStatus?: string | null;
+  activeShipmentId?: string | null;
+
   source?: string | null;
   sourceLabel?: string | null;
   createdByName?: string | null;
@@ -89,6 +95,7 @@ export type OrderListItem = {
   unpaidPaymentAmount?: number | string | null;
   updatedAt?: string | Date | null;
 };
+
 export type OrderListPageProps = {
   items: OrderListItem[];
   total: number;
@@ -98,4 +105,3 @@ export type OrderListPageProps = {
   rawSearchParams: Record<string, string | string[] | undefined>;
   counts: OrderListCounts;
 };
-

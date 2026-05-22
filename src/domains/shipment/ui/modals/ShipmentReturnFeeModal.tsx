@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-import type { ShipmentListItem } from "../list/types";
 import { Button, FieldLabel, Input, Select, Textarea } from "@/domains/shared/ui/form/fields";
+import type { ShipmentListItem } from "../list/types";
 
 const PAYMENT_METHOD_OPTIONS = [
     { value: "BANK_TRANSFER", label: "Chuyển khoản" },
@@ -12,7 +12,7 @@ const PAYMENT_METHOD_OPTIONS = [
 
 function moneyPreview(value: string) {
     const amount = Number(String(value).replace(/[^\d.-]/g, ""));
-    if (!Number.isFinite(amount) || amount <= 0) return "Chưa nhập phí hoàn hàng";
+    if (!Number.isFinite(amount) || amount <= 0) return "Không phát sinh / chưa nhập phí hoàn";
     return new Intl.NumberFormat("vi-VN").format(amount) + " VND";
 }
 
@@ -41,7 +41,7 @@ export default function ShipmentReturnFeeModal({
 
     const amount = useMemo(
         () => Number(String(form.amount).replace(/[^\d.-]/g, "")),
-        [form.amount]
+        [form.amount],
     );
 
     if (!shipment) return null;
@@ -52,10 +52,10 @@ export default function ShipmentReturnFeeModal({
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
-        if (!Number.isFinite(amount) || amount <= 0) return;
+        const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : 0;
 
         onSubmit({
-            amount,
+            amount: safeAmount,
             method: form.method,
             reference: form.reference.trim() || null,
             note: form.note.trim() || null,
@@ -66,11 +66,9 @@ export default function ShipmentReturnFeeModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
             <form onSubmit={submit} className="w-full max-w-xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
                 <div className="border-b border-slate-100 px-6 py-5">
-                    <h2 className="text-xl font-semibold text-slate-950">
-                        Ghi nhận phí hoàn hàng
-                    </h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Nhận hàng hoàn</h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        Khoản này là chi phí vận chuyển chiều hoàn về, được ghi nhận là payment OUT riêng.
+                        Xác nhận sale đã nhận lại hàng. Nếu có phí ship hoàn về, khoản này sẽ được ghi nhận là payment OUT riêng cho shipment.
                     </p>
                 </div>
 
@@ -83,9 +81,7 @@ export default function ShipmentReturnFeeModal({
                             placeholder="Ví dụ: 30000"
                             autoFocus
                         />
-                        <div className="mt-2 text-xs font-semibold text-slate-500">
-                            {moneyPreview(form.amount)}
-                        </div>
+                        <div className="mt-2 text-xs font-semibold text-slate-500">{moneyPreview(form.amount)}</div>
                     </div>
 
                     <div>
@@ -111,7 +107,7 @@ export default function ShipmentReturnFeeModal({
                         <Textarea
                             value={form.note}
                             onChange={(event) => patch({ note: event.target.value })}
-                            placeholder="Ví dụ: phí ship hoàn về do khách không nhận hàng"
+                            placeholder="Ví dụ: đã nhận lại hàng, khách yêu cầu kiểm tra/xử lý thêm"
                         />
                     </div>
                 </div>
@@ -120,8 +116,8 @@ export default function ShipmentReturnFeeModal({
                     <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
                         Hủy
                     </Button>
-                    <Button type="submit" disabled={submitting || !Number.isFinite(amount) || amount <= 0}>
-                        {submitting ? "Đang lưu..." : "Ghi nhận phí hoàn"}
+                    <Button type="submit" disabled={submitting}>
+                        {submitting ? "Đang lưu..." : "Nhận hàng hoàn"}
                     </Button>
                 </div>
             </form>

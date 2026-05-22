@@ -14,7 +14,9 @@ export type OrderViewKey =
   | "pending"
   | "need_action"
   | "processing"
+  | "returning"
   | "completed"
+  | "returned"
   | "cancelled";
 
 export type OrderProcessingSubFilter =
@@ -100,7 +102,7 @@ export type QuickOrderFromProductInput = {
 export type ResolvedProductOrderItem = {
   kind: "PRODUCT";
   productId: string;
-  variantId: string | null;
+  variantId: string;
   title: string;
   quantity: number;
   listPrice: number;

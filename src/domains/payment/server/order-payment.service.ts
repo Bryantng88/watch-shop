@@ -152,21 +152,23 @@ export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
       id: true,
       status: true,
       hasShipment: true,
-      shipments: { select: { status: true } },
+      shipments: {
+        orderBy: { updatedAt: "desc" },
+        select: { status: true },
+      },
     },
   });
 
   if (!order) throw new Error("Order không tồn tại.");
   if (order.status === OrderStatus.CANCELLED) return summary;
 
+  const status = String(order.status ?? "").toUpperCase();
+  const lockedStatuses = ["RETURNING", "RETURNED"];
   const fullyPaid = summary.totalDue > 0 && summary.paidTotal >= summary.totalDue;
-  const shipments = order.shipments ?? [];
-
   const shipmentCompleted =
     !order.hasShipment ||
-    shipments.some((shipment) =>
-      ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(shipment.status))
-    ); const completed = fullyPaid && shipmentCompleted;
+    (order.shipments ?? []).some((shipment) => String(shipment.status ?? "").toUpperCase() === "DELIVERED");
+  const completed = fullyPaid && shipmentCompleted && !lockedStatuses.includes(status);
 
   await tx.order.update({
     where: { id: orderId },

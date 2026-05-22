@@ -63,14 +63,8 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
           {
             OR: [
               { shipments: { none: {} } },
-              {
-                shipments: {
-                  some: {
-                    status: { not: "DELIVERED" as any },
-                  },
-                },
-              },
-            ]
+              { shipments: { some: { status: { not: "DELIVERED" } } } },
+            ],
           },
         ],
       };
@@ -83,16 +77,8 @@ function buildProcessingSubFilterWhere(subFilter?: OrderProcessingSubFilter): Pr
           {
             OR: [
               { shipments: { none: {} } },
-              {
-                shipments: {
-                  some: {
-                    status: {
-                      in: ["DRAFT", "READY"] as any,
-                    },
-                  },
-                },
-              },
-            ]
+              { shipments: { some: { status: { in: ["DRAFT", "READY"] as any } } } },
+            ],
           },
         ],
       };
@@ -136,11 +122,7 @@ function buildViewWhere(
             OR: [
               { status: "DRAFT" },
               { source: "WEB", verificationStatus: "PENDING" },
-              { status: "POSTED", paymentStatus: "UNPAID" },
-              {
-                shipments: { none: {} },
-                hasShipment: true,
-              },
+              { status: "POSTED", paymentStatus: "UNPAID", shipments: { none: {} }, hasShipment: true },
             ],
           },
         ],
@@ -154,9 +136,25 @@ function buildViewWhere(
           buildProcessingSubFilterWhere(subFilter),
         ],
       };
+    case "returning":
+      return {
+        AND: [
+          base,
+          {
+            shipments: {
+              some: {
+                status: "RETURNING" as any,
+              },
+            },
+          },
+        ],
+      };
 
     case "completed":
       return { AND: [base, { status: "COMPLETED" }] };
+
+    case "returned":
+      return { AND: [base, { status: "RETURNED" as any }] };
 
     case "cancelled":
       return {
@@ -203,30 +201,40 @@ const orderListSelect = {
   updatedAt: true,
   shipments: {
     orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      status: true,
-      updatedAt: true,
-    },
-  }, _count: { select: { orderItem: true } },
+    select: { id: true, status: true, updatedAt: true },
+  },
+  _count: { select: { orderItem: true } },
 } satisfies Prisma.OrderSelect;
-type OrderListSelectedRow = Prisma.OrderGetPayload<{
-  select: typeof orderListSelect;
-}>;
+
+type OrderListSelectedRow = Prisma.OrderGetPayload<{ select: typeof orderListSelect }>;
 
 function resolveOrderShipmentStatus(row: OrderListSelectedRow) {
   const shipments = row.shipments ?? [];
 
   return (
-    shipments.find((shipment) => shipment.status === "SHIPPED")?.status ??
-    shipments.find((shipment) => shipment.status === "DELIVERED")?.status ??
-    shipments.find((shipment) => shipment.status === "READY")?.status ??
-    shipments.find((shipment) => shipment.status === "DRAFT")?.status ??
-    shipments.find((shipment) => shipment.status === "RETURNED")?.status ??
-    shipments.find((shipment) => shipment.status === "CANCELLED")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNING")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "SHIPPED")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DELIVERED")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNED")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "READY")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DRAFT")?.status ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "CANCELLED")?.status ??
     null
   );
 }
+
+function resolveActiveShipmentId(row: OrderListSelectedRow) {
+  const shipments = row.shipments ?? [];
+
+  return (
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNING")?.id ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "SHIPPED")?.id ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DELIVERED")?.id ??
+    shipments.find((shipment) => String(shipment.status).toUpperCase() === "READY")?.id ??
+    null
+  );
+}
+
 export async function listAdminOrdersRepo(
   db: DB,
   input: {
@@ -251,7 +259,9 @@ export async function listAdminOrdersRepo(
     pending,
     needAction,
     processing,
+    returning,
     completed,
+    returned,
     cancelled,
     awaitingPayment,
     remainingPayment,
@@ -265,7 +275,9 @@ export async function listAdminOrdersRepo(
     client.order.count({ where: buildViewWhere(base, "pending") }),
     client.order.count({ where: buildViewWhere(base, "need_action") }),
     client.order.count({ where: buildViewWhere(base, "processing") }),
+    client.order.count({ where: buildViewWhere(base, "returning") }),
     client.order.count({ where: buildViewWhere(base, "completed") }),
+    client.order.count({ where: buildViewWhere(base, "returned") }),
     client.order.count({ where: buildViewWhere(base, "cancelled") }),
     client.order.count({ where: buildViewWhere(base, "processing", "awaiting_payment") }),
     client.order.count({ where: buildViewWhere(base, "processing", "remaining_payment") }),
@@ -278,6 +290,7 @@ export async function listAdminOrdersRepo(
     rows: rows.map((row) => ({
       ...row,
       shipmentStatus: resolveOrderShipmentStatus(row),
+      activeShipmentId: resolveActiveShipmentId(row),
     })),
     total,
     counts: {
@@ -285,7 +298,9 @@ export async function listAdminOrdersRepo(
       pending,
       need_action: needAction,
       processing,
+      returning,
       completed,
+      returned,
       cancelled,
       processingSub: {
         awaiting_payment: awaitingPayment,
