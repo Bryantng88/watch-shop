@@ -129,7 +129,11 @@ export default function OrderListRow({
           {!item.hasShipment ? (
             <ShipmentStateSignalIcon status="DELIVERED" />
           ) : (
-            <ShipmentProgress status={resolveShipmentProgressStatus(item)} compact />
+            <ShipmentProgress
+              status={resolveShipmentProgressStatus(item)}
+              events={item.shipmentProgressEvents}
+              compact
+            />
           )}
         </div>
       </td>

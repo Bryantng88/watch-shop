@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation";
-import OrderFormClient from "../../_client/OrderForm";
+
+import OrderFormClient from "@/domains/order/client/OrderFormClient";
 import {
     getOrderDraftForEdit,
     getServiceCatalogOptions,
-} from "../../_servers/order.service";
+} from "@/domains/order/server";
+
+function serialize<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value));
+}
 
 export default async function EditOrderPage({
     params,
@@ -17,7 +22,7 @@ export default async function EditOrderPage({
         getServiceCatalogOptions(),
     ]);
 
-    if (!draft) return notFound();
+    if (!draft) notFound();
 
     return (
         <div className="mx-auto w-full max-w-[1500px] px-4 pt-6 lg:px-6">
@@ -25,8 +30,8 @@ export default async function EditOrderPage({
                 key={id}
                 mode="edit"
                 orderId={id}
-                initialData={draft as any}
-                services={services}
+                initialData={serialize(draft)}
+                services={serialize(services)}
                 backHref={`/admin/orders/${id}`}
                 backLabel="← Chi tiết"
             />

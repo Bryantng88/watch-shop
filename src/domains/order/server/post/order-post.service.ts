@@ -13,14 +13,27 @@ import {
   updateOrderVerificationRepo,
 } from "./order-post.repo";
 import { syncWatchInventoryFromOrderId } from "../order-watch-sync.service";
+function assertPositiveOrderSubtotal(order: { subtotal?: unknown; orderItem?: any[] }) {
+  const subtotal = Number(order.subtotal ?? 0);
 
+  const itemSubtotal = (order.orderItem ?? []).reduce(
+    (sum, item) => sum + Number(item.subtotal ?? 0),
+    0,
+  );
+
+  const finalSubtotal = subtotal > 0 ? subtotal : itemSubtotal;
+
+  if (!Number.isFinite(finalSubtotal) || finalSubtotal <= 0) {
+    throw new Error("Không thể post đơn hàng có giá trị bằng 0. Vui lòng nhập giá chốt trước khi post.");
+  }
+}
 export async function postOneOrderTx(tx: Prisma.TransactionClient, orderId: string) {
   const order = await getOrderForPostRepo(tx as any, orderId);
   if (!order) throw new Error("Order không tồn tại");
   if (order.status !== OrderStatus.DRAFT) {
     throw new Error(`Chỉ được post order ở trạng thái DRAFT. Hiện tại: ${order.status}`);
   }
-
+  assertPositiveOrderSubtotal(order);
   const refNo =
     order.refNo ??
     (await genRefNo(tx, {

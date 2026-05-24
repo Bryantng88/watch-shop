@@ -95,9 +95,9 @@ async function getSnapshotFromOrderItem(
     orderBy: [{ createdAt: "desc" }],
     select: {
       previousProductStatus: true,
-      previousWatchSaleStage: true,
-      previousWatchStockStage: true,
-      previousWatchServiceStage: true,
+      previousSaleStage: true,
+      previousStockStage: true,
+      previousServiceStage: true,
     } as any,
   } as any);
 
@@ -105,9 +105,9 @@ async function getSnapshotFromOrderItem(
 
   return {
     productStatus: (row as any).previousProductStatus ?? null,
-    saleStage: (row as any).previousWatchSaleStage ?? null,
-    stockStage: (row as any).previousWatchStockStage ?? null,
-    serviceStage: (row as any).previousWatchServiceStage ?? null,
+    saleStage: (row as any).previousSaleStage ?? null,
+    stockStage: (row as any).previousStockStage ?? null,
+    serviceStage: (row as any).previousServiceStage ?? null,
   };
 }
 

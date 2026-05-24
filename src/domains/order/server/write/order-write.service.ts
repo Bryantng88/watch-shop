@@ -169,7 +169,11 @@ function assertValidReserveBusiness(input: {
   }
 }
 
-
+function assertPositiveOrderSubtotal(subtotal: number) {
+  if (!Number.isFinite(subtotal) || subtotal <= 0) {
+    throw new Error("Không thể tạo đơn hàng có giá trị bằng 0. Vui lòng nhập giá chốt cho sản phẩm / dịch vụ.");
+  }
+}
 function normalizeCreateInput(raw: any): CreateOrderInput {
   const reserve = normalizeReserve(raw.reserve);
   const paymentMethod = normalizePaymentMethodForReserve(raw.paymentMethod, reserve.type);
@@ -285,8 +289,9 @@ export async function createOrderWithItems(raw: any) {
     const discountItems = input.items.filter((item) => item.kind === "DISCOUNT");
     const rows = await createOrderItemsRepo(tx as any, order.id, [...productItems, ...serviceItems, ...discountItems]);
     const subtotal = rows.reduce((sum, row: any) => sum + Number(row.subtotal ?? 0), 0);
-    await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
+    assertPositiveOrderSubtotal(subtotal);
 
+    await updateOrderSubtotalRepo(tx as any, order.id, subtotal);
     // Business mới: chỉ cần order được tạo, kể cả DRAFT, watch phải HOLD ngay.
     await syncWatchInventoryFromOrders(
       tx,

@@ -93,7 +93,7 @@ export async function getAdminOrderList(input: OrderSearchInput) {
       customerName: order.customerName,
       customerPhone: order.shipPhone,
       shipPhone: order.shipPhone,
-
+      shipmentProgressEvents: (order as any).shipmentProgressEvents ?? [],
       status: order.status,
       paymentStatus: order.paymentStatus,
       shipmentStatus: (order as any).shipmentStatus ?? null,

@@ -68,7 +68,11 @@ export type OrderListItem = {
   fulfillmentStatus?: string | null;
   shipmentStatus?: string | null;
   activeShipmentId?: string | null;
-
+  shipmentProgressEvents?: {
+    key: string;
+    status: string | null;
+    label?: string;
+  }[];
   source?: string | null;
   sourceLabel?: string | null;
   createdByName?: string | null;

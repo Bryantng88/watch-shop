@@ -200,8 +200,13 @@ const orderListSelect = {
   createdAt: true,
   updatedAt: true,
   shipments: {
-    orderBy: { updatedAt: "desc" },
-    select: { id: true, status: true, updatedAt: true },
+    orderBy: [{ createdAt: "asc" }, { updatedAt: "asc" }],
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   },
   _count: { select: { orderItem: true } },
 } satisfies Prisma.OrderSelect;
@@ -234,7 +239,75 @@ function resolveActiveShipmentId(row: OrderListSelectedRow) {
     null
   );
 }
+function shipmentStatusChain(status: string | null | undefined) {
+  const key = String(status ?? "").toUpperCase();
 
+  if (key === "DRAFT" || key === "PENDING" || key === "READY") {
+    return ["READY"];
+  }
+
+  if (key === "SHIPPED") {
+    return ["READY", "SHIPPED"];
+  }
+
+  if (key === "DELIVERED") {
+    return ["READY", "SHIPPED", "DELIVERED"];
+  }
+
+  if (key === "RETURNING") {
+    return ["READY", "SHIPPED", "RETURNING"];
+  }
+
+  if (key === "RETURNED") {
+    return ["READY", "SHIPPED", "RETURNING", "RETURNED"];
+  }
+
+  if (key === "CANCELLED") {
+    return ["CANCELLED"];
+  }
+
+  return ["READY"];
+}
+
+function resolveShipmentProgressEvents(row: OrderListSelectedRow) {
+  const shipments = [...(row.shipments ?? [])].sort((a, b) => {
+    const aTime = new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
+    const bTime = new Date(b.createdAt ?? b.updatedAt ?? 0).getTime();
+    return aTime - bTime;
+  });
+
+  const events: { key: string; status: string; at: Date | null }[] = [];
+  let allowRepeatAfterReturn = false;
+
+  function push(status: string, shipment: (typeof shipments)[number], index: number) {
+    const normalized = String(status).toUpperCase();
+
+    if (normalized === "READY" && events.some((event) => event.status === "READY")) return;
+
+    const last = events[events.length - 1];
+    if (last?.status === normalized) return;
+
+    if (!allowRepeatAfterReturn && events.some((event) => event.status === normalized)) return;
+
+    events.push({
+      key: `${shipment.id}-${index}-${normalized}`,
+      status: normalized,
+      at: shipment.updatedAt ?? shipment.createdAt ?? null,
+    });
+
+    if (normalized === "RETURNED") {
+      allowRepeatAfterReturn = true;
+    }
+  }
+
+  shipments.forEach((shipment, shipmentIndex) => {
+    shipmentStatusChain(shipment.status).forEach((status, statusIndex) => {
+      push(status, shipment, shipmentIndex * 10 + statusIndex);
+    });
+  });
+
+  return events;
+}
 export async function listAdminOrdersRepo(
   db: DB,
   input: {
@@ -291,6 +364,7 @@ export async function listAdminOrdersRepo(
       ...row,
       shipmentStatus: resolveOrderShipmentStatus(row),
       activeShipmentId: resolveActiveShipmentId(row),
+      shipmentProgressEvents: resolveShipmentProgressEvents(row),
     })),
     total,
     counts: {
