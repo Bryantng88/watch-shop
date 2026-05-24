@@ -2,7 +2,7 @@ import { OrderStatus, OrderVerificationStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
-import * as shipmentService from "@/app/(admin)/admin/shipments/_server/shipment.service";
+import { createFromOrderTx } from "@/domains/shipment/server";
 import { createInitialPaymentsForOrderApplicationTx } from "@/domains/payment/application";
 import { toPlain } from "../shared";
 import {
@@ -40,7 +40,7 @@ export async function postOneOrderTx(tx: Prisma.TransactionClient, orderId: stri
   await createInitialPaymentsForOrderApplicationTx(tx, order.id);
 
   if (order.hasShipment) {
-    await shipmentService.createFromOrderTx(tx as any, {
+    await createFromOrderTx(tx as any, {
       id: order.id,
       orderRefNo: refNo,
       customerName: order.customerName,

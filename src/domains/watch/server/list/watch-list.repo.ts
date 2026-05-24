@@ -300,7 +300,7 @@ export async function listAdminWatches(
             brand: { select: { id: true, name: true } },
             vendor: { select: { id: true, name: true } },
             productImage: {
-              where: { role: { in: ["INLINE", "GALLERY"] as any } },
+              where: { role: "INLINE" as any },
               select: {
                 id: true,
                 role: true,

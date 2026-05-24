@@ -117,30 +117,36 @@ export async function listOrderPaymentsTx(tx: Tx, orderId: string): Promise<Paym
   const rows = await tx.payment.findMany({
     where: {
       order_id: orderId,
-      type: PaymentType.ORDER,
-      direction: PaymentDirection.IN,
     },
     orderBy: [{ createdAt: "asc" }],
   });
 
-  return rows.map((row: any) => ({
-    id: row.id,
-    refNo: row.refNo ?? null,
-    ownerType: "ORDER",
-    ownerId: row.order_id,
-    type: row.type,
-    direction: row.direction,
-    purpose: row.purpose ?? null,
-    method: row.method ?? null,
-    status: row.status,
-    amount: toNumber(row.amount),
-    currency: row.currency ?? "VND",
-    paidAt: row.paidAt ?? null,
-    reference: row.reference ?? null,
-    note: row.note ?? null,
-    createdAt: row.createdAt ?? null,
-    updatedAt: row.updatedAt ?? null,
-  }));
+  return rows.map((row: any) => {
+    const paymentType = String(row.type ?? "").toUpperCase();
+    const ownerType =
+      paymentType === "SHIPMENT" || row.shipment_id
+        ? "SHIPMENT"
+        : "ORDER";
+
+    return {
+      id: row.id,
+      refNo: row.refNo ?? null,
+      ownerType,
+      ownerId: ownerType === "SHIPMENT" ? row.shipment_id : row.order_id,
+      type: row.type,
+      direction: row.direction,
+      purpose: row.purpose ?? null,
+      method: row.method ?? null,
+      status: row.status,
+      amount: toNumber(row.amount),
+      currency: row.currency ?? "VND",
+      paidAt: row.paidAt ?? null,
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+      createdAt: row.createdAt ?? null,
+      updatedAt: row.updatedAt ?? null,
+    };
+  });
 }
 
 export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
@@ -219,7 +225,13 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
     where: {
       order_id: orderId,
       type: PaymentType.ORDER,
-      purpose: { in: [PaymentPurpose.ORDER_DEPOSIT, PaymentPurpose.ORDER_FULL, PaymentPurpose.ORDER_REMAIN] },
+      purpose: {
+        in: [
+          PaymentPurpose.ORDER_DEPOSIT,
+          PaymentPurpose.ORDER_FULL,
+          PaymentPurpose.ORDER_REMAIN,
+        ],
+      },
     },
     select: { id: true },
   });
@@ -227,11 +239,17 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
   if (existing) return [existing];
 
   const rows = [];
-  const hasDeposit = seed.depositAmount > 0 && seed.depositAmount < seed.totalDue;
 
-  // Full-payment order: tạo đúng 1 payment bằng tổng đơn.
-  // Sau đó user chỉ được action "hoàn tất payment", không tạo payment mới nữa.
-  if (!hasDeposit) {
+  const hasDeposit =
+    seed.depositAmount > 0 &&
+    seed.depositAmount < seed.totalDue;
+
+  const isCod = seed.remainingMethod === PaymentMethod.COD;
+
+  /**
+   * FULL PAYMENT
+   */
+  if (!hasDeposit && !isCod) {
     const full = await createOrderPaymentTx(tx, {
       orderId,
       amount: seed.totalDue,
@@ -239,28 +257,70 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
       method: seed.remainingMethod,
       note: "Payment toàn bộ đơn hàng",
     });
+
     if (full) rows.push(full);
+
     return rows;
   }
 
-  // Deposit/COD đều có cọc trước. Ban đầu chỉ tạo payment cọc.
-  // Phần còn lại:
-  // - COD: tạo COLLECTED khi shipment DELIVERED.
-  // - Deposit thường: user tạo thêm qua modal multi-payment.
-  const deposit = await createOrderPaymentTx(tx, {
-    orderId,
-    amount: seed.depositAmount,
-    purpose: PaymentPurpose.ORDER_DEPOSIT,
-    method: seed.depositMethod,
-    note: seed.remainingMethod === PaymentMethod.COD
-      ? "Payment cọc đơn COD"
-      : "Payment cọc đơn hàng",
-  });
-  if (deposit) rows.push(deposit);
+  /**
+   * PAYMENT CỌC
+   */
+  if (seed.depositAmount > 0) {
+    const deposit = await createOrderPaymentTx(tx, {
+      orderId,
+      amount: seed.depositAmount,
+      purpose: PaymentPurpose.ORDER_DEPOSIT,
+      method: seed.depositMethod,
+      note: isCod
+        ? "Payment cọc đơn COD"
+        : "Payment cọc đơn hàng",
+    });
+
+    if (deposit) rows.push(deposit);
+  }
+
+  /**
+   * COD PHẦN CÒN LẠI
+   *
+   * Quan trọng:
+   * - phải tạo ngay từ lúc POST order
+   * - status ban đầu = UNPAID
+   * - shipment delivered => chuyển COLLECTED
+   * - đối soát => PAID
+   */
+  if (isCod) {
+    const remainingAmount = Math.max(
+      0,
+      seed.totalDue - seed.depositAmount,
+    );
+
+    if (remainingAmount > 0) {
+      const codRemain = await createOrderPaymentTx(tx, {
+        orderId,
+        amount: remainingAmount,
+        purpose: PaymentPurpose.ORDER_REMAIN,
+        method: PaymentMethod.COD,
+        note: "Phần còn lại thu COD khi giao hàng.",
+      });
+
+      if (codRemain) {
+        rows.push(codRemain);
+
+        await tx.payment.update({
+          where: { id: codRemain.id },
+          data: {
+            status: PaymentStatus.UNPAID,
+          },
+        });
+      }
+    }
+
+    return rows;
+  }
 
   return rows;
 }
-
 export async function createPayment(input: CreatePaymentInput) {
   if (input.ownerType !== "ORDER") {
     throw new Error("Payment owner hiện chỉ hỗ trợ ORDER. Acquisition/Shipment sẽ dùng cùng domain này khi schema có owner generic.");

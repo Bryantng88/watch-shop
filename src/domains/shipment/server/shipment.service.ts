@@ -7,7 +7,7 @@ import {
   ShipmentStatus,
   ShippingFeePayer,
 } from "@prisma/client";
-
+import { buildPaymentRef } from "./shipment.utils";
 import { prisma } from "@/server/db/client";
 import { recomputeOrderPaymentRollupTx } from "@/domains/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
@@ -168,7 +168,7 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
     });
 
     if (isCod) {
-      await tx.payment.updateMany({
+      const updateResult = await tx.payment.updateMany({
         where: {
           order_id: shipment.orderId,
           type: PaymentType.ORDER,
@@ -178,19 +178,46 @@ export async function markShipmentDelivered(input: CompleteShipmentInput) {
         },
         data: {
           status: "COLLECTED" as any,
-          note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+          note:
+            input.note ??
+            "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
           updatedAt: new Date(),
         } as any,
       });
 
+      if (updateResult.count === 0) {
+        const summary = await recomputeOrderPaymentRollupTx(tx, shipment.orderId);
+        const remainingCodAmount = Math.max(
+          0,
+          Number(summary.totalDue ?? 0) -
+          Number(summary.paidTotal ?? 0) -
+          Number(summary.collectedTotal ?? 0)
+        );
+
+        if (remainingCodAmount > 0) {
+          await tx.payment.create({
+            data: {
+              refNo: await buildPaymentRef(tx),
+              type: PaymentType.ORDER,
+              direction: PaymentDirection.IN,
+              purpose: "ORDER_REMAIN" as any,
+              method: PaymentMethod.COD,
+              amount: money(remainingCodAmount),
+              currency: shipment.currency ?? "VND",
+              status: "COLLECTED" as any,
+              note:
+                input.note ??
+                "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+              order_id: shipment.orderId,
+              updatedAt: new Date(),
+            } as any,
+          });
+        }
+      }
+
       await tx.order.update({
         where: { id: shipment.orderId },
         data: { status: OrderStatus.SHIPPED, updatedAt: new Date() },
-      });
-    } else {
-      await tx.order.update({
-        where: { id: shipment.orderId },
-        data: { status: OrderStatus.COMPLETED, updatedAt: new Date() },
       });
     }
 

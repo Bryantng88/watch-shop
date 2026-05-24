@@ -28,10 +28,21 @@ export async function GET(req: NextRequest) {
             },
         });
     } catch (error: any) {
+        console.error("[api/media/browse]", {
+            name: error?.name,
+            message: error?.message,
+            code: error?.code,
+            causeName: error?.cause?.name,
+            causeMessage: error?.cause?.message,
+            causeCode: error?.cause?.code,
+        });
+
         return NextResponse.json(
             {
                 success: false,
                 error: error?.message || "Không thể duyệt thư mục ảnh",
+                code: error?.code,
+                causeCode: error?.cause?.code,
             },
             { status: 500 }
         );

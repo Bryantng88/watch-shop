@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { PaymentCompleteModal, PaymentCreateModal } from "@/domains/payment/ui";
+import { PaymentManageModal } from "@/domains/payment/ui";
 import {
   OrderListBulkActions,
   OrderListFilters,
@@ -62,14 +62,12 @@ export default function OrderListClient({
   const notify = useNotify();
   const dialog = useAppDialog();
   const progress = useAppProgress();
-
   const currentView = normalizeOrderView(sp.get("view"));
   const currentSubFilter = normalizeOrderProcessingSubFilter(sp.get("subFilter"));
 
   const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [paymentCreateOrder, setPaymentCreateOrder] = useState<OrderListItem | null>(null);
-  const [paymentCompleteOrder, setPaymentCompleteOrder] = useState<OrderListItem | null>(null);
+  const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   const countsByView: OrderListCounts = useMemo(
@@ -188,12 +186,10 @@ export default function OrderListClient({
     });
   }
 
-  function handleCreatePayment(row: OrderListItem) {
-    setPaymentCreateOrder(row);
-  }
+
 
   function handleMarkPaymentPaid(row: OrderListItem) {
-    setPaymentCompleteOrder(row);
+    setPaymentManageOrder(row);
   }
 
   function handleMarkShipmentDelivered(row: OrderListItem) {
@@ -278,7 +274,7 @@ export default function OrderListClient({
         message: "Danh sách đơn hàng sẽ được cập nhật.",
       });
 
-      setPaymentCreateOrder(null);
+      // Keep the manage modal open so user can continue tracking/finishing other payments.
       router.refresh();
     } catch (error: any) {
       notify.error({ title: "Không thể tạo payment", message: error?.message || "Thao tác thất bại." });
@@ -303,7 +299,7 @@ export default function OrderListClient({
       if (!res.ok) throw new Error(json?.error || "Hoàn tất payment thất bại.");
 
       notify.success({ title: "Đã hoàn tất payment", message: "Order đã được tính lại trạng thái thanh toán." });
-      setPaymentCompleteOrder(null);
+      // Keep the manage modal open so user can continue tracking/finishing other payments.
       router.refresh();
     } catch (error: any) {
       notify.error({ title: "Không thể hoàn tất payment", message: error?.message || "Thao tác thất bại." });
@@ -320,7 +316,63 @@ export default function OrderListClient({
   function handleEdit(row: OrderListItem) {
     router.push(`/admin/orders/${row.id}/edit`);
   }
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<OrderListItem | null>(null);
 
+  const handleCreatePayment = async (payload: {
+    ownerType: "ORDER";
+    ownerId: string;
+    amount: number;
+    method: string;
+    note?: string | null;
+    markPaidNow: boolean;
+  }) => {
+    try {
+      setSubmitting(true);
+
+      const res = await fetch("/api/admin/payments/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error("Create payment failed");
+      }
+
+      router.refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCompletePayment = async (payload: {
+    paymentId: string;
+    reference?: string | null;
+    note?: string | null;
+  }) => {
+    try {
+      setSubmitting(true);
+
+      const res = await fetch("/api/admin/payments/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error("Complete payment failed");
+      }
+
+      router.refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6">
       <OrderListToolbar selectedCount={selectedIds.length} />
@@ -356,26 +408,19 @@ export default function OrderListClient({
         onView={handleView}
         onEdit={handleEdit}
         onPost={handlePost}
-        onCreatePayment={handleCreatePayment}
-        onMarkPaymentPaid={handleMarkPaymentPaid}
         onMarkShipmentDelivered={handleMarkShipmentDelivered}
         onCancel={handleCancel}
+        onManagePayments={setPaymentManageOrder}
       />
 
-      <PaymentCreateModal
-        open={Boolean(paymentCreateOrder)}
-        order={paymentCreateOrder}
+      <PaymentManageModal
+        open={!!paymentManageOrder}
+        order={paymentManageOrder}
         submitting={paymentSubmitting}
-        onClose={() => setPaymentCreateOrder(null)}
-        onSubmit={createPayment}
-      />
-
-      <PaymentCompleteModal
-        open={Boolean(paymentCompleteOrder)}
-        order={paymentCompleteOrder}
-        submitting={paymentSubmitting}
-        onClose={() => setPaymentCompleteOrder(null)}
-        onSubmit={completePayment}
+        onClose={() => setPaymentManageOrder(null)}
+        onCreatePayment={createPayment}
+        onCompletePayment={completePayment}
+        onUpdated={() => router.refresh()}
       />
     </div>
   );

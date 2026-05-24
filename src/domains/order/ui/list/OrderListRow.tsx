@@ -1,22 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Banknote,
-  CheckCircle2,
-  Eye,
-  Pencil,
-  Send,
-  Truck,
-  XCircle,
-} from "lucide-react";
+import { Eye, Pencil, Send, Truck, WalletCards, XCircle } from "lucide-react";
 
 import {
   ReserveTypeSignalIcon,
   OrderSourceSignalIcon,
   PaymentStateSignalIcon,
   ProductCountSignalIcon,
-  ShipmentStateSignalIcon
+  ShipmentStateSignalIcon,
 } from "@/domains/shared/ui/icons";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import { ShipmentProgress } from "@/domains/shipment/ui/progress";
@@ -24,8 +16,6 @@ import { ShipmentProgress } from "@/domains/shipment/ui/progress";
 import type { OrderListItem } from "./types";
 import {
   canCancelOrder,
-  canCreatePayment,
-  canMarkPaymentPaid,
   canMarkShipmentDelivered,
   canPostOrder,
   formatDateTime,
@@ -40,13 +30,14 @@ type Props = {
   onView?: (row: OrderListItem) => void;
   onEdit?: (row: OrderListItem) => void;
   onPost?: (row: OrderListItem) => void;
-  onCreatePayment?: (row: OrderListItem) => void;
-  onMarkPaymentPaid?: (row: OrderListItem) => void;
+  onManagePayments?: (row: OrderListItem) => void;
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
 };
 
 function resolveShipmentProgressStatus(item: OrderListItem) {
+  if (!item.hasShipment) return "DELIVERED";
+
   const direct = item.shipmentStatus || item.fulfillmentStatus;
   if (direct) return direct;
 
@@ -55,7 +46,6 @@ function resolveShipmentProgressStatus(item: OrderListItem) {
   if (status === "RETURNED") return "RETURNED";
   if (status === "SHIPPED") return "SHIPPED";
   if (status === "COMPLETED") return "DELIVERED";
-  if (!item.hasShipment) return "DELIVERED";
 
   return "READY";
 }
@@ -67,8 +57,7 @@ export default function OrderListRow({
   onView,
   onEdit,
   onPost,
-  onCreatePayment,
-  onMarkPaymentPaid,
+  onManagePayments,
   onMarkShipmentDelivered,
   onCancel,
 }: Props) {
@@ -115,8 +104,12 @@ export default function OrderListRow({
 
       <td className="px-4 py-4">
         <div className="min-w-[150px]">
-          <div className="font-semibold text-slate-900">{item.customerName || "-"}</div>
-          <div className="mt-1 text-xs text-slate-500">{item.customerPhone || item.shipPhone || "-"}</div>
+          <div className="font-semibold text-slate-900">
+            {item.customerName || "-"}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            {item.customerPhone || item.shipPhone || "-"}
+          </div>
         </div>
       </td>
 
@@ -136,16 +129,16 @@ export default function OrderListRow({
           {!item.hasShipment ? (
             <ShipmentStateSignalIcon status="DELIVERED" />
           ) : (
-            <ShipmentProgress
-              status={resolveShipmentProgressStatus(item)}
-              compact
-            />
+            <ShipmentProgress status={resolveShipmentProgressStatus(item)} compact />
           )}
         </div>
       </td>
+
       <td className="px-4 py-4 text-right">
         <div className="min-w-[140px]">
-          <div className="font-semibold text-slate-950">{formatMoney(item.totalAmount)}</div>
+          <div className="font-semibold text-slate-950">
+            {formatMoney(item.totalAmount)}
+          </div>
 
           {remainingAmount > 0 ? (
             <div className="mt-1 text-xs text-rose-600">
@@ -156,7 +149,9 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-4">
-        <div className="min-w-[120px] text-sm text-slate-600">{formatDateTime(item.updatedAt)}</div>
+        <div className="min-w-[120px] text-sm text-slate-600">
+          {formatDateTime(item.updatedAt)}
+        </div>
       </td>
 
       <td className="px-4 py-4 text-right">
@@ -176,19 +171,11 @@ export default function OrderListRow({
               icon: <Send className="h-4 w-4" />,
               onClick: onPost,
             },
-            canCreatePayment(item) &&
-            onCreatePayment && {
-              key: "create-payment",
-              label: "Tạo payment",
-              icon: <Banknote className="h-4 w-4" />,
-              onClick: onCreatePayment,
-            },
-            canMarkPaymentPaid(item) &&
-            onMarkPaymentPaid && {
-              key: "mark-payment-paid",
-              label: "Hoàn tất payment",
-              icon: <CheckCircle2 className="h-4 w-4" />,
-              onClick: onMarkPaymentPaid,
+            onManagePayments && {
+              key: "manage-payments",
+              label: "Quản lý payment",
+              icon: <WalletCards className="h-4 w-4" />,
+              onClick: onManagePayments,
             },
             canMarkShipmentDelivered(item) &&
             onMarkShipmentDelivered && {

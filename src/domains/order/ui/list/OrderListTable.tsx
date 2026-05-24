@@ -23,10 +23,10 @@ type Props = {
   onView?: (row: OrderListItem) => void;
   onEdit?: (row: OrderListItem) => void;
   onPost?: (row: OrderListItem) => void;
-  onCreatePayment?: (row: OrderListItem) => void;
-  onMarkPaymentPaid?: (row: OrderListItem) => void;
+
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
+  onManagePayments?: (row: OrderListItem) => void;
 };
 
 export default function OrderListTable({
@@ -42,10 +42,10 @@ export default function OrderListTable({
   onView,
   onEdit,
   onPost,
-  onCreatePayment,
-  onMarkPaymentPaid,
+
   onMarkShipmentDelivered,
   onCancel,
+  onManagePayments,
 }: Props) {
   const selectableIds = items.filter(isOrderSelectable).map((item) => item.id);
 
@@ -104,10 +104,9 @@ export default function OrderListTable({
                 onView={onView}
                 onEdit={onEdit}
                 onPost={onPost}
-                onCreatePayment={onCreatePayment}
-                onMarkPaymentPaid={onMarkPaymentPaid}
                 onMarkShipmentDelivered={onMarkShipmentDelivered}
                 onCancel={onCancel}
+                onManagePayments={onManagePayments}
               />
             ))}
 

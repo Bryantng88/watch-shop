@@ -41,9 +41,9 @@ export async function createWatchDraftForAcquisitionItem(
             acquisitionId: input.acquisitionId,
             gender: "MEN",
             siteChannel: "AFFORDABLE",
-            stockState: "IN_STOCK",
-            saleState: "OFF_SHELF",
-            serviceState: "PENDING",
+            stockStage: "IN_STOCK",
+            saleStage: "DRAFT",
+            serviceStage: "PENDING",
         },
         select: {
             id: true,

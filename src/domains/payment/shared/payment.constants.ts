@@ -16,4 +16,6 @@ export const PAYMENT_PURPOSE_LABEL: Record<string, string> = {
   ORDER_FULL: "Thanh toán toàn bộ",
   ORDER_DEPOSIT: "Cọc đơn hàng",
   ORDER_REMAIN: "Phần còn lại",
+  SHIPMENT_COST: "Phí ship chiều đi",
+  SHIPMENT_RETURN_COST: "Phí ship hoàn về",
 };
