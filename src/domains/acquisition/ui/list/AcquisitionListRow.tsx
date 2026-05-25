@@ -1,20 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, CreditCard } from "lucide-react";
+
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
+import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisition.action";
+
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
 import { cx, fmtDate, fmtMoney, statusTone } from "./helpers";
 
 export default function AcquisitionListRow({
     item,
+    onOpenPayment,
 }: {
     item: AcquisitionListItem;
+    onOpenPayment?: (owner: PaymentOwner) => void;
 }) {
     const router = useRouter();
     const notify = useNotify();
@@ -66,12 +71,25 @@ export default function AcquisitionListRow({
         } catch (error) {
             notify.error({
                 title: "Duyệt phiếu thất bại",
-                message:
-                    error instanceof Error ? error.message : "Có lỗi không xác định",
+                message: error instanceof Error ? error.message : "Có lỗi không xác định",
             });
         } finally {
             progress.hide();
         }
+    }
+
+    function handleOpenPayment() {
+        onOpenPayment?.({
+            type: "ACQUISITION",
+            id: item.id,
+            code: item.refNo,
+            title: item.vendorName,
+            direction: "OUT",
+            totalAmount: item.totalAmount ?? 0,
+            remainingAmount: null,
+            codAmount: 0,
+            listEndpoint: `/api/admin/acquisitions/${item.id}/payment`,
+        });
     }
 
     return (
@@ -85,7 +103,7 @@ export default function AcquisitionListRow({
                 <span
                     className={cx(
                         "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                        statusTone(item.status)
+                        statusTone(item.status),
                     )}
                 >
                     {item.statusLabel}
@@ -116,6 +134,13 @@ export default function AcquisitionListRow({
                             label: "Chỉnh sửa",
                             href: `/admin/acquisitions/${item.id}/edit`,
                             icon: "edit",
+                        },
+                        {
+                            key: "payment",
+                            label: "Quản lý payment",
+                            onClick: handleOpenPayment,
+                            icon: <CreditCard className="h-4 w-4" />,
+                            hidden: item.status !== "POSTED",
                         },
                         {
                             key: "approve",

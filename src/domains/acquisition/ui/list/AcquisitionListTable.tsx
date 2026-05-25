@@ -1,15 +1,16 @@
 "use client";
 
+import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
+
 import AcquisitionListRow from "./AcquisitionListRow";
 import type { AcquisitionListItem } from "./types";
 
-
-
 export default function AcquisitionListTable({
     items,
-
+    onOpenPayment,
 }: {
     items: AcquisitionListItem[];
+    onOpenPayment?: (owner: PaymentOwner) => void;
 }) {
     return (
         <div className="overflow-x-auto">
@@ -30,7 +31,11 @@ export default function AcquisitionListTable({
 
                 <tbody>
                     {items.map((item) => (
-                        <AcquisitionListRow key={item.id} item={item} />
+                        <AcquisitionListRow
+                            key={item.id}
+                            item={item}
+                            onOpenPayment={onOpenPayment}
+                        />
                     ))}
 
                     {items.length === 0 ? (

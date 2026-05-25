@@ -9,7 +9,7 @@ import {
 } from "../server/acquisition-spec-job.service";
 import { getWatchFlagsFromDescription } from "../shared/acquisition-item-metadata";
 import * as repoAcq from "../server";
-
+import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
 async function resolveVendorIdForPosting(
     acq: Awaited<ReturnType<typeof repoAcq.getAcqtById>>,
     vendorName: string
@@ -106,7 +106,11 @@ export async function postAcquisitionApplication(
                 toStatus: "SENT",
             });
 
-            return repoAcq.changeDraftToPost(tx, acqId);
+            const posted = await repoAcq.changeDraftToPost(tx, acqId);
+
+            await createInitialPaymentForAcquisitionTx(tx as any, acqId);
+
+            return posted;
         },
         {
             maxWait: 10000,
