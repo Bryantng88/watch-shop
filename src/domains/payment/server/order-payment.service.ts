@@ -38,7 +38,30 @@ function normalizePaidStatuses() {
 function normalizeCollectedStatuses() {
   return [COLLECTED];
 }
+function activePaymentStatuses() {
+  return [PaymentStatus.UNPAID, COLLECTED, PaymentStatus.PAID];
+}
 
+async function getOrderPaymentExposureTx(tx: Tx, orderId: string) {
+  const seed = await getOrderPaymentSeedTx(tx, orderId);
+
+  const aggregate = await tx.payment.aggregate({
+    where: {
+      order_id: orderId,
+      direction: PaymentDirection.IN,
+      status: { in: activePaymentStatuses() as any },
+    },
+    _sum: { amount: true },
+  });
+
+  const activeTotal = toNumber(aggregate._sum.amount);
+
+  return {
+    totalDue: seed.totalDue,
+    activeTotal,
+    availableToCreate: Math.max(0, seed.totalDue - activeTotal),
+  };
+}
 async function getOrderPaymentSeedTx(tx: Tx, orderId: string): Promise<OrderPaymentSeed> {
   const order = await tx.order.findUnique({
     where: { id: orderId },
@@ -336,8 +359,11 @@ export async function createPayment(input: CreatePaymentInput) {
     if (order.status === OrderStatus.DRAFT) throw new Error("Cần post order trước khi tạo payment.");
     if (order.status === OrderStatus.CANCELLED) throw new Error("Không thể tạo payment cho order đã hủy.");
 
-    const summary = await getOrderPaymentSummaryTx(tx, order.id);
-    if (summary.remaining <= 0) throw new Error("Order đã thanh toán đủ.");
+    const exposure = await getOrderPaymentExposureTx(tx, order.id);
+
+    if (exposure.availableToCreate <= 0) {
+      throw new Error("Order đã có đủ payment đang mở. Vui lòng hoàn tất hoặc hủy payment hiện có trước khi tạo thêm.");
+    }
 
     const existingFullPayment = await tx.payment.findFirst({
       where: {
@@ -358,10 +384,11 @@ export async function createPayment(input: CreatePaymentInput) {
       throw new Error("Payment COD phần còn lại sẽ được tạo khi shipment được đánh dấu đã giao.");
     }
 
-    const amount = input.amount == null ? summary.remaining : Number(input.amount);
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Số tiền payment không hợp lệ.");
-    if (amount > summary.remaining) throw new Error("Số tiền payment vượt quá số còn lại cần thu.");
-
+    const amount =
+      input.amount == null ? exposure.availableToCreate : Number(input.amount); if (!Number.isFinite(amount) || amount <= 0) throw new Error("Số tiền payment không hợp lệ.");
+    if (amount > exposure.availableToCreate) {
+      throw new Error(`Số tiền payment vượt quá số còn được tạo: ${Math.round(exposure.availableToCreate).toLocaleString("vi-VN")} VND.`);
+    }
     const purpose = (input.purpose as PaymentPurpose | null) ?? PaymentPurpose.ORDER_REMAIN;
 
     const payment = await createOrderPaymentTx(tx, {
@@ -499,4 +526,50 @@ export async function listOrderPayments(orderId: string) {
 
 export async function getOrderPaymentSummary(orderId: string) {
   return prisma.$transaction(async (tx) => toPlain(await getOrderPaymentSummaryTx(tx, orderId)));
+}
+
+export async function cancelPayment(input: {
+  paymentId: string;
+  note?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: input.paymentId },
+      select: {
+        id: true,
+        order_id: true,
+        status: true,
+      },
+    });
+
+    if (!payment) throw new Error("Payment không tồn tại.");
+    if (!payment.order_id) throw new Error("Payment chưa có owner order.");
+
+    const status = String(payment.status ?? "").toUpperCase();
+
+    if (status === "PAID") {
+      throw new Error("Không thể hủy payment đã hoàn tất. Cần tạo nghiệp vụ refund/điều chỉnh riêng.");
+    }
+
+    if (status === "CANCELED" || status === "CANCELLED") {
+      throw new Error("Payment này đã bị hủy.");
+    }
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "CANCELED" as any,
+        note: input.note ?? "Payment bị hủy.",
+        updatedAt: new Date(),
+      },
+    });
+
+    const summary = await recomputeOrderPaymentRollupTx(tx, payment.order_id);
+
+    return toPlain({
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      summary,
+    });
+  });
 }

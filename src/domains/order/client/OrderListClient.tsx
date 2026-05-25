@@ -6,7 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { PaymentManageModal } from "@/domains/payment/ui";
+import PaymentManageModal from "@/domains/payment/ui/PaymentManageModal";
+
 import {
   OrderListBulkActions,
   OrderListFilters,
@@ -186,7 +187,40 @@ export default function OrderListClient({
     });
   }
 
+  async function cancelPayment(payload: { paymentId: string; note?: string | null }) {
+    setPaymentSubmitting(true);
+    progress.show({
+      title: "Đang hủy payment",
+      message: "Payment domain đang hủy khoản thanh toán đang mở.",
+    });
 
+    try {
+      const res = await fetch(`/api/admin/payments/${payload.paymentId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Hủy payment thất bại.");
+
+      notify.success({
+        title: "Đã hủy payment",
+        message: "Order đã được tính lại trạng thái thanh toán.",
+      });
+
+      router.refresh();
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể hủy payment",
+        message: error?.message || "Thao tác thất bại.",
+      });
+      throw error;
+    } finally {
+      progress.hide();
+      setPaymentSubmitting(false);
+    }
+  }
 
   function handleMarkPaymentPaid(row: OrderListItem) {
     setPaymentManageOrder(row);
@@ -278,6 +312,7 @@ export default function OrderListClient({
       router.refresh();
     } catch (error: any) {
       notify.error({ title: "Không thể tạo payment", message: error?.message || "Thao tác thất bại." });
+      throw error;
     } finally {
       progress.hide();
       setPaymentSubmitting(false);
@@ -303,6 +338,7 @@ export default function OrderListClient({
       router.refresh();
     } catch (error: any) {
       notify.error({ title: "Không thể hoàn tất payment", message: error?.message || "Thao tác thất bại." });
+      throw error;
     } finally {
       progress.hide();
       setPaymentSubmitting(false);
@@ -420,6 +456,7 @@ export default function OrderListClient({
         onClose={() => setPaymentManageOrder(null)}
         onCreatePayment={createPayment}
         onCompletePayment={completePayment}
+        onCancelPayment={cancelPayment}
         onUpdated={() => router.refresh()}
       />
     </div>
