@@ -8,7 +8,7 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     shipWard: z.number(),
     shipCity: z.number(),
     subtotal: z.number(),
-    shippingFee: z.number(),
+    shippingAmount: z.number(),
     status: z.number(),
     paymentStatus: z.number(),
     paymentMethod: z.number(),
@@ -35,13 +35,13 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     depositRequired: z.number().nullable(),
     depositPaid: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     depositRequired: z.number().nullable(),
     depositPaid: z.number().nullable()
   }).nullable().optional(),
@@ -54,7 +54,7 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     shipWard: z.string().nullable(),
     shipCity: z.string().nullable(),
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),
@@ -75,7 +75,7 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     shipWard: z.string().nullable(),
     shipCity: z.string().nullable(),
     subtotal: z.number().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     customerName: z.string().nullable(),

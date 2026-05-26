@@ -2,8 +2,8 @@ export * from "./acquisition.repo";
 export * from "./acquisition-item.repo";
 export * from "./acquisition-watch.repo";
 export * from "./acquisition-media.service";
-export * from "./acquisition-list.repo";
-export * from "./acquisition-list.service";
+export * from "./list"
+
 export * from "./acquisition-ai.service";
 export * from "./acquisition-brand-resolver";
 export * from "./acquisition-spec-job.service";

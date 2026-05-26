@@ -4,7 +4,7 @@ import { SortOrderSchema } from '../enums/SortOrder.schema'
 
 const makeSchema = () => z.object({
   subtotal: SortOrderSchema.optional(),
-  shippingFee: SortOrderSchema.optional(),
+  shippingAmount: SortOrderSchema.optional(),
   depositRequired: SortOrderSchema.optional(),
   depositPaid: SortOrderSchema.optional()
 }).strict();

@@ -19,7 +19,7 @@ const makeSchema = () => z.object({
   shipWard: z.string().optional().nullable(),
   shipCity: z.string(),
   subtotal: z.number(),
-  shippingFee: z.number().optional().nullable(),
+  shippingAmount: z.number().optional().nullable(),
   status: OrderStatusSchema.optional(),
   paymentStatus: PaymentStatusSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional().nullable(),

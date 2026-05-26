@@ -38,7 +38,7 @@ export async function POST(
             ownerId: id,
             amount: body.amount == null ? null : Number(body.amount),
             method: body.method ?? null,
-            purpose: body.purpose ?? "ACQUISITION_PAYOUT",
+            purpose: body.purpose ?? "ACQUISITION_FULL",
             note: body.note ?? null,
             markPaidNow: Boolean(body.markPaidNow),
         });

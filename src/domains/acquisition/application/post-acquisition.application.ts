@@ -7,9 +7,25 @@ import {
     enqueueAcquisitionSpecJob,
     processAcquisitionSpecJobsByItemIds,
 } from "../server/acquisition-spec-job.service";
-import { getWatchFlagsFromDescription } from "../shared/acquisition-item-metadata";
+import {
+    getAiMetaFromDescription,
+    getWatchFlagsFromDescription,
+} from "../shared/acquisition-item-metadata";
 import * as repoAcq from "../server";
+import {
+    attachInlineImageToAcquisitionWatchDraft,
+    pickFirstAcquisitionInlineImage,
+    type AcquisitionInlineImageInput,
+} from "../server/acquisition-media.service";
 import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
+
+type PendingInlineImageAttach = {
+    acquisitionId: string;
+    productId: string;
+    image: AcquisitionInlineImageInput;
+    sortOrder: number;
+};
+
 async function resolveVendorIdForPosting(
     acq: Awaited<ReturnType<typeof repoAcq.getAcqtById>>,
     vendorName: string
@@ -75,38 +91,67 @@ export async function postAcquisitionApplication(
         throw new Error("Phiếu nhập chưa có dòng nào");
     }
 
+    const pendingInlineImages: PendingInlineImageAttach[] = [];
+
     const result = await prisma.$transaction(
         async (tx) => {
-            for (const item of items) {
-                if (!item.productId) {
-                    throw new Error(
-                        `Dòng "${item.productTitle ?? item.id}" chưa được linked product/watch draft`
+            for (const [index, item] of items.entries()) {
+                let productId = item.productId;
+                let productSku = item.product?.sku ?? null;
+                let primaryImageUrl = item.product?.primaryImageUrl ?? null;
+
+                if (!productId) {
+                    const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
+                        acquisitionItemId: item.id,
+                        acquisitionId: acqId,
+                        vendorId,
+                        title: item.productTitle ?? "Watch draft",
+                        unitCost: Number(item.unitCost ?? 0),
+                    });
+
+                    productId = draft.productId;
+                    productSku = null;
+                    primaryImageUrl = null;
+
+                    const firstImage = pickFirstAcquisitionInlineImage(
+                        getAiMetaFromDescription(item.description)?.images
                     );
+
+                    if (firstImage) {
+                        pendingInlineImages.push({
+                            acquisitionId: acqId,
+                            productId,
+                            image: firstImage,
+                            sortOrder: index,
+                        });
+                    }
+                } else {
+                    await repoAcq.syncLinkedProductFromAcquisitionItem(tx as any, item.id);
                 }
 
                 await enqueueAcquisitionSpecJob(tx as any, {
                     acquisitionItemId: item.id,
-                    productId: item.productId,
+                    productId,
                 });
 
                 const watchFlags = getWatchFlagsFromDescription(item.description);
 
-                await maybeCreateTechnicalCheckForPostedWatch(tx, {
+                await maybeCreateTechnicalCheckForPostedWatch(tx as unknown as DB, {
                     acqId: acq.refNo ?? acq.id,
-                    productId: item.productId,
-                    productSku: item.product?.sku ?? null,
-                    primaryImageUrl: item.product?.primaryImageUrl ?? null,
+                    productId,
+                    productSku,
+                    primaryImageUrl,
                     needService: Boolean(watchFlags?.needService ?? false),
                 });
             }
 
-            await repoAcq.updateAcquisitionItemStatus(tx, {
+            await repoAcq.updateAcquisitionItemStatus(tx as any, {
                 acquisitionId: acqId,
                 fromStatus: "DRAFT",
                 toStatus: "SENT",
             });
 
-            const posted = await repoAcq.changeDraftToPost(tx, acqId);
+            const posted = await repoAcq.changeDraftToPost(tx as any, acqId);
 
             await createInitialPaymentForAcquisitionTx(tx as any, acqId);
 
@@ -117,6 +162,10 @@ export async function postAcquisitionApplication(
             timeout: 60000,
         }
     );
+
+    for (const pending of pendingInlineImages) {
+        await attachInlineImageToAcquisitionWatchDraft(pending);
+    }
 
     await prisma.$transaction(
         async (tx) => {

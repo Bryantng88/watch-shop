@@ -1,5 +1,5 @@
 //import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
-import { getAdminAcquisitionList } from "@/domains/acquisition/server/acquisition-list.service";
+import { getAdminAcquisitionList } from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
 

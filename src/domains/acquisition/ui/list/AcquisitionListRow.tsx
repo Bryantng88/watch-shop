@@ -207,19 +207,3 @@ export default function AcquisitionListRow({
     );
 }
 
-function SignalIcon({
-    children,
-    title,
-}: {
-    children: React.ReactNode;
-    title: string;
-}) {
-    return (
-        <span
-            title={title}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500"
-        >
-            {children}
-        </span>
-    );
-}

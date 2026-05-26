@@ -280,7 +280,7 @@ export async function createInitialPaymentForAcquisitionTx(
         where: {
             acquisition_id: acquisitionId,
             type: "ACQUISITION" as any,
-            purpose: "ACQUISITION_PAYOUT" as any,
+            purpose: "ACQUISITION_FULL" as any,
         },
         select: { id: true },
     });
@@ -293,7 +293,7 @@ export async function createInitialPaymentForAcquisitionTx(
         amount: seed.totalDue,
         direction: PaymentDirection.OUT,
         type: "ACQUISITION" as any,
-        purpose: "ACQUISITION_PAYOUT" as any,
+        purpose: "ACQUISITION_FULL" as any,
         method: PaymentMethod.BANK_TRANSFER,
         note: "Payment mặc định cho phiếu nhập.",
     });
@@ -481,7 +481,7 @@ export async function createPayment(input: CreatePaymentInput) {
             purpose:
                 (input.purpose as any) ??
                 (input.ownerType === "ACQUISITION"
-                    ? "ACQUISITION_PAYOUT"
+                    ? "ACQUISITION_FULL"
                     : PaymentPurpose.ORDER_REMAIN),
             method,
             note:

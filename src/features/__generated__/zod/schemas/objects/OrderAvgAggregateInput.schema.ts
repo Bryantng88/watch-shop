@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 
 const makeSchema = () => z.object({
   subtotal: z.literal(true).optional(),
-  shippingFee: z.literal(true).optional(),
+  shippingAmount: z.literal(true).optional(),
   depositRequired: z.literal(true).optional(),
   depositPaid: z.literal(true).optional()
 }).strict();

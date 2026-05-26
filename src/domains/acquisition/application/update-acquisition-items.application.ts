@@ -5,18 +5,6 @@ import * as dto from "../shared/acquisition.dto";
 import { toDraftItem } from "../shared/acquisition.mapper";
 import { computeActiveAcquisitionTotal } from "../shared/helper";
 import * as repoAcq from "../server";
-import {
-    attachInlineImageToAcquisitionWatchDraft,
-    pickFirstAcquisitionInlineImage,
-    type AcquisitionInlineImageInput,
-} from "../server/acquisition-media.service";
-
-type PendingInlineImageAttach = {
-    acquisitionId: string;
-    productId: string;
-    image: AcquisitionInlineImageInput;
-    sortOrder: number;
-};
 
 type UpdateAcquisitionItemsInput = {
     acquisitionId: string;
@@ -25,14 +13,13 @@ type UpdateAcquisitionItemsInput = {
 
 async function updateAcquisitionItemsTx(
     tx: DB,
-    input: UpdateAcquisitionItemsInput,
-    pendingInlineImages: PendingInlineImageAttach[]
+    input: UpdateAcquisitionItemsInput
 ) {
     const { acquisitionId: acqId, items } = input;
 
     const acq = await tx.acquisition.findUnique({
         where: { id: acqId },
-        select: { accquisitionStt: true, vendorId: true },
+        select: { accquisitionStt: true },
     });
 
     if (!acq) {
@@ -48,36 +35,11 @@ async function updateAcquisitionItemsTx(
         await repoAcq.deleteAcqItems(tx, toDelete);
     }
 
-    for (const [index, raw] of items.entries()) {
+    for (const raw of items) {
         const item = toDraftItem(raw);
-        const firstImage = pickFirstAcquisitionInlineImage(item.aiMeta?.images);
 
         if (raw.id.startsWith("tmp-")) {
-            const createdItem = await repoAcq.createAcqItem(tx, acqId, item);
-
-            if (acq.accquisitionStt !== "POSTED") {
-                if (!acq.vendorId) {
-                    throw new Error("Phiếu nhập không có vendor");
-                }
-
-                const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx, {
-                    acquisitionItemId: createdItem.id,
-                    acquisitionId: acqId,
-                    vendorId: acq.vendorId,
-                    title: item.productTitle ?? "Watch draft",
-                    unitCost: Number(item.unitCost ?? 0),
-                });
-
-                if (firstImage) {
-                    pendingInlineImages.push({
-                        acquisitionId: acqId,
-                        productId: draft.productId,
-                        image: firstImage,
-                        sortOrder: index,
-                    });
-                }
-            }
-
+            await repoAcq.createAcqItem(tx, acqId, item);
             continue;
         }
 
@@ -86,15 +48,8 @@ async function updateAcquisitionItemsTx(
             id: raw.id,
         });
 
-        const synced = await repoAcq.syncLinkedProductFromAcquisitionItem(tx, raw.id);
-
-        if (synced?.productId && firstImage) {
-            pendingInlineImages.push({
-                acquisitionId: acqId,
-                productId: synced.productId,
-                image: firstImage,
-                sortOrder: index,
-            });
+        if (acq.accquisitionStt === "POSTED") {
+            await repoAcq.syncLinkedProductFromAcquisitionItem(tx, raw.id);
         }
     }
 
@@ -114,17 +69,9 @@ async function updateAcquisitionItemsTx(
 export async function updateAcquisitionItemsApplication(
     input: UpdateAcquisitionItemsInput
 ) {
-    const pendingInlineImages: PendingInlineImageAttach[] = [];
-
-    const result = await prisma.$transaction((tx) =>
-        updateAcquisitionItemsTx(tx as unknown as DB, input, pendingInlineImages)
+    return prisma.$transaction((tx) =>
+        updateAcquisitionItemsTx(tx as unknown as DB, input)
     );
-
-    for (const pending of pendingInlineImages) {
-        await attachInlineImageToAcquisitionWatchDraft(pending);
-    }
-
-    return result;
 }
 
 /**
@@ -136,16 +83,5 @@ export async function updateAcquisitionItems(
     acqId: string,
     items: dto.WatchItemInput[]
 ) {
-    const pendingInlineImages: PendingInlineImageAttach[] = [];
-    const result = await updateAcquisitionItemsTx(
-        tx,
-        { acquisitionId: acqId, items },
-        pendingInlineImages
-    );
-
-    for (const pending of pendingInlineImages) {
-        await attachInlineImageToAcquisitionWatchDraft(pending);
-    }
-
-    return result;
+    return updateAcquisitionItemsTx(tx, { acquisitionId: acqId, items });
 }

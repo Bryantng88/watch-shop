@@ -2,30 +2,40 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { Link2, Package2 } from "lucide-react";
+import { ImageIcon, Link2, Package2 } from "lucide-react";
+
 import type { AcquisitionListItem } from "./types";
 import { fmtMoney } from "./helpers";
 
 type Rect = { top: number; left: number; width: number };
 
-export default function AcquisitionItemsPreview({
-    row,
-}: {
-    row: AcquisitionListItem;
-}) {
+function ItemThumb({ src, title }: { src?: string | null; title: string }) {
+    if (!src) {
+        return (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-300">
+                <ImageIcon className="h-4 w-4" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <img src={src} alt={title} className="h-full w-full object-cover" loading="lazy" />
+        </div>
+    );
+}
+
+export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListItem }) {
     const btnRef = React.useRef<HTMLButtonElement | null>(null);
     const [open, setOpen] = React.useState(false);
     const [rect, setRect] = React.useState<Rect | null>(null);
-
-    const summaryText = `${row.itemCount} dòng · ${row.linkedWatchCount} đã link watch${row.remainingCount > 0 ? ` · +${row.remainingCount} dòng khác` : ""
-        }`;
 
     const measure = React.useCallback(() => {
         const el = btnRef.current;
         if (!el) return;
 
         const r = el.getBoundingClientRect();
-        const width = 460;
+        const width = Math.min(520, window.innerWidth - 24);
 
         setRect({
             top: r.bottom + 8,
@@ -51,12 +61,7 @@ export default function AcquisitionItemsPreview({
 
         function onMouseDown(e: MouseEvent) {
             const pop = document.getElementById(`acq-items-popover-${row.id}`);
-            if (
-                pop &&
-                (pop.contains(e.target as Node) || btnRef.current?.contains(e.target as Node))
-            ) {
-                return;
-            }
+            if (pop && (pop.contains(e.target as Node) || btnRef.current?.contains(e.target as Node))) return;
             setOpen(false);
         }
 
@@ -79,46 +84,33 @@ export default function AcquisitionItemsPreview({
 
     return (
         <>
-            <div className="space-y-1">
-                {row.previewTitles.slice(0, 2).map((title, index) => (
-                    <div
-                        key={`${row.id}-${index}`}
-                        className={index === 0 ? "text-sm font-medium text-slate-900" : "text-xs text-slate-500"}
-                    >
-                        {title}
-                    </div>
-                ))}
-            </div>
-
             <button
                 ref={btnRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
-                className="mt-2 inline-flex items-center rounded-md px-1 py-0.5 text-xs font-medium text-sky-700 transition hover:bg-sky-50 hover:text-sky-800"
+                className="inline-flex max-w-[190px] flex-col items-start rounded-lg px-1 py-0.5 text-left transition hover:bg-sky-50"
             >
-                {summaryText}
+                <span className="text-xs font-semibold leading-5 text-sky-700">
+                    {row.itemCount} dòng · {row.linkedWatchCount} đã link watch
+                </span>
+                {row.remainingCount > 0 ? (
+                    <span className="mt-0.5 text-[11px] font-medium leading-4 text-slate-400">
+                        +{row.remainingCount} dòng khác
+                    </span>
+                ) : null}
             </button>
 
             {open && rect && typeof window !== "undefined"
                 ? createPortal(
                     <div
                         id={`acq-items-popover-${row.id}`}
-                        style={{
-                            position: "fixed",
-                            top: rect.top,
-                            left: rect.left,
-                            width: rect.width,
-                        }}
+                        style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width }}
                         className="z-[1000] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.16)]"
                     >
-                        <div className="mb-3 flex items-center justify-between">
-                            <div>
-                                <div className="text-sm font-semibold text-slate-900">
-                                    Acquisition items
-                                </div>
-                                <div className="mt-0.5 text-xs text-slate-500">
-                                    {row.refNo} · {row.itemCount} dòng
-                                </div>
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-sm font-semibold text-slate-900">Acquisition items</div>
+                                <div className="mt-0.5 text-xs text-slate-500">{row.refNo} · {row.itemCount} dòng</div>
                             </div>
 
                             <button
@@ -132,51 +124,48 @@ export default function AcquisitionItemsPreview({
 
                         <div className="space-y-2">
                             {row.detailItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-md bg-white px-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
-                                            {item.index}
-                                        </span>
-                                        <div className="truncate text-sm font-medium text-slate-900">
-                                            {item.title}
+                                <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
+                                    <div className="flex gap-3">
+                                        <ItemThumb src={item.imageUrl} title={item.title} />
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-md bg-white px-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                                                    {item.index}
+                                                </span>
+                                                <div className="truncate text-sm font-semibold text-slate-900">{item.title}</div>
+                                            </div>
+
+                                            {item.subtitle ? <div className="mt-1 truncate text-xs text-slate-500">{item.subtitle}</div> : null}
+
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
+                                                    <Package2 className="h-3 w-3" />
+                                                    {item.quantity != null ? `${item.quantity} món` : "Chưa rõ SL"}
+                                                </span>
+
+                                                <span className="inline-flex rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
+                                                    {fmtMoney(item.totalAmount)}
+                                                </span>
+
+                                                {item.linkedWatchProductId ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700 ring-1 ring-emerald-200">
+                                                        <Link2 className="h-3 w-3" />
+                                                        Đã link watch
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-700 ring-1 ring-amber-200">
+                                                        Chưa link watch
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    {item.subtitle ? (
-                                        <div className="mt-1 pl-7 text-xs text-slate-500">
-                                            {item.subtitle}
-                                        </div>
-                                    ) : null}
-
-                                    <div className="mt-2 flex flex-wrap items-center gap-2 pl-7">
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
-                                            <Package2 className="h-3 w-3" />
-                                            {item.quantity != null ? `${item.quantity} món` : "Chưa rõ SL"}
-                                        </span>
-
-                                        <span className="inline-flex rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
-                                            {fmtMoney(item.cost)}
-                                        </span>
-
-                                        {item.linkedWatchProductId ? (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700 ring-1 ring-emerald-200">
-                                                <Link2 className="h-3 w-3" />
-                                                Đã link watch
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-700 ring-1 ring-amber-200">
-                                                Chưa link watch
-                                            </span>
-                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>,
-                    document.body
+                    document.body,
                 )
                 : null}
         </>

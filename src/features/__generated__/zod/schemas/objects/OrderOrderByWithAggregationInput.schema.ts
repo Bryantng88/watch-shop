@@ -17,7 +17,7 @@ const makeSchema = () => z.object({
   shipWard: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   shipCity: SortOrderSchema.optional(),
   subtotal: SortOrderSchema.optional(),
-  shippingFee: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  shippingAmount: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   status: SortOrderSchema.optional(),
   paymentStatus: SortOrderSchema.optional(),
   paymentMethod: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),

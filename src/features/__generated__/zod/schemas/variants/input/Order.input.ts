@@ -17,7 +17,7 @@ export const OrderInputSchema = z.object({
     shipWard: z.string().optional().nullable(),
     shipCity: z.string(),
     subtotal: z.number(),
-    shippingFee: z.number().optional().nullable(),
+    shippingAmount: z.number().optional().nullable(),
     status: OrderStatusSchema,
     paymentStatus: PaymentStatusSchema,
     paymentMethod: PaymentMethodSchema.optional().nullable(),

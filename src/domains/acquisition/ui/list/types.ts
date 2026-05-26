@@ -13,6 +13,8 @@ export type AcquisitionListItemDetail = {
     linkedWatchProductId: string | null;
     linkedWatchTitle: string | null;
     linkedWatchSku: string | null;
+    imageUrl: string | null;
+    imageKey: string | null;
     totalAmount: number | null;
     quantity: number | null;
 };
@@ -55,5 +57,4 @@ export type AcquisitionListClientProps = {
     vendors: AcquisitionVendorOption[];
     selectedIds?: string[];
     onSelectedIdsChange?: React.Dispatch<React.SetStateAction<string[]>>;
-
 };

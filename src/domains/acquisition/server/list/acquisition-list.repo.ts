@@ -2,11 +2,57 @@ import { prisma } from "@/server/db/client";
 import type {
     AcquisitionListFilters,
     AcquisitionListView,
-} from "../shared/search-params";
-import { cleanAcquisitionItemDescription } from "../shared/acquisition-item-metadata";
+} from "../../shared/search-params";
+import { cleanAcquisitionItemDescription, getAiMetaFromDescription } from "../../shared/acquisition-item-metadata";
 
 function normalizeText(value: unknown) {
     return String(value ?? "").trim();
+}
+
+
+function buildMediaUrl(fileKey?: string | null) {
+    const key = String(fileKey ?? "").trim();
+
+    if (!key) return null;
+    if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("/")) {
+        return key;
+    }
+
+    return `/api/media/sign?key=${encodeURIComponent(key)}`;
+}
+
+function pickAcquisitionItemImage(item: any) {
+    const inlineImage = item?.product?.productImage?.[0] ?? null;
+    const productImageKey =
+        inlineImage?.fileKey ??
+        item?.product?.storefrontImageKey ??
+        item?.product?.primaryImageUrl ??
+        null;
+
+    if (productImageKey) {
+        return {
+            imageKey: productImageKey,
+            imageUrl: buildMediaUrl(productImageKey),
+        };
+    }
+
+    const aiImage = getAiMetaFromDescription(item?.description)?.images?.[0] ?? null;
+    const rawImage = aiImage?.key ?? aiImage?.url ?? null;
+
+    return {
+        imageKey: aiImage?.key ?? null,
+        imageUrl: buildMediaUrl(rawImage),
+    };
+}
+
+function calcItemTotal(item: any) {
+    const unitCost = item?.unitCost != null ? Number(item.unitCost) : null;
+    const quantity = item?.quantity != null ? Number(item.quantity) : null;
+
+    if (!Number.isFinite(unitCost as number)) return null;
+    if (!Number.isFinite(quantity as number) || !quantity) return unitCost;
+
+    return (unitCost as number) * (quantity as number);
 }
 
 function mapStatus(value: unknown) {
@@ -124,6 +170,18 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
                             id: true,
                             title: true,
                             sku: true,
+                            primaryImageUrl: true,
+                            storefrontImageKey: true,
+                            productImage: {
+                                where: { role: "INLINE" as any },
+                                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                                select: {
+                                    id: true,
+                                    fileKey: true,
+                                    sortOrder: true,
+                                },
+                                take: 1,
+                            },
                         },
                     },
                 },
@@ -150,20 +208,26 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
 
         const linkedWatchCount = acquisitionItems.filter((item) => Boolean(item?.productId)).length;
 
-        const detailItems = acquisitionItems.map((item, index) => ({
-            id: item.id,
-            index: index + 1,
-            title: buildItemTitle(item),
-            subtitle: buildItemSubtitle(item),
-            linkedWatchProductId: item.productId ?? null,
-            linkedWatchTitle: item.product?.title ?? null,
-            linkedWatchSku: item.product?.sku ?? null,
-            cost: item.unitCost != null ? Number(item.unitCost) : null,
-            quantity:
-                item.quantity != null && Number.isFinite(Number(item.quantity))
-                    ? Number(item.quantity)
-                    : null,
-        }));
+        const detailItems = acquisitionItems.map((item, index) => {
+            const image = pickAcquisitionItemImage(item);
+
+            return {
+                id: item.id,
+                index: index + 1,
+                title: buildItemTitle(item),
+                subtitle: buildItemSubtitle(item),
+                linkedWatchProductId: item.productId ?? null,
+                linkedWatchTitle: item.product?.title ?? null,
+                linkedWatchSku: item.product?.sku ?? null,
+                imageUrl: image.imageUrl,
+                imageKey: image.imageKey,
+                totalAmount: calcItemTotal(item),
+                quantity:
+                    item.quantity != null && Number.isFinite(Number(item.quantity))
+                        ? Number(item.quantity)
+                        : null,
+            };
+        });
 
         const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
         const remaining = Math.max(detailItems.length - previewTitles.length, 0);

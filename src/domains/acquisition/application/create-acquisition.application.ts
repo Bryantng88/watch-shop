@@ -4,18 +4,6 @@ import { prisma } from "@/server/db/client";
 import * as dto from "../shared/acquisition.dto";
 import { toDraftItem } from "../shared/acquisition.mapper";
 import * as repoAcq from "../server";
-import {
-    attachInlineImageToAcquisitionWatchDraft,
-    pickFirstAcquisitionInlineImage,
-    type AcquisitionInlineImageInput,
-} from "../server/acquisition-media.service";
-
-type PendingInlineImageAttach = {
-    acquisitionId: string;
-    productId: string;
-    image: AcquisitionInlineImageInput;
-    sortOrder: number;
-};
 
 function parseLocalDateVN(value?: string | null) {
     const text = String(value ?? "").trim();
@@ -32,9 +20,7 @@ function parseLocalDateVN(value?: string | null) {
 export async function createAcquisitionWithItemApplication(
     input: dto.CreateAcquisitionInput
 ) {
-    const pendingInlineImages: PendingInlineImageAttach[] = [];
-
-    const result = await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
         let vendorId = input.vendorId;
 
         if (!vendorId && input.quickVendorName) {
@@ -58,40 +44,16 @@ export async function createAcquisitionWithItemApplication(
 
         let total = 0;
 
-        for (const [index, raw] of input.items.entries()) {
+        for (const raw of input.items) {
             const item = toDraftItem(raw);
-            const createdItem = await repoAcq.createAcqItem(tx, acq.id, item);
+            await repoAcq.createAcqItem(tx, acq.id, item);
             total += Number(item.unitCost ?? 0);
-
-            const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx, {
-                acquisitionItemId: createdItem.id,
-                acquisitionId: acq.id,
-                vendorId,
-                title: item.productTitle ?? "Watch draft",
-                unitCost: Number(item.unitCost ?? 0),
-            });
-
-            const firstImage = pickFirstAcquisitionInlineImage(item.aiMeta?.images);
-            if (firstImage) {
-                pendingInlineImages.push({
-                    acquisitionId: acq.id,
-                    productId: draft.productId,
-                    image: firstImage,
-                    sortOrder: index,
-                });
-            }
         }
 
         await repoAcq.updateAcquisitionCost(tx, acq.id, total);
 
         return { id: acq.id };
     });
-
-    for (const pending of pendingInlineImages) {
-        await attachInlineImageToAcquisitionWatchDraft(pending);
-    }
-
-    return result;
 }
 
 export const createAcquisitionWithItem = createAcquisitionWithItemApplication;

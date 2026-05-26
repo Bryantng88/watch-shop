@@ -8,7 +8,7 @@ export const OrderUpdateResultSchema = z.nullable(z.object({
   shipWard: z.string().optional(),
   shipCity: z.string(),
   subtotal: z.number(),
-  shippingFee: z.number().optional(),
+  shippingAmount: z.number().optional(),
   status: z.unknown(),
   paymentStatus: z.unknown(),
   paymentMethod: z.unknown().optional(),
