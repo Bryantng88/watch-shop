@@ -72,7 +72,7 @@ export async function getDashboardOverviewRepo() {
     prisma.order.aggregate({
       _sum: {
         subtotal: true,
-        shippingFee: true,
+        shippingAmount: true,
       },
     }),
 
@@ -294,8 +294,8 @@ export async function getDashboardOverviewRepo() {
   ]);
 
   const subtotal = toNumber(orderMoneyAgg._sum.subtotal);
-  const shippingFee = toNumber(orderMoneyAgg._sum.shippingFee);
-  const orderValue = subtotal + shippingFee;
+  const shippingAmount = toNumber(orderMoneyAgg._sum.shippingAmount);
+  const orderValue = subtotal + shippingAmount;
   const paidAmount = toNumber(paidPaymentAgg._sum.amount);
   const collectedCodAmount = toNumber(collectedCodAgg._sum.amount);
   const pendingPaymentAmount = toNumber(pendingPaymentAgg._sum.amount);

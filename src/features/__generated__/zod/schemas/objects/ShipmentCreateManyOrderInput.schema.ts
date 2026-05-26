@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
-import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema'
+import { shippingAmountPayerSchema } from '../enums/shippingAmountPayer.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,7 +12,7 @@ const makeSchema = () => z.object({
   shipWard: z.string().optional().nullable(),
   carrier: z.string().optional().nullable(),
   trackingCode: z.string().optional().nullable(),
-  shippingFee: z.number().optional(),
+  shippingAmount: z.number().optional(),
   currency: z.string().max(10).optional(),
   shippedAt: z.coerce.date().optional().nullable(),
   deliveredAt: z.coerce.date().optional().nullable(),
@@ -20,7 +20,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   status: ShipmentStatusSchema.optional(),
-  shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
+  shippingAmountPayer: shippingAmountPayerSchema.optional().nullable(),
   refNo: z.string().optional().nullable(),
   orderRefNo: z.string().optional().nullable(),
   customerName: z.string().optional().nullable()

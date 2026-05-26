@@ -79,10 +79,11 @@ export default function AcquisitionListTable({
                     <colgroup>
                         <col className="w-[44px]" />
                         <col className="w-[220px]" />
-                        <col className="w-[130px]" />
-                        <col className="w-[180px]" />
+                        <col className="w-[120px]" />
+                        <col className="w-[150px]" />
                         <col />
-                        <col className="w-[160px]" />
+                        <col className="w-[120px]" />
+                        <col className="w-[150px]" />
                         <col className="w-[130px]" />
                         <col className="w-[70px]" />
                     </colgroup>
@@ -101,7 +102,8 @@ export default function AcquisitionListTable({
                                 />
                             </th>
                             <th className="px-4 py-4">Phiếu nhập</th>
-                            <th className="px-4 py-4">Trạng thái</th>
+                            <th className="px-4 py-4">Trạng thái duyệt</th>
+                            <th className="px-4 py-4 text-center">Thanh toán</th>
                             <th className="px-4 py-4">Vendor</th>
                             <th className="px-4 py-4">Item</th>
                             <th className="px-4 py-4 text-right">Tổng tiền</th>

@@ -10,7 +10,7 @@ export const ShipmentFindManyResultSchema = z.object({
   shipWard: z.string().optional(),
   carrier: z.string().optional(),
   trackingCode: z.string().optional(),
-  shippingFee: z.number(),
+  shippingAmount: z.number(),
   currency: z.string(),
   shippedAt: z.date().optional(),
   deliveredAt: z.date().optional(),

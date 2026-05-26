@@ -74,7 +74,7 @@ const orderListSelect = {
   paymentMethod: true,
   paymentStatus: true,
   subtotal: true,
-  shippingFee: true,
+  shippingAmount: true,
   source: true,
   quickFlowType: true,
   verificationStatus: true,

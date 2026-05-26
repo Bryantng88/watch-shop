@@ -8,7 +8,7 @@ const makeSchema = () => z.object({
   customerId: z.literal(true).optional(),
   type: z.literal(true).optional(),
   acquiredAt: z.literal(true).optional(),
-  cost: z.literal(true).optional(),
+  totalAmount: z.literal(true).optional(),
   currency: z.literal(true).optional(),
   payoutStatus: z.literal(true).optional(),
   accquisitionStt: z.literal(true).optional(),

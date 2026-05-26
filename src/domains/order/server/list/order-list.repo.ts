@@ -192,7 +192,7 @@ const orderListSelect = {
   notes: true,
   paymentMethod: true,
   subtotal: true,
-  shippingFee: true,
+  shippingAmount: true,
   source: true,
   quickFlowType: true,
   verificationStatus: true,

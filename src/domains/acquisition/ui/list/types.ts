@@ -13,7 +13,7 @@ export type AcquisitionListItemDetail = {
     linkedWatchProductId: string | null;
     linkedWatchTitle: string | null;
     linkedWatchSku: string | null;
-    cost: number | null;
+    totalAmount: number | null;
     quantity: number | null;
 };
 

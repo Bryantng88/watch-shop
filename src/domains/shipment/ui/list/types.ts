@@ -28,8 +28,8 @@ export type ShipmentListItem = {
   shipWard?: string | null;
   carrier?: string | null;
   trackingCode?: string | null;
-  shippingFee?: number | string | null;
-  shippingFeePayer?: string | null;
+  shippingAmount?: number | string | null;
+  shippingAmountPayer?: string | null;
   currency?: string | null;
   status: string;
   shippedAt?: string | Date | null;
@@ -46,7 +46,7 @@ export type ShipmentListItem = {
     reserveType?: string | null;
     source?: string | null;
     subtotal?: number | string | null;
-    shippingFee?: number | string | null;
+    shippingAmount?: number | string | null;
     quickFromProductId?: string | null;
     quickFlowType?: string | null;
   } | null;

@@ -74,7 +74,7 @@ export async function createDraft(tx: DB, input: CreateDraftInput) {
             accquisitionStt: "DRAFT",
             type: input.type ?? "PURCHASE",
             notes: input.notes ?? null,
-            cost: new Prisma.Decimal(0),
+            totalAmount: new Prisma.Decimal(0),
         },
         select: { id: true },
     });
@@ -85,8 +85,8 @@ export async function updateAcquisitionCost(tx: DB, acqId: string, total: number
 
     return db.acquisition.update({
         where: { id: acqId },
-        data: { cost: new Prisma.Decimal(Number(total || 0)) },
-        select: { id: true, cost: true },
+        data: { totalAmount: new Prisma.Decimal(Number(total || 0)) },
+        select: { id: true, totalAmount: true },
     });
 }
 

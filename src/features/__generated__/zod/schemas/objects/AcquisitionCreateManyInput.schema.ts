@@ -9,7 +9,7 @@ const makeSchema = () => z.object({
   customerId: z.string().optional().nullable(),
   type: AcquisitionTypeSchema.optional(),
   acquiredAt: z.coerce.date(),
-  cost: z.number().optional().nullable(),
+  totalAmount: z.number().optional().nullable(),
   currency: z.string().optional().nullable(),
   payoutStatus: z.string().optional().nullable(),
   accquisitionStt: AcquisitionStatusSchema.optional(),

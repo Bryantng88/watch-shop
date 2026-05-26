@@ -1,4 +1,4 @@
-import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
+import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, shippingAmountPayer, } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import type { CreateShipmentFromOrderInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput, ReceiveShipmentReturnInput } from "../shared";
 import { buildPaymentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
@@ -26,7 +26,7 @@ export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
           source: true,
           customerName: true,
           subtotal: true,
-          shippingFee: true,
+          shippingAmount: true,
           hasShipment: true,
           quickFromProductId: true,
           quickFlowType: true,
@@ -100,7 +100,7 @@ export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput)
             quickFromProductId: true,
             quickFlowType: true,
             subtotal: true,
-            shippingFee: true,
+            shippingAmount: true,
           },
         },
       },
@@ -165,9 +165,9 @@ export async function createShipmentFromOrderRepo(tx: Tx, input: CreateShipmentF
       shipAddress: input.shipAddress ?? null,
       shipCity: input.shipCity ?? null,
       shipDistrict: input.shipDistrict ?? null,
-      shippingFeePayer: ShippingFeePayer.BUSINESS,
+      shippingAmountPayer: shippingAmountPayer.BUSINESS,
       shipWard: input.shipWard ?? null,
-      shippingFee: money(0),
+      shippingAmount: money(0),
       currency: "VND",
       status: ShipmentStatus.READY,
       updatedAt: new Date(),
@@ -262,8 +262,8 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
       carrier: input.carrier ?? null,
       trackingCode: input.trackingCode ?? null,
       notes: input.notes ?? null,
-      shippingFee: money(0),
-      shippingFeePayer: ShippingFeePayer.BUSINESS,
+      shippingAmount: money(0),
+      shippingAmountPayer: shippingAmountPayer.BUSINESS,
       currency: "VND",
       status: ShipmentStatus.READY,
       updatedAt: new Date(),

@@ -46,11 +46,11 @@ export default function ShipmentListRow({
   const cod = isCodShipment(item);
   const address = fullAddress(item);
   const order = item.order ?? null;
-  const shippingFee = Number(item.shippingFee ?? 0);
+  const shippingAmount = Number(item.shippingAmount ?? 0);
 
   const isCustomerPaidShipping =
-    shippingFee > 0 &&
-    String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
+    shippingAmount > 0 &&
+    String(item.shippingAmountPayer ?? "").toUpperCase() === "CUSTOMER";
 
   const sourceForIcon = order?.quickFromProductId ? "WATCH_QUICK_ORDER" : order?.source;
 
@@ -103,7 +103,7 @@ export default function ShipmentListRow({
 
       <td className="px-5 py-4 text-right">
         <div className="break-words font-semibold text-slate-950">
-          {formatMoney(item.shippingFee, item.currency || "VND")}
+          {formatMoney(item.shippingAmount, item.currency || "VND")}
         </div>
 
         {isCustomerPaidShipping ? (
@@ -120,34 +120,34 @@ export default function ShipmentListRow({
           row={item}
           actions={[
             canCreateShipmentFee(item) &&
-              onCreateFee && {
-                key: "create-fee",
-                label: item.shippingFee && Number(item.shippingFee) > 0 ? "Cập nhật vận chuyển" : "Tạo phí ship & giao",
-                icon: <Banknote className="h-4 w-4" />,
-                onClick: onCreateFee,
-              },
+            onCreateFee && {
+              key: "create-fee",
+              label: item.shippingAmount && Number(item.shippingAmount) > 0 ? "Cập nhật vận chuyển" : "Tạo phí ship & giao",
+              icon: <Banknote className="h-4 w-4" />,
+              onClick: onCreateFee,
+            },
             canMarkDelivered(item) &&
-              onDelivered && {
-                key: "delivered",
-                label: cod ? "Đã giao COD" : "Đã giao hàng",
-                icon: <CheckCircle2 className="h-4 w-4" />,
-                onClick: onDelivered,
-              },
+            onDelivered && {
+              key: "delivered",
+              label: cod ? "Đã giao COD" : "Đã giao hàng",
+              icon: <CheckCircle2 className="h-4 w-4" />,
+              onClick: onDelivered,
+            },
             canMarkReturned(item) &&
-              onReturned && {
-                key: "returning",
-                label: "Hoàn trả",
-                icon: <RotateCcw className="h-4 w-4" />,
-                tone: "danger",
-                onClick: onReturned,
-              },
+            onReturned && {
+              key: "returning",
+              label: "Hoàn trả",
+              icon: <RotateCcw className="h-4 w-4" />,
+              tone: "danger",
+              onClick: onReturned,
+            },
             canReceiveReturn(item) &&
-              onReceiveReturn && {
-                key: "receive-return",
-                label: "Nhận hàng hoàn",
-                icon: <PackageCheck className="h-4 w-4" />,
-                onClick: onReceiveReturn,
-              },
+            onReceiveReturn && {
+              key: "receive-return",
+              label: "Nhận hàng hoàn",
+              icon: <PackageCheck className="h-4 w-4" />,
+              onClick: onReceiveReturn,
+            },
             onEdit && {
               key: "view",
               label: canEditShipment(item) ? "Chỉnh shipment" : "Xem shipment",

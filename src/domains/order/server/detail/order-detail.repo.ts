@@ -27,7 +27,7 @@ export async function getOrderDetailRepo(db: DB, id: string) {
       hasShipment: true,
       notes: true,
       subtotal: true,
-      shippingFee: true,
+      shippingAmount: true,
       shipments: { select: { id: true, status: true } },
       createdAt: true,
       updatedAt: true,

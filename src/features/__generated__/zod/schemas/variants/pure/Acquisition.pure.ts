@@ -9,7 +9,7 @@ export const AcquisitionModelSchema = z.object({
     customerId: z.string().nullable(),
     type: AcquisitionTypeSchema,
     acquiredAt: z.date(),
-    cost: z.number().nullable(),
+    totalAmount: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
     accquisitionStt: AcquisitionStatusSchema,

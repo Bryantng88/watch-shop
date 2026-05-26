@@ -75,8 +75,8 @@ export default function ShipmentFeeModal({
 
     setForm({
       amount:
-        shipment.shippingFee && Number(shipment.shippingFee) > 0
-          ? String(Number(shipment.shippingFee))
+        shipment.shippingAmount && Number(shipment.shippingAmount) > 0
+          ? String(Number(shipment.shippingAmount))
           : "",
       method: "BANK_TRANSFER",
       carrier: shipment.carrier ?? "",
@@ -121,7 +121,7 @@ export default function ShipmentFeeModal({
       >
         <div className="border-b border-slate-100 px-6 py-5">
           <h2 className="text-xl font-semibold text-slate-950">
-            {shipment?.shippingFee
+            {shipment?.shippingAmount
               ? "Cập nhật vận chuyển"
               : "Tạo phí ship & chuyển sang đang giao"}
           </h2>

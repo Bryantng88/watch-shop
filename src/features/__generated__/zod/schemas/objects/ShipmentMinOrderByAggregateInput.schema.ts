@@ -12,7 +12,7 @@ const makeSchema = () => z.object({
   shipWard: SortOrderSchema.optional(),
   carrier: SortOrderSchema.optional(),
   trackingCode: SortOrderSchema.optional(),
-  shippingFee: SortOrderSchema.optional(),
+  shippingAmount: SortOrderSchema.optional(),
   currency: SortOrderSchema.optional(),
   shippedAt: SortOrderSchema.optional(),
   deliveredAt: SortOrderSchema.optional(),

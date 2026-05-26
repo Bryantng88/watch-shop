@@ -45,11 +45,11 @@ export default function ShipmentListRow({
   const cod = isCodShipment(item);
   const address = fullAddress(item);
   const order = item.order ?? null;
-  const shippingFee = Number(item.shippingFee ?? 0);
+  const shippingAmount = Number(item.shippingAmount ?? 0);
 
   const isCustomerPaidShipping =
-    shippingFee > 0 &&
-    String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
+    shippingAmount > 0 &&
+    String(item.shippingAmountPayer ?? "").toUpperCase() === "CUSTOMER";
 
   const sourceForIcon = order?.quickFromProductId
     ? "WATCH_QUICK_ORDER"
@@ -110,7 +110,7 @@ export default function ShipmentListRow({
 
       <td className="px-5 py-4 text-right">
         <div className="break-words font-semibold text-slate-950">
-          {formatMoney(item.shippingFee, item.currency || "VND")}
+          {formatMoney(item.shippingAmount, item.currency || "VND")}
         </div>
 
         {isCustomerPaidShipping ? (
@@ -132,7 +132,7 @@ export default function ShipmentListRow({
             onCreateFee && {
               key: "create-fee",
               label:
-                item.shippingFee && Number(item.shippingFee) > 0
+                item.shippingAmount && Number(item.shippingAmount) > 0
                   ? "Cập nhật vận chuyển"
                   : "Tạo phí ship & giao",
               icon: <Banknote className="h-4 w-4" />,

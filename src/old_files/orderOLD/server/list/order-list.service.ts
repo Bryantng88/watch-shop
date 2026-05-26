@@ -26,7 +26,7 @@ export async function getAdminOrderList(input: OrderSearchInput) {
     reserveType: order.reserveType,
     depositRequired: toNumberPrice(order.depositRequired),
     subtotal: toNumberPrice(order.subtotal),
-    totalAmount: toNumberPrice(order.subtotal) + toNumberPrice(order.shippingFee),
+    totalAmount: toNumberPrice(order.subtotal) + toNumberPrice(order.shippingAmount),
     currency: "VND",
     hasShipment: order.hasShipment,
     itemCount: order._count?.orderItem ?? 0,

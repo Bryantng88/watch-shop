@@ -11,7 +11,7 @@ type LegacyOrder = {
     customerName?: string | null;
     totalAmount?: number | null;
     subtotal?: number | null;
-    shippingFee?: number | null;
+    shippingAmount?: number | null;
     remainingAmount?: number | null;
     codAmount?: number | null;
 };
@@ -49,7 +49,7 @@ function toNumber(value: unknown) {
 function orderTotal(order: LegacyOrder) {
     const total = toNumber(order.totalAmount);
     if (total > 0) return total;
-    return toNumber(order.subtotal) + toNumber(order.shippingFee);
+    return toNumber(order.subtotal) + toNumber(order.shippingAmount);
 }
 
 export default function PaymentManageModal({

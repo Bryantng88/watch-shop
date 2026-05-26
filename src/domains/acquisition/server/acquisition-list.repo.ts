@@ -176,7 +176,7 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             vendorName: row.vendor?.name ?? "-",
             itemCount: acquisitionItems.length,
             linkedWatchCount,
-            totalAmount: row.cost != null ? Number(row.cost) : null,
+            totalAmount: row.totalAmount != null ? Number(row.totalAmount) : null,
             notes: row.notes ?? "",
             acquiredAt: row.acquiredAt ? row.acquiredAt.toISOString() : "",
             createdAt: row.createdAt ? row.createdAt.toISOString() : "",

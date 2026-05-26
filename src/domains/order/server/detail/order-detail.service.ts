@@ -7,16 +7,16 @@ export async function getAdminOrderDetail(id: string) {
   if (!row) throw new Error("Order không tồn tại");
 
   const subtotal = toNumberPrice(row.subtotal);
-  const shippingFee = toNumberPrice((row as any).shippingFee);
+  const shippingAmount = toNumberPrice((row as any).shippingAmount);
   const depositPaid = toNumberPrice(row.depositPaid);
 
   return toPlain({
     ...row,
     currency: "VND",
     subtotal,
-    shippingFee,
-    totalAmount: subtotal + shippingFee,
-    remainingAmount: Math.max(0, subtotal + shippingFee - depositPaid),
+    shippingAmount,
+    totalAmount: subtotal + shippingAmount,
+    remainingAmount: Math.max(0, subtotal + shippingAmount - depositPaid),
     items: row.orderItem.map((item) => ({
       ...item,
       listPrice: toNumberPrice(item.listPrice),

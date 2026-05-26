@@ -12,7 +12,7 @@ const makeSchema = () => z.object({
   customerId: z.boolean().optional(),
   type: z.boolean().optional(),
   acquiredAt: z.boolean().optional(),
-  cost: z.boolean().optional(),
+  totalAmount: z.boolean().optional(),
   currency: z.boolean().optional(),
   payoutStatus: z.boolean().optional(),
   accquisitionStt: z.boolean().optional(),

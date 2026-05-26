@@ -5,7 +5,7 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     customerId: z.number(),
     type: z.number(),
     acquiredAt: z.number(),
-    cost: z.number(),
+    totalAmount: z.number(),
     currency: z.number(),
     payoutStatus: z.number(),
     accquisitionStt: z.number(),
@@ -23,17 +23,17 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     Invoice: z.number()
   }).optional(),
   _sum: z.object({
-    cost: z.number().nullable()
+    totalAmount: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    cost: z.number().nullable()
+    totalAmount: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
     vendorId: z.string().nullable(),
     customerId: z.string().nullable(),
     acquiredAt: z.date().nullable(),
-    cost: z.number().nullable(),
+    totalAmount: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
     refNo: z.string().nullable(),
@@ -50,7 +50,7 @@ export const AcquisitionAggregateResultSchema = z.object({  _count: z.object({
     vendorId: z.string().nullable(),
     customerId: z.string().nullable(),
     acquiredAt: z.date().nullable(),
-    cost: z.number().nullable(),
+    totalAmount: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
     refNo: z.string().nullable(),

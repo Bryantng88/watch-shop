@@ -4,7 +4,7 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
   vendorId: z.string(),
   customerId: z.string(),
   acquiredAt: z.date(),
-  cost: z.number(),
+  totalAmount: z.number(),
   currency: z.string(),
   payoutStatus: z.string(),
   refNo: z.string(),
@@ -21,7 +21,7 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     customerId: z.number(),
     type: z.number(),
     acquiredAt: z.number(),
-    cost: z.number(),
+    totalAmount: z.number(),
     currency: z.number(),
     payoutStatus: z.number(),
     accquisitionStt: z.number(),
@@ -39,17 +39,17 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     Invoice: z.number()
   }).optional(),
   _sum: z.object({
-    cost: z.number().nullable()
+    totalAmount: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    cost: z.number().nullable()
+    totalAmount: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
     vendorId: z.string().nullable(),
     customerId: z.string().nullable(),
     acquiredAt: z.date().nullable(),
-    cost: z.number().nullable(),
+    totalAmount: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
     refNo: z.string().nullable(),
@@ -66,7 +66,7 @@ export const AcquisitionGroupByResultSchema = z.array(z.object({
     vendorId: z.string().nullable(),
     customerId: z.string().nullable(),
     acquiredAt: z.date().nullable(),
-    cost: z.number().nullable(),
+    totalAmount: z.number().nullable(),
     currency: z.string().nullable(),
     payoutStatus: z.string().nullable(),
     refNo: z.string().nullable(),

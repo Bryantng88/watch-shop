@@ -1,0 +1,575 @@
+import {
+  OrderStatus,
+  PaymentDirection,
+  PaymentMethod,
+  PaymentPurpose,
+  PaymentStatus,
+  PaymentType,
+  Prisma,
+} from "@prisma/client";
+
+import { prisma } from "@/server/db/client";
+import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
+import type { CreatePaymentInput, PaymentListItem, PaymentSummary } from "../shared";
+import { assertPaymentStatusCollectedExists, buildPaymentRef, money, toNumber, toPlain, type Tx } from "./payment.utils";
+
+const COLLECTED = assertPaymentStatusCollectedExists();
+
+type OrderPaymentSeed = {
+  orderId: string;
+  totalDue: number;
+  depositAmount: number;
+  depositMethod: PaymentMethod;
+  remainingMethod: PaymentMethod;
+};
+
+function normalizePaymentMethod(value: unknown, fallback: PaymentMethod = PaymentMethod.BANK_TRANSFER): PaymentMethod {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (raw === "CASH") return PaymentMethod.CASH;
+  if (raw === "COD") return PaymentMethod.COD;
+  if (raw === "BANK_TRANSFER") return PaymentMethod.BANK_TRANSFER;
+  return fallback;
+}
+
+function normalizePaidStatuses() {
+  return [PaymentStatus.PAID];
+}
+
+function normalizeCollectedStatuses() {
+  return [COLLECTED];
+}
+function activePaymentStatuses() {
+  return [PaymentStatus.UNPAID, COLLECTED, PaymentStatus.PAID];
+}
+
+async function getOrderPaymentExposureTx(tx: Tx, orderId: string) {
+  const seed = await getOrderPaymentSeedTx(tx, orderId);
+
+  const aggregate = await tx.payment.aggregate({
+    where: {
+      order_id: orderId,
+      direction: PaymentDirection.IN,
+      status: { in: activePaymentStatuses() as any },
+    },
+    _sum: { amount: true },
+  });
+
+  const activeTotal = toNumber(aggregate._sum.amount);
+
+  return {
+    totalDue: seed.totalDue,
+    activeTotal,
+    availableToCreate: Math.max(0, seed.totalDue - activeTotal),
+  };
+}
+async function getOrderPaymentSeedTx(tx: Tx, orderId: string): Promise<OrderPaymentSeed> {
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      subtotal: true,
+      status: true,
+      shippingFee: true,
+      paymentMethod: true,
+      depositRequired: true,
+    },
+  });
+
+  if (!order) throw new Error("Order không tồn tại.");
+
+  const totalDue = toNumber((order as any).subtotal) + toNumber((order as any).shippingFee);
+  const depositAmount = Math.min(Math.max(0, toNumber((order as any).depositRequired)), totalDue);
+
+  return {
+    orderId: order.id,
+    totalDue,
+    depositAmount,
+    // Deposit method is intentionally conservative for now.
+    // COD is reserved for the remaining shipment collection flow, not for deposit.
+    depositMethod: PaymentMethod.BANK_TRANSFER,
+    remainingMethod: normalizePaymentMethod((order as any).paymentMethod, PaymentMethod.BANK_TRANSFER),
+  };
+}
+
+export async function getOrderPaymentSummaryTx(tx: Tx, orderId: string): Promise<PaymentSummary> {
+  const seed = await getOrderPaymentSeedTx(tx, orderId);
+
+  const [paid, collected, unpaid] = await Promise.all([
+    tx.payment.aggregate({
+      where: {
+        order_id: orderId,
+        status: { in: normalizePaidStatuses() as any },
+        direction: PaymentDirection.IN,
+      },
+      _sum: { amount: true },
+    }),
+    tx.payment.aggregate({
+      where: {
+        order_id: orderId,
+        status: { in: normalizeCollectedStatuses() as any },
+        direction: PaymentDirection.IN,
+      },
+      _sum: { amount: true },
+    }),
+    tx.payment.aggregate({
+      where: {
+        order_id: orderId,
+        status: PaymentStatus.UNPAID,
+        direction: PaymentDirection.IN,
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const paidTotal = toNumber(paid._sum.amount);
+  const collectedTotal = toNumber(collected._sum.amount);
+  const unpaidTotal = toNumber(unpaid._sum.amount);
+
+  return {
+    totalDue: seed.totalDue,
+    paidTotal,
+    collectedTotal,
+    unpaidTotal,
+    remaining: Math.max(0, seed.totalDue - paidTotal),
+    depositRequired: seed.depositAmount,
+    depositPaid: seed.depositAmount > 0 ? Math.min(seed.depositAmount, paidTotal) : 0,
+  };
+}
+
+export async function listOrderPaymentsTx(tx: Tx, orderId: string): Promise<PaymentListItem[]> {
+  const rows = await tx.payment.findMany({
+    where: {
+      order_id: orderId,
+    },
+    orderBy: [{ createdAt: "asc" }],
+  });
+
+  return rows.map((row: any) => {
+    const paymentType = String(row.type ?? "").toUpperCase();
+    const ownerType =
+      paymentType === "SHIPMENT" || row.shipment_id
+        ? "SHIPMENT"
+        : "ORDER";
+
+    return {
+      id: row.id,
+      refNo: row.refNo ?? null,
+      ownerType,
+      ownerId: ownerType === "SHIPMENT" ? row.shipment_id : row.order_id,
+      type: row.type,
+      direction: row.direction,
+      purpose: row.purpose ?? null,
+      method: row.method ?? null,
+      status: row.status,
+      amount: toNumber(row.amount),
+      currency: row.currency ?? "VND",
+      paidAt: row.paidAt ?? null,
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+      createdAt: row.createdAt ?? null,
+      updatedAt: row.updatedAt ?? null,
+    };
+  });
+}
+
+export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
+  const summary = await getOrderPaymentSummaryTx(tx, orderId);
+
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      hasShipment: true,
+      shipments: {
+        orderBy: { updatedAt: "desc" },
+        select: { status: true },
+      },
+    },
+  });
+
+  if (!order) throw new Error("Order không tồn tại.");
+  if (order.status === OrderStatus.CANCELLED) return summary;
+
+  const status = String(order.status ?? "").toUpperCase();
+  const lockedStatuses = ["RETURNING", "RETURNED"];
+  const fullyPaid = summary.totalDue > 0 && summary.paidTotal >= summary.totalDue;
+  const shipmentCompleted =
+    !order.hasShipment ||
+    (order.shipments ?? []).some((shipment) => String(shipment.status ?? "").toUpperCase() === "DELIVERED");
+  const completed = fullyPaid && shipmentCompleted && !lockedStatuses.includes(status);
+
+  await tx.order.update({
+    where: { id: orderId },
+    data: {
+      depositPaid: summary.depositRequired > 0 ? money(summary.depositPaid) : null,
+      paymentStatus: fullyPaid ? PaymentStatus.PAID : PaymentStatus.UNPAID,
+      status: completed ? OrderStatus.COMPLETED : order.status,
+      updatedAt: new Date(),
+    },
+  });
+
+  await syncWatchInventoryFromOrderId(tx, orderId);
+  return getOrderPaymentSummaryTx(tx, orderId);
+}
+
+async function createOrderPaymentTx(tx: Tx, input: {
+  orderId: string;
+  amount: number;
+  purpose: PaymentPurpose;
+  method: PaymentMethod;
+  note?: string | null;
+  status?: PaymentStatus | string;
+}) {
+  if (input.amount <= 0) return null;
+
+  return tx.payment.create({
+    data: {
+      refNo: await buildPaymentRef(tx),
+      order_id: input.orderId,
+      type: PaymentType.ORDER,
+      direction: PaymentDirection.IN,
+      purpose: input.purpose,
+      method: input.method,
+      amount: money(input.amount),
+      currency: "VND",
+      status: (input.status ?? PaymentStatus.UNPAID) as any,
+      paidAt: null,
+      note: input.note ?? null,
+    },
+  });
+}
+
+export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
+  const seed = await getOrderPaymentSeedTx(tx, orderId);
+  if (seed.totalDue <= 0) return [];
+
+  const existing = await tx.payment.findFirst({
+    where: {
+      order_id: orderId,
+      type: PaymentType.ORDER,
+      purpose: {
+        in: [
+          PaymentPurpose.ORDER_DEPOSIT,
+          PaymentPurpose.ORDER_FULL,
+          PaymentPurpose.ORDER_REMAIN,
+        ],
+      },
+    },
+    select: { id: true },
+  });
+
+  if (existing) return [existing];
+
+  const rows = [];
+
+  const hasDeposit =
+    seed.depositAmount > 0 &&
+    seed.depositAmount < seed.totalDue;
+
+  const isCod = seed.remainingMethod === PaymentMethod.COD;
+
+  /**
+   * FULL PAYMENT
+   */
+  if (!hasDeposit && !isCod) {
+    const full = await createOrderPaymentTx(tx, {
+      orderId,
+      amount: seed.totalDue,
+      purpose: PaymentPurpose.ORDER_FULL,
+      method: seed.remainingMethod,
+      note: "Payment toàn bộ đơn hàng",
+    });
+
+    if (full) rows.push(full);
+
+    return rows;
+  }
+
+  /**
+   * PAYMENT CỌC
+   */
+  if (seed.depositAmount > 0) {
+    const deposit = await createOrderPaymentTx(tx, {
+      orderId,
+      amount: seed.depositAmount,
+      purpose: PaymentPurpose.ORDER_DEPOSIT,
+      method: seed.depositMethod,
+      note: isCod
+        ? "Payment cọc đơn COD"
+        : "Payment cọc đơn hàng",
+    });
+
+    if (deposit) rows.push(deposit);
+  }
+
+  /**
+   * COD PHẦN CÒN LẠI
+   *
+   * Quan trọng:
+   * - phải tạo ngay từ lúc POST order
+   * - status ban đầu = UNPAID
+   * - shipment delivered => chuyển COLLECTED
+   * - đối soát => PAID
+   */
+  if (isCod) {
+    const remainingAmount = Math.max(
+      0,
+      seed.totalDue - seed.depositAmount,
+    );
+
+    if (remainingAmount > 0) {
+      const codRemain = await createOrderPaymentTx(tx, {
+        orderId,
+        amount: remainingAmount,
+        purpose: PaymentPurpose.ORDER_REMAIN,
+        method: PaymentMethod.COD,
+        note: "Phần còn lại thu COD khi giao hàng.",
+      });
+
+      if (codRemain) {
+        rows.push(codRemain);
+
+        await tx.payment.update({
+          where: { id: codRemain.id },
+          data: {
+            status: PaymentStatus.UNPAID,
+          },
+        });
+      }
+    }
+
+    return rows;
+  }
+
+  return rows;
+}
+export async function createPayment(input: CreatePaymentInput) {
+  if (input.ownerType !== "ORDER") {
+    throw new Error("Payment owner hiện chỉ hỗ trợ ORDER. Acquisition/Shipment sẽ dùng cùng domain này khi schema có owner generic.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: input.ownerId },
+      select: { id: true, status: true, paymentMethod: true },
+    });
+
+    if (!order) throw new Error("Order không tồn tại.");
+    if (order.status === OrderStatus.DRAFT) throw new Error("Cần post order trước khi tạo payment.");
+    if (order.status === OrderStatus.CANCELLED) throw new Error("Không thể tạo payment cho order đã hủy.");
+
+    const exposure = await getOrderPaymentExposureTx(tx, order.id);
+
+    if (exposure.availableToCreate <= 0) {
+      throw new Error("Order đã có đủ payment đang mở. Vui lòng hoàn tất hoặc hủy payment hiện có trước khi tạo thêm.");
+    }
+
+    const existingFullPayment = await tx.payment.findFirst({
+      where: {
+        order_id: order.id,
+        type: PaymentType.ORDER,
+        direction: PaymentDirection.IN,
+        purpose: PaymentPurpose.ORDER_FULL,
+      },
+      select: { id: true, status: true },
+    });
+
+    if (existingFullPayment) {
+      throw new Error("Đơn thanh toán full đã có payment toàn bộ. Vui lòng dùng action hoàn tất payment, không tạo payment mới.");
+    }
+
+    const method = normalizePaymentMethod(input.method, order.paymentMethod ?? PaymentMethod.BANK_TRANSFER);
+    if (method === PaymentMethod.COD) {
+      throw new Error("Payment COD phần còn lại sẽ được tạo khi shipment được đánh dấu đã giao.");
+    }
+
+    const amount =
+      input.amount == null ? exposure.availableToCreate : Number(input.amount); if (!Number.isFinite(amount) || amount <= 0) throw new Error("Số tiền payment không hợp lệ.");
+    if (amount > exposure.availableToCreate) {
+      throw new Error(`Số tiền payment vượt quá số còn được tạo: ${Math.round(exposure.availableToCreate).toLocaleString("vi-VN")} VND.`);
+    }
+    const purpose = (input.purpose as PaymentPurpose | null) ?? PaymentPurpose.ORDER_REMAIN;
+
+    const payment = await createOrderPaymentTx(tx, {
+      orderId: order.id,
+      amount,
+      purpose,
+      method,
+      note: input.note ?? "Payment bổ sung cho đơn hàng",
+    });
+
+    if (!payment) throw new Error("Không thể tạo payment.");
+
+    if (input.markPaidNow) {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.PAID, paidAt: new Date(), updatedAt: new Date() },
+      });
+      await recomputeOrderPaymentRollupTx(tx, order.id);
+    }
+
+    return toPlain(payment);
+  });
+}
+
+export async function completePayment(input: {
+  paymentId: string;
+  paidAt?: Date | string | null;
+  reference?: string | null;
+  note?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: input.paymentId },
+      select: { id: true, order_id: true, status: true, method: true },
+    });
+
+    if (!payment) throw new Error("Payment không tồn tại.");
+    if (!payment.order_id) throw new Error("Payment chưa có owner order.");
+    if (payment.status === PaymentStatus.PAID) throw new Error("Payment này đã hoàn tất.");
+    if (["CANCELED", "CANCELLED"].includes(String(payment.status))) throw new Error("Không thể hoàn tất payment đã hủy.");
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: PaymentStatus.PAID,
+        paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+        reference: input.reference ?? undefined,
+        note: input.note ?? undefined,
+        updatedAt: new Date(),
+      },
+    });
+
+    const summary = await recomputeOrderPaymentRollupTx(tx, payment.order_id);
+    return toPlain({ paymentId: payment.id, orderId: payment.order_id, summary });
+  });
+}
+
+export async function markOrderShipmentDeliveredAndCollectCod(input: { orderId: string; note?: string | null }) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: input.orderId },
+      select: {
+        id: true,
+        status: true,
+        hasShipment: true,
+        paymentMethod: true,
+      },
+    });
+
+    if (!order) throw new Error("Order không tồn tại.");
+    if (order.status === OrderStatus.DRAFT) throw new Error("Cần post order trước khi giao hàng.");
+    if (order.status === OrderStatus.CANCELLED) throw new Error("Không thể giao order đã hủy.");
+    if (!order.hasShipment) throw new Error("Order này không có shipment.");
+
+    await (tx as any).shipment.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        status: "DELIVERED",
+        deliveredAt: new Date(),
+        updatedAt: new Date(),
+      },
+      update: {
+        status: "DELIVERED",
+        deliveredAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const summary = await getOrderPaymentSummaryTx(tx, order.id);
+    const remainingCodAmount = Math.max(0, summary.totalDue - summary.paidTotal - summary.collectedTotal);
+
+    if (order.paymentMethod === PaymentMethod.COD && remainingCodAmount > 0) {
+      const existingCodRemain = await tx.payment.findFirst({
+        where: {
+          order_id: order.id,
+          type: PaymentType.ORDER,
+          direction: PaymentDirection.IN,
+          purpose: PaymentPurpose.ORDER_REMAIN,
+          method: PaymentMethod.COD,
+          status: { in: [PaymentStatus.UNPAID, COLLECTED] as any },
+        },
+        select: { id: true },
+      });
+
+      if (existingCodRemain) {
+        await tx.payment.update({
+          where: { id: existingCodRemain.id },
+          data: {
+            status: COLLECTED,
+            note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+            updatedAt: new Date(),
+          } as any,
+        });
+      } else {
+        await createOrderPaymentTx(tx, {
+          orderId: order.id,
+          amount: remainingCodAmount,
+          purpose: PaymentPurpose.ORDER_REMAIN,
+          method: PaymentMethod.COD,
+          status: COLLECTED,
+          note: input.note ?? "COD đã giao thành công, chờ đối soát/nhận tiền từ đơn vị vận chuyển.",
+        });
+      }
+    }
+
+    const nextSummary = await recomputeOrderPaymentRollupTx(tx, order.id);
+    return toPlain({ orderId: order.id, summary: nextSummary });
+  });
+}
+
+export async function listOrderPayments(orderId: string) {
+  return prisma.$transaction(async (tx) => toPlain(await listOrderPaymentsTx(tx, orderId)));
+}
+
+export async function getOrderPaymentSummary(orderId: string) {
+  return prisma.$transaction(async (tx) => toPlain(await getOrderPaymentSummaryTx(tx, orderId)));
+}
+
+export async function cancelPayment(input: {
+  paymentId: string;
+  note?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: input.paymentId },
+      select: {
+        id: true,
+        order_id: true,
+        status: true,
+      },
+    });
+
+    if (!payment) throw new Error("Payment không tồn tại.");
+    if (!payment.order_id) throw new Error("Payment chưa có owner order.");
+
+    const status = String(payment.status ?? "").toUpperCase();
+
+    if (status === "PAID") {
+      throw new Error("Không thể hủy payment đã hoàn tất. Cần tạo nghiệp vụ refund/điều chỉnh riêng.");
+    }
+
+    if (status === "CANCELED" || status === "CANCELLED") {
+      throw new Error("Payment này đã bị hủy.");
+    }
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "CANCELED" as any,
+        note: input.note ?? "Payment bị hủy.",
+        updatedAt: new Date(),
+      },
+    });
+
+    const summary = await recomputeOrderPaymentRollupTx(tx, payment.order_id);
+
+    return toPlain({
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      summary,
+    });
+  });
+}

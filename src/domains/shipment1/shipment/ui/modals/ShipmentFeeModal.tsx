@@ -54,7 +54,7 @@ export default function ShipmentFeeModal({
   useEffect(() => {
     if (!shipment) return;
     setForm({
-      amount: shipment.shippingFee && Number(shipment.shippingFee) > 0 ? String(Number(shipment.shippingFee)) : "",
+      amount: shipment.shippingAmount && Number(shipment.shippingAmount) > 0 ? String(Number(shipment.shippingAmount)) : "",
       method: "BANK_TRANSFER",
       carrier: shipment.carrier ?? "",
       trackingCode: shipment.trackingCode ?? "",
@@ -90,7 +90,7 @@ export default function ShipmentFeeModal({
       <form onSubmit={submit} className="w-full max-w-2xl overflow-hidden rounded-[28px] bg-white shadow-2xl">
         <div className="border-b border-slate-100 px-6 py-5">
           <h2 className="text-xl font-semibold text-slate-950">
-            {shipment?.shippingFee
+            {shipment?.shippingAmount
               ? "Cập nhật vận chuyển"
               : "Tạo phí ship & chuyển sang đang giao"}
           </h2>          <p className="mt-1 text-sm text-slate-500">

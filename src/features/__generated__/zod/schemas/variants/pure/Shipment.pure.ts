@@ -13,7 +13,7 @@ export const ShipmentModelSchema = z.object({
     shipWard: z.string().nullable(),
     carrier: z.string().nullable(),
     trackingCode: z.string().nullable(),
-    shippingFee: z.number(),
+    shippingAmount: z.number(),
     currency: z.string(),
     shippedAt: z.date().nullable(),
     deliveredAt: z.date().nullable(),

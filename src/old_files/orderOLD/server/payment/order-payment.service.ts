@@ -46,7 +46,7 @@ async function getOrderPaymentSummaryTx(tx: Tx, orderId: string): Promise<OrderP
     where: { id: orderId },
     select: {
       subtotal: true,
-      shippingFee: true,
+      shippingAmount: true,
       depositRequired: true,
       depositPaid: true,
     },
@@ -63,7 +63,7 @@ async function getOrderPaymentSummaryTx(tx: Tx, orderId: string): Promise<OrderP
     _sum: { amount: true },
   });
 
-  const totalDue = toNumber(order.subtotal) + toNumber(order.shippingFee);
+  const totalDue = toNumber(order.subtotal) + toNumber(order.shippingAmount);
   const paidTotal = toNumber(paid._sum.amount);
   const depositRequired = toNumber(order.depositRequired);
   const depositPaid = toNumber(order.depositPaid);
@@ -110,7 +110,7 @@ export async function createInitialPaymentForOrderTx(tx: Tx, orderId: string) {
       id: true,
       paymentMethod: true,
       subtotal: true,
-      shippingFee: true,
+      shippingAmount: true,
       depositRequired: true,
     },
   });
@@ -128,7 +128,7 @@ export async function createInitialPaymentForOrderTx(tx: Tx, orderId: string) {
 
   if (existing) return existing;
 
-  const totalDue = toNumber(order.subtotal) + toNumber(order.shippingFee);
+  const totalDue = toNumber(order.subtotal) + toNumber(order.shippingAmount);
   const depositRequired = toNumber(order.depositRequired);
   const isDeposit = depositRequired > 0 && depositRequired < totalDue;
   const amount = isDeposit ? depositRequired : totalDue;

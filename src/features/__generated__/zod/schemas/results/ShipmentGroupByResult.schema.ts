@@ -9,7 +9,7 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
   shipWard: z.string(),
   carrier: z.string(),
   trackingCode: z.string(),
-  shippingFee: z.number(),
+  shippingAmount: z.number(),
   currency: z.string(),
   shippedAt: z.date(),
   deliveredAt: z.date(),
@@ -29,7 +29,7 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
     shipWard: z.number(),
     carrier: z.number(),
     trackingCode: z.number(),
-    shippingFee: z.number(),
+    shippingAmount: z.number(),
     currency: z.number(),
     shippedAt: z.number(),
     deliveredAt: z.number(),
@@ -44,10 +44,10 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
     order: z.number()
   }).optional(),
   _sum: z.object({
-    shippingFee: z.number().nullable()
+    shippingAmount: z.number().nullable()
   }).nullable().optional(),
   _avg: z.object({
-    shippingFee: z.number().nullable()
+    shippingAmount: z.number().nullable()
   }).nullable().optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -59,7 +59,7 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
     shipWard: z.string().nullable(),
     carrier: z.string().nullable(),
     trackingCode: z.string().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     currency: z.string().nullable(),
     shippedAt: z.date().nullable(),
     deliveredAt: z.date().nullable(),
@@ -80,7 +80,7 @@ export const ShipmentGroupByResultSchema = z.array(z.object({
     shipWard: z.string().nullable(),
     carrier: z.string().nullable(),
     trackingCode: z.string().nullable(),
-    shippingFee: z.number().nullable(),
+    shippingAmount: z.number().nullable(),
     currency: z.string().nullable(),
     shippedAt: z.date().nullable(),
     deliveredAt: z.date().nullable(),

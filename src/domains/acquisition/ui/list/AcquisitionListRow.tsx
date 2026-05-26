@@ -2,13 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import {
+    DomainSignalGroup,
+    DomainSignalIcon,
+    PaymentStateSignalIcon,
+    WatchReadinessSignalIcon
+} from "@/domains/shared/ui/icons";
+import {
     BadgeCheck,
     CreditCard,
     FileText,
     PackageCheck,
-    ReceiptText,
 } from "lucide-react";
-
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -125,28 +129,25 @@ export default function AcquisitionListRow({
                     <div className="truncate font-bold text-slate-950">{item.refNo}</div>
 
                     <div className="mt-2 flex items-center gap-1.5">
-                        <SignalIcon title="Phiếu nhập">
-                            <FileText className="h-3.5 w-3.5" />
-                        </SignalIcon>
-                        <SignalIcon title="Tồn kho">
-                            <PackageCheck className="h-3.5 w-3.5" />
-                        </SignalIcon>
-                        <SignalIcon title="Payment">
-                            <ReceiptText className="h-3.5 w-3.5" />
-                        </SignalIcon>
+                        <DomainSignalGroup>
+                            <DomainSignalIcon title="Phiếu nhập" icon={<FileText />} />
+                            <DomainSignalIcon title="Tồn kho" icon={<PackageCheck />} />
+                        </DomainSignalGroup>
                     </div>
                 </div>
             </td>
-
-            <td className="px-4 py-4">
-                <span
-                    className={cx(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                        statusTone(item.status),
-                    )}
-                >
-                    {item.statusLabel}
-                </span>
+            <td className="px-4 py-4 text-center">
+                <WatchReadinessSignalIcon state={posted ? "APPROVED" : "DRAFT"} />
+            </td>
+            <td className="px-4 py-4 text-center">
+                <PaymentStateSignalIcon
+                    status={(item as any).paymentStatus ?? "UNPAID"}
+                    totalAmount={item.totalAmount}
+                    remainingAmount={
+                        (item as any).paymentRemainingAmount ?? item.totalAmount
+                    }
+                    collectedAmount={(item as any).paymentPaidAmount ?? 0}
+                />
             </td>
 
             <td className="px-4 py-4">

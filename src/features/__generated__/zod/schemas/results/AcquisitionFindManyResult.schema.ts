@@ -6,7 +6,7 @@ export const AcquisitionFindManyResultSchema = z.object({
   customerId: z.string().optional(),
   type: z.unknown(),
   acquiredAt: z.date(),
-  cost: z.number().optional(),
+  totalAmount: z.number().optional(),
   currency: z.string().optional(),
   payoutStatus: z.string().optional(),
   accquisitionStt: z.unknown(),

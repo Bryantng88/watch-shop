@@ -5,7 +5,7 @@ import { toNumberPrice, toPlain } from "../shared";
 import { listAdminOrdersRepo } from "./order-list.repo";
 import { buildOrderPaymentFlow } from "../../shared";
 function totalAmount(order: any) {
-  return toNumberPrice(order.subtotal) + toNumberPrice(order.shippingFee);
+  return toNumberPrice(order.subtotal) + toNumberPrice(order.shippingAmount);
 }
 
 function emptyPaymentSummary(total: number) {
