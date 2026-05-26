@@ -114,12 +114,14 @@ export default function PaymentWorkspace({
     );
 
     const totalAmount = toNumber(owner.totalAmount);
+    const computedRemainingAmount = Math.max(0, totalAmount - paidTotal);
     const remainingAmount =
         owner.remainingAmount != null
-            ? toNumber(owner.remainingAmount)
-            : Math.max(0, totalAmount - paidTotal);
+            ? Math.min(toNumber(owner.remainingAmount), computedRemainingAmount)
+            : computedRemainingAmount;
 
-    const availableToCreate = Math.max(0, totalAmount - activeOpenTotal);
+    const isFullyPaid = totalAmount > 0 && remainingAmount <= 0;
+    const availableToCreate = isFullyPaid ? 0 : Math.max(0, totalAmount - activeOpenTotal);
 
     async function reloadPayments() {
         if (!owner.listEndpoint) return;
@@ -210,6 +212,12 @@ export default function PaymentWorkspace({
                         <PaymentCreatePanel
                             owner={owner}
                             defaultAmount={availableToCreate}
+                            locked={isFullyPaid || availableToCreate <= 0}
+                            lockMessage={
+                                isFullyPaid
+                                    ? "Payment đã thanh toán full. Không thể tạo thêm payment mới."
+                                    : "Owner đã có đủ payment đang mở. Hoàn tất hoặc hủy payment hiện có trước khi tạo thêm."
+                            }
                             submitting={submitting}
                             onCreatePayment={onCreatePayment}
                             onReload={reloadPayments}

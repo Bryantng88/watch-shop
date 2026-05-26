@@ -311,6 +311,57 @@ export async function listAdminWatches(
               orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
               take: 1,
             },
+            acquisitionItem: {
+              select: {
+                id: true,
+                acquisitionId: true,
+                productId: true,
+                quantity: true,
+                unitCost: true,
+                currency: true,
+                status: true,
+                kind: true,
+                productTitle: true,
+                notes: true,
+                createdAt: true,
+                acquisition: {
+                  select: {
+                    id: true,
+                    refNo: true,
+                    type: true,
+                    accquisitionStt: true,
+                    acquiredAt: true,
+                    totalAmount: true,
+                    vendor: { select: { id: true, name: true } },
+                    acquisitionItem: {
+                      select: {
+                        id: true,
+                        acquisitionId: true,
+                        productId: true,
+                        quantity: true,
+                        unitCost: true,
+                        currency: true,
+                        status: true,
+                        kind: true,
+                        productTitle: true,
+                        notes: true,
+                        createdAt: true,
+                        product: {
+                          select: {
+                            id: true,
+                            title: true,
+                            sku: true,
+                          },
+                        },
+                      },
+                      orderBy: [{ createdAt: "asc" }],
+                    },
+                  },
+                },
+              },
+              orderBy: [{ createdAt: "desc" }],
+              take: 3,
+            },
             serviceRequest: {
               select: {
                 id: true,

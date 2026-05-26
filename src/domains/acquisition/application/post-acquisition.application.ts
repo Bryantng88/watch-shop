@@ -113,9 +113,13 @@ export async function postAcquisitionApplication(
                     productSku = null;
                     primaryImageUrl = null;
 
-                    const firstImage = pickFirstAcquisitionInlineImage(
-                        getAiMetaFromDescription(item.description)?.images
-                    );
+                    const firstImage =
+                        pickFirstAcquisitionInlineImage(
+                            getAiMetaFromDescription(item.description)?.images
+                        ) ??
+                        (await repoAcq.findFirstAcquisitionInlineMediaAsset(tx as any, {
+                            acquisitionId: acqId,
+                        }));
 
                     if (firstImage) {
                         pendingInlineImages.push({

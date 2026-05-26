@@ -201,6 +201,61 @@ function getReviewStateStatus(row: any, targetType: "CONTENT" | "IMAGE") {
     ).toUpperCase();
 }
 
+
+function mapAcquisitionPreviewItems(row: any) {
+    const product = row?.product ?? row ?? {};
+    const sourceItems = Array.isArray(product?.acquisitionItem)
+        ? product.acquisitionItem
+        : Array.isArray(row?.acquisitionItem)
+            ? row.acquisitionItem
+            : [];
+
+    const currentProductId = String(row?.productId ?? product?.id ?? "");
+    const byId = new Map<string, any>();
+
+    for (const sourceItem of sourceItems) {
+        const acquisitionItems = Array.isArray(sourceItem?.acquisition?.acquisitionItem)
+            ? sourceItem.acquisition.acquisitionItem
+            : [sourceItem];
+
+        for (const item of acquisitionItems) {
+            const id = String(item?.id ?? "");
+            if (!id || byId.has(id)) continue;
+
+            byId.set(id, {
+                id,
+                acquisitionId: String(
+                    item?.acquisitionId ??
+                    sourceItem?.acquisitionId ??
+                    sourceItem?.acquisition?.id ??
+                    "",
+                ),
+                refNo: sourceItem?.acquisition?.refNo ?? null,
+                type: sourceItem?.acquisition?.type ?? null,
+                status: sourceItem?.acquisition?.accquisitionStt ?? null,
+                vendorName: sourceItem?.acquisition?.vendor?.name ?? null,
+                productTitle:
+                    item?.productTitle ??
+                    item?.product?.title ??
+                    (String(item?.productId ?? "") === currentProductId ? product?.title : null),
+                quantity: normalizeNumber(item?.quantity),
+                unitCost: normalizeNumber(item?.unitCost),
+                currency: item?.currency ?? "VND",
+                notes: item?.notes ?? null,
+                acquiredAt: sourceItem?.acquisition?.acquiredAt ?? null,
+                sku: item?.product?.sku ?? null,
+                isCurrentProduct: String(item?.productId ?? "") === currentProductId,
+            });
+        }
+    }
+
+    return Array.from(byId.values()).sort((a, b) => {
+        if (a.isCurrentProduct && !b.isCurrentProduct) return -1;
+        if (!a.isCurrentProduct && b.isCurrentProduct) return 1;
+        return String(a.productTitle ?? "").localeCompare(String(b.productTitle ?? ""));
+    });
+}
+
 export function mapWatchRow(row: any): WatchRow {
     const product = row?.product ?? row ?? {};
     const imagesCount = countListImages(row);
@@ -227,6 +282,7 @@ export function mapWatchRow(row: any): WatchRow {
             null,
 
         vendorName: product?.vendor?.name ?? row?.vendor?.name ?? null,
+        acquisitionItems: mapAcquisitionPreviewItems(row),
 
         imageUrl: mapWatchImage(row),
         imageKey:

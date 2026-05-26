@@ -13,8 +13,6 @@ export type AcquisitionListItemDetail = {
     linkedWatchProductId: string | null;
     linkedWatchTitle: string | null;
     linkedWatchSku: string | null;
-    imageUrl: string | null;
-    imageKey: string | null;
     totalAmount: number | null;
     quantity: number | null;
 };
@@ -38,6 +36,12 @@ export type AcquisitionListItem = {
     previewTitles: string[];
     remainingCount: number;
     detailItems: AcquisitionListItemDetail[];
+    paymentStatus: "UNPAID" | "PARTIAL_PAID" | "PAID" | string;
+    paymentPaidAmount: number;
+    paymentPendingAmount: number;
+    paymentActiveAmount: number;
+    paymentRemainingAmount: number;
+    paymentIsFullyPaid: boolean;
 };
 
 export type AcquisitionListCounts = {

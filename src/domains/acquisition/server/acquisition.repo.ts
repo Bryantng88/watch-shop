@@ -170,3 +170,25 @@ export async function cancelDraftAcquisition(tx: DB, id: string) {
         data: { accquisitionStt: "CANCELED" as any },
     });
 }
+
+export async function findFirstAcquisitionInlineMediaAsset(
+    tx: DB,
+    input: { acquisitionId: string }
+): Promise<AcquisitionInlineImageInput | null> {
+    const db = tx ?? prisma;
+
+    const asset = await db.mediaAsset.findFirst({
+        where: {
+            acquisitionId: input.acquisitionId,
+            role: "INLINE",
+            isMissing: false,
+            status: { in: ["ACTIVE", "CHOSEN", "ATTACHED"] },
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: {
+            key: true,
+        },
+    });
+
+    return asset?.key ? { key: asset.key } : null;
+}

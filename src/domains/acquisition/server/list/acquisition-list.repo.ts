@@ -1,58 +1,14 @@
+import { PaymentDirection, PaymentStatus } from "@prisma/client";
+
 import { prisma } from "@/server/db/client";
 import type {
     AcquisitionListFilters,
     AcquisitionListView,
 } from "../../shared/search-params";
-import { cleanAcquisitionItemDescription, getAiMetaFromDescription } from "../../shared/acquisition-item-metadata";
+import { cleanAcquisitionItemDescription } from "../../shared/acquisition-item-metadata";
 
 function normalizeText(value: unknown) {
     return String(value ?? "").trim();
-}
-
-
-function buildMediaUrl(fileKey?: string | null) {
-    const key = String(fileKey ?? "").trim();
-
-    if (!key) return null;
-    if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("/")) {
-        return key;
-    }
-
-    return `/api/media/sign?key=${encodeURIComponent(key)}`;
-}
-
-function pickAcquisitionItemImage(item: any) {
-    const inlineImage = item?.product?.productImage?.[0] ?? null;
-    const productImageKey =
-        inlineImage?.fileKey ??
-        item?.product?.storefrontImageKey ??
-        item?.product?.primaryImageUrl ??
-        null;
-
-    if (productImageKey) {
-        return {
-            imageKey: productImageKey,
-            imageUrl: buildMediaUrl(productImageKey),
-        };
-    }
-
-    const aiImage = getAiMetaFromDescription(item?.description)?.images?.[0] ?? null;
-    const rawImage = aiImage?.key ?? aiImage?.url ?? null;
-
-    return {
-        imageKey: aiImage?.key ?? null,
-        imageUrl: buildMediaUrl(rawImage),
-    };
-}
-
-function calcItemTotal(item: any) {
-    const unitCost = item?.unitCost != null ? Number(item.unitCost) : null;
-    const quantity = item?.quantity != null ? Number(item.quantity) : null;
-
-    if (!Number.isFinite(unitCost as number)) return null;
-    if (!Number.isFinite(quantity as number) || !quantity) return unitCost;
-
-    return (unitCost as number) * (quantity as number);
 }
 
 function mapStatus(value: unknown) {
@@ -153,6 +109,40 @@ function buildItemSubtitle(item: any) {
     return cleanAcquisitionItemDescription(item?.description) || item?.product?.sku || "";
 }
 
+function toNumber(value: unknown) {
+    const n = Number(value ?? 0);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function buildPaymentSummary(payments: Array<{ status: unknown; amount: unknown }>, totalAmount: number) {
+    const paidAmount = payments
+        .filter((payment) => String(payment.status ?? "").toUpperCase() === "PAID")
+        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
+
+    const pendingAmount = payments
+        .filter((payment) => String(payment.status ?? "").toUpperCase() === "UNPAID")
+        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
+
+    const activeAmount = payments
+        .filter((payment) => {
+            const status = String(payment.status ?? "").toUpperCase();
+            return status === "PAID" || status === "UNPAID" || status === "COLLECTED";
+        })
+        .reduce((sum, payment) => sum + toNumber(payment.amount), 0);
+
+    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+    const isFullyPaid = totalAmount > 0 && remainingAmount <= 0;
+
+    return {
+        paymentStatus: isFullyPaid ? "PAID" : paidAmount > 0 ? "PARTIAL_PAID" : "UNPAID",
+        paymentPaidAmount: paidAmount,
+        paymentPendingAmount: pendingAmount,
+        paymentActiveAmount: activeAmount,
+        paymentRemainingAmount: remainingAmount,
+        paymentIsFullyPaid: isFullyPaid,
+    };
+}
+
 export async function listAdminAcquisitions(input: AcquisitionListFilters) {
     const page = input.page ?? 1;
     const pageSize = input.pageSize ?? 20;
@@ -170,18 +160,6 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
                             id: true,
                             title: true,
                             sku: true,
-                            primaryImageUrl: true,
-                            storefrontImageKey: true,
-                            productImage: {
-                                where: { role: "INLINE" as any },
-                                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-                                select: {
-                                    id: true,
-                                    fileKey: true,
-                                    sortOrder: true,
-                                },
-                                take: 1,
-                            },
                         },
                     },
                 },
@@ -200,6 +178,37 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
     const filteredRows = rows.filter((row) => matchView(row, input.view ?? "all"));
     const total = filteredRows.length;
     const pagedRows = filteredRows.slice(skip, skip + pageSize);
+    const pagedIds = pagedRows.map((row) => row.id);
+
+    const paymentRows = pagedIds.length
+        ? await prisma.payment.findMany({
+            where: {
+                acquisition_id: { in: pagedIds },
+                direction: PaymentDirection.OUT,
+                status: {
+                    in: [
+                        PaymentStatus.UNPAID,
+                        PaymentStatus.PAID,
+                        "COLLECTED" as any,
+                    ],
+                },
+            },
+            select: {
+                acquisition_id: true,
+                status: true,
+                amount: true,
+            },
+        })
+        : [];
+
+    const paymentsByAcquisitionId = new Map<string, typeof paymentRows>();
+
+    for (const payment of paymentRows) {
+        if (!payment.acquisition_id) continue;
+        const list = paymentsByAcquisitionId.get(payment.acquisition_id) ?? [];
+        list.push(payment);
+        paymentsByAcquisitionId.set(payment.acquisition_id, list);
+    }
 
     const items = pagedRows.map((row) => {
         const acquisitionItems = Array.isArray(row.acquisitionItem)
@@ -208,29 +217,28 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
 
         const linkedWatchCount = acquisitionItems.filter((item) => Boolean(item?.productId)).length;
 
-        const detailItems = acquisitionItems.map((item, index) => {
-            const image = pickAcquisitionItemImage(item);
-
-            return {
-                id: item.id,
-                index: index + 1,
-                title: buildItemTitle(item),
-                subtitle: buildItemSubtitle(item),
-                linkedWatchProductId: item.productId ?? null,
-                linkedWatchTitle: item.product?.title ?? null,
-                linkedWatchSku: item.product?.sku ?? null,
-                imageUrl: image.imageUrl,
-                imageKey: image.imageKey,
-                totalAmount: calcItemTotal(item),
-                quantity:
-                    item.quantity != null && Number.isFinite(Number(item.quantity))
-                        ? Number(item.quantity)
-                        : null,
-            };
-        });
+        const detailItems = acquisitionItems.map((item, index) => ({
+            id: item.id,
+            index: index + 1,
+            title: buildItemTitle(item),
+            subtitle: buildItemSubtitle(item),
+            linkedWatchProductId: item.productId ?? null,
+            linkedWatchTitle: item.product?.title ?? null,
+            linkedWatchSku: item.product?.sku ?? null,
+            cost: item.unitCost != null ? Number(item.unitCost) : null,
+            quantity:
+                item.quantity != null && Number.isFinite(Number(item.quantity))
+                    ? Number(item.quantity)
+                    : null,
+        }));
 
         const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
         const remaining = Math.max(detailItems.length - previewTitles.length, 0);
+        const totalAmount = row.totalAmount != null ? Number(row.totalAmount) : 0;
+        const paymentSummary = buildPaymentSummary(
+            paymentsByAcquisitionId.get(row.id) ?? [],
+            totalAmount,
+        );
 
         return {
             id: row.id,
@@ -249,6 +257,7 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
             previewTitles,
             remainingCount: remaining,
             detailItems,
+            ...paymentSummary,
         };
     });
 

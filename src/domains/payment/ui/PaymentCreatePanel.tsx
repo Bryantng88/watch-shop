@@ -13,6 +13,8 @@ const PAYMENT_METHODS = [
 type Props = {
     owner: PaymentOwner;
     defaultAmount: number;
+    locked?: boolean;
+    lockMessage?: string;
     submitting?: boolean;
     onReload: () => Promise<void>;
     onUpdated?: () => void;
@@ -34,6 +36,8 @@ function toNumber(value: unknown) {
 export default function PaymentCreatePanel({
     owner,
     defaultAmount,
+    locked = false,
+    lockMessage,
     submitting,
     onReload,
     onUpdated,
@@ -74,7 +78,10 @@ export default function PaymentCreatePanel({
         <div className="rounded-2xl border border-slate-200 bg-white">
             <button
                 type="button"
-                onClick={() => setExpanded((v) => !v)}
+                onClick={() => {
+                    if (locked) return;
+                    setExpanded((v) => !v);
+                }}
                 className="flex w-full items-center justify-between px-5 py-4 text-left"
             >
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-950">
@@ -82,11 +89,17 @@ export default function PaymentCreatePanel({
                     Tạo payment mới
                 </div>
                 <span className="text-xs font-bold text-slate-400">
-                    {expanded ? "Thu gọn" : "Mở"}
+                    {locked ? "Đã đủ" : expanded ? "Thu gọn" : "Mở"}
                 </span>
             </button>
 
-            {expanded ? (
+            {locked ? (
+                <div className="border-t border-slate-100 px-5 pb-5 pt-4">
+                    <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                        {lockMessage ?? "Payment đã hoàn tất. Không thể tạo thêm payment mới."}
+                    </div>
+                </div>
+            ) : expanded ? (
                 <div className="space-y-4 border-t border-slate-100 px-5 pb-5 pt-2">
                     <input
                         value={amount}

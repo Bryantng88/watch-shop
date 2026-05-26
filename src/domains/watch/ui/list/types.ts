@@ -32,6 +32,24 @@ export type WatchListSubCounts = {
     posted: number;
 };
 
+
+export type WatchAcquisitionPreviewItem = {
+    id: string;
+    acquisitionId: string;
+    refNo?: string | null;
+    type?: string | null;
+    status?: string | null;
+    vendorName?: string | null;
+    productTitle?: string | null;
+    quantity?: number | null;
+    unitCost?: number | null;
+    currency?: string | null;
+    notes?: string | null;
+    acquiredAt?: string | Date | null;
+    sku?: string | null;
+    isCurrentProduct?: boolean;
+};
+
 export type WatchListSummary = {
     items: number;
     hasContent: number;
@@ -48,6 +66,7 @@ export type WatchRow = {
 
     brandName?: string | null;
     vendorName?: string | null;
+    acquisitionItems?: WatchAcquisitionPreviewItem[];
     reviewStatus?:
     | "DRAFT"
     | "SUBMITTED"
