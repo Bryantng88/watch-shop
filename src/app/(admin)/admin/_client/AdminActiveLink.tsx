@@ -11,12 +11,14 @@ export default function ActiveLink({
     exact = false,
     className,
     activeClassName = "bg-gray-900 text-white",
+    title,
 }: {
     href: string;
     children: React.ReactNode;
     exact?: boolean;
     className?: string;
     activeClassName?: string;
+    title?: string;
 }) {
     const pathname = usePathname();
     const isActive = exact ? pathname === href : pathname?.startsWith(href);
@@ -24,7 +26,8 @@ export default function ActiveLink({
         <Link
             href={href}
             className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-100 hover:bg-gray-800 hover:text-white transition",
+                "flex h-12 items-center rounded-xl px-4 text-slate-300 transition hover:bg-white/5 hover:text-white",
+                "justify-center xl:justify-start xl:gap-3",
                 isActive && activeClassName,
                 className
             )}

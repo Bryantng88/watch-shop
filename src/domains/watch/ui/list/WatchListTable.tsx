@@ -326,11 +326,12 @@ export default function WatchListTable({
                 />
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full text-left">
-                    <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
+
+            <div className="relative overflow-visible">
+                <table className="w-full table-fixed text-sm">
+                    <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                         <tr>
-                            <th className="w-10 px-4 py-4">
+                            <th className="w-[5%] px-5 py-4">
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
@@ -338,17 +339,17 @@ export default function WatchListTable({
                                     className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>
-                            <th className="px-4 py-4">Watch</th>
-                            <th className="px-4 py-4">Post readiness</th>
-                            <th className="px-4 py-4">Giá bán</th>
-                            <th className="px-4 py-4">Tạo lúc</th>
-                            <th className="px-4 py-4">Cập nhật</th>
-                            <th className="px-4 py-4">Người cập nhật</th>
-                            <th className="px-4 py-4 text-right">Hành động</th>
+                            <th className="w-[32%] px-5 py-4">Watch</th>
+                            <th className="w-[10%] px-5 py-4">Post readiness</th>
+                            <th className="w-[10%] px-5 py-4">Giá bán</th>
+                            <th className="w-[7%] px-5 py-4">Tạo lúc</th>
+                            <th className="w-[7%] px-5 py-4">Cập nhật</th>
+                            <th className="w-[7%] px-5 py-4">Người cập nhật</th>
+                            <th className="w-[7%] px-5 py-4 text-right">Hành động</th>
                         </tr>
                     </thead>
 
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                         {safeItems.length === 0 ? (
                             <tr>
                                 <td

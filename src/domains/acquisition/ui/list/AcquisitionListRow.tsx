@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BadgeCheck, CreditCard } from "lucide-react";
+import {
+    BadgeCheck,
+    CreditCard,
+    FileText,
+    PackageCheck,
+    ReceiptText,
+} from "lucide-react";
 
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
@@ -12,25 +18,34 @@ import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisi
 
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
-import { cx, fmtDate, fmtMoney, statusTone } from "./helpers";
+import { cx, fmtDateCompact, fmtMoney, statusTone } from "./helpers";
+
+type Props = {
+    item: AcquisitionListItem;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    onOpenPayment?: (owner: PaymentOwner) => void;
+};
 
 export default function AcquisitionListRow({
     item,
+    checked,
+    onCheckedChange,
     onOpenPayment,
-}: {
-    item: AcquisitionListItem;
-    onOpenPayment?: (owner: PaymentOwner) => void;
-}) {
+}: Props) {
     const router = useRouter();
     const notify = useNotify();
     const dialog = useAppDialog();
     const progress = useAppProgress();
 
+    const posted = String(item.status).toUpperCase() === "POSTED";
+    const selectable = !posted;
+
     async function handleApprove() {
         const accepted = await dialog.confirm({
             title: "Duyệt phiếu nhập",
             message:
-                "Phiếu sau khi duyệt sẽ cập nhật tồn kho và chạy các xử lý liên quan. Bạn có chắc chắn muốn tiếp tục?",
+                "Phiếu sau khi duyệt sẽ cập nhật tồn kho và tạo payment đầu vào. Bạn có chắc chắn muốn tiếp tục?",
             confirmText: "Duyệt phiếu",
             cancelText: "Hủy",
             tone: "warning",
@@ -78,7 +93,7 @@ export default function AcquisitionListRow({
         }
     }
 
-    function handleOpenPayment() {
+    function openPayment() {
         onOpenPayment?.({
             type: "ACQUISITION",
             id: item.id,
@@ -92,17 +107,41 @@ export default function AcquisitionListRow({
         });
     }
 
+    const updated = fmtDateCompact(item.updatedAt);
+
     return (
-        <tr className="border-t border-slate-100 align-top">
-            <td className="px-5 py-4">
-                <div className="font-medium text-slate-950">{item.refNo}</div>
-                <div className="mt-1 text-xs text-slate-500">{item.notes || "-"}</div>
+        <tr className="align-middle hover:bg-slate-50/40">
+            <td className="px-4 py-4">
+                <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!selectable}
+                    onChange={(event) => onCheckedChange(event.target.checked)}
+                />
             </td>
 
-            <td className="px-5 py-4">
+            <td className="px-4 py-4">
+                <div className="min-w-0">
+                    <div className="truncate font-bold text-slate-950">{item.refNo}</div>
+
+                    <div className="mt-2 flex items-center gap-1.5">
+                        <SignalIcon title="Phiếu nhập">
+                            <FileText className="h-3.5 w-3.5" />
+                        </SignalIcon>
+                        <SignalIcon title="Tồn kho">
+                            <PackageCheck className="h-3.5 w-3.5" />
+                        </SignalIcon>
+                        <SignalIcon title="Payment">
+                            <ReceiptText className="h-3.5 w-3.5" />
+                        </SignalIcon>
+                    </div>
+                </div>
+            </td>
+
+            <td className="px-4 py-4">
                 <span
                     className={cx(
-                        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                        "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
                         statusTone(item.status),
                     )}
                 >
@@ -110,17 +149,27 @@ export default function AcquisitionListRow({
                 </span>
             </td>
 
-            <td className="px-5 py-4">{item.vendorName}</td>
+            <td className="px-4 py-4">
+                <div className="truncate font-semibold text-slate-950">
+                    {item.vendorName || "-"}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">{item.type || "-"}</div>
+            </td>
 
-            <td className="px-5 py-4">
+            <td className="px-4 py-4">
                 <AcquisitionItemsPreview row={item} />
             </td>
 
-            <td className="px-5 py-4">{fmtMoney(item.totalAmount)}</td>
+            <td className="px-4 py-4 text-right whitespace-nowrap">
+                <div className="font-bold text-slate-950">{fmtMoney(item.totalAmount)}</div>
+            </td>
 
-            <td className="px-5 py-4">{fmtDate(item.updatedAt)}</td>
+            <td className="px-4 py-4 whitespace-nowrap">
+                <div className="text-sm font-medium text-slate-700">{updated.time}</div>
+                <div className="text-xs text-slate-400">{updated.date}</div>
+            </td>
 
-            <td className="px-5 py-4">
+            <td className="px-3 py-4 text-right">
                 <RowActionMenu
                     actions={[
                         {
@@ -134,24 +183,42 @@ export default function AcquisitionListRow({
                             label: "Chỉnh sửa",
                             href: `/admin/acquisitions/${item.id}/edit`,
                             icon: "edit",
+                            hidden: posted,
                         },
                         {
                             key: "payment",
                             label: "Quản lý payment",
-                            onClick: handleOpenPayment,
+                            onClick: openPayment,
                             icon: <CreditCard className="h-4 w-4" />,
-                            hidden: item.status !== "POSTED",
+                            hidden: !posted,
                         },
                         {
                             key: "approve",
                             label: "Duyệt phiếu",
                             onClick: handleApprove,
                             icon: <BadgeCheck className="h-4 w-4" />,
-                            hidden: item.status === "POSTED",
+                            hidden: posted,
                         },
                     ]}
                 />
             </td>
         </tr>
+    );
+}
+
+function SignalIcon({
+    children,
+    title,
+}: {
+    children: React.ReactNode;
+    title: string;
+}) {
+    return (
+        <span
+            title={title}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500"
+        >
+            {children}
+        </span>
     );
 }

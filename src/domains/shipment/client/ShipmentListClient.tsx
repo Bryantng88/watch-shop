@@ -181,7 +181,7 @@ export default function ShipmentListClient({ items, total, page, pageSize, total
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
       <ShipmentListToolbar total={total} />
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">

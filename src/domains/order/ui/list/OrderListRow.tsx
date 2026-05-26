@@ -146,7 +146,7 @@ export default function OrderListRow({
 
           {remainingAmount > 0 ? (
             <div className="mt-1 text-xs text-rose-600">
-              Còn thu: {formatMoney(remainingAmount)}
+              Còn {formatMoney(remainingAmount)}
             </div>
           ) : null}
         </div>

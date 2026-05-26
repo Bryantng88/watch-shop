@@ -410,7 +410,7 @@ export default function OrderListClient({
     }
   };
   return (
-    <div className="mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6">
+    <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
       <OrderListToolbar selectedCount={selectedIds.length} />
 
       <OrderListViewTabs currentView={currentView} counts={countsByView} onViewChange={setView} />

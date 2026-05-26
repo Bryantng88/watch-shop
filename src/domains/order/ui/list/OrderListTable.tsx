@@ -57,8 +57,8 @@ export default function OrderListTable({
     selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+    <div className="relative overflow-visible rounded-[28px] border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold text-slate-950">
             Danh sách dữ liệu
@@ -69,11 +69,12 @@ export default function OrderListTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+      <div className="relative overflow-visible">
+        <table className="w-full table-fixed text-sm">
+
+          <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              <th className="w-10 px-4 py-4">
+              <th className="w-[5%] px-4 py-4">
                 <input
                   type="checkbox"
                   checked={allChecked}
@@ -84,13 +85,13 @@ export default function OrderListTable({
                   onChange={(event) => onToggleAll(event.target.checked)}
                 />
               </th>
-              <th className="px-4 py-4">Đơn hàng</th>
-              <th className="px-4 py-4">Khách hàng</th>
-              <th className="px-4 py-4">Thanh toán</th>
-              <th className="px-4 py-4">Giao hàng</th>
-              <th className="px-4 py-4 text-right">Tổng tiền</th>
-              <th className="px-4 py-4">Cập nhật</th>
-              <th className="px-4 py-4 text-right">Action</th>
+              <th className="w-[11%] px-5 py-4">Đơn hàng</th>
+              <th className="w-[11%] px-5 py-4">Khách hàng</th>
+              <th className="w-[7%] px-5 py-4">Thanh toán</th>
+              <th className="w-[11%] px-5 py-4">Giao hàng</th>
+              <th className="w-[11%] px-5 py-4 text-right">Tổng tiền</th>
+              <th className="w-[7%] px-5 py-4">Cập nhật</th>
+              <th className="w-[7%] px-1 py-4 text-right">Action</th>
             </tr>
           </thead>
 

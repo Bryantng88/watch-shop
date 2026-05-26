@@ -435,7 +435,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const displayRows = rows;
     const displayTotal = listData.total;
     return (
-        <div className="space-y-5">
+        <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 pt-6 lg:px-5 xl:px-6">
             <WatchListToolbar selectedCount={selectedIds.length} />
 
             <WatchListViewTabs

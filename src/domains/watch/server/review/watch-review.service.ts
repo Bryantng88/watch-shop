@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/client";
+import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
@@ -70,6 +71,55 @@ async function writeReviewLog(input: {
             note: input.note ?? null,
         },
     });
+}
+async function moveWatchToProcessingIfEditable(productId: string) {
+    await prisma.watch.updateMany({
+        where: {
+            productId,
+            saleStage: {
+                in: [WatchSaleStage.DRAFT, WatchSaleStage.READY],
+            },
+        },
+        data: {
+            saleStage: WatchSaleStage.PROCESSING,
+            updatedAt: new Date(),
+        },
+    });
+}
+
+async function moveWatchToReadyIfFullyApproved(productId: string) {
+    const pair = await getReviewPair(productId);
+    if (!pair?.content || !pair?.image) return false;
+
+    const fullyApproved =
+        pair.content.status === "APPROVED" &&
+        pair.image.status === "APPROVED";
+
+    if (!fullyApproved) return false;
+
+    await prisma.watch.updateMany({
+        where: {
+            productId,
+            saleStage: {
+                in: [WatchSaleStage.DRAFT, WatchSaleStage.PROCESSING],
+            },
+        },
+        data: {
+            saleStage: WatchSaleStage.READY,
+            stockStage: WatchStockStage.IN_STOCK,
+            updatedAt: new Date(),
+        },
+    });
+
+    await prisma.product.update({
+        where: { id: productId },
+        data: {
+            status: ProductStatus.AVAILABLE,
+            updatedAt: new Date(),
+        },
+    });
+
+    return true;
 }
 async function getReviewPair(productId: string) {
     const watch = await prisma.watch.findUnique({
@@ -183,9 +233,10 @@ export async function submitWatchReview(input: ReviewInput) {
         actorId: input.userId,
     });
 
+    await moveWatchToProcessingIfEditable(input.productId);
+
     return state;
 }
-
 export async function approveWatchReview(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
@@ -193,7 +244,7 @@ export async function approveWatchReview(input: ReviewInput) {
         throw new Error(
             input.targetType === "CONTENT"
                 ? "Nội dung hiện không thể duyệt."
-                : "Hình ảnh hiện không thể duyệt."
+                : "Hình ảnh hiện không thể duyệt.",
         );
     }
 
@@ -214,7 +265,10 @@ export async function approveWatchReview(input: ReviewInput) {
         toStatus: "APPROVED",
         actorId: input.userId,
     });
+
+    await moveWatchToReadyIfFullyApproved(input.productId);
     await notifyFullyApprovedIfReady(input.productId);
+
     return state;
 }
 export async function rejectWatchReview(input: RejectInput) {
@@ -224,7 +278,7 @@ export async function rejectWatchReview(input: RejectInput) {
         throw new Error(
             input.targetType === "CONTENT"
                 ? "Chỉ nội dung đã gửi duyệt mới được trả về."
-                : "Chỉ hình ảnh đã gửi duyệt mới được trả về."
+                : "Chỉ hình ảnh đã gửi duyệt mới được trả về.",
         );
     }
 
@@ -246,12 +300,16 @@ export async function rejectWatchReview(input: RejectInput) {
         actorId: input.userId,
         note: input.note,
     });
+
+    await moveWatchToProcessingIfEditable(input.productId);
+
     await notifyReviewRejected({
         state,
         productId: input.productId,
         targetType: input.targetType,
         note: input.note,
     });
+
     return state;
 }
 
@@ -259,6 +317,7 @@ export async function resetWatchReviewToDraft(input: ReviewInput) {
     const current = await ensureReviewState(input);
 
     if (current.status === "DRAFT") {
+        await moveWatchToProcessingIfEditable(input.productId);
         return current;
     }
 
@@ -279,6 +338,8 @@ export async function resetWatchReviewToDraft(input: ReviewInput) {
         toStatus: "DRAFT",
         actorId: input.userId,
     });
+
+    await moveWatchToProcessingIfEditable(input.productId);
 
     return state;
 }
@@ -303,6 +364,9 @@ export async function autoApproveWatchReview(input: ReviewInput) {
         toStatus: "APPROVED",
         actorId: input.userId,
     });
+
+    await moveWatchToReadyIfFullyApproved(input.productId);
+    await notifyFullyApprovedIfReady(input.productId);
 
     return state;
 }

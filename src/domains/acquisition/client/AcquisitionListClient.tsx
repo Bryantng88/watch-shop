@@ -22,15 +22,15 @@ function getBulkPostErrorMessage(data: any) {
 
     if (Array.isArray(data?.failed) && data.failed.length > 0) {
         return data.failed
-            .map((item: any) => {
-                const id = item?.id || "unknown";
-                const error = item?.error || "Lỗi không xác định";
-                return `${id}: ${error}`;
-            })
+            .map((item: any) => `${item?.id || "unknown"}: ${item?.error || "Lỗi không xác định"}`)
             .join("\n");
     }
 
     return data?.error || "Có lỗi khi duyệt phiếu!";
+}
+
+function isSelectable(item: { status: string }) {
+    return String(item.status).toUpperCase() !== "POSTED";
 }
 
 export default function AcquisitionListClient(props: AcquisitionListClientProps) {
@@ -41,21 +41,27 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     const progress = useAppProgress();
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-    const [showBulkBar, setShowBulkBar] = React.useState(false);
-
-    const [paymentSubmitting, setPaymentSubmitting] = React.useState(false);
     const [paymentOwner, setPaymentOwner] = React.useState<PaymentOwner | null>(null);
+    const [paymentSubmitting, setPaymentSubmitting] = React.useState(false);
 
     React.useEffect(() => {
         setSelectedIds([]);
-        setShowBulkBar(false);
     }, [sp.toString(), props.page]);
 
-    React.useEffect(() => {
-        setShowBulkBar(selectedIds.length > 0);
-    }, [selectedIds.length]);
+    const selectableIds = React.useMemo(
+        () => props.items.filter(isSelectable).map((item) => item.id),
+        [props.items],
+    );
 
-    const displayItems = props.items;
+    function toggleOne(id: string, checked: boolean) {
+        setSelectedIds((prev) =>
+            checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id),
+        );
+    }
+
+    function toggleAll(checked: boolean) {
+        setSelectedIds(checked ? selectableIds : []);
+    }
 
     async function createAcquisitionPayment(payload: {
         ownerType: PaymentOwnerType;
@@ -162,13 +168,15 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     }
 
     async function handleBulkPost() {
+        if (!selectedIds.length) return;
+
         progress.show({
             title: "Đang duyệt phiếu",
             message: `Đang xử lý ${selectedIds.length} phiếu nhập đã chọn.`,
         });
 
         try {
-            const payload = displayItems
+            const payload = props.items
                 .filter((x) => selectedIds.includes(x.id))
                 .map((x) => ({ id: x.id, vendor: x.vendorName || "" }));
 
@@ -206,7 +214,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
             }
 
             setSelectedIds([]);
-            setShowBulkBar(false);
             router.refresh();
         } catch (error) {
             notify.error({
@@ -219,27 +226,44 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
     }
 
     return (
-        <div className="space-y-4">
-            <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-                    Danh sách phiếu nhập
-                </h1>
-                <p className="mt-2 text-sm text-slate-500">
-                    Domain acquisition đã tách riêng, dữ liệu đi theo luồng watch-first.
-                </p>
+        <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
+            <div className="flex flex-col gap-4 px-1 py-1 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                    <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
+                        Danh sách phiếu nhập
+                    </h1>
+                    <p className="mt-2 text-sm text-slate-500">
+                        Quản lý phiếu nhập, duyệt tồn kho và thanh toán đầu vào.
+                    </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-3 self-start">
+                    <div className="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4">
+                        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
+                            Đã chọn
+                        </div>
+                        <div className="text-xl font-semibold leading-none text-slate-950">
+                            {selectedIds.length}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <AcquisitionListTabs counts={props.counts} />
-            <AcquisitionListToolbar vendors={props.vendors} />
+            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <AcquisitionListTabs counts={props.counts} />
+                <div className="mt-5">
+                    <AcquisitionListToolbar vendors={props.vendors} />
+                </div>
+            </div>
 
-            {showBulkBar ? (
-                <div className="flex items-center gap-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
+            {selectedIds.length > 0 ? (
+                <div className="flex items-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-3">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} phiếu đã chọn
                     </span>
 
                     <button
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
                         onClick={handleBulkPost}
                         type="button"
                     >
@@ -247,11 +271,8 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                     </button>
 
                     <button
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50"
-                        onClick={() => {
-                            setSelectedIds([]);
-                            setShowBulkBar(false);
-                        }}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+                        onClick={() => setSelectedIds([])}
                         type="button"
                     >
                         Bỏ chọn
@@ -259,54 +280,18 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                 </div>
             ) : null}
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-200 px-5 py-4">
-                    <div className="text-lg font-semibold text-slate-950">Dữ liệu</div>
-                    <div className="mt-1 text-sm text-slate-500">
-                        Tổng {props.total} phiếu nhập
-                    </div>
-                </div>
-
-                <AcquisitionListTable
-                    items={props.items}
-                    onOpenPayment={(owner) => setPaymentOwner(owner)}
-                />
-
-                <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm text-slate-600">
-                    <div>
-                        Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/
-                        <b>{props.totalPages}</b>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            className="rounded-lg border px-3 py-2 disabled:opacity-50"
-                            disabled={props.page <= 1}
-                            onClick={() => {
-                                const next = new URLSearchParams(sp.toString());
-                                next.set("page", String(Math.max(1, props.page - 1)));
-                                router.push(`${pathname}?${next.toString()}`);
-                            }}
-                        >
-                            ← Trước
-                        </button>
-
-                        <button
-                            type="button"
-                            className="rounded-lg border px-3 py-2 disabled:opacity-50"
-                            disabled={props.page >= props.totalPages}
-                            onClick={() => {
-                                const next = new URLSearchParams(sp.toString());
-                                next.set("page", String(Math.min(props.totalPages, props.page + 1)));
-                                router.push(`${pathname}?${next.toString()}`);
-                            }}
-                        >
-                            Sau →
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <AcquisitionListTable
+                items={props.items}
+                total={props.total}
+                page={props.page}
+                totalPages={props.totalPages}
+                pathname={pathname}
+                searchParams={sp}
+                selectedIds={selectedIds}
+                onToggleOne={toggleOne}
+                onToggleAll={toggleAll}
+                onOpenPayment={setPaymentOwner}
+            />
 
             {paymentOwner ? (
                 <PaymentWorkspace

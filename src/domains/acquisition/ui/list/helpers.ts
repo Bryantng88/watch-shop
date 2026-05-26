@@ -4,7 +4,7 @@ export function cx(...classes: Array<string | false | null | undefined>) {
 
 export function fmtMoney(value: number | null) {
     if (value == null || Number.isNaN(Number(value))) return "-";
-    return new Intl.NumberFormat("vi-VN").format(Number(value)) + " VND";
+    return `${new Intl.NumberFormat("vi-VN").format(Number(value))} VND`;
 }
 
 export function fmtDate(value: string) {
@@ -13,6 +13,32 @@ export function fmtDate(value: string) {
         return new Date(value).toLocaleString("vi-VN");
     } catch {
         return value;
+    }
+}
+
+export function fmtDateCompact(value: string) {
+    if (!value) return { time: "-", date: "" };
+
+    try {
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return { time: value, date: "" };
+        }
+
+        return {
+            time: date.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+            date: date.toLocaleDateString("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit",
+            }),
+        };
+    } catch {
+        return { time: value, date: "" };
     }
 }
 
@@ -25,6 +51,7 @@ export function statusTone(status: string) {
         case "RETURNED":
             return "bg-sky-50 text-sky-700 ring-1 ring-sky-200";
         case "CANCELLED":
+        case "CANCELED":
             return "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
         default:
             return "bg-slate-100 text-slate-700 ring-1 ring-slate-200";

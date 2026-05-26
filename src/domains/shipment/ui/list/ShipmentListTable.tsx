@@ -55,7 +55,7 @@ export default function ShipmentListTable({
               <th className="w-[10%] px-5 py-4">Trạng thái</th>
               <th className="w-[9%] px-5 py-4 text-right">Phí ship</th>
               <th className="w-[9%] px-5 py-4">Cập nhật</th>
-              <th className="w-[7%] px-5 py-4 text-right">Action</th>
+              <th className="w-[7%] px-1 py-4 text-right">Action</th>
             </tr>
           </thead>
 
