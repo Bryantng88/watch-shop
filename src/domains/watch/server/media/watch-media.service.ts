@@ -8,7 +8,8 @@ import {
   getWatchImagesRepo,
   reorderWatchImagesRepo,
   setWatchStorefrontImageRepo,
-  replaceWatchGalleryImagesRepo
+  replaceWatchGalleryImagesRepo,
+  ensureWatchInlineImageFromFirstGalleryRepo,
 } from "./watch-media.repo";
 
 export async function replaceWatchGalleryImages(input: {
@@ -39,3 +40,8 @@ export async function getWatchImages(productId: string) {
   return getWatchImagesRepo(prisma as any, productId);
 }
 
+export async function ensureWatchInlineImageFromFirstGallery(input: {
+  productId: string;
+}) {
+  return ensureWatchInlineImageFromFirstGalleryRepo(prisma as any, input);
+}

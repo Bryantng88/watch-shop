@@ -8,6 +8,7 @@ import {
     moveWatchGalleryImagesToChosen,
     moveWatchPoolImagesToChosenPool,
     releaseRemovedWatchPoolImagesToActive,
+    ensureWatchInlineImageFromFirstGallery,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
 import { resetWatchReviewToDraft } from "../../server/review";
@@ -319,7 +320,9 @@ export async function submitWatchFormApplication(
         productId,
         images: galleryImageInputs,
     });
-
+    await ensureWatchInlineImageFromFirstGallery({
+        productId,
+    });
     if (contentChanged) {
         await resetWatchReviewToDraft({
             productId,

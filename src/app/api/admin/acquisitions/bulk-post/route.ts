@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { postMultipleAcquisitionsApplication } from "@/domains/acquisition/application";
+import { postAcquisitionApplication } from "@/domains/acquisition/application";
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,32 +22,53 @@ export async function POST(req: NextRequest) {
 
         if (!acquisitionIds.length) {
             return NextResponse.json(
-                { ok: false, posted: [], failed: [], error: "Thiếu acquisitionIds" },
+                {
+                    ok: false,
+                    posted: [],
+                    failed: [],
+                    error: "Thiếu acquisitionIds",
+                },
                 { status: 400 }
             );
         }
 
-        const result = await postMultipleAcquisitionsApplication(acquisitionIds);
+        const posted: any[] = [];
+        const failed: { id: string; error: string }[] = [];
 
-        if (result.failed.length > 0 && result.posted.length === 0) {
+        for (const acquisitionId of acquisitionIds) {
+            try {
+                const result = await postAcquisitionApplication({
+                    acquisitionId,
+                });
+
+                posted.push(result);
+            } catch (error: any) {
+                failed.push({
+                    id: acquisitionId,
+                    error: error?.message || "Duyệt phiếu thất bại",
+                });
+            }
+        }
+
+        if (failed.length > 0 && posted.length === 0) {
             return NextResponse.json(
                 {
                     ok: false,
                     posted: [],
-                    failed: result.failed,
-                    error: result.failed[0]?.error || "Duyệt phiếu thất bại",
+                    failed,
+                    error: failed[0]?.error || "Duyệt phiếu thất bại",
                 },
                 { status: 409 }
             );
         }
 
-        if (result.failed.length > 0) {
+        if (failed.length > 0) {
             return NextResponse.json(
                 {
                     ok: false,
-                    posted: result.posted,
-                    failed: result.failed,
-                    error: `Có ${result.failed.length} phiếu duyệt lỗi`,
+                    posted,
+                    failed,
+                    error: `Có ${failed.length} phiếu duyệt lỗi`,
                 },
                 { status: 207 }
             );
@@ -55,7 +76,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             ok: true,
-            posted: result.posted,
+            posted,
             failed: [],
         });
     } catch (e: any) {

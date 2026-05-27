@@ -272,10 +272,13 @@ export default function AcquisitionFormClient({ vendors }: Props) {
                                 </div>
 
                                 <div className="flex items-center gap-2">
+
+
                                     <AcquisitionBulkImagePicker
                                         onImport={importPreparedImages}
                                         disabled={submitting}
                                     />
+
 
                                     <button
                                         type="button"

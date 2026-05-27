@@ -1,5 +1,5 @@
 import { getVendorList } from "@/domains/vendor/server/vendor.service";
-import AcquisitionFormClient from "@/domains/acquisitionOld/client/AcquisitionFormClient";
+import AcquisitionFormClient from "@/domains/acquisition/client/AcquisitionFormClient";
 
 export default async function AcquisitionNewPage() {
     const vendors = await getVendorList();

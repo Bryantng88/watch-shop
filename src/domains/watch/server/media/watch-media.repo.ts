@@ -221,3 +221,70 @@ export async function getWatchGalleryImagesRepo(db: DB, productId: string) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 }
+export async function ensureWatchInlineImageFromFirstGalleryRepo(
+  db: DB,
+  input: { productId: string }
+) {
+  await assertWatchExists(db, input.productId);
+
+  return withDbTransaction(db, async (tx) => {
+    const existingInline = await tx.productImage.findFirst({
+      where: {
+        productId: input.productId,
+        role: ImageRole.INLINE,
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+
+    if (existingInline) {
+      await tx.product.update({
+        where: { id: input.productId },
+        data: {
+          storefrontImageKey: existingInline.fileKey,
+          primaryImageUrl: existingInline.fileKey,
+        },
+      });
+
+      return existingInline;
+    }
+
+    const firstGallery = await tx.productImage.findFirst({
+      where: {
+        productId: input.productId,
+        role: ImageRole.GALLERY,
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+
+    if (!firstGallery) return null;
+
+    const inlineImage = await tx.productImage.create({
+      data: {
+        productId: input.productId,
+        fileKey: firstGallery.fileKey,
+        role: ImageRole.INLINE,
+        sortOrder: 0,
+        isPrimary: true,
+        isForAdmin: true,
+        isForStorefront: true,
+        alt: firstGallery.alt,
+        width: firstGallery.width,
+        height: firstGallery.height,
+        mime: firstGallery.mime,
+        sizeBytes: firstGallery.sizeBytes,
+        dominantHex: firstGallery.dominantHex,
+        contentHash: firstGallery.contentHash,
+      },
+    });
+
+    await tx.product.update({
+      where: { id: input.productId },
+      data: {
+        storefrontImageKey: inlineImage.fileKey,
+        primaryImageUrl: inlineImage.fileKey,
+      },
+    });
+
+    return inlineImage;
+  });
+}

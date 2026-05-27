@@ -2,13 +2,9 @@
 import { getAdminAcquisitionList } from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
 import AcquisitionListClient from "@/domains/acquisition/client/AcquisitionListClient";
-
-
-
-
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { parseAcquisitionListSearchParams } from "@/domains/acquisitionOld/server/shared/search-params";
+import { parseAcquisitionListSearchParams } from "@/domains/acquisition/shared/search-params";
 import { getListVendors } from "../vendors/_server/vendor.repo";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
