@@ -17,6 +17,24 @@ function buildMediaUrl(fileKey?: string | null) {
   return `/api/media/sign?key=${encodeURIComponent(key)}`;
 }
 
+
+const BLOCKED_ORDER_PRODUCT_STATUSES = ["HOLD", "SOLD"] as const;
+const BLOCKED_ORDER_WATCH_SALE_STAGES = ["HOLD", "SOLD"] as const;
+
+const ORDERABLE_PRODUCT_WHERE = {
+  status: { notIn: BLOCKED_ORDER_PRODUCT_STATUSES as any },
+  OR: [
+    { watch: null },
+    {
+      watch: {
+        is: {
+          saleStage: { notIn: BLOCKED_ORDER_WATCH_SALE_STAGES as any },
+        },
+      },
+    },
+  ],
+};
+
 export async function getServiceCatalogOptions(opts?: { isActive?: boolean }) {
   const rows = await prisma.serviceCatalog.findMany({
     where:
@@ -100,6 +118,15 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
   });
 
   if (!product) return null;
+
+  const productStatus = String(product.status ?? "").toUpperCase();
+  const watchSaleStage = String(product.watch?.saleStage ?? "").toUpperCase();
+  if (
+    BLOCKED_ORDER_PRODUCT_STATUSES.includes(productStatus as any) ||
+    BLOCKED_ORDER_WATCH_SALE_STAGES.includes(watchSaleStage as any)
+  ) {
+    return null;
+  }
 
   const variant =
     product.productVariant.find(
@@ -197,15 +224,20 @@ export async function searchOrderProducts(query: string) {
 
   const rows = await prisma.product.findMany({
     where: {
-      OR: [
-        { sku: { contains: q, mode: "insensitive" } },
-        { title: { contains: q, mode: "insensitive" } },
+      AND: [
+        ORDERABLE_PRODUCT_WHERE,
         {
-          productVariant: {
-            some: {
-              sku: { contains: q, mode: "insensitive" },
+          OR: [
+            { sku: { contains: q, mode: "insensitive" } },
+            { title: { contains: q, mode: "insensitive" } },
+            {
+              productVariant: {
+                some: {
+                  sku: { contains: q, mode: "insensitive" },
+                },
+              },
             },
-          },
+          ],
         },
       ],
     },

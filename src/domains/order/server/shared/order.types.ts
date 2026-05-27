@@ -7,6 +7,7 @@ import type {
   PaymentMethod,
   ReserveType,
   ServiceScope,
+  ProductType,
 } from "@prisma/client";
 
 export type OrderViewKey =
@@ -102,10 +103,10 @@ export type QuickOrderFromProductInput = {
 export type ResolvedProductOrderItem = {
   kind: "PRODUCT";
   productId: string;
-  variantId: string;
+  variantId: string | null;
   title: string;
   quantity: number;
   listPrice: number;
-  primaryImageUrl?: string | null;
-  productType?: string | null;
+  primaryImageUrl: string | null;
+  productType: ProductType;
 };

@@ -27,6 +27,7 @@ type Props = {
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
   onManagePayments?: (row: OrderListItem) => void;
+  onManageShipment?: (row: OrderListItem) => void;
 };
 
 export default function OrderListTable({
@@ -46,6 +47,7 @@ export default function OrderListTable({
   onMarkShipmentDelivered,
   onCancel,
   onManagePayments,
+  onManageShipment,
 }: Props) {
   const selectableIds = items.filter(isOrderSelectable).map((item) => item.id);
 
@@ -108,6 +110,7 @@ export default function OrderListTable({
                 onMarkShipmentDelivered={onMarkShipmentDelivered}
                 onCancel={onCancel}
                 onManagePayments={onManagePayments}
+                onManageShipment={onManageShipment}
                 isCancelledOrder={isCancelledOrder}
               />
             ))}

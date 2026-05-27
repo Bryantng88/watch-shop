@@ -20,7 +20,6 @@ import {
   canPostOrder,
   formatDateTime,
   formatMoney,
-  isCancelledOrder,
 } from "./helpers";
 
 type Props = {
@@ -32,6 +31,7 @@ type Props = {
   onEdit?: (row: OrderListItem) => void;
   onPost?: (row: OrderListItem) => void;
   onManagePayments?: (row: OrderListItem) => void;
+  onManageShipment?: (row: OrderListItem) => void;
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
   isCancelledOrder: (status: OrderListItem["status"]) => boolean;
@@ -64,6 +64,7 @@ export default function OrderListRow({
   onEdit,
   onPost,
   onManagePayments,
+  onManageShipment,
   onMarkShipmentDelivered,
   onCancel,
   isCancelledOrder,
@@ -191,10 +192,18 @@ export default function OrderListRow({
               onClick: onManagePayments,
             },
             !cancelled &&
+            item.hasShipment &&
+            onManageShipment && {
+              key: "manage-shipment",
+              label: "Quản lý giao hàng",
+              icon: <Truck className="h-4 w-4" />,
+              onClick: onManageShipment,
+            },
+            !cancelled &&
             canMarkShipmentDelivered(item) &&
             onMarkShipmentDelivered && {
               key: "mark-shipment-delivered",
-              label: "Đã giao hàng",
+              label: "Đã giao hàng nhanh",
               icon: <Truck className="h-4 w-4" />,
               onClick: onMarkShipmentDelivered,
             },

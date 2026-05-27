@@ -242,7 +242,18 @@ export default function WatchListRow({
     const isRecent =
         product.updatedAt &&
         Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
+    const saleStage = String(product.saleState ?? "").toUpperCase();
 
+    const isLockedForQuickOrder =
+        saleStage === "HOLD" ||
+        saleStage === "SOLD";
+
+    const quickOrderDisabledReason =
+        saleStage === "HOLD"
+            ? "Watch đang HOLD, không thể tạo đơn mới."
+            : saleStage === "SOLD"
+                ? "Watch đã SOLD, không thể tạo đơn mới."
+                : "";
     return (
         <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
             <td className="px-4 py-4">
@@ -337,7 +348,11 @@ export default function WatchListRow({
                             key: "quick-order",
                             label: "Quick order",
                             icon: <ShoppingCart className="h-4 w-4" />,
-                            onClick: onQuickOrder,
+                            disabled: isLockedForQuickOrder,
+                            onClick: (row) => {
+                                if (isLockedForQuickOrder) return;
+                                onQuickOrder(row);
+                            },
                         },
                         onService && {
                             key: "service",

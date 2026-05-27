@@ -10,6 +10,8 @@ import {
   createOrderRepo,
   findCustomerByIdRepo,
   findCustomerByPhoneRepo,
+  getActiveOrderLocksForProductsRepo,
+  getOrderProductIdsRepo,
   getProductsForOrderResolutionRepo,
   replaceOrderDraftRepo,
   updateCustomerAddressRepo,
@@ -53,7 +55,7 @@ async function resolveCustomer(tx: Prisma.TransactionClient, input: CreateOrderI
 async function resolveProductItems(
   tx: Prisma.TransactionClient,
   items: Array<{ productId: string; quantity: number }>,
-  opts?: { strictActiveOnly?: boolean },
+  opts?: { strictActiveOnly?: boolean; currentOrderId?: string | null },
 ): Promise<ResolvedProductOrderItem[]> {
   if (!items.length) return [];
 
@@ -72,6 +74,12 @@ async function resolveProductItems(
   const productById = new Map(products.map((product) => [product.id, product]));
   const missing = productIds.filter((id) => !productById.has(id));
   if (missing.length) throw new Error(`Không tìm thấy sản phẩm: ${missing.join(", ")}`);
+
+  await assertProductsCanBeOrdered(tx, {
+    products,
+    productIds,
+    currentOrderId: opts?.currentOrderId ?? null,
+  });
 
   return productIds.map((productId) => {
     const product = productById.get(productId)!;
@@ -174,6 +182,62 @@ function assertPositiveOrderSubtotal(subtotal: number) {
     throw new Error("Không thể tạo đơn hàng có giá trị bằng 0. Vui lòng nhập giá chốt cho sản phẩm / dịch vụ.");
   }
 }
+function productLabel(product: any) {
+  return product?.title ? `${product.title} (${product.id})` : String(product?.id ?? "");
+}
+
+async function assertProductsCanBeOrdered(
+  tx: Prisma.TransactionClient,
+  input: {
+    products: any[];
+    productIds: string[];
+    currentOrderId?: string | null;
+  },
+) {
+  const productIds = Array.from(
+    new Set(input.productIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!productIds.length) return;
+
+  const currentOrderProductIds = input.currentOrderId
+    ? new Set(await getOrderProductIdsRepo(tx as any, input.currentOrderId))
+    : new Set<string>();
+
+  const activeLocks = await getActiveOrderLocksForProductsRepo(tx as any, {
+    productIds,
+    excludeOrderId: input.currentOrderId ?? null,
+  });
+
+  const activeLockByProductId = new Map(
+    activeLocks
+      .filter((lock) => lock.productId)
+      .map((lock) => [lock.productId!, lock]),
+  );
+
+  for (const product of input.products) {
+    if (!productIds.includes(product.id)) continue;
+
+    const productStatus = String(product.status ?? "").toUpperCase();
+    const saleStage = String(product.watch?.saleStage ?? "").toUpperCase();
+    const isAlreadyInCurrentOrder = currentOrderProductIds.has(product.id);
+    const activeLock = activeLockByProductId.get(product.id);
+
+    if (activeLock) {
+      const ref = activeLock.order?.refNo ?? activeLock.orderId;
+      throw new Error(`Watch ${productLabel(product)} đã nằm trong đơn ${ref}, không thể tạo thêm đơn khác.`);
+    }
+
+    if (saleStage === "SOLD" || productStatus === "SOLD") {
+      throw new Error(`Watch ${productLabel(product)} đã SOLD, không thể tạo đơn.`);
+    }
+
+    if ((saleStage === "HOLD" || productStatus === "HOLD") && !isAlreadyInCurrentOrder) {
+      throw new Error(`Watch ${productLabel(product)} đang HOLD, không thể tạo đơn mới.`);
+    }
+  }
+}
+
 function normalizeCreateInput(raw: any): CreateOrderInput {
   const reserve = normalizeReserve(raw.reserve);
   const paymentMethod = normalizePaymentMethodForReserve(raw.paymentMethod, reserve.type);
@@ -332,6 +396,18 @@ export async function updateOrderDraft(orderId: string, input: OrderDraftInput) 
     const beforeItems = await tx.orderItem.findMany({
       where: { orderId },
       select: { productId: true },
+    });
+
+    const productItems = normalizedInput.items
+      .filter((item) => item.kind === "PRODUCT" && item.productId)
+      .map((item) => ({
+        productId: item.productId!,
+        quantity: Number(item.quantity ?? 1),
+      }));
+
+    await resolveProductItems(tx, productItems, {
+      strictActiveOnly: false,
+      currentOrderId: orderId,
     });
 
     const result = await replaceOrderDraftRepo(tx as any, orderId, normalizedInput);

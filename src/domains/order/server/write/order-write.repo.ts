@@ -33,6 +33,7 @@ export async function getProductsForOrderResolutionRepo(db: DB, productIds: stri
       id: true,
       title: true,
       primaryImageUrl: true,
+      storefrontImageKey: true,
       type: true,
       status: true,
       productVariant: {
@@ -48,8 +49,66 @@ export async function getProductsForOrderResolutionRepo(db: DB, productIds: stri
           updatedAt: true,
         },
       },
+      watch: {
+        select: {
+          id: true,
+          saleStage: true,
+          stockStage: true,
+          serviceStage: true,
+          watchPrice: {
+            select: {
+              salePrice: true,
+              listPrice: true,
+            },
+          },
+        },
+      },
     },
   });
+}
+
+export async function getActiveOrderLocksForProductsRepo(
+  db: DB,
+  input: { productIds: string[]; excludeOrderId?: string | null },
+) {
+  const productIds = Array.from(
+    new Set(input.productIds.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!productIds.length) return [];
+
+  return dbOrTx(db).orderItem.findMany({
+    where: {
+      productId: { in: productIds },
+      ...(input.excludeOrderId ? { orderId: { not: input.excludeOrderId } } : {}),
+      order: {
+        status: {
+          not: "CANCELLED" as any,
+        },
+      },
+    },
+    select: {
+      productId: true,
+      orderId: true,
+      order: {
+        select: {
+          refNo: true,
+          status: true,
+        },
+      },
+    },
+  });
+}
+
+export async function getOrderProductIdsRepo(db: DB, orderId: string) {
+  const rows = await dbOrTx(db).orderItem.findMany({
+    where: { orderId },
+    select: { productId: true },
+  });
+
+  return rows
+    .map((row) => row.productId)
+    .filter(Boolean) as string[];
 }
 
 export async function createOrderRepo(db: DB, data: Prisma.OrderUncheckedCreateInput) {

@@ -7,6 +7,7 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import PaymentManageModal from "@/domains/payment/ui/PaymentManageModal";
+import { ShipmentManageModal } from "@/domains/shipment/ui";
 
 import {
   OrderListBulkActions,
@@ -98,6 +99,7 @@ export default function OrderListClient({
   const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
+  const [shipmentManageOrder, setShipmentManageOrder] = useState<OrderListItem | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   const paymentManageOrderForModal = useMemo(
@@ -460,7 +462,18 @@ export default function OrderListClient({
           if (isCancelledOrder(row.status)) return;
           setPaymentManageOrder(row);
         }}
+        onManageShipment={(row) => {
+          if (isCancelledOrder(row.status)) return;
+          setShipmentManageOrder(row);
+        }}
         isCancelledOrder={isCancelledOrder}
+      />
+
+      <ShipmentManageModal
+        open={!!shipmentManageOrder}
+        order={shipmentManageOrder}
+        onClose={() => setShipmentManageOrder(null)}
+        onUpdated={() => router.refresh()}
       />
 
       <PaymentManageModal
