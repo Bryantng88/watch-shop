@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     Package,
@@ -11,9 +12,7 @@ import {
     Users2,
     Menu,
     ClipboardList,
-    Receipt,
     Warehouse,
-    CreditCard,
     LayoutList,
     MonitorCog,
     CameraIcon,
@@ -21,6 +20,8 @@ import {
 
 import ActiveLink from "./AdminActiveLink";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type NotificationCounts = Partial<{
     products: number;
@@ -56,13 +57,16 @@ const NAV: NavItem[] = [
     { href: "/admin/catalogs/technical", label: "Danh mục", icon: LayoutList, permission: PERMISSIONS.SERVICE_VIEW },
     { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW, notificationKey: "shipments" },
     { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
-    { href: "/admin/invoices", label: "Hóa đơn", icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW, notificationKey: "invoices" },
-    { href: "/admin/payments", label: "Payment", icon: CreditCard, permission: PERMISSIONS.PAYMENT_VIEW, notificationKey: "payments" },
     { href: "/admin/system/jobs", label: "Jobs", icon: MonitorCog, permission: PERMISSIONS.SYSTEM_JOB_VIEW },
     { href: "/admin/media", label: "Media", icon: CameraIcon, permission: PERMISSIONS.MEDIA_VIEW },
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
 ];
+
+function isCurrentRoute(pathname: string, item: NavItem) {
+    if (item.exact) return pathname === item.href;
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
 
 export default function AdminSidebar({
     user,
@@ -70,11 +74,55 @@ export default function AdminSidebar({
     variant = "desktop",
 }: Props) {
     const isMobile = variant === "mobile";
+    const pathname = usePathname();
+    const progress = useAppProgress();
+    const notify = useNotify();
     const [open, setOpen] = useState(false);
+    const hideTimerRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+        };
+    }, []);
 
     const allowedNav = useMemo(
         () => NAV.filter((n) => !n.permission || user.permissions.includes(n.permission)),
         [user.permissions],
+    );
+
+    const handleMenuSwitch = useCallback(
+        (item: NavItem, event: React.MouseEvent) => {
+            if (
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey ||
+                event.defaultPrevented ||
+                isCurrentRoute(pathname, item)
+            ) {
+                return;
+            }
+
+            if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+
+            progress.show({
+                title: "Đang chuyển menu",
+                message: `Đang mở ${item.label}.`,
+            });
+
+            notify.info({
+                title: "Đang chuyển menu",
+                message: item.label,
+            });
+
+            if (isMobile) setOpen(false);
+
+            hideTimerRef.current = window.setTimeout(() => {
+                progress.hide();
+            }, 1200);
+        },
+        [isMobile, notify, pathname, progress],
     );
 
     return (
@@ -139,7 +187,11 @@ export default function AdminSidebar({
                         );
 
                         return (
-                            <div key={n.href} className="group relative">
+                            <div
+                                key={n.href}
+                                className="group relative"
+                                onClick={(event) => handleMenuSwitch(n, event)}
+                            >
                                 <ActiveLink href={n.href} exact={n.exact}>
                                     <Icon size={18} className="shrink-0 opacity-80" />
 

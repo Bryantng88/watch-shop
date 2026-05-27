@@ -12,6 +12,7 @@ import {
     CreditCard,
     FileText,
     PackageCheck,
+    XCircle
 } from "lucide-react";
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu";
 import type { PaymentOwner } from "@/domains/payment/ui/PaymentWorkspace";
@@ -43,8 +44,53 @@ export default function AcquisitionListRow({
     const progress = useAppProgress();
 
     const posted = String(item.status).toUpperCase() === "POSTED";
+    const draft = String(item.status).toUpperCase() === "DRAFT";
     const selectable = !posted;
+    async function handleCancel() {
+        const accepted = await dialog.confirm({
+            title: "Hủy phiếu nhập",
+            message:
+                "Phiếu DRAFT sau khi hủy sẽ không còn được chỉnh sửa, duyệt phiếu hoặc tạo payment. Bạn có chắc chắn muốn tiếp tục?",
+            confirmText: "Hủy phiếu",
+            cancelText: "Giữ lại",
+            tone: "danger",
+        });
 
+        if (!accepted) return;
+
+        progress.show({
+            title: "Đang hủy phiếu nhập",
+            message: item.refNo || "Vui lòng chờ trong giây lát",
+        });
+
+        try {
+            const res = await fetch(`/api/admin/acquisitions/${item.id}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+
+            const json = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(json?.error || "Không thể hủy phiếu nhập");
+            }
+
+            notify.success({
+                title: "Đã hủy phiếu nhập",
+                message: "Phiếu nhập đã được chuyển sang trạng thái hủy.",
+            });
+
+            router.refresh();
+        } catch (error) {
+            notify.error({
+                title: "Hủy phiếu thất bại",
+                message: error instanceof Error ? error.message : "Có lỗi không xác định",
+            });
+        } finally {
+            progress.hide();
+        }
+    }
     async function handleApprove() {
         const accepted = await dialog.confirm({
             title: "Duyệt phiếu nhập",
@@ -199,6 +245,13 @@ export default function AcquisitionListRow({
                             onClick: handleApprove,
                             icon: <BadgeCheck className="h-4 w-4" />,
                             hidden: posted,
+                        },
+                        {
+                            key: "cancel",
+                            label: "Hủy phiếu",
+                            onClick: handleCancel,
+                            icon: <XCircle className="h-4 w-4" />,
+                            hidden: !draft,
                         },
                     ]}
                 />

@@ -23,35 +23,32 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const notificationCounts = await getSideMenuNotificationCounts();
 
     return (
-        <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
-            <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
-                <AdminSidebar
-                    user={{ permissions }}
-                    notifications={notificationCounts}
-                />
-            </div>
+        <AppToastProvider>
+            <AppDialogProvider>
+                <AppProgressProvider>
+                    <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)]">
+                        <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
+                            <AdminSidebar user={{ permissions }} notifications={notificationCounts} />
+                        </div>
 
-            <div className="lg:hidden">
-                <AdminSidebar
-                    user={{ permissions }}
-                    notifications={notificationCounts}
-                    variant="mobile"
-                />
-            </div>
+                        <div className="lg:hidden">
+                            <AdminSidebar
+                                user={{ permissions }}
+                                notifications={notificationCounts}
+                                variant="mobile"
+                            />
+                        </div>
 
-            <div className="flex min-w-0 overflow-hidden flex-col">
-                <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
+                        <div className="flex min-w-0 overflow-hidden flex-col">
+                            <AdminTopbar title="Admin" user={{ name: user.name, roles: user.roles }} />
 
-                <AppToastProvider>
-                    <AppDialogProvider>
-                        <AppProgressProvider>
                             <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50">
                                 {children}
                             </main>
-                        </AppProgressProvider>
-                    </AppDialogProvider>
-                </AppToastProvider>
-            </div>
-        </div>
+                        </div>
+                    </div>
+                </AppProgressProvider>
+            </AppDialogProvider>
+        </AppToastProvider>
     );
 }

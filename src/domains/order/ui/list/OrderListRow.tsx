@@ -20,6 +20,7 @@ import {
   canPostOrder,
   formatDateTime,
   formatMoney,
+  isCancelledOrder,
 } from "./helpers";
 
 type Props = {
@@ -33,23 +34,28 @@ type Props = {
   onManagePayments?: (row: OrderListItem) => void;
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
+  isCancelledOrder: (status: OrderListItem["status"]) => boolean;
 };
 
 function resolveShipmentProgressStatus(item: OrderListItem) {
+  const orderStatus = String(item.status ?? "").toUpperCase();
+
+  if (["CANCELLED", "CANCELED"].includes(orderStatus)) {
+    return "CANCELLED";
+  }
+
   if (!item.hasShipment) return "DELIVERED";
 
   const direct = item.shipmentStatus || item.fulfillmentStatus;
   if (direct) return direct;
 
-  const status = String(item.status ?? "").toUpperCase();
-  if (status === "RETURNING") return "RETURNING";
-  if (status === "RETURNED") return "RETURNED";
-  if (status === "SHIPPED") return "SHIPPED";
-  if (status === "COMPLETED") return "DELIVERED";
+  if (orderStatus === "RETURNING") return "RETURNING";
+  if (orderStatus === "RETURNED") return "RETURNED";
+  if (orderStatus === "SHIPPED") return "SHIPPED";
+  if (orderStatus === "COMPLETED") return "DELIVERED";
 
   return "READY";
 }
-
 export default function OrderListRow({
   item,
   checked,
@@ -60,10 +66,11 @@ export default function OrderListRow({
   onManagePayments,
   onMarkShipmentDelivered,
   onCancel,
+  isCancelledOrder,
 }: Props) {
   const itemsCount = Number(item.itemsCount ?? 0);
-  const remainingAmount = Number(item.remainingAmount ?? 0);
-
+  const cancelled = isCancelledOrder(item.status);
+  const remainingAmount = cancelled ? 0 : Number(item.remainingAmount ?? 0);
   const isWebVerified =
     String(item.source ?? "").toUpperCase() === "WEB" &&
     String(item.verificationStatus ?? "").toUpperCase() === "VERIFIED";
@@ -116,10 +123,10 @@ export default function OrderListRow({
       <td className="px-4 py-4">
         <div className="flex min-w-[90px] items-center">
           <PaymentStateSignalIcon
-            status={item.paymentStatus}
+            status={cancelled ? "CANCELED" : item.paymentStatus}
             totalAmount={item.totalAmount}
-            remainingAmount={item.remainingAmount}
-            collectedAmount={item.collectedAmount}
+            remainingAmount={cancelled ? 0 : item.remainingAmount}
+            collectedAmount={cancelled ? 0 : item.collectedAmount}
           />
         </div>
       </td>
@@ -168,6 +175,7 @@ export default function OrderListRow({
               icon: <Eye className="h-4 w-4" />,
               onClick: onView,
             },
+            !cancelled &&
             canPostOrder(item) &&
             onPost && {
               key: "post",
@@ -175,12 +183,14 @@ export default function OrderListRow({
               icon: <Send className="h-4 w-4" />,
               onClick: onPost,
             },
+            !cancelled &&
             onManagePayments && {
               key: "manage-payments",
               label: "Quản lý payment",
               icon: <WalletCards className="h-4 w-4" />,
               onClick: onManagePayments,
             },
+            !cancelled &&
             canMarkShipmentDelivered(item) &&
             onMarkShipmentDelivered && {
               key: "mark-shipment-delivered",
@@ -188,12 +198,14 @@ export default function OrderListRow({
               icon: <Truck className="h-4 w-4" />,
               onClick: onMarkShipmentDelivered,
             },
+            !cancelled &&
             onEdit && {
               key: "edit",
               label: "Chỉnh sửa",
               icon: <Pencil className="h-4 w-4" />,
               onClick: onEdit,
             },
+            !cancelled &&
             canCancelOrder(item) &&
             onCancel && {
               key: "cancel",

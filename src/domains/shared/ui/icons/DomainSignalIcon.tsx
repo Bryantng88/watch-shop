@@ -263,6 +263,8 @@ function toSignalNumber(value: number | string | null | undefined) {
     return Number.isFinite(n) ? n : 0;
 }
 
+type PaymentSignalState = "CANCELED" | "PAID" | "PARTIAL" | "UNPAID";
+
 function resolvePaymentSignalState({
     status,
     totalAmount,
@@ -273,18 +275,19 @@ function resolvePaymentSignalState({
     totalAmount?: number | string | null;
     remainingAmount?: number | string | null;
     collectedAmount?: number | string | null;
-}) {
+}): PaymentSignalState {
     const key = String(status ?? "").toUpperCase();
     const total = toSignalNumber(totalAmount);
     const remaining = toSignalNumber(remainingAmount);
     const collected = toSignalNumber(collectedAmount);
 
-    if (
-        key === "PAID" ||
-        key === "FULL_PAID" ||
-        key === "FULLY_PAID" ||
-        (total > 0 && remaining <= 0)
-    ) {
+    // Quan trọng: trạng thái huỷ phải ưu tiên tuyệt đối.
+    // Không được để rule `remaining <= 0` đẩy đơn đã huỷ sang PAID.
+    if (key === "CANCELED" || key === "CANCELLED") {
+        return "CANCELED";
+    }
+
+    if (key === "PAID" || key === "FULL_PAID" || key === "FULLY_PAID") {
         return "PAID";
     }
 
@@ -298,6 +301,10 @@ function resolvePaymentSignalState({
         return "PARTIAL";
     }
 
+    if (total > 0 && remaining <= 0) {
+        return "PAID";
+    }
+
     return "UNPAID";
 }
 
@@ -309,16 +316,25 @@ export function PaymentStateSignalIcon(props: {
 }) {
     const state = resolvePaymentSignalState(props);
 
-    const title =
-        state === "PAID"
-            ? "Đã thanh toán đủ"
-            : state === "PARTIAL"
-                ? "Đã thanh toán một phần"
-                : "Chưa thanh toán";
+    if (state === "CANCELED") {
+        return (
+            <DomainSignalIcon
+                size="md"
+                title="Thanh toán đã huỷ"
+                icon={<Ban />}
+                className="bg-slate-100 text-slate-500 ring-slate-200"
+            />
+        );
+    }
 
     if (state === "PAID") {
-        return <DoneSignalIcon title={title} />;
+        return <DoneSignalIcon title="Đã thanh toán đủ" />;
     }
+
+    const title =
+        state === "PARTIAL"
+            ? "Đã thanh toán một phần"
+            : "Chưa thanh toán";
 
     return (
         <span
@@ -418,7 +434,7 @@ export function ShipmentStateSignalIcon({
         );
     }
 
-    if (key === "CANCELLED") {
+    if (key === "CANCELLED" || key === "CANCELED") {
         return (
             <DomainSignalIcon
                 size="md"

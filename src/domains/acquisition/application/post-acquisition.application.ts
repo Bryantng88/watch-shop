@@ -204,18 +204,6 @@ export async function postMultipleAcquisitionsApplication(
 
     for (const acqId of acquisitionIds) {
         try {
-            const acq = await repoAcq.getAcqtById(acqId);
-
-            if (!acq) {
-                failed.push({ id: acqId, error: "Không tìm thấy phiếu nhập" });
-                continue;
-            }
-
-            if (acq.accquisitionStt !== "DRAFT") {
-                failed.push({ id: acqId, error: "Chỉ phiếu DRAFT mới được duyệt" });
-                continue;
-            }
-
             await postAcquisitionApplication({ acquisitionId: acqId });
             posted.push(acqId);
         } catch (error) {

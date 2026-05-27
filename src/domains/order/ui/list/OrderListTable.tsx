@@ -23,7 +23,7 @@ type Props = {
   onView?: (row: OrderListItem) => void;
   onEdit?: (row: OrderListItem) => void;
   onPost?: (row: OrderListItem) => void;
-
+  isCancelledOrder: (status?: string | null) => boolean;
   onMarkShipmentDelivered?: (row: OrderListItem) => void;
   onCancel?: (row: OrderListItem) => void;
   onManagePayments?: (row: OrderListItem) => void;
@@ -42,7 +42,7 @@ export default function OrderListTable({
   onView,
   onEdit,
   onPost,
-
+  isCancelledOrder,
   onMarkShipmentDelivered,
   onCancel,
   onManagePayments,
@@ -108,6 +108,7 @@ export default function OrderListTable({
                 onMarkShipmentDelivered={onMarkShipmentDelivered}
                 onCancel={onCancel}
                 onManagePayments={onManagePayments}
+                isCancelledOrder={isCancelledOrder}
               />
             ))}
 

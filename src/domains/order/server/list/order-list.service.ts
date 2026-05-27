@@ -79,6 +79,8 @@ export async function getAdminOrderList(input: OrderSearchInput) {
   const paymentSummaries = await getPaymentSummaries(rows.map((order) => order.id), totalsByOrderId);
 
   const items = rows.map((order) => {
+    const orderStatus = String(order.status ?? "").toUpperCase();
+    const isCancelled = "CANCELED".includes(orderStatus);
     const total = totalsByOrderId.get(order.id) ?? 0;
     const payment = paymentSummaries.get(order.id) ?? emptyPaymentSummary(total);
     const paymentFlow = buildOrderPaymentFlow({
@@ -115,14 +117,14 @@ export async function getAdminOrderList(input: OrderSearchInput) {
       collectedAmount: payment.collectedAmount,
       unpaidPaymentAmount: payment.unpaidAmount,
       remainingAmount: payment.remainingAmount,
-
+      hasPendingPayment: isCancelled ? false : payment.hasPendingPayment,
+      isFullyPaid: isCancelled ? false : payment.isFullyPaid,
       subtotal: toNumberPrice(order.subtotal),
       totalAmount: total,
       currency: "VND",
 
       hasShipment: order.hasShipment,
-      hasPendingPayment: payment.hasPendingPayment,
-      isFullyPaid: payment.isFullyPaid,
+
 
       itemsCount: order._count?.orderItem ?? 0,
       itemCount: order._count?.orderItem ?? 0,

@@ -48,6 +48,35 @@ function buildInitialFilters(input: { rawSearchParams: Props["rawSearchParams"];
   };
 }
 
+function isCancelledOrder(status?: string | null) {
+  const normalized = String(status ?? "").toUpperCase();
+  return normalized === "CANCELLED" || normalized === "CANCELED";
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toNumber(value: unknown) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function toPaymentManageOrder(order: OrderListItem | null) {
+  if (!order) return null;
+
+  return {
+    ...order,
+    totalAmount: toNumber(order.totalAmount),
+    remainingAmount: toNumber(order.remainingAmount),
+    paidAmount: toNumber(order.paidAmount),
+    collectedAmount: toNumber(order.collectedAmount),
+    unpaidPaymentAmount: toNumber(order.unpaidPaymentAmount),
+  };
+}
+
 export default function OrderListClient({
   items,
   total,
@@ -70,6 +99,11 @@ export default function OrderListClient({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  const paymentManageOrderForModal = useMemo(
+    () => toPaymentManageOrder(paymentManageOrder),
+    [paymentManageOrder],
+  );
 
   const countsByView: OrderListCounts = useMemo(
     () => buildCounts({ counts, currentView, total }),
@@ -188,6 +222,14 @@ export default function OrderListClient({
   }
 
   async function cancelPayment(payload: { paymentId: string; note?: string | null }) {
+    if (isCancelledOrder(paymentManageOrder?.status)) {
+      notify.error({
+        title: "Đơn hàng đã hủy",
+        message: "Không thể thao tác payment trên đơn hàng đã hủy.",
+      });
+      return;
+    }
+
     setPaymentSubmitting(true);
     progress.show({
       title: "Đang hủy payment",
@@ -223,6 +265,7 @@ export default function OrderListClient({
   }
 
   function handleMarkPaymentPaid(row: OrderListItem) {
+    if (isCancelledOrder(row.status)) return;
     setPaymentManageOrder(row);
   }
 
@@ -248,7 +291,6 @@ export default function OrderListClient({
       tone: "danger",
     });
   }
-
   async function postOrders(orderIds: string[]) {
     if (!orderIds.length) return;
 
@@ -290,6 +332,14 @@ export default function OrderListClient({
     note?: string | null;
     markPaidNow: boolean;
   }) {
+    if (isCancelledOrder(paymentManageOrder?.status)) {
+      notify.error({
+        title: "Đơn hàng đã hủy",
+        message: "Không thể tạo payment cho đơn hàng đã hủy.",
+      });
+      return;
+    }
+
     setPaymentSubmitting(true);
     progress.show({ title: "Đang tạo payment", message: "Payment domain đang ghi nhận khoản cần thu." });
 
@@ -320,6 +370,14 @@ export default function OrderListClient({
   }
 
   async function completePayment(payload: { paymentId: string; reference?: string | null; note?: string | null }) {
+    if (isCancelledOrder(paymentManageOrder?.status)) {
+      notify.error({
+        title: "Đơn hàng đã hủy",
+        message: "Không thể hoàn tất payment trên đơn hàng đã hủy.",
+      });
+      return;
+    }
+
     setPaymentSubmitting(true);
     progress.show({ title: "Đang hoàn tất payment", message: "Payment domain đang xác nhận shop đã nhận tiền." });
 
@@ -350,65 +408,17 @@ export default function OrderListClient({
   }
 
   function handleEdit(row: OrderListItem) {
+    if (isCancelledOrder(row.status)) {
+      notify.error({
+        title: "Đơn hàng đã hủy",
+        message: "Không thể chỉnh sửa đơn hàng đã hủy.",
+      });
+      return;
+    }
+
     router.push(`/admin/orders/${row.id}/edit`);
   }
-  const [submitting, setSubmitting] = useState(false);
-  const [paymentOrder, setPaymentOrder] = useState<OrderListItem | null>(null);
 
-  const handleCreatePayment = async (payload: {
-    ownerType: "ORDER";
-    ownerId: string;
-    amount: number;
-    method: string;
-    note?: string | null;
-    markPaidNow: boolean;
-  }) => {
-    try {
-      setSubmitting(true);
-
-      const res = await fetch("/api/admin/payments/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error("Create payment failed");
-      }
-
-      router.refresh();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCompletePayment = async (payload: {
-    paymentId: string;
-    reference?: string | null;
-    note?: string | null;
-  }) => {
-    try {
-      setSubmitting(true);
-
-      const res = await fetch("/api/admin/payments/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error("Complete payment failed");
-      }
-
-      router.refresh();
-    } finally {
-      setSubmitting(false);
-    }
-  };
   return (
     <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
       <OrderListToolbar selectedCount={selectedIds.length} />
@@ -446,12 +456,16 @@ export default function OrderListClient({
         onPost={handlePost}
         onMarkShipmentDelivered={handleMarkShipmentDelivered}
         onCancel={handleCancel}
-        onManagePayments={setPaymentManageOrder}
+        onManagePayments={(row) => {
+          if (isCancelledOrder(row.status)) return;
+          setPaymentManageOrder(row);
+        }}
+        isCancelledOrder={isCancelledOrder}
       />
 
       <PaymentManageModal
         open={!!paymentManageOrder}
-        order={paymentManageOrder}
+        order={paymentManageOrderForModal}
         submitting={paymentSubmitting}
         onClose={() => setPaymentManageOrder(null)}
         onCreatePayment={createPayment}

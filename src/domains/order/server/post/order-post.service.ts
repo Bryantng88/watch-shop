@@ -91,10 +91,57 @@ export async function postOrders(orderIds: string[]) {
   });
 }
 
+async function cancelOrderSideEffectsTx(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  reason?: string | null,
+) {
+  await tx.shipment.updateMany({
+    where: {
+      orderId,
+      status: {
+        notIn: ["DELIVERED", "RETURNED", "CANCELLED"] as any,
+      },
+    },
+    data: {
+      status: "CANCELLED" as any,
+      notes: reason ?? undefined,
+      updatedAt: new Date(),
+    },
+  });
+
+  await tx.payment.updateMany({
+    where: {
+      order_id: orderId,
+      status: {
+        notIn: ["PAID", "CANCELED"] as any,
+      },
+    },
+    data: {
+      status: "CANCELED" as any,
+      note: reason ?? undefined,
+      updatedAt: new Date(),
+    },
+  });
+
+  await tx.order.update({
+    where: { id: orderId },
+    data: {
+      paymentStatus: "UNPAID" as any,
+      depositPaid: new Prisma.Decimal(0),
+      updatedAt: new Date(),
+    },
+  });
+}
+
 export async function cancelOrder(input: { id: string; reason?: string | null }) {
   return prisma.$transaction(async (tx) => {
     const updated = await cancelOrderRepo(tx as any, input.id, input.reason ?? null);
+
+    await cancelOrderSideEffectsTx(tx, input.id, input.reason ?? null);
+
     await syncWatchInventoryFromOrderId(tx, input.id);
+
     return toPlain(updated);
   });
 }

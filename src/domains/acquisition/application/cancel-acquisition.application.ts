@@ -1,60 +1,41 @@
 "use server";
 
 import { prisma } from "@/server/db/client";
-import * as dto from "../shared/acquisition.dto";
-import { toDraftItem } from "../shared/acquisition.mapper";
 import * as repoAcq from "../server";
 
-function parseLocalDateVN(value?: string | null) {
-    const text = String(value ?? "").trim();
-    if (!text) return undefined;
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-        return new Date(`${text}T00:00:00+07:00`);
-    }
-
-    const date = new Date(text);
-    return Number.isNaN(date.getTime()) ? undefined : date;
+function normalizeStatus(value: unknown) {
+    return String(value ?? "").toUpperCase();
 }
 
-export async function createAcquisitionWithItemApplication(
-    input: dto.CreateAcquisitionInput
+export async function cancelAcquisitionApplication(
+    input: string | { acquisitionId: string }
 ) {
+    const acquisitionId =
+        typeof input === "string" ? input : String(input.acquisitionId ?? "").trim();
+
+    if (!acquisitionId) {
+        throw new Error("Thiếu id phiếu nhập");
+    }
+
     return prisma.$transaction(async (tx) => {
-        let vendorId = input.vendorId;
+        const acq = await repoAcq.getAcqtById(acquisitionId, tx as any);
 
-        if (!vendorId && input.quickVendorName) {
-            const newVendor = await tx.vendor.create({
-                data: { name: input.quickVendorName },
-            });
-            vendorId = newVendor.id;
+        if (!acq) {
+            throw new Error("Không tìm thấy phiếu nhập");
         }
 
-        if (!vendorId) {
-            throw new Error("Thiếu vendor");
+        const status = normalizeStatus(acq.accquisitionStt);
+
+        if (status === "CANCELED" || status === "CANCELLED") {
+            return acq;
         }
 
-        const acq = await repoAcq.createDraft(tx, {
-            vendorId,
-            currency: input.currency,
-            type: input.type,
-            createdAt: parseLocalDateVN(input.createdAt),
-            notes: input.notes,
-        });
-
-        let total = 0;
-
-        for (const raw of input.items) {
-            const item = toDraftItem(raw);
-            await repoAcq.createAcqItem(tx, acq.id, item);
-            total += Number(item.unitCost ?? 0);
+        if (status !== "DRAFT") {
+            throw new Error("Chỉ phiếu DRAFT mới được hủy");
         }
 
-        await repoAcq.updateAcquisitionCost(tx, acq.id, total);
-
-        return { id: acq.id };
+        return repoAcq.cancelDraftAcquisition(tx as any, acquisitionId);
     });
 }
 
-export const createAcquisitionWithItem = createAcquisitionWithItemApplication;
-export const createAcquisitionApplication = createAcquisitionWithItemApplication;
+export const cancelAcquisition = cancelAcquisitionApplication;

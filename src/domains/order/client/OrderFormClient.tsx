@@ -518,8 +518,9 @@ export default function OrderFormClient({
           canEdit={canEdit}
           submitting={submitting}
           backHref={backHref}
-          onSubmit={submit}
+          onSubmit={() => submit(isEdit ? "DRAFT" : "POSTED")}
         />
+
       </div>
     </div>
   );
