@@ -29,7 +29,7 @@ export type ShipmentListItem = {
   carrier?: string | null;
   trackingCode?: string | null;
   shippingAmount?: number | string | null;
-  shippingAmountPayer?: string | null;
+  shippingFeePayer?: string | null;
   currency?: string | null;
   status: string;
   shippedAt?: string | Date | null;

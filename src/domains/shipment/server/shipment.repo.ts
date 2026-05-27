@@ -1,4 +1,4 @@
-import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, shippingAmountPayer, } from "@prisma/client";
+import { PaymentDirection, PaymentPurpose, PaymentStatus, PaymentType, Prisma, ShipmentStatus, ShippingFeePayer, } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import type { CreateShipmentFromOrderInput, CreateShipmentFeeInput, ShipmentListInput, UpdateShipmentInput, ReceiveShipmentReturnInput } from "../shared";
 import { buildPaymentRef, money, normalizePaymentMethod, normalizeShipmentStatus, nullableText, toNumber, type Tx } from "./shipment.utils";
@@ -165,7 +165,7 @@ export async function createShipmentFromOrderRepo(tx: Tx, input: CreateShipmentF
       shipAddress: input.shipAddress ?? null,
       shipCity: input.shipCity ?? null,
       shipDistrict: input.shipDistrict ?? null,
-      shippingAmountPayer: shippingAmountPayer.BUSINESS,
+      shippingFeePayer: ShippingFeePayer.BUSINESS,
       shipWard: input.shipWard ?? null,
       shippingAmount: money(0),
       currency: "VND",
@@ -263,7 +263,7 @@ export async function createManualShipmentRepo(tx: Tx, input: import("../shared"
       trackingCode: input.trackingCode ?? null,
       notes: input.notes ?? null,
       shippingAmount: money(0),
-      shippingAmountPayer: shippingAmountPayer.BUSINESS,
+      shippingFeePayer: ShippingFeePayer.BUSINESS,
       currency: "VND",
       status: ShipmentStatus.READY,
       updatedAt: new Date(),

@@ -5,7 +5,7 @@ import {
   PaymentStatus,
   PaymentType,
   ShipmentStatus,
-  shippingAmountPayer,
+  ShippingFeePayer,
 } from "@prisma/client";
 import { buildPaymentRef } from "./shipment.utils";
 import { prisma } from "@/server/db/client";
@@ -112,14 +112,14 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
     }
 
     const payer =
-      String(input.payer ?? shippingAmountPayer.BUSINESS).toUpperCase() === shippingAmountPayer.CUSTOMER
-        ? shippingAmountPayer.CUSTOMER
-        : shippingAmountPayer.BUSINESS;
+      String(input.payer ?? ShippingFeePayer.BUSINESS).toUpperCase() === ShippingFeePayer.CUSTOMER
+        ? ShippingFeePayer.CUSTOMER
+        : ShippingFeePayer.BUSINESS;
 
     await cancelActiveShipmentCostPaymentsRepo(tx, shipment.id);
 
     const payment =
-      payer === shippingAmountPayer.BUSINESS && amount > 0
+      payer === ShippingFeePayer.BUSINESS && amount > 0
         ? await createCompletedShipmentCostPaymentRepo(tx, shipment, input)
         : null;
 
@@ -128,7 +128,7 @@ export async function createShipmentFeeAndShip(input: CreateShipmentFeeInput) {
       data: {
         status: ShipmentStatus.SHIPPED,
         shippingAmount: money(amount),
-        shippingAmountPayer: payer,
+        shippingFeePayer: payer,
         carrier: input.carrier ?? shipment.carrier ?? null,
         trackingCode: input.trackingCode ?? shipment.trackingCode ?? null,
         shippedAt: shipment.shippedAt ?? new Date(),
