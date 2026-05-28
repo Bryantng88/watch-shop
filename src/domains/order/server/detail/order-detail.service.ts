@@ -15,8 +15,8 @@ export async function getAdminOrderDetail(id: string) {
     currency: "VND",
     subtotal,
     shippingAmount,
-    totalAmount: subtotal + shippingAmount,
-    remainingAmount: Math.max(0, subtotal + shippingAmount - depositPaid),
+    totalAmount: subtotal,
+    remainingAmount: Math.max(0, subtotal - depositPaid),
     items: row.orderItem.map((item) => ({
       ...item,
       listPrice: toNumberPrice(item.listPrice),

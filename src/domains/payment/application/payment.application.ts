@@ -9,6 +9,7 @@ import {
   listOrderPayments,
   markOrderShipmentDeliveredAndCollectCod,
   cancelPayment,
+  finalizeOrderByPaidAmount,
   type Tx,
 } from "../server";
 import type { CreatePaymentInput } from "../shared";
@@ -31,6 +32,13 @@ export async function cancelPaymentApplication(input: {
   note?: string | null;
 }) {
   return cancelPayment(input);
+}
+
+export async function finalizeOrderByPaidAmountApplication(input: {
+  orderId: string;
+  note?: string | null;
+}) {
+  return finalizeOrderByPaidAmount(input);
 }
 
 export async function listOrderPaymentsApplication(orderId: string) {

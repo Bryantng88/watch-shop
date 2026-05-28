@@ -1,4 +1,4 @@
-import type { PaymentMethod, ShipmentStatus, shippingAmountPayer } from "@prisma/client";
+import type { PaymentMethod, ShipmentStatus, ShippingFeePayer } from "@prisma/client";
 
 export type ShipmentListInput = {
   page?: number;
@@ -32,7 +32,7 @@ export type UpdateShipmentInput = {
 export type CreateShipmentFeeInput = {
   shipmentId: string;
   amount: number;
-  payer?: shippingAmountPayer | string | null;
+  payer?: ShippingFeePayer | string | null;
   method?: PaymentMethod | string | null;
   carrier?: string | null;
   trackingCode?: string | null;

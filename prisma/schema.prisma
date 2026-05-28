@@ -704,7 +704,7 @@ model ServiceRequest {
 
 model Shipment {
   id               String            @id(map: "shipment_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId          String            @unique(map: "shipment_orderid_key")
+  orderId          String
   shipPhone        String?
   shipAddress      String?
   shipCity         String?

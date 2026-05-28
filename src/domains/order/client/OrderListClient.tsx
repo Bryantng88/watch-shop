@@ -166,7 +166,7 @@ export default function OrderListClient({
 
   async function runOrderAction(input: {
     row: OrderListItem;
-    action: "post" | "mark-shipment-delivered" | "cancel";
+    action: "post" | "mark-shipment-delivered" | "cancel" | "finalize-by-paid";
     title: string;
     message: string;
     confirmText: string;
@@ -371,6 +371,61 @@ export default function OrderListClient({
     }
   }
 
+  async function finalizeOrderByPaidAmount(payload: { orderId: string; note?: string | null }) {
+    if (isCancelledOrder(paymentManageOrder?.status)) {
+      notify.error({
+        title: "Đơn hàng đã hủy",
+        message: "Không thể chốt đơn hàng đã hủy.",
+      });
+      return;
+    }
+
+    const ok = await dialog.confirm({
+      title: "Chốt đơn theo tiền đã nhận?",
+      message:
+        "Hệ thống sẽ cập nhật tổng order bằng tổng payment ORDER đã nhận, hủy các payment ORDER còn mở và hoàn tất order. Chỉ dùng khi giá chốt nhập sai nhưng tiền đã nhận là đúng.",
+      confirmText: "Chốt đơn",
+      cancelText: "Hủy",
+      tone: "warning",
+    });
+
+    if (!ok) return;
+
+    setPaymentSubmitting(true);
+    progress.show({
+      title: "Đang chốt order",
+      message: "Hệ thống đang đồng bộ tổng tiền, payment và trạng thái order.",
+    });
+
+    try {
+      const res = await fetch(`/api/admin/orders/${payload.orderId}/finalize-by-paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Chốt order thất bại.");
+
+      notify.success({
+        title: "Đã chốt order",
+        message: "Order đã được hoàn tất theo số tiền đã nhận.",
+      });
+
+      setPaymentManageOrder(null);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể chốt order",
+        message: error?.message || "Thao tác thất bại.",
+      });
+      throw error;
+    } finally {
+      progress.hide();
+      setPaymentSubmitting(false);
+    }
+  }
+
   async function completePayment(payload: { paymentId: string; reference?: string | null; note?: string | null }) {
     if (isCancelledOrder(paymentManageOrder?.status)) {
       notify.error({
@@ -484,6 +539,7 @@ export default function OrderListClient({
         onCreatePayment={createPayment}
         onCompletePayment={completePayment}
         onCancelPayment={cancelPayment}
+        onFinalizeByPaidAmount={finalizeOrderByPaidAmount}
         onUpdated={() => router.refresh()}
       />
     </div>

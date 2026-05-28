@@ -213,31 +213,37 @@ const orderListSelect = {
 
 type OrderListSelectedRow = Prisma.OrderGetPayload<{ select: typeof orderListSelect }>;
 
-function resolveOrderShipmentStatus(row: OrderListSelectedRow) {
-  const shipments = row.shipments ?? [];
+function normalizeShipmentStatusKey(status: string | null | undefined) {
+  return String(status ?? "").toUpperCase();
+}
 
-  return (
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNING")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "SHIPPED")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DELIVERED")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNED")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "READY")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DRAFT")?.status ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "CANCELLED")?.status ??
-    null
-  );
+function shipmentSortTime(shipment: { createdAt?: Date | null; updatedAt?: Date | null }) {
+  return new Date(shipment.createdAt ?? shipment.updatedAt ?? 0).getTime();
+}
+
+function isTerminalShipment(status?: string | null) {
+  const key = normalizeShipmentStatusKey(status);
+  return key === "RETURNED" || key === "CANCELLED" || key === "CANCELED";
+}
+
+function getLatestActiveShipment(row: OrderListSelectedRow) {
+  const shipments = [...(row.shipments ?? [])].sort((a, b) => shipmentSortTime(b) - shipmentSortTime(a));
+  return shipments.find((shipment) => !isTerminalShipment(shipment.status)) ?? null;
+}
+
+function getLatestShipment(row: OrderListSelectedRow) {
+  return [...(row.shipments ?? [])].sort((a, b) => shipmentSortTime(b) - shipmentSortTime(a))[0] ?? null;
+}
+
+function resolveOrderShipmentStatus(row: OrderListSelectedRow) {
+  const active = getLatestActiveShipment(row);
+  if (active) return active.status;
+
+  return getLatestShipment(row)?.status ?? null;
 }
 
 function resolveActiveShipmentId(row: OrderListSelectedRow) {
-  const shipments = row.shipments ?? [];
-
-  return (
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "RETURNING")?.id ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "SHIPPED")?.id ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "DELIVERED")?.id ??
-    shipments.find((shipment) => String(shipment.status).toUpperCase() === "READY")?.id ??
-    null
-  );
+  return getLatestActiveShipment(row)?.id ?? null;
 }
 function shipmentStatusChain(status: string | null | undefined) {
   const key = String(status ?? "").toUpperCase();
@@ -270,23 +276,19 @@ function shipmentStatusChain(status: string | null | undefined) {
 }
 
 function resolveShipmentProgressEvents(row: OrderListSelectedRow) {
-  const shipments = [...(row.shipments ?? [])].sort((a, b) => {
-    const aTime = new Date(a.createdAt ?? a.updatedAt ?? 0).getTime();
-    const bTime = new Date(b.createdAt ?? b.updatedAt ?? 0).getTime();
-    return aTime - bTime;
-  });
+  const shipments = [...(row.shipments ?? [])].sort((a, b) => shipmentSortTime(a) - shipmentSortTime(b));
 
   const events: { key: string; status: string; at: Date | null }[] = [];
   let allowRepeatAfterReturn = false;
 
   function push(status: string, shipment: (typeof shipments)[number], index: number) {
-    const normalized = String(status).toUpperCase();
-
-    if (normalized === "READY" && events.some((event) => event.status === "READY")) return;
-
+    const normalized = normalizeShipmentStatusKey(status);
     const last = events[events.length - 1];
+
     if (last?.status === normalized) return;
 
+    // Trong cùng một vòng đời shipment thì không lặp lại stage cũ.
+    // Sau RETURNED, shipment mới được phép bắt đầu lại READY -> SHIPPED.
     if (!allowRepeatAfterReturn && events.some((event) => event.status === normalized)) return;
 
     events.push({
@@ -295,7 +297,7 @@ function resolveShipmentProgressEvents(row: OrderListSelectedRow) {
       at: shipment.updatedAt ?? shipment.createdAt ?? null,
     });
 
-    if (normalized === "RETURNED") {
+    if (normalized === "RETURNED" || normalized === "CANCELLED" || normalized === "CANCELED") {
       allowRepeatAfterReturn = true;
     }
   }

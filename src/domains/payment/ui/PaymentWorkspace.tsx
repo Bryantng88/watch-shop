@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CreditCard, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, CreditCard, ShieldAlert, X } from "lucide-react";
 
 import PaymentSummaryMetrics from "./PaymentSummaryMetrics";
 import PaymentTable from "./PaymentTable";
@@ -63,6 +63,10 @@ type Props = {
         paymentId: string;
         note?: string | null;
     }) => void | Promise<void>;
+    onFinalizeByPaidAmount?: (payload: {
+        orderId: string;
+        note?: string | null;
+    }) => void | Promise<void>;
 };
 
 function toNumber(value: unknown) {
@@ -93,9 +97,11 @@ export default function PaymentWorkspace({
     onCreatePayment,
     onCompletePayment,
     onCancelPayment,
+    onFinalizeByPaidAmount,
 }: Props) {
     const [payments, setPayments] = useState<PaymentListItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [showFinalizePanel, setShowFinalizePanel] = useState(false);
 
     const paidTotal = useMemo(
         () =>
@@ -122,6 +128,11 @@ export default function PaymentWorkspace({
 
     const isFullyPaid = totalAmount > 0 && remainingAmount <= 0;
     const availableToCreate = isFullyPaid ? 0 : Math.max(0, totalAmount - activeOpenTotal);
+    const canFinalizeByPaidAmount =
+        owner.type === "ORDER" &&
+        typeof onFinalizeByPaidAmount === "function" &&
+        paidTotal > 0 &&
+        remainingAmount > 0;
 
     async function reloadPayments() {
         if (!owner.listEndpoint) return;
@@ -147,6 +158,7 @@ export default function PaymentWorkspace({
     useEffect(() => {
         if (!open || !owner.id) return;
         setPayments([]);
+        setShowFinalizePanel(false);
         reloadPayments();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, owner.id, owner.listEndpoint]);
@@ -209,20 +221,91 @@ export default function PaymentWorkspace({
                     </div>
 
                     <aside className="border-l border-slate-100 bg-white px-6 py-6">
-                        <PaymentCreatePanel
-                            owner={owner}
-                            defaultAmount={availableToCreate}
-                            locked={isFullyPaid || availableToCreate <= 0}
-                            lockMessage={
-                                isFullyPaid
-                                    ? "Payment đã thanh toán full. Không thể tạo thêm payment mới."
-                                    : "Owner đã có đủ payment đang mở. Hoàn tất hoặc hủy payment hiện có trước khi tạo thêm."
-                            }
-                            submitting={submitting}
-                            onCreatePayment={onCreatePayment}
-                            onReload={reloadPayments}
-                            onUpdated={onUpdated}
-                        />
+                        <div className="space-y-3">
+                            <PaymentCreatePanel
+                                owner={owner}
+                                defaultAmount={availableToCreate}
+                                locked={isFullyPaid || availableToCreate <= 0}
+                                lockMessage={
+                                    isFullyPaid
+                                        ? "Payment đã thanh toán full. Không thể tạo thêm payment mới."
+                                        : "Owner đã có đủ payment đang mở. Hoàn tất hoặc hủy payment hiện có trước khi tạo thêm."
+                                }
+                                submitting={submitting}
+                                onCreatePayment={onCreatePayment}
+                                onReload={reloadPayments}
+                                onUpdated={onUpdated}
+                            />
+
+                            {canFinalizeByPaidAmount ? (
+                                <div className="rounded-3xl border border-amber-200 bg-amber-50/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowFinalizePanel((value) => !value)}
+                                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                                                <ShieldAlert className="h-4 w-4" />
+                                            </span>
+                                            <span>
+                                                <span className="block text-sm font-semibold text-amber-900">
+                                                    Chốt nâng cao
+                                                </span>
+                                                <span className="mt-0.5 block text-xs text-amber-700/80">
+                                                    Chỉ dùng để sửa sai tài chính.
+                                                </span>
+                                            </span>
+                                        </span>
+
+                                        <ChevronDown
+                                            className={`h-4 w-4 text-amber-700 transition ${showFinalizePanel ? "rotate-180" : ""
+                                                }`}
+                                        />
+                                    </button>
+
+                                    {showFinalizePanel ? (
+                                        <div className="border-t border-amber-200/70 px-4 py-4">
+                                            <div className="rounded-2xl border border-amber-200 bg-white/70 p-3">
+                                                <div className="flex items-start gap-2">
+                                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-amber-900">
+                                                            Cẩn trọng trước khi chốt
+                                                        </div>
+                                                        <p className="mt-1 text-xs leading-5 text-amber-700">
+                                                            Thao tác này sẽ hủy các payment còn mở, cập nhật tổng order theo số tiền đã nhận
+                                                            và hoàn tất order. Chỉ dùng khi giá chốt ban đầu nhập sai nhưng payment đã nhận là đúng.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                disabled={submitting}
+                                                onClick={() => {
+                                                    const ok = window.confirm(
+                                                        "Bạn chắc chắn muốn chốt đơn theo số tiền đã nhận? Thao tác này sẽ hủy payment còn mở, cập nhật tổng order và hoàn tất order.",
+                                                    );
+
+                                                    if (!ok) return;
+
+                                                    onFinalizeByPaidAmount?.({
+                                                        orderId: owner.id,
+                                                        note: "Chốt order theo tiền đã nhận từ payment.",
+                                                    });
+                                                }}
+                                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                <CheckCircle2 className="h-4 w-4" />
+                                                Tôi hiểu rủi ro, chốt theo tiền đã nhận
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
                     </aside>
                 </div>
             </div>

@@ -30,6 +30,7 @@ type Props = {
     status?: ShipmentProgressStatus;
     events?: ShipmentProgressEvent[];
     compact?: boolean;
+    maxVisibleEvents?: number;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -129,8 +130,17 @@ function formatEventTime(value?: string | Date | null) {
         year: "numeric",
     }).format(date);
 }
-export default function ShipmentProgress({ status, events, compact = false }: Props) {
+export default function ShipmentProgress({ status, events, compact = false, maxVisibleEvents = compact ? 5 : 6 }: Props) {
     const timeline = normalizeEvents(events, status);
+    const hiddenCount = Math.max(0, timeline.length - maxVisibleEvents);
+    const visibleTimeline = hiddenCount > 0 ? timeline.slice(-maxVisibleEvents) : timeline;
+    const hiddenTitle = hiddenCount > 0
+        ? timeline
+            .slice(0, hiddenCount)
+            .map((event) => [event.label, formatEventTime(event.at)].filter(Boolean).join(" · "))
+            .filter(Boolean)
+            .join("\n")
+        : "";
     const current = timeline[timeline.length - 1];
 
     if (!timeline.length) return null;
@@ -140,11 +150,11 @@ export default function ShipmentProgress({ status, events, compact = false }: Pr
     }
 
     const widthClass =
-        timeline.length >= 5
+        visibleTimeline.length >= 5
             ? compact
                 ? "max-w-[260px]"
                 : "max-w-[340px]"
-            : timeline.length >= 4
+            : visibleTimeline.length >= 4
                 ? compact
                     ? "max-w-[230px]"
                     : "max-w-[300px]"
@@ -155,9 +165,18 @@ export default function ShipmentProgress({ status, events, compact = false }: Pr
     return (
         <div className={cn("w-full", widthClass)}>
             <div className="flex items-center">
-                {timeline.map((event, index) => {
-                    const isPast = index < timeline.length - 1;
-                    const nextStatus = timeline[index + 1]?.status as
+                {hiddenCount > 0 ? (
+                    <div
+                        className="mr-1 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-1.5 text-[10px] font-bold text-slate-400"
+                        title={`Ẩn ${hiddenCount} stage trước đó${hiddenTitle ? `\n${hiddenTitle}` : ""}`}
+                    >
+                        +{hiddenCount}
+                    </div>
+                ) : null}
+
+                {visibleTimeline.map((event, index) => {
+                    const isPast = index < visibleTimeline.length - 1;
+                    const nextStatus = visibleTimeline[index + 1]?.status as
                         | keyof typeof shipmentSignalLineClass
                         | undefined;
 
@@ -170,7 +189,7 @@ export default function ShipmentProgress({ status, events, compact = false }: Pr
                                 <ShipmentStateSignalIcon status={event.status} />
                             </div>
 
-                            {index < timeline.length - 1 ? (
+                            {index < visibleTimeline.length - 1 ? (
                                 <div
                                     className={cn(
                                         "mx-1 h-px flex-1 transition",
@@ -190,6 +209,11 @@ export default function ShipmentProgress({ status, events, compact = false }: Pr
             {!compact ? (
                 <div className="mt-1.5 text-xs font-semibold text-slate-600">
                     {current?.label || STATUS_LABEL.READY}
+                    {hiddenCount > 0 ? (
+                        <span className="ml-2 font-medium text-slate-400">
+                            Đã ẩn {hiddenCount} stage cũ. Rê chuột vào +{hiddenCount} để xem nhanh.
+                        </span>
+                    ) : null}
                 </div>
             ) : null}
         </div>

@@ -26,6 +26,33 @@ import {
 
 const COLLECTED = assertPaymentStatusCollectedExists();
 
+const ORDER_PAYMENT_PURPOSES = [
+    PaymentPurpose.ORDER_DEPOSIT,
+    PaymentPurpose.ORDER_REMAIN,
+    PaymentPurpose.ORDER_FULL,
+] as const;
+
+function paymentScopeWhere(ownerType: PaymentOwnerType, ownerId: string) {
+    const base = ownerWhere(ownerType, ownerId);
+
+    if (ownerType === "ORDER") {
+        return {
+            ...base,
+            type: PaymentType.ORDER,
+            purpose: { in: ORDER_PAYMENT_PURPOSES as any },
+        };
+    }
+
+    if (ownerType === "ACQUISITION") {
+        return {
+            ...base,
+            type: PaymentType.ACQUISITION,
+        };
+    }
+
+    return base;
+}
+
 function normalizePaymentMethod(
     value: unknown,
     fallback: PaymentMethod = PaymentMethod.BANK_TRANSFER,
@@ -82,7 +109,7 @@ async function getPaymentOwnerSeedTx(
 
         if (!order) throw new Error("Order không tồn tại.");
 
-        const totalDue = toNumber(order.subtotal) + toNumber(order.shippingAmount);
+        const totalDue = toNumber(order.subtotal);
         const depositAmount = Math.min(
             Math.max(0, toNumber(order.depositRequired)),
             totalDue,
@@ -134,7 +161,7 @@ async function getPaymentExposureTx(
 
     const aggregate = await tx.payment.aggregate({
         where: {
-            ...ownerWhere(ownerType, ownerId),
+            ...paymentScopeWhere(ownerType, ownerId),
             direction: seed.direction,
             status: { in: activePaymentStatuses() },
         } as any,
@@ -160,7 +187,7 @@ export async function getPaymentSummaryTx(
     const [paid, collected, unpaid] = await Promise.all([
         tx.payment.aggregate({
             where: {
-                ...ownerWhere(ownerType, ownerId),
+                ...paymentScopeWhere(ownerType, ownerId),
                 direction: seed.direction,
                 status: PaymentStatus.PAID,
             } as any,
@@ -168,7 +195,7 @@ export async function getPaymentSummaryTx(
         }),
         tx.payment.aggregate({
             where: {
-                ...ownerWhere(ownerType, ownerId),
+                ...paymentScopeWhere(ownerType, ownerId),
                 direction: seed.direction,
                 status: COLLECTED,
             } as any,
@@ -176,7 +203,7 @@ export async function getPaymentSummaryTx(
         }),
         tx.payment.aggregate({
             where: {
-                ...ownerWhere(ownerType, ownerId),
+                ...paymentScopeWhere(ownerType, ownerId),
                 direction: seed.direction,
                 status: PaymentStatus.UNPAID,
             } as any,
@@ -205,7 +232,7 @@ export async function listPaymentsTx(
     ownerId: string,
 ): Promise<PaymentListItem[]> {
     const rows = await tx.payment.findMany({
-        where: ownerWhere(ownerType, ownerId) as any,
+        where: paymentScopeWhere(ownerType, ownerId) as any,
         orderBy: [{ createdAt: "asc" }],
     });
 
@@ -698,6 +725,104 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: {
 
         const nextSummary = await recomputeOrderPaymentRollupTx(tx, order.id);
         return toPlain({ orderId: order.id, summary: nextSummary });
+    });
+}
+
+
+export async function finalizeOrderByPaidAmount(input: {
+    orderId: string;
+    note?: string | null;
+}) {
+    return prisma.$transaction(async (tx) => {
+        const order = await tx.order.findUnique({
+            where: { id: input.orderId },
+            select: {
+                id: true,
+                refNo: true,
+                status: true,
+                hasShipment: true,
+                subtotal: true,
+                notes: true,
+                shipments: {
+                    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+                    select: { id: true, status: true },
+                },
+            },
+        });
+
+        if (!order) throw new Error("Order không tồn tại.");
+
+        const orderStatus = String(order.status ?? "").toUpperCase();
+        if (orderStatus === "DRAFT") {
+            throw new Error("Cần post order trước khi chốt theo tiền đã nhận.");
+        }
+        if (orderStatus === "CANCELLED" || orderStatus === "CANCELED") {
+            throw new Error("Không thể chốt order đã hủy.");
+        }
+        if (orderStatus === "RETURNING" || orderStatus === "RETURNED") {
+            throw new Error("Không thể chốt order đang/đã hoàn.");
+        }
+
+        const shipmentDelivered =
+            !order.hasShipment ||
+            (order.shipments ?? []).some(
+                (shipment) => String(shipment.status ?? "").toUpperCase() === "DELIVERED",
+            );
+
+        if (!shipmentDelivered) {
+            throw new Error("Chỉ chốt theo tiền đã nhận khi order không cần giao hàng hoặc shipment đã DELIVERED.");
+        }
+
+        const paid = await tx.payment.aggregate({
+            where: {
+                ...paymentScopeWhere("ORDER", order.id),
+                direction: PaymentDirection.IN,
+                status: PaymentStatus.PAID,
+            } as any,
+            _sum: { amount: true },
+        });
+
+        const paidTotal = toNumber(paid._sum.amount);
+        if (paidTotal <= 0) {
+            throw new Error("Order chưa có payment đã nhận tiền để chốt.");
+        }
+
+        await tx.payment.updateMany({
+            where: {
+                ...paymentScopeWhere("ORDER", order.id),
+                direction: PaymentDirection.IN,
+                status: { in: [PaymentStatus.UNPAID, COLLECTED] as any },
+            } as any,
+            data: {
+                status: PaymentStatus.CANCELED,
+                note:
+                    input.note ??
+                    "Payment còn mở đã được hủy khi chốt order theo tiền đã nhận.",
+                updatedAt: new Date(),
+            },
+        });
+
+        const currentNote = String(input.note ?? "").trim();
+        const finalizedNote =
+            currentNote ||
+            `Chốt order theo tiền đã nhận: ${Math.round(paidTotal).toLocaleString("vi-VN")} VND.`;
+
+        const updated = await tx.order.update({
+            where: { id: order.id },
+            data: {
+                subtotal: money(paidTotal),
+                depositPaid: money(paidTotal),
+                paymentStatus: PaymentStatus.PAID,
+                status: OrderStatus.COMPLETED,
+                notes: [order.notes, finalizedNote].filter(Boolean).join("\n") || finalizedNote,
+                updatedAt: new Date(),
+            },
+        });
+
+        await syncWatchInventoryFromOrderId(tx, order.id);
+
+        const summary = await getPaymentSummaryTx(tx, "ORDER", order.id);
+        return toPlain({ order: updated, summary });
     });
 }
 

@@ -39,6 +39,10 @@ type Props = {
         paymentId: string;
         note?: string | null;
     }) => void | Promise<void>;
+    onFinalizeByPaidAmount?: (payload: {
+        orderId: string;
+        note?: string | null;
+    }) => void | Promise<void>;
 };
 
 function toNumber(value: unknown) {
@@ -61,6 +65,7 @@ export default function PaymentManageModal({
     onCreatePayment,
     onCompletePayment,
     onCancelPayment,
+    onFinalizeByPaidAmount,
 }: Props) {
     if (!order) return null;
 
@@ -86,6 +91,7 @@ export default function PaymentManageModal({
             onCreatePayment={onCreatePayment as any}
             onCompletePayment={onCompletePayment}
             onCancelPayment={onCancelPayment}
+            onFinalizeByPaidAmount={onFinalizeByPaidAmount}
         />
     );
 }

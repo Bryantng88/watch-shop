@@ -72,6 +72,7 @@ export type OrderListItem = {
     key: string;
     status: string | null;
     label?: string;
+    at?: string | Date | null;
   }[];
   source?: string | null;
   sourceLabel?: string | null;

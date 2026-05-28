@@ -5,7 +5,7 @@ import { toNumberPrice, toPlain } from "../shared";
 import { listAdminOrdersRepo } from "./order-list.repo";
 import { buildOrderPaymentFlow } from "../../shared";
 function totalAmount(order: any) {
-  return toNumberPrice(order.subtotal) + toNumberPrice(order.shippingAmount);
+  return toNumberPrice(order.subtotal);
 }
 
 function emptyPaymentSummary(total: number) {
@@ -26,6 +26,8 @@ async function getPaymentSummaries(orderIds: string[], totalsByOrderId: Map<stri
     where: {
       order_id: { in: orderIds },
       direction: PaymentDirection.IN,
+      type: "ORDER",
+      purpose: { in: ["ORDER_DEPOSIT", "ORDER_FULL", "ORDER_REMAIN"] },
     },
     select: {
       order_id: true,
@@ -80,7 +82,7 @@ export async function getAdminOrderList(input: OrderSearchInput) {
 
   const items = rows.map((order) => {
     const orderStatus = String(order.status ?? "").toUpperCase();
-    const isCancelled = "CANCELED".includes(orderStatus);
+    const isCancelled = ["CANCELLED", "CANCELED"].includes(orderStatus);
     const total = totalsByOrderId.get(order.id) ?? 0;
     const payment = paymentSummaries.get(order.id) ?? emptyPaymentSummary(total);
     const paymentFlow = buildOrderPaymentFlow({
