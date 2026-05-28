@@ -199,14 +199,7 @@ export default function OrderListRow({
               icon: <Truck className="h-4 w-4" />,
               onClick: onManageShipment,
             },
-            !cancelled &&
-            canMarkShipmentDelivered(item) &&
-            onMarkShipmentDelivered && {
-              key: "mark-shipment-delivered",
-              label: "Đã giao hàng nhanh",
-              icon: <Truck className="h-4 w-4" />,
-              onClick: onMarkShipmentDelivered,
-            },
+
             !cancelled &&
             onEdit && {
               key: "edit",

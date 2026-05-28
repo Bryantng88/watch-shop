@@ -61,6 +61,154 @@ function hasContentSnapshotData(
     );
 }
 
+
+function cleanSkuText(value?: string | null) {
+    const text = String(value ?? "").trim().toUpperCase();
+    return text || null;
+}
+
+function normalizeBrandTextForSku(value?: string | null) {
+    return String(value ?? "")
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+}
+
+function buildWatchSkuPrefixForSubmit(brandName?: string | null) {
+    const normalized = normalizeBrandTextForSku(brandName);
+    if (!normalized) return "UNK";
+
+    const words = normalized
+        .split(/\s+/)
+        .map((word) => word.replace(/[^A-Z0-9]/g, ""))
+        .filter(Boolean);
+
+    if (!words.length) return "UNK";
+
+    const known: Record<string, string> = {
+        OMEGA: "OME",
+        ROLEX: "RLX",
+        LONGINES: "LNG",
+        ORIS: "ORI",
+        EXACTLY: "XCT",
+        "RAYMOND WEIL": "RMW",
+        SEIKO: "SEI",
+        CITIZEN: "CTZ",
+        CARTIER: "CAR",
+        TISSOT: "TIS",
+        BULOVA: "BLV",
+    };
+
+    const joined = words.join(" ");
+    if (known[joined]) return known[joined];
+    if (known[words[0]]) return known[words[0]];
+
+    if (words.length >= 2) {
+        return words
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 3)
+            .padEnd(3, "X");
+    }
+
+    const single = words[0];
+    if (single.length <= 3) return single.padEnd(3, "X");
+
+    const consonants = single.replace(/[AEIOUY]/g, "");
+    if (consonants.length >= 3) return consonants.slice(0, 3);
+
+    return single.slice(0, 3).padEnd(3, "X");
+}
+
+function formatSkuDateForSubmit(date = new Date()) {
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(date.getFullYear());
+    return `${dd}${mm}${yyyy}`;
+}
+
+function padSkuSeqForSubmit(value: number) {
+    return String(value).padStart(3, "0");
+}
+
+async function genUniqueWatchSkuForSubmit(
+    tx: any,
+    input: {
+        productId: string;
+        brandName?: string | null;
+        date?: Date | null;
+    },
+) {
+    const prefix = buildWatchSkuPrefixForSubmit(input.brandName);
+    const datePart = formatSkuDateForSubmit(input.date ?? new Date());
+    const base = `${prefix}-${datePart}`;
+
+    const rows = await tx.product.findMany({
+        where: {
+            sku: { startsWith: `${base}-` },
+            NOT: { id: input.productId },
+        },
+        select: { sku: true },
+        orderBy: { sku: "desc" },
+    });
+
+    let maxSeq = 0;
+
+    for (const row of rows) {
+        const match = row.sku?.match(new RegExp(`^${base}-(\\d{3})$`));
+        if (!match) continue;
+
+        const seq = Number(match[1]);
+        if (Number.isFinite(seq) && seq > maxSeq) {
+            maxSeq = seq;
+        }
+    }
+
+    return `${base}-${padSkuSeqForSubmit(maxSeq + 1)}`;
+}
+
+async function resolveSubmittedWatchSku(
+    tx: any,
+    input: {
+        productId: string;
+        submittedSku?: string | null;
+        currentBrandId?: string | null;
+        nextBrandId?: string | null;
+        brandName?: string | null;
+    },
+) {
+    const submittedSku = cleanSkuText(input.submittedSku);
+    const nextBrandId = input.nextBrandId ?? null;
+    const currentBrandId = input.currentBrandId ?? null;
+    const brandChanged = currentBrandId !== nextBrandId;
+
+    const expectedPrefix = buildWatchSkuPrefixForSubmit(input.brandName);
+    const submittedMatchesNextBrand = submittedSku
+        ? submittedSku.startsWith(`${expectedPrefix}-`)
+        : false;
+
+    const duplicated = submittedSku
+        ? await tx.product.findFirst({
+            where: {
+                sku: submittedSku,
+                NOT: { id: input.productId },
+            },
+            select: { id: true },
+        })
+        : null;
+
+    if (!submittedSku || brandChanged || !submittedMatchesNextBrand || duplicated) {
+        return genUniqueWatchSkuForSubmit(tx, {
+            productId: input.productId,
+            brandName: input.brandName,
+            date: new Date(),
+        });
+    }
+
+    return submittedSku;
+}
+
 export async function submitWatchFormApplication(
     values: WatchFormValues,
     context: SubmitWatchFormContext,
@@ -155,12 +303,20 @@ export async function submitWatchFormApplication(
             throw new Error("Brand không hợp lệ.");
         }
 
+        const safeSku = await resolveSubmittedWatchSku(tx, {
+            productId,
+            submittedSku: values.header.sku,
+            currentBrandId: current.product.brandId ?? null,
+            nextBrandId: values.basic.brandId || null,
+            brandName: brand?.name ?? values.spec.specBrand ?? null,
+        });
+
         await tx.product.update({
             where: { id: productId },
             data: {
                 title: textOrUndefined(values.basic.title),
                 slug: textOrUndefined(values.basic.slug),
-                sku: textOrUndefined(values.header.sku),
+                sku: safeSku,
                 brand: values.basic.brandId
                     ? { connect: { id: values.basic.brandId } }
                     : { disconnect: true },

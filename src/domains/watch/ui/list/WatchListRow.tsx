@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import Link from "next/link";
 import {
     Eye,
@@ -25,7 +25,15 @@ import {
 
 import type { WatchRow } from "./types";
 import { contentStatusText, formatDateTime, formatMoney } from "./helpers";
-
+type WatchRowAction = {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    onClick: (row: WatchRow) => void;
+    disabled?: boolean;
+    tone?: "danger";
+    separatorBefore?: boolean;
+};
 type Props = {
     product: WatchRow;
     checked: boolean;
@@ -242,18 +250,70 @@ export default function WatchListRow({
     const isRecent =
         product.updatedAt &&
         Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
-    const saleStage = String(product.saleState ?? "").toUpperCase();
+    const saleState = String(product.saleState ?? "").toUpperCase();
 
     const isLockedForQuickOrder =
-        saleStage === "HOLD" ||
-        saleStage === "SOLD";
+        saleState === "HOLD" ||
+        saleState === "SOLD";
 
     const quickOrderDisabledReason =
-        saleStage === "HOLD"
+        saleState === "HOLD"
             ? "Watch đang HOLD, không thể tạo đơn mới."
-            : saleStage === "SOLD"
+            : saleState === "SOLD"
                 ? "Watch đã SOLD, không thể tạo đơn mới."
                 : "";
+    const canQuickOrder = Boolean(onQuickOrder) && !isLockedForQuickOrder;
+    const isLockedForEdit =
+        saleState === "SOLD";
+    const actions = [
+        onView && {
+            key: "view",
+            label: "Xem",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: onView,
+        },
+
+        onEdit &&
+        !isLockedForEdit && {
+            key: "edit",
+            label: "Sửa",
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: onEdit,
+        },
+
+        onQuickOrder &&
+        !isLockedForQuickOrder && {
+            key: "quick-order",
+            label: "Quick order",
+            icon: <ShoppingCart className="h-4 w-4" />,
+            onClick: onQuickOrder,
+        },
+
+        onService &&
+        !isLockedForQuickOrder && {
+            key: "service",
+            label: "Service",
+            icon: <Hammer className="h-4 w-4" />,
+            onClick: onService,
+        },
+
+        onConsign &&
+        !isLockedForQuickOrder && {
+            key: "consign",
+            label: "Consign",
+            icon: <HandCoins className="h-4 w-4" />,
+            onClick: onConsign,
+        },
+
+        onDelete && {
+            key: "delete",
+            label: "Xóa",
+            icon: <Trash2 className="h-4 w-4" />,
+            tone: "danger",
+            separatorBefore: true,
+            onClick: onDelete,
+        },
+    ].filter(Boolean) as WatchRowAction[];
     return (
         <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
             <td className="px-4 py-4">
@@ -329,52 +389,9 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-4 text-right">
-                <RowActions
+                <RowActions<WatchRow>
                     row={product}
-                    actions={[
-                        onView && {
-                            key: "view",
-                            label: "Xem",
-                            icon: <Eye className="h-4 w-4" />,
-                            onClick: onView,
-                        },
-                        onEdit && {
-                            key: "edit",
-                            label: "Sửa",
-                            icon: <Pencil className="h-4 w-4" />,
-                            onClick: onEdit,
-                        },
-                        onQuickOrder && {
-                            key: "quick-order",
-                            label: "Quick order",
-                            icon: <ShoppingCart className="h-4 w-4" />,
-                            disabled: isLockedForQuickOrder,
-                            onClick: (row) => {
-                                if (isLockedForQuickOrder) return;
-                                onQuickOrder(row);
-                            },
-                        },
-                        onService && {
-                            key: "service",
-                            label: "Service",
-                            icon: <Hammer className="h-4 w-4" />,
-                            onClick: onService,
-                        },
-                        onConsign && {
-                            key: "consign",
-                            label: "Consign",
-                            icon: <HandCoins className="h-4 w-4" />,
-                            onClick: onConsign,
-                        },
-                        onDelete && {
-                            key: "delete",
-                            label: "Xóa",
-                            icon: <Trash2 className="h-4 w-4" />,
-                            tone: "danger",
-                            separatorBefore: true,
-                            onClick: onDelete,
-                        },
-                    ]}
+                    actions={actions}
                 />
             </td>
         </tr>

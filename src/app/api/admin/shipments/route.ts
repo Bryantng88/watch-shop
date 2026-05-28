@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listShipmentsApplication } from "@/domains/shipment/application";
+import { createManualShipmentApplication, listShipmentsApplication } from "@/domains/shipment/application";
 
 function toPositiveInt(value: string | null, fallback: number) {
     const n = Number(value);
@@ -18,5 +18,25 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(data);
     } catch (e: any) {
         return NextResponse.json({ error: e?.message ?? "Không thể tải danh sách shipment." }, { status: 500 });
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json().catch(() => ({}));
+        const data = await createManualShipmentApplication({
+            orderId: String(body.orderId ?? ""),
+            shipPhone: body.shipPhone ?? null,
+            shipAddress: body.shipAddress ?? null,
+            shipCity: body.shipCity ?? null,
+            shipDistrict: body.shipDistrict ?? null,
+            shipWard: body.shipWard ?? null,
+            carrier: body.carrier ?? null,
+            trackingCode: body.trackingCode ?? null,
+            notes: body.notes ?? null,
+        });
+        return NextResponse.json(data);
+    } catch (e: any) {
+        return NextResponse.json({ error: e?.message ?? "Không thể tạo shipment." }, { status: 400 });
     }
 }

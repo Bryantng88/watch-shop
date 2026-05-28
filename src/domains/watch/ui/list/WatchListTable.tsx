@@ -309,7 +309,7 @@ export default function WatchListTable({
         safeItems.every((item) => safeSelectedIds.includes(item.id));
 
     return (
-        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+        <div className="relative overflow-visible rounded-[28px] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-4">
                 <div className="text-[18px] font-semibold text-slate-900">
                     Danh sách dữ liệu

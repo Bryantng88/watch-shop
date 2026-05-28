@@ -50,7 +50,7 @@ export default function ShipmentListRow({
 
   const isCustomerPaidShipping =
     shippingAmount > 0 &&
-    String(item.shippingAmountPayer ?? "").toUpperCase() === "CUSTOMER";
+    String(item.shippingFeePayer ?? "").toUpperCase() === "CUSTOMER";
 
   const sourceForIcon = order?.quickFromProductId ? "WATCH_QUICK_ORDER" : order?.source;
 

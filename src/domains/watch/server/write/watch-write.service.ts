@@ -222,12 +222,10 @@ export async function regenerateWatchTitleAndSku(productId: string) {
       dialColor: watch.watchSpecV2?.dialColor ?? null,
     });
 
-    const nextSku = shouldRegenerateSku(watch.product.sku)
-      ? await genUniqueWatchSku(tx, {
-        brandName,
-        date: new Date(),
-      })
-      : undefined;
+    const nextSku = await genUniqueWatchSku(tx, {
+      brandName,
+      date: new Date(),
+    });
 
     await updateProductTitleSkuRepo(tx, {
       productId,
@@ -237,7 +235,7 @@ export async function regenerateWatchTitleAndSku(productId: string) {
 
     return {
       title,
-      sku: nextSku ?? watch.product.sku ?? null,
+      sku: nextSku,
     };
   });
 }

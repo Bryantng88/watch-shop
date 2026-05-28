@@ -36,6 +36,36 @@ export async function getShipmentByIdRepo(db: DB | Tx, shipmentId: string) {
   });
 }
 
+
+export async function getActiveShipmentByOrderIdRepo(db: DB | Tx, orderId: string) {
+  return (db as any).shipment.findFirst({
+    where: {
+      orderId,
+      status: { notIn: ["RETURNED", ShipmentStatus.CANCELLED] as any },
+    },
+    orderBy: [{ createdAt: "desc" }, { updatedAt: "desc" }],
+    include: {
+      order: {
+        select: {
+          id: true,
+          refNo: true,
+          status: true,
+          paymentStatus: true,
+          paymentMethod: true,
+          reserveType: true,
+          source: true,
+          customerName: true,
+          subtotal: true,
+          shippingAmount: true,
+          hasShipment: true,
+          quickFromProductId: true,
+          quickFlowType: true,
+        },
+      },
+    },
+  });
+}
+
 export async function getShipmentListRepo(db: DB | Tx, input: ShipmentListInput) {
   const page = Math.max(1, Number(input.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize ?? 20)));

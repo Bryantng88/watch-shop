@@ -133,14 +133,13 @@ export function buildWatchSkuSuggestionFromForm(
   values: WatchFormValues,
   brands: BrandOption[] = [],
 ) {
-  const currentSku = cleanText(values.header.sku);
-  if (!shouldRegenerateWatchSku(currentSku)) return currentSku;
-
   const brandName =
     brands.find((item) => item.id === values.basic.brandId)?.name ||
     cleanText(values.spec.specBrand) ||
     null;
 
+  // Client-side suggestion only. Final uniqueness is enforced again in
+  // submit-watch-form.application on the server.
   return `${buildWatchSkuPrefix(brandName)}-${formatSkuDate(new Date())}-001`;
 }
 

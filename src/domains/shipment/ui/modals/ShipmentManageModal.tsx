@@ -169,65 +169,71 @@ export default function ShipmentManageModal({
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    const shipmentId = order?.activeShipmentId ?? null;
+    const shipmentId = shipment?.id ?? null;
     const amount = useMemo(() => parseAmount(form.shippingAmount), [form.shippingAmount]);
     const isSelfDelivery = isSelfDeliveryCarrier(form.carrier);
     const invalidShippingAmount = !isSelfDelivery && amount < 0;
     const currency = shipment?.currency ?? "VND";
     const payerLabel = form.payer === "CUSTOMER" ? "Khách trả - không tạo payment" : "Doanh nghiệp trả - tạo payment OUT";
 
-    useEffect(() => {
-        if (!open) return;
+    function applyShipment(data: ShipmentDetail | null) {
+        setShipment(data);
 
-        setShipment(null);
-        setForm(initialForm());
+        if (!data) {
+            setForm(initialForm());
+            return;
+        }
 
-        if (!shipmentId) return;
+        const payer = String(data.shippingFeePayer ?? data.shippingAmountPayer ?? "CUSTOMER").toUpperCase();
 
-        let mounted = true;
+        setForm({
+            shipPhone: data.shipPhone ?? "",
+            shipAddress: data.shipAddress ?? "",
+            shipCity: data.shipCity ?? "",
+            shipDistrict: data.shipDistrict ?? "",
+            shipWard: data.shipWard ?? "",
+            carrier: data.carrier ?? "",
+            trackingCode: data.trackingCode ?? "",
+            shippingAmount: data.shippingAmount && Number(data.shippingAmount) > 0 ? String(Number(data.shippingAmount)) : "",
+            payer: payer === "BUSINESS" ? "BUSINESS" : "CUSTOMER",
+            method: "BANK_TRANSFER",
+            reference: "",
+            note: data.notes ?? "",
+        });
+    }
+
+    async function loadActiveShipment(orderId: string, mounted = true) {
         setLoading(true);
 
-        fetch(`/api/admin/shipments/${shipmentId}`)
-            .then(async (res) => {
-                const json = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(json?.error || "Không thể tải shipment.");
-                return json as ShipmentDetail;
-            })
-            .then((data) => {
-                if (!mounted) return;
-                const payer = String(data.shippingFeePayer ?? data.shippingAmountPayer ?? "CUSTOMER").toUpperCase();
-
-                setShipment(data);
-                setForm({
-                    shipPhone: data.shipPhone ?? "",
-                    shipAddress: data.shipAddress ?? "",
-                    shipCity: data.shipCity ?? "",
-                    shipDistrict: data.shipDistrict ?? "",
-                    shipWard: data.shipWard ?? "",
-                    carrier: data.carrier ?? "",
-                    trackingCode: data.trackingCode ?? "",
-                    shippingAmount: data.shippingAmount && Number(data.shippingAmount) > 0 ? String(Number(data.shippingAmount)) : "",
-                    payer: payer === "BUSINESS" ? "BUSINESS" : "CUSTOMER",
-                    method: "BANK_TRANSFER",
-                    reference: "",
-                    note: data.notes ?? "",
-                });
-            })
-            .catch((error: any) => {
-                if (!mounted) return;
-                notify.error({
-                    title: "Không thể tải shipment",
-                    message: error?.message || "Có lỗi xảy ra.",
-                });
-            })
-            .finally(() => {
-                if (mounted) setLoading(false);
+        try {
+            const res = await fetch(`/api/admin/orders/${orderId}/shipments/active`);
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.error || "Không thể tải shipment active.");
+            if (!mounted) return;
+            applyShipment(json as ShipmentDetail | null);
+        } catch (error: any) {
+            if (!mounted) return;
+            notify.error({
+                title: "Không thể tải shipment",
+                message: error?.message || "Có lỗi xảy ra.",
             });
+            applyShipment(null);
+        } finally {
+            if (mounted) setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (!open || !order?.id) return;
+
+        let mounted = true;
+        applyShipment(null);
+        loadActiveShipment(order.id, mounted);
 
         return () => {
             mounted = false;
         };
-    }, [open, shipmentId, notify]);
+    }, [open, order?.id, notify]);
 
     if (!open || !order) return null;
 
@@ -269,16 +275,59 @@ export default function ShipmentManageModal({
 
             onUpdated?.();
             if (input.closeAfter) onClose();
-            else if (shipmentId) {
-                const fresh = await fetch(`/api/admin/shipments/${shipmentId}`).then((r) => r.json());
-                setShipment(fresh);
-            }
+            else if (order?.id) await loadActiveShipment(order.id);
         } catch (error: any) {
             notify.error({
                 title: input.errorTitle,
                 message: error?.message || "Có lỗi xảy ra.",
             });
             throw error;
+        } finally {
+            progress.hide();
+            setSubmitting(false);
+        }
+    }
+
+    async function createNewShipment() {
+        if (!order?.id) return;
+
+        const ok = await dialog.confirm({
+            tone: "success",
+            title: "Tạo shipment giao lại?",
+            message:
+                "Hệ thống sẽ tạo shipment mới cho order này. Chỉ dùng khi shipment cũ đã RETURNED/CANCELLED hoặc order chưa có shipment active.",
+            confirmText: "Tạo shipment",
+            cancelText: "Hủy",
+        });
+
+        if (!ok) return;
+
+        setSubmitting(true);
+        progress.show({
+            title: "Đang tạo shipment",
+            message: "Hệ thống đang tạo shipment active mới cho order.",
+        });
+
+        try {
+            const res = await fetch("/api/admin/shipments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.id }),
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(json?.error || "Không thể tạo shipment.");
+
+            notify.success({
+                title: "Đã tạo shipment",
+                message: "Shipment mới đã sẵn sàng để xử lý giao hàng.",
+            });
+            applyShipment(json as ShipmentDetail);
+            onUpdated?.();
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể tạo shipment",
+                message: error?.message || "Có lỗi xảy ra.",
+            });
         } finally {
             progress.hide();
             setSubmitting(false);
@@ -336,7 +385,7 @@ export default function ShipmentManageModal({
     async function markDelivered() {
         if (!shipmentId || !shipment) return;
 
-        const cod = String(order.paymentMethod ?? shipment.order?.paymentMethod ?? "").toUpperCase() === "COD";
+        const cod = String(order?.paymentMethod ?? shipment.order?.paymentMethod ?? "").toUpperCase() === "COD";
         const ok = await dialog.confirm({
             tone: "success",
             title: cod ? "Xác nhận đã giao COD?" : "Xác nhận đã giao hàng?",
@@ -435,23 +484,26 @@ export default function ShipmentManageModal({
                     </button>
                 </div>
 
-                {!shipmentId ? (
-                    <div className="px-6 py-8">
-                        <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
-                            Order này chưa có active shipment để xử lý. Nếu order đã post mà vẫn thiếu shipment,
-                            cần rà lại flow post/create shipment ở server.
-                        </div>
-                    </div>
-                ) : loading ? (
+                {loading ? (
                     <div className="flex min-h-[320px] items-center justify-center gap-3 text-sm font-medium text-slate-500">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Đang tải shipment...
                     </div>
                 ) : !shipment ? (
                     <div className="px-6 py-8">
-                        <div className="rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3 text-sm text-rose-700">
-                            Không tìm thấy shipment hoặc shipment đã bị xóa.
+                        <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+                            Order này không có shipment active để xử lý. Có thể shipment gần nhất đã RETURNED/CANCELLED,
+                            hoặc order chưa được tạo shipment.
                         </div>
+                        <Button
+                            type="button"
+                            className="mt-4 justify-center"
+                            disabled={submitting}
+                            onClick={createNewShipment}
+                        >
+                            <Truck className="mr-2 h-4 w-4" />
+                            Tạo shipment mới / giao lại
+                        </Button>
                     </div>
                 ) : (
                     <>
@@ -567,9 +619,10 @@ export default function ShipmentManageModal({
                                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                                     <div className="text-sm font-semibold text-slate-950">Luồng xử lý</div>
                                     <div className="mt-3 space-y-2 text-xs text-slate-500">
-                                        <div>1. Lưu thông tin vận chuyển nếu cần chỉnh địa chỉ/tracking.</div>
-                                        <div>2. Cập nhật phí ship & chuyển shipment sang đang giao.</div>
-                                        <div>3. Hoàn tất shipment khi giao thành công.</div>
+                                        <div>1. Modal chỉ xử lý shipment active mới nhất của order.</div>
+                                        <div>2. Lưu thông tin vận chuyển nếu cần chỉnh địa chỉ/tracking.</div>
+                                        <div>3. Cập nhật phí ship & chuyển shipment sang đang giao.</div>
+                                        <div>4. Hoàn tất shipment khi giao thành công.</div>
                                     </div>
                                 </div>
 

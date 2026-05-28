@@ -303,11 +303,11 @@ export function mapWatchRow(row: any): WatchRow {
         postReadiness: reviewStatus,
         serviceState: row?.serviceState ?? null,
         stockState: row?.stockState ?? null,
-        saleState: row?.saleState ?? null,
+        saleState: row?.saleStage ?? row?.saleState ?? null,
+        statusLabel: row?.saleStage ?? row?.saleState ?? row?.stockState ?? null,
         conditionGrade: row?.conditionGrade ?? null,
 
         serviceLabel: row?.serviceState ?? null,
-        statusLabel: row?.saleState ?? row?.stockState ?? null,
 
         salePrice: normalizeNumber(price?.salePrice),
         listPrice: normalizeNumber(price?.listPrice),

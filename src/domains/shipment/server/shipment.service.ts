@@ -28,6 +28,7 @@ import {
   createManualShipmentRepo,
   createShipmentFromOrderRepo,
   getShipmentByIdRepo,
+  getActiveShipmentByOrderIdRepo,
   getShipmentListRepo,
   updateShipmentRepo,
 } from "./shipment.repo";
@@ -79,6 +80,10 @@ export async function listShipments(input: ShipmentListInput) {
 
 export async function getShipmentDetail(shipmentId: string) {
   return toPlain(await getShipmentByIdRepo(prisma as any, shipmentId));
+}
+
+export async function getActiveShipmentByOrderId(orderId: string) {
+  return toPlain(await getActiveShipmentByOrderIdRepo(prisma as any, orderId));
 }
 
 export async function updateShipment(input: { shipmentId: string; data: UpdateShipmentInput }) {
