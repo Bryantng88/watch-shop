@@ -30,6 +30,7 @@ type Props = {
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
     onOpenPayment?: (owner: PaymentOwner) => void;
+    onOpenEdit?: (id: string) => void;
 };
 
 export default function AcquisitionListRow({
@@ -37,6 +38,7 @@ export default function AcquisitionListRow({
     checked,
     onCheckedChange,
     onOpenPayment,
+    onOpenEdit,
 }: Props) {
     const router = useRouter();
     const notify = useNotify();
@@ -227,10 +229,9 @@ export default function AcquisitionListRow({
                         },
                         {
                             key: "edit",
-                            label: "Chỉnh sửa",
-                            href: `/admin/acquisitions/${item.id}/edit`,
+                            label: posted ? "Chỉnh giá nhập" : "Chỉnh sửa",
+                            onClick: () => onOpenEdit?.(item.id),
                             icon: "edit",
-                            hidden: posted,
                         },
                         {
                             key: "payment",

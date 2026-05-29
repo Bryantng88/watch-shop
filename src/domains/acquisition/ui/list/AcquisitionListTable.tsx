@@ -38,6 +38,7 @@ type Props = {
     onToggleOne: (id: string, checked: boolean) => void;
     onToggleAll: (checked: boolean) => void;
     onOpenPayment?: (owner: PaymentOwner) => void;
+    onOpenEdit?: (id: string) => void;
 };
 
 export default function AcquisitionListTable({
@@ -51,6 +52,7 @@ export default function AcquisitionListTable({
     onToggleOne,
     onToggleAll,
     onOpenPayment,
+    onOpenEdit,
 }: Props) {
     const selectableIds = items.filter(isSelectable).map((item) => item.id);
 
@@ -120,6 +122,7 @@ export default function AcquisitionListTable({
                                 checked={selectedIds.includes(item.id)}
                                 onCheckedChange={(checked) => onToggleOne(item.id, checked)}
                                 onOpenPayment={onOpenPayment}
+                                onOpenEdit={onOpenEdit}
                             />
                         ))}
 

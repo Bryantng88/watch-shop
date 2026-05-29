@@ -26,6 +26,25 @@ export type ShipmentProgressEvent = {
     at?: string | Date | null;
 };
 
+type NormalizedShipmentProgressEvent = {
+    key: string;
+    status: string;
+    label: string;
+    at?: string | Date | null;
+};
+
+type HiddenPreviousCycleEvent = {
+    key: string;
+    status: "PREVIOUS_CYCLE";
+    label: string;
+    hiddenCount: number;
+    hiddenTitle: string;
+};
+
+type VisibleShipmentProgressEvent =
+    | NormalizedShipmentProgressEvent
+    | HiddenPreviousCycleEvent;
+
 type Props = {
     status?: ShipmentProgressStatus;
     events?: ShipmentProgressEvent[];
@@ -51,9 +70,14 @@ function normalizeStatus(status: ShipmentProgressStatus) {
     if (key === "RETURNING") return "RETURNING";
     if (key === "DELIVERED") return "DELIVERED";
     if (key === "RETURNED") return "RETURNED";
-    if (key === "CANCELLED") return "CANCELLED";
+    if (key === "CANCELLED" || key === "CANCELED") return "CANCELLED";
 
     return "READY";
+}
+
+function isTerminalShipmentEvent(status: ShipmentProgressStatus) {
+    const normalized = normalizeStatus(status);
+    return normalized === "RETURNED" || normalized === "CANCELLED";
 }
 
 function buildFallbackEvents(status: ShipmentProgressStatus): ShipmentProgressEvent[] {
@@ -105,7 +129,7 @@ function buildFallbackEvents(status: ShipmentProgressStatus): ShipmentProgressEv
 function normalizeEvents(events?: ShipmentProgressEvent[], status?: ShipmentProgressStatus) {
     const source = events?.length ? events : buildFallbackEvents(status);
 
-    return source.map((event, index) => {
+    return source.map((event, index): NormalizedShipmentProgressEvent => {
         const normalized = normalizeStatus(event.status);
 
         return {
@@ -116,6 +140,7 @@ function normalizeEvents(events?: ShipmentProgressEvent[], status?: ShipmentProg
         };
     });
 }
+
 function formatEventTime(value?: string | Date | null) {
     if (!value) return "";
 
@@ -130,17 +155,72 @@ function formatEventTime(value?: string | Date | null) {
         year: "numeric",
     }).format(date);
 }
-export default function ShipmentProgress({ status, events, compact = false, maxVisibleEvents = compact ? 5 : 6 }: Props) {
-    const timeline = normalizeEvents(events, status);
+
+function buildHiddenTitle(events: NormalizedShipmentProgressEvent[]) {
+    return events
+        .map((event) => [event.label, formatEventTime(event.at)].filter(Boolean).join(" · "))
+        .filter(Boolean)
+        .join("\n");
+}
+
+function getCurrentCycleTimeline(
+    timeline: NormalizedShipmentProgressEvent[],
+    maxVisibleEvents: number,
+): {
+    visibleTimeline: VisibleShipmentProgressEvent[];
+    hiddenCount: number;
+    hiddenTitle: string;
+    hiddenMode: "previous-cycle" | "overflow" | null;
+} {
+    const lastTerminalIndex = timeline.findLastIndex((event) =>
+        isTerminalShipmentEvent(event.status),
+    );
+
+    if (lastTerminalIndex >= 0 && lastTerminalIndex < timeline.length - 1) {
+        const hiddenEvents = timeline.slice(0, lastTerminalIndex + 1);
+        const currentCycleEvents = timeline.slice(lastTerminalIndex + 1);
+
+        return {
+            visibleTimeline: [
+                {
+                    key: "previous-shipment-cycle",
+                    status: "PREVIOUS_CYCLE",
+                    label: "Vòng giao trước",
+                    hiddenCount: hiddenEvents.length,
+                    hiddenTitle: buildHiddenTitle(hiddenEvents),
+                },
+                ...currentCycleEvents,
+            ],
+            hiddenCount: hiddenEvents.length,
+            hiddenTitle: buildHiddenTitle(hiddenEvents),
+            hiddenMode: "previous-cycle",
+        };
+    }
+
     const hiddenCount = Math.max(0, timeline.length - maxVisibleEvents);
-    const visibleTimeline = hiddenCount > 0 ? timeline.slice(-maxVisibleEvents) : timeline;
-    const hiddenTitle = hiddenCount > 0
-        ? timeline
-            .slice(0, hiddenCount)
-            .map((event) => [event.label, formatEventTime(event.at)].filter(Boolean).join(" · "))
-            .filter(Boolean)
-            .join("\n")
-        : "";
+    const hiddenEvents = hiddenCount > 0 ? timeline.slice(0, hiddenCount) : [];
+
+    return {
+        visibleTimeline: hiddenCount > 0 ? timeline.slice(-maxVisibleEvents) : timeline,
+        hiddenCount,
+        hiddenTitle: buildHiddenTitle(hiddenEvents),
+        hiddenMode: hiddenCount > 0 ? "overflow" : null,
+    };
+}
+
+function isHiddenPreviousCycleEvent(
+    event: VisibleShipmentProgressEvent,
+): event is HiddenPreviousCycleEvent {
+    return event.status === "PREVIOUS_CYCLE";
+}
+
+export default function ShipmentProgress({
+    status,
+    events,
+    compact = false,
+    maxVisibleEvents = compact ? 5 : 6,
+}: Props) {
+    const timeline = normalizeEvents(events, status);
     const current = timeline[timeline.length - 1];
 
     if (!timeline.length) return null;
@@ -148,6 +228,13 @@ export default function ShipmentProgress({ status, events, compact = false, maxV
     if (timeline.length === 1 && current?.status === "CANCELLED") {
         return <ShipmentStateSignalIcon status="CANCELLED" />;
     }
+
+    const { visibleTimeline, hiddenCount, hiddenTitle, hiddenMode } =
+        getCurrentCycleTimeline(timeline, maxVisibleEvents);
+
+    const visibleNodeCount = visibleTimeline.filter(
+        (event) => !isHiddenPreviousCycleEvent(event),
+    ).length;
 
     const widthClass =
         visibleTimeline.length >= 5
@@ -158,27 +245,41 @@ export default function ShipmentProgress({ status, events, compact = false, maxV
                 ? compact
                     ? "max-w-[230px]"
                     : "max-w-[300px]"
-                : compact
-                    ? "max-w-[180px]"
-                    : "max-w-[230px]";
+                : visibleTimeline.length >= 3
+                    ? compact
+                        ? "max-w-[190px]"
+                        : "max-w-[250px]"
+                    : compact
+                        ? "max-w-[180px]"
+                        : "max-w-[230px]";
 
     return (
         <div className={cn("w-full", widthClass)}>
             <div className="flex items-center">
-                {hiddenCount > 0 ? (
-                    <div
-                        className="mr-1 inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-1.5 text-[10px] font-bold text-slate-400"
-                        title={`Ẩn ${hiddenCount} stage trước đó${hiddenTitle ? `\n${hiddenTitle}` : ""}`}
-                    >
-                        +{hiddenCount}
-                    </div>
-                ) : null}
-
                 {visibleTimeline.map((event, index) => {
+                    if (isHiddenPreviousCycleEvent(event)) {
+                        return (
+                            <div
+                                key={event.key}
+                                className="flex items-center"
+                                title={`Đã ẩn ${event.hiddenCount} stage của vòng giao trước${event.hiddenTitle ? `\n${event.hiddenTitle}` : ""}`}
+                            >
+                                <div className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-1.5 text-[10px] font-bold text-slate-400">
+                                    +{event.hiddenCount}
+                                </div>
+
+                                {visibleNodeCount > 0 ? (
+                                    <div className="mx-1 h-px w-5 bg-slate-200" />
+                                ) : null}
+                            </div>
+                        );
+                    }
+
+                    const nextEvent = visibleTimeline[index + 1];
                     const isPast = index < visibleTimeline.length - 1;
-                    const nextStatus = visibleTimeline[index + 1]?.status as
-                        | keyof typeof shipmentSignalLineClass
-                        | undefined;
+                    const nextStatus = !nextEvent || isHiddenPreviousCycleEvent(nextEvent)
+                        ? undefined
+                        : (nextEvent.status as keyof typeof shipmentSignalLineClass);
 
                     return (
                         <div key={event.key} className="flex flex-1 items-center last:flex-none">
@@ -211,7 +312,10 @@ export default function ShipmentProgress({ status, events, compact = false, maxV
                     {current?.label || STATUS_LABEL.READY}
                     {hiddenCount > 0 ? (
                         <span className="ml-2 font-medium text-slate-400">
-                            Đã ẩn {hiddenCount} stage cũ. Rê chuột vào +{hiddenCount} để xem nhanh.
+                            {hiddenMode === "previous-cycle"
+                                ? `Đã ẩn ${hiddenCount} stage của vòng giao trước.`
+                                : `Đã ẩn ${hiddenCount} stage cũ.`}
+                            {hiddenTitle ? ` Rê chuột vào +${hiddenCount} để xem nhanh.` : ""}
                         </span>
                     ) : null}
                 </div>

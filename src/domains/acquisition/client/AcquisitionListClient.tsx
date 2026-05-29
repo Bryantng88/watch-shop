@@ -9,6 +9,7 @@ import PaymentWorkspace, {
 } from "@/domains/payment/ui/PaymentWorkspace";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
 
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
@@ -42,6 +43,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
 
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
     const [paymentOwner, setPaymentOwner] = React.useState<PaymentOwner | null>(null);
+    const [editAcquisitionId, setEditAcquisitionId] = React.useState<string | null>(null);
     const [paymentSubmitting, setPaymentSubmitting] = React.useState(false);
 
     React.useEffect(() => {
@@ -291,7 +293,17 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps)
                 onToggleOne={toggleOne}
                 onToggleAll={toggleAll}
                 onOpenPayment={setPaymentOwner}
+                onOpenEdit={setEditAcquisitionId}
             />
+
+            {editAcquisitionId ? (
+                <AcquisitionEditModal
+                    open={!!editAcquisitionId}
+                    acquisitionId={editAcquisitionId}
+                    onClose={() => setEditAcquisitionId(null)}
+                    onUpdated={() => router.refresh()}
+                />
+            ) : null}
 
             {paymentOwner ? (
                 <PaymentWorkspace

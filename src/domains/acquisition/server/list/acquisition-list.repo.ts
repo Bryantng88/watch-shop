@@ -1,11 +1,14 @@
-import { PaymentDirection, PaymentStatus } from "@prisma/client";
+import { ImageRole, PaymentDirection, PaymentStatus } from "@prisma/client";
 
 import { prisma } from "@/server/db/client";
 import type {
     AcquisitionListFilters,
     AcquisitionListView,
 } from "../../shared/search-params";
-import { cleanAcquisitionItemDescription } from "../../shared/acquisition-item-metadata";
+import {
+    cleanAcquisitionItemDescription,
+    getAiMetaFromDescription,
+} from "../../shared/acquisition-item-metadata";
 
 function normalizeText(value: unknown) {
     return String(value ?? "").trim();
@@ -96,6 +99,57 @@ function matchView(row: any, view: AcquisitionListView) {
     }
 }
 
+
+function toMediaImageUrl(value: unknown) {
+    const text = String(value ?? "").trim();
+    if (!text) return null;
+
+    if (
+        text.startsWith("http://") ||
+        text.startsWith("https://") ||
+        text.startsWith("data:image/") ||
+        text.startsWith("blob:") ||
+        text.startsWith("/api/")
+    ) {
+        return text;
+    }
+
+    if (text.startsWith("/")) return text;
+
+    return `/api/media/sign?key=${encodeURIComponent(text)}`;
+}
+
+function getFirstMetaImageUrl(item: any) {
+    const images = getAiMetaFromDescription(item?.description)?.images ?? [];
+    const firstWithUrl = images.find((image) => String(image?.url ?? "").trim());
+    const firstWithKey = images.find((image) => String(image?.key ?? "").trim());
+
+    return (
+        toMediaImageUrl(firstWithUrl?.url) ??
+        toMediaImageUrl(firstWithKey?.key) ??
+        null
+    );
+}
+
+function getFirstProductImageUrl(product: any) {
+    if (!product) return null;
+
+    const primaryProductImage = Array.isArray(product.productImage)
+        ? product.productImage.find((image: any) => image?.isPrimary) ?? product.productImage[0]
+        : null;
+
+    return (
+        toMediaImageUrl(product.storefrontImageKey) ??
+        toMediaImageUrl(product.primaryImageUrl) ??
+        toMediaImageUrl(primaryProductImage?.fileKey) ??
+        null
+    );
+}
+
+function buildItemImageUrl(item: any) {
+    return getFirstProductImageUrl(item?.product) ?? getFirstMetaImageUrl(item);
+}
+
 function buildItemTitle(item: any) {
     return (
         item?.productTitle ||
@@ -160,6 +214,22 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
                             id: true,
                             title: true,
                             sku: true,
+                            primaryImageUrl: true,
+                            storefrontImageKey: true,
+                            productImage: {
+                                where: { role: ImageRole.INLINE },
+                                select: {
+                                    fileKey: true,
+                                    isPrimary: true,
+                                    sortOrder: true,
+                                },
+                                orderBy: [
+                                    { isPrimary: "desc" },
+                                    { sortOrder: "asc" },
+                                    { createdAt: "asc" },
+                                ],
+                                take: 3,
+                            },
                         },
                     },
                 },
@@ -217,20 +287,27 @@ export async function listAdminAcquisitions(input: AcquisitionListFilters) {
 
         const linkedWatchCount = acquisitionItems.filter((item) => Boolean(item?.productId)).length;
 
-        const detailItems = acquisitionItems.map((item, index) => ({
-            id: item.id,
-            index: index + 1,
-            title: buildItemTitle(item),
-            subtitle: buildItemSubtitle(item),
-            linkedWatchProductId: item.productId ?? null,
-            linkedWatchTitle: item.product?.title ?? null,
-            linkedWatchSku: item.product?.sku ?? null,
-            cost: item.unitCost != null ? Number(item.unitCost) : null,
-            quantity:
+        const detailItems = acquisitionItems.map((item, index) => {
+            const quantity =
                 item.quantity != null && Number.isFinite(Number(item.quantity))
                     ? Number(item.quantity)
-                    : null,
-        }));
+                    : null;
+            const cost = item.unitCost != null ? Number(item.unitCost) : null;
+            const totalAmount = cost != null ? cost * (quantity ?? 1) : null;
+
+            return {
+                id: item.id,
+                index: index + 1,
+                title: buildItemTitle(item),
+                subtitle: buildItemSubtitle(item),
+                imageUrl: buildItemImageUrl(item),
+                linkedWatchProductId: item.productId ?? null,
+                linkedWatchTitle: item.product?.title ?? null,
+                linkedWatchSku: item.product?.sku ?? null,
+                totalAmount,
+                quantity,
+            };
+        });
 
         const previewTitles = detailItems.slice(0, 2).map((item) => item.title);
         const remaining = Math.max(detailItems.length - previewTitles.length, 0);

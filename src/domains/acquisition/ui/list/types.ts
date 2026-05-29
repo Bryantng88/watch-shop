@@ -10,6 +10,7 @@ export type AcquisitionListItemDetail = {
     index: number;
     title: string;
     subtitle: string;
+    imageUrl: string | null;
     linkedWatchProductId: string | null;
     linkedWatchTitle: string | null;
     linkedWatchSku: string | null;

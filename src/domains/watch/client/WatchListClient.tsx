@@ -275,12 +275,31 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+    /**
+     * URL state and server props must be synced separately.
+     *
+     * The old implementation reset listData from props every time the URL changed.
+     * Because props still contained the first SSR result, clicking page 2/3 updated
+     * the pagination state but immediately rendered page-1 rows again.
+     */
     useEffect(() => {
         setParams(urlParams);
         setFilters(filterStateFromParams(urlParams));
-        setListData(dataFromProps(props));
         setSelectedIds([]);
-    }, [urlKey, props.initialResult, props.items, props.total, props.page, props.pageSize, props.totalPages, props.counts, props.summary]);
+    }, [urlKey, urlParams]);
+
+    useEffect(() => {
+        setListData(dataFromProps(props));
+    }, [
+        props.initialResult,
+        props.items,
+        props.total,
+        props.page,
+        props.pageSize,
+        props.totalPages,
+        props.counts,
+        props.summary,
+    ]);
 
     useEffect(() => {
         const raw = new URLSearchParams(sp.toString());
