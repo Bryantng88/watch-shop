@@ -1,6 +1,6 @@
 // src/app/api/admin/service-requests/bulk-assign-vendor/route.ts
 import { NextResponse } from "next/server";
-import * as srService from "@/app/(admin)/admin/services/_server/service_request.service";
+import * as srService from "@/domains/service/server";
 
 export async function POST(req: Request) {
     try {

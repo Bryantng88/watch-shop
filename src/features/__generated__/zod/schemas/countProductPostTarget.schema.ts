@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProductPostTargetOrderByWithRelationInputObjectSchema as ProductPostTargetOrderByWithRelationInputObjectSchema } from './objects/ProductPostTargetOrderByWithRelationInput.schema';
+import { ProductPostTargetWhereInputObjectSchema as ProductPostTargetWhereInputObjectSchema } from './objects/ProductPostTargetWhereInput.schema';
+import { ProductPostTargetWhereUniqueInputObjectSchema as ProductPostTargetWhereUniqueInputObjectSchema } from './objects/ProductPostTargetWhereUniqueInput.schema';
+import { ProductPostTargetCountAggregateInputObjectSchema as ProductPostTargetCountAggregateInputObjectSchema } from './objects/ProductPostTargetCountAggregateInput.schema';
+
+export const ProductPostTargetCountSchema: z.ZodType<Prisma.ProductPostTargetCountArgs> = z.object({ orderBy: z.union([ProductPostTargetOrderByWithRelationInputObjectSchema, ProductPostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductPostTargetWhereInputObjectSchema.optional(), cursor: ProductPostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProductPostTargetCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.ProductPostTargetCountArgs>;
+
+export const ProductPostTargetCountZodSchema = z.object({ orderBy: z.union([ProductPostTargetOrderByWithRelationInputObjectSchema, ProductPostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductPostTargetWhereInputObjectSchema.optional(), cursor: ProductPostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), ProductPostTargetCountAggregateInputObjectSchema ]).optional() }).strict();

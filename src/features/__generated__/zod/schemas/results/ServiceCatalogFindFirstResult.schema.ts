@@ -16,8 +16,8 @@ export const ServiceCatalogFindFirstResultSchema = z.nullable(z.object({
   note: z.string().optional(),
   categoryKey: z.string().optional(),
   sortOrder: z.number().int(),
-  MaintenanceRecord: z.array(z.unknown()),
-  OrderItem: z.array(z.unknown()),
-  ServiceRequest: z.array(z.unknown()),
-  TechnicalIssue: z.array(z.unknown())
+  maintenanceRecord: z.array(z.unknown()),
+  orderItem: z.array(z.unknown()),
+  serviceRequest: z.array(z.unknown()),
+  technicalIssue: z.array(z.unknown())
 }));

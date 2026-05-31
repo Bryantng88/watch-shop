@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { confirmTechnicalIssue } from "@/app/(admin)/admin/services/_server/technical-issues.service";
+import { confirmTechnicalIssue } from "@/domains/service/server";
 
 type RouteContext = {
     params: Promise<{ id: string }>;

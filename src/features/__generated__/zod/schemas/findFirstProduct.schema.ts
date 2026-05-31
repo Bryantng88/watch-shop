@@ -51,6 +51,7 @@ export const ProductFindFirstSelectSchema: z.ZodType<Prisma.ProductSelect> = z.o
     serviceRequest: z.boolean().optional(),
     watch: z.boolean().optional(),
     watchSpec: z.boolean().optional(),
+    postTargets: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ProductSelect>;
 
@@ -96,6 +97,7 @@ export const ProductFindFirstSelectZodSchema = z.object({
     serviceRequest: z.boolean().optional(),
     watch: z.boolean().optional(),
     watchSpec: z.boolean().optional(),
+    postTargets: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

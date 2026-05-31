@@ -26,7 +26,8 @@ import { ProductImageUncheckedUpdateManyWithoutProductNestedInputObjectSchema as
 import { ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ProductVariantUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { ReservationUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ReservationUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ReservationUncheckedUpdateManyWithoutProductNestedInput.schema';
 import { ServiceRequestUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ServiceRequestUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ServiceRequestUncheckedUpdateManyWithoutProductNestedInput.schema';
-import { WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema as WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema } from './WatchUncheckedUpdateOneWithoutProductNestedInput.schema'
+import { WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema as WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema } from './WatchUncheckedUpdateOneWithoutProductNestedInput.schema';
+import { ProductPostTargetUncheckedUpdateManyWithoutProductNestedInputObjectSchema as ProductPostTargetUncheckedUpdateManyWithoutProductNestedInputObjectSchema } from './ProductPostTargetUncheckedUpdateManyWithoutProductNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -65,7 +66,8 @@ const makeSchema = () => z.object({
   productVariant: z.lazy(() => ProductVariantUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   reservation: z.lazy(() => ReservationUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional(),
-  watch: z.lazy(() => WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema).optional()
+  watch: z.lazy(() => WatchUncheckedUpdateOneWithoutProductNestedInputObjectSchema).optional(),
+  postTargets: z.lazy(() => ProductPostTargetUncheckedUpdateManyWithoutProductNestedInputObjectSchema).optional()
 }).strict();
 export const ProductUncheckedUpdateWithoutWatchSpecInputObjectSchema: z.ZodType<Prisma.ProductUncheckedUpdateWithoutWatchSpecInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductUncheckedUpdateWithoutWatchSpecInput>;
 export const ProductUncheckedUpdateWithoutWatchSpecInputObjectZodSchema = makeSchema();

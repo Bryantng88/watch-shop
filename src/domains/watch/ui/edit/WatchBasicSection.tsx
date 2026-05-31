@@ -5,13 +5,14 @@ import { FieldLabel, Input, SectionCard, Select, Button } from "./shared";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { buildWatchSpecSummary } from "./WatchSpecModal";
 import WatchBrandField from "./WatchBrandField";
-type SimpleOption = { id: string; name: string; slug?: string | null };
+type SimpleOption = { id: string; name: string; slug?: string | null; platform?: string | null };
 
 type Props = {
     values: WatchFormValues["basic"];
     spec: WatchFormValues["spec"];
     vendors: SimpleOption[];
     categories: SimpleOption[];
+    postTargets: SimpleOption[];
     onChange: (patch: Partial<WatchFormValues["basic"]>) => void;
     onOpenSpecModal: () => void;
     brands: SimpleOption[];
@@ -54,6 +55,129 @@ const MOVEMENT_TYPE_OPTIONS = [
     "SPRING_DRIVE",
     "HYBRID",
 ].map((x) => ({ value: x, label: x }));
+function normalizeTargetName(value: unknown) {
+    return String(value ?? "").trim();
+}
+
+function getPostTargetGroupKey(target: SimpleOption) {
+    return normalizeTargetName(target.name).toLowerCase();
+}
+
+function buildPostTargetGroups(options: SimpleOption[]) {
+    const byName = new Map<
+        string,
+        {
+            key: string;
+            name: string;
+            ids: string[];
+        }
+    >();
+
+    for (const option of options) {
+        const name = normalizeTargetName(option.name);
+        const id = String(option.id ?? "").trim();
+
+        if (!name || !id) continue;
+
+        const key = getPostTargetGroupKey(option);
+        const current = byName.get(key);
+
+        if (current) {
+            if (!current.ids.includes(id)) current.ids.push(id);
+        } else {
+            byName.set(key, {
+                key,
+                name,
+                ids: [id],
+            });
+        }
+    }
+
+    return Array.from(byName.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "vi"),
+    );
+}
+
+function PostTargetMultiSelect({
+    value,
+    options,
+    onChange,
+}: {
+    value: string[];
+    options: SimpleOption[];
+    onChange: (next: string[]) => void;
+}) {
+    const selected = Array.isArray(value)
+        ? value.map((id) => String(id ?? "").trim()).filter(Boolean)
+        : [];
+
+    const groups = buildPostTargetGroups(options);
+    const selectedSet = new Set(selected);
+
+    const selectedGroups = groups.filter((group) =>
+        group.ids.some((id) => selectedSet.has(id)),
+    );
+
+    const toggleGroup = (groupKey: string) => {
+        const group = groups.find((item) => item.key === groupKey);
+        if (!group) return;
+
+        const hasGroup = group.ids.some((id) => selectedSet.has(id));
+        const groupIds = new Set(group.ids);
+
+        if (hasGroup) {
+            onChange(selected.filter((id) => !groupIds.has(id)));
+            return;
+        }
+
+        onChange(Array.from(new Set([...selected, ...group.ids])));
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+                {selectedGroups.length ? (
+                    selectedGroups.map((group) => (
+                        <button
+                            key={group.key}
+                            type="button"
+                            onClick={() => toggleGroup(group.key)}
+                            className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white"
+                            title="Bấm để bỏ chọn"
+                        >
+                            {group.name}
+                            <span className="text-slate-300">×</span>
+                        </button>
+                    ))
+                ) : (
+                    <div className="text-sm text-slate-400">Chưa chọn page/kênh đăng</div>
+                )}
+            </div>
+
+            <select
+                value=""
+                onChange={(event) => {
+                    toggleGroup(event.target.value);
+                    event.currentTarget.value = "";
+                }}
+                className="block h-[40px] w-full border-0 border-b border-slate-200 bg-transparent px-0 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-0"
+            >
+                <option value="">Thêm page/kênh đăng</option>
+                {groups.map((group) => {
+                    const selectedGroup = group.ids.some((id) => selectedSet.has(id));
+
+                    return (
+                        <option key={group.key} value={group.key}>
+                            {selectedGroup ? "✓ " : ""}
+                            {group.name}
+                        </option>
+                    );
+                })}
+            </select>
+        </div>
+    );
+}
+
 
 export default function WatchBasicSection({
     values,
@@ -61,6 +185,7 @@ export default function WatchBasicSection({
     brands,
     vendors,
     categories,
+    postTargets,
     onChange,
     onOpenSpecModal,
     onBrandsChange
@@ -115,6 +240,15 @@ export default function WatchBasicSection({
                         onChange={(e) => onChange({ vendorId: e.target.value })}
                         options={vendorOptions}
                         placeholder="Chọn vendor"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Page đăng đề xuất</FieldLabel>
+                    <PostTargetMultiSelect
+                        value={values.postTargetIds}
+                        options={postTargets}
+                        onChange={(postTargetIds) => onChange({ postTargetIds })}
                     />
                 </div>
 

@@ -26,10 +26,10 @@ export const ServiceCatalogFindManySelectSchema: z.ZodType<Prisma.ServiceCatalog
     note: z.boolean().optional(),
     categoryKey: z.boolean().optional(),
     sortOrder: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
-    TechnicalIssue: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 
@@ -50,10 +50,10 @@ export const ServiceCatalogFindManySelectZodSchema = z.object({
     note: z.boolean().optional(),
     categoryKey: z.boolean().optional(),
     sortOrder: z.boolean().optional(),
-    MaintenanceRecord: z.boolean().optional(),
-    OrderItem: z.boolean().optional(),
-    ServiceRequest: z.boolean().optional(),
-    TechnicalIssue: z.boolean().optional(),
+    maintenanceRecord: z.boolean().optional(),
+    orderItem: z.boolean().optional(),
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

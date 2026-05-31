@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openTechnicalAssessment } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import { openTechnicalAssessment } from "@/domains/service/server";
 
 export async function POST(
     _req: Request,

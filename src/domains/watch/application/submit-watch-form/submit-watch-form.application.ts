@@ -33,6 +33,25 @@ type SubmitWatchFormContext = {
     canReviewContent: boolean;
 };
 
+type ReviewSubmitTarget = "CONTENT" | "IMAGE";
+
+type SubmitWatchFormResult = {
+    ok: true;
+    message: string;
+    contentChanged: boolean;
+    imagesChanged: boolean;
+    hasContentData: boolean;
+    media: {
+        poolImages: unknown[];
+        galleryImages: unknown[];
+    };
+    reviewSubmitTargets: ReviewSubmitTarget[];
+    askSubmitReview: boolean;
+    askContinueContent: boolean;
+    contentReviewStatus?: "DRAFT";
+    imageReviewStatus?: "DRAFT";
+};
+
 function buildContentSnapshot(input: {
     titleOverride?: string | null;
     hookText?: string | null;
@@ -212,7 +231,7 @@ async function resolveSubmittedWatchSku(
 export async function submitWatchFormApplication(
     values: WatchFormValues,
     context: SubmitWatchFormContext,
-) {
+): Promise<SubmitWatchFormResult> {
     const productId = String(values.productId || "").trim();
 
     if (!productId) {
@@ -328,6 +347,28 @@ export async function submitWatchFormApplication(
                     : { disconnect: true },
             },
         });
+
+        const postTargetIds = Array.from(
+            new Set(
+                (values.basic.postTargetIds ?? [])
+                    .map((id) => String(id ?? "").trim())
+                    .filter(Boolean),
+            ),
+        );
+
+        await tx.productPostTarget.deleteMany({
+            where: { productId },
+        });
+
+        if (postTargetIds.length > 0) {
+            await tx.productPostTarget.createMany({
+                data: postTargetIds.map((postTargetId) => ({
+                    productId,
+                    postTargetId,
+                })),
+                skipDuplicates: true,
+            });
+        }
 
         await tx.watch.update({
             where: { id: current.id },
@@ -542,7 +583,7 @@ export async function submitWatchFormApplication(
                 contentChanged && hasContentData ? "CONTENT" : null,
                 imagesChanged ? "IMAGE" : null,
             ].filter(Boolean) as Array<"CONTENT" | "IMAGE">)
-            : [],
+            : ([] as ReviewSubmitTarget[]),
         askSubmitReview:
             !context.canReviewContent &&
             ((contentChanged && hasContentData) || imagesChanged),

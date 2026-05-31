@@ -1,24 +1,27 @@
-import TechnicalIssueBoardClient from "../_client/technical-issues-board/TechnicalIssuesBoardClient";
+import { TechnicalIssuesBoardClient } from "@/domains/service/ui/issue-board";
+import { getTechnicalIssueBoardData } from "@/domains/service/server/issue-board";
 
-import { getTechnicalIssueBoardData } from "../_server/technical-issue-board.service";
-
-function serialize(obj: any) {
-    return JSON.parse(
-        JSON.stringify(obj, (_key, value) => {
-            if (value instanceof Date) return value.toISOString();
-            if (typeof value === "object" && value?._isDecimal) return Number(value);
-            return value;
-        })
-    );
+function firstValue(value: string | string[] | undefined) {
+    if (Array.isArray(value)) return value[0] ?? "";
+    return value ?? "";
 }
 
-export default async function TechnicalIssueBoardPage() {
-    const data = await getTechnicalIssueBoardData();
+export default async function TechnicalIssueBoardPage({
+    searchParams,
+}: {
+    searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+    const sp = (await searchParams) ?? {};
+    const serviceRequestId = firstValue(sp.serviceRequestId).trim() || null;
+    const data = await getTechnicalIssueBoardData({ serviceRequestId });
 
     return (
-        <TechnicalIssueBoardClient
-            items={serialize(data.items)}
-            counts={serialize(data.counts)}
+        <TechnicalIssuesBoardClient
+            items={data.items}
+            counts={data.counts}
+            serviceRequestId={serviceRequestId}
+            title={serviceRequestId ? "Issue Board của Service Request" : "Technical Issue Board"}
+            subtitle={serviceRequestId ? "Board đang được filter theo một service request cụ thể." : "Điều phối toàn bộ technical issue theo trạng thái vận hành."}
         />
     );
 }

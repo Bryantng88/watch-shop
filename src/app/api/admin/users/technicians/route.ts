@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTechnicianOptions } from "@/app/(admin)/admin/services/_server/service_request.service";
+import { getTechnicianOptions } from "@/domains/service/server";
 
 
 export async function GET() {

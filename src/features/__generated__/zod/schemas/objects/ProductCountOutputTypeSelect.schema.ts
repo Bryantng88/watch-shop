@@ -11,7 +11,8 @@ const makeSchema = () => z.object({
   productImage: z.boolean().optional(),
   productVariant: z.boolean().optional(),
   reservation: z.boolean().optional(),
-  serviceRequest: z.boolean().optional()
+  serviceRequest: z.boolean().optional(),
+  postTargets: z.boolean().optional()
 }).strict();
 export const ProductCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.ProductCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.ProductCountOutputTypeSelect>;
 export const ProductCountOutputTypeSelectObjectZodSchema = makeSchema();

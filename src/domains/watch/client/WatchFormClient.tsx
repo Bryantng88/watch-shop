@@ -25,6 +25,7 @@ type SimpleOption = {
     id: string;
     name: string;
     slug?: string | null;
+    platform?: string | null;
 };
 
 type Props = {
@@ -32,9 +33,15 @@ type Props = {
     brands?: SimpleOption[];
     vendors?: SimpleOption[];
     categories?: SimpleOption[];
+
     canViewCost?: boolean;
     canEditPrice?: boolean;
     canReviewContent?: boolean;
+    postTargets?: Array<{
+        id: string;
+        name: string;
+        platform?: string | null;
+    }>;
 };
 
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
@@ -132,9 +139,11 @@ export default function WatchFormClient({
     brands = [],
     vendors = [],
     categories = [],
+    postTargets = [],
     canViewCost = false,
     canEditPrice = false,
     canReviewContent = false,
+
 }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -236,6 +245,7 @@ export default function WatchFormClient({
         });
 
         router.push(returnTo);
+        router.refresh();
         window.setTimeout(() => progress.hide(), 1200);
     };
 
@@ -464,7 +474,8 @@ export default function WatchFormClient({
                 if (result?.askContinueContent) {
                     setAfterSaveMode("continueContent");
                 } else if (!canReviewContent && result?.askSubmitReview) {
-                    const targets = result?.reviewSubmitTargets ?? [];
+                    const targets: Array<"CONTENT" | "IMAGE"> =
+                        (result?.reviewSubmitTargets ?? []) as Array<"CONTENT" | "IMAGE">;
 
                     if (targets.includes("CONTENT") && targets.includes("IMAGE")) {
                         setAfterSaveMode("submitBoth");
@@ -564,6 +575,7 @@ export default function WatchFormClient({
                         brands={brandOptions}
                         vendors={vendors}
                         categories={categories}
+                        postTargets={postTargets}
                         onChange={updateBasic}
                         onOpenSpecModal={() => setSpecModalOpen(true)}
                         onBrandsChange={setBrandOptions}

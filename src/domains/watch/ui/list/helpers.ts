@@ -201,7 +201,31 @@ function getReviewStateStatus(row: any, targetType: "CONTENT" | "IMAGE") {
     ).toUpperCase();
 }
 
+function mapPostTargets(product: any) {
+    const relations = Array.isArray(product?.postTargets) ? product.postTargets : [];
+    const byName = new Map<string, { id: string; name: string; platform?: string | null }>();
 
+    for (const item of relations) {
+        const target = item?.postTarget ?? item;
+        const id = String(target?.id ?? "").trim();
+        const name = String(target?.name ?? "").trim();
+
+        if (!id || !name) continue;
+
+        const key = name.toLowerCase();
+        if (byName.has(key)) continue;
+
+        byName.set(key, {
+            id,
+            name,
+            platform: null,
+        });
+    }
+
+    return Array.from(byName.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "vi"),
+    );
+}
 function mapAcquisitionPreviewItems(row: any) {
     const product = row?.product ?? row ?? {};
     const sourceItems = Array.isArray(product?.acquisitionItem)
@@ -282,6 +306,7 @@ export function mapWatchRow(row: any): WatchRow {
             null,
 
         vendorName: product?.vendor?.name ?? row?.vendor?.name ?? null,
+        postTargets: mapPostTargets(product),
         acquisitionItems: mapAcquisitionPreviewItems(row),
 
         imageUrl: mapWatchImage(row),

@@ -16,7 +16,8 @@ import { ProductVariantOrderByRelationAggregateInputObjectSchema as ProductVaria
 import { ReservationOrderByRelationAggregateInputObjectSchema as ReservationOrderByRelationAggregateInputObjectSchema } from './ReservationOrderByRelationAggregateInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
 import { WatchOrderByWithRelationInputObjectSchema as WatchOrderByWithRelationInputObjectSchema } from './WatchOrderByWithRelationInput.schema';
-import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './WatchSpecOrderByWithRelationInput.schema'
+import { WatchSpecOrderByWithRelationInputObjectSchema as WatchSpecOrderByWithRelationInputObjectSchema } from './WatchSpecOrderByWithRelationInput.schema';
+import { ProductPostTargetOrderByRelationAggregateInputObjectSchema as ProductPostTargetOrderByRelationAggregateInputObjectSchema } from './ProductPostTargetOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -59,7 +60,8 @@ const makeSchema = () => z.object({
   reservation: z.lazy(() => ReservationOrderByRelationAggregateInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
   watch: z.lazy(() => WatchOrderByWithRelationInputObjectSchema).optional(),
-  watchSpec: z.lazy(() => WatchSpecOrderByWithRelationInputObjectSchema).optional()
+  watchSpec: z.lazy(() => WatchSpecOrderByWithRelationInputObjectSchema).optional(),
+  postTargets: z.lazy(() => ProductPostTargetOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const ProductOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ProductOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductOrderByWithRelationInput>;
 export const ProductOrderByWithRelationInputObjectZodSchema = makeSchema();

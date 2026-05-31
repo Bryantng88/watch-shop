@@ -30,9 +30,9 @@ const makeSchema = () => z.object({
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   categoryKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  OrderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
+  orderItem: z.lazy(() => OrderItemUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUncheckedUpdateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUncheckedUpdateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUncheckedUpdateWithoutMaintenanceRecordInput>;
 export const ServiceCatalogUncheckedUpdateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

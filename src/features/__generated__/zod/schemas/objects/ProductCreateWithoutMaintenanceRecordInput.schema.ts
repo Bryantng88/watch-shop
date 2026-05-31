@@ -18,7 +18,8 @@ import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as Produc
 import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema';
 import { ServiceRequestCreateNestedManyWithoutProductInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductInput.schema';
 import { WatchCreateNestedOneWithoutProductInputObjectSchema as WatchCreateNestedOneWithoutProductInputObjectSchema } from './WatchCreateNestedOneWithoutProductInput.schema';
-import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema'
+import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema';
+import { ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema as ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema } from './ProductPostTargetCreateNestedManyWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -57,7 +58,8 @@ const makeSchema = () => z.object({
   reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductInputObjectSchema).optional(),
   watch: z.lazy(() => WatchCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional()
+  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  postTargets: z.lazy(() => ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema).optional()
 }).strict();
 export const ProductCreateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.ProductCreateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateWithoutMaintenanceRecordInput>;
 export const ProductCreateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

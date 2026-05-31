@@ -47,7 +47,8 @@ export const ProductResultSchema = z.object({
     reservation: z.array(z.unknown()),
     serviceRequest: z.array(z.unknown()),
     watch: z.unknown().nullable(),
-    watchSpec: z.unknown().nullable()
+    watchSpec: z.unknown().nullable(),
+    postTargets: z.array(z.unknown())
 }).strict();
 
 export type ProductResultType = z.infer<typeof ProductResultSchema>;

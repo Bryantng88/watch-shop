@@ -22,9 +22,9 @@ const makeSchema = () => z.object({
   note: z.string().optional().nullable(),
   categoryKey: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUncheckedCreateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUncheckedCreateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUncheckedCreateWithoutServiceRequestInput>;
 export const ServiceCatalogUncheckedCreateWithoutServiceRequestInputObjectZodSchema = makeSchema();

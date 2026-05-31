@@ -299,6 +299,18 @@ export async function listAdminWatches(
           include: {
             brand: { select: { id: true, name: true } },
             vendor: { select: { id: true, name: true } },
+            postTargets: {
+              include: {
+                postTarget: {
+                  select: {
+                    id: true,
+                    name: true,
+                    platform: true,
+                  },
+                },
+              },
+              orderBy: { createdAt: "asc" },
+            },
             productImage: {
               where: { role: "INLINE" as any },
               select: {

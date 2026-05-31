@@ -15,7 +15,8 @@ import { ProductImageUncheckedCreateNestedManyWithoutProductInputObjectSchema as
 import { ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema as ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './ProductVariantUncheckedCreateNestedManyWithoutProductInput.schema';
 import { ServiceRequestUncheckedCreateNestedManyWithoutProductInputObjectSchema as ServiceRequestUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './ServiceRequestUncheckedCreateNestedManyWithoutProductInput.schema';
 import { WatchUncheckedCreateNestedOneWithoutProductInputObjectSchema as WatchUncheckedCreateNestedOneWithoutProductInputObjectSchema } from './WatchUncheckedCreateNestedOneWithoutProductInput.schema';
-import { WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema as WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecUncheckedCreateNestedOneWithoutProductInput.schema'
+import { WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema as WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecUncheckedCreateNestedOneWithoutProductInput.schema';
+import { ProductPostTargetUncheckedCreateNestedManyWithoutProductInputObjectSchema as ProductPostTargetUncheckedCreateNestedManyWithoutProductInputObjectSchema } from './ProductPostTargetUncheckedCreateNestedManyWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -54,7 +55,8 @@ const makeSchema = () => z.object({
   productVariant: z.lazy(() => ProductVariantUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional(),
   watch: z.lazy(() => WatchUncheckedCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  watchSpec: z.lazy(() => WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema).optional()
+  watchSpec: z.lazy(() => WatchSpecUncheckedCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  postTargets: z.lazy(() => ProductPostTargetUncheckedCreateNestedManyWithoutProductInputObjectSchema).optional()
 }).strict();
 export const ProductUncheckedCreateWithoutReservationInputObjectSchema: z.ZodType<Prisma.ProductUncheckedCreateWithoutReservationInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductUncheckedCreateWithoutReservationInput>;
 export const ProductUncheckedCreateWithoutReservationInputObjectZodSchema = makeSchema();

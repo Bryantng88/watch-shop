@@ -19,7 +19,8 @@ import { ProductVariantCreateNestedManyWithoutProductInputObjectSchema as Produc
 import { ReservationCreateNestedManyWithoutProductInputObjectSchema as ReservationCreateNestedManyWithoutProductInputObjectSchema } from './ReservationCreateNestedManyWithoutProductInput.schema';
 import { ServiceRequestCreateNestedManyWithoutProductInputObjectSchema as ServiceRequestCreateNestedManyWithoutProductInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutProductInput.schema';
 import { WatchCreateNestedOneWithoutProductInputObjectSchema as WatchCreateNestedOneWithoutProductInputObjectSchema } from './WatchCreateNestedOneWithoutProductInput.schema';
-import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema'
+import { WatchSpecCreateNestedOneWithoutProductInputObjectSchema as WatchSpecCreateNestedOneWithoutProductInputObjectSchema } from './WatchSpecCreateNestedOneWithoutProductInput.schema';
+import { ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema as ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema } from './ProductPostTargetCreateNestedManyWithoutProductInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -58,7 +59,8 @@ const makeSchema = () => z.object({
   reservation: z.lazy(() => ReservationCreateNestedManyWithoutProductInputObjectSchema),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutProductInputObjectSchema),
   watch: z.lazy(() => WatchCreateNestedOneWithoutProductInputObjectSchema).optional(),
-  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional()
+  watchSpec: z.lazy(() => WatchSpecCreateNestedOneWithoutProductInputObjectSchema).optional(),
+  postTargets: z.lazy(() => ProductPostTargetCreateNestedManyWithoutProductInputObjectSchema)
 }).strict();
 export const ProductCreateInputObjectSchema: z.ZodType<Prisma.ProductCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ProductCreateInput>;
 export const ProductCreateInputObjectZodSchema = makeSchema();

@@ -35,6 +35,7 @@ export type WatchFormValues = {
         serialNumber: string;
         yearText: string;
         style: string;
+        postTargetIds: string[];
     };
 
     spec: {

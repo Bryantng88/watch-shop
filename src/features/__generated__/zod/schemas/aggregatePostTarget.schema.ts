@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PostTargetOrderByWithRelationInputObjectSchema as PostTargetOrderByWithRelationInputObjectSchema } from './objects/PostTargetOrderByWithRelationInput.schema';
+import { PostTargetWhereInputObjectSchema as PostTargetWhereInputObjectSchema } from './objects/PostTargetWhereInput.schema';
+import { PostTargetWhereUniqueInputObjectSchema as PostTargetWhereUniqueInputObjectSchema } from './objects/PostTargetWhereUniqueInput.schema';
+import { PostTargetCountAggregateInputObjectSchema as PostTargetCountAggregateInputObjectSchema } from './objects/PostTargetCountAggregateInput.schema';
+import { PostTargetMinAggregateInputObjectSchema as PostTargetMinAggregateInputObjectSchema } from './objects/PostTargetMinAggregateInput.schema';
+import { PostTargetMaxAggregateInputObjectSchema as PostTargetMaxAggregateInputObjectSchema } from './objects/PostTargetMaxAggregateInput.schema';
+
+export const PostTargetAggregateSchema: z.ZodType<Prisma.PostTargetAggregateArgs> = z.object({ orderBy: z.union([PostTargetOrderByWithRelationInputObjectSchema, PostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: PostTargetWhereInputObjectSchema.optional(), cursor: PostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PostTargetCountAggregateInputObjectSchema ]).optional(), _min: PostTargetMinAggregateInputObjectSchema.optional(), _max: PostTargetMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.PostTargetAggregateArgs>;
+
+export const PostTargetAggregateZodSchema = z.object({ orderBy: z.union([PostTargetOrderByWithRelationInputObjectSchema, PostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: PostTargetWhereInputObjectSchema.optional(), cursor: PostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), PostTargetCountAggregateInputObjectSchema ]).optional(), _min: PostTargetMinAggregateInputObjectSchema.optional(), _max: PostTargetMaxAggregateInputObjectSchema.optional() }).strict();

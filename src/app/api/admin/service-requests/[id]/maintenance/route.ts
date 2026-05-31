@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as maintenanceService from "@/app/(admin)/admin/services/_server/maintenance.service";
+import * as maintenanceService from "@/domains/service/server";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {

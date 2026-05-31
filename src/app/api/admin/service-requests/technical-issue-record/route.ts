@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addTechnicalIssueRecord } from "@/app/(admin)/admin/services/_server/technical-issues.service";
+import { addTechnicalIssueRecord } from "@/domains/service/server";
 
 export async function POST(req: Request) {
     try {

@@ -1,7 +1,7 @@
 import { prisma } from "@/server/db/client";
 
 export async function listWatchEditOptions() {
-    const [brands, vendors, categories] = await Promise.all([
+    const [brands, vendors, categories, postTargets] = await Promise.all([
         prisma.brand.findMany({
             orderBy: { name: "asc" },
             select: {
@@ -24,11 +24,21 @@ export async function listWatchEditOptions() {
                 name: true,
             },
         }),
+        prisma.postTarget.findMany({
+            where: { isActive: true },
+            orderBy: [{ platform: "asc" }, { name: "asc" }],
+            select: {
+                id: true,
+                name: true,
+                platform: true,
+            },
+        }),
     ]);
 
     return {
         brands,
         vendors,
         categories,
+        postTargets,
     };
 }

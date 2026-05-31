@@ -74,6 +74,7 @@ export default async function WatchEditPage({
                 brands={serialize(options.brands)}
                 vendors={serialize(options.vendors)}
                 categories={serialize(options.categories)}
+                postTargets={serialize(options.postTargets ?? [])}
                 canViewCost={canViewCost(user)}
                 canEditPrice={canEditPrice(user)}
                 canReviewContent={hasAdmin(user)}

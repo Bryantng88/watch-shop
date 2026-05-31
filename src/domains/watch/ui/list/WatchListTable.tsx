@@ -339,10 +339,11 @@ export default function WatchListTable({
                                     className="h-4 w-4 rounded border-slate-300"
                                 />
                             </th>
-                            <th className="w-[30%] px-5 py-4">Watch</th>
-                            <th className="w-[10%] px-5 py-4">Post readiness</th>
-                            <th className="w-[13%] px-5 py-4">Acquisition</th>
-                            <th className="w-[9%] px-5 py-4">Giá bán</th>
+                            <th className="w-[27%] px-5 py-4">Watch</th>
+                            <th className="w-[9%] px-5 py-4">Post readiness</th>
+                            <th className="w-[12%] px-5 py-4">Page đăng</th>
+                            <th className="w-[12%] px-5 py-4">Acquisition</th>
+                            <th className="w-[8%] px-5 py-4">Giá bán</th>
                             <th className="w-[7%] px-5 py-4">Tạo lúc</th>
                             <th className="w-[7%] px-5 py-4">Cập nhật</th>
                             <th className="w-[7%] px-5 py-4">Người cập nhật</th>
@@ -354,7 +355,7 @@ export default function WatchListTable({
                         {safeItems.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={9}
+                                    colSpan={10}
                                     className="px-4 py-12 text-center text-sm text-slate-500"
                                 >
                                     Chưa có watch nào khớp bộ lọc hiện tại.

@@ -15,6 +15,7 @@ import { ReservationFindManySchema as ReservationFindManySchema } from '../findM
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
 import { WatchArgsObjectSchema as WatchArgsObjectSchema } from './WatchArgs.schema';
 import { WatchSpecArgsObjectSchema as WatchSpecArgsObjectSchema } from './WatchSpecArgs.schema';
+import { ProductPostTargetFindManySchema as ProductPostTargetFindManySchema } from '../findManyProductPostTarget.schema';
 import { ProductCountOutputTypeArgsObjectSchema as ProductCountOutputTypeArgsObjectSchema } from './ProductCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -33,6 +34,7 @@ const makeSchema = () => z.object({
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   watch: z.union([z.boolean(), z.lazy(() => WatchArgsObjectSchema)]).optional(),
   watchSpec: z.union([z.boolean(), z.lazy(() => WatchSpecArgsObjectSchema)]).optional(),
+  postTargets: z.union([z.boolean(), z.lazy(() => ProductPostTargetFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ProductCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ProductIncludeObjectSchema: z.ZodType<Prisma.ProductInclude> = makeSchema() as unknown as z.ZodType<Prisma.ProductInclude>;

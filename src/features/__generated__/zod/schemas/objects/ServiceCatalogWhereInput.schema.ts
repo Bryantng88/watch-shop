@@ -34,10 +34,10 @@ const servicecatalogwhereinputSchema = z.object({
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   categoryKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
-  OrderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
 }).strict();
 export const ServiceCatalogWhereInputObjectSchema: z.ZodType<Prisma.ServiceCatalogWhereInput> = servicecatalogwhereinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogWhereInput>;
 export const ServiceCatalogWhereInputObjectZodSchema = servicecatalogwhereinputSchema;

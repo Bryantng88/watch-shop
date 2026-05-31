@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { completeServiceRequestById } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import { completeServiceRequestById } from "@/domains/service/server";
 
 export async function POST(
     _req: Request,

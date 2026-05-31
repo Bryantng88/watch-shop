@@ -22,6 +22,8 @@ export { OrderItemInputSchema } from './OrderItem.input';
 export { PartVariantSpecInputSchema } from './PartVariantSpec.input';
 export { PaymentInputSchema } from './Payment.input';
 export { ProductInputSchema } from './Product.input';
+export { PostTargetInputSchema } from './PostTarget.input';
+export { ProductPostTargetInputSchema } from './ProductPostTarget.input';
 export { ProductCategoryInputSchema } from './ProductCategory.input';
 export { ProductContentInputSchema } from './ProductContent.input';
 export { ProductImageInputSchema } from './ProductImage.input';

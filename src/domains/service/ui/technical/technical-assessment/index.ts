@@ -1,0 +1,1 @@
+export { default as TechnicalAssessmentInlinePanel } from "./inline-panel";

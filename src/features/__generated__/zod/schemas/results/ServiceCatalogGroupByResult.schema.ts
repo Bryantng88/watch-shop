@@ -32,10 +32,10 @@ export const ServiceCatalogGroupByResultSchema = z.array(z.object({
     note: z.number(),
     categoryKey: z.number(),
     sortOrder: z.number(),
-    MaintenanceRecord: z.number(),
-    OrderItem: z.number(),
-    ServiceRequest: z.number(),
-    TechnicalIssue: z.number()
+    maintenanceRecord: z.number(),
+    orderItem: z.number(),
+    serviceRequest: z.number(),
+    technicalIssue: z.number()
   }).optional(),
   _sum: z.object({
     defaultPrice: z.number().nullable(),

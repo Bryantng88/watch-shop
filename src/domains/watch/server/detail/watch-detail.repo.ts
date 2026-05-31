@@ -15,6 +15,14 @@ export async function getAdminWatchRow(db: DB, productId: string) {
           productImage: {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           },
+          postTargets: {
+            include: {
+              postTarget: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
         },
       },
       watchSpecV2: true,
@@ -39,6 +47,14 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
           productCategory: true,
           productImage: {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
+          postTargets: {
+            include: {
+              postTarget: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
           },
         },
       },

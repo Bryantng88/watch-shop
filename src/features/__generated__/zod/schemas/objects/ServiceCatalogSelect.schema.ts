@@ -23,10 +23,10 @@ const makeSchema = () => z.object({
   note: z.boolean().optional(),
   categoryKey: z.boolean().optional(),
   sortOrder: z.boolean().optional(),
-  MaintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
-  OrderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
-  ServiceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
-  TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
+  maintenanceRecord: z.union([z.boolean(), z.lazy(() => MaintenanceRecordFindManySchema)]).optional(),
+  orderItem: z.union([z.boolean(), z.lazy(() => OrderItemFindManySchema)]).optional(),
+  serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
+  technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceCatalogCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceCatalogSelectObjectSchema: z.ZodType<Prisma.ServiceCatalogSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;

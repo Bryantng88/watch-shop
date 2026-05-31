@@ -33,6 +33,12 @@ export type WatchListSubCounts = {
 };
 
 
+export type WatchPostTargetPreviewItem = {
+    id: string;
+    name: string;
+    platform?: string | null;
+};
+
 export type WatchAcquisitionPreviewItem = {
     id: string;
     acquisitionId: string;
@@ -66,6 +72,7 @@ export type WatchRow = {
 
     brandName?: string | null;
     vendorName?: string | null;
+    postTargets?: WatchPostTargetPreviewItem[];
     acquisitionItems?: WatchAcquisitionPreviewItem[];
     reviewStatus?:
     | "DRAFT"

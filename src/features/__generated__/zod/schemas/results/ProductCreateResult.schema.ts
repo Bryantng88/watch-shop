@@ -40,5 +40,6 @@ export const ProductCreateResultSchema = z.object({
   reservation: z.array(z.unknown()),
   serviceRequest: z.array(z.unknown()),
   watch: z.unknown().optional(),
-  watchSpec: z.unknown().optional()
+  watchSpec: z.unknown().optional(),
+  postTargets: z.array(z.unknown())
 });

@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { PostTargetWhereInputObjectSchema as PostTargetWhereInputObjectSchema } from './objects/PostTargetWhereInput.schema';
+import { PostTargetOrderByWithAggregationInputObjectSchema as PostTargetOrderByWithAggregationInputObjectSchema } from './objects/PostTargetOrderByWithAggregationInput.schema';
+import { PostTargetScalarWhereWithAggregatesInputObjectSchema as PostTargetScalarWhereWithAggregatesInputObjectSchema } from './objects/PostTargetScalarWhereWithAggregatesInput.schema';
+import { PostTargetScalarFieldEnumSchema } from './enums/PostTargetScalarFieldEnum.schema';
+import { PostTargetCountAggregateInputObjectSchema as PostTargetCountAggregateInputObjectSchema } from './objects/PostTargetCountAggregateInput.schema';
+import { PostTargetMinAggregateInputObjectSchema as PostTargetMinAggregateInputObjectSchema } from './objects/PostTargetMinAggregateInput.schema';
+import { PostTargetMaxAggregateInputObjectSchema as PostTargetMaxAggregateInputObjectSchema } from './objects/PostTargetMaxAggregateInput.schema';
+
+export const PostTargetGroupBySchema: z.ZodType<Prisma.PostTargetGroupByArgs> = z.object({ where: PostTargetWhereInputObjectSchema.optional(), orderBy: z.union([PostTargetOrderByWithAggregationInputObjectSchema, PostTargetOrderByWithAggregationInputObjectSchema.array()]).optional(), having: PostTargetScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(PostTargetScalarFieldEnumSchema), _count: z.union([ z.literal(true), PostTargetCountAggregateInputObjectSchema ]).optional(), _min: PostTargetMinAggregateInputObjectSchema.optional(), _max: PostTargetMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.PostTargetGroupByArgs>;
+
+export const PostTargetGroupByZodSchema = z.object({ where: PostTargetWhereInputObjectSchema.optional(), orderBy: z.union([PostTargetOrderByWithAggregationInputObjectSchema, PostTargetOrderByWithAggregationInputObjectSchema.array()]).optional(), having: PostTargetScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(PostTargetScalarFieldEnumSchema), _count: z.union([ z.literal(true), PostTargetCountAggregateInputObjectSchema ]).optional(), _min: PostTargetMinAggregateInputObjectSchema.optional(), _max: PostTargetMaxAggregateInputObjectSchema.optional() }).strict();

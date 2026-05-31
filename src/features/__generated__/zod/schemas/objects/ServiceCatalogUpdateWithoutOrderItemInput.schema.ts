@@ -30,9 +30,9 @@ const makeSchema = () => z.object({
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   categoryKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
-  ServiceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUpdateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUpdateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUpdateWithoutOrderItemInput>;
 export const ServiceCatalogUpdateWithoutOrderItemInputObjectZodSchema = makeSchema();

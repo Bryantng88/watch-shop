@@ -194,6 +194,50 @@ function AcquisitionCell({ row }: { row: WatchRow }) {
     );
 }
 
+
+function uniquePostTargetNames(targets: WatchRow["postTargets"] = []) {
+    const byName = new Map<string, NonNullable<WatchRow["postTargets"]>[number]>();
+
+    for (const target of targets) {
+        const name = String(target?.name ?? "").trim();
+        if (!name) continue;
+
+        const key = name.toLowerCase();
+        if (!byName.has(key)) {
+            byName.set(key, {
+                ...target,
+                name,
+                platform: null,
+            });
+        }
+    }
+
+    return Array.from(byName.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "vi"),
+    );
+}
+
+function formatPostTargetLabel(target: NonNullable<WatchRow["postTargets"]>[number]) {
+    return String(target.name ?? "").trim();
+}
+
+function PostTargetCell({ row }: { row: WatchRow }) {
+    const targets = uniquePostTargetNames(row.postTargets);
+    const label = targets.map(formatPostTargetLabel).join(", ");
+
+    if (!label) {
+        return <span className="text-xs font-medium text-slate-300">-</span>;
+    }
+
+    return (
+        <span
+            className="block max-w-[160px] truncate text-sm text-slate-600"
+            title={label}
+        >
+            {label}
+        </span>
+    );
+}
 function WatchSignalSummary({ row }: { row: WatchRow }) {
     const hasContent = Boolean(row.hasContent);
     const hasGalleryImage = Number(row.imagesCount ?? 0) > 0 || Boolean(row.hasImages);
@@ -256,13 +300,6 @@ export default function WatchListRow({
         saleState === "HOLD" ||
         saleState === "SOLD";
 
-    const quickOrderDisabledReason =
-        saleState === "HOLD"
-            ? "Watch đang HOLD, không thể tạo đơn mới."
-            : saleState === "SOLD"
-                ? "Watch đã SOLD, không thể tạo đơn mới."
-                : "";
-    const canQuickOrder = Boolean(onQuickOrder) && !isLockedForQuickOrder;
     const isLockedForEdit =
         saleState === "SOLD";
     const actions = [
@@ -350,9 +387,13 @@ export default function WatchListRow({
             </td>
 
             <td className="px-4 py-4">
-                <div className="flex min-w-[150px] items-center gap-2">
+                <div className="flex min-w-[120px] items-center gap-2">
                     <WatchPostReadinessIcon row={product} />
                 </div>
+            </td>
+
+            <td className="px-4 py-4 align-middle">
+                <PostTargetCell row={product} />
             </td>
 
             <td className="px-4 py-4 align-middle">

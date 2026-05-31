@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTechnicalAssessmentPanel } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import { getTechnicalAssessmentPanel } from "@/domains/service/server";
 
 type RouteContext = {
     params: Promise<{ id: string }>;

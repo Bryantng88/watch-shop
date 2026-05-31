@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { cancelTechnicalIssue } from "@/app/(admin)/admin/services/_server/technical-issues.service";
+import { cancelTechnicalIssue } from "@/domains/service/server";
 
 export async function POST(
     req: Request,

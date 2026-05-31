@@ -502,12 +502,41 @@ model Product {
   watch              Watch?
   watchSpec          WatchSpec?
 
+  postTargets ProductPostTarget[]
+
   @@index([brandId])
   @@index([categoryId])
   @@index([createdAt])
   @@index([specStatus])
   @@index([type])
   @@index([updatedAt])
+}
+
+model PostTarget {
+  id        String   @id @default(cuid())
+  name      String
+  platform  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products ProductPostTarget[]
+
+  @@index([isActive])
+  @@index([platform])
+  @@index([name])
+}
+
+model ProductPostTarget {
+  productId    String
+  postTargetId String
+  createdAt    DateTime @default(now())
+
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  postTarget PostTarget @relation(fields: [postTargetId], references: [id], onDelete: Cascade)
+
+  @@id([productId, postTargetId])
+  @@index([postTargetId])
 }
 
 model ProductCategory {
@@ -634,10 +663,10 @@ model ServiceCatalog {
   note              String?
   categoryKey       String?
   sortOrder         Int                 @default(0)
-  MaintenanceRecord MaintenanceRecord[]
-  OrderItem         OrderItem[]
-  ServiceRequest    ServiceRequest[]
-  TechnicalIssue    TechnicalIssue[]
+  maintenanceRecord MaintenanceRecord[]
+  orderItem         OrderItem[]
+  serviceRequest    ServiceRequest[]
+  technicalIssue    TechnicalIssue[]
 
   @@index([detail], map: "idx_service_catalog_detail")
 }

@@ -41,6 +41,19 @@ function mapProductImage(img: any) {
     };
 }
 
+function mapProductPostTargets(product: any) {
+    const relations = Array.isArray(product?.postTargets) ? product.postTargets : [];
+
+    return relations
+        .map((item: any) => item?.postTarget ?? item)
+        .filter((target: any) => target?.id)
+        .map((target: any) => ({
+            id: String(target.id),
+            name: String(target.name ?? ""),
+            platform: target.platform ?? null,
+        }));
+}
+
 function hasMeaningfulContent(row: any) {
     return Boolean(
         String(row?.watchContent?.body ?? "").trim() ||
@@ -95,6 +108,7 @@ export function mapAdminWatchListItem(row: any): WatchListComputedItem {
 
         sku: row?.product?.sku ?? null,
         brand: row?.product?.brand?.name ?? row?.watchSpecV2?.brand ?? null,
+        postTargets: mapProductPostTargets(row?.product),
         primaryImageUrl: galleryImages[0]?.url ?? null,
 
         salePrice: decimalToString(row?.watchPrice?.salePrice),
@@ -171,6 +185,8 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 name: row.product.productCategory.name,
             }
             : null,
+
+        postTargets: mapProductPostTargets(row.product),
 
         watch: {
             id: row.id,

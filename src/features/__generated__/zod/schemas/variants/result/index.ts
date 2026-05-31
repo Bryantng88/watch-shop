@@ -22,6 +22,8 @@ export { OrderItemResultSchema } from './OrderItem.result';
 export { PartVariantSpecResultSchema } from './PartVariantSpec.result';
 export { PaymentResultSchema } from './Payment.result';
 export { ProductResultSchema } from './Product.result';
+export { PostTargetResultSchema } from './PostTarget.result';
+export { ProductPostTargetResultSchema } from './ProductPostTarget.result';
 export { ProductCategoryResultSchema } from './ProductCategory.result';
 export { ProductContentResultSchema } from './ProductContent.result';
 export { ProductImageResultSchema } from './ProductImage.result';

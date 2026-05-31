@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as technicalService from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import * as technicalService from "@/domains/service/server";
 
 export async function GET(
     _req: Request,

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import TechnicalWorkbenchClient from "../../_client/TechnicalWorkbenchClient";
-import { getTechnicalAssessmentPanel } from "../../_server/technical_assessment.serivce";
+import TechnicalWorkbenchClient from "@/domains/service/client/TechnicalWorkbenchClient";
+import { getTechnicalAssessmentPanel } from "@/domains/service/server";
 
 export default async function ServiceTechnicalWorkbenchPage({
     params,

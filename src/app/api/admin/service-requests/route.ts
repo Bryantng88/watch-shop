@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { saveTechnicalAssessment } from "@/app/(admin)/admin/services/_server/technical_assessment.serivce";
+import { saveTechnicalAssessment } from "@/domains/service/server";
 
 export async function POST(req: Request) {
     try {

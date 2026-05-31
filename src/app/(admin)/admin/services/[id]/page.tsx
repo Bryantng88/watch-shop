@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import ServiceRequestDetailClient from "../_client/ServiceRequestDetailClient";
-import { getTechnicalAssessmentPanel, getServiceRequestTechnicalSummary } from "../_server/technical_assessment.serivce";
+import ServiceRequestDetailClient from "@/domains/service/client/ServiceRequestDetailClient";
+import { getServiceRequestDetailPageData } from "@/domains/service/server/detail";
 
 export default async function ServiceRequestDetailPage({
     params,
@@ -8,18 +8,9 @@ export default async function ServiceRequestDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
+    const data = await getServiceRequestDetailPageData(id);
 
-    const panel = await getTechnicalAssessmentPanel(id).catch(() => null);
-    if (!panel) notFound();
+    if (!data) notFound();
 
-    const technicalSummary = await getServiceRequestTechnicalSummary(id);
-
-    return (
-        <ServiceRequestDetailClient
-            detail={{
-                ...panel,
-                technicalSummary,
-            }}
-        />
-    );
+    return <ServiceRequestDetailClient detail={data.detail} issueBoard={data.issueBoard} />;
 }

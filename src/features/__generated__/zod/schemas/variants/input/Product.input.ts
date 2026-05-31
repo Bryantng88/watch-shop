@@ -47,7 +47,8 @@ export const ProductInputSchema = z.object({
     reservation: z.array(z.unknown()),
     serviceRequest: z.array(z.unknown()),
     watch: z.unknown().optional().nullable(),
-    watchSpec: z.unknown().optional().nullable()
+    watchSpec: z.unknown().optional().nullable(),
+    postTargets: z.array(z.unknown())
 }).strict();
 
 export type ProductInputType = z.infer<typeof ProductInputSchema>;

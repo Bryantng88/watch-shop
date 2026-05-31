@@ -78,6 +78,9 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             serialNumber: s(detail?.watch?.serialNumber),
             yearText: s(detail?.watch?.yearText),
             style: s(detail?.watch?.style),
+            postTargetIds: Array.isArray(detail?.postTargets)
+                ? detail.postTargets.map((target: any) => String(target?.id ?? "")).filter(Boolean)
+                : [],
         },
 
         spec: {

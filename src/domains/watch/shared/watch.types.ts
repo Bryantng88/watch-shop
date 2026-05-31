@@ -35,6 +35,15 @@ export type WatchDetailReviewSnapshot = {
     content: WatchReviewSnapshot;
     image: WatchReviewSnapshot;
     readyForPublish: boolean;
+    isContentDownloaded?: boolean;
+    isImageDownloaded?: boolean;
+    isPosted?: boolean;
+};
+
+export type WatchPostTargetModel = {
+    id: string;
+    name: string;
+    platform?: string | null;
 };
 
 export type WatchDetailModel = {
@@ -56,6 +65,7 @@ export type WatchDetailModel = {
     brand?: WatchBrandModel | null;
     vendor?: WatchVendorModel | null;
     category?: WatchCategoryModel | null;
+    postTargets?: WatchPostTargetModel[];
 
     watch: {
         id: string;
@@ -76,6 +86,9 @@ export type WatchDetailModel = {
         hasBox?: boolean | null;
         hasPapers?: boolean | null;
         isDownloadedContent?: boolean | null;
+        isContentDownloaded?: boolean | null;
+        isImageDownloaded?: boolean | null;
+        isPosted?: boolean | null;
         notes?: string | null;
         conditionGrade?: string | null;
         serialNumber?: string | null;

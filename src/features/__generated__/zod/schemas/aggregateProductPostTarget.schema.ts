@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { ProductPostTargetOrderByWithRelationInputObjectSchema as ProductPostTargetOrderByWithRelationInputObjectSchema } from './objects/ProductPostTargetOrderByWithRelationInput.schema';
+import { ProductPostTargetWhereInputObjectSchema as ProductPostTargetWhereInputObjectSchema } from './objects/ProductPostTargetWhereInput.schema';
+import { ProductPostTargetWhereUniqueInputObjectSchema as ProductPostTargetWhereUniqueInputObjectSchema } from './objects/ProductPostTargetWhereUniqueInput.schema';
+import { ProductPostTargetCountAggregateInputObjectSchema as ProductPostTargetCountAggregateInputObjectSchema } from './objects/ProductPostTargetCountAggregateInput.schema';
+import { ProductPostTargetMinAggregateInputObjectSchema as ProductPostTargetMinAggregateInputObjectSchema } from './objects/ProductPostTargetMinAggregateInput.schema';
+import { ProductPostTargetMaxAggregateInputObjectSchema as ProductPostTargetMaxAggregateInputObjectSchema } from './objects/ProductPostTargetMaxAggregateInput.schema';
+
+export const ProductPostTargetAggregateSchema: z.ZodType<Prisma.ProductPostTargetAggregateArgs> = z.object({ orderBy: z.union([ProductPostTargetOrderByWithRelationInputObjectSchema, ProductPostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductPostTargetWhereInputObjectSchema.optional(), cursor: ProductPostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductPostTargetCountAggregateInputObjectSchema ]).optional(), _min: ProductPostTargetMinAggregateInputObjectSchema.optional(), _max: ProductPostTargetMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.ProductPostTargetAggregateArgs>;
+
+export const ProductPostTargetAggregateZodSchema = z.object({ orderBy: z.union([ProductPostTargetOrderByWithRelationInputObjectSchema, ProductPostTargetOrderByWithRelationInputObjectSchema.array()]).optional(), where: ProductPostTargetWhereInputObjectSchema.optional(), cursor: ProductPostTargetWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), ProductPostTargetCountAggregateInputObjectSchema ]).optional(), _min: ProductPostTargetMinAggregateInputObjectSchema.optional(), _max: ProductPostTargetMaxAggregateInputObjectSchema.optional() }).strict();

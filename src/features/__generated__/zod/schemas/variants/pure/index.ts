@@ -22,6 +22,8 @@ export { OrderItemModelSchema } from './OrderItem.pure';
 export { PartVariantSpecModelSchema } from './PartVariantSpec.pure';
 export { PaymentModelSchema } from './Payment.pure';
 export { ProductModelSchema } from './Product.pure';
+export { PostTargetModelSchema } from './PostTarget.pure';
+export { ProductPostTargetModelSchema } from './ProductPostTarget.pure';
 export { ProductCategoryModelSchema } from './ProductCategory.pure';
 export { ProductContentModelSchema } from './ProductContent.pure';
 export { ProductImageModelSchema } from './ProductImage.pure';

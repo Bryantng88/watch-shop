@@ -19,10 +19,10 @@ export const ServiceCatalogInputSchema = z.object({
     note: z.string().optional().nullable(),
     categoryKey: z.string().optional().nullable(),
     sortOrder: z.number().int(),
-    MaintenanceRecord: z.array(z.unknown()),
-    OrderItem: z.array(z.unknown()),
-    ServiceRequest: z.array(z.unknown()),
-    TechnicalIssue: z.array(z.unknown())
+    maintenanceRecord: z.array(z.unknown()),
+    orderItem: z.array(z.unknown()),
+    serviceRequest: z.array(z.unknown()),
+    technicalIssue: z.array(z.unknown())
 }).strict();
 
 export type ServiceCatalogInputType = z.infer<typeof ServiceCatalogInputSchema>;

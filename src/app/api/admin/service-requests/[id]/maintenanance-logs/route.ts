@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as maintenanceService from "@/app/(admin)/admin/services/_server/maintenance.service";
+import * as maintenanceService from "@/domains/service/server";
 
 type Ctx = { params: Promise<{ id: string }> };
 

@@ -62,7 +62,8 @@ export const ProductGroupByResultSchema = z.array(z.object({
     reservation: z.number(),
     serviceRequest: z.number(),
     watch: z.number(),
-    watchSpec: z.number()
+    watchSpec: z.number(),
+    postTargets: z.number()
   }).optional(),
   _sum: z.object({
     maxQtyPerOrder: z.number().nullable()

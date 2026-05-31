@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as serviceRequest from "@/app/(admin)/admin/services/_server/service_request.service";
+import * as serviceRequest from "@/domains/service/server";
 import { ServiceScope } from "@prisma/client";
 
 export async function POST(req: Request) {

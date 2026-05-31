@@ -36,7 +36,8 @@ import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelat
 import { WatchNullableScalarRelationFilterObjectSchema as WatchNullableScalarRelationFilterObjectSchema } from './WatchNullableScalarRelationFilter.schema';
 import { WatchWhereInputObjectSchema as WatchWhereInputObjectSchema } from './WatchWhereInput.schema';
 import { WatchSpecNullableScalarRelationFilterObjectSchema as WatchSpecNullableScalarRelationFilterObjectSchema } from './WatchSpecNullableScalarRelationFilter.schema';
-import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './WatchSpecWhereInput.schema'
+import { WatchSpecWhereInputObjectSchema as WatchSpecWhereInputObjectSchema } from './WatchSpecWhereInput.schema';
+import { ProductPostTargetListRelationFilterObjectSchema as ProductPostTargetListRelationFilterObjectSchema } from './ProductPostTargetListRelationFilter.schema'
 
 const productwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ProductWhereInputObjectSchema), z.lazy(() => ProductWhereInputObjectSchema).array()]).optional(),
@@ -82,7 +83,8 @@ const productwhereinputSchema = z.object({
   reservation: z.lazy(() => ReservationListRelationFilterObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   watch: z.union([z.lazy(() => WatchNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchWhereInputObjectSchema)]).optional(),
-  watchSpec: z.union([z.lazy(() => WatchSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecWhereInputObjectSchema)]).optional()
+  watchSpec: z.union([z.lazy(() => WatchSpecNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecWhereInputObjectSchema)]).optional(),
+  postTargets: z.lazy(() => ProductPostTargetListRelationFilterObjectSchema).optional()
 }).strict();
 export const ProductWhereInputObjectSchema: z.ZodType<Prisma.ProductWhereInput> = productwhereinputSchema as unknown as z.ZodType<Prisma.ProductWhereInput>;
 export const ProductWhereInputObjectZodSchema = productwhereinputSchema;
