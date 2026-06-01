@@ -29,6 +29,7 @@ const makeSchema = () => z.object({
   canceledAt: z.coerce.date().optional().nullable(),
   actualCost: z.number().optional().nullable(),
   summary: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
   resolutionNote: z.string().optional().nullable(),
   completedByNameSnap: z.string().optional().nullable(),
   isConfirmed: z.boolean().optional(),

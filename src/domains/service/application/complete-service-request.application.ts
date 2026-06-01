@@ -44,19 +44,44 @@ export async function completeServiceRequestApplication(input: { serviceRequestI
         id: true,
         movementKind: true,
         imageFileKey: true,
-        TechnicalIssue: { select: { id: true, isConfirmed: true, executionStatus: true } },
+        TechnicalIssue: { select: { id: true, isConfirmed: true, executionStatus: true, serviceCatalogId: true, actualCost: true, resolutionNote: true } },
       },
     });
 
     if (technicalAssessment) {
-      const confirmedIssues = technicalAssessment.TechnicalIssue.filter((issue: any) => issue.isConfirmed && String(issue.executionStatus || "").toUpperCase() !== "CANCELED");
-      const hasOpenConfirmedIssue = confirmedIssues.some((issue: any) => {
-        const status = String(issue.executionStatus || "").toUpperCase();
-        return status === "OPEN" || status === "IN_PROGRESS";
-      });
-      if (hasOpenConfirmedIssue) throw new Error("Còn issue đã xác nhận nhưng chưa hoàn tất");
+      const activeIssues = technicalAssessment.TechnicalIssue.filter(
+        (issue: any) => String(issue.executionStatus || "").toUpperCase() !== "CANCELED"
+      );
 
-      const needsMechanicalImage = String(technicalAssessment.movementKind || "").toUpperCase() === "MECHANICAL" && confirmedIssues.length > 0 && !String(technicalAssessment.imageFileKey || "").trim();
+      const unfinishedIssue = activeIssues.find((issue: any) => {
+        const status = String(issue.executionStatus || "").toUpperCase();
+        return status !== "DONE" && status !== "COMPLETED";
+      });
+
+      if (unfinishedIssue) {
+        throw new Error("Còn issue chưa hoàn tất. Vui lòng hoàn tất, hủy hoặc xử lý lại issue trước khi đóng SR.");
+      }
+
+      const missingConclusionIssue = activeIssues.find((issue: any) => {
+        const status = String(issue.executionStatus || "").toUpperCase();
+        if (status !== "DONE" && status !== "COMPLETED") return false;
+
+        return (
+          !issue.serviceCatalogId ||
+          issue.actualCost == null ||
+          !String(issue.resolutionNote || "").trim()
+        );
+      });
+
+      if (missingConclusionIssue) {
+        throw new Error("Có issue đã hoàn tất nhưng thiếu kết luận kỹ thuật/hạng mục/chi phí. Vui lòng bổ sung trước khi đóng SR.");
+      }
+
+      const needsMechanicalImage =
+        String(technicalAssessment.movementKind || "").toUpperCase() === "MECHANICAL" &&
+        activeIssues.length > 0 &&
+        !String(technicalAssessment.imageFileKey || "").trim();
+
       if (needsMechanicalImage) throw new Error("Máy cơ đã hoàn tất issue nhưng vẫn chưa có hình ảnh kỹ thuật.");
     }
 

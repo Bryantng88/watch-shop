@@ -35,6 +35,7 @@ const makeSchema = () => z.object({
   actualCost: z.boolean().optional(),
   technicianId: z.boolean().optional(),
   summary: z.boolean().optional(),
+  priority: z.boolean().optional(),
   resolutionNote: z.boolean().optional(),
   completedByNameSnap: z.boolean().optional(),
   isConfirmed: z.boolean().optional(),

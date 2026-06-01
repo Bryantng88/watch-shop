@@ -18,7 +18,7 @@ import type {
     WatchListSubFilter,
     WatchRow,
 } from "../ui/list/types";
-import TechnicalAssessmentModal from "@/domains/service/ui/technical/TechnicalAssessmentModal";
+import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -266,7 +266,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const sp = useSearchParams();
     const [isPending, startTransition] = useTransition();
     const progress = useAppProgress();
-    const [technicalAssessmentServiceRequestId, setTechnicalAssessmentServiceRequestId] = React.useState<string | null>(null);
+    const [serviceQuickRow, setServiceQuickRow] = React.useState<WatchRow | null>(null);
     const urlParams = useMemo(() => sanitizeParams(new URLSearchParams(sp.toString())), [sp]);
     const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
 
@@ -474,7 +474,7 @@ export default function WatchListClient(props: WatchListClientProps) {
         console.log("TODO delete watch", row);
     }
 
-    async function onService(row: WatchRow) {
+    function onService(row: WatchRow) {
         const productId = String(row.productId || "").trim();
 
         if (!productId) {
@@ -482,37 +482,7 @@ export default function WatchListClient(props: WatchListClientProps) {
             return;
         }
 
-        progress.show({
-            title: "Đang tạo phiếu service",
-            message: "Hệ thống đang tạo service request từ watch.",
-        });
-
-        try {
-            const res = await fetch("/api/admin/service-requests/from-product", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId }),
-            });
-
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                throw new Error(data?.error || "Tạo service request thất bại");
-            }
-
-            const createdId = data?.items?.[0]?.id;
-
-            if (!createdId) {
-                throw new Error("Không lấy được service request vừa tạo");
-            }
-
-            setTechnicalAssessmentServiceRequestId(createdId);
-            router.refresh();
-        } catch (error: any) {
-            alert(error?.message || "Tạo service request thất bại");
-        } finally {
-            window.setTimeout(() => progress.hide(), 500);
-        }
+        setServiceQuickRow(row);
     }
 
     function onQuickOrder(row: WatchRow) {
@@ -585,11 +555,14 @@ export default function WatchListClient(props: WatchListClientProps) {
                 loading={loading}
                 onPage={handlePage}
             />
-            {technicalAssessmentServiceRequestId ? (
-                <TechnicalAssessmentModal
+            {serviceQuickRow ? (
+                <WatchServiceQuickModal
                     open
-                    serviceRequestId={technicalAssessmentServiceRequestId}
-                    onClose={() => setTechnicalAssessmentServiceRequestId(null)}
+                    productId={serviceQuickRow.productId}
+                    productTitle={serviceQuickRow.title}
+                    sku={serviceQuickRow.sku}
+                    onClose={() => setServiceQuickRow(null)}
+                    onUpdated={() => router.refresh()}
                 />
             ) : null}
         </div>

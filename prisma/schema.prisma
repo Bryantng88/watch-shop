@@ -843,6 +843,7 @@ model TechnicalIssue {
   actualCost              Decimal?                      @db.Decimal(18, 2)
   technicianId            String?
   summary                 String?
+  priority                String?
   resolutionNote          String?
   completedByNameSnap     String?
   isConfirmed             Boolean                       @default(false)

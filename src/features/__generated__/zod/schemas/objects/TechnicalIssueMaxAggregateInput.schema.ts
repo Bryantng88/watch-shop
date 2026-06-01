@@ -27,6 +27,7 @@ const makeSchema = () => z.object({
   actualCost: z.literal(true).optional(),
   technicianId: z.literal(true).optional(),
   summary: z.literal(true).optional(),
+  priority: z.literal(true).optional(),
   resolutionNote: z.literal(true).optional(),
   completedByNameSnap: z.literal(true).optional(),
   isConfirmed: z.literal(true).optional(),

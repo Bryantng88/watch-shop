@@ -24,6 +24,7 @@ export const TechnicalIssueDeleteResultSchema = z.nullable(z.object({
   actualCost: z.number().optional(),
   technicianId: z.string().optional(),
   summary: z.string().optional(),
+  priority: z.string().optional(),
   resolutionNote: z.string().optional(),
   completedByNameSnap: z.string().optional(),
   isConfirmed: z.boolean(),

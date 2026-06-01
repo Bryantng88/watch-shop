@@ -29,6 +29,7 @@ export const TechnicalIssueModelSchema = z.object({
     actualCost: z.number().nullable(),
     technicianId: z.string().nullable(),
     summary: z.string().nullable(),
+    priority: z.string().nullable(),
     resolutionNote: z.string().nullable(),
     completedByNameSnap: z.string().nullable(),
     isConfirmed: z.boolean(),

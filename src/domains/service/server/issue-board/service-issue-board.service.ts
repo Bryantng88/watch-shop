@@ -126,9 +126,30 @@ export async function completeTechnicalIssue(input: {
     actorName?: string | null;
     actualCost?: unknown;
     resolutionNote?: string | null;
+    serviceCatalogId?: string | null;
+    supplyCatalogId?: string | null;
+    mechanicalPartCatalogId?: string | null;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
+
+    const serviceCatalogId = cleanId(input.serviceCatalogId);
+    const supplyCatalogId = cleanId(input.supplyCatalogId);
+    const mechanicalPartCatalogId = cleanId(input.mechanicalPartCatalogId);
+    const resolutionNote = cleanId(input.resolutionNote);
+    const actualCost = decimalOrNull(input.actualCost);
+
+    if (!serviceCatalogId) {
+        throw new Error("Vui lòng chọn hạng mục xử lý trước khi hoàn tất issue.");
+    }
+
+    if (actualCost == null || actualCost < 0) {
+        throw new Error("Vui lòng nhập chi phí thực tế hợp lệ trước khi hoàn tất issue.");
+    }
+
+    if (!resolutionNote) {
+        throw new Error("Vui lòng nhập kết luận xử lý trước khi hoàn tất issue.");
+    }
 
     return prisma.technicalIssue.update({
         where: { id },
@@ -137,8 +158,11 @@ export async function completeTechnicalIssue(input: {
             executionStatus: "DONE" as any,
             completedAt: new Date(),
             completedByNameSnap: cleanId(input.actorName),
-            actualCost: decimalOrNull(input.actualCost),
-            resolutionNote: cleanId(input.resolutionNote),
+            actualCost,
+            resolutionNote,
+            serviceCatalogId,
+            supplyCatalogId,
+            mechanicalPartCatalogId,
             updatedAt: new Date(),
         } as any,
     });
@@ -480,7 +504,33 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
         readyToCloseSrCount: readyToCloseSrIds.length,
     };
 
-    return { items, counts };
+    const [serviceCatalogs, supplyCatalogs, mechanicalPartCatalogs] = await Promise.all([
+        prisma.serviceCatalog.findMany({
+            where: { isActive: true },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: { id: true, code: true, name: true, categoryKey: true },
+        }),
+        prisma.supplyCatalog.findMany({
+            where: { isActive: true },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: { id: true, code: true, name: true, category: true },
+        }),
+        prisma.mechanicalPartCatalog.findMany({
+            where: { isActive: true },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: { id: true, code: true, name: true, group: true },
+        }),
+    ]);
+
+    return {
+        items,
+        counts,
+        conclusionOptions: {
+            serviceCatalogs,
+            supplyCatalogs,
+            mechanicalPartCatalogs,
+        },
+    };
 }
 
 

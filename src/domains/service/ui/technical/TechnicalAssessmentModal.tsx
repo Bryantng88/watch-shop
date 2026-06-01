@@ -21,7 +21,7 @@ type Props = {
     onClose: () => void;
     onSaved?: () => void | Promise<void>;
     serviceRequestId: string | null;
-
+    productId?: string | null;
     productName?: string;
     productSku?: string | null;
     productImage?: string | null;
@@ -144,7 +144,14 @@ type TechnicalCatalogs = {
 
 type PanelResponse = {
     serviceRequest?: {
+        id?: string | null;
+        refNo?: string | null;
         productId?: string | null;
+        productTitle?: string | null;
+        skuSnapshot?: string | null;
+        sku?: string | null;
+        primaryImageUrl?: string | null;
+        movement?: string | null;
     };
     assessment?: any;
     technicalAssessment?: any;
@@ -173,7 +180,21 @@ function parseNumber(value?: string) {
     const numeric = Number(String(value).replace(/[^\d.-]/g, ""));
     return Number.isNaN(numeric) ? 0 : numeric;
 }
+function resolveImageSrc(value?: string | null) {
+    const src = String(value || "").trim();
+    if (!src) return null;
 
+    if (
+        src.startsWith("http://") ||
+        src.startsWith("https://") ||
+        src.startsWith("/") ||
+        src.startsWith("data:")
+    ) {
+        return src;
+    }
+
+    return `/api/media/sign?key=${encodeURIComponent(src)}`;
+}
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("vi-VN").format(value) + "đ";
 }
@@ -632,7 +653,8 @@ export default function TechnicalAssessmentModal({
     open,
     onClose,
     onSaved,
-    serviceRequestId,
+    serviceRequestId = null,
+    productId: productIdProp = null,
     productName = "-",
     productSku = "-",
     productImage = null,
@@ -653,12 +675,30 @@ export default function TechnicalAssessmentModal({
     const [saving, setSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const productId = panel?.serviceRequest?.productId ?? null;
+    const effectiveProductId = panel?.serviceRequest?.productId ?? productIdProp ?? null;
+
+    const displayProductName =
+        panel?.serviceRequest?.productTitle ?? productName ?? "-";
+
+    const displayProductSku =
+        panel?.serviceRequest?.skuSnapshot ??
+        panel?.serviceRequest?.sku ??
+        productSku ??
+        "-";
+
+    const displayProductImage =
+        panel?.serviceRequest?.primaryImageUrl ?? productImage ?? null;
+
+    const displayMovementSpecLabel =
+        panel?.serviceRequest?.movement ?? movementSpecLabel ?? "-";
+
+    const productImageSrc = resolveImageSrc(displayProductImage);
+
     const vendors = catalogs?.vendors ?? [];
     const parts = catalogs?.parts ?? [];
 
     useEffect(() => {
-        if (!open || !serviceRequestId) return;
+        if (!open) return;
 
         let cancelled = false;
 
@@ -667,22 +707,54 @@ export default function TechnicalAssessmentModal({
                 setPanelLoading(true);
                 setErrorMessage(null);
 
+                if (serviceRequestId) {
+                    const res = await fetch(
+                        `/api/admin/service-requests/${serviceRequestId}/technical-assessment`,
+                        { cache: "no-store" }
+                    );
+
+                    if (!res.ok) {
+                        throw new Error("Load technical assessment failed");
+                    }
+
+                    const json = await res.json().catch(() => null);
+                    if (!json || cancelled) return;
+
+                    const data = json?.data ?? json;
+                    setPanel(data);
+                    setCatalogs(data?.catalogs ?? null);
+                    setForm(createInitialState(mapMovementSpecLabelToMachineType(data?.serviceRequest?.movement ?? movementSpecLabel)));
+                    return;
+                }
+
                 const res = await fetch(
-                    `/api/admin/service-requests/${serviceRequestId}/technical-assessment`,
+                    "/api/admin/service-requests/technical-assessment/catalogs",
                     { cache: "no-store" }
                 );
 
                 if (!res.ok) {
-                    throw new Error("Load technical assessment failed");
+                    throw new Error("Load technical catalogs failed");
                 }
 
                 const json = await res.json().catch(() => null);
-                if (!json || cancelled) return;
+                if (cancelled) return;
 
-                const data = json?.data ?? json;
-                setPanel(data);
-                setCatalogs(data?.catalogs ?? null);
-                setForm((prev) => createInitialState(prev.machineType));
+                const data = json?.data ?? json ?? null;
+                setCatalogs(data);
+                setPanel({
+                    serviceRequest: {
+                        productId: productIdProp,
+                        productTitle: productName,
+                        skuSnapshot: productSku,
+                        primaryImageUrl: productImage,
+                        movement: movementSpecLabel,
+                    },
+                    assessment: null,
+                    technicalAssessment: null,
+                    technicalIssues: [],
+                    catalogs: data,
+                });
+                setForm(createInitialState(mapMovementSpecLabelToMachineType(movementSpecLabel)));
             } catch (e: any) {
                 if (!cancelled) {
                     setErrorMessage(e?.message || "Không thể tải dữ liệu phiếu kỹ thuật");
@@ -697,7 +769,15 @@ export default function TechnicalAssessmentModal({
         return () => {
             cancelled = true;
         };
-    }, [open, serviceRequestId]);
+    }, [
+        open,
+        serviceRequestId,
+        productIdProp,
+        productName,
+        productSku,
+        productImage,
+        movementSpecLabel,
+    ]);
 
     const CASE_ISSUES = useMemo(
         () =>
@@ -813,8 +893,8 @@ export default function TechnicalAssessmentModal({
     }
 
     async function handleSave() {
-        if (!serviceRequestId) {
-            setErrorMessage("Thiếu service request id");
+        if (!serviceRequestId && !effectiveProductId) {
+            setErrorMessage("Thiếu product id");
             return;
         }
 
@@ -823,12 +903,13 @@ export default function TechnicalAssessmentModal({
             setErrorMessage(null);
 
             const payload = {
-                serviceRequestId,
+                serviceRequestId: serviceRequestId || undefined,
+                productId: effectiveProductId || undefined,
                 productSnapshot: {
-                    name: productName,
-                    sku: productSku,
-                    image: productImage,
-                    movementSpecLabel,
+                    name: displayProductName,
+                    sku: displayProductSku,
+                    image: displayProductImage,
+                    movementSpecLabel: displayMovementSpecLabel,
                 },
                 movement: {
                     machineType: form.machineType,
@@ -934,7 +1015,7 @@ export default function TechnicalAssessmentModal({
         }
     }
 
-    if (!open || !serviceRequestId) return null;
+    if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4">
@@ -947,7 +1028,7 @@ export default function TechnicalAssessmentModal({
                             Đánh giá kỹ thuật
                         </h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            {serviceRequestId ? `Service Request: ${serviceRequestId}` : "Chưa có mã phiếu"}
+                            {serviceRequestId ? `Service Request: ${serviceRequestId}` : "Đánh giá từ sản phẩm"}
                         </p>
                     </div>
 
@@ -960,10 +1041,10 @@ export default function TechnicalAssessmentModal({
                     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div className="grid gap-4 p-5 md:grid-cols-[auto_1fr_auto] md:items-start">
                             <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                                {productImage ? (
+                                {productImageSrc ? (
                                     <img
-                                        src={`/api/media/sign?key=${encodeURIComponent(productImage)}`}
-                                        alt={productName}
+                                        src={productImageSrc}
+                                        alt={displayProductName}
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (
@@ -978,10 +1059,10 @@ export default function TechnicalAssessmentModal({
                             </div>
 
                             <div className="space-y-2">
-                                <div className="text-xl font-semibold text-slate-900">{productName}</div>
-                                <div className="text-sm text-slate-500">SKU: {productSku || "-"}</div>
+                                <div className="text-xl font-semibold text-slate-900">{displayProductName}</div>
+                                <div className="text-sm text-slate-500">SKU: {displayProductSku || "-"}</div>
                                 <div className="text-sm text-slate-500">
-                                    Bộ máy theo spec: {movementSpecLabel || "-"}
+                                    Bộ máy theo spec: {displayMovementSpecLabel || "-"}
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 pt-1">
@@ -992,12 +1073,12 @@ export default function TechnicalAssessmentModal({
                                 </div>
                             </div>
 
-                            {productId ? (
+                            {effectiveProductId ? (
                                 <div className="flex items-center">
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => router.push(`/admin/products/${productId}/edit`)}
+                                        onClick={() => router.push(`/admin/products/${effectiveProductId}/edit`)}
                                     >
                                         Sửa spec sản phẩm
                                         <ExternalLink className="ml-2 h-4 w-4" />

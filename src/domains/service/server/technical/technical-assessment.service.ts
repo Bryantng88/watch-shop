@@ -1,7 +1,9 @@
 import { prisma } from "@/server/db/client";
 import * as repo from "./technical-assessment.repo";
+import { createTechnicalChecksFromProductsApplication } from "@/domains/service/application/create-technical-checks-from-products.application";
 import {
     ServiceRequestStatus,
+    ServiceScope,
     TechnicalAssessmentStatus,
     TechnicalIssueExecutionStatus,
 } from "@prisma/client";
@@ -18,7 +20,7 @@ function toText(v: any) {
 }
 
 function mapProductMovementToMachineType(
-    movement?: string | null
+    movement?: string | null,
 ): "MECHANICAL" | "QUARTZ" {
     const raw = String(movement || "").toUpperCase();
 
@@ -35,7 +37,7 @@ function mapProductMovementToMachineType(
 }
 
 function inferMovementKindFromProduct(
-    productMovement?: string | null
+    productMovement?: string | null,
 ): "BATTERY" | "MECHANICAL" {
     return mapProductMovementToMachineType(productMovement) === "QUARTZ"
         ? "BATTERY"
@@ -43,8 +45,9 @@ function inferMovementKindFromProduct(
 }
 
 function inferMovementStatusFromPayload(input: any): "GOOD" | "ISSUE" {
-    const raw =
-        String(input?.movement?.status || input?.movementStatus || "").toUpperCase();
+    const raw = String(
+        input?.movement?.status || input?.movementStatus || "",
+    ).toUpperCase();
     return raw === "ISSUE" ? "ISSUE" : "GOOD";
 }
 
@@ -286,10 +289,9 @@ function buildDesiredIssuesFromPayload(input: any) {
             area: "CROWN",
             summary: "Xử lý núm / ty",
             note: toText(crown?.note),
-            issueType:
-                String(crown?.action || "").toUpperCase().includes("REPLACE")
-                    ? "REPLACE"
-                    : "REPAIR",
+            issueType: String(crown?.action || "").toUpperCase().includes("REPLACE")
+                ? "REPLACE"
+                : "REPAIR",
             actionMode:
                 String(crown?.execution || "").toUpperCase() === "VENDOR"
                     ? "VENDOR"
@@ -312,14 +314,14 @@ async function syncTechnicalIssuesFromAssessment(
         serviceRequestId: string;
         vendorNameMap: Record<string, string>;
         payload: any;
-    }
+    },
 ) {
     const { assessmentId, serviceRequestId, vendorNameMap, payload } = params;
 
     const existing = await repo.listAssessmentIssuesForSync(tx, assessmentId);
 
     const openExisting = existing.filter(
-        (x: any) => x.executionStatus === TechnicalIssueExecutionStatus.OPEN
+        (x: any) => x.executionStatus === TechnicalIssueExecutionStatus.OPEN,
     );
 
     const desired = buildDesiredIssuesFromPayload(payload);
@@ -328,8 +330,7 @@ async function syncTechnicalIssuesFromAssessment(
 
     for (let i = 0; i < desired.length; i++) {
         const d = desired[i];
-        const current = openExisting[i];
-
+        const current = openExisting.find((x: any) => x.technicalIssueId === d.technicalIssueId) as any;
         const vendorNameSnap = d.vendorId ? vendorNameMap[d.vendorId] ?? null : null;
 
         if (current) {
@@ -380,16 +381,20 @@ async function syncTechnicalIssuesFromAssessment(
 
     if (openExisting.length > desired.length) {
         const redundant = openExisting.slice(desired.length);
-        for (const item of redundant) {
+        for (const item of redundant as any[]) {
             await repo.updateAssessmentIssue(tx, item.id, {
                 executionStatus: TechnicalIssueExecutionStatus.CANCELED,
                 canceledAt: new Date(),
                 resolutionNote:
                     "Auto closed because assessment no longer requests this issue",
                 updatedAt: new Date(),
-            });
+            } as any);
         }
     }
+}
+
+export async function getTechnicalAssessmentCatalogs() {
+    return repo.getTechnicalAssessmentCatalogs();
 }
 
 export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
@@ -400,7 +405,7 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
 
     const maintenanceRecords = await repo.listServiceMaintenanceRecords(
         prisma,
-        serviceRequestId
+        serviceRequestId,
     );
 
     const issues = panel.assessment?.issues ?? [];
@@ -408,7 +413,7 @@ export async function getTechnicalAssessmentPanel(serviceRequestId: string) {
     const openIssueCount = confirmedIssues.filter(
         (x: any) =>
             x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
-            x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS
+            x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS,
     ).length;
 
     return {
@@ -464,12 +469,37 @@ export async function openTechnicalAssessment(serviceRequestId: string) {
     });
 }
 
-export async function saveTechnicalAssessment(input: any) {
-    await assertServiceRequestEditable(input.serviceRequestId);
-    const serviceRequestId = String(input?.serviceRequestId || "").trim();
-    if (!serviceRequestId) {
-        throw new Error("Missing serviceRequestId");
+async function resolveServiceRequestIdForSave(input: any) {
+    const existingServiceRequestId = String(input?.serviceRequestId || "").trim();
+    if (existingServiceRequestId) return existingServiceRequestId;
+
+    const productId = String(input?.productId || "").trim();
+    if (!productId) {
+        throw new Error("Missing serviceRequestId or productId");
     }
+
+    const created = await createTechnicalChecksFromProductsApplication({
+        productIds: [productId],
+        scope: ServiceScope.WITH_PURCHASE,
+        notes: "Tạo service request từ đánh giá kỹ thuật watch",
+    });
+
+    const createdId = String(created?.[0]?.id || "").trim();
+    if (!createdId) {
+        throw new Error("Create service request failed");
+    }
+
+    return createdId;
+}
+
+export async function saveTechnicalAssessment(input: any) {
+    const serviceRequestId = await resolveServiceRequestIdForSave(input);
+    await assertServiceRequestEditable(serviceRequestId);
+
+    const payload = {
+        ...input,
+        serviceRequestId,
+    };
 
     return prisma.$transaction(async (tx) => {
         const sr = await tx.serviceRequest.findUnique({
@@ -497,11 +527,11 @@ export async function saveTechnicalAssessment(input: any) {
         const productMovement = sr.product?.watchSpec?.movement ?? null;
 
         const vendorIds = new Set<string>();
-        const singleVendorId = inferVendorIdFromPayload(input);
+        const singleVendorId = inferVendorIdFromPayload(payload);
         if (singleVendorId) vendorIds.add(singleVendorId);
 
-        const movementLines = Array.isArray(input?.movement?.lines)
-            ? input.movement.lines
+        const movementLines = Array.isArray(payload?.movement?.lines)
+            ? payload.movement.lines
             : [];
 
         movementLines.forEach((x: any) => {
@@ -510,10 +540,10 @@ export async function saveTechnicalAssessment(input: any) {
         });
 
         [
-            input?.appearance?.case?.proposal,
-            input?.appearance?.glass?.proposal,
-            input?.appearance?.dial?.proposal,
-            input?.appearance?.crown,
+            payload?.appearance?.case?.proposal,
+            payload?.appearance?.glass?.proposal,
+            payload?.appearance?.dial?.proposal,
+            payload?.appearance?.crown,
         ].forEach((x: any) => {
             const id = toText(x?.vendorId);
             if (id) vendorIds.add(id);
@@ -537,21 +567,21 @@ export async function saveTechnicalAssessment(input: any) {
         const assessment = await repo.upsertAssessment(tx, {
             serviceRequestId,
             movementKind: inferMovementKindFromProduct(productMovement),
-            movementStatus: inferMovementStatusFromPayload(input),
-            caseStatus: inferCaseStatusFromPayload(input),
-            crystalStatus: inferCrystalStatusFromPayload(input),
-            crownStatus: inferCrownStatusFromPayload(input),
-            preRate: inferPreRate(input),
-            preAmplitude: inferPreAmplitude(input),
-            preBeatError: inferPreBeatError(input),
-            postRate: inferPostRate(input),
-            postAmplitude: inferPostAmplitude(input),
-            postBeatError: inferPostBeatError(input),
-            actionMode: inferActionModeFromPayload(input),
+            movementStatus: inferMovementStatusFromPayload(payload),
+            caseStatus: inferCaseStatusFromPayload(payload),
+            crystalStatus: inferCrystalStatusFromPayload(payload),
+            crownStatus: inferCrownStatusFromPayload(payload),
+            preRate: inferPreRate(payload),
+            preAmplitude: inferPreAmplitude(payload),
+            preBeatError: inferPreBeatError(payload),
+            postRate: inferPostRate(payload),
+            postAmplitude: inferPostAmplitude(payload),
+            postBeatError: inferPostBeatError(payload),
+            actionMode: inferActionModeFromPayload(payload),
             vendorId,
             vendorNameSnap,
-            conclusion: inferConclusion(input),
-            imageFileKey: inferImageFileKey(input),
+            conclusion: inferConclusion(payload),
+            imageFileKey: inferImageFileKey(payload),
             status: TechnicalAssessmentStatus.IN_PROGRESS,
             evaluatedById: sr.technicianId ?? null,
             evaluatedByNameSnap: sr.technicianNameSnap ?? null,
@@ -561,7 +591,7 @@ export async function saveTechnicalAssessment(input: any) {
             assessmentId: assessment.id,
             serviceRequestId,
             vendorNameMap,
-            payload: input,
+            payload,
         });
 
         await tx.serviceRequest.update({
@@ -575,6 +605,7 @@ export async function saveTechnicalAssessment(input: any) {
 
         return {
             ok: true,
+            serviceRequestId,
             item: assessment,
         };
     });
@@ -597,7 +628,7 @@ export async function completeTechnicalAssessment(assessmentId: string) {
             (x: any) =>
                 x.isConfirmed &&
                 (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
-                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS),
         );
 
         if (hasOpenConfirmedIssue) {
@@ -639,7 +670,7 @@ export async function completeServiceRequestById(serviceRequestId: string) {
             (x: any) =>
                 x.isConfirmed &&
                 (x.executionStatus === TechnicalIssueExecutionStatus.OPEN ||
-                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS)
+                    x.executionStatus === TechnicalIssueExecutionStatus.IN_PROGRESS),
         );
 
         if (hasOpenConfirmedIssue) {
@@ -667,10 +698,10 @@ export async function completeServiceRequestById(serviceRequestId: string) {
         };
     });
 }
+
 export async function getServiceRequestTechnicalSummary(serviceRequestId: string) {
     return repo.getTechnicalSummaryByServiceRequest(serviceRequestId);
 }
-
 
 export async function assertServiceRequestEditable(serviceRequestId: string) {
     const sr = await repo.findServiceRequestStatusById(serviceRequestId);

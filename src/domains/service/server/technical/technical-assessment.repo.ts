@@ -39,6 +39,9 @@ export async function getPanel(serviceRequestId: string) {
             technicianNameSnap: true,
             skuSnapshot: true,
             primaryImageUrlSnapshot: true,
+            brandSnapshot: true,
+            modelSnapshot: true,
+            refSnapshot: true,
             createdAt: true,
             updatedAt: true,
             product: {
@@ -186,12 +189,15 @@ export async function getPanel(serviceRequestId: string) {
             technicianId: sr.technicianId ?? null,
             technicianNameSnap: sr.technicianNameSnap ?? null,
             skuSnapshot: sr.skuSnapshot ?? null,
-            productTitle: sr.product?.title ?? null,
+            productTitle: sr.modelSnapshot ?? sr.product?.title ?? null,
             movement: sr.product?.watchSpec?.movement ?? null,
-            model: sr.product?.watchSpec?.model ?? null,
-            ref: sr.product?.watchSpec?.ref ?? null,
+            model: sr.modelSnapshot ?? sr.product?.watchSpec?.model ?? null,
+            ref: sr.refSnapshot ?? sr.product?.watchSpec?.ref ?? null,
             primaryImageUrl:
-                sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
+                sr.primaryImageUrlSnapshot ??
+                sr.product?.primaryImageUrl ??
+                sr.product?.productImage?.[0]?.fileKey ??
+                null,
             productImages: sr.product?.productImage ?? [],
             createdAt: sr.createdAt,
             updatedAt: sr.updatedAt,
@@ -289,6 +295,73 @@ export async function getPanel(serviceRequestId: string) {
             })),
             vendors,
         },
+    };
+}
+
+
+export async function getTechnicalAssessmentCatalogs() {
+    const [serviceCatalogs, supplyCatalogs, mechanicalPartCatalogs, vendors] =
+        await Promise.all([
+            prisma.serviceCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    vendorPrice: true,
+                    customerPrice: true,
+                    internalCost: true,
+                    note: true,
+                },
+            }),
+            prisma.supplyCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    category: true,
+                    unit: true,
+                    defaultCost: true,
+                    note: true,
+                },
+            }),
+            prisma.mechanicalPartCatalog.findMany({
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    group: true,
+                    defaultCost: true,
+                    note: true,
+                },
+            }),
+            prisma.vendor.findMany({
+                orderBy: { name: "asc" },
+                select: { id: true, name: true },
+            }),
+        ]);
+
+    return {
+        serviceCatalogs: serviceCatalogs.map((x) => ({
+            ...x,
+            vendorPrice: x.vendorPrice != null ? Number(x.vendorPrice) : null,
+            customerPrice: x.customerPrice != null ? Number(x.customerPrice) : null,
+            internalCost: x.internalCost != null ? Number(x.internalCost) : null,
+        })),
+        supplyCatalogs: supplyCatalogs.map((x) => ({
+            ...x,
+            defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
+        })),
+        mechanicalPartCatalogs: mechanicalPartCatalogs.map((x) => ({
+            ...x,
+            defaultCost: x.defaultCost != null ? Number(x.defaultCost) : null,
+        })),
+        vendors,
     };
 }
 

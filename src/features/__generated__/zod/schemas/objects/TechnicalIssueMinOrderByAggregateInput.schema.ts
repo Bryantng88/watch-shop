@@ -27,6 +27,7 @@ const makeSchema = () => z.object({
   actualCost: SortOrderSchema.optional(),
   technicianId: SortOrderSchema.optional(),
   summary: SortOrderSchema.optional(),
+  priority: SortOrderSchema.optional(),
   resolutionNote: SortOrderSchema.optional(),
   completedByNameSnap: SortOrderSchema.optional(),
   isConfirmed: SortOrderSchema.optional(),

@@ -11,7 +11,6 @@ import {
     ensureWatchInlineImageFromFirstGallery,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
-import { resetWatchReviewToDraft } from "../../server/review";
 import {
     WatchFormEnums,
     dedupeMediaItems,
@@ -228,7 +227,6 @@ async function resolveSubmittedWatchSku(
     return submittedSku;
 }
 
-
 async function syncProductPostTargets(
     tx: any,
     input: {
@@ -236,7 +234,6 @@ async function syncProductPostTargets(
         postTargetIds?: string[] | null;
     },
 ) {
-    const productId = String(input.productId ?? "").trim();
     const nextIds = Array.from(
         new Set(
             (input.postTargetIds ?? [])
@@ -245,46 +242,55 @@ async function syncProductPostTargets(
         ),
     );
 
-    if (!productId) return;
-
-    const existingRows = await tx.productPostTarget.findMany({
-        where: { productId },
-        select: {
-            postTargetId: true,
-            createdAt: true,
-        },
-        orderBy: {
-            createdAt: "asc",
-        },
+    const existing = await tx.productPostTarget.findMany({
+        where: { productId: input.productId },
+        select: { postTargetId: true },
+        orderBy: { createdAt: "asc" },
     });
 
-    const existingIds = existingRows.map((row: any) => String(row.postTargetId));
-    const nextSet = new Set(nextIds);
-    const existingSet = new Set(existingIds);
+    const existingIds = existing.map((item: any) => String(item.postTargetId));
 
-    const toDelete = existingIds.filter((id: string) => !nextSet.has(id));
-    const toCreate = nextIds.filter((id) => !existingSet.has(id));
+    const toDelete = existingIds.filter((id: string) => !nextIds.includes(id));
+    const toCreate = nextIds.filter((id) => !existingIds.includes(id));
 
-    if (toDelete.length > 0) {
+    if (toDelete.length) {
         await tx.productPostTarget.deleteMany({
             where: {
-                productId,
-                postTargetId: {
-                    in: toDelete,
-                },
+                productId: input.productId,
+                postTargetId: { in: toDelete },
             },
         });
     }
 
-    // Dùng create tuần tự thay vì createMany để createdAt phản ánh đúng thứ tự user thêm.
     for (const postTargetId of toCreate) {
         await tx.productPostTarget.create({
             data: {
-                productId,
+                productId: input.productId,
                 postTargetId,
             },
         });
     }
+}
+
+async function moveReadyWatchToProcessingOnlyWhenMissingPostAssets(
+    input: {
+        productId: string;
+        hasContentData: boolean;
+        hasGalleryImages: boolean;
+    },
+) {
+    if (input.hasContentData && input.hasGalleryImages) return;
+
+    await prisma.watch.updateMany({
+        where: {
+            productId: input.productId,
+            saleStage: "READY" as any,
+        },
+        data: {
+            saleStage: "PROCESSING" as any,
+            updatedAt: new Date(),
+        },
+    });
 }
 
 export async function submitWatchFormApplication(
@@ -409,7 +415,7 @@ export async function submitWatchFormApplication(
 
         await syncProductPostTargets(tx, {
             productId,
-            postTargetIds: values.basic.postTargetIds,
+            postTargetIds: values.basic.postTargetIds ?? [],
         });
 
         await tx.watch.update({
@@ -562,21 +568,14 @@ export async function submitWatchFormApplication(
     await ensureWatchInlineImageFromFirstGallery({
         productId,
     });
-    if (contentChanged) {
-        await resetWatchReviewToDraft({
-            productId,
-            targetType: "CONTENT",
-            userId: context.userId,
-        });
-    }
+    const hasContentData = hasContentSnapshotData(afterContent);
+    const hasGalleryImages = galleryImageInputs.length > 0;
 
-    if (imagesChanged) {
-        await resetWatchReviewToDraft({
-            productId,
-            targetType: "IMAGE",
-            userId: context.userId,
-        });
-    }
+    await moveReadyWatchToProcessingOnlyWhenMissingPostAssets({
+        productId,
+        hasContentData,
+        hasGalleryImages,
+    });
 
     const pricingResult = await updateWatchPricingWithDiff(productId, {
         salePrice: values.pricing.salePrice,
@@ -605,14 +604,9 @@ export async function submitWatchFormApplication(
         });
     }
 
-    const hasContentData = hasContentSnapshotData(afterContent);
-
     return {
         ok: true,
-        message:
-            contentChanged || imagesChanged
-                ? "Đã lưu watch. Phần vừa thay đổi đã ở trạng thái Draft và cần duyệt lại."
-                : "Đã lưu watch.",
+        message: "Đã lưu watch.",
         contentChanged,
         imagesChanged,
         hasContentData,

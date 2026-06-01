@@ -1,6 +1,21 @@
 export type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
 export type PriorityLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
+export type IssueCatalogOption = {
+  id: string;
+  code?: string | null;
+  name: string;
+  categoryKey?: string | null;
+  category?: string | null;
+  group?: string | null;
+};
+
+export type IssueConclusionOptions = {
+  serviceCatalogs: IssueCatalogOption[];
+  supplyCatalogs: IssueCatalogOption[];
+  mechanicalPartCatalogs: IssueCatalogOption[];
+};
+
 export type IssueItem = {
   id: string;
   summary?: string | null;
@@ -37,6 +52,10 @@ export type IssueItem = {
     movement?: string | null;
     model?: string | null;
     ref?: string | null;
+    priority?: PriorityLevel | string | null;
+    priorityReason?: string | null;
+    prioritySource?: string | null;
+    priorityMarkedAt?: string | null;
   } | null;
   assessment?: {
     id: string;
