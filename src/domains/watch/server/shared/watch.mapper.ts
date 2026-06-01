@@ -43,15 +43,26 @@ function mapProductImage(img: any) {
 
 function mapProductPostTargets(product: any) {
     const relations = Array.isArray(product?.postTargets) ? product.postTargets : [];
+    const byName = new Map<string, { id: string; name: string; platform?: string | null }>();
 
-    return relations
-        .map((item: any) => item?.postTarget ?? item)
-        .filter((target: any) => target?.id)
-        .map((target: any) => ({
-            id: String(target.id),
-            name: String(target.name ?? ""),
+    for (const item of relations) {
+        const target = item?.postTarget ?? item;
+        const id = String(target?.id ?? "").trim();
+        const name = String(target?.name ?? "").trim();
+
+        if (!id || !name) continue;
+
+        const key = name.toLowerCase();
+        if (byName.has(key)) continue;
+
+        byName.set(key, {
+            id,
+            name,
             platform: target.platform ?? null,
-        }));
+        });
+    }
+
+    return Array.from(byName.values());
 }
 
 function hasMeaningfulContent(row: any) {

@@ -93,9 +93,9 @@ function buildPostTargetGroups(options: SimpleOption[]) {
         }
     }
 
-    return Array.from(byName.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "vi"),
-    );
+    // Giữ đúng thứ tự option được server trả về.
+    // Không sort alphabet để thứ tự page/kênh đăng phản ánh thứ tự vận hành.
+    return Array.from(byName.values());
 }
 
 function PostTargetMultiSelect({
@@ -114,9 +114,22 @@ function PostTargetMultiSelect({
     const groups = buildPostTargetGroups(options);
     const selectedSet = new Set(selected);
 
-    const selectedGroups = groups.filter((group) =>
-        group.ids.some((id) => selectedSet.has(id)),
-    );
+    const groupById = new Map<string, (typeof groups)[number]>();
+
+    for (const group of groups) {
+        for (const id of group.ids) {
+            groupById.set(id, group);
+        }
+    }
+
+    const selectedGroups = selected.reduce<(typeof groups)[number][]>((acc, id) => {
+        const group = groupById.get(id);
+        if (!group) return acc;
+        if (acc.some((item) => item.key === group.key)) return acc;
+
+        acc.push(group);
+        return acc;
+    }, []);
 
     const toggleGroup = (groupKey: string) => {
         const group = groups.find((item) => item.key === groupKey);

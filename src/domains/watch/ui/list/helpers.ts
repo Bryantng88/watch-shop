@@ -222,9 +222,7 @@ function mapPostTargets(product: any) {
         });
     }
 
-    return Array.from(byName.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "vi"),
-    );
+    return Array.from(byName.values());
 }
 function mapAcquisitionPreviewItems(row: any) {
     const product = row?.product ?? row ?? {};

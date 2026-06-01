@@ -228,6 +228,65 @@ async function resolveSubmittedWatchSku(
     return submittedSku;
 }
 
+
+async function syncProductPostTargets(
+    tx: any,
+    input: {
+        productId: string;
+        postTargetIds?: string[] | null;
+    },
+) {
+    const productId = String(input.productId ?? "").trim();
+    const nextIds = Array.from(
+        new Set(
+            (input.postTargetIds ?? [])
+                .map((id) => String(id ?? "").trim())
+                .filter(Boolean),
+        ),
+    );
+
+    if (!productId) return;
+
+    const existingRows = await tx.productPostTarget.findMany({
+        where: { productId },
+        select: {
+            postTargetId: true,
+            createdAt: true,
+        },
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+
+    const existingIds = existingRows.map((row: any) => String(row.postTargetId));
+    const nextSet = new Set(nextIds);
+    const existingSet = new Set(existingIds);
+
+    const toDelete = existingIds.filter((id: string) => !nextSet.has(id));
+    const toCreate = nextIds.filter((id) => !existingSet.has(id));
+
+    if (toDelete.length > 0) {
+        await tx.productPostTarget.deleteMany({
+            where: {
+                productId,
+                postTargetId: {
+                    in: toDelete,
+                },
+            },
+        });
+    }
+
+    // Dùng create tuần tự thay vì createMany để createdAt phản ánh đúng thứ tự user thêm.
+    for (const postTargetId of toCreate) {
+        await tx.productPostTarget.create({
+            data: {
+                productId,
+                postTargetId,
+            },
+        });
+    }
+}
+
 export async function submitWatchFormApplication(
     values: WatchFormValues,
     context: SubmitWatchFormContext,
@@ -348,27 +407,10 @@ export async function submitWatchFormApplication(
             },
         });
 
-        const postTargetIds = Array.from(
-            new Set(
-                (values.basic.postTargetIds ?? [])
-                    .map((id) => String(id ?? "").trim())
-                    .filter(Boolean),
-            ),
-        );
-
-        await tx.productPostTarget.deleteMany({
-            where: { productId },
+        await syncProductPostTargets(tx, {
+            productId,
+            postTargetIds: values.basic.postTargetIds,
         });
-
-        if (postTargetIds.length > 0) {
-            await tx.productPostTarget.createMany({
-                data: postTargetIds.map((postTargetId) => ({
-                    productId,
-                    postTargetId,
-                })),
-                skipDuplicates: true,
-            });
-        }
 
         await tx.watch.update({
             where: { id: current.id },

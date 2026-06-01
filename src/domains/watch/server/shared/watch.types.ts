@@ -8,6 +8,7 @@ import {
   WatchMaterialProfile,
   WatchSiteChannel,
 } from "@prisma/client";
+import { WatchPostTargetPreviewItem } from "../../ui/list/types";
 
 export type WatchListImageItem = {
   id?: string;
@@ -40,7 +41,7 @@ export type WatchListComputedItem = {
   sku?: string | null;
   brand?: string | null;
   primaryImageUrl?: string | null;
-
+  postTargets?: WatchPostTargetPreviewItem[];
   salePrice?: string | null;
   listPrice?: string | null;
   costPrice?: string | null;

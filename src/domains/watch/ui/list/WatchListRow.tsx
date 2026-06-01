@@ -212,9 +212,7 @@ function uniquePostTargetNames(targets: WatchRow["postTargets"] = []) {
         }
     }
 
-    return Array.from(byName.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "vi"),
-    );
+    return Array.from(byName.values());
 }
 
 function formatPostTargetLabel(target: NonNullable<WatchRow["postTargets"]>[number]) {
