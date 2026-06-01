@@ -1,5 +1,215 @@
 import { prisma } from "@/server/db/client";
 
+
+function cleanId(v: unknown): string | null {
+    const text = String(v ?? "").trim();
+    return text || null;
+}
+
+function decimalOrNull(v: unknown): number | null {
+    if (v === "" || v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+
+async function vendorName(vendorId?: string | null) {
+    const id = cleanId(vendorId);
+    if (!id) return null;
+    const vendor = await prisma.vendor.findUnique({ where: { id }, select: { name: true } });
+    return vendor?.name ?? null;
+}
+
+export async function createTechnicalIssue(input: {
+    assessmentId?: string | null;
+    serviceRequestId?: string | null;
+    area?: string | null;
+    issueType?: string | null;
+    actionMode?: string | null;
+    note?: string | null;
+    estimatedCost?: unknown;
+    vendorId?: string | null;
+    technicianId?: string | null;
+    serviceCatalogId?: string | null;
+    supplyCatalogId?: string | null;
+    mechanicalPartCatalogId?: string | null;
+    summary?: string | null;
+}) {
+    const serviceRequestId = cleanId(input.serviceRequestId);
+    if (!serviceRequestId) throw new Error("Missing serviceRequestId");
+
+    let assessmentId = cleanId(input.assessmentId);
+
+    if (!assessmentId) {
+        const existing = await prisma.technicalAssessment.findUnique({
+            where: { serviceRequestId },
+            select: { id: true },
+        });
+        assessmentId = existing?.id ?? null;
+    }
+
+    if (!assessmentId) {
+        const created = await prisma.technicalAssessment.create({
+            data: {
+                serviceRequestId,
+                status: "DRAFT" as any,
+            } as any,
+            select: { id: true },
+        });
+        assessmentId = created.id;
+    }
+
+    const now = new Date();
+    const vendorId = cleanId(input.vendorId);
+
+    return prisma.technicalIssue.create({
+        data: {
+            assessmentId,
+            serviceRequestId,
+            area: cleanId(input.area),
+            issueType: (cleanId(input.issueType) ?? "CHECK") as any,
+            actionMode: (cleanId(input.actionMode) ?? "INTERNAL") as any,
+            note: cleanId(input.note),
+            summary: cleanId(input.summary),
+            estimatedCost: decimalOrNull(input.estimatedCost),
+            vendorId,
+            vendorNameSnap: await vendorName(vendorId),
+            technicianId: cleanId(input.technicianId),
+            serviceCatalogId: cleanId(input.serviceCatalogId),
+            supplyCatalogId: cleanId(input.supplyCatalogId),
+            mechanicalPartCatalogId: cleanId(input.mechanicalPartCatalogId),
+            executionStatus: "OPEN" as any,
+            openedAt: now,
+            updatedAt: now,
+        } as any,
+    });
+}
+
+export async function confirmTechnicalIssue(input: {
+    id: string;
+    actorId?: string | null;
+    actorName?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            isConfirmed: true,
+            confirmedAt: new Date(),
+            confirmedById: cleanId(input.actorId),
+            confirmedByNameSnap: cleanId(input.actorName),
+            executionStatus: "OPEN" as any,
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function startTechnicalIssue(input: { id: string; actorName?: string | null }) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            isConfirmed: true,
+            confirmedAt: new Date(),
+            executionStatus: "IN_PROGRESS" as any,
+            startedAt: new Date(),
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function completeTechnicalIssue(input: {
+    id: string;
+    actorName?: string | null;
+    actualCost?: unknown;
+    resolutionNote?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            isConfirmed: true,
+            executionStatus: "DONE" as any,
+            completedAt: new Date(),
+            completedByNameSnap: cleanId(input.actorName),
+            actualCost: decimalOrNull(input.actualCost),
+            resolutionNote: cleanId(input.resolutionNote),
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function cancelTechnicalIssue(
+    idInput: string,
+    input: { reason?: string | null } = {}
+) {
+    const id = cleanId(idInput);
+    if (!id) throw new Error("Missing issue id");
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            executionStatus: "CANCELED" as any,
+            canceledAt: new Date(),
+            resolutionNote: cleanId(input.reason),
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function updateTechnicalIssue(input: {
+    id: string;
+    note?: string | null;
+    summary?: string | null;
+    estimatedCost?: unknown;
+    actualCost?: unknown;
+    resolutionNote?: string | null;
+    actionMode?: string | null;
+    vendorId?: string | null;
+    technicianId?: string | null;
+    serviceCatalogId?: string | null;
+    supplyCatalogId?: string | null;
+    mechanicalPartCatalogId?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing issue id");
+
+    const vendorId = cleanId(input.vendorId);
+
+    return prisma.technicalIssue.update({
+        where: { id },
+        data: {
+            note: input.note === undefined ? undefined : cleanId(input.note),
+            summary: input.summary === undefined ? undefined : cleanId(input.summary),
+            estimatedCost: input.estimatedCost === undefined ? undefined : decimalOrNull(input.estimatedCost),
+            actualCost: input.actualCost === undefined ? undefined : decimalOrNull(input.actualCost),
+            resolutionNote: input.resolutionNote === undefined ? undefined : cleanId(input.resolutionNote),
+            actionMode: input.actionMode === undefined ? undefined : (cleanId(input.actionMode) as any),
+            vendorId: input.vendorId === undefined ? undefined : vendorId,
+            vendorNameSnap: input.vendorId === undefined ? undefined : await vendorName(vendorId),
+            technicianId: input.technicianId === undefined ? undefined : cleanId(input.technicianId),
+            serviceCatalogId: input.serviceCatalogId === undefined ? undefined : cleanId(input.serviceCatalogId),
+            supplyCatalogId: input.supplyCatalogId === undefined ? undefined : cleanId(input.supplyCatalogId),
+            mechanicalPartCatalogId:
+                input.mechanicalPartCatalogId === undefined ? undefined : cleanId(input.mechanicalPartCatalogId),
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function removeTechnicalIssue(idInput: string) {
+    const id = cleanId(idInput);
+    if (!id) throw new Error("Missing issue id");
+    await prisma.technicalIssue.delete({ where: { id } });
+    return { ok: true };
+}
+
+
 type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
 
 
@@ -53,10 +263,9 @@ function boardWeight(col: BoardColumnKey) {
     return 1;
 }
 
-export async function getTechnicalIssueBoardData(input: { serviceRequestId?: string | null } = {}) {
+export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: string | null } = {}) {
     const rows = await prisma.technicalIssue.findMany({
         where: {
-            ...(input.serviceRequestId ? { serviceRequestId: input.serviceRequestId } : {}),
             executionStatus: {
                 not: "CANCELED" as any,
             },
@@ -114,7 +323,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
             Vendor: {
                 select: { id: true, name: true },
             },
-            ServiceCatalog: {
+            serviceCatalog: {
                 select: { id: true, code: true, name: true },
             },
             SupplyCatalog: {
@@ -208,18 +417,18 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                     priorityMarkedAt: (sr as any).priorityMarkedAt ?? null,
                 },
 
-                assessment: x.echnicalAssessment
+                assessment: x.TechnicalAssessment
                     ? {
                         id: x.TechnicalAssessment.id,
                         status: x.TechnicalAssessment.status ?? null,
                     }
                     : null,
 
-                serviceCatalog: x.ServiceCatalog
+                serviceCatalog: x.serviceCatalog
                     ? {
-                        id: x.ServiceCatalog.id,
-                        code: x.ServiceCatalog.code ?? null,
-                        name: x.ServiceCatalog.name ?? null,
+                        id: x.serviceCatalog.id,
+                        code: x.serviceCatalog.code ?? null,
+                        name: x.serviceCatalog.name ?? null,
                     }
                     : null,
 

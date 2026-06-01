@@ -49,7 +49,7 @@ export default function ServiceRequestDetailClient({
       <ServiceIssueManageModal
         open={issueModalOpen}
         onClose={() => setIssueModalOpen(false)}
-        serviceRequestId={sr.id}
+        currentServiceRequestId={sr.id}
         serviceRefNo={sr.refNo}
         items={issueBoard.items}
         counts={issueBoard.counts}

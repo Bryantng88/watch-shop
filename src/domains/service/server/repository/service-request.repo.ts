@@ -153,6 +153,14 @@ export async function findProductForService(tx: DB, productId: string) {
         select: { id: true, sku: true },
         take: 1,
       },
+      productImage: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        take: 1,
+        select: {
+          fileKey: true,
+          role: true,
+        },
+      },
     },
   });
 }

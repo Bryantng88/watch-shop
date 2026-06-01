@@ -101,7 +101,6 @@ export default function TechnicalIssueBoardClient({
     return (boardItems ?? []).filter((item) => {
       const sr = item?.serviceRequest ?? null;
 
-      if (serviceRequestId && sr?.id !== serviceRequestId) return false;
 
       const matchesQuery =
         !q ||

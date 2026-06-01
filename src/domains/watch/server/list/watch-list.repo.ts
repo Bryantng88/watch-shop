@@ -14,16 +14,34 @@ import {
   buildWatchListSegmentWhere,
   buildWatchListSubFilterWhere,
   buildWatchListSummaryWhere,
-  buildWatchListWhere,
   mergeWatchWhere,
 } from "./watch-list.query";
+
+type WatchListMetaMode = "full" | "lite";
 
 type NormalizedWatchListInput = WatchListFilters & {
   view: ReturnType<typeof normalizeWatchListView>;
   subFilter: WatchListSubFilter;
   page: number;
   pageSize: number;
+  meta: WatchListMetaMode;
 };
+
+type WatchListRawRow = Prisma.WatchGetPayload<{
+  select: typeof WATCH_LIST_ROW_SELECT;
+}>;
+
+type AcquisitionSourceItem = Prisma.AcquisitionItemGetPayload<{
+  select: typeof ACQUISITION_SOURCE_ITEM_SELECT;
+}>;
+
+type AcquisitionSiblingItem = Prisma.AcquisitionItemGetPayload<{
+  select: typeof ACQUISITION_SIBLING_ITEM_SELECT;
+}>;
+
+type ServiceRequestPreview = Prisma.ServiceRequestGetPayload<{
+  select: typeof SERVICE_REQUEST_PREVIEW_SELECT;
+}>;
 
 const EMPTY_SUB_COUNTS: WatchListSubCounts = {
   missingContent: 0,
@@ -35,6 +53,204 @@ const EMPTY_SUB_COUNTS: WatchListSubCounts = {
   posted: 0,
 };
 
+const EMPTY_COUNTS: WatchListCounts = {
+  draft: 0,
+  processing: 0,
+  ready: 0,
+  hold: 0,
+  sold: 0,
+  all: 0,
+};
+
+type CacheItem<T> = { expiresAt: number; value: T };
+const COUNT_CACHE_TTL_MS = 30_000;
+const countCache = new Map<string, CacheItem<unknown>>();
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+
+  const input = value as Record<string, unknown>;
+  return `{${Object.keys(input)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(input[key])}`)
+    .join(",")}}`;
+}
+
+async function getCachedCountValue<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const cached = countCache.get(key) as CacheItem<T> | undefined;
+  if (cached && cached.expiresAt > now) return cached.value;
+
+  const value = await loader();
+  countCache.set(key, { value, expiresAt: now + COUNT_CACHE_TTL_MS });
+  return value;
+}
+
+function buildCountCacheKey(name: string, input: NormalizedWatchListInput, extra?: unknown) {
+  const baseInput = {
+    q: input.q ?? "",
+    sku: input.sku ?? "",
+    brandId: input.brandId ?? "",
+    vendorId: input.vendorId ?? "",
+    hasContent: input.hasContent ?? "",
+    hasImages: input.hasImages ?? "",
+    saleStage: input.saleStage ?? "",
+    opsStage: input.opsStage ?? "",
+  };
+
+  return `${name}:${stableStringify(baseInput)}:${stableStringify(extra ?? {})}`;
+}
+
+/**
+ * List page chỉ cần dữ liệu hiển thị trực tiếp trên bảng.
+ * Những relation nặng như acquisition siblings / service issues được bulk-load ở dưới
+ * để tránh Prisma tạo 1 query include quá sâu cho mỗi lần load list.
+ */
+const WATCH_LIST_ROW_SELECT = {
+  id: true,
+  productId: true,
+  saleStage: true,
+  serviceStage: true,
+  stockStage: true,
+  conditionGrade: true,
+  specStatus: true,
+  isContentDownloaded: true,
+  isImageDownloaded: true,
+  createdAt: true,
+  updatedAt: true,
+  product: {
+    select: {
+      id: true,
+      title: true,
+      sku: true,
+      slug: true,
+      brand: { select: { id: true, name: true } },
+      vendor: { select: { id: true, name: true } },
+      postTargets: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          createdAt: true,
+          postTargetId: true,
+          postTarget: {
+            select: {
+              id: true,
+              name: true,
+              platform: true,
+            },
+          },
+        },
+      },
+      productImage: {
+        where: { role: "INLINE" as any },
+        select: {
+          id: true,
+          role: true,
+          fileKey: true,
+          sortOrder: true,
+          createdAt: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        take: 1,
+      },
+    },
+  },
+  watchSpecV2: {
+    select: {
+      id: true,
+      brand: true,
+      model: true,
+      referenceNumber: true,
+    },
+  },
+  watchPrice: {
+    select: {
+      salePrice: true,
+      listPrice: true,
+      costPrice: true,
+      minPrice: true,
+    },
+  },
+  watchContent: {
+    select: {
+      id: true,
+      titleOverride: true,
+      hookText: true,
+      body: true,
+      summary: true,
+      bulletSpecs: true,
+    },
+  },
+  reviewStates: {
+    select: {
+      id: true,
+      targetType: true,
+      status: true,
+      reviewedAt: true,
+      reviewedById: true,
+      submittedAt: true,
+      submittedById: true,
+    },
+  },
+} satisfies Prisma.WatchSelect;
+
+const ACQUISITION_SOURCE_ITEM_SELECT = {
+  id: true,
+  acquisitionId: true,
+  productId: true,
+  quantity: true,
+  unitCost: true,
+  currency: true,
+  status: true,
+  kind: true,
+  productTitle: true,
+  notes: true,
+  createdAt: true,
+  acquisition: {
+    select: {
+      id: true,
+      refNo: true,
+      type: true,
+      accquisitionStt: true,
+      acquiredAt: true,
+      totalAmount: true,
+      vendor: { select: { id: true, name: true } },
+    },
+  },
+} satisfies Prisma.AcquisitionItemSelect;
+
+const ACQUISITION_SIBLING_ITEM_SELECT = {
+  id: true,
+  acquisitionId: true,
+  productId: true,
+  quantity: true,
+  unitCost: true,
+  currency: true,
+  status: true,
+  kind: true,
+  productTitle: true,
+  notes: true,
+  createdAt: true,
+  product: {
+    select: {
+      id: true,
+      title: true,
+      sku: true,
+    },
+  },
+} satisfies Prisma.AcquisitionItemSelect;
+
+const SERVICE_REQUEST_PREVIEW_SELECT = {
+  id: true,
+  productId: true,
+  technicalIssue: {
+    select: {
+      id: true,
+      executionStatus: true,
+    },
+  },
+} satisfies Prisma.ServiceRequestSelect;
+
 function toPositiveInt(value: unknown, fallback: number) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
@@ -42,6 +258,10 @@ function toPositiveInt(value: unknown, fallback: number) {
 
 function normalizeText(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter(Boolean).map(String)));
 }
 
 function buildSort(sort?: string): Prisma.WatchOrderByWithRelationInput[] {
@@ -94,7 +314,6 @@ function normalizeSubFilter(value: unknown): WatchListSubFilter {
     PARTIAL_APPROVED: "PARTIAL_APPROVED",
 
     APPROVED: "APPROVED",
-
     POSTED: "POSTED",
 
     MISSING_CONTENT: "MISSING_CONTENT",
@@ -103,6 +322,7 @@ function normalizeSubFilter(value: unknown): WatchListSubFilter {
 
   return aliasMap[text] ?? "";
 }
+
 function sanitizeSubFilterForView(
   view: ReturnType<typeof normalizeWatchListView>,
   subFilter: WatchListSubFilter
@@ -128,6 +348,11 @@ function sanitizeSubFilterForView(
   return "";
 }
 
+function normalizeMetaMode(input: WatchListFilters): WatchListMetaMode {
+  const value = String((input as any).meta ?? (input as any).metaMode ?? "full").trim().toLowerCase();
+  return value === "lite" ? "lite" : "full";
+}
+
 function normalizeInput(input: WatchListFilters): NormalizedWatchListInput {
   const view = normalizeWatchListView(input.view);
 
@@ -137,6 +362,7 @@ function normalizeInput(input: WatchListFilters): NormalizedWatchListInput {
     subFilter: sanitizeSubFilterForView(view, normalizeSubFilter(input.subFilter)),
     page: toPositiveInt(input.page, 1),
     pageSize: Math.min(toPositiveInt(input.pageSize, 20), 100),
+    meta: normalizeMetaMode(input),
   };
 }
 
@@ -146,12 +372,14 @@ function buildCurrentSegmentWhere(input: NormalizedWatchListInput) {
     buildWatchListSegmentWhere(input.view)
   );
 }
+
 function buildCurrentListWhere(input: NormalizedWatchListInput) {
   return mergeWatchWhere(
     buildCurrentSegmentWhere(input),
     buildWatchListSubFilterWhere(input.subFilter)
   );
 }
+
 function buildCountWhere(input: NormalizedWatchListInput, view: NormalizedWatchListInput["view"]) {
   return mergeWatchWhere(
     buildWatchListBaseWhere(input),
@@ -167,9 +395,7 @@ function buildSubCountWhere(input: NormalizedWatchListInput, subFilter: WatchLis
 }
 
 function getSubFiltersForView(view: NormalizedWatchListInput["view"]): WatchListSubFilter[] {
-  if (view === "processing") {
-    return ["MISSING_CONTENT", "MISSING_IMAGE"];
-  }
+  if (view === "processing") return ["MISSING_CONTENT", "MISSING_IMAGE"];
 
   if (view === "ready") {
     return [
@@ -220,17 +446,13 @@ async function countListGalleryImages(productIds: string[]) {
   return new Map(grouped.map((item) => [item.productId, item._count._all]));
 }
 
-async function getReviewActors(rows: any[]) {
-  const actorIds = Array.from(
-    new Set(
-      rows
-        .flatMap((row: any) =>
-          (row.reviewStates ?? []).flatMap((state: any) => [
-            state.reviewedById,
-            state.submittedById,
-          ])
-        )
-        .filter(Boolean)
+async function getReviewActors(rows: WatchListRawRow[]) {
+  const actorIds = uniqueStrings(
+    rows.flatMap((row) =>
+      (row.reviewStates ?? []).flatMap((state) => [
+        state.reviewedById,
+        state.submittedById,
+      ])
     )
   );
 
@@ -245,38 +467,180 @@ async function getReviewActors(rows: any[]) {
 }
 
 async function getWatchListCounts(input: NormalizedWatchListInput): Promise<WatchListCounts> {
-  const [draft, processing, ready, hold, sold, all] = await Promise.all([
-    prisma.watch.count({ where: buildCountWhere(input, "draft") }),
-    prisma.watch.count({ where: buildCountWhere(input, "processing") }),
-    prisma.watch.count({ where: buildCountWhere(input, "ready") }),
-    prisma.watch.count({ where: buildCountWhere(input, "hold") }),
-    prisma.watch.count({ where: buildCountWhere(input, "sold") }),
-    prisma.watch.count({ where: buildCountWhere(input, "all") }),
-  ]);
+  return getCachedCountValue(
+    buildCountCacheKey("watch-list-counts", input),
+    async () => {
+      const baseWhere = buildWatchListBaseWhere(input);
+      const grouped = await prisma.watch.groupBy({
+        by: ["saleStage"],
+        where: baseWhere,
+        _count: { _all: true },
+      });
 
-  return { draft, processing, ready, hold, sold, all };
+      const result: WatchListCounts = { ...EMPTY_COUNTS };
+      for (const item of grouped) {
+        const key = String(item.saleStage ?? "").toLowerCase() as keyof WatchListCounts;
+        if (key in result) result[key] = item._count._all;
+        result.all += item._count._all;
+      }
+
+      return result;
+    }
+  );
 }
 
 async function getWatchListSubCounts(
   input: NormalizedWatchListInput
 ): Promise<WatchListSubCounts> {
-  const targets = getSubFiltersForView(input.view);
-  if (!targets.length) return { ...EMPTY_SUB_COUNTS };
+  return getCachedCountValue(
+    buildCountCacheKey("watch-list-sub-counts", input, { view: input.view }),
+    async () => {
+      const targets = getSubFiltersForView(input.view);
+      if (!targets.length) return { ...EMPTY_SUB_COUNTS };
 
-  const values = await Promise.all(
-    targets.map((subFilter) =>
-      prisma.watch.count({ where: buildSubCountWhere(input, subFilter) })
-    )
+      const values = await Promise.all(
+        targets.map((subFilter) =>
+          prisma.watch.count({ where: buildSubCountWhere(input, subFilter) })
+        )
+      );
+
+      const result = { ...EMPTY_SUB_COUNTS };
+
+      targets.forEach((subFilter, index) => {
+        const key = subFilterToSummaryKey(subFilter);
+        if (key) result[key] = values[index] ?? 0;
+      });
+
+      return result;
+    }
   );
+}
 
-  const result = { ...EMPTY_SUB_COUNTS };
+async function getWatchListSummary(input: NormalizedWatchListInput, currentSegmentWhere: Prisma.WatchWhereInput) {
+  return getCachedCountValue(
+    buildCountCacheKey("watch-list-summary", input, { view: input.view }),
+    async () => {
+      const [segmentTotal, hasContent, hasImages] = await Promise.all([
+        prisma.watch.count({ where: currentSegmentWhere }),
+        prisma.watch.count({
+          where: buildWatchListSummaryWhere(currentSegmentWhere, "content"),
+        }),
+        prisma.watch.count({
+          where: buildWatchListSummaryWhere(currentSegmentWhere, "image"),
+        }),
+      ]);
 
-  targets.forEach((subFilter, index) => {
-    const key = subFilterToSummaryKey(subFilter);
-    if (key) result[key] = values[index] ?? 0;
+      return { segmentTotal, hasContent, hasImages };
+    }
+  );
+}
+
+async function getAcquisitionPreviewMap(productIds: string[]) {
+  const result = new Map<string, AcquisitionSourceItem[]>();
+  if (!productIds.length) return result;
+
+  const sourceItems = await prisma.acquisitionItem.findMany({
+    where: { productId: { in: productIds } },
+    select: ACQUISITION_SOURCE_ITEM_SELECT,
+    orderBy: [{ createdAt: "desc" }],
   });
 
+  if (!sourceItems.length) return result;
+
+  const limitedSourceItems: AcquisitionSourceItem[] = [];
+  const perProductCount = new Map<string, number>();
+
+  for (const item of sourceItems) {
+    const productId = String(item.productId ?? "");
+    if (!productId) continue;
+
+    const count = perProductCount.get(productId) ?? 0;
+    if (count >= 3) continue;
+
+    perProductCount.set(productId, count + 1);
+    limitedSourceItems.push(item);
+  }
+
+  const acquisitionIds = uniqueStrings(limitedSourceItems.map((item) => item.acquisitionId));
+
+  const siblingItems = acquisitionIds.length
+    ? await prisma.acquisitionItem.findMany({
+      where: { acquisitionId: { in: acquisitionIds } },
+      select: ACQUISITION_SIBLING_ITEM_SELECT,
+      orderBy: [{ createdAt: "asc" }],
+    })
+    : [];
+
+  const siblingsByAcquisitionId = new Map<string, AcquisitionSiblingItem[]>();
+  for (const item of siblingItems) {
+    const acquisitionId = String(item.acquisitionId ?? "");
+    if (!acquisitionId) continue;
+
+    const current = siblingsByAcquisitionId.get(acquisitionId) ?? [];
+    current.push(item);
+    siblingsByAcquisitionId.set(acquisitionId, current);
+  }
+
+  for (const sourceItem of limitedSourceItems) {
+    const productId = String(sourceItem.productId ?? "");
+    if (!productId) continue;
+
+    const enrichedSourceItem = {
+      ...sourceItem,
+      acquisition: sourceItem.acquisition
+        ? {
+          ...sourceItem.acquisition,
+          acquisitionItem: siblingsByAcquisitionId.get(sourceItem.acquisition.id) ?? [],
+        }
+        : null,
+    } as AcquisitionSourceItem;
+
+    const current = result.get(productId) ?? [];
+    current.push(enrichedSourceItem);
+    result.set(productId, current);
+  }
+
   return result;
+}
+
+async function getServiceRequestMap(productIds: string[]) {
+  const result = new Map<string, ServiceRequestPreview[]>();
+  if (!productIds.length) return result;
+
+  const serviceRequests = await prisma.serviceRequest.findMany({
+    where: { productId: { in: productIds } },
+    select: SERVICE_REQUEST_PREVIEW_SELECT,
+  });
+
+  for (const request of serviceRequests) {
+    const productId = String(request.productId ?? "");
+    if (!productId) continue;
+
+    const current = result.get(productId) ?? [];
+    current.push(request);
+    result.set(productId, current);
+  }
+
+  return result;
+}
+
+function attachBulkLoadedRelations(
+  row: WatchListRawRow,
+  acquisitionMap: Map<string, AcquisitionSourceItem[]>,
+  serviceRequestMap: Map<string, ServiceRequestPreview[]>
+) {
+  const productId = String(row.productId ?? row.product?.id ?? "");
+
+  return {
+    ...row,
+    product: row.product
+      ? {
+        ...row.product,
+        acquisitionItem: acquisitionMap.get(productId) ?? [],
+        serviceRequest: serviceRequestMap.get(productId) ?? [],
+      }
+      : row.product,
+  };
 }
 
 export async function listAdminWatches(
@@ -288,169 +652,49 @@ export async function listAdminWatches(
   const listWhere = buildCurrentListWhere(normalizedInput);
   const orderBy = buildSort(normalizedInput.sort);
 
-  const [rows, total, segmentTotal, counts, subCounts, hasContent, hasImages] = await Promise.all([
+  const shouldLoadMeta = normalizedInput.meta === "full";
+
+  const [rows, total, summaryMeta, counts, subCounts] = await Promise.all([
     prisma.watch.findMany({
       where: listWhere,
       skip,
       take: normalizedInput.pageSize,
       orderBy,
-      include: {
-        product: {
-          include: {
-            brand: { select: { id: true, name: true } },
-            vendor: { select: { id: true, name: true } },
-            postTargets: {
-              include: {
-                postTarget: {
-                  select: {
-                    id: true,
-                    name: true,
-                    platform: true,
-                  },
-                },
-              },
-              orderBy: { createdAt: "asc" },
-            },
-            productImage: {
-              where: { role: "INLINE" as any },
-              select: {
-                id: true,
-                role: true,
-                fileKey: true,
-                sortOrder: true,
-                createdAt: true,
-              },
-              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-              take: 1,
-            },
-            acquisitionItem: {
-              select: {
-                id: true,
-                acquisitionId: true,
-                productId: true,
-                quantity: true,
-                unitCost: true,
-                currency: true,
-                status: true,
-                kind: true,
-                productTitle: true,
-                notes: true,
-                createdAt: true,
-                acquisition: {
-                  select: {
-                    id: true,
-                    refNo: true,
-                    type: true,
-                    accquisitionStt: true,
-                    acquiredAt: true,
-                    totalAmount: true,
-                    vendor: { select: { id: true, name: true } },
-                    acquisitionItem: {
-                      select: {
-                        id: true,
-                        acquisitionId: true,
-                        productId: true,
-                        quantity: true,
-                        unitCost: true,
-                        currency: true,
-                        status: true,
-                        kind: true,
-                        productTitle: true,
-                        notes: true,
-                        createdAt: true,
-                        product: {
-                          select: {
-                            id: true,
-                            title: true,
-                            sku: true,
-                          },
-                        },
-                      },
-                      orderBy: [{ createdAt: "asc" }],
-                    },
-                  },
-                },
-              },
-              orderBy: [{ createdAt: "desc" }],
-              take: 3,
-            },
-            serviceRequest: {
-              select: {
-                id: true,
-                technicalIssue: {
-                  select: { id: true, executionStatus: true },
-                },
-              },
-            },
-          },
-        },
-        watchSpecV2: {
-          select: {
-            id: true,
-            brand: true,
-            model: true,
-            referenceNumber: true,
-          },
-        },
-        watchPrice: {
-          select: {
-            salePrice: true,
-            listPrice: true,
-            costPrice: true,
-            minPrice: true,
-          },
-        },
-        watchContent: {
-          select: {
-            id: true,
-            titleOverride: true,
-            hookText: true,
-            body: true,
-            summary: true,
-            bulletSpecs: true,
-          },
-        },
-        reviewStates: {
-          select: {
-            id: true,
-            targetType: true,
-            status: true,
-            reviewedAt: true,
-            reviewedById: true,
-            submittedAt: true,
-            submittedById: true,
-          },
-        },
-      },
+      select: WATCH_LIST_ROW_SELECT,
     }),
     prisma.watch.count({ where: listWhere }),
-    prisma.watch.count({ where: currentSegmentWhere }),
-    getWatchListCounts(normalizedInput),
-    getWatchListSubCounts(normalizedInput),
-    prisma.watch.count({
-      where: buildWatchListSummaryWhere(currentSegmentWhere, "content"),
-    }),
-    prisma.watch.count({
-      where: buildWatchListSummaryWhere(currentSegmentWhere, "image"),
-    }),
+    shouldLoadMeta
+      ? getWatchListSummary(normalizedInput, currentSegmentWhere)
+      : Promise.resolve(null),
+    shouldLoadMeta
+      ? getWatchListCounts(normalizedInput)
+      : Promise.resolve(null),
+    shouldLoadMeta
+      ? getWatchListSubCounts(normalizedInput)
+      : Promise.resolve(null),
   ]);
 
-  const productIds = rows
-    .map((row: any) => row.productId ?? row.product?.id)
-    .filter(Boolean);
-
-  const [imageCountMap, userMap] = await Promise.all([
-    countListGalleryImages(productIds),
-    getReviewActors(rows as any[]),
-  ]);
-
-  const items = rows.map((row: any) =>
-    mapWatchRow({
-      ...row,
-      __imagesCount: imageCountMap.get(row.productId ?? row.product?.id) ?? 0,
-      __userMap: userMap,
-    })
+  const productIds = uniqueStrings(
+    rows.map((row) => row.productId ?? row.product?.id)
   );
+
+  const [imageCountMap, userMap, acquisitionMap, serviceRequestMap] = await Promise.all([
+    countListGalleryImages(productIds),
+    getReviewActors(rows),
+    getAcquisitionPreviewMap(productIds),
+    getServiceRequestMap(productIds),
+  ]);
+
+  const items = rows.map((row) => {
+    const productId = String(row.productId ?? row.product?.id ?? "");
+    const enrichedRow = attachBulkLoadedRelations(row, acquisitionMap, serviceRequestMap);
+
+    return mapWatchRow({
+      ...enrichedRow,
+      __imagesCount: imageCountMap.get(productId) ?? 0,
+      __userMap: userMap,
+    });
+  });
 
   return {
     items,
@@ -458,12 +702,14 @@ export async function listAdminWatches(
     page: normalizedInput.page,
     pageSize: normalizedInput.pageSize,
     totalPages: Math.max(1, Math.ceil(total / normalizedInput.pageSize)),
-    counts,
-    summary: {
-      items: segmentTotal,
-      hasContent,
-      hasImages,
-      subCounts,
-    },
+    counts: counts ?? (undefined as any),
+    summary: summaryMeta
+      ? {
+        items: summaryMeta.segmentTotal,
+        hasContent: summaryMeta.hasContent,
+        hasImages: summaryMeta.hasImages,
+        subCounts: subCounts ?? { ...EMPTY_SUB_COUNTS },
+      }
+      : (undefined as any),
   };
 }

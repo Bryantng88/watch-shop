@@ -4,10 +4,17 @@ import { ServiceScope } from "@prisma/client";
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json().catch(() => ({}));
+        type CreateServiceFromProductBody = {
+            productId?: string;
+            productIds?: string[];
+            scope?: ServiceScope;
+            notes?: string | null;
+        };
+
+        const body = (await req.json().catch(() => ({}))) as Partial<CreateServiceFromProductBody>;
 
         const productIds = Array.isArray(body.productIds)
-            ? body.productIds.map((x: unknown) => String(x || "").trim()).filter(Boolean)
+            ? body.productIds.map((x) => String(x || "").trim()).filter(Boolean)
             : [];
 
         const singleProductId = String(body.productId || "").trim();

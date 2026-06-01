@@ -54,7 +54,7 @@ export async function getPanel(serviceRequestId: string) {
                             ref: true,
                         },
                     },
-                    image: {
+                    productImage: {
                         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                         take: 8,
                         select: {
@@ -94,7 +94,7 @@ export async function getPanel(serviceRequestId: string) {
                         include: {
                             Vendor: { select: { id: true, name: true } },
                             User: { select: { id: true, name: true, email: true } },
-                            ServiceCatalog: { select: { id: true, code: true, name: true } },
+                            serviceCatalog: { select: { id: true, code: true, name: true } },
                             SupplyCatalog: { select: { id: true, code: true, name: true } },
                             MechanicalPartCatalog: {
                                 select: { id: true, code: true, name: true },
@@ -192,7 +192,7 @@ export async function getPanel(serviceRequestId: string) {
             ref: sr.product?.watchSpec?.ref ?? null,
             primaryImageUrl:
                 sr.primaryImageUrlSnapshot ?? sr.product?.primaryImageUrl ?? null,
-            productImages: sr.product?.image ?? [],
+            productImages: sr.product?.productImage ?? [],
             createdAt: sr.createdAt,
             updatedAt: sr.updatedAt,
         },
@@ -259,7 +259,7 @@ export async function getPanel(serviceRequestId: string) {
                     confirmedByNameSnap: (x as any).confirmedByNameSnap ?? null,
                     Vendor: x.Vendor,
                     User: x.User,
-                    ServiceCatalog: x.ServiceCatalog,
+                    ServiceCatalog: x.serviceCatalog,
                     SupplyCatalog: x.SupplyCatalog,
                     MechanicalPartCatalog: x.MechanicalPartCatalog,
                     MaintenanceRecord: x.MaintenanceRecord.map((r) => ({
@@ -309,7 +309,7 @@ export async function listServiceMaintenanceRecords(
                     note: true,
                 },
             },
-            ServiceCatalog: {
+            serviceCatalog: {
                 select: {
                     id: true,
                     code: true,
@@ -323,7 +323,7 @@ export async function listServiceMaintenanceRecords(
                     email: true,
                 },
             },
-            vendor: {
+            Vendor: {
                 select: {
                     id: true,
                     name: true,

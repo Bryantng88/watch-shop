@@ -8,8 +8,14 @@ import type { IssueItem } from "./types";
 type Props = {
   open: boolean;
   onClose: () => void;
-  serviceRequestId: string;
+
+  /**
+   * SR hiện tại chỉ dùng để hiển thị context trên modal.
+   * Không dùng để filter Issue Board.
+   */
+  currentServiceRequestId?: string | null;
   serviceRefNo?: string | null;
+
   items: IssueItem[];
   counts: {
     pendingConfirm: number;
@@ -23,19 +29,23 @@ type Props = {
 export default function ServiceIssueManageModal({
   open,
   onClose,
-  serviceRequestId,
+  currentServiceRequestId,
   serviceRefNo,
   items,
   counts,
 }: Props) {
   React.useEffect(() => {
     if (!open) return;
+
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
+
     document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", handleKeyDown);
@@ -51,9 +61,13 @@ export default function ServiceIssueManageModal({
           <div>
             <div className="text-base font-semibold text-slate-950">Quản lý issue service</div>
             <div className="mt-1 text-sm text-slate-500">
-              {serviceRefNo || serviceRequestId} · Board thao tác chính cho kỹ thuật, phí và trạng thái issue.
+              {serviceRefNo || currentServiceRequestId
+                ? `${serviceRefNo || currentServiceRequestId} · `
+                : null}
+              Board tổng cho toàn bộ technical issue. Detail service chỉ giữ vai trò xem thông tin.
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -68,10 +82,10 @@ export default function ServiceIssueManageModal({
           <TechnicalIssuesBoardClient
             items={items}
             counts={counts}
-            serviceRequestId={serviceRequestId}
+            serviceRequestId={null}
             compact
-            title="Issue Board"
-            subtitle="Thao tác issue của riêng phiếu service này. Detail bên dưới chỉ giữ vai trò xem thông tin."
+            title="Issue Board tổng"
+            subtitle="Board thao tác chính cho toàn bộ technical issue của service."
             onClose={onClose}
           />
         </div>
