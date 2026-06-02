@@ -188,6 +188,10 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
     (sum: number, issue: any) => sum + Number(issue.actualCost ?? 0),
     0,
   );
+  const technicalDetailCatalogOptions =
+    rawIssueBoard.technicalDetailCatalogOptions ??
+    rawIssueBoard.catalogs?.technicalDetailCatalogOptions ??
+    [];
 
   const issueBoard = {
     items: rawIssueBoard.items ?? [],
@@ -197,7 +201,7 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
       inProgress: 0,
       done: 0,
       readyToCloseSrCount: 0,
-    },
+    }, technicalDetailCatalogOptions,
     catalogs: {
       ...(rawIssueBoard.catalogs ?? {}),
       technicalDetailCatalogOptions:
@@ -206,7 +210,10 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
         [],
     },
   };
-
+  console.log("[service-request-detail] rawIssueBoard", {
+    topLevelCount: rawIssueBoard.technicalDetailCatalogOptions?.length,
+    catalogsCount: rawIssueBoard.catalogs?.technicalDetailCatalogOptions?.length,
+  });
   return serialize({
     detail: {
       serviceRequest: {

@@ -156,14 +156,14 @@ export async function createMany(tx: DB, payments: CreatePaymentInput[]) {
 /** =========================
  * Shipment fee helpers
  * ========================= */
-export async function findShippingFeePaymentByShipmentId(shipment_id: string, tx: DB) {
+export async function findshippingAmountPaymentByShipmentId(shipment_id: string, tx: DB) {
     const db = dbOrTx(tx);
     return db.payment.findFirst({
         where: { shipment_id, type: PaymentType.SHIPMENT },
     });
 }
 
-export async function createShippingFeePayment(
+export async function createshippingAmountPayment(
     input: {
         shipmentId: string;
         orderId: string | null;

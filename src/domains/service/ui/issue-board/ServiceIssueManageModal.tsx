@@ -55,7 +55,11 @@ export default function ServiceIssueManageModal({
   }, [open, onClose]);
 
   if (!open) return null;
-
+  console.log("[ServiceIssueManageModal] catalogs", {
+    catalogs,
+    count: catalogs?.technicalDetailCatalogOptions?.length,
+    sample: catalogs?.technicalDetailCatalogOptions?.slice(0, 3),
+  });
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div className="flex h-[96vh] w-full max-w-[1560px] flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh] sm:rounded-3xl">

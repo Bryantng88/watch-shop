@@ -6,7 +6,7 @@ export type ShipmentListRow = {
     status: string;
 
     trackingCode: string | null;
-    shippingFee: Prisma.Decimal | null;
+    shippingAmount: Prisma.Decimal | null;
 
     createdAt: Date;
 
@@ -129,7 +129,7 @@ export async function getByIdWithOrder(id: string, tx: DB) {
             id: true,
             refNo: true,
             status: true,
-            shippingFee: true,
+            shippingAmount: true,
             orderId: true,
         },
     });

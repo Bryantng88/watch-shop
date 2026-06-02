@@ -44,7 +44,7 @@ export async function createFromOrderTx(
             shipDistrict: order.shipDistrict ?? null,
             shipWard: order.shipWard ?? null,
             status: "DRAFT",
-            shippingFee: 0,
+            shippingAmount: 0,
         },
     });
 }
@@ -151,7 +151,7 @@ export async function getAdminShipmentList(input: ShipmentSearchInput) {
         shipAddress: s.shipAddress ?? s.Order?.shipAddress ?? "",
         carrier: s.carrier,
         trackingNo: s.trackingCode,
-        shippingFee: s.shippingFee == null ? null : Number(s.shippingFee),
+        shippingAmount: s.shippingAmount == null ? null : Number(s.shippingAmount),
         currency: s.currency ?? "VND",
         shippedAt: s.shippedAt,
         deliveredAt: s.deliveredAt,
@@ -212,8 +212,8 @@ export async function bulkReadyShipments(input: { shipmentIds: string[] }) {
     });
 }
 
-export async function markShipmentShipped(input: { shipmentId: string; shippingFee: number }) {
-    const { shipmentId, shippingFee } = input;
+export async function markShipmentShipped(input: { shipmentId: string; shippingAmount: number }) {
+    const { shipmentId, shippingAmount } = input;
 
     await prisma.$transaction(async (tx) => {
         const s = await shipmentRepo.getById(shipmentId, tx);
@@ -227,7 +227,7 @@ export async function markShipmentShipped(input: { shipmentId: string; shippingF
             shipmentId,
             {
                 status: "SHIPPED",
-                shippingFee,
+                shippingAmount,
                 shippedAt: new Date(),
             },
             tx

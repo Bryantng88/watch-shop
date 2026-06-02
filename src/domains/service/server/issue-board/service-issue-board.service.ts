@@ -100,12 +100,8 @@ async function resolveTechnicalDetailCatalog(input: {
 
     return catalog;
 }
-
 export async function listTechnicalDetailCatalogOptions() {
-    return (prisma as any).technicalDetailCatalog.findMany({
-        where: {
-            isActive: true,
-        },
+    const rows = await (prisma as any).technicalDetailCatalog.findMany({
         orderBy: [
             { area: "asc" },
             { sortOrder: "asc" },
@@ -117,10 +113,20 @@ export async function listTechnicalDetailCatalogOptions() {
             code: true,
             name: true,
             sortOrder: true,
+            isActive: true,
         },
     });
-}
 
+    return rows
+        .filter((x: any) => x.isActive !== false)
+        .map((x: any) => ({
+            id: x.id,
+            area: x.area ?? null,
+            code: x.code ?? null,
+            name: x.name ?? null,
+            sortOrder: x.sortOrder ?? null,
+        }));
+}
 export async function createTechnicalIssue(input: {
     assessmentId?: string | null;
     serviceRequestId?: string | null;
@@ -602,12 +608,12 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
                     }
                     : null,
 
-                technicalDetailCatalog: x.TechnicalDetailCatalog
+                technicalDetailCatalog: x.technicalDetailCatalog
                     ? {
-                        id: x.TechnicalDetailCatalog.id,
-                        area: x.TechnicalDetailCatalog.area ?? null,
-                        code: x.TechnicalDetailCatalog.code ?? null,
-                        name: x.TechnicalDetailCatalog.name ?? null,
+                        id: x.technicalDetailCatalog.id,
+                        area: x.technicalDetailCatalog.area ?? null,
+                        code: x.technicalDetailCatalog.code ?? null,
+                        name: x.technicalDetailCatalog.name ?? null,
                     }
                     : null,
 
@@ -666,10 +672,16 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
         done: items.filter((x) => x.boardColumn === "DONE").length,
         readyToCloseSrCount: readyToCloseSrIds.length,
     };
-
+    console.log("[issue-board.service] technicalDetailCatalogOptions", {
+        count: technicalDetailCatalogOptions.length,
+        sample: technicalDetailCatalogOptions.slice(0, 3),
+    });
     return {
         items,
         counts,
         technicalDetailCatalogOptions,
+        catalogs: {
+            technicalDetailCatalogOptions,
+        },
     };
 }

@@ -34,7 +34,10 @@ export default function ServiceRequestDetailClient({
   const router = useRouter();
   const [issueModalOpen, setIssueModalOpen] = React.useState(false);
   const sr = detail.serviceRequest;
-
+  console.log("[ServiceRequestDetailClient] issueBoard.catalogs", {
+    count: issueBoard?.catalogs?.technicalDetailCatalogOptions?.length,
+    sample: issueBoard?.catalogs?.technicalDetailCatalogOptions?.slice(0, 3),
+  });
   return (
     <div className="space-y-6">
       <ServiceDetailHero
@@ -56,8 +59,13 @@ export default function ServiceRequestDetailClient({
         serviceRefNo={sr.refNo}
         items={issueBoard.items}
         counts={issueBoard.counts}
-        catalogs={issueBoard.catalogs}
-      />
+        catalogs={{
+          ...(issueBoard.catalogs ?? {}),
+          technicalDetailCatalogOptions:
+            issueBoard.catalogs?.technicalDetailCatalogOptions ??
+            (issueBoard as any).technicalDetailCatalogOptions ??
+            [],
+        }} />
     </div>
   );
 }

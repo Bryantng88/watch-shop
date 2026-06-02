@@ -23,7 +23,7 @@ type ShipmentRow = {
     shipAddress: string;
     carrier: string | null;
     trackingNo: string | null;
-    shippingFee: number | null;
+    shippingAmount: number | null;
     currency?: string | null;
 };
 
@@ -380,7 +380,7 @@ export default function ShipmentListClient({
                                                 ) : null}
                                             </td>
 
-                                            <td className="px-3 py-4 align-middle font-semibold">{money(s.shippingFee)}</td>
+                                            <td className="px-3 py-4 align-middle font-semibold">{money(s.shippingAmount)}</td>
 
                                             <td className="px-3 py-4 align-middle">
                                                 <StatusBadge status={s.status} />

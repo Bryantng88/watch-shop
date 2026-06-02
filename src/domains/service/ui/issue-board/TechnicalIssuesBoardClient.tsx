@@ -47,13 +47,18 @@ export default function TechnicalIssueBoardClient({
   items,
   counts,
   title = "Technical Issue Board",
+  catalogs,
   subtitle = "Điều phối toàn bộ technical issue theo trạng thái vận hành.",
   serviceRequestId = null,
   compact = false,
   onClose,
-  catalogs,
+
   technicalDetailCatalogOptions = [],
 }: Props) {
+  console.log("[TechnicalIssuesBoardClient] technicalDetailCatalogOptions", {
+    count: technicalDetailCatalogOptions.length,
+    sample: technicalDetailCatalogOptions.slice(0, 3),
+  });
   const router = useRouter();
   const notify = useNotify();
 
@@ -80,6 +85,17 @@ export default function TechnicalIssueBoardClient({
     DONE: 12,
   });
   const [loadingMoreColumn, setLoadingMoreColumn] = React.useState<BoardColumnKey | null>(null);
+
+  const normalizedTechnicalDetailCatalogOptions = React.useMemo<TechnicalDetailCatalogOption[]>(() => {
+    const direct = Array.isArray(technicalDetailCatalogOptions) ? technicalDetailCatalogOptions : [];
+    if (direct.length > 0) return direct;
+
+    const fromCatalogs = Array.isArray(catalogs?.technicalDetailCatalogOptions)
+      ? catalogs.technicalDetailCatalogOptions
+      : [];
+
+    return fromCatalogs;
+  }, [technicalDetailCatalogOptions, catalogs]);
 
   React.useEffect(() => {
     setBoardItems(items ?? []);
@@ -569,7 +585,7 @@ export default function TechnicalIssueBoardClient({
           resolutionNote={drawerState.resolutionNote}
           onChangeActualCost={(value) => setDrawerState((prev) => ({ ...prev, actualCost: value }))}
           onChangeResolutionNote={(value) => setDrawerState((prev) => ({ ...prev, resolutionNote: value }))}
-          technicalDetailCatalogOptions={technicalDetailCatalogOptions}
+          technicalDetailCatalogOptions={normalizedTechnicalDetailCatalogOptions}
           technicalDetailCatalogId={drawerState.technicalDetailCatalogId}
           actionMode={drawerState.actionMode}
           vendorId={drawerState.vendorId}

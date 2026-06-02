@@ -11,7 +11,7 @@ export async function POST(
 
     const body = await req.json().catch(() => ({}));
 
-    const amount = Number(body?.amount ?? body?.shippingFee ?? 0);
+    const amount = Number(body?.amount ?? body?.shippingAmount ?? 0);
 
     if (!Number.isFinite(amount) || amount < 0) {
       return NextResponse.json(

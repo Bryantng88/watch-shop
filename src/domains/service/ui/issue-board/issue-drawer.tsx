@@ -8,7 +8,8 @@ function normalizeAreaKey(value?: string | null) {
     .trim()
     .toUpperCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s-]+/g, "_");
 
   const map: Record<string, string> = {
     MAY: "MOVEMENT",
@@ -25,14 +26,16 @@ function normalizeAreaKey(value?: string | null) {
     CROWN: "CROWN",
 
     MAT_SO: "DIAL",
-    "MAT SO": "DIAL",
     DIAL: "DIAL",
 
+    HANDS: "HANDS",
+    KIM: "HANDS",
+
     DAY: "BRACELET",
+    STRAP: "BRACELET",
     BRACELET: "BRACELET",
 
     TONG_QUAT: "GENERAL",
-    "TONG QUAT": "GENERAL",
     GENERAL: "GENERAL",
   };
 
@@ -133,16 +136,14 @@ export function IssueDrawer({
   const issueAreaKey = normalizeAreaKey(issue.area);
 
   const detailOptions = React.useMemo(() => {
-    return (technicalDetailCatalogOptions ?? []).filter(
-      (item) => normalizeAreaKey(item.area) === issueAreaKey
-    );
+    const options = Array.isArray(technicalDetailCatalogOptions)
+      ? technicalDetailCatalogOptions
+      : [];
+
+    if (!issueAreaKey) return options;
+
+    return options.filter((item) => normalizeAreaKey(item.area) === issueAreaKey);
   }, [technicalDetailCatalogOptions, issueAreaKey]);
-  console.log({
-    issueArea: issue.area,
-    issueAreaKey,
-    technicalDetailCatalogOptions,
-    detailOptions,
-  });
   const isStarting = issue.boardColumn === "READY";
   const isCompleting = issue.boardColumn === "IN_PROGRESS";
 

@@ -179,7 +179,7 @@ export default function ActionMenuPopover({
     // ===== Shipment modals
     const [shipModalOpen, setShipModalOpen] = useState(false);
     const [deliverModalOpen, setDeliverModalOpen] = useState(false);
-    const [shippingFee, setShippingFee] = useState<number>(0);
+    const [shippingAmount, setshippingAmount] = useState<number>(0);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState<string | null>(null);
 
@@ -305,13 +305,13 @@ export default function ActionMenuPopover({
     const openShipModal = () => {
         setErr(null);
         setOpen(false);
-        setShippingFee(0);
+        setshippingAmount(0);
         setShipModalOpen(true);
     };
 
     const submitShip = async () => {
         setErr(null);
-        const fee = Number(shippingFee);
+        const fee = Number(shippingAmount);
         if (Number.isNaN(fee) || fee < 0) {
             setErr("Phí ship không hợp lệ");
             return;
@@ -319,7 +319,7 @@ export default function ActionMenuPopover({
 
         setSaving(true);
         try {
-            await postJson(`/api/admin/shipments/${entityId}/ship`, { shippingFee: fee });
+            await postJson(`/api/admin/shipments/${entityId}/ship`, { shippingAmount: fee });
             setShipModalOpen(false);
             done();
         } catch (e: any) {
@@ -465,8 +465,8 @@ export default function ActionMenuPopover({
                                     className="h-9 w-full rounded border px-2"
                                     type="number"
                                     min={0}
-                                    value={shippingFee}
-                                    onChange={(e) => setShippingFee(Number(e.target.value))}
+                                    value={shippingAmount}
+                                    onChange={(e) => setshippingAmount(Number(e.target.value))}
                                 />
                             </div>
 

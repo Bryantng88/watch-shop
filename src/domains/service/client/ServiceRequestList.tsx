@@ -2,11 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ListChecks } from "lucide-react";
+import { ListChecks } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import TechnicalAssessmentModal from "@/domains/service/ui/technical/TechnicalAssessmentModal";
+import {
+    ServiceIssueManageModal,
+    type IssueBoardCatalogs,
+    type IssueItem,
+} from "@/domains/service/ui/issue-board";
 import {
     buildServiceRequestCounts,
     normalizeServiceRequestView,
@@ -20,7 +25,22 @@ import {
     type ServiceRequestViewKey,
 } from "@/domains/service/ui/list";
 
-type Props = ServiceRequestListPageProps;
+type IssueBoardPayload = {
+    items: IssueItem[];
+    counts: {
+        pendingConfirm: number;
+        ready: number;
+        inProgress: number;
+        done: number;
+        readyToCloseSrCount?: number;
+    };
+    catalogs?: IssueBoardCatalogs;
+    technicalDetailCatalogOptions?: IssueBoardCatalogs["technicalDetailCatalogOptions"];
+};
+
+type Props = ServiceRequestListPageProps & {
+    issueBoard?: IssueBoardPayload;
+};
 
 function setParam(params: URLSearchParams, key: string, value: string | null) {
     if (!value) params.delete(key);
@@ -35,20 +55,34 @@ export default function ServiceRequestListClient(props: Props) {
     const dialog = useAppDialog();
 
     const items = props.items ?? [];
+
     const currentView = useMemo(
         () => normalizeServiceRequestView(searchParams.get("view")),
         [searchParams],
     );
+
     const counts = useMemo(
-        () => buildServiceRequestCounts({ counts: props.counts, total: props.total, currentView }),
+        () =>
+            buildServiceRequestCounts({
+                counts: props.counts,
+                total: props.total,
+                currentView,
+            }),
         [props.counts, props.total, currentView],
     );
 
     const q = searchParams.get("q") ?? "";
     const sort = searchParams.get("sort") ?? "updatedDesc";
 
-    const [filters, setFilters] = useState<ServiceRequestFiltersValue>({ q, sort });
-    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] = useState<string | null>(null);
+    const [filters, setFilters] = useState<ServiceRequestFiltersValue>({
+        q,
+        sort,
+    });
+
+    const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
+        useState<string | null>(null);
+
+    const [issueBoardOpen, setIssueBoardOpen] = useState(false);
 
     useEffect(() => {
         setFilters({ q, sort });
@@ -59,10 +93,21 @@ export default function ServiceRequestListClient(props: Props) {
         [items, technicalAssessmentRequestId],
     );
 
-    const productImage = selectedItem?.primaryImageUrl ?? selectedItem?.product?.primaryImageUrl ?? null;
+    const productImage =
+        selectedItem?.primaryImageUrl ?? selectedItem?.product?.primaryImageUrl ?? null;
     const productTitle = selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
     const productSku = selectedItem?.skuSnapshot ?? null;
     const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
+
+    const normalizedIssueBoardCatalogs = useMemo<IssueBoardCatalogs>(() => {
+        return {
+            ...(props.issueBoard?.catalogs ?? {}),
+            technicalDetailCatalogOptions:
+                props.issueBoard?.catalogs?.technicalDetailCatalogOptions ??
+                props.issueBoard?.technicalDetailCatalogOptions ??
+                [],
+        };
+    }, [props.issueBoard]);
 
     function pushParams(mutator: (params: URLSearchParams) => void) {
         const next = new URLSearchParams(searchParams.toString());
@@ -82,7 +127,11 @@ export default function ServiceRequestListClient(props: Props) {
     function applyFilters() {
         pushParams((next) => {
             setParam(next, "q", filters.q.trim() || null);
-            setParam(next, "sort", filters.sort && filters.sort !== "updatedDesc" ? filters.sort : null);
+            setParam(
+                next,
+                "sort",
+                filters.sort && filters.sort !== "updatedDesc" ? filters.sort : null,
+            );
             next.set("page", "1");
         });
     }
@@ -103,24 +152,28 @@ export default function ServiceRequestListClient(props: Props) {
     }
 
     function openDetail(row: ServiceReqItem) {
-        router.push(`/admin/services/${row.id}`);
+        router.push(`/admin/service-requests/${row.id}`);
     }
 
     function openGlobalIssueBoard() {
-        router.push("/admin/services/issues-board");
+        setIssueBoardOpen(true);
+    }
+
+    function openIssueBoard(_row: ServiceReqItem) {
+        setIssueBoardOpen(true);
     }
 
     function openLogs(row: ServiceReqItem) {
         notify.info({
             title: "Nhật ký xử lý",
-            message: `Cần nối lại MaintenanceLogModal cho ${row.refNo || row.id}.`,
+            message: `Cần nối lại MaintenanceLogModal cho ${row.refNo ?? row.id}.`,
         });
     }
 
     async function completeOne(row: ServiceReqItem) {
         const confirmed = await dialog.confirm({
             title: "Đóng service request",
-            message: "Bạn có chắc muốn chốt service request này không? Toàn bộ issue phải hoàn tất và đủ kết luận kỹ thuật.",
+            message: "Bạn có chắc muốn chốt service request này không?",
             confirmText: "Đóng SR",
             cancelText: "Hủy",
             tone: "success",
@@ -164,44 +217,46 @@ export default function ServiceRequestListClient(props: Props) {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1680px] space-y-5 px-4 py-6 lg:px-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
                 <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">
-                        Service Domain
-                    </p>
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Danh sách service</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                        Theo dõi phiếu kỹ thuật đi kèm watch. Issue Board là nơi kỹ thuật xử lý toàn bộ queue.
+                    <h1 className="text-2xl font-semibold text-slate-950">
+                        Service Requests
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Quản lý service đi kèm watch, kỹ thuật, vendor và maintenance.
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-3">
                     <button
                         type="button"
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                        onClick={() => router.push("/admin/orders")}
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Orders
-                    </button>
-
-                    <button
-                        type="button"
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                         onClick={openGlobalIssueBoard}
                     >
                         <ListChecks className="h-4 w-4" />
                         Mở Issue Board
                     </button>
+
+                    <button
+                        type="button"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        onClick={() => router.push("/admin/orders")}
+                    >
+                        ← Orders
+                    </button>
                 </div>
             </div>
 
-            <div className="rounded-[28px] border border-slate-200 bg-white px-5 shadow-sm">
-                <ServiceRequestListViewTabs value={currentView} counts={counts} onChange={setView} />
+            <div className="rounded-3xl border border-slate-200 bg-white px-5 shadow-sm">
+                <ServiceRequestListViewTabs
+                    value={currentView}
+                    counts={counts}
+                    onChange={setView}
+                />
             </div>
 
-            <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                 <ServiceRequestListFilters
                     value={filters}
                     onChange={setFilters}
@@ -213,7 +268,7 @@ export default function ServiceRequestListClient(props: Props) {
             <ServiceRequestTable
                 items={items}
                 onOpenDetail={openDetail}
-                onOpenIssueBoard={openGlobalIssueBoard}
+                onOpenIssueBoard={openIssueBoard}
                 onOpenLogs={openLogs}
                 onComplete={completeOne}
                 onCopyId={copyId}
@@ -244,6 +299,22 @@ export default function ServiceRequestListClient(props: Props) {
                 productSku={productSku ?? undefined}
                 productImage={productImage ?? undefined}
                 movementSpecLabel={movementSpecLabel ?? undefined}
+            />
+
+            <ServiceIssueManageModal
+                open={issueBoardOpen}
+                onClose={() => setIssueBoardOpen(false)}
+                items={props.issueBoard?.items ?? []}
+                counts={
+                    props.issueBoard?.counts ?? {
+                        pendingConfirm: 0,
+                        ready: 0,
+                        inProgress: 0,
+                        done: 0,
+                        readyToCloseSrCount: 0,
+                    }
+                }
+                catalogs={normalizedIssueBoardCatalogs}
             />
         </div>
     );
