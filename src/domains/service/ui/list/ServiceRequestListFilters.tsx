@@ -24,12 +24,12 @@ export default function ServiceRequestListFilters({ value, onChange, onSubmit, o
                 event.preventDefault();
                 onSubmit();
             }}
+            className="[&>div]:lg:grid-cols-[minmax(320px,1fr)_minmax(180px,220px)_auto_auto]"
         >
             <ListSearchInput
                 value={value.q}
                 onChange={(event) => onChange({ ...value, q: event.target.value })}
-                placeholder="Tìm refNo, order, service, vendor, ghi chú..."
-                wrapperClassName="lg:col-span-2"
+                placeholder="Tìm refNo, watch, SKU, vendor, kỹ thuật viên..."
             />
 
             <ListSelect

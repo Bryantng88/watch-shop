@@ -1,19 +1,23 @@
 export type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
-export type PriorityLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type PriorityLevel = "LOW" | "MEDIUM" | "NORMAL" | "HIGH" | "URGENT";
 
-export type IssueCatalogOption = {
+export type IssueBoardCatalogOption = {
   id: string;
   code?: string | null;
-  name: string;
-  categoryKey?: string | null;
+  name?: string | null;
   category?: string | null;
   group?: string | null;
+  unit?: string | null;
+  defaultCost?: number | null;
+  internalCost?: number | null;
+  vendorPrice?: number | null;
+  customerPrice?: number | null;
 };
 
-export type IssueConclusionOptions = {
-  serviceCatalogs: IssueCatalogOption[];
-  supplyCatalogs: IssueCatalogOption[];
-  mechanicalPartCatalogs: IssueCatalogOption[];
+export type IssueBoardCatalogs = {
+  serviceCatalogs: IssueBoardCatalogOption[];
+  supplyCatalogs: IssueBoardCatalogOption[];
+  mechanicalPartCatalogs: IssueBoardCatalogOption[];
 };
 
 export type IssueItem = {
@@ -52,7 +56,7 @@ export type IssueItem = {
     movement?: string | null;
     model?: string | null;
     ref?: string | null;
-    priority?: PriorityLevel | string | null;
+    priority?: string | null;
     priorityReason?: string | null;
     prioritySource?: string | null;
     priorityMarkedAt?: string | null;

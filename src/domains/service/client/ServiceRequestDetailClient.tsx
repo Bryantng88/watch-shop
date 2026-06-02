@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ServiceIssueManageModal, type IssueItem } from "@/domains/service/ui/issue-board";
+import { ServiceIssueManageModal, type IssueBoardCatalogs, type IssueItem } from "@/domains/service/ui/issue-board";
 import {
   ServiceCompletedSummaryCard,
   ServiceDetailHero,
+  ServiceIssuesSummaryCard,
   ServiceOverviewCard,
   ServiceReadonlyInfoCard,
 } from "@/domains/service/ui/detail/ServiceDetailShell";
@@ -20,6 +21,7 @@ type IssueBoardPayload = {
     done: number;
     readyToCloseSrCount?: number;
   };
+  catalogs?: IssueBoardCatalogs;
 };
 
 export default function ServiceRequestDetailClient({
@@ -43,6 +45,7 @@ export default function ServiceRequestDetailClient({
       />
 
       <ServiceOverviewCard detail={detail} />
+      <ServiceIssuesSummaryCard detail={detail} />
       <ServiceCompletedSummaryCard detail={detail} />
       <ServiceReadonlyInfoCard detail={detail} />
 
@@ -53,6 +56,7 @@ export default function ServiceRequestDetailClient({
         serviceRefNo={sr.refNo}
         items={issueBoard.items}
         counts={issueBoard.counts}
+        catalogs={issueBoard.catalogs}
       />
     </div>
   );

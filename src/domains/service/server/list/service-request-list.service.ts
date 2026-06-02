@@ -22,6 +22,10 @@ export type ServiceRequestListItem = {
   vendorName: string | null;
   technicianName: string | null;
   maintenanceCount: number;
+  issueCount: number;
+  openIssueCount: number;
+  productId: string | null;
+  source: string | null;
   productTitle: string | null;
   primaryImageUrl: string | null;
   skuSnapshot: string | null;
@@ -102,6 +106,10 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
     technicianName: r.technicianName ?? null,
     customerItemNote: r.orderItem?.customerItemNote ?? null,
     maintenanceCount: r.maintenanceCount ?? 0,
+    issueCount: r.issueCount ?? 0,
+    openIssueCount: r.openIssueCount ?? 0,
+    productId: r.productId ?? null,
+    source: r.orderItem?.order?.id ? "SERVICE_FROM_ORDER" : "QUICK_SERVICE_FROM_WATCH",
     productTitle: r.productTitle ?? null,
     primaryImageUrl: r.primaryImageUrl ?? null,
     skuSnapshot: r.skuSnapshot ?? null,

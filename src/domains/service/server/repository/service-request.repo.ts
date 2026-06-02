@@ -22,6 +22,9 @@ export type ServiceRequestListRow = {
   vendorName: string | null;
   technicianName: string | null;
   maintenanceCount: number;
+  issueCount: number;
+  openIssueCount: number;
+  productId: string | null;
   orderItem: {
     id: string;
     title: string | null;
@@ -65,7 +68,10 @@ export async function getServiceRequestList(
           },
         },
         serviceCatalog: { select: { id: true, code: true, name: true } },
-        _count: { select: { maintenanceRecord: true } },
+        _count: { select: { maintenanceRecord: true, technicalIssue: true } },
+        technicalIssue: {
+          select: { executionStatus: true },
+        },
         orderItem: {
           select: {
             id: true,
@@ -86,6 +92,7 @@ export async function getServiceRequestList(
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     scope: r.scope ?? null,
+    productId: r.product?.id ?? null,
     productTitle: r.product?.title ?? null,
     primaryImageUrl: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
     skuSnapshot: r.skuSnapshot ?? null,
@@ -96,6 +103,11 @@ export async function getServiceRequestList(
       ? { id: r.serviceCatalog.id, code: r.serviceCatalog.code ?? null, name: r.serviceCatalog.name }
       : null,
     maintenanceCount: r._count.maintenanceRecord,
+    issueCount: r._count.technicalIssue,
+    openIssueCount: (r.technicalIssue ?? []).filter((issue: any) => {
+      const status = String(issue.executionStatus ?? "").toUpperCase();
+      return status !== "DONE" && status !== "COMPLETED" && status !== "CANCELED" && status !== "CANCELLED";
+    }).length,
     orderItem: r.orderItem
       ? {
         id: r.orderItem.id,

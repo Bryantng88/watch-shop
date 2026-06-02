@@ -1,27 +1,31 @@
-import { NextResponse } from "next/server";
-import { completeTechnicalIssue } from "@/domains/service/server";
+import { NextRequest, NextResponse } from "next/server";
 
-type RouteContext = {
-    params: Promise<{ id: string }>;
-};
+import { completeTechnicalIssue } from "@/domains/service/server/issue-board";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 
-export async function POST(req: Request, context: RouteContext) {
+export async function POST(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+) {
     try {
-        const { id } = await context.params;
-        const body = await req.json().catch(() => ({}));
+        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-        const item = await completeTechnicalIssue({
+        const { id } = await params;
+        const body = await request.json().catch(() => ({}));
+
+        await completeTechnicalIssue({
             id,
-            actorName: body.actorName ?? null,
-            actualCost: body.actualCost ?? null,
-            resolutionNote: body.resolutionNote ?? null,
+            serviceCatalogId: body.serviceCatalogId,
+            supplyCatalogId: body.supplyCatalogId,
+            mechanicalPartCatalogId: body.mechanicalPartCatalogId,
+            actualCost: body.actualCost,
+            resolutionNote: body.resolutionNote,
         });
 
-        return NextResponse.json({ ok: true, item });
-    } catch (e: any) {
-        return NextResponse.json(
-            { error: e?.message ?? "Internal error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Không hoàn tất được issue.";
+        return NextResponse.json({ ok: false, error: message }, { status: 400 });
     }
 }

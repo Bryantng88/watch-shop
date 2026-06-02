@@ -5,19 +5,25 @@ export type ServiceReqItem = {
     createdAt: string;
     updatedAt: string;
     scope: string | null;
+    source?: string | null;
+    sourceType?: string | null;
     customerItemNote: string | null;
+    orderId?: string | null;
     orderRefNo: string | null;
-    serviceName: string | null;
+    productId?: string | null;
     productTitle: string | null;
     primaryImageUrl: string | null;
     skuSnapshot: string | null;
     vendorName: string | null;
     technicianName: string | null;
     maintenanceCount: number;
+    issueCount?: number;
+    openIssueCount?: number;
     product?: {
         id: string;
         title?: string | null;
         primaryImageUrl?: string | null;
+        sku?: string | null;
         watchSpec?: {
             movement?: string | null;
         } | null;

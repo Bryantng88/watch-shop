@@ -3,7 +3,7 @@
 import * as React from "react";
 import { X } from "lucide-react";
 import TechnicalIssuesBoardClient from "./TechnicalIssuesBoardClient";
-import type { IssueItem } from "./types";
+import type { IssueBoardCatalogs, IssueItem } from "./types";
 
 type Props = {
   open: boolean;
@@ -24,6 +24,7 @@ type Props = {
     done: number;
     readyToCloseSrCount?: number;
   };
+  catalogs?: IssueBoardCatalogs;
 };
 
 export default function ServiceIssueManageModal({
@@ -33,6 +34,7 @@ export default function ServiceIssueManageModal({
   serviceRefNo,
   items,
   counts,
+  catalogs,
 }: Props) {
   React.useEffect(() => {
     if (!open) return;
@@ -82,6 +84,7 @@ export default function ServiceIssueManageModal({
           <TechnicalIssuesBoardClient
             items={items}
             counts={counts}
+            catalogs={catalogs}
             serviceRequestId={null}
             compact
             title="Issue Board tổng"

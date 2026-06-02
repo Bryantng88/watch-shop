@@ -35,6 +35,9 @@ export type ServiceRequestDetailViewModel = {
     actualCost?: number | null;
     estimatedCost?: number | null;
     resolutionNote?: string | null;
+    serviceCatalog?: { id: string; code?: string | null; name?: string | null } | null;
+    supplyCatalog?: { id: string; code?: string | null; name?: string | null } | null;
+    mechanicalPartCatalog?: { id: string; code?: string | null; name?: string | null } | null;
   }>;
   technicalAssessment?: {
     id?: string | null;

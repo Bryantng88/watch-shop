@@ -23,7 +23,9 @@ import { actionModeLabel, areaLabel, normalizeText } from "./helpers";
 import { DraggableIssueCard, IssueCard } from "./issue-card";
 import { IssueDrawer } from "./issue-drawer";
 import { FilterChip } from "./filter-chip";
-import type { BoardColumnKey, IssueConclusionOptions, IssueItem } from "./types";
+import type { BoardColumnKey, IssueItem } from "./types";
+
+type TechnicalOption = { id: string; code?: string | null; name: string; defaultPrice?: number | string | null; defaultCost?: number | string | null };
 
 type Props = {
   items: IssueItem[];
@@ -34,7 +36,6 @@ type Props = {
     done: number;
     readyToCloseSrCount?: number;
   };
-  conclusionOptions?: IssueConclusionOptions;
   title?: string;
   subtitle?: string;
   serviceRequestId?: string | null;
@@ -45,7 +46,6 @@ type Props = {
 export default function TechnicalIssueBoardClient({
   items,
   counts,
-  conclusionOptions,
   title = "Technical Issue Board",
   subtitle = "Điều phối toàn bộ technical issue theo trạng thái vận hành.",
   serviceRequestId = null,
@@ -61,12 +61,20 @@ export default function TechnicalIssueBoardClient({
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [selectedIssue, setSelectedIssue] = React.useState<IssueItem | null>(null);
   const [drawerState, setDrawerState] = React.useState({
-    actualCost: "",
-    resolutionNote: "",
+    actionMode: "INTERNAL",
+    vendorId: "",
     serviceCatalogId: "",
     supplyCatalogId: "",
     mechanicalPartCatalogId: "",
+    actualCost: "",
+    resolutionNote: "",
   });
+  const [technicalOptions, setTechnicalOptions] = React.useState<{
+    serviceCatalogs: TechnicalOption[];
+    supplyCatalogs: TechnicalOption[];
+    mechanicalPartCatalogs: TechnicalOption[];
+    vendors: TechnicalOption[];
+  }>({ serviceCatalogs: [], supplyCatalogs: [], mechanicalPartCatalogs: [], vendors: [] });
   const [cancelingIssueId, setCancelingIssueId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [areaFilter, setAreaFilter] = React.useState<string>("ALL");
@@ -84,16 +92,38 @@ export default function TechnicalIssueBoardClient({
   }, [items]);
 
   React.useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/technical-issues/options")
+      .then((res) => res.json())
+      .then((json) => {
+        if (!alive) return;
+        setTechnicalOptions({
+          serviceCatalogs: Array.isArray(json?.serviceCatalogs) ? json.serviceCatalogs : [],
+          supplyCatalogs: Array.isArray(json?.supplyCatalogs) ? json.supplyCatalogs : [],
+          mechanicalPartCatalogs: Array.isArray(json?.mechanicalPartCatalogs) ? json.mechanicalPartCatalogs : [],
+          vendors: Array.isArray(json?.vendors) ? json.vendors : [],
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!selectedIssue) return;
     setDrawerState({
+      actionMode: String(selectedIssue.actionMode ?? "INTERNAL").toUpperCase(),
+      vendorId: selectedIssue.vendorId ?? "",
+      serviceCatalogId: selectedIssue.serviceCatalog?.id ?? "",
+      supplyCatalogId: selectedIssue.supplyCatalog?.id ?? "",
+      mechanicalPartCatalogId: selectedIssue.mechanicalPartCatalog?.id ?? "",
       actualCost:
         selectedIssue.actualCost != null && Number.isFinite(Number(selectedIssue.actualCost))
           ? String(selectedIssue.actualCost)
           : "",
       resolutionNote: selectedIssue.resolutionNote ?? "",
-      serviceCatalogId: selectedIssue.serviceCatalog?.id ?? "",
-      supplyCatalogId: selectedIssue.supplyCatalog?.id ?? "",
-      mechanicalPartCatalogId: selectedIssue.mechanicalPartCatalog?.id ?? "",
     });
   }, [selectedIssue]);
 
@@ -193,19 +223,24 @@ export default function TechnicalIssueBoardClient({
               : `/api/admin/technical-issues/${issueId}/cancel`;
 
       const body =
-        action === "complete"
+        action === "start"
           ? {
-            actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
-            resolutionNote: drawerState.resolutionNote.trim() || null,
+            actionMode: drawerState.actionMode,
+            vendorId: drawerState.vendorId || null,
             serviceCatalogId: drawerState.serviceCatalogId || null,
-            supplyCatalogId: drawerState.supplyCatalogId || null,
-            mechanicalPartCatalogId: drawerState.mechanicalPartCatalogId || null,
           }
-          : action === "cancel"
+          : action === "complete"
             ? {
-              reason: drawerState.resolutionNote.trim() || null,
+              actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
+              resolutionNote: drawerState.resolutionNote.trim() || null,
+              supplyCatalogId: drawerState.supplyCatalogId || null,
+              mechanicalPartCatalogId: drawerState.mechanicalPartCatalogId || null,
             }
-            : {};
+            : action === "cancel"
+              ? {
+                reason: drawerState.resolutionNote.trim() || null,
+              }
+              : {};
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -216,7 +251,10 @@ export default function TechnicalIssueBoardClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (rollback) setBoardItems(rollback);
-        alert(json?.error || "Không thể cập nhật issue");
+        notify.error({
+          title: "Không thể cập nhật issue",
+          message: json?.error || "Vui lòng kiểm tra lại thông tin xử lý.",
+        });
         return;
       }
 
@@ -323,31 +361,30 @@ export default function TechnicalIssueBoardClient({
       return;
     }
 
-    if (from === "IN_PROGRESS" && targetColumn === "DONE") {
-      setActiveId(null);
-      setOverColumn(null);
-      setSelectedIssue(issue);
-      notify.error({
-        title: "Cần kết luận kỹ thuật",
-        message: "Vui lòng mở issue và nhập hạng mục, chi phí, kết luận trước khi hoàn tất.",
-      });
-      return;
-    }
-
-    optimisticMove(issueId, targetColumn);
     setActiveId(null);
     setOverColumn(null);
 
     if (from === "PENDING_CONFIRM" && targetColumn === "READY") {
+      optimisticMove(issueId, targetColumn);
       void callAction(issueId, "confirm", snapshot);
       return;
     }
+
     if (from === "READY" && targetColumn === "IN_PROGRESS") {
-      void callAction(issueId, "start", snapshot);
+      setSelectedIssue(issue);
+      notify.info({
+        title: "Cần hạng mục xử lý",
+        message: "Chọn hạng mục xử lý/vendor trong modal trước khi bắt đầu issue.",
+      });
       return;
     }
+
     if (from === "IN_PROGRESS" && targetColumn === "DONE") {
-      void callAction(issueId, "complete", snapshot);
+      setSelectedIssue(issue);
+      notify.info({
+        title: "Cần kết luận kỹ thuật",
+        message: "Nhập chi phí thực tế, vật tư nếu có và kết luận trước khi hoàn tất issue.",
+      });
     }
   }
 
@@ -566,17 +603,21 @@ export default function TechnicalIssueBoardClient({
         <IssueDrawer
           issue={selectedIssue}
           busyId={busyId}
-          actualCost={drawerState.actualCost}
-          resolutionNote={drawerState.resolutionNote}
+          actionMode={drawerState.actionMode}
+          vendorId={drawerState.vendorId}
           serviceCatalogId={drawerState.serviceCatalogId}
           supplyCatalogId={drawerState.supplyCatalogId}
           mechanicalPartCatalogId={drawerState.mechanicalPartCatalogId}
-          conclusionOptions={conclusionOptions}
-          onChangeActualCost={(value) => setDrawerState((prev) => ({ ...prev, actualCost: value }))}
-          onChangeResolutionNote={(value) => setDrawerState((prev) => ({ ...prev, resolutionNote: value }))}
+          actualCost={drawerState.actualCost}
+          resolutionNote={drawerState.resolutionNote}
+          options={technicalOptions}
+          onChangeActionMode={(value) => setDrawerState((prev) => ({ ...prev, actionMode: value }))}
+          onChangeVendorId={(value) => setDrawerState((prev) => ({ ...prev, vendorId: value }))}
           onChangeServiceCatalogId={(value) => setDrawerState((prev) => ({ ...prev, serviceCatalogId: value }))}
           onChangeSupplyCatalogId={(value) => setDrawerState((prev) => ({ ...prev, supplyCatalogId: value }))}
           onChangeMechanicalPartCatalogId={(value) => setDrawerState((prev) => ({ ...prev, mechanicalPartCatalogId: value }))}
+          onChangeActualCost={(value) => setDrawerState((prev) => ({ ...prev, actualCost: value }))}
+          onChangeResolutionNote={(value) => setDrawerState((prev) => ({ ...prev, resolutionNote: value }))}
           onClose={() => setSelectedIssue(null)}
           onAction={callAction}
           onOpenServiceRequest={() => {

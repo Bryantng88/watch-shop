@@ -66,15 +66,7 @@ const PRIORITY_OPTIONS = [
   { value: "LOW", label: "Thấp" },
 ];
 
-const AREA_OPTIONS = [
-  { value: "GENERAL", label: "Tổng quát" },
-  { value: "MOVEMENT", label: "Máy" },
-  { value: "CASE", label: "Vỏ" },
-  { value: "CRYSTAL", label: "Kính" },
-  { value: "DIAL", label: "Mặt số" },
-  { value: "CROWN", label: "Núm" },
-  { value: "BRACELET", label: "Dây / khóa" },
-];
+
 
 function priorityClass(priority?: string | null) {
   const key = String(priority ?? "NORMAL").toUpperCase();
@@ -143,12 +135,12 @@ export default function WatchServiceQuickModal({
   const [loading, setLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const [area, setArea] = useState("GENERAL");
   const [priority, setPriority] = useState("NORMAL");
+  const [area, setArea] = useState("GENERAL");
   const [summary, setSummary] = useState("");
   const [note, setNote] = useState("");
 
-  const canSubmit = Boolean(productId) && summary.trim().length > 0 && !loading && !isPending;
+  const canSubmit = Boolean(productId) && area.trim().length > 0 && note.trim().length > 0 && !loading && !isPending;
 
   const title = useMemo(
     () => data?.serviceRequest?.productTitle || productTitle || "Watch service",
@@ -162,11 +154,10 @@ export default function WatchServiceQuickModal({
     setError(null);
 
     try {
-      const res = await fetch("/api/admin/service-requests/watch-active", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      });
+      const res = await fetch(
+        `/api/admin/service-requests/watch-active?productId=${encodeURIComponent(productId)}`,
+        { method: "GET" },
+      );
 
       const json = await res.json().catch(() => null);
 
@@ -210,7 +201,7 @@ export default function WatchServiceQuickModal({
             serviceRequestId: data?.serviceRequest?.id ?? null,
             area,
             priority,
-            summary,
+            summary: summary.trim() || null,
             note,
             issueType: "CHECK",
           }),
@@ -310,7 +301,7 @@ export default function WatchServiceQuickModal({
                 </div>
 
                 <a
-                  href={boardUrl(sr?.id)}
+                  href="/admin/services/issues-board"
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Mở Issue Board
@@ -320,7 +311,7 @@ export default function WatchServiceQuickModal({
               <div className="divide-y divide-slate-100">
                 {!issues.length ? (
                   <div className="px-5 py-8 text-center text-sm text-slate-400">
-                    Chưa có technical issue nào cho phiếu service active.
+                    Chưa có active SR/issue. SR chỉ được tạo khi bạn lưu issue đầu tiên.
                   </div>
                 ) : (
                   issues.map((issue) => (
@@ -364,11 +355,12 @@ export default function WatchServiceQuickModal({
                 </div>
                 <div>
                   <div className="font-bold text-slate-950">Thêm issue nhanh</div>
-                  <div className="text-sm text-slate-500">Không xử lý issue tại đây.</div>
+                  <div className="text-sm text-slate-500">Chỉ nhập khu vực và ghi chú thô. Kỹ thuật kết luận hạng mục/part/chi phí ở Issue Board.</div>
                 </div>
               </div>
 
               <div className="mt-5 space-y-4">
+
                 <label className="block">
                   <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Khu vực</span>
                   <select
@@ -376,9 +368,12 @@ export default function WatchServiceQuickModal({
                     onChange={(e) => setArea(e.target.value)}
                     className="mt-1 w-full border-b border-slate-200 bg-transparent py-2 text-sm outline-none focus:border-slate-950"
                   >
-                    {AREA_OPTIONS.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
+                    <option value="GENERAL">Tổng quát</option>
+                    <option value="MOVEMENT">Máy</option>
+                    <option value="CASE">Vỏ</option>
+                    <option value="CRYSTAL">Kính</option>
+                    <option value="DIAL">Mặt số</option>
+                    <option value="CROWN">Núm</option>
                   </select>
                 </label>
 
@@ -396,21 +391,11 @@ export default function WatchServiceQuickModal({
                 </label>
 
                 <label className="block">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Issue</span>
-                  <input
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
-                    placeholder="Ví dụ: Núm lỏng, máy yếu cót..."
-                    className="mt-1 w-full border-b border-slate-200 bg-transparent py-2 text-sm outline-none focus:border-slate-950"
-                  />
-                </label>
-
-                <label className="block">
                   <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Ghi chú</span>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Ghi chú thêm cho kỹ thuật nếu cần"
+                    placeholder="Ví dụ: check vỏ, kiểm tra máy, kiểm tra núm..."
                     rows={4}
                     className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-950"
                   />
@@ -423,7 +408,7 @@ export default function WatchServiceQuickModal({
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  Thêm issue
+                  Lưu issue vào phiếu
                 </button>
               </div>
             </div>

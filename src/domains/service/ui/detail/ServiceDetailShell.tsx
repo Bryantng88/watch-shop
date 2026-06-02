@@ -283,3 +283,66 @@ export function ServiceReadonlyInfoCard({ detail }: { detail: ServiceRequestDeta
     </SectionCard>
   );
 }
+
+function issueExecutionLabel(status?: string | null) {
+  const key = String(status ?? "").toUpperCase();
+  if (key === "OPEN") return "Mở";
+  if (key === "IN_PROGRESS") return "Đang xử lý";
+  if (key === "DONE" || key === "COMPLETED") return "Hoàn tất";
+  if (key === "CANCELED") return "Đã hủy";
+  return status || "-";
+}
+
+export function ServiceIssuesSummaryCard({ detail }: { detail: ServiceRequestDetailViewModel }) {
+  const issues = detail.technicalIssues ?? [];
+
+  return (
+    <SectionCard
+      title="Technical issues"
+      subtitle="Tổng hợp đầu bài, hạng mục kết luận, linh kiện và chi phí của từng issue."
+    >
+      {!issues.length ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+          Chưa có issue kỹ thuật nào.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <tr>
+                <th className="px-4 py-3">Issue</th>
+                <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3">Hạng mục</th>
+                <th className="px-4 py-3">Linh kiện / part</th>
+                <th className="px-4 py-3 text-right">Chi phí</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {issues.map((issue: any) => {
+                const catalog = issue.serviceCatalog?.name ?? "-";
+                const parts = [issue.supplyCatalog?.name, issue.mechanicalPartCatalog?.name].filter(Boolean).join(", ") || "-";
+
+                return (
+                  <tr key={issue.id} className="align-top">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-slate-900">{issue.summary || "Technical issue"}</div>
+                      {issue.resolutionNote ? (
+                        <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{issue.resolutionNote}</div>
+                      ) : issue.note ? (
+                        <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{issue.note}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{issueExecutionLabel(issue.executionStatus)}</td>
+                    <td className="px-4 py-3 text-slate-700">{catalog}</td>
+                    <td className="px-4 py-3 text-slate-600">{parts}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900">{formatCurrency(Number(issue.actualCost ?? 0))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </SectionCard>
+  );
+}

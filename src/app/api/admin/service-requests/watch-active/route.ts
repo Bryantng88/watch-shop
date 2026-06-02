@@ -1,89 +1,73 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 import {
     createQuickIssueForActiveWatchService,
     getActiveWatchService,
     getOrCreateActiveWatchService,
 } from "@/domains/service/server/watch-quick";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { PERMISSIONS } from "@/constants/permissions";
 
-type RouteContext = {
-    params?: Promise<Record<string, string>>;
-};
-
-function productIdFromUrl(req: Request) {
-    const url = new URL(req.url);
-    return String(url.searchParams.get("productId") ?? "").trim();
+function ok(data: unknown) {
+    return NextResponse.json({ ok: true, data });
 }
 
-export async function GET(req: Request, _context: RouteContext) {
-    try {
-        const productId = productIdFromUrl(req);
-        if (!productId) {
-            return NextResponse.json({ error: "Missing productId" }, { status: 400 });
-        }
+function fail(error: unknown, status = 400) {
+    const message = error instanceof Error ? error.message : "Không xử lý được yêu cầu.";
+    return NextResponse.json({ ok: false, error: message }, { status });
+}
 
+export async function GET(request: NextRequest) {
+    try {
+        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+
+        const productId = request.nextUrl.searchParams.get("productId");
+        if (!productId) throw new Error("Missing productId");
+
+        // Preview only: không tạo SR khi chỉ mở modal từ Watch.
         const data = await getActiveWatchService({ productId });
-
-        return NextResponse.json({
-            ok: true,
-            data,
-        });
-    } catch (error: any) {
-        console.error("[WATCH_ACTIVE_SERVICE][GET]", error);
-        return NextResponse.json(
-            { error: error?.message || "Load active service request failed" },
-            { status: 500 },
-        );
+        return ok(data);
+    } catch (error) {
+        return fail(error);
     }
 }
 
-export async function POST(req: Request, _context: RouteContext) {
+export async function POST(request: NextRequest) {
     try {
-        const body = await req.json().catch(() => ({}));
-        const productId = String(body?.productId ?? "").trim();
+        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
-        if (!productId) {
-            return NextResponse.json({ error: "Missing productId" }, { status: 400 });
-        }
+        const body = await request.json().catch(() => ({}));
+        if (!body?.productId) throw new Error("Missing productId");
 
-        const data = await getOrCreateActiveWatchService({ productId });
+        // Giữ tương thích nếu nơi cũ còn gọi POST để mở modal.
+        // Mặc định POST cũng chỉ preview, trừ khi gọi forceCreate rõ ràng.
+        const data = body?.forceCreate
+            ? await getOrCreateActiveWatchService({ productId: body.productId })
+            : await getActiveWatchService({ productId: body.productId });
 
-        return NextResponse.json({
-            ok: true,
-            data,
-        });
-    } catch (error: any) {
-        console.error("[WATCH_ACTIVE_SERVICE][POST]", error);
-        return NextResponse.json(
-            { error: error?.message || "Open active service request failed" },
-            { status: 500 },
-        );
+        return ok(data);
+    } catch (error) {
+        return fail(error);
     }
 }
 
-export async function PATCH(req: Request, _context: RouteContext) {
+export async function PATCH(request: NextRequest) {
     try {
-        const body = await req.json().catch(() => ({}));
+        await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
+        const body = await request.json().catch(() => ({}));
         const data = await createQuickIssueForActiveWatchService({
-            productId: body?.productId,
-            serviceRequestId: body?.serviceRequestId,
-            area: body?.area,
-            priority: body?.priority,
-            summary: body?.summary,
-            note: body?.note,
-            issueType: body?.issueType,
+            productId: body.productId,
+            serviceRequestId: body.serviceRequestId,
+            area: body.area,
+            summary: body.summary,
+            note: body.note,
+            issueType: body.issueType,
+            priority: body.priority,
         });
 
-        return NextResponse.json({
-            ok: true,
-            data,
-            message: "Đã thêm technical issue",
-        });
-    } catch (error: any) {
-        console.error("[WATCH_ACTIVE_SERVICE][PATCH]", error);
-        return NextResponse.json(
-            { error: error?.message || "Create technical issue failed" },
-            { status: 400 },
-        );
+        return ok(data);
+    } catch (error) {
+        return fail(error);
     }
 }

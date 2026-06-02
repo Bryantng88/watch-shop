@@ -29,9 +29,8 @@ export function IssueCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${
-        dragging ? "rotate-[1.5deg] shadow-xl" : "hover:shadow-md"
-      }`}
+      className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition ${dragging ? "rotate-[1.5deg] shadow-xl" : "hover:shadow-md"
+        }`}
     >
       <div className={`h-1.5 ${accent.topBar}`} />
 
@@ -39,10 +38,10 @@ export function IssueCard({
         <div className="flex items-start justify-between gap-3">
           <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
             <div className="line-clamp-1 text-sm font-semibold text-stone-900">
-              {item.summary || "Technical issue"}
+              {sr?.refNo || item.id}
             </div>
             <div className="mt-1 line-clamp-2 text-xs text-stone-600">
-              {item.note || "Chưa có ghi chú kỹ thuật."}
+              {item.serviceCatalog?.name || item.summary || item.note || "Chưa cập nhật hạng mục xử lý."}
             </div>
           </button>
 
@@ -99,7 +98,7 @@ export function IssueCard({
                 <div className="line-clamp-2 text-sm font-semibold text-stone-900">
                   {sr?.productTitle || "-"}
                 </div>
-                <div className="mt-1 text-xs text-stone-500">{sr?.refNo || "-"}</div>
+                <div className="mt-1 text-xs text-stone-500">{item.serviceCatalog?.name || item.summary || "Chưa có hạng mục"}</div>
               </div>
 
               <div className="h-[72px] w-[72px] overflow-hidden rounded-xl border border-stone-200 bg-white">
