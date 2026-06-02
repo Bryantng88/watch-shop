@@ -85,6 +85,9 @@ export default function ServiceIssueManageModal({
             items={items}
             counts={counts}
             catalogs={catalogs}
+            technicalDetailCatalogOptions={
+              catalogs?.technicalDetailCatalogOptions ?? []
+            }
             serviceRequestId={null}
             compact
             title="Issue Board tổng"

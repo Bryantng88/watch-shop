@@ -33,7 +33,8 @@ const makeSchema = () => z.object({
   isConfirmed: SortOrderSchema.optional(),
   confirmedAt: SortOrderSchema.optional(),
   confirmedById: SortOrderSchema.optional(),
-  confirmedByNameSnap: SortOrderSchema.optional()
+  confirmedByNameSnap: SortOrderSchema.optional(),
+  technicalDetailCatalogId: SortOrderSchema.optional()
 }).strict();
 export const TechnicalIssueMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueMaxOrderByAggregateInput>;
 export const TechnicalIssueMaxOrderByAggregateInputObjectZodSchema = makeSchema();

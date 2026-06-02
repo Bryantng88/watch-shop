@@ -49,6 +49,8 @@ export const TechnicalIssueFindFirstSelectSchema: z.ZodType<Prisma.TechnicalIssu
     SupplyCatalog: z.boolean().optional(),
     User: z.boolean().optional(),
     Vendor: z.boolean().optional(),
+    technicalDetailCatalogId: z.boolean().optional(),
+    technicalDetailCatalog: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 
@@ -92,6 +94,8 @@ export const TechnicalIssueFindFirstSelectZodSchema = z.object({
     SupplyCatalog: z.boolean().optional(),
     User: z.boolean().optional(),
     Vendor: z.boolean().optional(),
+    technicalDetailCatalogId: z.boolean().optional(),
+    technicalDetailCatalog: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

@@ -38,7 +38,9 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     ServiceRequest: z.number(),
     SupplyCatalog: z.number(),
     User: z.number(),
-    Vendor: z.number()
+    Vendor: z.number(),
+    technicalDetailCatalogId: z.number(),
+    technicalDetailCatalog: z.number()
   }).optional(),
   _sum: z.object({
     estimatedCost: z.number().nullable(),
@@ -77,7 +79,8 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     completedByNameSnap: z.string().nullable(),
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
-    confirmedByNameSnap: z.string().nullable()
+    confirmedByNameSnap: z.string().nullable(),
+    technicalDetailCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -106,5 +109,6 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     completedByNameSnap: z.string().nullable(),
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
-    confirmedByNameSnap: z.string().nullable()
+    confirmedByNameSnap: z.string().nullable(),
+    technicalDetailCatalogId: z.string().nullable()
   }).nullable().optional()});

@@ -45,7 +45,8 @@ const makeSchema = () => z.object({
   isConfirmed: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
   confirmedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   confirmedById: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
+  confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicalDetailCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TechnicalIssueUncheckedUpdateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutMaintenanceRecordInput>;
 export const TechnicalIssueUncheckedUpdateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

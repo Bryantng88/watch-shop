@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TechnicalDetailCatalogSelectObjectSchema as TechnicalDetailCatalogSelectObjectSchema } from './objects/TechnicalDetailCatalogSelect.schema';
+import { TechnicalDetailCatalogIncludeObjectSchema as TechnicalDetailCatalogIncludeObjectSchema } from './objects/TechnicalDetailCatalogInclude.schema';
+import { TechnicalDetailCatalogWhereUniqueInputObjectSchema as TechnicalDetailCatalogWhereUniqueInputObjectSchema } from './objects/TechnicalDetailCatalogWhereUniqueInput.schema';
+import { TechnicalDetailCatalogCreateInputObjectSchema as TechnicalDetailCatalogCreateInputObjectSchema } from './objects/TechnicalDetailCatalogCreateInput.schema';
+import { TechnicalDetailCatalogUncheckedCreateInputObjectSchema as TechnicalDetailCatalogUncheckedCreateInputObjectSchema } from './objects/TechnicalDetailCatalogUncheckedCreateInput.schema';
+import { TechnicalDetailCatalogUpdateInputObjectSchema as TechnicalDetailCatalogUpdateInputObjectSchema } from './objects/TechnicalDetailCatalogUpdateInput.schema';
+import { TechnicalDetailCatalogUncheckedUpdateInputObjectSchema as TechnicalDetailCatalogUncheckedUpdateInputObjectSchema } from './objects/TechnicalDetailCatalogUncheckedUpdateInput.schema';
+
+export const TechnicalDetailCatalogUpsertOneSchema: z.ZodType<Prisma.TechnicalDetailCatalogUpsertArgs> = z.object({ select: TechnicalDetailCatalogSelectObjectSchema.optional(), include: TechnicalDetailCatalogIncludeObjectSchema.optional(), where: TechnicalDetailCatalogWhereUniqueInputObjectSchema, create: z.union([ TechnicalDetailCatalogCreateInputObjectSchema, TechnicalDetailCatalogUncheckedCreateInputObjectSchema ]), update: z.union([ TechnicalDetailCatalogUpdateInputObjectSchema, TechnicalDetailCatalogUncheckedUpdateInputObjectSchema ]) }).strict() as unknown as z.ZodType<Prisma.TechnicalDetailCatalogUpsertArgs>;
+
+export const TechnicalDetailCatalogUpsertOneZodSchema = z.object({ select: TechnicalDetailCatalogSelectObjectSchema.optional(), include: TechnicalDetailCatalogIncludeObjectSchema.optional(), where: TechnicalDetailCatalogWhereUniqueInputObjectSchema, create: z.union([ TechnicalDetailCatalogCreateInputObjectSchema, TechnicalDetailCatalogUncheckedCreateInputObjectSchema ]), update: z.union([ TechnicalDetailCatalogUpdateInputObjectSchema, TechnicalDetailCatalogUncheckedUpdateInputObjectSchema ]) }).strict();

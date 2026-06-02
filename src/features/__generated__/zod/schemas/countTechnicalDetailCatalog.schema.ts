@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TechnicalDetailCatalogOrderByWithRelationInputObjectSchema as TechnicalDetailCatalogOrderByWithRelationInputObjectSchema } from './objects/TechnicalDetailCatalogOrderByWithRelationInput.schema';
+import { TechnicalDetailCatalogWhereInputObjectSchema as TechnicalDetailCatalogWhereInputObjectSchema } from './objects/TechnicalDetailCatalogWhereInput.schema';
+import { TechnicalDetailCatalogWhereUniqueInputObjectSchema as TechnicalDetailCatalogWhereUniqueInputObjectSchema } from './objects/TechnicalDetailCatalogWhereUniqueInput.schema';
+import { TechnicalDetailCatalogCountAggregateInputObjectSchema as TechnicalDetailCatalogCountAggregateInputObjectSchema } from './objects/TechnicalDetailCatalogCountAggregateInput.schema';
+
+export const TechnicalDetailCatalogCountSchema: z.ZodType<Prisma.TechnicalDetailCatalogCountArgs> = z.object({ orderBy: z.union([TechnicalDetailCatalogOrderByWithRelationInputObjectSchema, TechnicalDetailCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalDetailCatalogWhereInputObjectSchema.optional(), cursor: TechnicalDetailCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TechnicalDetailCatalogCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.TechnicalDetailCatalogCountArgs>;
+
+export const TechnicalDetailCatalogCountZodSchema = z.object({ orderBy: z.union([TechnicalDetailCatalogOrderByWithRelationInputObjectSchema, TechnicalDetailCatalogOrderByWithRelationInputObjectSchema.array()]).optional(), where: TechnicalDetailCatalogWhereInputObjectSchema.optional(), cursor: TechnicalDetailCatalogWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), TechnicalDetailCatalogCountAggregateInputObjectSchema ]).optional() }).strict();

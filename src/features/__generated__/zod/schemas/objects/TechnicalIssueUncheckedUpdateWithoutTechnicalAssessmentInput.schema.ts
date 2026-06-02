@@ -46,6 +46,7 @@ const makeSchema = () => z.object({
   confirmedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   confirmedById: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  technicalDetailCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUncheckedUpdateWithoutTechnicalAssessmentInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutTechnicalAssessmentInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutTechnicalAssessmentInput>;

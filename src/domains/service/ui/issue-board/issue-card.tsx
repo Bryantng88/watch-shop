@@ -38,10 +38,10 @@ export function IssueCard({
         <div className="flex items-start justify-between gap-3">
           <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
             <div className="line-clamp-1 text-sm font-semibold text-stone-900">
-              {sr?.refNo || item.id}
+              {item.id}
             </div>
             <div className="mt-1 line-clamp-2 text-xs text-stone-600">
-              {item.serviceCatalog?.name || item.summary || item.note || "Chưa cập nhật hạng mục xử lý."}
+              {item.technicalDetailCatalog?.name || item.summary || item.note || "Chưa xác định chi tiết kỹ thuật."}
             </div>
           </button>
 
@@ -83,6 +83,11 @@ export function IssueCard({
             <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-700">
               {statusLabel(item.executionStatus)}
             </span>
+            {item.technicalDetailCatalog?.name ? (
+              <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                {item.technicalDetailCatalog.name}
+              </span>
+            ) : null}
             <PriorityBadge level={item.priority} />
             {item.serviceRequestClosed ? (
               <ClosedSrBadge />
@@ -98,7 +103,7 @@ export function IssueCard({
                 <div className="line-clamp-2 text-sm font-semibold text-stone-900">
                   {sr?.productTitle || "-"}
                 </div>
-                <div className="mt-1 text-xs text-stone-500">{item.serviceCatalog?.name || item.summary || "Chưa có hạng mục"}</div>
+                <div className="mt-1 text-xs text-stone-500">{sr?.refNo || "-"}</div>
               </div>
 
               <div className="h-[72px] w-[72px] overflow-hidden rounded-xl border border-stone-200 bg-white">

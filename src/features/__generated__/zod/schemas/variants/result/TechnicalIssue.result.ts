@@ -43,7 +43,9 @@ export const TechnicalIssueResultSchema = z.object({
     ServiceRequest: z.unknown(),
     SupplyCatalog: z.unknown().nullable(),
     User: z.unknown().nullable(),
-    Vendor: z.unknown().nullable()
+    Vendor: z.unknown().nullable(),
+    technicalDetailCatalogId: z.string().nullable(),
+    technicalDetailCatalog: z.unknown().nullable()
 }).strict();
 
 export type TechnicalIssueResultType = z.infer<typeof TechnicalIssueResultSchema>;

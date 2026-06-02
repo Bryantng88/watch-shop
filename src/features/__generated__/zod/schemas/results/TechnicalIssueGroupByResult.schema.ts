@@ -28,6 +28,7 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
   confirmedAt: z.date(),
   confirmedById: z.string(),
   confirmedByNameSnap: z.string(),
+  technicalDetailCatalogId: z.string(),
   _count: z.object({
     id: z.number(),
     assessmentId: z.number(),
@@ -67,7 +68,9 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     ServiceRequest: z.number(),
     SupplyCatalog: z.number(),
     User: z.number(),
-    Vendor: z.number()
+    Vendor: z.number(),
+    technicalDetailCatalogId: z.number(),
+    technicalDetailCatalog: z.number()
   }).optional(),
   _sum: z.object({
     estimatedCost: z.number().nullable(),
@@ -106,7 +109,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     completedByNameSnap: z.string().nullable(),
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
-    confirmedByNameSnap: z.string().nullable()
+    confirmedByNameSnap: z.string().nullable(),
+    technicalDetailCatalogId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -135,6 +139,7 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     completedByNameSnap: z.string().nullable(),
     confirmedAt: z.date().nullable(),
     confirmedById: z.string().nullable(),
-    confirmedByNameSnap: z.string().nullable()
+    confirmedByNameSnap: z.string().nullable(),
+    technicalDetailCatalogId: z.string().nullable()
   }).nullable().optional()
 }));

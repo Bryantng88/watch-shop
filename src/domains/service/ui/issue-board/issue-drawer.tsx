@@ -1,98 +1,105 @@
-"use client";
-
-import { ArrowRight, CheckCircle2, Circle, X } from "lucide-react";
-
+import * as React from "react";
+import type { IssueItem, TechnicalDetailCatalogOption } from "./types";
+import { actionModeLabel, areaLabel, fmtDT, fmtMoney, statusLabel } from "./helpers";
 import { ClosedSrBadge, PriorityBadge, ReadyToCloseBadge } from "./badges";
-import {
-  actionModeLabel,
-  areaLabel,
-  fmtDT,
-  fmtMoney,
-  statusLabel,
-} from "./helpers";
-import type { IssueItem } from "./types";
 
-type Option = {
-  id: string;
-  code?: string | null;
-  name: string;
-  defaultPrice?: number | string | null;
-  defaultCost?: number | string | null;
-};
+function normalizeAreaKey(value?: string | null) {
+  const raw = String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
-type Options = {
-  serviceCatalogs: Option[];
-  supplyCatalogs: Option[];
-  mechanicalPartCatalogs: Option[];
-  vendors: Option[];
-};
+  const map: Record<string, string> = {
+    MAY: "MOVEMENT",
+    MOVEMENT: "MOVEMENT",
 
-function optionLabel(option: Option) {
-  return [option.code, option.name].filter(Boolean).join(" · ");
+    VO: "CASE",
+    CASE: "CASE",
+
+    KINH: "CRYSTAL",
+    GLASS: "CRYSTAL",
+    CRYSTAL: "CRYSTAL",
+
+    NUM: "CROWN",
+    CROWN: "CROWN",
+
+    MAT_SO: "DIAL",
+    "MAT SO": "DIAL",
+    DIAL: "DIAL",
+
+    DAY: "BRACELET",
+    BRACELET: "BRACELET",
+
+    TONG_QUAT: "GENERAL",
+    "TONG QUAT": "GENERAL",
+    GENERAL: "GENERAL",
+  };
+
+  return map[raw] ?? raw;
 }
-
-function Step({ label, value, active }: { label: string; value?: string | null; active?: boolean }) {
+function InfoLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      {active ? <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-950" /> : <Circle className="h-4 w-4 shrink-0 text-slate-300" />}
-      <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
-        <div className="mt-0.5 truncate text-xs text-slate-700">{value || "-"}</div>
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+        {label}
       </div>
+      <div className="mt-1 text-sm font-medium text-stone-900">{value}</div>
     </div>
   );
 }
 
-function SelectField({
+function TimelineStep({
   label,
   value,
-  onChange,
-  options,
-  placeholder = "Không chọn",
+  active,
 }: {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Option[];
-  placeholder?: string;
+  value?: string | null;
+  active?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+    <div className="flex min-w-[120px] items-center gap-2">
+      <span
+        className={[
+          "grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px]",
+          active
+            ? "border-stone-900 bg-stone-900 text-white"
+            : "border-stone-300 bg-white text-stone-400",
+        ].join(" ")}
       >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {optionLabel(option)}
-          </option>
-        ))}
-      </select>
-    </label>
+        {active ? "✓" : ""}
+      </span>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+          {label}
+        </div>
+        <div className="mt-0.5 text-xs text-stone-600">{value || "-"}</div>
+      </div>
+    </div>
   );
 }
 
 export function IssueDrawer({
   issue,
   busyId,
-  actionMode,
-  vendorId,
-  serviceCatalogId,
-  supplyCatalogId,
-  mechanicalPartCatalogId,
   actualCost,
   resolutionNote,
-  options,
-  onChangeActionMode,
-  onChangeVendorId,
-  onChangeServiceCatalogId,
-  onChangeSupplyCatalogId,
-  onChangeMechanicalPartCatalogId,
+  technicalDetailCatalogOptions,
+  technicalDetailCatalogId,
+  actionMode,
+  vendorId,
   onChangeActualCost,
   onChangeResolutionNote,
+  onChangeTechnicalDetailCatalogId,
+  onChangeActionMode,
+  onChangeVendorId,
   onClose,
   onAction,
   onOpenServiceRequest,
@@ -101,21 +108,17 @@ export function IssueDrawer({
 }: {
   issue: IssueItem;
   busyId: string | null;
-  actionMode: string;
-  vendorId: string;
-  serviceCatalogId: string;
-  supplyCatalogId: string;
-  mechanicalPartCatalogId: string;
   actualCost: string;
   resolutionNote: string;
-  options: Options;
-  onChangeActionMode: (value: string) => void;
-  onChangeVendorId: (value: string) => void;
-  onChangeServiceCatalogId: (value: string) => void;
-  onChangeSupplyCatalogId: (value: string) => void;
-  onChangeMechanicalPartCatalogId: (value: string) => void;
+  technicalDetailCatalogOptions: TechnicalDetailCatalogOption[];
+  technicalDetailCatalogId: string;
+  actionMode: string;
+  vendorId: string;
   onChangeActualCost: (value: string) => void;
   onChangeResolutionNote: (value: string) => void;
+  onChangeTechnicalDetailCatalogId: (value: string) => void;
+  onChangeActionMode: (value: string) => void;
+  onChangeVendorId: (value: string) => void;
   onClose: () => void;
   onAction: (
     issueId: string,
@@ -127,206 +130,221 @@ export function IssueDrawer({
   cancelingIssueId: string | null;
 }) {
   const sr = issue?.serviceRequest ?? null;
-  const isVendor = String(actionMode || "").toUpperCase() === "VENDOR";
+  const issueAreaKey = normalizeAreaKey(issue.area);
 
-  const hasStartConclusion = Boolean(serviceCatalogId) && (!isVendor || Boolean(vendorId));
-  const hasCompleteConclusion =
-    Boolean(serviceCatalogId || issue.serviceCatalog?.id) &&
-    actualCost.trim() !== "" &&
-    Number.isFinite(Number(actualCost)) &&
-    Number(actualCost) >= 0 &&
-    Boolean(resolutionNote.trim());
-
-  const drawerTitle = issue.serviceCatalog?.name || issue.summary || issue.note || "Technical issue";
+  const detailOptions = React.useMemo(() => {
+    return (technicalDetailCatalogOptions ?? []).filter(
+      (item) => normalizeAreaKey(item.area) === issueAreaKey
+    );
+  }, [technicalDetailCatalogOptions, issueAreaKey]);
+  console.log({
+    issueArea: issue.area,
+    issueAreaKey,
+    technicalDetailCatalogOptions,
+    detailOptions,
+  });
+  const isStarting = issue.boardColumn === "READY";
+  const isCompleting = issue.boardColumn === "IN_PROGRESS";
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-slate-950/35" onClick={onClose} />
-      <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-4">
+      <div className="flex-1 bg-stone-950/35" onClick={onClose} />
+
+      <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-lg font-bold text-slate-950">{sr?.refNo || issue.id}</div>
-              <div className="mt-1 line-clamp-2 text-sm text-slate-500">
-                {drawerTitle} · {sr?.productTitle || "-"}
+            <div>
+              <div className="text-lg font-semibold text-stone-950">
+                {issue.summary || issue.id}
               </div>
+              <div className="mt-1 text-sm text-stone-500">
+                {sr?.productTitle || "-"} • {sr?.refNo || "-"}
+              </div>
+
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <PriorityBadge level={issue.priority} />
-                {issue.serviceRequestClosed ? <ClosedSrBadge /> : issue.serviceRequestReadyToClose ? <ReadyToCloseBadge /> : null}
+                {issue.serviceRequestClosed ? (
+                  <ClosedSrBadge />
+                ) : issue.serviceRequestReadyToClose ? (
+                  <ReadyToCloseBadge />
+                ) : null}
               </div>
             </div>
 
             <button
               type="button"
-              className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+              className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              Đóng
             </button>
           </div>
         </div>
 
         <div className="space-y-5 p-5">
-          <section className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Khu vực</div>
-                <div className="mt-1 font-semibold text-slate-900">{areaLabel(issue.area)}</div>
-              </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Trạng thái</div>
-                <div className="mt-1 font-semibold text-slate-900">{statusLabel(issue.executionStatus)}</div>
-              </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Thực hiện</div>
-                <div className="mt-1 font-semibold text-slate-900">{actionModeLabel(issue.actionMode)}</div>
-              </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Hạng mục</div>
-                <div className="mt-1 font-semibold text-slate-900">{issue.serviceCatalog?.name || "Chưa kết luận"}</div>
-              </div>
+          <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InfoLine label="Khu vực" value={areaLabel(issue.area)} />
+              <InfoLine label="Trạng thái" value={statusLabel(issue.executionStatus)} />
+              <InfoLine label="Thực hiện" value={actionModeLabel(issue.actionMode)} />
+              <InfoLine
+                label="Chi tiết kỹ thuật"
+                value={issue.technicalDetailCatalog?.name || "Chưa xác định"}
+              />
             </div>
 
-            <div className="mt-4 rounded-xl bg-white px-3 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
-              {issue.note || issue.summary || "Chưa có ghi chú kỹ thuật."}
+            <div className="mt-4 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
+              {issue.note || "Chưa có ghi chú kỹ thuật."}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-4 text-sm font-bold text-slate-950">Timeline</div>
-            <div className="grid gap-3 sm:grid-cols-4">
-              <Step label="Mở issue" value={fmtDT(issue.openedAt)} active />
-              <Step label="Xác nhận" value={fmtDT(issue.confirmedAt)} active={Boolean(issue.confirmedAt)} />
-              <Step label="Bắt đầu" value={fmtDT(issue.startedAt)} active={Boolean(issue.startedAt)} />
-              <Step label="Hoàn tất" value={fmtDT(issue.completedAt)} active={Boolean(issue.completedAt)} />
+          <section className="rounded-2xl border border-stone-200 bg-white p-4">
+            <div className="text-sm font-semibold text-stone-900">Timeline</div>
+            <div className="mt-4 flex flex-wrap items-center gap-5">
+              <TimelineStep label="Mở issue" value={fmtDT(issue.openedAt)} active />
+              <TimelineStep label="Xác nhận" value={fmtDT(issue.confirmedAt)} active={Boolean(issue.confirmedAt)} />
+              <TimelineStep label="Bắt đầu" value={fmtDT(issue.startedAt)} active={Boolean(issue.startedAt)} />
+              <TimelineStep label="Hoàn tất" value={fmtDT(issue.completedAt)} active={Boolean(issue.completedAt)} />
             </div>
           </section>
 
-          {issue.boardColumn === "READY" ? (
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-              <div className="text-sm font-bold text-slate-950">Kết luận trước khi bắt đầu xử lý</div>
-              <p className="mt-1 text-sm text-slate-500">
-                Từ trạng thái đã xác nhận sang đang xử lý, kỹ thuật phải chọn hạng mục xử lý và vendor nếu outsource.
+          {isStarting ? (
+            <section className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+              <div className="text-sm font-semibold text-stone-900">
+                Xác định chi tiết kỹ thuật trước khi bắt đầu
+              </div>
+              <p className="mt-1 text-sm text-stone-500">
+                Từ trạng thái đã xác nhận sang đang xử lý, kỹ thuật phải chọn chi tiết xử lý đúng theo khu vực issue.
               </p>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="Hạng mục xử lý"
-                  value={serviceCatalogId}
-                  onChange={onChangeServiceCatalogId}
-                  options={options.serviceCatalogs}
-                  placeholder="Chọn hạng mục"
-                />
-
-                <label className="block">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Thực hiện</span>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Chi tiết kỹ thuật
+                  </label>
                   <select
-                    value={actionMode}
-                    onChange={(event) => onChangeActionMode(event.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+                    value={technicalDetailCatalogId}
+                    onChange={(e) => onChangeTechnicalDetailCatalogId(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                  >
+                    <option value="">Chọn chi tiết</option>
+                    {detailOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Thực hiện
+                  </label>
+                  <select
+                    value={actionMode || "INTERNAL"}
+                    onChange={(e) => onChangeActionMode(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                   >
                     <option value="INTERNAL">Nội bộ</option>
                     <option value="VENDOR">Vendor</option>
                   </select>
-                </label>
+                </div>
 
-                {isVendor ? (
-                  <SelectField
-                    label="Vendor"
-                    value={vendorId}
-                    onChange={onChangeVendorId}
-                    options={options.vendors}
-                    placeholder="Chọn vendor"
-                  />
+                {String(actionMode || "").toUpperCase() === "VENDOR" ? (
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                      Vendor ID
+                    </label>
+                    <input
+                      value={vendorId}
+                      onChange={(e) => onChangeVendorId(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                      placeholder="Nhập vendorId hoặc thay bằng select vendor sau"
+                    />
+                  </div>
                 ) : null}
               </div>
+
+              {!detailOptions.length ? (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  Chưa có chi tiết kỹ thuật active cho khu vực {areaLabel(issue.area)}.
+                  Vào Danh mục để thêm TechnicalDetailCatalog.
+                </div>
+              ) : null}
             </section>
           ) : null}
 
-          {issue.boardColumn === "IN_PROGRESS" ? (
-            <section className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
-              <div className="text-sm font-bold text-slate-950">Kết luận hoàn tất</div>
-              <p className="mt-1 text-sm text-slate-500">
-                Hoàn tất issue bắt buộc có chi phí thực tế và kết luận kỹ thuật. Linh kiện/vật tư là tùy chọn.
+          {isCompleting ? (
+            <section className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+              <div className="text-sm font-semibold text-stone-900">Kết luận hoàn tất issue</div>
+              <p className="mt-1 text-sm text-stone-500">
+                Khi hoàn tất issue bắt buộc nhập chi phí thực tế và kết luận xử lý.
               </p>
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="Vật tư sử dụng"
-                  value={supplyCatalogId}
-                  onChange={onChangeSupplyCatalogId}
-                  options={options.supplyCatalogs}
-                  placeholder="Không dùng vật tư"
-                />
-                <SelectField
-                  label="Part liên quan"
-                  value={mechanicalPartCatalogId}
-                  onChange={onChangeMechanicalPartCatalogId}
-                  options={options.mechanicalPartCatalogs}
-                  placeholder="Không chọn part"
-                />
-                <label className="block">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Chi phí thực tế</span>
+              <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Chi phí thực tế
+                  </label>
                   <input
                     value={actualCost}
-                    onChange={(event) => onChangeActualCost(event.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400"
+                    onChange={(e) => onChangeActualCost(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                     placeholder="0"
                   />
-                </label>
-                <div className="text-sm text-slate-500">
-                  Chi phí hiện tại: <span className="font-semibold text-slate-900">{fmtMoney(issue.actualCost)}</span>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Kết luận xử lý
+                  </label>
+                  <textarea
+                    value={resolutionNote}
+                    onChange={(e) => onChangeResolutionNote(e.target.value)}
+                    className="min-h-[110px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
+                    placeholder="Nhập kết quả xử lý, linh kiện đã thay, lưu ý sau xử lý..."
+                  />
                 </div>
               </div>
-
-              <label className="mt-4 block">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Kết luận kỹ thuật</span>
-                <textarea
-                  value={resolutionNote}
-                  onChange={(event) => onChangeResolutionNote(event.target.value)}
-                  className="mt-2 min-h-[120px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400"
-                  placeholder="Nhập kết quả xử lý, linh kiện đã thay, lưu ý sau xử lý..."
-                />
-              </label>
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <section className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="flex flex-wrap gap-3">
-              {issue.boardColumn === "PENDING_CONFIRM" ? (
+              {issue.boardColumn === "PENDING_CONFIRM" && (
                 <button
                   type="button"
                   disabled={busyId === issue.id}
                   onClick={() => onAction(issue.id, "confirm")}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                 >
                   Xác nhận
                 </button>
-              ) : null}
+              )}
 
-              {issue.boardColumn === "READY" ? (
+              {issue.boardColumn === "READY" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id || !hasStartConclusion}
+                  disabled={busyId === issue.id || !technicalDetailCatalogId}
                   onClick={() => onAction(issue.id, "start")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Bắt đầu xử lý <ArrowRight className="h-4 w-4" />
+                  Bắt đầu xử lý
                 </button>
-              ) : null}
+              )}
 
-              {issue.boardColumn === "IN_PROGRESS" ? (
+              {issue.boardColumn === "IN_PROGRESS" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id || !hasCompleteConclusion}
+                  disabled={busyId === issue.id || actualCost.trim() === "" || !resolutionNote.trim()}
                   onClick={() => onAction(issue.id, "complete")}
-                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Hoàn tất issue
+                  Hoàn tất
                 </button>
-              ) : null}
+              )}
 
-              {issue.boardColumn !== "DONE" ? (
+              {issue.boardColumn !== "DONE" && (
                 <button
                   type="button"
                   onClick={() => onCancelIssue(issue.id)}
@@ -335,11 +353,11 @@ export function IssueDrawer({
                 >
                   {cancelingIssueId === issue.id ? "Đang hủy..." : "Hủy issue"}
                 </button>
-              ) : null}
+              )}
 
               <button
                 type="button"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
                 onClick={onOpenServiceRequest}
               >
                 Mở Service Request

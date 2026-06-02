@@ -1,7 +1,11 @@
 import { prisma } from "@/server/db/client";
 
-
 function cleanId(v: unknown): string | null {
+    const text = String(v ?? "").trim();
+    return text || null;
+}
+
+function cleanText(v: unknown): string | null {
     const text = String(v ?? "").trim();
     return text || null;
 }
@@ -15,8 +19,106 @@ function decimalOrNull(v: unknown): number | null {
 async function vendorName(vendorId?: string | null) {
     const id = cleanId(vendorId);
     if (!id) return null;
-    const vendor = await prisma.vendor.findUnique({ where: { id }, select: { name: true } });
+    const vendor = await prisma.vendor.findUnique({
+        where: { id },
+        select: { name: true },
+    });
     return vendor?.name ?? null;
+}
+
+function normalizeAreaKey(value?: string | null) {
+    const raw = String(value ?? "").trim().toUpperCase();
+
+    const map: Record<string, string> = {
+        CASE: "CASE",
+        "VỎ": "CASE",
+        VO: "CASE",
+
+        MOVEMENT: "MOVEMENT",
+        "MÁY": "MOVEMENT",
+        MAY: "MOVEMENT",
+
+        CROWN: "CROWN",
+        "NÚM": "CROWN",
+        NUM: "CROWN",
+
+        CRYSTAL: "CRYSTAL",
+        GLASS: "CRYSTAL",
+        "KÍNH": "CRYSTAL",
+        KINH: "CRYSTAL",
+
+        DIAL: "DIAL",
+        "MẶT SỐ": "DIAL",
+        "MAT SO": "DIAL",
+
+        HANDS: "HANDS",
+        "KIM": "HANDS",
+
+        BRACELET: "BRACELET",
+        STRAP: "BRACELET",
+        "DÂY": "BRACELET",
+        DAY: "BRACELET",
+
+        GENERAL: "GENERAL",
+        "TỔNG QUÁT": "GENERAL",
+        "TONG QUAT": "GENERAL",
+    };
+
+    return map[raw] ?? raw;
+}
+
+async function resolveTechnicalDetailCatalog(input: {
+    technicalDetailCatalogId?: string | null;
+    area?: string | null;
+}) {
+    const technicalDetailCatalogId = cleanId(input.technicalDetailCatalogId);
+    if (!technicalDetailCatalogId) return null;
+
+    const catalog = await (prisma as any).technicalDetailCatalog.findFirst({
+        where: {
+            id: technicalDetailCatalogId,
+            isActive: true,
+        },
+        select: {
+            id: true,
+            area: true,
+            code: true,
+            name: true,
+        },
+    });
+
+    if (!catalog) {
+        throw new Error("Chi tiết kỹ thuật không tồn tại hoặc đã bị ẩn.");
+    }
+
+    const issueArea = normalizeAreaKey(input.area);
+    const catalogArea = normalizeAreaKey(catalog.area);
+
+    if (issueArea && catalogArea && issueArea !== catalogArea) {
+        throw new Error("Chi tiết kỹ thuật không khớp với khu vực issue.");
+    }
+
+    return catalog;
+}
+
+export async function listTechnicalDetailCatalogOptions() {
+    return (prisma as any).technicalDetailCatalog.findMany({
+        where: {
+            isActive: true,
+        },
+        orderBy: [
+            { area: "asc" },
+            { sortOrder: "asc" },
+            { name: "asc" },
+        ],
+        select: {
+            id: true,
+            area: true,
+            code: true,
+            name: true,
+            sortOrder: true,
+        },
+    });
 }
 
 export async function createTechnicalIssue(input: {
@@ -32,6 +134,7 @@ export async function createTechnicalIssue(input: {
     serviceCatalogId?: string | null;
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
+    technicalDetailCatalogId?: string | null;
     summary?: string | null;
 }) {
     const serviceRequestId = cleanId(input.serviceRequestId);
@@ -69,7 +172,7 @@ export async function createTechnicalIssue(input: {
             issueType: (cleanId(input.issueType) ?? "CHECK") as any,
             actionMode: (cleanId(input.actionMode) ?? "INTERNAL") as any,
             note: cleanId(input.note),
-            summary: cleanId(input.summary),
+            summary: cleanId(input.summary) ?? cleanId(input.note) ?? "Technical issue",
             estimatedCost: decimalOrNull(input.estimatedCost),
             vendorId,
             vendorNameSnap: await vendorName(vendorId),
@@ -77,6 +180,7 @@ export async function createTechnicalIssue(input: {
             serviceCatalogId: cleanId(input.serviceCatalogId),
             supplyCatalogId: cleanId(input.supplyCatalogId),
             mechanicalPartCatalogId: cleanId(input.mechanicalPartCatalogId),
+            technicalDetailCatalogId: cleanId(input.technicalDetailCatalogId),
             executionStatus: "OPEN" as any,
             openedAt: now,
             updatedAt: now,
@@ -108,23 +212,39 @@ export async function confirmTechnicalIssue(input: {
 export async function startTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
+    technicalDetailCatalogId?: string | null;
     actionMode?: string | null;
     vendorId?: string | null;
-    serviceCatalogId?: string | null;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
-    const serviceCatalogId = cleanId(input.serviceCatalogId);
-    if (!serviceCatalogId) {
-        throw new Error("Vui lòng chọn hạng mục xử lý trước khi bắt đầu issue.");
+    const issue = await prisma.technicalIssue.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            area: true,
+            executionStatus: true,
+            isConfirmed: true,
+        } as any,
+    });
+
+    if (!issue) throw new Error("Không tìm thấy issue.");
+
+    const detail = await resolveTechnicalDetailCatalog({
+        technicalDetailCatalogId: input.technicalDetailCatalogId,
+        area: (issue as any).area,
+    });
+
+    if (!detail?.id) {
+        throw new Error("Vui lòng chọn chi tiết kỹ thuật trước khi bắt đầu xử lý.");
     }
 
-    const actionMode = cleanId(input.actionMode) ?? "INTERNAL";
     const vendorId = cleanId(input.vendorId);
+    const actionMode = cleanId(input.actionMode) ?? "INTERNAL";
 
-    if (actionMode === "VENDOR" && !vendorId) {
-        throw new Error("Vui lòng chọn vendor nếu issue được xử lý bởi vendor.");
+    if (String(actionMode).toUpperCase() === "VENDOR" && !vendorId) {
+        throw new Error("Vui lòng chọn vendor khi xử lý bởi vendor.");
     }
 
     return prisma.technicalIssue.update({
@@ -137,7 +257,7 @@ export async function startTechnicalIssue(input: {
             actionMode: actionMode as any,
             vendorId,
             vendorNameSnap: await vendorName(vendorId),
-            serviceCatalogId,
+            technicalDetailCatalogId: detail.id,
             updatedAt: new Date(),
         } as any,
     });
@@ -157,25 +277,25 @@ export async function completeTechnicalIssue(input: {
     const issue = await prisma.technicalIssue.findUnique({
         where: { id },
         select: {
-            serviceCatalogId: true,
-            executionStatus: true,
-        },
+            id: true,
+            technicalDetailCatalogId: true,
+        } as any,
     });
 
     if (!issue) throw new Error("Không tìm thấy issue.");
 
-    if (!cleanId(issue.serviceCatalogId)) {
-        throw new Error("Issue chưa có hạng mục xử lý. Vui lòng cập nhật hạng mục trước khi hoàn tất.");
+    if (!(issue as any).technicalDetailCatalogId) {
+        throw new Error("Issue chưa có chi tiết kỹ thuật. Vui lòng bắt đầu xử lý đúng luồng trước khi hoàn tất.");
     }
 
     const actualCost = decimalOrNull(input.actualCost);
     if (actualCost == null || actualCost < 0) {
-        throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể là 0đ.");
+        throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
     }
 
-    const resolutionNote = cleanId(input.resolutionNote);
+    const resolutionNote = cleanText(input.resolutionNote);
     if (!resolutionNote) {
-        throw new Error("Vui lòng nhập kết luận kỹ thuật trước khi hoàn tất issue.");
+        throw new Error("Vui lòng nhập kết luận xử lý trước khi hoàn tất issue.");
     }
 
     return prisma.technicalIssue.update({
@@ -226,6 +346,7 @@ export async function updateTechnicalIssue(input: {
     serviceCatalogId?: string | null;
     supplyCatalogId?: string | null;
     mechanicalPartCatalogId?: string | null;
+    technicalDetailCatalogId?: string | null;
 }) {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
@@ -248,6 +369,8 @@ export async function updateTechnicalIssue(input: {
             supplyCatalogId: input.supplyCatalogId === undefined ? undefined : cleanId(input.supplyCatalogId),
             mechanicalPartCatalogId:
                 input.mechanicalPartCatalogId === undefined ? undefined : cleanId(input.mechanicalPartCatalogId),
+            technicalDetailCatalogId:
+                input.technicalDetailCatalogId === undefined ? undefined : cleanId(input.technicalDetailCatalogId),
             updatedAt: new Date(),
         } as any,
     });
@@ -260,9 +383,7 @@ export async function removeTechnicalIssue(idInput: string) {
     return { ok: true };
 }
 
-
 type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
-
 
 function toNumber(v: unknown): number | null {
     if (v == null) return null;
@@ -315,85 +436,91 @@ function boardWeight(col: BoardColumnKey) {
 }
 
 export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: string | null } = {}) {
-    const rows = await prisma.technicalIssue.findMany({
-        where: {
-            executionStatus: {
-                not: "CANCELED" as any,
-            },
-        },
-        orderBy: [{ openedAt: "desc" }, { createdAt: "desc" as any }],
-        include: {
-            ServiceRequest: {
-                select: {
-                    id: true,
-                    refNo: true,
-                    status: true,
-                    scope: true,
-                    technicianNameSnap: true,
-                    vendorNameSnap: true,
-                    priority: true,
-                    priorityReason: true,
-                    prioritySource: true,
-                    priorityMarkedAt: true,
-                    technicalAssessment: {
-                        select: {
-                            id: true,
-                            status: true,
-                            createdAt: true,
-                            updatedAt: true,
-                            TechnicalIssue: {
-                                where: {
-                                    executionStatus: {
-                                        not: "CANCELED" as any,
-                                    },
-                                },
-                                select: {
-                                    id: true,
-                                    executionStatus: true,
-                                    isConfirmed: true,
-                                } as any,
-                            },
-                        },
-                    },
-                    product: {
-                        select: {
-                            id: true,
-                            title: true,
-                            primaryImageUrl: true,
-                            watchSpec: {
-                                select: {
-                                    movement: true,
-                                    model: true,
-                                    ref: true,
-                                },
-                            },
-                        },
-                    },
-                } as any,
-            },
-            Vendor: {
-                select: { id: true, name: true },
-            },
-            serviceCatalog: {
-                select: { id: true, code: true, name: true },
-            },
-            SupplyCatalog: {
-                select: { id: true, code: true, name: true },
-            },
-            MechanicalPartCatalog: {
-                select: { id: true, code: true, name: true },
-            },
-            TechnicalAssessment: {
-                select: {
-                    id: true,
-                    status: true,
+    const [rows, technicalDetailCatalogOptions] = await Promise.all([
+        prisma.technicalIssue.findMany({
+            where: {
+                executionStatus: {
+                    not: "CANCELED" as any,
                 },
             },
-        },
-    });
+            orderBy: [{ openedAt: "desc" }, { createdAt: "desc" as any }],
+            include: {
+                ServiceRequest: {
+                    select: {
+                        id: true,
+                        refNo: true,
+                        status: true,
+                        scope: true,
+                        technicianNameSnap: true,
+                        vendorNameSnap: true,
+                        priority: true,
+                        priorityReason: true,
+                        prioritySource: true,
+                        priorityMarkedAt: true,
+                        technicalAssessment: {
+                            select: {
+                                id: true,
+                                status: true,
+                                createdAt: true,
+                                updatedAt: true,
+                                TechnicalIssue: {
+                                    where: {
+                                        executionStatus: {
+                                            not: "CANCELED" as any,
+                                        },
+                                    },
+                                    select: {
+                                        id: true,
+                                        executionStatus: true,
+                                        isConfirmed: true,
+                                    } as any,
+                                },
+                            },
+                        },
+                        product: {
+                            select: {
+                                id: true,
+                                title: true,
+                                primaryImageUrl: true,
+                                watchSpec: {
+                                    select: {
+                                        movement: true,
+                                        model: true,
+                                        ref: true,
+                                    },
+                                },
+                            },
+                        },
+                    } as any,
+                },
+                Vendor: {
+                    select: { id: true, name: true },
+                },
+                serviceCatalog: {
+                    select: { id: true, code: true, name: true },
+                },
+                SupplyCatalog: {
+                    select: { id: true, code: true, name: true },
+                },
+                MechanicalPartCatalog: {
+                    select: { id: true, code: true, name: true },
+                },
+                technicalDetailCatalog: {
+                    select: { id: true, area: true, code: true, name: true },
+                },
+                TechnicalAssessment: {
+                    select: {
+                        id: true,
+                        status: true,
+                    },
+                },
+            } as any,
+        }),
+        listTechnicalDetailCatalogOptions(),
+    ]);
 
     const items = rows
-        .map((x) => {
+        .map((x: any) => {
             const sr = x.ServiceRequest;
             if (!sr?.id) return null;
 
@@ -475,6 +602,15 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
                     }
                     : null,
 
+                technicalDetailCatalog: x.TechnicalDetailCatalog
+                    ? {
+                        id: x.TechnicalDetailCatalog.id,
+                        area: x.TechnicalDetailCatalog.area ?? null,
+                        code: x.TechnicalDetailCatalog.code ?? null,
+                        name: x.TechnicalDetailCatalog.name ?? null,
+                    }
+                    : null,
+
                 serviceCatalog: x.serviceCatalog
                     ? {
                         id: x.serviceCatalog.id,
@@ -531,10 +667,9 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
         readyToCloseSrCount: readyToCloseSrIds.length,
     };
 
-    return { items, counts };
+    return {
+        items,
+        counts,
+        technicalDetailCatalogOptions,
+    };
 }
-
-
-
-
-

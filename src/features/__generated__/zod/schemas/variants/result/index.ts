@@ -36,6 +36,7 @@ export { StrapVariantSpecResultSchema } from './StrapVariantSpec.result';
 export { SupplyCatalogResultSchema } from './SupplyCatalog.result';
 export { TechnicalAssessmentResultSchema } from './TechnicalAssessment.result';
 export { TechnicalIssueResultSchema } from './TechnicalIssue.result';
+export { TechnicalDetailCatalogResultSchema } from './TechnicalDetailCatalog.result';
 export { UserResultSchema } from './User.result';
 export { RoleResultSchema } from './Role.result';
 export { PermissionResultSchema } from './Permission.result';

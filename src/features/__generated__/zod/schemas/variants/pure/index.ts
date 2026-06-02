@@ -36,6 +36,7 @@ export { StrapVariantSpecModelSchema } from './StrapVariantSpec.pure';
 export { SupplyCatalogModelSchema } from './SupplyCatalog.pure';
 export { TechnicalAssessmentModelSchema } from './TechnicalAssessment.pure';
 export { TechnicalIssueModelSchema } from './TechnicalIssue.pure';
+export { TechnicalDetailCatalogModelSchema } from './TechnicalDetailCatalog.pure';
 export { UserModelSchema } from './User.pure';
 export { RoleModelSchema } from './Role.pure';
 export { PermissionModelSchema } from './Permission.pure';

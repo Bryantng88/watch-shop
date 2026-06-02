@@ -1,27 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveTechnicalCatalogItem } from "@/app/(admin)/admin/catalogs/technical/_server/technical.catalog.service";
 
+import { saveTechnicalCatalogItem } from "@/domains/category/server/";
 
-type RouteContext = {
-    params: Promise<{ kind: "action" | "part" | "appearanceIssue" }>;
-};
-
-export async function POST(req: NextRequest, context: RouteContext) {
+export async function POST(
+    req: NextRequest,
+    { params }: { params: Promise<{ kind: string }> }
+) {
     try {
-        const { kind } = await context.params;
-        const body = await req.json();
+        const { kind } = await params;
+        const payload = await req.json();
 
-        const result = await saveTechnicalCatalogItem(kind, body);
+        const item = await saveTechnicalCatalogItem(kind as any, payload);
 
-        return NextResponse.json({
-            ok: true,
-            item: result,
-        });
+        return NextResponse.json(item);
     } catch (error: any) {
-        console.error(error);
         return NextResponse.json(
-            { error: error?.message ?? "Save technical catalog failed" },
-            { status: 500 }
+            { error: error?.message || "Không thể lưu catalog." },
+            { status: 400 }
         );
     }
 }

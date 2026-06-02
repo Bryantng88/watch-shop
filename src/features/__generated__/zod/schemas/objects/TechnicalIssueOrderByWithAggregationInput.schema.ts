@@ -40,6 +40,7 @@ const makeSchema = () => z.object({
   confirmedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   confirmedById: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   confirmedByNameSnap: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  technicalDetailCatalogId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TechnicalIssueCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => TechnicalIssueAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TechnicalIssueMaxOrderByAggregateInputObjectSchema).optional(),

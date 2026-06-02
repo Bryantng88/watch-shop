@@ -36,6 +36,7 @@ export { StrapVariantSpecInputSchema } from './StrapVariantSpec.input';
 export { SupplyCatalogInputSchema } from './SupplyCatalog.input';
 export { TechnicalAssessmentInputSchema } from './TechnicalAssessment.input';
 export { TechnicalIssueInputSchema } from './TechnicalIssue.input';
+export { TechnicalDetailCatalogInputSchema } from './TechnicalDetailCatalog.input';
 export { UserInputSchema } from './User.input';
 export { RoleInputSchema } from './Role.input';
 export { PermissionInputSchema } from './Permission.input';

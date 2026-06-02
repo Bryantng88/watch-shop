@@ -48,7 +48,8 @@ const technicalissuescalarwhereinputSchema = z.object({
   isConfirmed: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   confirmedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   confirmedById: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
+  confirmedByNameSnap: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  technicalDetailCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const TechnicalIssueScalarWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueScalarWhereInput> = technicalissuescalarwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueScalarWhereInput>;
 export const TechnicalIssueScalarWhereInputObjectZodSchema = technicalissuescalarwhereinputSchema;

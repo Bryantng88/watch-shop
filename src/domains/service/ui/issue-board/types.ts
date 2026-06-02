@@ -1,23 +1,12 @@
 export type BoardColumnKey = "PENDING_CONFIRM" | "READY" | "IN_PROGRESS" | "DONE";
-export type PriorityLevel = "LOW" | "MEDIUM" | "NORMAL" | "HIGH" | "URGENT";
+export type PriorityLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-export type IssueBoardCatalogOption = {
+export type TechnicalDetailCatalogOption = {
   id: string;
+  area?: string | null;
   code?: string | null;
   name?: string | null;
-  category?: string | null;
-  group?: string | null;
-  unit?: string | null;
-  defaultCost?: number | null;
-  internalCost?: number | null;
-  vendorPrice?: number | null;
-  customerPrice?: number | null;
-};
-
-export type IssueBoardCatalogs = {
-  serviceCatalogs: IssueBoardCatalogOption[];
-  supplyCatalogs: IssueBoardCatalogOption[];
-  mechanicalPartCatalogs: IssueBoardCatalogOption[];
+  sortOrder?: number | null;
 };
 
 export type IssueItem = {
@@ -65,7 +54,19 @@ export type IssueItem = {
     id: string;
     status?: string | null;
   } | null;
+  technicalDetailCatalog?: {
+    id: string;
+    area?: string | null;
+    code?: string | null;
+    name?: string | null;
+  } | null;
   serviceCatalog?: { id: string; code?: string | null; name?: string | null } | null;
   supplyCatalog?: { id: string; code?: string | null; name?: string | null } | null;
   mechanicalPartCatalog?: { id: string; code?: string | null; name?: string | null } | null;
+};
+
+
+export type IssueBoardCatalogs = {
+  technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
+  // giữ các field cũ nếu có
 };

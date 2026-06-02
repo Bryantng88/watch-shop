@@ -38,5 +38,7 @@ export const TechnicalIssueDeleteResultSchema = z.nullable(z.object({
   ServiceRequest: z.unknown(),
   SupplyCatalog: z.unknown().optional(),
   User: z.unknown().optional(),
-  Vendor: z.unknown().optional()
+  Vendor: z.unknown().optional(),
+  technicalDetailCatalogId: z.string().optional(),
+  technicalDetailCatalog: z.unknown().optional()
 }));

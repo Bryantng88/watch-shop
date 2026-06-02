@@ -8,6 +8,7 @@ import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from
 import { SupplyCatalogArgsObjectSchema as SupplyCatalogArgsObjectSchema } from './SupplyCatalogArgs.schema';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.schema';
+import { TechnicalDetailCatalogArgsObjectSchema as TechnicalDetailCatalogArgsObjectSchema } from './TechnicalDetailCatalogArgs.schema';
 import { TechnicalIssueCountOutputTypeArgsObjectSchema as TechnicalIssueCountOutputTypeArgsObjectSchema } from './TechnicalIssueCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -19,6 +20,7 @@ const makeSchema = () => z.object({
   SupplyCatalog: z.union([z.boolean(), z.lazy(() => SupplyCatalogArgsObjectSchema)]).optional(),
   User: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   Vendor: z.union([z.boolean(), z.lazy(() => VendorArgsObjectSchema)]).optional(),
+  technicalDetailCatalog: z.union([z.boolean(), z.lazy(() => TechnicalDetailCatalogArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TechnicalIssueCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const TechnicalIssueIncludeObjectSchema: z.ZodType<Prisma.TechnicalIssueInclude> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueInclude>;

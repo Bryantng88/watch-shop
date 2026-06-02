@@ -19,7 +19,8 @@ import { MechanicalPartCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSch
 import { ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInput.schema';
 import { ServiceRequestUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema as ServiceRequestUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema } from './ServiceRequestUpdateOneRequiredWithoutTechnicalIssueNestedInput.schema';
 import { SupplyCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as SupplyCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './SupplyCatalogUpdateOneWithoutTechnicalIssueNestedInput.schema';
-import { VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './VendorUpdateOneWithoutTechnicalIssueNestedInput.schema'
+import { VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema as VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema } from './VendorUpdateOneWithoutTechnicalIssueNestedInput.schema';
+import { TechnicalDetailCatalogUpdateOneWithoutTechnicalIssuesNestedInputObjectSchema as TechnicalDetailCatalogUpdateOneWithoutTechnicalIssuesNestedInputObjectSchema } from './TechnicalDetailCatalogUpdateOneWithoutTechnicalIssuesNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -52,7 +53,8 @@ const makeSchema = () => z.object({
   serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   ServiceRequest: z.lazy(() => ServiceRequestUpdateOneRequiredWithoutTechnicalIssueNestedInputObjectSchema).optional(),
   SupplyCatalog: z.lazy(() => SupplyCatalogUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
-  Vendor: z.lazy(() => VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional()
+  Vendor: z.lazy(() => VendorUpdateOneWithoutTechnicalIssueNestedInputObjectSchema).optional(),
+  technicalDetailCatalog: z.lazy(() => TechnicalDetailCatalogUpdateOneWithoutTechnicalIssuesNestedInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUpdateWithoutUserInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUpdateWithoutUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUpdateWithoutUserInput>;
 export const TechnicalIssueUpdateWithoutUserInputObjectZodSchema = makeSchema();
