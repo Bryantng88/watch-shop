@@ -13,13 +13,16 @@ export async function POST(req: Request, context: RouteContext) {
         const item = await startTechnicalIssue({
             id,
             actorName: body.actorName ?? null,
+            technicalDetailCatalogId: body.technicalDetailCatalogId ?? null,
+            actionMode: body.actionMode ?? "INTERNAL",
+            vendorId: body.vendorId ?? null,
         });
 
         return NextResponse.json({ ok: true, item });
     } catch (e: any) {
         return NextResponse.json(
             { error: e?.message ?? "Internal error" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

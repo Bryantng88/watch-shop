@@ -3,10 +3,11 @@ import type { BoardColumnKey } from "./types";
 export function canMove(from: BoardColumnKey, to: BoardColumnKey) {
   if (from === to) return false;
 
-  // Cho phép xác nhận nhanh bằng kéo thả.
   if (from === "PENDING_CONFIRM" && to === "READY") return true;
 
-  // READY -> IN_PROGRESS và IN_PROGRESS -> DONE phải mở drawer/modal
-  // để nhập Chi tiết kỹ thuật / Kết luận kỹ thuật, không kéo thả thẳng.
+  // 2 case này cho phép drag, nhưng sẽ mở modal trước khi gọi API
+  if (from === "READY" && to === "IN_PROGRESS") return true;
+  if (from === "IN_PROGRESS" && to === "DONE") return true;
+
   return false;
 }

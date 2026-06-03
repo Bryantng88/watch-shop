@@ -185,7 +185,30 @@ async function genUniqueWatchSkuForSubmit(
 
     return `${base}-${padSkuSeqForSubmit(maxSeq + 1)}`;
 }
+async function syncWatchSaleStageAfterPostAssets(input: {
+    productId: string;
+    hasContentData: boolean;
+    hasGalleryImages: boolean;
+}) {
+    const nextSaleStage =
+        input.hasContentData && input.hasGalleryImages ? "READY" : "PROCESSING";
 
+    await prisma.watch.updateMany({
+        where: {
+            productId: input.productId,
+            saleStage: {
+                in: ["DRAFT", "PROCESSING", "READY"] as any,
+            },
+            serviceStage: {
+                notIn: ["PENDING", "IN_SERVICE"] as any,
+            },
+        },
+        data: {
+            saleStage: nextSaleStage as any,
+            updatedAt: new Date(),
+        },
+    });
+}
 async function resolveSubmittedWatchSku(
     tx: any,
     input: {
@@ -272,26 +295,7 @@ async function syncProductPostTargets(
     }
 }
 
-async function moveReadyWatchToProcessingOnlyWhenMissingPostAssets(
-    input: {
-        productId: string;
-        hasContentData: boolean;
-        hasGalleryImages: boolean;
-    },
-) {
-    if (input.hasContentData && input.hasGalleryImages) return;
 
-    await prisma.watch.updateMany({
-        where: {
-            productId: input.productId,
-            saleStage: "READY" as any,
-        },
-        data: {
-            saleStage: "PROCESSING" as any,
-            updatedAt: new Date(),
-        },
-    });
-}
 
 export async function submitWatchFormApplication(
     values: WatchFormValues,
@@ -571,7 +575,7 @@ export async function submitWatchFormApplication(
     const hasContentData = hasContentSnapshotData(afterContent);
     const hasGalleryImages = galleryImageInputs.length > 0;
 
-    await moveReadyWatchToProcessingOnlyWhenMissingPostAssets({
+    await syncWatchSaleStageAfterPostAssets({
         productId,
         hasContentData,
         hasGalleryImages,

@@ -8,11 +8,6 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import TechnicalAssessmentModal from "@/domains/service/ui/technical/TechnicalAssessmentModal";
 import {
-    ServiceIssueManageModal,
-    type IssueBoardCatalogs,
-    type IssueItem,
-} from "@/domains/service/ui/issue-board";
-import {
     buildServiceRequestCounts,
     normalizeServiceRequestView,
     ServiceRequestListFilters,
@@ -25,22 +20,7 @@ import {
     type ServiceRequestViewKey,
 } from "@/domains/service/ui/list";
 
-type IssueBoardPayload = {
-    items: IssueItem[];
-    counts: {
-        pendingConfirm: number;
-        ready: number;
-        inProgress: number;
-        done: number;
-        readyToCloseSrCount?: number;
-    };
-    catalogs?: IssueBoardCatalogs;
-    technicalDetailCatalogOptions?: IssueBoardCatalogs["technicalDetailCatalogOptions"];
-};
-
-type Props = ServiceRequestListPageProps & {
-    issueBoard?: IssueBoardPayload;
-};
+type Props = ServiceRequestListPageProps;
 
 function setParam(params: URLSearchParams, key: string, value: string | null) {
     if (!value) params.delete(key);
@@ -82,32 +62,24 @@ export default function ServiceRequestListClient(props: Props) {
     const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
         useState<string | null>(null);
 
-    const [issueBoardOpen, setIssueBoardOpen] = useState(false);
-
     useEffect(() => {
         setFilters({ q, sort });
     }, [q, sort]);
 
     const selectedItem = useMemo(
-        () => items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
+        () =>
+            items.find((item) => item.id === technicalAssessmentRequestId) ?? null,
         [items, technicalAssessmentRequestId],
     );
 
     const productImage =
-        selectedItem?.primaryImageUrl ?? selectedItem?.product?.primaryImageUrl ?? null;
-    const productTitle = selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
+        selectedItem?.primaryImageUrl ??
+        selectedItem?.product?.primaryImageUrl ??
+        null;
+    const productTitle =
+        selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
     const productSku = selectedItem?.skuSnapshot ?? null;
     const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
-
-    const normalizedIssueBoardCatalogs = useMemo<IssueBoardCatalogs>(() => {
-        return {
-            ...(props.issueBoard?.catalogs ?? {}),
-            technicalDetailCatalogOptions:
-                props.issueBoard?.catalogs?.technicalDetailCatalogOptions ??
-                props.issueBoard?.technicalDetailCatalogOptions ??
-                [],
-        };
-    }, [props.issueBoard]);
 
     function pushParams(mutator: (params: URLSearchParams) => void) {
         const next = new URLSearchParams(searchParams.toString());
@@ -156,11 +128,11 @@ export default function ServiceRequestListClient(props: Props) {
     }
 
     function openGlobalIssueBoard() {
-        setIssueBoardOpen(true);
+        router.push("/admin/services/issues-board");
     }
 
-    function openIssueBoard(_row: ServiceReqItem) {
-        setIssueBoardOpen(true);
+    function openIssueBoard(row: ServiceReqItem) {
+        router.push(`/admin/services/issues-board?serviceRequestId=${row.id}`);
     }
 
     function openLogs(row: ServiceReqItem) {
@@ -182,11 +154,14 @@ export default function ServiceRequestListClient(props: Props) {
         if (!confirmed) return;
 
         try {
-            const response = await fetch(`/api/admin/service-requests/${row.id}/complete`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({}),
-            });
+            const response = await fetch(
+                `/api/admin/service-requests/${row.id}/complete`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                },
+            );
 
             const json = await response.json().catch(() => ({}));
 
@@ -217,7 +192,7 @@ export default function ServiceRequestListClient(props: Props) {
     }
 
     return (
-        <div className="space-y-5">
+        <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-950">
@@ -272,7 +247,9 @@ export default function ServiceRequestListClient(props: Props) {
                 onOpenLogs={openLogs}
                 onComplete={completeOne}
                 onCopyId={copyId}
-                onOpenTechnicalAssessment={(row) => setTechnicalAssessmentRequestId(row.id)}
+                onOpenTechnicalAssessment={(row) =>
+                    setTechnicalAssessmentRequestId(row.id)
+                }
             />
 
             <ServiceRequestPagination
@@ -299,22 +276,6 @@ export default function ServiceRequestListClient(props: Props) {
                 productSku={productSku ?? undefined}
                 productImage={productImage ?? undefined}
                 movementSpecLabel={movementSpecLabel ?? undefined}
-            />
-
-            <ServiceIssueManageModal
-                open={issueBoardOpen}
-                onClose={() => setIssueBoardOpen(false)}
-                items={props.issueBoard?.items ?? []}
-                counts={
-                    props.issueBoard?.counts ?? {
-                        pendingConfirm: 0,
-                        ready: 0,
-                        inProgress: 0,
-                        done: 0,
-                        readyToCloseSrCount: 0,
-                    }
-                }
-                catalogs={normalizedIssueBoardCatalogs}
             />
         </div>
     );

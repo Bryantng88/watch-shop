@@ -9,6 +9,25 @@ export type TechnicalDetailCatalogOption = {
   sortOrder?: number | null;
 };
 
+export type SupplyCatalogOption = {
+  id: string;
+  code?: string | null;
+  name?: string | null;
+  category?: string | null;
+  unit?: string | null;
+  defaultCost?: number | null;
+  sortOrder?: number | null;
+};
+
+export type MechanicalPartCatalogOption = {
+  id: string;
+  code?: string | null;
+  name?: string | null;
+  group?: string | null;
+  defaultCost?: number | null;
+  sortOrder?: number | null;
+};
+
 export type IssueItem = {
   id: string;
   summary?: string | null;
@@ -68,5 +87,12 @@ export type IssueItem = {
 
 export type IssueBoardCatalogs = {
   technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
-  // giữ các field cũ nếu có
+  supplyCatalogOptions?: SupplyCatalogOption[];
+  mechanicalPartCatalogOptions?: MechanicalPartCatalogOption[];
+
+  // Backward-compatible aliases from older technical assessment catalogs.
+  supplyCatalogs?: SupplyCatalogOption[];
+  mechanicalPartCatalogs?: MechanicalPartCatalogOption[];
+  supplies?: SupplyCatalogOption[];
+  parts?: MechanicalPartCatalogOption[];
 };

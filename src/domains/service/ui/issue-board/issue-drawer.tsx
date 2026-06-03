@@ -1,7 +1,18 @@
 import * as React from "react";
-import type { IssueItem, TechnicalDetailCatalogOption } from "./types";
-import { actionModeLabel, areaLabel, fmtDT, fmtMoney, statusLabel } from "./helpers";
+import type {
+  IssueItem,
+  MechanicalPartCatalogOption,
+  SupplyCatalogOption,
+  TechnicalDetailCatalogOption,
+} from "./types";
+import {
+  actionModeLabel,
+  areaLabel,
+  fmtDT,
+  statusLabel,
+} from "./helpers";
 import { ClosedSrBadge, PriorityBadge, ReadyToCloseBadge } from "./badges";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 function normalizeAreaKey(value?: string | null) {
   const raw = String(value ?? "")
@@ -14,40 +25,43 @@ function normalizeAreaKey(value?: string | null) {
   const map: Record<string, string> = {
     MAY: "MOVEMENT",
     MOVEMENT: "MOVEMENT",
-
     VO: "CASE",
     CASE: "CASE",
-
     KINH: "CRYSTAL",
     GLASS: "CRYSTAL",
     CRYSTAL: "CRYSTAL",
-
     NUM: "CROWN",
     CROWN: "CROWN",
-
     MAT_SO: "DIAL",
     DIAL: "DIAL",
-
     HANDS: "HANDS",
     KIM: "HANDS",
-
     DAY: "BRACELET",
     STRAP: "BRACELET",
     BRACELET: "BRACELET",
-
     TONG_QUAT: "GENERAL",
     GENERAL: "GENERAL",
   };
 
   return map[raw] ?? raw;
 }
-function InfoLine({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
+
+function catalogOptionLabel(option: {
+  code?: string | null;
+  name?: string | null;
+  unit?: string | null;
+  group?: string | null;
+  category?: string | null;
 }) {
+  const code = String(option.code ?? "").trim();
+  const name = String(option.name ?? "").trim();
+  const meta = String(option.unit ?? option.group ?? option.category ?? "").trim();
+
+  const main = [code, name].filter(Boolean).join(" - ");
+  return meta ? `${main || "Không tên"} (${meta})` : main || "Không tên";
+}
+
+function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
@@ -95,12 +109,18 @@ export function IssueDrawer({
   actualCost,
   resolutionNote,
   technicalDetailCatalogOptions,
+  supplyCatalogOptions,
+  mechanicalPartCatalogOptions,
   technicalDetailCatalogId,
+  supplyCatalogId,
+  mechanicalPartCatalogId,
   actionMode,
   vendorId,
   onChangeActualCost,
   onChangeResolutionNote,
   onChangeTechnicalDetailCatalogId,
+  onChangeSupplyCatalogId,
+  onChangeMechanicalPartCatalogId,
   onChangeActionMode,
   onChangeVendorId,
   onClose,
@@ -114,19 +134,25 @@ export function IssueDrawer({
   actualCost: string;
   resolutionNote: string;
   technicalDetailCatalogOptions: TechnicalDetailCatalogOption[];
+  supplyCatalogOptions: SupplyCatalogOption[];
+  mechanicalPartCatalogOptions: MechanicalPartCatalogOption[];
   technicalDetailCatalogId: string;
+  supplyCatalogId: string;
+  mechanicalPartCatalogId: string;
   actionMode: string;
   vendorId: string;
   onChangeActualCost: (value: string) => void;
   onChangeResolutionNote: (value: string) => void;
   onChangeTechnicalDetailCatalogId: (value: string) => void;
+  onChangeSupplyCatalogId: (value: string) => void;
+  onChangeMechanicalPartCatalogId: (value: string) => void;
   onChangeActionMode: (value: string) => void;
   onChangeVendorId: (value: string) => void;
   onClose: () => void;
   onAction: (
     issueId: string,
     action: "confirm" | "start" | "complete" | "cancel",
-    rollback?: IssueItem[]
+    rollback?: IssueItem[],
   ) => Promise<void>;
   onOpenServiceRequest: () => void;
   onCancelIssue: (issueId: string) => Promise<void>;
@@ -142,16 +168,55 @@ export function IssueDrawer({
 
     if (!issueAreaKey) return options;
 
-    return options.filter((item) => normalizeAreaKey(item.area) === issueAreaKey);
+    return options.filter(
+      (item) => normalizeAreaKey(item.area) === issueAreaKey,
+    );
   }, [technicalDetailCatalogOptions, issueAreaKey]);
+
   const isStarting = issue.boardColumn === "READY";
   const isCompleting = issue.boardColumn === "IN_PROGRESS";
+  const notify = useNotify();
+  async function handleStartProcessing() {
+    const selectedId = String(technicalDetailCatalogId ?? "").trim();
+
+    if (!selectedId) {
+      notify.warning("Vui lòng chọn chi tiết kỹ thuật trước khi bắt đầu xử lý.");
+      return;
+    }
+
+    await onAction(issue.id, "start");
+  }
+
+  async function handleCompleteIssue() {
+    if (actualCost.trim() === "") {
+      notify.warning("Vui lòng nhập chi phí thực tế.");
+      return;
+    }
+
+    const cost = Number(actualCost);
+    if (!Number.isFinite(cost) || cost < 0) {
+      notify.warning("Chi phí thực tế không hợp lệ.");
+      return;
+    }
+
+    if (!resolutionNote.trim()) {
+      notify.warning("Vui lòng nhập kết luận xử lý.");
+      return;
+    }
+
+    await onAction(issue.id, "complete");
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-stone-950/35" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <button
+        type="button"
+        aria-label="Đóng modal"
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
 
-      <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-white shadow-2xl">
+      <div className="relative flex max-h-[96vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
         <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -182,12 +247,18 @@ export function IssueDrawer({
           </div>
         </div>
 
-        <div className="space-y-5 p-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
           <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <InfoLine label="Khu vực" value={areaLabel(issue.area)} />
-              <InfoLine label="Trạng thái" value={statusLabel(issue.executionStatus)} />
-              <InfoLine label="Thực hiện" value={actionModeLabel(issue.actionMode)} />
+              <InfoLine
+                label="Trạng thái"
+                value={statusLabel(issue.executionStatus)}
+              />
+              <InfoLine
+                label="Thực hiện"
+                value={actionModeLabel(issue.actionMode)}
+              />
               <InfoLine
                 label="Chi tiết kỹ thuật"
                 value={issue.technicalDetailCatalog?.name || "Chưa xác định"}
@@ -203,9 +274,21 @@ export function IssueDrawer({
             <div className="text-sm font-semibold text-stone-900">Timeline</div>
             <div className="mt-4 flex flex-wrap items-center gap-5">
               <TimelineStep label="Mở issue" value={fmtDT(issue.openedAt)} active />
-              <TimelineStep label="Xác nhận" value={fmtDT(issue.confirmedAt)} active={Boolean(issue.confirmedAt)} />
-              <TimelineStep label="Bắt đầu" value={fmtDT(issue.startedAt)} active={Boolean(issue.startedAt)} />
-              <TimelineStep label="Hoàn tất" value={fmtDT(issue.completedAt)} active={Boolean(issue.completedAt)} />
+              <TimelineStep
+                label="Xác nhận"
+                value={fmtDT(issue.confirmedAt)}
+                active={Boolean(issue.confirmedAt)}
+              />
+              <TimelineStep
+                label="Bắt đầu"
+                value={fmtDT(issue.startedAt)}
+                active={Boolean(issue.startedAt)}
+              />
+              <TimelineStep
+                label="Hoàn tất"
+                value={fmtDT(issue.completedAt)}
+                active={Boolean(issue.completedAt)}
+              />
             </div>
           </section>
 
@@ -215,7 +298,8 @@ export function IssueDrawer({
                 Xác định chi tiết kỹ thuật trước khi bắt đầu
               </div>
               <p className="mt-1 text-sm text-stone-500">
-                Từ trạng thái đã xác nhận sang đang xử lý, kỹ thuật phải chọn chi tiết xử lý đúng theo khu vực issue.
+                Từ trạng thái đã xác nhận sang đang xử lý, kỹ thuật phải chọn
+                chi tiết xử lý đúng theo khu vực issue.
               </p>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -225,13 +309,15 @@ export function IssueDrawer({
                   </label>
                   <select
                     value={technicalDetailCatalogId}
-                    onChange={(e) => onChangeTechnicalDetailCatalogId(e.target.value)}
+                    onChange={(e) =>
+                      onChangeTechnicalDetailCatalogId(e.target.value)
+                    }
                     className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                   >
                     <option value="">Chọn chi tiết</option>
                     {detailOptions.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.name}
+                        {catalogOptionLabel(option)}
                       </option>
                     ))}
                   </select>
@@ -268,8 +354,8 @@ export function IssueDrawer({
 
               {!detailOptions.length ? (
                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                  Chưa có chi tiết kỹ thuật active cho khu vực {areaLabel(issue.area)}.
-                  Vào Danh mục để thêm TechnicalDetailCatalog.
+                  Chưa có chi tiết kỹ thuật active cho khu vực{" "}
+                  {areaLabel(issue.area)}.
                 </div>
               ) : null}
             </section>
@@ -277,12 +363,78 @@ export function IssueDrawer({
 
           {isCompleting ? (
             <section className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-              <div className="text-sm font-semibold text-stone-900">Kết luận hoàn tất issue</div>
+              <div className="text-sm font-semibold text-stone-900">
+                Kết luận hoàn tất issue
+              </div>
               <p className="mt-1 text-sm text-stone-500">
                 Khi hoàn tất issue bắt buộc nhập chi phí thực tế và kết luận xử lý.
               </p>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                      Thực hiện
+                    </label>
+                    <select
+                      value={actionMode || "INTERNAL"}
+                      onChange={(e) => onChangeActionMode(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                    >
+                      <option value="INTERNAL">Nội bộ</option>
+                      <option value="VENDOR">Vendor</option>
+                    </select>
+                  </div>
+                  {String(actionMode || "").toUpperCase() === "VENDOR" ? (
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                        Vendor
+                      </label>
+                      <input
+                        value={vendorId}
+                        onChange={(e) => onChangeVendorId(e.target.value)}
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                        placeholder="Nhập vendorId"
+                      />
+                    </div>
+                  ) : null}
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Vật tư / supply
+                  </label>
+                  <select
+                    value={supplyCatalogId}
+                    onChange={(e) => onChangeSupplyCatalogId(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                  >
+                    <option value="">Không dùng vật tư</option>
+                    {supplyCatalogOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {catalogOptionLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Linh kiện máy / part
+                  </label>
+                  <select
+                    value={mechanicalPartCatalogId}
+                    onChange={(e) =>
+                      onChangeMechanicalPartCatalogId(e.target.value)
+                    }
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                  >
+                    <option value="">Không thay linh kiện máy</option>
+                    {mechanicalPartCatalogOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {catalogOptionLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
                     Chi phí thực tế
@@ -295,7 +447,7 @@ export function IssueDrawer({
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
                     Kết luận xử lý
                   </label>
@@ -303,7 +455,7 @@ export function IssueDrawer({
                     value={resolutionNote}
                     onChange={(e) => onChangeResolutionNote(e.target.value)}
                     className="min-h-[110px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
-                    placeholder="Nhập kết quả xử lý, linh kiện đã thay, lưu ý sau xử lý..."
+                    placeholder="Nhập kết quả xử lý, vật tư/linh kiện đã thay, lưu ý sau xử lý..."
                   />
                 </div>
               </div>
@@ -326,8 +478,8 @@ export function IssueDrawer({
               {issue.boardColumn === "READY" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id || !technicalDetailCatalogId}
-                  onClick={() => onAction(issue.id, "start")}
+                  disabled={busyId === issue.id}
+                  onClick={handleStartProcessing}
                   className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Bắt đầu xử lý
@@ -337,8 +489,8 @@ export function IssueDrawer({
               {issue.boardColumn === "IN_PROGRESS" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id || actualCost.trim() === "" || !resolutionNote.trim()}
-                  onClick={() => onAction(issue.id, "complete")}
+                  disabled={busyId === issue.id}
+                  onClick={handleCompleteIssue}
                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Hoàn tất

@@ -193,7 +193,7 @@ function ServiceRequestRow({
         },
         {
             key: "issue-board",
-            label: "Mở Issue Board tổng",
+            label: "Mở issue của SR",
             icon: <ListChecks className="h-4 w-4" />,
             onClick: onOpenIssueBoard,
         },

@@ -127,6 +127,57 @@ export async function listTechnicalDetailCatalogOptions() {
             sortOrder: x.sortOrder ?? null,
         }));
 }
+
+export async function listIssueBoardSupplyCatalogOptions() {
+    const rows = await prisma.supplyCatalog.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+            id: true,
+            code: true,
+            name: true,
+            category: true,
+            unit: true,
+            defaultCost: true,
+            sortOrder: true,
+        },
+    });
+
+    return rows.map((x: any) => ({
+        id: x.id,
+        code: x.code ?? null,
+        name: x.name ?? null,
+        category: x.category ?? null,
+        unit: x.unit ?? null,
+        defaultCost: toNumber(x.defaultCost),
+        sortOrder: x.sortOrder ?? null,
+    }));
+}
+
+export async function listIssueBoardMechanicalPartCatalogOptions() {
+    const rows = await prisma.mechanicalPartCatalog.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+            id: true,
+            code: true,
+            name: true,
+            group: true,
+            defaultCost: true,
+            sortOrder: true,
+        },
+    });
+
+    return rows.map((x: any) => ({
+        id: x.id,
+        code: x.code ?? null,
+        name: x.name ?? null,
+        group: x.group ?? null,
+        defaultCost: toNumber(x.defaultCost),
+        sortOrder: x.sortOrder ?? null,
+    }));
+}
+
 export async function createTechnicalIssue(input: {
     assessmentId?: string | null;
     serviceRequestId?: string | null;
@@ -441,10 +492,13 @@ function boardWeight(col: BoardColumnKey) {
     return 1;
 }
 
-export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: string | null } = {}) {
-    const [rows, technicalDetailCatalogOptions] = await Promise.all([
+export async function getTechnicalIssueBoardData(input: { serviceRequestId?: string | null } = {}) {
+    const serviceRequestId = cleanId(input.serviceRequestId);
+
+    const [rows, technicalDetailCatalogOptions, supplyCatalogOptions, mechanicalPartCatalogOptions] = await Promise.all([
         prisma.technicalIssue.findMany({
             where: {
+                ...(serviceRequestId ? { serviceRequestId } : {}),
                 executionStatus: {
                     not: "CANCELED" as any,
                 },
@@ -523,6 +577,8 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
             } as any,
         }),
         listTechnicalDetailCatalogOptions(),
+        listIssueBoardSupplyCatalogOptions(),
+        listIssueBoardMechanicalPartCatalogOptions(),
     ]);
 
     const items = rows
@@ -672,16 +728,14 @@ export async function getTechnicalIssueBoardData(_input: { serviceRequestId?: st
         done: items.filter((x) => x.boardColumn === "DONE").length,
         readyToCloseSrCount: readyToCloseSrIds.length,
     };
-    console.log("[issue-board.service] technicalDetailCatalogOptions", {
-        count: technicalDetailCatalogOptions.length,
-        sample: technicalDetailCatalogOptions.slice(0, 3),
-    });
     return {
         items,
         counts,
         technicalDetailCatalogOptions,
         catalogs: {
             technicalDetailCatalogOptions,
+            supplyCatalogOptions,
+            mechanicalPartCatalogOptions,
         },
     };
 }
