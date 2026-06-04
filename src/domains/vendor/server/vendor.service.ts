@@ -3,7 +3,24 @@ import { prisma } from "@/server/db/client";
 export type VendorOption = {
     id: string;
     name: string;
+    phone?: string | null;
 };
+
+function cleanText(value: unknown) {
+    return String(value ?? "").trim();
+}
+
+function normalizeVendor(vendor: {
+    id: string;
+    name: string;
+    phone?: string | null;
+}): VendorOption {
+    return {
+        id: vendor.id,
+        name: vendor.name,
+        phone: vendor.phone ?? null,
+    };
+}
 
 export async function getVendorList(): Promise<VendorOption[]> {
     const vendors = await prisma.vendor.findMany({
@@ -11,13 +28,11 @@ export async function getVendorList(): Promise<VendorOption[]> {
         select: {
             id: true,
             name: true,
+            phone: true,
         },
     });
 
-    return vendors.map((vendor) => ({
-        id: vendor.id,
-        name: vendor.name,
-    }));
+    return vendors.map(normalizeVendor);
 }
 
 export async function getVendorById(id: string) {
@@ -28,6 +43,7 @@ export async function getVendorById(id: string) {
         select: {
             id: true,
             name: true,
+            phone: true,
         },
     });
 }
@@ -50,13 +66,53 @@ export async function searchVendors(keyword: string): Promise<VendorOption[]> {
         select: {
             id: true,
             name: true,
+            phone: true,
         },
     });
 
-    return vendors.map((vendor) => ({
-        id: vendor.id,
-        name: vendor.name,
-    }));
+    return vendors.map(normalizeVendor);
+}
+
+export async function createVendorQuick(input: {
+    name: string;
+    phone?: string | null;
+}): Promise<VendorOption> {
+    const name = cleanText(input.name);
+    const phone = cleanText(input.phone) || null;
+
+    if (!name) {
+        throw new Error("Vui lòng nhập tên vendor.");
+    }
+
+    const existing = await prisma.vendor.findFirst({
+        where: {
+            name: {
+                equals: name,
+                mode: "insensitive",
+            },
+        },
+        select: {
+            id: true,
+            name: true,
+            phone: true,
+        },
+    });
+
+    if (existing) return normalizeVendor(existing);
+
+    const vendor = await prisma.vendor.create({
+        data: {
+            name,
+            phone,
+        },
+        select: {
+            id: true,
+            name: true,
+            phone: true,
+        },
+    });
+
+    return normalizeVendor(vendor);
 }
 
 export async function ensureVendorExists(id: string) {

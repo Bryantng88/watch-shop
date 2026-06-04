@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowLeft, Loader2 } from "lucide-react";
-
+import { useState } from "react";
+import { ArrowLeft, Loader2, X, ZoomIn } from "lucide-react";
 import RegenerateTitleSkuButton from "@/domains/watch/ui/edit/RegenerateTitleSkuButton";
 import type {
     PickedMediaItem,
@@ -69,6 +69,8 @@ function HeaderImage({
     image?: PickedMediaItem | null;
     title: string;
 }) {
+    const [open, setOpen] = useState(false);
+
     const src =
         image?.url || image?.key
             ? image?.url ||
@@ -76,15 +78,55 @@ function HeaderImage({
             : null;
 
     return (
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-            {src ? (
-                <img src={src} alt={title} className="h-full w-full object-cover" />
-            ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                    No image
+        <>
+            <button
+                type="button"
+                onClick={() => src && setOpen(true)}
+                disabled={!src}
+                className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 disabled:cursor-default"
+                title={src ? "Bấm để xem ảnh lớn" : undefined}
+            >
+                {src ? (
+                    <>
+                        <img
+                            src={src}
+                            alt={title}
+                            className="h-full w-full object-cover transition group-hover:scale-105"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/25 group-hover:opacity-100">
+                            <ZoomIn className="h-5 w-5 text-white" />
+                        </span>
+                    </>
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                        No image
+                    </div>
+                )}
+            </button>
+
+            {open && src ? (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+                    onClick={() => setOpen(false)}
+                >
+                    <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="absolute right-5 top-5 rounded-full bg-white/95 p-2 text-slate-700 shadow-lg hover:bg-white"
+                        aria-label="Đóng"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+
+                    <img
+                        src={src}
+                        alt={title}
+                        onClick={(event) => event.stopPropagation()}
+                        className="max-h-[88vh] max-w-[92vw] rounded-3xl object-contain shadow-2xl"
+                    />
                 </div>
-            )}
-        </div>
+            ) : null}
+        </>
     );
 }
 

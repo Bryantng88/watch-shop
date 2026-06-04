@@ -14,22 +14,17 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Search, X } from "lucide-react";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { BoardColumn } from "./board-column";
+import { ClosedSrBadge, ReadyToCloseBadge } from "./badges";
 import { COLUMNS } from "./constants";
 import { canMove } from "./dnd";
 import { actionModeLabel, areaLabel, normalizeText } from "./helpers";
 import { DraggableIssueCard, IssueCard } from "./issue-card";
 import { IssueDrawer } from "./issue-drawer";
 import { FilterChip } from "./filter-chip";
-import type {
-  BoardColumnKey,
-  IssueItem,
-  IssueBoardCatalogs,
-  TechnicalDetailCatalogOption,
-  SupplyCatalogOption,
-  MechanicalPartCatalogOption,
-} from "./types";
-import { notify } from "@/lib/notify";
+import type { BoardColumnKey, IssueItem, IssueBoardCatalogs, TechnicalDetailCatalogOption, VendorOption } from "./types";
+
 type Props = {
   items: IssueItem[];
   counts: {
@@ -46,8 +41,6 @@ type Props = {
   onClose?: () => void;
   catalogs?: IssueBoardCatalogs;
   technicalDetailCatalogOptions?: TechnicalDetailCatalogOption[];
-  supplyCatalogOptions?: SupplyCatalogOption[];
-  mechanicalPartCatalogOptions?: MechanicalPartCatalogOption[];
 };
 
 export default function TechnicalIssueBoardClient({
@@ -61,51 +54,49 @@ export default function TechnicalIssueBoardClient({
   onClose,
 
   technicalDetailCatalogOptions = [],
-  supplyCatalogOptions = [],
-  mechanicalPartCatalogOptions = [],
 }: Props) {
+  console.log("[TechnicalIssuesBoardClient] technicalDetailCatalogOptions", {
+    count: technicalDetailCatalogOptions.length,
+    sample: technicalDetailCatalogOptions.slice(0, 3),
+  });
   const router = useRouter();
+  const notify = useNotify();
+
   const [boardItems, setBoardItems] = React.useState<IssueItem[]>(items ?? []);
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [overColumn, setOverColumn] = React.useState<BoardColumnKey | null>(
-    null,
-  );
+  const [overColumn, setOverColumn] = React.useState<BoardColumnKey | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
-  const [selectedIssue, setSelectedIssue] = React.useState<IssueItem | null>(
-    null,
-  );
+  const [selectedIssue, setSelectedIssue] = React.useState<IssueItem | null>(null);
   const [drawerState, setDrawerState] = React.useState({
     actualCost: "",
     resolutionNote: "",
     technicalDetailCatalogId: "",
     actionMode: "INTERNAL",
     vendorId: "",
-    supplyCatalogId: "",
-    mechanicalPartCatalogId: "",
   });
-  const [cancelingIssueId, setCancelingIssueId] = React.useState<string | null>(
-    null,
-  );
+  const [cancelingIssueId, setCancelingIssueId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [areaFilter, setAreaFilter] = React.useState<string>("ALL");
   const [actionModeFilter, setActionModeFilter] = React.useState<string>("ALL");
-  const [visibleCountByColumn, setVisibleCountByColumn] = React.useState<
-    Record<BoardColumnKey, number>
-  >({
+  const [visibleCountByColumn, setVisibleCountByColumn] = React.useState<Record<BoardColumnKey, number>>({
     PENDING_CONFIRM: 12,
     READY: 12,
     IN_PROGRESS: 12,
     DONE: 12,
   });
-  const [loadingMoreColumn, setLoadingMoreColumn] =
-    React.useState<BoardColumnKey | null>(null);
+  const [loadingMoreColumn, setLoadingMoreColumn] = React.useState<BoardColumnKey | null>(null);
+  const [localVendorOptions, setLocalVendorOptions] = React.useState<VendorOption[]>(
+    Array.isArray(catalogs?.vendorOptions) ? catalogs.vendorOptions : [],
+  );
 
-  const normalizedTechnicalDetailCatalogOptions = React.useMemo<
-    TechnicalDetailCatalogOption[]
-  >(() => {
-    const direct = Array.isArray(technicalDetailCatalogOptions)
-      ? technicalDetailCatalogOptions
-      : [];
+  React.useEffect(() => {
+    setLocalVendorOptions(
+      Array.isArray(catalogs?.vendorOptions) ? catalogs.vendorOptions : [],
+    );
+  }, [catalogs?.vendorOptions]);
+
+  const normalizedTechnicalDetailCatalogOptions = React.useMemo<TechnicalDetailCatalogOption[]>(() => {
+    const direct = Array.isArray(technicalDetailCatalogOptions) ? technicalDetailCatalogOptions : [];
     if (direct.length > 0) return direct;
 
     const fromCatalogs = Array.isArray(catalogs?.technicalDetailCatalogOptions)
@@ -115,30 +106,6 @@ export default function TechnicalIssueBoardClient({
     return fromCatalogs;
   }, [technicalDetailCatalogOptions, catalogs]);
 
-  const normalizedSupplyCatalogOptions = React.useMemo<SupplyCatalogOption[]>(() => {
-    if (Array.isArray(supplyCatalogOptions) && supplyCatalogOptions.length > 0) {
-      return supplyCatalogOptions;
-    }
-
-    if (Array.isArray(catalogs?.supplyCatalogOptions)) return catalogs.supplyCatalogOptions;
-    if (Array.isArray(catalogs?.supplyCatalogs)) return catalogs.supplyCatalogs;
-    if (Array.isArray(catalogs?.supplies)) return catalogs.supplies;
-
-    return [];
-  }, [supplyCatalogOptions, catalogs]);
-
-  const normalizedMechanicalPartCatalogOptions = React.useMemo<MechanicalPartCatalogOption[]>(() => {
-    if (Array.isArray(mechanicalPartCatalogOptions) && mechanicalPartCatalogOptions.length > 0) {
-      return mechanicalPartCatalogOptions;
-    }
-
-    if (Array.isArray(catalogs?.mechanicalPartCatalogOptions)) return catalogs.mechanicalPartCatalogOptions;
-    if (Array.isArray(catalogs?.mechanicalPartCatalogs)) return catalogs.mechanicalPartCatalogs;
-    if (Array.isArray(catalogs?.parts)) return catalogs.parts;
-
-    return [];
-  }, [mechanicalPartCatalogOptions, catalogs]);
-
   React.useEffect(() => {
     setBoardItems(items ?? []);
   }, [items]);
@@ -147,30 +114,28 @@ export default function TechnicalIssueBoardClient({
     if (!selectedIssue) return;
     setDrawerState({
       actualCost:
-        selectedIssue.actualCost != null &&
-          Number.isFinite(Number(selectedIssue.actualCost))
+        selectedIssue.actualCost != null && Number.isFinite(Number(selectedIssue.actualCost))
           ? String(selectedIssue.actualCost)
           : "",
       resolutionNote: selectedIssue.resolutionNote ?? "",
       technicalDetailCatalogId: selectedIssue.technicalDetailCatalog?.id ?? "",
       actionMode: selectedIssue.actionMode ?? "INTERNAL",
       vendorId: selectedIssue.vendorId ?? "",
-      supplyCatalogId: selectedIssue.supplyCatalog?.id ?? "",
-      mechanicalPartCatalogId: selectedIssue.mechanicalPartCatalog?.id ?? "",
     });
   }, [selectedIssue]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
-    }),
+    })
   );
-  const vendorOptions = catalogs?.vendorOptions ?? [];
+
   const filteredItems = React.useMemo(() => {
     const q = normalizeText(query);
 
     return (boardItems ?? []).filter((item) => {
       const sr = item?.serviceRequest ?? null;
+
 
       const matchesQuery =
         !q ||
@@ -187,12 +152,9 @@ export default function TechnicalIssueBoardClient({
           .map(normalizeText)
           .some((x) => x.includes(q));
 
-      const matchesArea =
-        areaFilter === "ALL" ||
-        String(item.area || "").toUpperCase() === areaFilter;
+      const matchesArea = areaFilter === "ALL" || String(item.area || "").toUpperCase() === areaFilter;
       const matchesActionMode =
-        actionModeFilter === "ALL" ||
-        String(item.actionMode || "").toUpperCase() === actionModeFilter;
+        actionModeFilter === "ALL" || String(item.actionMode || "").toUpperCase() === actionModeFilter;
 
       return matchesQuery && matchesArea && matchesActionMode;
     });
@@ -212,10 +174,7 @@ export default function TechnicalIssueBoardClient({
     }
 
     return {
-      PENDING_CONFIRM: base.PENDING_CONFIRM.slice(
-        0,
-        visibleCountByColumn.PENDING_CONFIRM,
-      ),
+      PENDING_CONFIRM: base.PENDING_CONFIRM.slice(0, visibleCountByColumn.PENDING_CONFIRM),
       READY: base.READY.slice(0, visibleCountByColumn.READY),
       IN_PROGRESS: base.IN_PROGRESS.slice(0, visibleCountByColumn.IN_PROGRESS),
       DONE: base.DONE.slice(0, visibleCountByColumn.DONE),
@@ -228,8 +187,8 @@ export default function TechnicalIssueBoardClient({
       new Set(
         filteredItems
           .filter((x) => x?.serviceRequestReadyToClose && x?.serviceRequest?.id)
-          .map((x) => x.serviceRequest!.id),
-      ),
+          .map((x) => x.serviceRequest!.id)
+      )
     );
 
     return {
@@ -241,15 +200,12 @@ export default function TechnicalIssueBoardClient({
     };
   }, [grouped, filteredItems]);
 
-  const activeItem = React.useMemo(
-    () => boardItems.find((x) => x.id === activeId) ?? null,
-    [boardItems, activeId],
-  );
+  const activeItem = React.useMemo(() => boardItems.find((x) => x.id === activeId) ?? null, [boardItems, activeId]);
 
   async function callAction(
     issueId: string,
     action: "confirm" | "start" | "complete" | "cancel",
-    rollback?: IssueItem[],
+    rollback?: IssueItem[]
   ) {
     try {
       setBusyId(issueId);
@@ -266,20 +222,16 @@ export default function TechnicalIssueBoardClient({
       const body =
         action === "start"
           ? {
-            technicalDetailCatalogId:
-              drawerState.technicalDetailCatalogId || null,
+            technicalDetailCatalogId: drawerState.technicalDetailCatalogId || null,
             actionMode: drawerState.actionMode || "INTERNAL",
             vendorId: drawerState.vendorId || null,
           }
           : action === "complete"
             ? {
-              actualCost:
-                drawerState.actualCost.trim() === ""
-                  ? null
-                  : Number(drawerState.actualCost),
+              actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
               resolutionNote: drawerState.resolutionNote.trim() || null,
-              supplyCatalogId: drawerState.supplyCatalogId || null,
-              mechanicalPartCatalogId: drawerState.mechanicalPartCatalogId || null,
+              actionMode: drawerState.actionMode || "INTERNAL",
+              vendorId: drawerState.vendorId || null,
             }
             : action === "cancel"
               ? {
@@ -296,7 +248,7 @@ export default function TechnicalIssueBoardClient({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (rollback) setBoardItems(rollback);
-        alert(json?.error || "Không thể cập nhật issue");
+        notify.error(json?.error || "Không thể cập nhật issue");
         return;
       }
 
@@ -337,22 +289,13 @@ export default function TechnicalIssueBoardClient({
             executionStatus: "DONE",
             completedAt: new Date().toISOString(),
             actualCost:
-              drawerState.actualCost.trim() === ""
-                ? (item.actualCost ?? null)
-                : Number(drawerState.actualCost),
-            resolutionNote:
-              drawerState.resolutionNote.trim() || item.resolutionNote,
-            supplyCatalog: drawerState.supplyCatalogId
-              ? item.supplyCatalog
-              : item.supplyCatalog,
-            mechanicalPartCatalog: drawerState.mechanicalPartCatalogId
-              ? item.mechanicalPartCatalog
-              : item.mechanicalPartCatalog,
+              drawerState.actualCost.trim() === "" ? item.actualCost ?? null : Number(drawerState.actualCost),
+            resolutionNote: drawerState.resolutionNote.trim() || item.resolutionNote,
           };
         }
 
         return item;
-      }),
+      })
     );
   }
 
@@ -363,12 +306,7 @@ export default function TechnicalIssueBoardClient({
   function handleDragOver(event: DragOverEvent) {
     const overId = event.over?.id ? String(event.over.id) : null;
 
-    if (
-      overId === "PENDING_CONFIRM" ||
-      overId === "READY" ||
-      overId === "IN_PROGRESS" ||
-      overId === "DONE"
-    ) {
+    if (overId === "PENDING_CONFIRM" || overId === "READY" || overId === "IN_PROGRESS" || overId === "DONE") {
       setOverColumn(overId);
       return;
     }
@@ -428,13 +366,14 @@ export default function TechnicalIssueBoardClient({
     if (from === "READY" && targetColumn === "IN_PROGRESS") {
       setBoardItems(snapshot);
       setSelectedIssue(issue);
+      notify.error({
+        title: "Cần xác định chi tiết kỹ thuật",
+        message: "Mở issue và chọn chi tiết kỹ thuật trước khi bắt đầu xử lý.",
+      });
       return;
     }
-
     if (from === "IN_PROGRESS" && targetColumn === "DONE") {
-      setBoardItems(snapshot);
-      setSelectedIssue(issue);
-      return;
+      void callAction(issueId, "complete", snapshot);
     }
   }
 
@@ -488,236 +427,166 @@ export default function TechnicalIssueBoardClient({
   }
 
   return (
-    <div
-      className={
-        compact
-          ? "min-w-0 space-y-4"
-          : "mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6"
-      }
-    >
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-        </div>
 
-        <div className="flex flex-col gap-3 xl:items-end">
+    <div className={compact ? "space-y-5" : "mx-auto w-full max-w-[1680px] space-y-5"}>
+
+      <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-stone-950">{title}</h1>
+            <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+          </div>
+
           {onClose ? (
             <button
               type="button"
               onClick={onClose}
-              className="self-start rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 xl:self-end"
+              className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
             >
               Đóng
             </button>
           ) : null}
 
-          <div
-            className={
-              compact
-                ? "grid grid-cols-2 gap-3 lg:grid-cols-5"
-                : "grid w-full grid-cols-2 gap-3 md:grid-cols-3 xl:w-[720px] xl:grid-cols-5"
-            }
-          >
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-              <div className="text-xs uppercase tracking-wide text-amber-700">
-                Chờ xác nhận
-              </div>
-              <div className="mt-1 text-xl font-semibold text-amber-900">
-                {filteredCounts.pendingConfirm}
-              </div>
+          <div className={compact ? "grid grid-cols-2 gap-3 lg:grid-cols-5" : "grid w-full grid-cols-2 gap-3 md:grid-cols-3 2xl:max-w-4xl 2xl:grid-cols-5"}>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-amber-700">Chờ xác nhận</div>
+              <div className="mt-1 text-xl font-semibold text-amber-900">{filteredCounts.pendingConfirm}</div>
             </div>
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 shadow-sm">
-              <div className="text-xs uppercase tracking-wide text-sky-700">
-                Đã xác nhận
-              </div>
-              <div className="mt-1 text-xl font-semibold text-sky-900">
-                {filteredCounts.ready}
-              </div>
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-sky-700">Đã xác nhận</div>
+              <div className="mt-1 text-xl font-semibold text-sky-900">{filteredCounts.ready}</div>
             </div>
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 shadow-sm">
-              <div className="text-xs uppercase tracking-wide text-indigo-700">
-                Đang xử lý
-              </div>
-              <div className="mt-1 text-xl font-semibold text-indigo-900">
-                {filteredCounts.inProgress}
-              </div>
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-indigo-700">Đang xử lý</div>
+              <div className="mt-1 text-xl font-semibold text-indigo-900">{filteredCounts.inProgress}</div>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm">
-              <div className="text-xs uppercase tracking-wide text-emerald-700">
-                Hoàn tất
-              </div>
-              <div className="mt-1 text-xl font-semibold text-emerald-900">
-                {filteredCounts.done}
-              </div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-emerald-700">Hoàn tất</div>
+              <div className="mt-1 text-xl font-semibold text-emerald-900">{filteredCounts.done}</div>
             </div>
-            <div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 shadow-sm">
-              <div className="text-xs uppercase tracking-wide text-teal-700">
-                SR sẵn sàng đóng
-              </div>
-              <div className="mt-1 text-xl font-semibold text-teal-900">
-                {filteredCounts.readyToCloseSrCount}
-              </div>
+            <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-teal-700">SR sẵn sàng đóng</div>
+              <div className="mt-1 text-xl font-semibold text-teal-900">{filteredCounts.readyToCloseSrCount}</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm theo sản phẩm, SR, issue, kỹ thuật viên, vendor..."
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm outline-none focus:border-slate-400"
-            />
-            {query ? (
+        <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="relative w-full max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tìm theo sản phẩm, SR, issue, kỹ thuật viên, vendor..."
+                className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm outline-none focus:border-stone-400"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterChip active={areaFilter === "ALL"} onClick={() => setAreaFilter("ALL")}>
+                Tất cả khu vực
+              </FilterChip>
+              <FilterChip active={areaFilter === "MOVEMENT"} onClick={() => setAreaFilter("MOVEMENT")}>
+                Máy
+              </FilterChip>
+              <FilterChip active={areaFilter === "CASE"} onClick={() => setAreaFilter("CASE")}>
+                Vỏ
+              </FilterChip>
+              <FilterChip active={areaFilter === "CRYSTAL"} onClick={() => setAreaFilter("CRYSTAL")}>
+                Kính
+              </FilterChip>
+              <FilterChip active={areaFilter === "DIAL"} onClick={() => setAreaFilter("DIAL")}>
+                Mặt số
+              </FilterChip>
+              <FilterChip active={areaFilter === "CROWN"} onClick={() => setAreaFilter("CROWN")}>
+                Núm
+              </FilterChip>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <FilterChip active={actionModeFilter === "ALL"} onClick={() => setActionModeFilter("ALL")}>
+              Tất cả thực hiện
+            </FilterChip>
+            <FilterChip active={actionModeFilter === "INTERNAL"} onClick={() => setActionModeFilter("INTERNAL")}>
+              Nội bộ
+            </FilterChip>
+            <FilterChip active={actionModeFilter === "VENDOR"} onClick={() => setActionModeFilter("VENDOR")}>
+              Vendor
+            </FilterChip>
+
+            {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
               <button
                 type="button"
-                onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                onClick={clearFilters}
+                className="ml-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
               >
-                <X className="h-4 w-4" />
+                Xóa filter
               </button>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterChip
-              active={areaFilter === "ALL"}
-              onClick={() => setAreaFilter("ALL")}
-            >
-              Tất cả khu vực
-            </FilterChip>
-            <FilterChip
-              active={areaFilter === "MOVEMENT"}
-              onClick={() => setAreaFilter("MOVEMENT")}
-            >
-              Máy
-            </FilterChip>
-            <FilterChip
-              active={areaFilter === "CASE"}
-              onClick={() => setAreaFilter("CASE")}
-            >
-              Vỏ
-            </FilterChip>
-            <FilterChip
-              active={areaFilter === "CRYSTAL"}
-              onClick={() => setAreaFilter("CRYSTAL")}
-            >
-              Kính
-            </FilterChip>
-            <FilterChip
-              active={areaFilter === "DIAL"}
-              onClick={() => setAreaFilter("DIAL")}
-            >
-              Mặt số
-            </FilterChip>
-            <FilterChip
-              active={areaFilter === "CROWN"}
-              onClick={() => setAreaFilter("CROWN")}
-            >
-              Núm
-            </FilterChip>
+            )}
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <FilterChip
-            active={actionModeFilter === "ALL"}
-            onClick={() => setActionModeFilter("ALL")}
-          >
-            Tất cả thực hiện
-          </FilterChip>
-          <FilterChip
-            active={actionModeFilter === "INTERNAL"}
-            onClick={() => setActionModeFilter("INTERNAL")}
-          >
-            Nội bộ
-          </FilterChip>
-          <FilterChip
-            active={actionModeFilter === "VENDOR"}
-            onClick={() => setActionModeFilter("VENDOR")}
-          >
-            Vendor
-          </FilterChip>
-
-          {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
-            >
-              Xóa filter
-            </button>
-          )}
-        </div>
-      </div>
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div
-          className={
-            compact
-              ? "grid gap-4 xl:grid-cols-4"
-              : "grid min-h-[520px] gap-4 xl:grid-cols-4"
-          }
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
         >
-          {COLUMNS.map((column) => {
-            const columnItems = grouped[column.key] ?? [];
-            const rawCount = grouped.raw[column.key]?.length ?? 0;
+          <div className={compact ? "grid gap-4 xl:grid-cols-4" : "grid min-h-[520px] gap-4 xl:grid-cols-4"}>
+            {COLUMNS.map((column) => {
+              const columnItems = grouped[column.key] ?? [];
+              const rawCount = grouped.raw[column.key]?.length ?? 0;
 
-            return (
-              <BoardColumn
-                key={column.key}
-                column={column}
-                items={columnItems}
-                isOver={overColumn === column.key}
-                canLoadMore={rawCount > columnItems.length}
-                onLoadMore={() => loadMore(column.key)}
-                loadingMore={loadingMoreColumn === column.key}
-                totalCount={rawCount}
-              >
-                {columnItems.map((item) => (
-                  <DraggableIssueCard
-                    key={item.id}
-                    item={item}
-                    activeId={activeId}
-                    onOpen={() => setSelectedIssue(item)}
-                    onOpenServiceRequest={() => {
-                      if (item?.serviceRequest?.id) {
-                        router.push(
-                          `/admin/service-requests/${item.serviceRequest.id}`,
-                        );
-                      }
-                    }}
-                  />
-                ))}
-              </BoardColumn>
-            );
-          })}
-        </div>
+              return (
+                <BoardColumn
+                  key={column.key}
+                  column={column}
+                  items={columnItems}
+                  isOver={overColumn === column.key}
+                  canLoadMore={rawCount > columnItems.length}
+                  onLoadMore={() => loadMore(column.key)}
+                  loadingMore={loadingMoreColumn === column.key}
+                  totalCount={rawCount}
+                >
+                  {columnItems.map((item) => (
+                    <DraggableIssueCard
+                      key={item.id}
+                      item={item}
+                      activeId={activeId}
+                      onOpen={() => setSelectedIssue(item)}
+                      onOpenServiceRequest={() => {
+                        if (item?.serviceRequest?.id) {
+                          router.push(`/admin/services-requests/${item.serviceRequest.id}`);
+                        }
+                      }}
+                    />
+                  ))}
+                </BoardColumn>
+              );
+            })}
+          </div>
 
-        <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
-          {activeItem ? (
-            <div className="w-[360px] max-w-[90vw]">
-              <IssueCard
-                item={activeItem}
-                dragging
-                onOpen={() => { }}
-                onOpenServiceRequest={() => { }}
-              />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+            {activeItem ? (
+              <div className="w-[360px] max-w-[90vw]">
+                <IssueCard item={activeItem} dragging onOpen={() => { }} onOpenServiceRequest={() => { }} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {selectedIssue && (
         <IssueDrawer
@@ -725,57 +594,32 @@ export default function TechnicalIssueBoardClient({
           busyId={busyId}
           actualCost={drawerState.actualCost}
           resolutionNote={drawerState.resolutionNote}
-          onChangeActualCost={(value) =>
-            setDrawerState((prev) => ({ ...prev, actualCost: value }))
-          }
-          onChangeResolutionNote={(value) =>
-            setDrawerState((prev) => ({ ...prev, resolutionNote: value }))
-          }
-          technicalDetailCatalogOptions={
-            normalizedTechnicalDetailCatalogOptions
-          }
-          supplyCatalogOptions={normalizedSupplyCatalogOptions}
-          mechanicalPartCatalogOptions={normalizedMechanicalPartCatalogOptions}
+          onChangeActualCost={(value) => setDrawerState((prev) => ({ ...prev, actualCost: value }))}
+          onChangeResolutionNote={(value) => setDrawerState((prev) => ({ ...prev, resolutionNote: value }))}
+          technicalDetailCatalogOptions={normalizedTechnicalDetailCatalogOptions}
+          vendorOptions={localVendorOptions}
+          onVendorOptionsChange={setLocalVendorOptions}
           technicalDetailCatalogId={drawerState.technicalDetailCatalogId}
-          supplyCatalogId={drawerState.supplyCatalogId}
-          mechanicalPartCatalogId={drawerState.mechanicalPartCatalogId}
           actionMode={drawerState.actionMode}
           vendorId={drawerState.vendorId}
-          vendorOptions={vendorOptions}
           onChangeTechnicalDetailCatalogId={(value) =>
-            setDrawerState((prev) => ({
-              ...prev,
-              technicalDetailCatalogId: value,
-            }))
+            setDrawerState((prev) => ({ ...prev, technicalDetailCatalogId: value }))
           }
-          onChangeSupplyCatalogId={(value) =>
-            setDrawerState((prev) => ({ ...prev, supplyCatalogId: value }))
-          }
-          onChangeMechanicalPartCatalogId={(value) =>
-            setDrawerState((prev) => ({
-              ...prev,
-              mechanicalPartCatalogId: value,
-            }))
-          }
-          onChangeActionMode={(value) =>
-            setDrawerState((prev) => ({ ...prev, actionMode: value }))
-          }
-          onChangeVendorId={(value) =>
-            setDrawerState((prev) => ({ ...prev, vendorId: value }))
-          }
+          onChangeActionMode={(value) => setDrawerState((prev) => ({ ...prev, actionMode: value }))}
+          onChangeVendorId={(value) => setDrawerState((prev) => ({ ...prev, vendorId: value }))}
           onClose={() => setSelectedIssue(null)}
           onAction={callAction}
           onOpenServiceRequest={() => {
             if (selectedIssue?.serviceRequest?.id) {
-              router.push(
-                `/admin/service-requests/${selectedIssue.serviceRequest.id}`,
-              );
+              router.push(`/admin/service-requests/${selectedIssue.serviceRequest.id}`);
             }
           }}
           onCancelIssue={handleCancelIssue}
           cancelingIssueId={cancelingIssueId}
         />
       )}
+
+
     </div>
-  );
+  )
 }

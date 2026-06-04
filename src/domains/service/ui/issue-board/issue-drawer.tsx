@@ -1,25 +1,20 @@
 import * as React from "react";
+import { Plus, X } from "lucide-react";
+import { createQuickVendor } from "@/domains/vendor/client/vendor.actions";
 import type {
   IssueItem,
   MechanicalPartCatalogOption,
   SupplyCatalogOption,
   TechnicalDetailCatalogOption,
+  VendorOption,
 } from "./types";
 import {
   actionModeLabel,
   areaLabel,
   fmtDT,
-  fmtMoney,
   statusLabel,
 } from "./helpers";
 import { ClosedSrBadge, PriorityBadge, ReadyToCloseBadge } from "./badges";
-
-type VendorOption = {
-  id: string;
-  name: string;
-  phone?: string | null;
-  code?: string | null;
-};
 
 function normalizeAreaKey(value?: string | null) {
   const raw = String(value ?? "")
@@ -59,32 +54,32 @@ function normalizeAreaKey(value?: string | null) {
 
   return map[raw] ?? raw;
 }
+
 function catalogOptionLabel(option: {
   code?: string | null;
   name?: string | null;
   unit?: string | null;
-  group?: string | null;
   category?: string | null;
 }) {
   const code = String(option.code ?? "").trim();
   const name = String(option.name ?? "").trim();
-  const meta = String(
-    option.unit ?? option.group ?? option.category ?? "",
-  ).trim();
+  const meta = String(option.unit ?? option.category ?? "").trim();
 
   const main = [code, name].filter(Boolean).join(" - ");
   return meta ? `${main || "Không tên"} (${meta})` : main || "Không tên";
 }
-function vendorOptionLabel(vendor: VendorOption) {
-  const code = String(vendor.code ?? "").trim();
-  const name = String(vendor.name ?? "").trim();
-  const phone = String(vendor.phone ?? "").trim();
 
-  const main = [code, name].filter(Boolean).join(" - ") || "Không tên";
-  return phone ? `${main} - ${phone}` : main;
+function vendorLabel(vendor: VendorOption) {
+  return vendor.phone ? `${vendor.name} - ${vendor.phone}` : vendor.name;
 }
 
-function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
@@ -126,18 +121,177 @@ function TimelineStep({
   );
 }
 
+function VendorSelectWithQuickCreate({
+  value,
+  vendorOptions,
+  onChange,
+  onVendorsChange,
+}: {
+  value: string;
+  vendorOptions: VendorOption[];
+  onChange: (value: string) => void;
+  onVendorsChange?: (vendors: VendorOption[]) => void;
+}) {
+  const [creating, setCreating] = React.useState(false);
+  const [name, setName] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+
+  function handleCreate() {
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim();
+
+    if (!cleanName) {
+      setError("Vui lòng nhập tên vendor.");
+      return;
+    }
+
+    setError(null);
+
+    startTransition(async () => {
+      try {
+        const vendor = await createQuickVendor({
+          name: cleanName,
+          phone: cleanPhone || null,
+        });
+
+        const next = [
+          ...vendorOptions.filter((item) => item.id !== vendor.id),
+          vendor,
+        ].sort((a, b) => a.name.localeCompare(b.name, "vi"));
+
+        onVendorsChange?.(next);
+        onChange(vendor.id);
+        setName("");
+        setPhone("");
+        setCreating(false);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Không thể tạo vendor mới.",
+        );
+      }
+    });
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+          Vendor
+        </label>
+
+        {!creating ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setCreating(true);
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Vendor mới
+          </button>
+        ) : null}
+      </div>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+      >
+        <option value="">Chọn vendor</option>
+        {vendorOptions.map((vendor) => (
+          <option key={vendor.id} value={vendor.id}>
+            {vendorLabel(vendor)}
+          </option>
+        ))}
+      </select>
+
+      {creating ? (
+        <div className="mt-3 rounded-2xl bg-indigo-50/60 p-3 ring-1 ring-inset ring-indigo-100">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">
+                Vendor mới
+              </div>
+              <div className="mt-0.5 text-xs text-indigo-500">
+                Tạo nhanh vendor để gán ngay cho issue này.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(false);
+                setError(null);
+              }}
+              className="rounded-full p-1 text-indigo-500 hover:bg-white/70"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                Tên vendor
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 w-full rounded-xl border border-indigo-100 bg-white px-3 text-sm outline-none focus:border-indigo-300"
+                placeholder="Ví dụ: Anh A sửa vỏ"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                SĐT
+              </label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="h-10 w-full rounded-xl border border-indigo-100 bg-white px-3 text-sm outline-none focus:border-indigo-300"
+                placeholder="Tuỳ chọn"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={pending || !name.trim()}
+              className="self-end rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pending ? "Đang tạo..." : "Thêm"}
+            </button>
+          </div>
+
+          {error ? (
+            <div className="mt-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-600">
+              {error}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function IssueDrawer({
   issue,
   busyId,
   actualCost,
   resolutionNote,
   technicalDetailCatalogOptions,
-  supplyCatalogOptions,
-  mechanicalPartCatalogOptions,
+  supplyCatalogOptions = [],
+  mechanicalPartCatalogOptions = [],
   vendorOptions = [],
   technicalDetailCatalogId,
-  supplyCatalogId,
-  mechanicalPartCatalogId,
+  supplyCatalogId = "",
+  mechanicalPartCatalogId = "",
   actionMode,
   vendorId,
   onChangeActualCost,
@@ -147,6 +301,7 @@ export function IssueDrawer({
   onChangeMechanicalPartCatalogId,
   onChangeActionMode,
   onChangeVendorId,
+  onVendorOptionsChange,
   onClose,
   onAction,
   onOpenServiceRequest,
@@ -158,21 +313,22 @@ export function IssueDrawer({
   actualCost: string;
   resolutionNote: string;
   technicalDetailCatalogOptions: TechnicalDetailCatalogOption[];
-  supplyCatalogOptions: SupplyCatalogOption[];
-  mechanicalPartCatalogOptions: MechanicalPartCatalogOption[];
+  supplyCatalogOptions?: SupplyCatalogOption[];
+  mechanicalPartCatalogOptions?: MechanicalPartCatalogOption[];
   vendorOptions?: VendorOption[];
   technicalDetailCatalogId: string;
-  supplyCatalogId: string;
-  mechanicalPartCatalogId: string;
+  supplyCatalogId?: string;
+  mechanicalPartCatalogId?: string;
   actionMode: string;
   vendorId: string;
   onChangeActualCost: (value: string) => void;
   onChangeResolutionNote: (value: string) => void;
   onChangeTechnicalDetailCatalogId: (value: string) => void;
-  onChangeSupplyCatalogId: (value: string) => void;
-  onChangeMechanicalPartCatalogId: (value: string) => void;
+  onChangeSupplyCatalogId?: (value: string) => void;
+  onChangeMechanicalPartCatalogId?: (value: string) => void;
   onChangeActionMode: (value: string) => void;
   onChangeVendorId: (value: string) => void;
+  onVendorOptionsChange?: (vendors: VendorOption[]) => void;
   onClose: () => void;
   onAction: (
     issueId: string,
@@ -185,6 +341,7 @@ export function IssueDrawer({
 }) {
   const sr = issue?.serviceRequest ?? null;
   const issueAreaKey = normalizeAreaKey(issue.area);
+  const isVendorMode = String(actionMode || "").toUpperCase() === "VENDOR";
 
   const detailOptions = React.useMemo(() => {
     const options = Array.isArray(technicalDetailCatalogOptions)
@@ -197,20 +354,26 @@ export function IssueDrawer({
       (item) => normalizeAreaKey(item.area) === issueAreaKey,
     );
   }, [technicalDetailCatalogOptions, issueAreaKey]);
+
   const isStarting = issue.boardColumn === "READY";
   const isCompleting = issue.boardColumn === "IN_PROGRESS";
-  const isVendorMode = String(actionMode || "").toUpperCase() === "VENDOR";
+
+  const canStart =
+    busyId !== issue.id &&
+    Boolean(technicalDetailCatalogId) &&
+    (!isVendorMode || Boolean(vendorId));
+
+  const canComplete =
+    busyId !== issue.id &&
+    actualCost.trim() !== "" &&
+    resolutionNote.trim() !== "" &&
+    (!isVendorMode || Boolean(vendorId));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <button
-        type="button"
-        aria-label="Đóng modal"
-        className="absolute inset-0 cursor-default"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-stone-950/35" onClick={onClose} />
 
-      <div className="relative flex max-h-[96vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200 bg-white shadow-2xl transition-all sm:max-h-[90vh] sm:rounded-3xl">
+      <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-stone-200 bg-white shadow-2xl">
         <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -241,7 +404,7 @@ export function IssueDrawer({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <div className="space-y-5 p-5">
           <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <InfoLine label="Khu vực" value={areaLabel(issue.area)} />
@@ -267,11 +430,7 @@ export function IssueDrawer({
           <section className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="text-sm font-semibold text-stone-900">Timeline</div>
             <div className="mt-4 flex flex-wrap items-center gap-5">
-              <TimelineStep
-                label="Mở issue"
-                value={fmtDT(issue.openedAt)}
-                active
-              />
+              <TimelineStep label="Mở issue" value={fmtDT(issue.openedAt)} active />
               <TimelineStep
                 label="Xác nhận"
                 value={fmtDT(issue.confirmedAt)}
@@ -315,7 +474,7 @@ export function IssueDrawer({
                     <option value="">Chọn chi tiết</option>
                     {detailOptions.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.name}
+                        {catalogOptionLabel(option)}
                       </option>
                     ))}
                   </select>
@@ -337,21 +496,12 @@ export function IssueDrawer({
 
                 {isVendorMode ? (
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-                      Vendor
-                    </label>
-                    <select
+                    <VendorSelectWithQuickCreate
                       value={vendorId}
-                      onChange={(e) => onChangeVendorId(e.target.value)}
-                      className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
-                    >
-                      <option value="">Chọn vendor</option>
-                      {vendorOptions.map((vendor) => (
-                        <option key={vendor.id} value={vendor.id}>
-                          {vendorOptionLabel(vendor)}
-                        </option>
-                      ))}
-                    </select>
+                      vendorOptions={vendorOptions}
+                      onChange={onChangeVendorId}
+                      onVendorsChange={onVendorOptionsChange}
+                    />
                   </div>
                 ) : null}
               </div>
@@ -392,26 +542,13 @@ export function IssueDrawer({
                 </div>
 
                 {isVendorMode ? (
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-                      Vendor
-                    </label>
-                    <select
-                      value={vendorId}
-                      onChange={(e) => onChangeVendorId(e.target.value)}
-                      className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
-                    >
-                      <option value="">Chọn vendor</option>
-                      {vendorOptions.map((vendor) => (
-                        <option key={vendor.id} value={vendor.id}>
-                          {vendorOptionLabel(vendor)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className="hidden md:block" />
-                )}
+                  <VendorSelectWithQuickCreate
+                    value={vendorId}
+                    vendorOptions={vendorOptions}
+                    onChange={onChangeVendorId}
+                    onVendorsChange={onVendorOptionsChange}
+                  />
+                ) : null}
 
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
@@ -419,7 +556,7 @@ export function IssueDrawer({
                   </label>
                   <select
                     value={supplyCatalogId}
-                    onChange={(e) => onChangeSupplyCatalogId(e.target.value)}
+                    onChange={(e) => onChangeSupplyCatalogId?.(e.target.value)}
                     className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                   >
                     <option value="">Không dùng vật tư</option>
@@ -438,7 +575,7 @@ export function IssueDrawer({
                   <select
                     value={mechanicalPartCatalogId}
                     onChange={(e) =>
-                      onChangeMechanicalPartCatalogId(e.target.value)
+                      onChangeMechanicalPartCatalogId?.(e.target.value)
                     }
                     className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                   >
@@ -494,11 +631,7 @@ export function IssueDrawer({
               {issue.boardColumn === "READY" && (
                 <button
                   type="button"
-                  disabled={
-                    busyId === issue.id ||
-                    !technicalDetailCatalogId ||
-                    (isVendorMode && !vendorId)
-                  }
+                  disabled={!canStart}
                   onClick={() => onAction(issue.id, "start")}
                   className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -509,12 +642,7 @@ export function IssueDrawer({
               {issue.boardColumn === "IN_PROGRESS" && (
                 <button
                   type="button"
-                  disabled={
-                    busyId === issue.id ||
-                    actualCost.trim() === "" ||
-                    !resolutionNote.trim() ||
-                    (isVendorMode && !vendorId)
-                  }
+                  disabled={!canComplete}
                   onClick={() => onAction(issue.id, "complete")}
                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
