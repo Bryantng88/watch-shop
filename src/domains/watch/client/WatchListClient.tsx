@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import React from "react";
 import { WatchListToolbar } from "../ui/list";
 import WatchListViewTabs from "../ui/list/WatchListViewTabs";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
+import BuyBackWatchModal from "../ui/buy-back/BuyBackWatchModal";
 import { buildCounts } from "../ui/list/helpers";
 import { normalizeWatchListView } from "../shared/watch-status";
 
@@ -266,7 +268,11 @@ export default function WatchListClient(props: WatchListClientProps) {
     const sp = useSearchParams();
     const [isPending, startTransition] = useTransition();
     const progress = useAppProgress();
+    const notify = useNotify();
     const [serviceQuickRow, setServiceQuickRow] = React.useState<WatchRow | null>(null);
+    const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
+    const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
+    const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
     const urlParams = useMemo(() => sanitizeParams(new URLSearchParams(sp.toString())), [sp]);
     const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
 
@@ -493,6 +499,68 @@ export default function WatchListClient(props: WatchListClientProps) {
         navigateWithProgress(`/admin/consignments/new?productId=${row.productId}`, "Đang mở ký gửi");
     }
 
+    function onBuyBack(row: WatchRow) {
+        setBuyBackError(null);
+        setBuyBackRow(row);
+    }
+
+    async function submitBuyBack(payload: {
+        productId: string;
+        unitCost: number;
+        notes?: string | null;
+    }) {
+        setBuyBackSubmitting(true);
+        setBuyBackError(null);
+
+        try {
+            const res = await fetch("/api/admin/watches/buy-back", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const json = await res.json().catch(() => null);
+
+            if (!res.ok || !json?.ok) {
+                throw new Error(json?.error || "Không thể tạo phiếu mua lại.");
+            }
+
+            const acquisitionId = json.data?.acquisitionId ?? json.data?.id;
+
+            notify.success({
+                title: "Đã tạo phiếu mua lại",
+                message: "Phiếu BUY_BACK đã được tạo dạng DRAFT.",
+            });
+
+            setBuyBackRow(null);
+
+            if (acquisitionId) {
+                navigateWithProgress(
+                    `/admin/acquisitions/${acquisitionId}`,
+                    "Đang mở phiếu mua lại",
+                );
+            } else {
+                router.refresh();
+            }
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Không thể tạo phiếu mua lại.";
+
+            setBuyBackError(message);
+            notify.error({
+                title: "Không thể tạo buy back",
+                message,
+            });
+        } finally {
+            setBuyBackSubmitting(false);
+        }
+    }
+
     const brandOptions = (props.brands ?? []).map((brand) => ({
         label: brand.name,
         value: brand.id,
@@ -545,6 +613,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onService={onService}
                     onQuickOrder={onQuickOrder}
                     onConsign={onConsign}
+                    onBuyBack={onBuyBack}
                 />
             </div>
 
@@ -555,6 +624,21 @@ export default function WatchListClient(props: WatchListClientProps) {
                 loading={loading}
                 onPage={handlePage}
             />
+            {buyBackRow ? (
+                <BuyBackWatchModal
+                    open
+                    row={buyBackRow}
+                    submitting={buyBackSubmitting}
+                    error={buyBackError}
+                    onClose={() => {
+                        if (buyBackSubmitting) return;
+                        setBuyBackRow(null);
+                        setBuyBackError(null);
+                    }}
+                    onSubmit={submitBuyBack}
+                />
+            ) : null}
+
             {serviceQuickRow ? (
                 <WatchServiceQuickModal
                     open

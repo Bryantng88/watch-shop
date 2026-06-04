@@ -12,3 +12,4 @@ export * from "./acquisition-spec-mapper";
 export * from "./acquisition-watch-spec-status.helper";
 export * from "./acquisition-watch-title.helper";
 export * from "./acquisition-edit.service";
+export * from "./acquisition-buyback.service";

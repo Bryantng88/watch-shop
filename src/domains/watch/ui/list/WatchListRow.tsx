@@ -7,6 +7,7 @@ import {
     Hammer,
     HandCoins,
     ImageIcon,
+    RotateCcw,
     PackageOpen,
     Pencil,
     ShoppingCart,
@@ -46,6 +47,7 @@ type Props = {
     onService?: (row: WatchRow) => void;
     onQuickOrder?: (row: WatchRow) => void;
     onConsign?: (row: WatchRow) => void;
+    onBuyBack?: (row: WatchRow) => void;
 };
 
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
@@ -288,6 +290,7 @@ export default function WatchListRow({
     onService,
     onQuickOrder,
     onConsign,
+    onBuyBack,
 }: Props) {
     const isRecent =
         product.updatedAt &&
@@ -300,6 +303,9 @@ export default function WatchListRow({
 
     const isLockedForEdit =
         saleState === "SOLD";
+
+    const canBuyBack = saleState === "SOLD";
+
     const actions = [
         onView && {
             key: "view",
@@ -338,6 +344,15 @@ export default function WatchListRow({
             label: "Consign",
             icon: <HandCoins className="h-4 w-4" />,
             onClick: onConsign,
+        },
+
+        onBuyBack &&
+        canBuyBack && {
+            key: "buy-back",
+            label: "Buy back",
+            icon: <RotateCcw className="h-4 w-4" />,
+            separatorBefore: true,
+            onClick: onBuyBack,
         },
 
         onDelete && {

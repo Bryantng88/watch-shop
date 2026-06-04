@@ -5,12 +5,11 @@ import type {
   QuickOrderWatchInput,
 } from "../shared";
 import { getWatchBridgeRow } from "./watch-bridge.repo";
-import { markWatchConsignedTo, markWatchReady, markWatchServicePending } from "../state";
+import { markWatchConsignedTo } from "../state";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
 import * as orderService from "@/domains/order/server";
 import * as acquisitionService from "@/domains/acquisition/server";
-import * as serviceRequestService from "@/app/(admin)/admin/services/_server/service_request.service";
 
 function normalizeStatus(value: unknown) {
   return String(value ?? "")
@@ -57,29 +56,23 @@ export async function buyBackFromWatch(input: BuyBackFromWatchInput) {
     throw new Error("Không tìm thấy watch");
   }
 
-  const result = await acquisitionService.createBuyBackFromProduct({
+  const productStatus = normalizeStatus(watch.product.status);
+  const saleState = normalizeStatus(watch.saleStage);
+
+  if (productStatus !== "SOLD" && saleState !== "SOLD") {
+    throw new Error("Chỉ watch SOLD mới được buy back");
+  }
+
+  // Quan trọng: chỉ tạo Acquisition BUY_BACK dạng DRAFT.
+  // Không đổi trạng thái watch ở đây, vì user có thể tạo draft rồi bỏ đó.
+  // Watch chỉ được trả về kho khi phiếu BUY_BACK được POST.
+  return acquisitionService.createBuyBackFromProduct({
     productId: input.productId,
     unitCost: Number(input.unitCost ?? 0),
     notes: input.notes ?? null,
     customerId: input.customerId ?? null,
     needService: Boolean(input.needService),
   });
-
-  if (input.needService) {
-    await markWatchServicePending(input.productId);
-  } else {
-    await markWatchReady(input.productId);
-  }
-
-  if (input.needService) {
-    await serviceRequestService.ensurePriorityTechnicalCheckForBuyBack({
-      productId: input.productId,
-      reason: "Buy back cần kiểm tra lại",
-      source: "BUY_BACK",
-    });
-  }
-
-  return result;
 }
 
 export async function consignWatch(input: ConsignWatchInput) {

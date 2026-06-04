@@ -14,6 +14,7 @@ import {
     type AcquisitionInlineImageInput,
 } from "../server/acquisition-media.service";
 import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
+import { restoreBuyBackWatchAfterAcquisitionPostTx } from "../server";
 
 type PendingInlineImageAttach = {
     acquisitionId: string;
@@ -126,6 +127,11 @@ export async function postAcquisitionApplication(
             const posted = await repoAcq.changeDraftToPost(tx as any, acqId);
 
             await createInitialPaymentForAcquisitionTx(tx as any, acqId);
+
+            // BUY_BACK: chỉ khi phiếu nhập được POST mới trả watch về kho.
+            // SaleStage không bị hard-code; helper sẽ quyết định READY/PROCESSING
+            // theo dữ liệu content + gallery hiện có.
+            await restoreBuyBackWatchAfterAcquisitionPostTx(tx as any, acqId);
 
             return posted;
         },
