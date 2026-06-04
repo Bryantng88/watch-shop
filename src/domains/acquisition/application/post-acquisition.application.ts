@@ -65,10 +65,11 @@ export async function postAcquisitionApplication(
 
     const vendorId = await resolveVendorIdForPosting(acq, vendorName);
 
-    if (!vendorId) {
+    const isBuyBack = acq.type === "BUY_BACK";
+
+    if (!isBuyBack && !acq.vendorId) {
         throw new Error("Không tìm thấy vendor để post phiếu");
     }
-
     const items = acq.acquisitionItem ?? [];
 
     if (!items.length) {

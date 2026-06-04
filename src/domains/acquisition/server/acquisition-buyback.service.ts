@@ -1,4 +1,4 @@
-import { AcquisitionStatus, AcquisitionType, Prisma, ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import { AcquisitionStatus, OrderStatus, AcquisitionType, Prisma, ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 
 import { prisma, type DB, dbOrTx } from "@/server/db/client";
 
@@ -25,7 +25,10 @@ async function resolveLatestSoldOrderForProduct(tx: DB, productId: string) {
             productId,
             order: {
                 status: {
-                    notIn: ["DRAFT", "CANCELLED", "CANCELED"] as any,
+                    notIn: [
+                        OrderStatus.DRAFT,
+                        OrderStatus.CANCELLED,
+                    ],
                 },
             },
         },
