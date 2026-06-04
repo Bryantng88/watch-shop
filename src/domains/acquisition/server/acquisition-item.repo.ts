@@ -11,7 +11,6 @@ export type CreateOrUpdateAcqItemInput = {
     quantity?: number;
     unitCost?: number;
     unitPrice?: number;
-    watchFlags?: any;
     quickSpec?: any;
     aiMeta?: any;
 };
@@ -30,7 +29,6 @@ function resolveItemUnitCost(input: CreateOrUpdateAcqItemInput) {
 
 function buildItemDescription(input: CreateOrUpdateAcqItemInput) {
     return stringifyAcquisitionItemMeta({
-        watchFlags: input.watchFlags,
         quickSpec: input.quickSpec,
         aiMeta: input.aiMeta,
     });
@@ -74,7 +72,6 @@ export async function updateAcqItem(
     const db = getDb(tx);
 
     const shouldRewriteDescription =
-        item.watchFlags !== undefined ||
         item.quickSpec !== undefined ||
         item.aiMeta !== undefined;
 

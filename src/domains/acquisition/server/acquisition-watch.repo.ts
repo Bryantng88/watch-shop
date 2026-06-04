@@ -43,7 +43,7 @@ export async function createWatchDraftForAcquisitionItem(
             siteChannel: "AFFORDABLE",
             stockStage: "IN_STOCK",
             saleStage: "DRAFT",
-            serviceStage: "PENDING",
+            serviceStage: "NOT_REQUIRED",
         },
         select: {
             id: true,

@@ -9,10 +9,17 @@ import {
   actionModeLabel,
   areaLabel,
   fmtDT,
+  fmtMoney,
   statusLabel,
 } from "./helpers";
 import { ClosedSrBadge, PriorityBadge, ReadyToCloseBadge } from "./badges";
-import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+
+type VendorOption = {
+  id: string;
+  name: string;
+  phone?: string | null;
+  code?: string | null;
+};
 
 function normalizeAreaKey(value?: string | null) {
   const raw = String(value ?? "")
@@ -25,27 +32,33 @@ function normalizeAreaKey(value?: string | null) {
   const map: Record<string, string> = {
     MAY: "MOVEMENT",
     MOVEMENT: "MOVEMENT",
+
     VO: "CASE",
     CASE: "CASE",
+
     KINH: "CRYSTAL",
     GLASS: "CRYSTAL",
     CRYSTAL: "CRYSTAL",
+
     NUM: "CROWN",
     CROWN: "CROWN",
+
     MAT_SO: "DIAL",
     DIAL: "DIAL",
+
     HANDS: "HANDS",
     KIM: "HANDS",
+
     DAY: "BRACELET",
     STRAP: "BRACELET",
     BRACELET: "BRACELET",
+
     TONG_QUAT: "GENERAL",
     GENERAL: "GENERAL",
   };
 
   return map[raw] ?? raw;
 }
-
 function catalogOptionLabel(option: {
   code?: string | null;
   name?: string | null;
@@ -55,10 +68,20 @@ function catalogOptionLabel(option: {
 }) {
   const code = String(option.code ?? "").trim();
   const name = String(option.name ?? "").trim();
-  const meta = String(option.unit ?? option.group ?? option.category ?? "").trim();
+  const meta = String(
+    option.unit ?? option.group ?? option.category ?? "",
+  ).trim();
 
   const main = [code, name].filter(Boolean).join(" - ");
   return meta ? `${main || "Không tên"} (${meta})` : main || "Không tên";
+}
+function vendorOptionLabel(vendor: VendorOption) {
+  const code = String(vendor.code ?? "").trim();
+  const name = String(vendor.name ?? "").trim();
+  const phone = String(vendor.phone ?? "").trim();
+
+  const main = [code, name].filter(Boolean).join(" - ") || "Không tên";
+  return phone ? `${main} - ${phone}` : main;
 }
 
 function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
@@ -111,6 +134,7 @@ export function IssueDrawer({
   technicalDetailCatalogOptions,
   supplyCatalogOptions,
   mechanicalPartCatalogOptions,
+  vendorOptions = [],
   technicalDetailCatalogId,
   supplyCatalogId,
   mechanicalPartCatalogId,
@@ -136,6 +160,7 @@ export function IssueDrawer({
   technicalDetailCatalogOptions: TechnicalDetailCatalogOption[];
   supplyCatalogOptions: SupplyCatalogOption[];
   mechanicalPartCatalogOptions: MechanicalPartCatalogOption[];
+  vendorOptions?: VendorOption[];
   technicalDetailCatalogId: string;
   supplyCatalogId: string;
   mechanicalPartCatalogId: string;
@@ -172,40 +197,9 @@ export function IssueDrawer({
       (item) => normalizeAreaKey(item.area) === issueAreaKey,
     );
   }, [technicalDetailCatalogOptions, issueAreaKey]);
-
   const isStarting = issue.boardColumn === "READY";
   const isCompleting = issue.boardColumn === "IN_PROGRESS";
-  const notify = useNotify();
-  async function handleStartProcessing() {
-    const selectedId = String(technicalDetailCatalogId ?? "").trim();
-
-    if (!selectedId) {
-      notify.warning("Vui lòng chọn chi tiết kỹ thuật trước khi bắt đầu xử lý.");
-      return;
-    }
-
-    await onAction(issue.id, "start");
-  }
-
-  async function handleCompleteIssue() {
-    if (actualCost.trim() === "") {
-      notify.warning("Vui lòng nhập chi phí thực tế.");
-      return;
-    }
-
-    const cost = Number(actualCost);
-    if (!Number.isFinite(cost) || cost < 0) {
-      notify.warning("Chi phí thực tế không hợp lệ.");
-      return;
-    }
-
-    if (!resolutionNote.trim()) {
-      notify.warning("Vui lòng nhập kết luận xử lý.");
-      return;
-    }
-
-    await onAction(issue.id, "complete");
-  }
+  const isVendorMode = String(actionMode || "").toUpperCase() === "VENDOR";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
@@ -216,7 +210,7 @@ export function IssueDrawer({
         onClick={onClose}
       />
 
-      <div className="relative flex max-h-[96vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
+      <div className="relative flex max-h-[96vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-stone-200 bg-white shadow-2xl transition-all sm:max-h-[90vh] sm:rounded-3xl">
         <div className="sticky top-0 z-10 border-b border-stone-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -273,7 +267,11 @@ export function IssueDrawer({
           <section className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="text-sm font-semibold text-stone-900">Timeline</div>
             <div className="mt-4 flex flex-wrap items-center gap-5">
-              <TimelineStep label="Mở issue" value={fmtDT(issue.openedAt)} active />
+              <TimelineStep
+                label="Mở issue"
+                value={fmtDT(issue.openedAt)}
+                active
+              />
               <TimelineStep
                 label="Xác nhận"
                 value={fmtDT(issue.confirmedAt)}
@@ -317,7 +315,7 @@ export function IssueDrawer({
                     <option value="">Chọn chi tiết</option>
                     {detailOptions.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {catalogOptionLabel(option)}
+                        {option.name}
                       </option>
                     ))}
                   </select>
@@ -337,17 +335,23 @@ export function IssueDrawer({
                   </select>
                 </div>
 
-                {String(actionMode || "").toUpperCase() === "VENDOR" ? (
+                {isVendorMode ? (
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-                      Vendor ID
+                      Vendor
                     </label>
-                    <input
+                    <select
                       value={vendorId}
                       onChange={(e) => onChangeVendorId(e.target.value)}
                       className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
-                      placeholder="Nhập vendorId hoặc thay bằng select vendor sau"
-                    />
+                    >
+                      <option value="">Chọn vendor</option>
+                      {vendorOptions.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendorOptionLabel(vendor)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 ) : null}
               </div>
@@ -355,7 +359,8 @@ export function IssueDrawer({
               {!detailOptions.length ? (
                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
                   Chưa có chi tiết kỹ thuật active cho khu vực{" "}
-                  {areaLabel(issue.area)}.
+                  {areaLabel(issue.area)}. Vào Danh mục để thêm
+                  TechnicalDetailCatalog.
                 </div>
               ) : null}
             </section>
@@ -367,37 +372,48 @@ export function IssueDrawer({
                 Kết luận hoàn tất issue
               </div>
               <p className="mt-1 text-sm text-stone-500">
-                Khi hoàn tất issue bắt buộc nhập chi phí thực tế và kết luận xử lý.
+                Khi hoàn tất issue bắt buộc nhập chi phí thực tế và kết luận xử
+                lý.
               </p>
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Thực hiện
+                  </label>
+                  <select
+                    value={actionMode || "INTERNAL"}
+                    onChange={(e) => onChangeActionMode(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                  >
+                    <option value="INTERNAL">Nội bộ</option>
+                    <option value="VENDOR">Vendor</option>
+                  </select>
+                </div>
+
+                {isVendorMode ? (
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-                      Thực hiện
+                      Vendor
                     </label>
                     <select
-                      value={actionMode || "INTERNAL"}
-                      onChange={(e) => onChangeActionMode(e.target.value)}
+                      value={vendorId}
+                      onChange={(e) => onChangeVendorId(e.target.value)}
                       className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
                     >
-                      <option value="INTERNAL">Nội bộ</option>
-                      <option value="VENDOR">Vendor</option>
+                      <option value="">Chọn vendor</option>
+                      {vendorOptions.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendorOptionLabel(vendor)}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  {String(actionMode || "").toUpperCase() === "VENDOR" ? (
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
-                        Vendor
-                      </label>
-                      <input
-                        value={vendorId}
-                        onChange={(e) => onChangeVendorId(e.target.value)}
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
-                        placeholder="Nhập vendorId"
-                      />
-                    </div>
-                  ) : null}
+                ) : (
+                  <div className="hidden md:block" />
+                )}
+
+                <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
                     Vật tư / supply
                   </label>
@@ -478,8 +494,12 @@ export function IssueDrawer({
               {issue.boardColumn === "READY" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id}
-                  onClick={handleStartProcessing}
+                  disabled={
+                    busyId === issue.id ||
+                    !technicalDetailCatalogId ||
+                    (isVendorMode && !vendorId)
+                  }
+                  onClick={() => onAction(issue.id, "start")}
                   className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Bắt đầu xử lý
@@ -489,8 +509,13 @@ export function IssueDrawer({
               {issue.boardColumn === "IN_PROGRESS" && (
                 <button
                   type="button"
-                  disabled={busyId === issue.id}
-                  onClick={handleCompleteIssue}
+                  disabled={
+                    busyId === issue.id ||
+                    actualCost.trim() === "" ||
+                    !resolutionNote.trim() ||
+                    (isVendorMode && !vendorId)
+                  }
+                  onClick={() => onAction(issue.id, "complete")}
                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Hoàn tất

@@ -165,7 +165,7 @@ export default function TechnicalIssueBoardClient({
       activationConstraint: { distance: 8 },
     }),
   );
-
+  const vendorOptions = catalogs?.vendorOptions ?? [];
   const filteredItems = React.useMemo(() => {
     const q = normalizeText(query);
 
@@ -280,8 +280,6 @@ export default function TechnicalIssueBoardClient({
               resolutionNote: drawerState.resolutionNote.trim() || null,
               supplyCatalogId: drawerState.supplyCatalogId || null,
               mechanicalPartCatalogId: drawerState.mechanicalPartCatalogId || null,
-              actionMode: drawerState.actionMode || "INTERNAL",
-              vendorId: drawerState.vendorId || null,
             }
             : action === "cancel"
               ? {
@@ -743,6 +741,7 @@ export default function TechnicalIssueBoardClient({
           mechanicalPartCatalogId={drawerState.mechanicalPartCatalogId}
           actionMode={drawerState.actionMode}
           vendorId={drawerState.vendorId}
+          vendorOptions={vendorOptions}
           onChangeTechnicalDetailCatalogId={(value) =>
             setDrawerState((prev) => ({
               ...prev,

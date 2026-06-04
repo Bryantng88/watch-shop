@@ -16,8 +16,16 @@ export default async function TechnicalIssueBoardPage({
 
     const data = await getTechnicalIssueBoardData({ serviceRequestId });
 
-    const technicalDetailCatalogOptions =
-        data.catalogs?.technicalDetailCatalogOptions ??
+    const catalogs = {
+        ...(data.catalogs ?? {}),
+        vendorOptions:
+            data.catalogs?.vendorOptions ?? [],
+    };
+    console.log(
+        "vendorOptions:",
+        JSON.stringify(data.catalogs?.vendorOptions, null, 2)
+    ); const technicalDetailCatalogOptions =
+        catalogs.technicalDetailCatalogOptions ??
         data.technicalDetailCatalogOptions ??
         [];
 
@@ -25,7 +33,7 @@ export default async function TechnicalIssueBoardPage({
         <TechnicalIssuesBoardClient
             items={data.items}
             counts={data.counts}
-            catalogs={data.catalogs}
+            catalogs={catalogs}
             technicalDetailCatalogOptions={technicalDetailCatalogOptions}
             serviceRequestId={serviceRequestId}
             title={

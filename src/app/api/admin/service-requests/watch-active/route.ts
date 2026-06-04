@@ -7,7 +7,21 @@ import {
 } from "@/domains/service/server/watch-quick";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
+function issueAreaLabel(area: unknown) {
+    const key = String(area ?? "").trim().toUpperCase();
 
+    const map: Record<string, string> = {
+        GENERAL: "tổng quát",
+        MOVEMENT: "máy",
+        CASE: "vỏ",
+        CRYSTAL: "kính",
+        DIAL: "mặt số",
+        CROWN: "núm",
+        BRACELET: "dây",
+    };
+
+    return map[key] ?? "kỹ thuật";
+}
 function ok(data: unknown) {
     return NextResponse.json({ ok: true, data });
 }
@@ -56,12 +70,19 @@ export async function PATCH(request: NextRequest) {
         await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
 
         const body = await request.json().catch(() => ({}));
+        if (!body?.productId) throw new Error("Missing productId");
+        if (!body?.area) throw new Error("Missing issue area");
+
+        const fallbackNote = `Issue ${issueAreaLabel(body.area)}`;
+        const finalNote = String(body.note ?? "").trim() || fallbackNote;
+        const finalSummary = String(body.summary ?? "").trim() || finalNote;
+
         const data = await createQuickIssueForActiveWatchService({
             productId: body.productId,
             serviceRequestId: body.serviceRequestId,
             area: body.area,
-            summary: body.summary,
-            note: body.note,
+            summary: finalSummary,
+            note: finalNote,
             issueType: body.issueType,
             priority: body.priority,
         });

@@ -12,7 +12,6 @@ import { prisma, type DB } from "@/server/db/client";
 import { buildPaymentRef, money, toNumber, type Tx } from "@/domains/payment/server";
 import {
     getAiMetaFromDescription,
-    getWatchFlagsFromDescription,
     stringifyAcquisitionItemMeta,
 } from "../shared/acquisition-item-metadata";
 import type { WatchItemInput } from "../shared/acquisition.dto";
@@ -49,17 +48,9 @@ function resolveAiMeta(input: WatchItemInput, existing?: ExistingItem | null) {
     };
 }
 
-function resolveWatchFlags(input: WatchItemInput, existing?: ExistingItem | null) {
-    const current = getWatchFlagsFromDescription(existing?.description ?? null) ?? {};
-    return {
-        ...current,
-        ...(input.watchFlags ?? {}),
-    };
-}
 
 function buildDescription(input: WatchItemInput, existing?: ExistingItem | null) {
     return stringifyAcquisitionItemMeta({
-        watchFlags: resolveWatchFlags(input, existing),
         quickSpec: input.quickSpec ?? null,
         aiMeta: resolveAiMeta(input, existing),
     });

@@ -95,4 +95,11 @@ export type IssueBoardCatalogs = {
   mechanicalPartCatalogs?: MechanicalPartCatalogOption[];
   supplies?: SupplyCatalogOption[];
   parts?: MechanicalPartCatalogOption[];
+  vendorOptions?: VendorOption[];
+};
+
+export type VendorOption = {
+  id: string;
+  name: string;
+  phone?: string | null;
 };

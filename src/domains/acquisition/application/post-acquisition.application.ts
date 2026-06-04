@@ -6,7 +6,6 @@ import {
 } from "../server/acquisition-spec-job.service";
 import {
     getAiMetaFromDescription,
-    getWatchFlagsFromDescription,
 } from "../shared/acquisition-item-metadata";
 import * as repoAcq from "../server";
 import {
@@ -15,20 +14,12 @@ import {
     type AcquisitionInlineImageInput,
 } from "../server/acquisition-media.service";
 import { createInitialPaymentForAcquisitionTx } from "@/domains/payment/server";
-import { createTechnicalCheckFromAcquisitionTx } from "@/app/(admin)/admin/services/_server/service_request.service";
 
 type PendingInlineImageAttach = {
     acquisitionId: string;
     productId: string;
     image: AcquisitionInlineImageInput;
     sortOrder: number;
-};
-
-type PendingTechnicalCheck = {
-    acqId: string;
-    productId: string;
-    productSku?: string | null;
-    primaryImageUrl?: string | null;
 };
 
 async function resolveVendorIdForPosting(
@@ -84,14 +75,11 @@ export async function postAcquisitionApplication(
     }
 
     const pendingInlineImages: PendingInlineImageAttach[] = [];
-    const pendingTechnicalChecks: PendingTechnicalCheck[] = [];
 
     const result = await prisma.$transaction(
         async (tx) => {
             for (const [index, item] of items.entries()) {
                 let productId = item.productId;
-                let productSku = item.product?.sku ?? null;
-                let primaryImageUrl = item.product?.primaryImageUrl ?? null;
 
                 if (!productId) {
                     const draft = await repoAcq.createWatchDraftForAcquisitionItem(tx as any, {
@@ -127,17 +115,6 @@ export async function postAcquisitionApplication(
                     acquisitionItemId: item.id,
                     productId,
                 });
-
-                const watchFlags = getWatchFlagsFromDescription(item.description);
-
-                if (watchFlags?.needService) {
-                    pendingTechnicalChecks.push({
-                        acqId: acq.refNo ?? acq.id,
-                        productId,
-                        productSku,
-                        primaryImageUrl,
-                    });
-                }
             }
 
             await repoAcq.updateAcquisitionItemStatus(tx as any, {
@@ -162,21 +139,6 @@ export async function postAcquisitionApplication(
     Promise.allSettled(
         pendingInlineImages.map((pending) =>
             attachInlineImageToAcquisitionWatchDraft(pending)
-        )
-    ).catch(console.error);
-
-    // NON BLOCKING TECHNICAL CHECK
-    Promise.allSettled(
-        pendingTechnicalChecks.map((item) =>
-            prisma.$transaction(async (tx) => {
-                await createTechnicalCheckFromAcquisitionTx(tx as any, {
-                    productId: item.productId,
-                    variantId: null,
-                    skuSnapshot: item.productSku ?? null,
-                    primaryImageUrlSnapshot: item.primaryImageUrl ?? null,
-                    notes: `Tạo từ phiếu nhập ${item.acqId}`,
-                });
-            })
         )
     ).catch(console.error);
 

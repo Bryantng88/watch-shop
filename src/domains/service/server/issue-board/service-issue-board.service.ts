@@ -494,7 +494,19 @@ function boardWeight(col: BoardColumnKey) {
 
 export async function getTechnicalIssueBoardData(input: { serviceRequestId?: string | null } = {}) {
     const serviceRequestId = cleanId(input.serviceRequestId);
-
+    const vendorOptions = await prisma.vendor.findMany({
+        where: {
+            isActive: true,
+        },
+        orderBy: {
+            name: "asc",
+        },
+        select: {
+            id: true,
+            name: true,
+            phone: true,
+        },
+    });
     const [rows, technicalDetailCatalogOptions, supplyCatalogOptions, mechanicalPartCatalogOptions] = await Promise.all([
         prisma.technicalIssue.findMany({
             where: {
@@ -736,6 +748,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
             technicalDetailCatalogOptions,
             supplyCatalogOptions,
             mechanicalPartCatalogOptions,
+            vendorOptions,
         },
     };
 }

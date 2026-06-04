@@ -140,8 +140,11 @@ export default function WatchServiceQuickModal({
   const [summary, setSummary] = useState("");
   const [note, setNote] = useState("");
 
-  const canSubmit = Boolean(productId) && area.trim().length > 0 && note.trim().length > 0 && !loading && !isPending;
-
+  const canSubmit =
+    Boolean(productId) &&
+    area.trim().length > 0 &&
+    !loading &&
+    !isPending;
   const title = useMemo(
     () => data?.serviceRequest?.productTitle || productTitle || "Watch service",
     [data?.serviceRequest?.productTitle, productTitle],
@@ -202,7 +205,9 @@ export default function WatchServiceQuickModal({
             area,
             priority,
             summary: summary.trim() || null,
-            note,
+            note:
+              note.trim() ||
+              `Issue ${String(area).toLowerCase()}`,
             issueType: "CHECK",
           }),
         });
