@@ -1,18 +1,19 @@
 "use client";
 
 import { ArrowLeftRight } from "lucide-react";
-import {
-  DetailField,
-  SectionCard,
-  SectionEmpty,
-  StatusBadge,
-  fmtDate,
-  fmtMoney,
-} from "./shared";
+import { SectionCard, SectionEmpty, fmtDate, fmtMoney } from "./shared";
 
 type Props = {
   tradeHistory?: any;
   canViewTradeFinancials?: boolean;
+};
+
+type TimelineRow = {
+  id: string;
+  date: any;
+  amount: any;
+  text: string;
+  tone: "buy" | "sell" | "buyback";
 };
 
 function normalizeTradeHistory(tradeHistory: any) {
@@ -24,7 +25,7 @@ function normalizeTradeHistory(tradeHistory: any) {
             .toUpperCase()
             .includes("ACQUISITION") ||
           x?.acquisitionId ||
-          x?.unitCost
+          x?.unitCost,
       ),
       orders: tradeHistory.filter(
         (x) =>
@@ -32,7 +33,7 @@ function normalizeTradeHistory(tradeHistory: any) {
             .toUpperCase()
             .includes("ORDER") ||
           x?.orderId ||
-          x?.salePrice
+          x?.salePrice,
       ),
     };
   }
@@ -45,146 +46,108 @@ function normalizeTradeHistory(tradeHistory: any) {
   };
 }
 
-function TradeRow({
-  item,
-  type,
-  canViewTradeFinancials,
-}: {
-  item: any;
-  type: "ACQUISITION" | "ORDER";
-  canViewTradeFinancials: boolean;
-}) {
-  const title =
-    item.title ||
-    item.code ||
-    item.acquisitionCode ||
-    item.orderCode ||
-    item.id ||
-    "-";
+function getAcquisitionParty(item: any) {
+  if (String(item?.acquisitionType ?? "").toUpperCase() === "BUY_BACK") {
+    return (
+      item.customer?.name ||
+      item.customerName ||
+      item.orderCustomerName ||
+      "khách"
+    );
+  }
 
-  const party =
-    item.vendor?.name ||
-    item.customer?.name ||
-    item.vendorName ||
-    item.customerName ||
-    "-";
+  return item.vendor?.name || item.vendorName || "nguồn nhập";
+}
 
-  const money =
-    type === "ACQUISITION"
-      ? item.unitCost || item.costPrice || item.amount
-      : item.salePrice || item.totalAmount || item.amount;
+function getOrderParty(item: any) {
+  return item.customer?.name || item.customerName || "khách";
+}
 
-  return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-inset ring-slate-200">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="truncate text-sm font-semibold text-slate-900">
-              {title}
-            </div>
-            <StatusBadge label={item.status} />
-          </div>
+function buildTimeline(tradeHistory: any): TimelineRow[] {
+  const { acquisitions, orders } = normalizeTradeHistory(tradeHistory);
 
-          <div className="mt-1 text-xs text-slate-500">
-            {type === "ACQUISITION" ? "Phiếu nhập" : "Đơn hàng"} ·{" "}
-            {fmtDate(item.updatedAt || item.createdAt)}
-          </div>
-        </div>
+  const acquisitionRows: TimelineRow[] = acquisitions.map((item: any, index: number) => {
+    const acquisitionType = String(item?.acquisitionType ?? "").toUpperCase();
+    const isBuyBack = acquisitionType === "BUY_BACK";
 
-        {canViewTradeFinancials ? (
-          <div className="text-right text-sm font-semibold text-slate-900">
-            {fmtMoney(money)}
-          </div>
-        ) : null}
-      </div>
+    return {
+      id: `acq-${item.id ?? index}`,
+      date: item.createdAt ?? item.updatedAt,
+      amount: item.amount ?? item.unitCost ?? item.costPrice,
+      text: isBuyBack
+        ? `Mua lại từ ${getAcquisitionParty(item)}`
+        : `Mua từ ${getAcquisitionParty(item)}`,
+      tone: isBuyBack ? "buyback" : "buy",
+    };
+  });
 
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <DetailField
-          label={type === "ACQUISITION" ? "Vendor" : "Customer"}
-          value={party}
-        />
-        <DetailField
-          label="Created"
-          value={fmtDate(item.createdAt)}
-        />
-        <DetailField
-          label="Updated"
-          value={fmtDate(item.updatedAt)}
-        />
-      </div>
-    </div>
-  );
+  const orderRows: TimelineRow[] = orders.map((item: any, index: number) => ({
+    id: `order-${item.id ?? index}`,
+    date: item.createdAt ?? item.updatedAt,
+    amount: item.amount ?? item.salePrice ?? item.totalAmount,
+    text: `Bán cho ${getOrderParty(item)}`,
+    tone: "sell",
+  }));
+
+  return [...acquisitionRows, ...orderRows].sort((a, b) => {
+    const timeA = new Date(a.date ?? 0).getTime();
+    const timeB = new Date(b.date ?? 0).getTime();
+    return timeA - timeB;
+  });
+}
+
+function dotClass(tone: TimelineRow["tone"]) {
+  if (tone === "sell") return "bg-emerald-500";
+  if (tone === "buyback") return "bg-orange-500";
+  return "bg-blue-500";
 }
 
 export default function WatchTradePanel({
   tradeHistory,
   canViewTradeFinancials = false,
 }: Props) {
-  const { acquisitions, orders } = normalizeTradeHistory(tradeHistory);
-  const hasData = acquisitions.length > 0 || orders.length > 0;
+  const timeline = buildTimeline(tradeHistory);
 
   return (
     <SectionCard
       title="Lịch sử giao dịch"
-      subtitle="Theo dõi nguồn nhập và giao dịch bán liên quan."
+      subtitle="Theo dõi vòng đời mua vào, bán ra và mua lại của watch."
       icon={<ArrowLeftRight className="h-5 w-5" />}
       defaultOpen
     >
-      {!hasData ? (
+      {timeline.length === 0 ? (
         <SectionEmpty text="Chưa có lịch sử nhập/bán cho watch này." />
       ) : (
-        <div className="space-y-6">
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-slate-900">
-                Phiếu nhập
+        <div className="space-y-2">
+          {timeline.map((row, index) => (
+            <div
+              key={row.id}
+              className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                  {index + 1}
+                </div>
+
+                <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass(row.tone)}`} />
+
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-950">
+                    {row.text}
+                  </div>
+                  <div className="mt-0.5 text-xs text-slate-500">
+                    {fmtDate(row.date)}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                {acquisitions.length}
-              </div>
+
+              {canViewTradeFinancials ? (
+                <div className="shrink-0 text-right text-sm font-semibold text-slate-950">
+                  {fmtMoney(row.amount)}
+                </div>
+              ) : null}
             </div>
-
-            {acquisitions.length === 0 ? (
-              <SectionEmpty text="Chưa có phiếu nhập liên quan." />
-            ) : (
-              <div className="space-y-3">
-                {acquisitions.map((item: any, index: number) => (
-                  <TradeRow
-                    key={item.id ?? index}
-                    item={item}
-                    type="ACQUISITION"
-                    canViewTradeFinancials={canViewTradeFinancials}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-slate-900">
-                Đơn hàng
-              </div>
-              <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                {orders.length}
-              </div>
-            </div>
-
-            {orders.length === 0 ? (
-              <SectionEmpty text="Chưa có đơn hàng liên quan." />
-            ) : (
-              <div className="space-y-3">
-                {orders.map((item: any, index: number) => (
-                  <TradeRow
-                    key={item.id ?? index}
-                    item={item}
-                    type="ORDER"
-                    canViewTradeFinancials={canViewTradeFinancials}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       )}
     </SectionCard>

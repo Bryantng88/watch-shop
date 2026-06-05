@@ -103,22 +103,85 @@ export async function getOpenServiceWatches(db: DB) {
   });
 }
 
-export async function getWatchTradeHistory(_db: DB, _productId: string) {
-  return [];
+export async function getWatchTradeHistory(db: DB, productId: string) {
+  const client = dbOrTx(db);
+
+  const [acquisitionItems, orderItems] = await Promise.all([
+    client.acquisitionItem.findMany({
+      where: { productId },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: {
+        acquisition: {
+          include: {
+            vendor: true,
+          },
+        },
+      },
+    }),
+
+    client.orderItem.findMany({
+      where: { productId },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: {
+        order: true,
+      },
+    }),
+  ]);
+
+  return {
+    acquisitions: acquisitionItems.map((item: any) => ({
+      id: item.id,
+      type: "ACQUISITION",
+      acquisitionId: item.acquisitionId,
+      code: item.acquisition?.refNo ?? item.acquisitionId,
+      acquisitionCode: item.acquisition?.refNo ?? item.acquisitionId,
+      status: item.acquisition?.accquisitionStt ?? item.status ?? null,
+      acquisitionType: item.acquisition?.type ?? null,
+      unitCost: item.unitCost ?? null,
+      amount: item.unitCost ?? null,
+      vendor: item.acquisition?.vendor ?? null,
+      vendorName: item.acquisition?.vendor?.name ?? null,
+      createdAt: item.acquisition?.createdAt ?? item.createdAt,
+      updatedAt: item.acquisition?.updatedAt ?? item.updatedAt,
+    })),
+
+    orders: orderItems.map((item: any) => ({
+      id: item.id,
+      type: "ORDER",
+      orderId: item.orderId,
+      code: item.order?.refNo ?? item.orderId,
+      orderCode: item.order?.refNo ?? item.orderId,
+      status: item.order?.status ?? null,
+      salePrice: item.unitPriceAgreed ?? item.listPrice ?? null,
+      amount: item.unitPriceAgreed ?? item.listPrice ?? null,
+      customerName: item.order?.customerName ?? null,
+      createdAt: item.order?.createdAt ?? item.createdAt,
+      updatedAt: item.order?.updatedAt ?? item.updatedAt,
+    })),
+  };
 }
 
 export async function getWatchServiceHistory(db: DB, productId: string) {
   const client = dbOrTx(db);
 
-  return client.serviceRequest.findMany({
-    where: {
-      productId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+  const rows = await client.serviceRequest.findMany({
+    where: { productId },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     include: {
       vendor: true,
     },
   });
+
+  return rows.map((item: any) => ({
+    id: item.id,
+    issue: item.refNo ?? item.serviceName ?? "Service request",
+    title: item.refNo ?? "Service request",
+    status: item.status ?? null,
+    note: item.notes ?? item.customerItemNote ?? null,
+    description: item.notes ?? null,
+    vendor: item.vendor ?? null,
+    vendorName: item.vendor?.name ?? null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }));
 }
