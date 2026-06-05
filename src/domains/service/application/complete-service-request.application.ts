@@ -1,5 +1,6 @@
 import { prisma, type DB } from "@/server/db/client";
 import { ProductStatus, ServiceRequestStatus } from "@prisma/client";
+import { ensureServiceRequestPaymentApplicationTx } from "@/domains/payment/application";
 import * as serviceRepo from "../server/repository/service-request.repo";
 import * as maintRepo from "../server/maintenance/maintenance.repo";
 import { OPEN_SERVICE_STATUSES, canCompleteServiceStatus } from "../server/shared/service-request.rules";
@@ -105,7 +106,9 @@ export async function completeServiceRequestApplication(input: { serviceRequestI
       serialSnapshot: updated.serialSnapshot ?? null,
     } as any);
 
+    const payment = await ensureServiceRequestPaymentApplicationTx(tx, updated.id);
+
     await restoreProductStatusIfDone(tx, updated.productId ?? null);
-    return { ok: true, skipped: false, status: updated.status };
+    return { ok: true, skipped: false, status: updated.status, paymentId: payment?.id ?? null };
   });
 }

@@ -1,4 +1,4 @@
-import { ImageRole } from "@prisma/client";
+import { ImageRole, WatchSaleStage, WatchServiceStage } from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 
 type WatchImageInput = {
@@ -31,6 +31,23 @@ function normalizeSortOrder(value: unknown, fallback: number) {
     : fallback;
 }
 
+function hasText(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasMeaningfulContent(content: any) {
+  if (!content) return false;
+
+  return (
+    hasText(content.titleOverride) ||
+    hasText(content.hookText) ||
+    hasText(content.body) ||
+    hasText(content.summary) ||
+    (Array.isArray(content.bulletSpecs) &&
+      content.bulletSpecs.some((item) => hasText(item)))
+  );
+}
+
 async function assertWatchExists(db: DB, productId: string) {
   const client = dbOrTx(db);
 
@@ -44,6 +61,74 @@ async function assertWatchExists(db: DB, productId: string) {
   }
 
   return watch;
+}
+
+async function syncWatchSaleStageByAssets(tx: any, productId: string) {
+  const watch = await tx.watch.findUnique({
+    where: { productId },
+    select: {
+      productId: true,
+      saleStage: true,
+      serviceStage: true,
+      watchContent: {
+        select: {
+          titleOverride: true,
+          hookText: true,
+          body: true,
+          summary: true,
+          bulletSpecs: true,
+        },
+      },
+      product: {
+        select: {
+          productImage: {
+            where: {
+              role: ImageRole.GALLERY,
+            },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  if (!watch) return;
+
+  if (
+    watch.saleStage === WatchSaleStage.HOLD ||
+    watch.saleStage === WatchSaleStage.SOLD ||
+    watch.saleStage === WatchSaleStage.CONSIGNED_TO
+  ) {
+    return;
+  }
+
+  if (
+    watch.serviceStage === WatchServiceStage.PENDING ||
+    watch.serviceStage === WatchServiceStage.IN_SERVICE
+  ) {
+    return;
+  }
+
+  const hasContent = hasMeaningfulContent(watch.watchContent);
+  const hasGallery = (watch.product?.productImage?.length ?? 0) > 0;
+
+  const nextSaleStage =
+    hasContent && hasGallery
+      ? WatchSaleStage.READY
+      : hasContent || hasGallery
+        ? WatchSaleStage.PROCESSING
+        : WatchSaleStage.DRAFT;
+
+  if (watch.saleStage === nextSaleStage) return;
+
+  await tx.watch.update({
+    where: { productId },
+    data: {
+      saleStage: nextSaleStage,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function replaceWatchImagesRepo(
@@ -71,6 +156,10 @@ export async function replaceWatchImagesRepo(
       }));
 
       await tx.productImage.createMany({ data });
+    }
+
+    if (input.role === ImageRole.GALLERY) {
+      await syncWatchSaleStageByAssets(tx, input.productId);
     }
 
     return tx.productImage.findMany({
@@ -221,6 +310,7 @@ export async function getWatchGalleryImagesRepo(db: DB, productId: string) {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 }
+
 export async function ensureWatchInlineImageFromFirstGalleryRepo(
   db: DB,
   input: { productId: string }

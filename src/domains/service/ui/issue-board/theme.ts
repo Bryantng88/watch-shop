@@ -146,3 +146,31 @@ export function getAreaAccent(area?: string | null) {
     chip: "border-sky-200 bg-sky-50 text-sky-700",
   };
 }
+export function getPriorityAccent(priority?: string | null) {
+  const raw = String(priority || "NORMAL").toUpperCase();
+
+  if (raw === "URGENT") {
+    return {
+      topBar: "bg-orange-500",
+      headerBg: "bg-orange-50",
+      headerBorder: "border-orange-200",
+      chip: "border-orange-200 bg-orange-50 text-orange-700",
+    };
+  }
+
+  if (raw === "HIGH") {
+    return {
+      topBar: "bg-blue-500",
+      headerBg: "bg-blue-50",
+      headerBorder: "border-blue-200",
+      chip: "border-blue-200 bg-blue-50 text-blue-700",
+    };
+  }
+
+  return {
+    topBar: "bg-slate-400",
+    headerBg: "bg-slate-50",
+    headerBorder: "border-slate-200",
+    chip: "border-slate-200 bg-slate-100 text-slate-700",
+  };
+}

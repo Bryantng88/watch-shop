@@ -3,10 +3,13 @@ import {
   createInitialPaymentForAcquisitionTx,
   createInitialPaymentsForOrderTx,
   createPayment,
+  ensureServiceRequestPaymentTx,
   getAcquisitionPaymentSummary,
   getOrderPaymentSummary,
+  getServicePaymentSummary,
   listAcquisitionPayments,
   listOrderPayments,
+  listServicePayments,
   markOrderShipmentDeliveredAndCollectCod,
   cancelPayment,
   finalizeOrderByPaidAmount,
@@ -55,6 +58,18 @@ export async function listAcquisitionPaymentsApplication(acquisitionId: string) 
 
 export async function getAcquisitionPaymentSummaryApplication(acquisitionId: string) {
   return getAcquisitionPaymentSummary(acquisitionId);
+}
+
+export async function listServicePaymentsApplication(serviceRequestId: string) {
+  return listServicePayments(serviceRequestId);
+}
+
+export async function getServicePaymentSummaryApplication(serviceRequestId: string) {
+  return getServicePaymentSummary(serviceRequestId);
+}
+
+export async function ensureServiceRequestPaymentApplicationTx(tx: Tx, serviceRequestId: string) {
+  return ensureServiceRequestPaymentTx(tx, serviceRequestId);
 }
 
 export async function createInitialPaymentsForOrderApplicationTx(tx: Tx, orderId: string) {

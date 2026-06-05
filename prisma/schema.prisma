@@ -42,6 +42,7 @@ model Acquisition {
   vendor          Vendor?           @relation(fields: [vendorId], references: [id], onUpdate: NoAction)
   acquisitionItem AcquisitionItem[]
   Invoice         Invoice[]
+  Task            Task[]
 
   @@index([customerId, acquiredAt])
   @@index([vendorId, acquiredAt])
@@ -366,6 +367,7 @@ model Order {
   customer              Customer?               @relation(fields: [customerId], references: [id])
   orderItem             OrderItem[]
   shipments             Shipment[]
+  Task                  Task[]
 
   @@index([createdAt])
   @@index([customerId])
@@ -449,6 +451,7 @@ model Payment {
   refNo              String?             @unique @db.VarChar(30)
   updatedAt          DateTime            @default(now())
   maintenanceRecord  MaintenanceRecord[]
+  Task               Task[]
 
   @@index([acquisition_id], map: "idx_payment_acquisition")
   @@index([direction], map: "idx_payment_direction")
@@ -718,6 +721,7 @@ model ServiceRequest {
   serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
   technicalAssessment     TechnicalAssessment?
   technicalIssue          TechnicalIssue[]
+  Task                    Task[]
 
   @@index([customerId])
   @@index([orderItemId])
@@ -755,6 +759,7 @@ model Shipment {
   orderRefNo   String?
   customerName String?
   order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
+  Task         Task[]
 }
 
 model StrapVariantSpec {
@@ -860,6 +865,7 @@ model TechnicalIssue {
   Vendor                   Vendor?                       @relation(fields: [vendorId], references: [id])
   technicalDetailCatalogId String?
   technicalDetailCatalog   TechnicalDetailCatalog?       @relation(fields: [technicalDetailCatalogId], references: [id])
+  Task                     Task[]
 
   @@index([technicalDetailCatalogId])
   @@index([assessmentId])
@@ -985,6 +991,7 @@ model Watch {
   watchPrice   WatchPrice?
   watchSpecV2  WatchSpecV2?
   reviewStates WatchReviewState[]
+  Task         Task[]
 
   @@index([gender])
   @@index([saleStage])
@@ -1387,6 +1394,92 @@ model MediaAsset {
   @@index([status, acquisitionId])
   @@index([productId, role, sortOrder])
   @@index([isMissing, parentPrefix])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskType {
+  PERSONAL
+  WATCH
+  ORDER
+  SHIPMENT
+  ACQUISITION
+  SERVICE
+  TECHNICAL_ISSUE
+  PAYMENT
+  OTHER
+}
+
+enum TaskVisibility {
+  PRIVATE
+  TEAM
+}
+
+model Task {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  title       String
+  description String?
+
+  type       TaskType       @default(PERSONAL)
+  status     TaskStatus     @default(TODO)
+  priority   TaskPriority   @default(MEDIUM)
+  visibility TaskVisibility @default(PRIVATE)
+
+  dueAt       DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  createdByUserId  String?
+  assignedToUserId String?
+
+  watchId          String?
+  orderId          String?
+  shipmentId       String?
+  acquisitionId    String?
+  serviceRequestId String?
+  technicalIssueId String?
+  paymentId        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  watch          Watch?          @relation(fields: [watchId], references: [id], onDelete: SetNull)
+  order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  shipment       Shipment?       @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  acquisition    Acquisition?    @relation(fields: [acquisitionId], references: [id], onDelete: SetNull)
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
+  payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([status])
+  @@index([priority])
+  @@index([visibility])
+  @@index([dueAt])
+  @@index([createdAt])
+  @@index([assignedToUserId])
+  @@index([createdByUserId])
+  @@index([watchId])
+  @@index([orderId])
+  @@index([shipmentId])
+  @@index([acquisitionId])
+  @@index([serviceRequestId])
+  @@index([technicalIssueId])
+  @@index([paymentId])
 }
 
 enum AcquisitionItemKind {

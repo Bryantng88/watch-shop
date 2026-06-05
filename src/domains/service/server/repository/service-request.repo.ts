@@ -24,6 +24,13 @@ export type ServiceRequestListRow = {
   maintenanceCount: number;
   issueCount: number;
   openIssueCount: number;
+  actualCostTotal: number;
+  estimatedCostTotal: number;
+  paidAmount: number;
+  collectedAmount: number;
+  unpaidPaymentAmount: number;
+  canceledPaymentAmount: number;
+  remainingAmount: number;
   productId: string | null;
   orderItem: {
     id: string;
@@ -70,7 +77,7 @@ export async function getServiceRequestList(
         serviceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenanceRecord: true, technicalIssue: true } },
         technicalIssue: {
-          select: { executionStatus: true },
+          select: { executionStatus: true, actualCost: true, estimatedCost: true },
         },
         orderItem: {
           select: {
@@ -86,40 +93,84 @@ export async function getServiceRequestList(
     db.serviceRequest.count({ where }),
   ]);
 
-  const mapped: ServiceRequestListRow[] = rows.map((r) => ({
-    id: r.id,
-    refNo: r.refNo ?? null,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    scope: r.scope ?? null,
-    productId: r.product?.id ?? null,
-    productTitle: r.product?.title ?? null,
-    primaryImageUrl: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
-    skuSnapshot: r.skuSnapshot ?? null,
-    status: r.status,
-    vendorName: r.vendorNameSnap ?? null,
-    technicianName: r.technicianNameSnap ?? null,
-    serviceCatalog: r.serviceCatalog
-      ? { id: r.serviceCatalog.id, code: r.serviceCatalog.code ?? null, name: r.serviceCatalog.name }
-      : null,
-    maintenanceCount: r._count.maintenanceRecord,
-    issueCount: r._count.technicalIssue,
-    openIssueCount: (r.technicalIssue ?? []).filter((issue: any) => {
+  const serviceRequestIds = rows.map((row) => row.id);
+  const paymentRows = serviceRequestIds.length
+    ? await db.payment.findMany({
+      where: {
+        service_request_id: { in: serviceRequestIds },
+        type: "SERVICE" as any,
+        direction: "IN" as any,
+      },
+      select: { service_request_id: true, status: true, amount: true },
+    })
+    : [];
+
+  const paymentByServiceRequestId = new Map<string, { paid: number; collected: number; unpaid: number; canceled: number }>();
+  for (const payment of paymentRows as any[]) {
+    const key = payment.service_request_id;
+    if (!key) continue;
+    const current = paymentByServiceRequestId.get(key) ?? { paid: 0, collected: 0, unpaid: 0, canceled: 0 };
+    const amount = Number(payment.amount ?? 0);
+    const status = String(payment.status ?? "").toUpperCase();
+    if (status === "PAID") current.paid += amount;
+    else if (status === "COLLECTED") current.collected += amount;
+    else if (status === "UNPAID") current.unpaid += amount;
+    else if (status === "CANCELED" || status === "CANCELLED") current.canceled += amount;
+    paymentByServiceRequestId.set(key, current);
+  }
+
+  const mapped: ServiceRequestListRow[] = rows.map((r) => {
+    const activeIssues = (r.technicalIssue ?? []).filter((issue: any) => {
       const status = String(issue.executionStatus ?? "").toUpperCase();
-      return status !== "DONE" && status !== "COMPLETED" && status !== "CANCELED" && status !== "CANCELLED";
-    }).length,
-    orderItem: r.orderItem
-      ? {
-        id: r.orderItem.id,
-        title: r.orderItem.title ?? null,
-        serviceScope: (r.orderItem as any).serviceScope ?? null,
-        customerItemNote: (r.orderItem as any).customerItemNote ?? null,
-        order: r.orderItem.order
-          ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null }
-          : null,
-      }
-      : null,
-  }));
+      return status !== "CANCELED" && status !== "CANCELLED";
+    });
+    const actualCostTotal = activeIssues.reduce((sum: number, issue: any) => sum + Number(issue.actualCost ?? 0), 0);
+    const estimatedCostTotal = activeIssues.reduce((sum: number, issue: any) => sum + Number(issue.estimatedCost ?? 0), 0);
+    const payableTotal = actualCostTotal > 0 ? actualCostTotal : estimatedCostTotal;
+    const payment = paymentByServiceRequestId.get(r.id) ?? { paid: 0, collected: 0, unpaid: 0, canceled: 0 };
+
+    return {
+      id: r.id,
+      refNo: r.refNo ?? null,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      scope: r.scope ?? null,
+      productId: r.product?.id ?? null,
+      productTitle: r.product?.title ?? null,
+      primaryImageUrl: r.primaryImageUrlSnapshot ?? r.product?.primaryImageUrl ?? null,
+      skuSnapshot: r.skuSnapshot ?? null,
+      status: r.status,
+      vendorName: r.vendorNameSnap ?? null,
+      technicianName: r.technicianNameSnap ?? null,
+      serviceCatalog: r.serviceCatalog
+        ? { id: r.serviceCatalog.id, code: r.serviceCatalog.code ?? null, name: r.serviceCatalog.name }
+        : null,
+      maintenanceCount: r._count.maintenanceRecord,
+      issueCount: r._count.technicalIssue,
+      openIssueCount: (r.technicalIssue ?? []).filter((issue: any) => {
+        const status = String(issue.executionStatus ?? "").toUpperCase();
+        return status !== "DONE" && status !== "COMPLETED" && status !== "CANCELED" && status !== "CANCELLED";
+      }).length,
+      actualCostTotal,
+      estimatedCostTotal,
+      paidAmount: payment.paid,
+      collectedAmount: payment.collected,
+      unpaidPaymentAmount: payment.unpaid,
+      canceledPaymentAmount: payment.canceled,
+      remainingAmount: Math.max(0, payableTotal - payment.paid),
+      orderItem: r.orderItem
+        ? {
+          id: r.orderItem.id,
+          title: r.orderItem.title ?? null,
+          serviceScope: (r.orderItem as any).serviceScope ?? null,
+          customerItemNote: (r.orderItem as any).customerItemNote ?? null,
+          order: r.orderItem.order
+            ? { id: r.orderItem.order.id, refNo: r.orderItem.order.refNo ?? null }
+            : null,
+        }
+        : null,
+    };
+  });
 
   return { rows: mapped, total };
 }

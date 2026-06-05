@@ -5,8 +5,7 @@ import { GripVertical } from "lucide-react";
 import type { IssueItem } from "./types";
 import { actionModeLabel, areaLabel, fmtDT, fmtMoney, statusLabel } from "./helpers";
 import { ClosedSrBadge, PriorityBadge, ReadyToCloseBadge } from "./badges";
-import { getAreaAccent } from "./theme";
-
+import { getPriorityAccent } from "./theme";
 export function IssueCard({
   item,
   dragging,
@@ -21,8 +20,7 @@ export function IssueCard({
   dragHandleProps?: Record<string, any>;
 }) {
   const sr = item?.serviceRequest ?? null;
-  const accent = getAreaAccent(item.area);
-
+  const accent = getPriorityAccent(item.priority ?? item.serviceRequest?.priority);
   const imageSrc = sr?.primaryImageUrl
     ? `/api/media/sign?key=${encodeURIComponent(sr.primaryImageUrl)}`
     : null;

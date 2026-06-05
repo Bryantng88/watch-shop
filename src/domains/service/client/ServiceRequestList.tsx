@@ -6,6 +6,7 @@ import { ListChecks } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import PaymentWorkspace from "@/domains/payment/ui/PaymentWorkspace";
 import TechnicalAssessmentModal from "@/domains/service/ui/technical/TechnicalAssessmentModal";
 import {
     buildServiceRequestCounts,
@@ -61,6 +62,9 @@ export default function ServiceRequestListClient(props: Props) {
 
     const [technicalAssessmentRequestId, setTechnicalAssessmentRequestId] =
         useState<string | null>(null);
+    const [paymentServiceRequest, setPaymentServiceRequest] =
+        useState<ServiceReqItem | null>(null);
+    const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
     useEffect(() => {
         setFilters({ q, sort });
@@ -80,6 +84,25 @@ export default function ServiceRequestListClient(props: Props) {
         selectedItem?.productTitle ?? selectedItem?.product?.title ?? null;
     const productSku = selectedItem?.skuSnapshot ?? null;
     const movementSpecLabel = selectedItem?.product?.watchSpec?.movement ?? null;
+
+    const paymentOwner = useMemo(() => {
+        if (!paymentServiceRequest) return null;
+
+        const actualCostTotal = Number(paymentServiceRequest.actualCostTotal ?? 0);
+        const estimatedCostTotal = Number(paymentServiceRequest.estimatedCostTotal ?? 0);
+        const totalAmount = actualCostTotal > 0 ? actualCostTotal : estimatedCostTotal;
+
+        return {
+            type: "SERVICE" as const,
+            id: paymentServiceRequest.id,
+            code: paymentServiceRequest.refNo,
+            title: paymentServiceRequest.productTitle ?? paymentServiceRequest.product?.title ?? "Service request",
+            direction: "IN" as const,
+            totalAmount,
+            remainingAmount: paymentServiceRequest.remainingAmount ?? null,
+            listEndpoint: `/api/admin/service-requests/${paymentServiceRequest.id}/payment`,
+        };
+    }, [paymentServiceRequest]);
 
     function pushParams(mutator: (params: URLSearchParams) => void) {
         const next = new URLSearchParams(searchParams.toString());
@@ -183,6 +206,108 @@ export default function ServiceRequestListClient(props: Props) {
         }
     }
 
+
+    async function createPayment(payload: {
+        ownerType: "ORDER" | "ACQUISITION" | "SERVICE";
+        ownerId: string;
+        amount: number;
+        method: string;
+        note?: string | null;
+        markPaidNow: boolean;
+    }) {
+        setPaymentSubmitting(true);
+        try {
+            const response = await fetch(`/api/admin/service-requests/${payload.ownerId}/payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    amount: payload.amount,
+                    method: payload.method,
+                    note: payload.note ?? null,
+                    markPaidNow: payload.markPaidNow,
+                    purpose: "SERVICE_REQUEST",
+                }),
+            });
+
+            const json = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(json?.error || "Không thể tạo payment service.");
+
+            notify.success({
+                title: "Đã tạo payment service",
+                message: "Khoản thu dịch vụ đã được tạo.",
+            });
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể tạo payment",
+                message: error?.message || "Thao tác thất bại.",
+            });
+            throw error;
+        } finally {
+            setPaymentSubmitting(false);
+        }
+    }
+
+    async function completePayment(payload: {
+        paymentId: string;
+        reference?: string | null;
+        note?: string | null;
+    }) {
+        setPaymentSubmitting(true);
+        try {
+            const response = await fetch(`/api/admin/payments/${payload.paymentId}/complete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const json = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(json?.error || "Không thể hoàn tất payment.");
+
+            notify.success({
+                title: "Đã thu payment",
+                message: "Payment service đã được đánh dấu đã thu.",
+            });
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể hoàn tất payment",
+                message: error?.message || "Thao tác thất bại.",
+            });
+            throw error;
+        } finally {
+            setPaymentSubmitting(false);
+        }
+    }
+
+    async function cancelPayment(payload: { paymentId: string; note?: string | null }) {
+        setPaymentSubmitting(true);
+        try {
+            const response = await fetch(`/api/admin/payments/${payload.paymentId}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const json = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(json?.error || "Không thể hủy payment.");
+
+            notify.success({
+                title: "Đã hủy payment",
+                message: "Khoản payment service đã được hủy.",
+            });
+            router.refresh();
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể hủy payment",
+                message: error?.message || "Thao tác thất bại.",
+            });
+            throw error;
+        } finally {
+            setPaymentSubmitting(false);
+        }
+    }
+
     async function copyId(row: ServiceReqItem) {
         await navigator.clipboard?.writeText(row.id);
         notify.success({
@@ -250,6 +375,7 @@ export default function ServiceRequestListClient(props: Props) {
                 onOpenTechnicalAssessment={(row) =>
                     setTechnicalAssessmentRequestId(row.id)
                 }
+                onOpenPayment={(row) => setPaymentServiceRequest(row)}
             />
 
             <ServiceRequestPagination
@@ -258,6 +384,19 @@ export default function ServiceRequestListClient(props: Props) {
                 totalPages={props.totalPages}
                 onPageChange={goPage}
             />
+
+            {paymentOwner ? (
+                <PaymentWorkspace
+                    open={!!paymentServiceRequest}
+                    owner={paymentOwner}
+                    submitting={paymentSubmitting}
+                    onClose={() => setPaymentServiceRequest(null)}
+                    onCreatePayment={createPayment}
+                    onCompletePayment={completePayment}
+                    onCancelPayment={cancelPayment}
+                    onUpdated={() => router.refresh()}
+                />
+            ) : null}
 
             <TechnicalAssessmentModal
                 key={technicalAssessmentRequestId || "technical-assessment-empty"}

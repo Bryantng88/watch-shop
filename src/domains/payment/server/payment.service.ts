@@ -32,6 +32,12 @@ const ORDER_PAYMENT_PURPOSES = [
     PaymentPurpose.ORDER_FULL,
 ] as const;
 
+const SERVICE_PAYMENT_PURPOSES = [
+    PaymentPurpose.SERVICE_REQUEST,
+    PaymentPurpose.MAINTENANCE_COST,
+    PaymentPurpose.SERVICE_FEE,
+] as const;
+
 function paymentScopeWhere(ownerType: PaymentOwnerType, ownerId: string) {
     const base = ownerWhere(ownerType, ownerId);
 
@@ -47,6 +53,14 @@ function paymentScopeWhere(ownerType: PaymentOwnerType, ownerId: string) {
         return {
             ...base,
             type: PaymentType.ACQUISITION,
+        };
+    }
+
+    if (ownerType === "SERVICE") {
+        return {
+            ...base,
+            type: PaymentType.SERVICE,
+            purpose: { in: SERVICE_PAYMENT_PURPOSES as any },
         };
     }
 
@@ -146,6 +160,51 @@ async function getPaymentOwnerSeedTx(
             direction: PaymentDirection.OUT,
             defaultMethod: PaymentMethod.BANK_TRANSFER,
             status: String(acquisition.accquisitionStt ?? ""),
+        };
+    }
+
+    if (ownerType === "SERVICE") {
+        const serviceRequest = await tx.serviceRequest.findUnique({
+            where: { id: ownerId },
+            select: {
+                id: true,
+                status: true,
+                billable: true,
+                technicalIssue: {
+                    select: {
+                        executionStatus: true,
+                        actualCost: true,
+                        estimatedCost: true,
+                    },
+                },
+            },
+        });
+
+        if (!serviceRequest) throw new Error("Service request không tồn tại.");
+
+        const billable = serviceRequest.billable !== false;
+        const activeIssues = (serviceRequest.technicalIssue ?? []).filter((issue: any) => {
+            const status = String(issue.executionStatus ?? "").toUpperCase();
+            return status !== "CANCELED" && status !== "CANCELLED";
+        });
+
+        const actualTotal = activeIssues.reduce(
+            (sum: number, issue: any) => sum + toNumber(issue.actualCost),
+            0,
+        );
+        const estimatedTotal = activeIssues.reduce(
+            (sum: number, issue: any) => sum + toNumber(issue.estimatedCost),
+            0,
+        );
+
+        return {
+            ownerType,
+            ownerId: serviceRequest.id,
+            totalDue: billable ? (actualTotal > 0 ? actualTotal : estimatedTotal) : 0,
+            depositAmount: 0,
+            direction: PaymentDirection.IN,
+            defaultMethod: PaymentMethod.BANK_TRANSFER,
+            status: String(serviceRequest.status ?? ""),
         };
     }
 
@@ -404,6 +463,36 @@ export async function createInitialPaymentsForOrderTx(tx: Tx, orderId: string) {
     return rows;
 }
 
+export async function ensureServiceRequestPaymentTx(tx: Tx, serviceRequestId: string) {
+    const exposure = await getPaymentExposureTx(tx, "SERVICE", serviceRequestId);
+
+    if (exposure.totalDue <= 0) return null;
+
+    const status = String(exposure.status ?? "").toUpperCase();
+    if (status === "DRAFT" || status === "CANCELED" || status === "CANCELLED") return null;
+
+    if (exposure.availableToCreate <= 0) return null;
+
+    return createPaymentRowTx(tx, {
+        ownerType: "SERVICE",
+        ownerId: serviceRequestId,
+        amount: exposure.availableToCreate,
+        direction: PaymentDirection.IN,
+        type: PaymentType.SERVICE,
+        purpose: PaymentPurpose.SERVICE_REQUEST,
+        method: exposure.defaultMethod,
+        note: "Payment dịch vụ được tạo khi đóng service request.",
+    });
+}
+
+export async function listServicePayments(serviceRequestId: string) {
+    return prisma.$transaction((tx) => listPaymentsTx(tx, "SERVICE", serviceRequestId));
+}
+
+export async function getServicePaymentSummary(serviceRequestId: string) {
+    return prisma.$transaction((tx) => getPaymentSummaryTx(tx, "SERVICE", serviceRequestId));
+}
+
 export async function recomputeOrderPaymentRollupTx(tx: Tx, orderId: string) {
     const summary = await getPaymentSummaryTx(tx, "ORDER", orderId);
 
@@ -475,6 +564,16 @@ export async function createPayment(input: CreatePaymentInput) {
             }
         }
 
+        if (exposure.ownerType === "SERVICE") {
+            if (exposure.status === "DRAFT") throw new Error("Cần bắt đầu service trước khi tạo payment.");
+            if (exposure.status === "CANCELED" || exposure.status === "CANCELLED") {
+                throw new Error("Không thể tạo payment cho service request đã hủy.");
+            }
+            if (exposure.totalDue <= 0) {
+                throw new Error("Service request chưa có chi phí để tạo payment.");
+            }
+        }
+
         if (exposure.availableToCreate <= 0) {
             throw new Error("Owner đã có đủ payment đang mở. Vui lòng hoàn tất hoặc hủy payment hiện có trước khi tạo thêm.");
         }
@@ -509,13 +608,17 @@ export async function createPayment(input: CreatePaymentInput) {
                 (input.purpose as any) ??
                 (input.ownerType === "ACQUISITION"
                     ? "ACQUISITION_FULL"
-                    : PaymentPurpose.ORDER_REMAIN),
+                    : input.ownerType === "SERVICE"
+                        ? PaymentPurpose.SERVICE_REQUEST
+                        : PaymentPurpose.ORDER_REMAIN),
             method,
             note:
                 input.note ??
                 (input.ownerType === "ACQUISITION"
                     ? "Payment bổ sung cho phiếu nhập."
-                    : "Payment bổ sung cho đơn hàng."),
+                    : input.ownerType === "SERVICE"
+                        ? "Payment bổ sung cho service request."
+                        : "Payment bổ sung cho đơn hàng."),
         });
 
         if (!payment) throw new Error("Không thể tạo payment.");

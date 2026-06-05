@@ -118,36 +118,32 @@ export default function WatchTradePanel({
       {timeline.length === 0 ? (
         <SectionEmpty text="Chưa có lịch sử nhập/bán cho watch này." />
       ) : (
-        <div className="space-y-2">
-          {timeline.map((row, index) => (
-            <div
-              key={row.id}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
-                  {index + 1}
+        <div className="space-y-0">
+          {timeline.map((row, index) => {
+            const isLast = index === timeline.length - 1;
+
+            return (
+              <div key={row.id} className="grid grid-cols-[24px_1fr_auto] gap-3">
+                <div className="relative flex justify-center">
+                  <span className="mt-1.5 h-2.5 w-2.5 rounded-full bg-slate-950" />
+                  {!isLast ? (
+                    <span className="absolute top-5 bottom-0 w-px bg-slate-200" />
+                  ) : null}
                 </div>
 
-                <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass(row.tone)}`} />
-
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-950">
-                    {row.text}
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {fmtDate(row.date)}
-                  </div>
+                <div className="pb-5">
+                  <div className="text-sm font-semibold text-slate-950">{row.text}</div>
+                  <div className="mt-1 text-xs text-slate-500">{fmtDate(row.date)}</div>
                 </div>
+
+                {canViewTradeFinancials ? (
+                  <div className="pb-5 text-sm font-semibold text-slate-950">
+                    {fmtMoney(row.amount)}
+                  </div>
+                ) : null}
               </div>
-
-              {canViewTradeFinancials ? (
-                <div className="shrink-0 text-right text-sm font-semibold text-slate-950">
-                  {fmtMoney(row.amount)}
-                </div>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </SectionCard>

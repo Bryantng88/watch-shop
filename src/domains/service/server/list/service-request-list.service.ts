@@ -24,6 +24,13 @@ export type ServiceRequestListItem = {
   maintenanceCount: number;
   issueCount: number;
   openIssueCount: number;
+  actualCostTotal: number;
+  estimatedCostTotal: number;
+  paidAmount: number;
+  collectedAmount: number;
+  unpaidPaymentAmount: number;
+  canceledPaymentAmount: number;
+  remainingAmount: number;
   productId: string | null;
   source: string | null;
   productTitle: string | null;
@@ -108,6 +115,13 @@ export async function getAdminServiceRequestList(input: ServiceRequestSearchInpu
     maintenanceCount: r.maintenanceCount ?? 0,
     issueCount: r.issueCount ?? 0,
     openIssueCount: r.openIssueCount ?? 0,
+    actualCostTotal: r.actualCostTotal ?? 0,
+    estimatedCostTotal: r.estimatedCostTotal ?? 0,
+    paidAmount: r.paidAmount ?? 0,
+    collectedAmount: r.collectedAmount ?? 0,
+    unpaidPaymentAmount: r.unpaidPaymentAmount ?? 0,
+    canceledPaymentAmount: r.canceledPaymentAmount ?? 0,
+    remainingAmount: r.remainingAmount ?? 0,
     productId: r.productId ?? null,
     source: r.orderItem?.order?.id ? "SERVICE_FROM_ORDER" : "QUICK_SERVICE_FROM_WATCH",
     productTitle: r.productTitle ?? null,

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Copy, ExternalLink, FileText, ListChecks, PackageCheck, ShoppingBag, Wrench } from "lucide-react";
+import { ClipboardList, Copy, CreditCard, ExternalLink, FileText, ListChecks, PackageCheck, ShoppingBag, Wrench } from "lucide-react";
 
 import RowActions, { type RowAction } from "@/domains/shared/ui/list/RowActions";
 import { DomainSignalIcon } from "@/domains/shared/ui/icons";
@@ -103,6 +103,7 @@ type Props = {
     onComplete: (row: ServiceReqItem) => void;
     onCopyId: (row: ServiceReqItem) => void;
     onOpenTechnicalAssessment: (row: ServiceReqItem) => void;
+    onOpenPayment: (row: ServiceReqItem) => void;
 };
 
 export default function ServiceRequestTable({
@@ -113,6 +114,7 @@ export default function ServiceRequestTable({
     onComplete,
     onCopyId,
     onOpenTechnicalAssessment,
+    onOpenPayment,
 }: Props) {
     return (
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -127,14 +129,15 @@ export default function ServiceRequestTable({
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[1120px] table-fixed text-sm">
+                <table className="w-full min-w-[1240px] table-fixed text-sm">
                     <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                         <tr>
                             <th className="w-[18%] px-4 py-4">Phiếu</th>
                             <th className="w-[34%] px-4 py-4">Watch</th>
                             <th className="w-[12%] px-4 py-4 text-center">Trạng thái</th>
-                            <th className="w-[13%] px-4 py-4">Issue</th>
-                            <th className="w-[16%] px-4 py-4">Thời gian</th>
+                            <th className="w-[12%] px-4 py-4">Issue</th>
+                            <th className="w-[13%] px-4 py-4">Payment</th>
+                            <th className="w-[14%] px-4 py-4">Thời gian</th>
                             <th className="w-[7%] px-4 py-4 text-right">Action</th>
                         </tr>
                     </thead>
@@ -142,7 +145,7 @@ export default function ServiceRequestTable({
                     <tbody className="divide-y divide-slate-100">
                         {items.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-14 text-center text-sm text-slate-500">
+                                <td colSpan={7} className="px-4 py-14 text-center text-sm text-slate-500">
                                     Không có dữ liệu trong tab này.
                                 </td>
                             </tr>
@@ -157,6 +160,7 @@ export default function ServiceRequestTable({
                                     onComplete={onComplete}
                                     onCopyId={onCopyId}
                                     onOpenTechnicalAssessment={onOpenTechnicalAssessment}
+                                    onOpenPayment={onOpenPayment}
                                 />
                             ))
                         )}
@@ -177,12 +181,33 @@ function ServiceRequestRow({
     onComplete,
     onCopyId,
     onOpenTechnicalAssessment,
+    onOpenPayment,
 }: RowProps) {
     const image = serviceImageItem(row.primaryImageUrl ?? row.product?.primaryImageUrl ?? null);
     const productTitle = row.productTitle || row.product?.title || "-";
     const sku = row.skuSnapshot || row.product?.sku || "-";
     const openIssueCount = Number(row.openIssueCount ?? 0);
     const issueCount = Number(row.issueCount ?? 0);
+    const payableTotal = Number(row.actualCostTotal ?? 0) > 0
+        ? Number(row.actualCostTotal ?? 0)
+        : Number(row.estimatedCostTotal ?? 0);
+    const paidAmount = Number(row.paidAmount ?? 0);
+    const unpaidPaymentAmount = Number(row.unpaidPaymentAmount ?? 0);
+    const remainingAmount = Math.max(0, payableTotal - paidAmount);
+    const paymentText = payableTotal <= 0
+        ? "Chưa có chi phí"
+        : paidAmount >= payableTotal
+            ? "Đã thu"
+            : unpaidPaymentAmount > 0
+                ? "Chờ thu"
+                : "Chưa tạo";
+    const paymentTone = payableTotal <= 0
+        ? "bg-slate-50 text-slate-500 ring-slate-200"
+        : paidAmount >= payableTotal
+            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+            : unpaidPaymentAmount > 0
+                ? "bg-amber-50 text-amber-700 ring-amber-200"
+                : "bg-rose-50 text-rose-700 ring-rose-200";
 
     const actions: RowAction<ServiceReqItem>[] = [
         {
@@ -208,6 +233,12 @@ function ServiceRequestRow({
             label: "Mở đánh giá kỹ thuật",
             icon: <Wrench className="h-4 w-4" />,
             onClick: onOpenTechnicalAssessment,
+        },
+        {
+            key: "payment",
+            label: "Quản lý payment",
+            icon: <CreditCard className="h-4 w-4" />,
+            onClick: onOpenPayment,
         },
         {
             key: "complete",
@@ -276,6 +307,22 @@ function ServiceRequestRow({
                     {openIssueCount > 0 ? `${openIssueCount} đang mở` : "Không còn issue mở"}
                 </div>
                 {row.technicianName ? <div className="mt-1 text-xs text-slate-400">Thợ: {row.technicianName}</div> : null}
+            </td>
+
+            <td className="px-4 py-4">
+                <button
+                    type="button"
+                    onClick={() => onOpenPayment(row)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${paymentTone}`}
+                >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    {paymentText}
+                </button>
+                {payableTotal > 0 ? (
+                    <div className="mt-1 text-xs text-slate-500">
+                        Còn {Math.round(remainingAmount).toLocaleString("vi-VN")}đ
+                    </div>
+                ) : null}
             </td>
 
             <td className="px-4 py-4">

@@ -19,6 +19,13 @@ export type ServiceReqItem = {
     maintenanceCount: number;
     issueCount?: number;
     openIssueCount?: number;
+    actualCostTotal?: number;
+    estimatedCostTotal?: number;
+    paidAmount?: number;
+    collectedAmount?: number;
+    unpaidPaymentAmount?: number;
+    canceledPaymentAmount?: number;
+    remainingAmount?: number;
     product?: {
         id: string;
         title?: string | null;
