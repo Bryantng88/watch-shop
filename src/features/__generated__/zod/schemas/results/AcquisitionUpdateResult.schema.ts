@@ -20,5 +20,6 @@ export const AcquisitionUpdateResultSchema = z.nullable(z.object({
   customer: z.unknown().optional(),
   vendor: z.unknown().optional(),
   acquisitionItem: z.array(z.unknown()),
-  Invoice: z.array(z.unknown())
+  Invoice: z.array(z.unknown()),
+  Task: z.array(z.unknown())
 }));

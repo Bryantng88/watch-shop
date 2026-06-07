@@ -9,10 +9,12 @@ export const NotificationInputSchema = z.object({
     priority: z.string(),
     isRead: z.boolean(),
     userId: z.string(),
+    taskId: z.string().optional().nullable(),
     metadata: z.unknown().optional().nullable(),
     createdAt: z.date().optional().nullable(),
     updatedAt: z.date(),
-    user: z.unknown()
+    user: z.unknown(),
+    task: z.unknown().optional().nullable()
 }).strict();
 
 export type NotificationInputType = z.infer<typeof NotificationInputSchema>;

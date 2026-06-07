@@ -41,7 +41,9 @@ export const TechnicalIssueFindManyResultSchema = z.object({
   User: z.unknown().optional(),
   Vendor: z.unknown().optional(),
   technicalDetailCatalogId: z.string().optional(),
-  technicalDetailCatalog: z.unknown().optional()
+  technicalDetailCatalog: z.unknown().optional(),
+  task: z.array(z.unknown()),
+  payments: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

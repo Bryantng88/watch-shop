@@ -10,6 +10,7 @@ const makeSchema = () => z.object({
   priority: z.literal(true).optional(),
   isRead: z.literal(true).optional(),
   userId: z.literal(true).optional(),
+  taskId: z.literal(true).optional(),
   metadata: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),

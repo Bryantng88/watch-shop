@@ -31,7 +31,9 @@ export const ShipmentFindFirstSelectSchema: z.ZodType<Prisma.ShipmentSelect> = z
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
     customerName: z.boolean().optional(),
-    order: z.boolean().optional()
+    order: z.boolean().optional(),
+    Task: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ShipmentSelect>;
 
 export const ShipmentFindFirstSelectZodSchema = z.object({
@@ -56,7 +58,9 @@ export const ShipmentFindFirstSelectZodSchema = z.object({
     refNo: z.boolean().optional(),
     orderRefNo: z.boolean().optional(),
     customerName: z.boolean().optional(),
-    order: z.boolean().optional()
+    order: z.boolean().optional(),
+    Task: z.boolean().optional(),
+    _count: z.boolean().optional()
   }).strict();
 
 export const ShipmentFindFirstSchema: z.ZodType<Prisma.ShipmentFindFirstArgs> = z.object({ select: ShipmentFindFirstSelectSchema.optional(), include: ShipmentIncludeObjectSchema.optional(), orderBy: z.union([ShipmentOrderByWithRelationInputObjectSchema, ShipmentOrderByWithRelationInputObjectSchema.array()]).optional(), where: ShipmentWhereInputObjectSchema.optional(), cursor: ShipmentWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([ShipmentScalarFieldEnumSchema, ShipmentScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.ShipmentFindFirstArgs>;

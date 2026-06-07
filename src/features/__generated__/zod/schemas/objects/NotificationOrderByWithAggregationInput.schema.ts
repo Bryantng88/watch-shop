@@ -14,6 +14,7 @@ const makeSchema = () => z.object({
   priority: SortOrderSchema.optional(),
   isRead: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
+  taskId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   metadata: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   updatedAt: SortOrderSchema.optional(),

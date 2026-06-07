@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
-import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema'
+import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
+import { TaskCreateNestedManyWithoutShipmentInputObjectSchema as TaskCreateNestedManyWithoutShipmentInputObjectSchema } from './TaskCreateNestedManyWithoutShipmentInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -23,7 +24,8 @@ const makeSchema = () => z.object({
   shippingFeePayer: ShippingFeePayerSchema.optional().nullable(),
   refNo: z.string().optional().nullable(),
   orderRefNo: z.string().optional().nullable(),
-  customerName: z.string().optional().nullable()
+  customerName: z.string().optional().nullable(),
+  Task: z.lazy(() => TaskCreateNestedManyWithoutShipmentInputObjectSchema).optional()
 }).strict();
 export const ShipmentCreateWithoutOrderInputObjectSchema: z.ZodType<Prisma.ShipmentCreateWithoutOrderInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCreateWithoutOrderInput>;
 export const ShipmentCreateWithoutOrderInputObjectZodSchema = makeSchema();

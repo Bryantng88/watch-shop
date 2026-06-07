@@ -45,7 +45,9 @@ export const TechnicalIssueModelSchema = z.object({
     User: z.unknown().nullable(),
     Vendor: z.unknown().nullable(),
     technicalDetailCatalogId: z.string().nullable(),
-    technicalDetailCatalog: z.unknown().nullable()
+    technicalDetailCatalog: z.unknown().nullable(),
+    task: z.array(z.unknown()),
+    payments: z.array(z.unknown())
 }).strict();
 
 export type TechnicalIssuePureType = z.infer<typeof TechnicalIssueModelSchema>;

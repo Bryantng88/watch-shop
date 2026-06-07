@@ -366,7 +366,7 @@ export function IssueDrawer({
   const canComplete =
     busyId !== issue.id &&
     actualCost.trim() !== "" &&
-    resolutionNote.trim() !== "" &&
+    Boolean(technicalDetailCatalogId) &&
     (!isVendorMode || Boolean(vendorId));
 
   return (
@@ -527,6 +527,26 @@ export function IssueDrawer({
               </p>
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Chi tiết kỹ thuật
+                  </label>
+                  <select
+                    value={technicalDetailCatalogId}
+                    onChange={(e) =>
+                      onChangeTechnicalDetailCatalogId(e.target.value)
+                    }
+                    className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                  >
+                    <option value="">Chọn chi tiết</option>
+                    {detailOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {catalogOptionLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
                     Thực hiện

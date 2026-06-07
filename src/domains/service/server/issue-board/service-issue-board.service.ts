@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/client";
+import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/payment.service";
 
 function cleanId(v: unknown): string | null {
     const text = String(v ?? "").trim();
@@ -280,44 +281,46 @@ export async function completeTechnicalIssue(input: {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
-    const issue = await prisma.technicalIssue.findUnique({
-        where: { id },
-        select: {
-            id: true,
-            technicalDetailCatalogId: true,
-        } as any,
-    });
-
-    if (!issue) throw new Error("Không tìm thấy issue.");
-
-    if (!(issue as any).technicalDetailCatalogId) {
-        throw new Error("Issue chưa có chi tiết kỹ thuật. Vui lòng bắt đầu xử lý đúng luồng trước khi hoàn tất.");
-    }
-
     const actualCost = decimalOrNull(input.actualCost);
     if (actualCost == null || actualCost < 0) {
         throw new Error("Vui lòng nhập chi phí thực tế hợp lệ. Chi phí có thể bằng 0.");
     }
 
-    const resolutionNote = cleanText(input.resolutionNote);
-    if (!resolutionNote) {
-        throw new Error("Vui lòng nhập kết luận xử lý trước khi hoàn tất issue.");
-    }
+    return prisma.$transaction(async (tx) => {
+        const issue = await tx.technicalIssue.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                technicalDetailCatalogId: true,
+                executionStatus: true,
+            } as any,
+        });
 
-    return prisma.technicalIssue.update({
-        where: { id },
-        data: {
-            isConfirmed: true,
-            executionStatus: "DONE" as any,
-            completedAt: new Date(),
-            completedByNameSnap: cleanId(input.actorName),
-            actualCost,
-            resolutionNote,
-            supplyCatalogId: input.supplyCatalogId === undefined ? undefined : cleanId(input.supplyCatalogId),
-            mechanicalPartCatalogId:
-                input.mechanicalPartCatalogId === undefined ? undefined : cleanId(input.mechanicalPartCatalogId),
-            updatedAt: new Date(),
-        } as any,
+        if (!issue) throw new Error("Không tìm thấy issue.");
+
+        if (!(issue as any).technicalDetailCatalogId) {
+            throw new Error("Issue chưa có chi tiết kỹ thuật. Vui lòng bắt đầu xử lý đúng luồng trước khi hoàn tất.");
+        }
+
+        const updated = await tx.technicalIssue.update({
+            where: { id },
+            data: {
+                isConfirmed: true,
+                executionStatus: "DONE" as any,
+                completedAt: new Date(),
+                completedByNameSnap: cleanId(input.actorName),
+                actualCost,
+                resolutionNote: cleanText(input.resolutionNote),
+                supplyCatalogId: input.supplyCatalogId === undefined ? undefined : cleanId(input.supplyCatalogId),
+                mechanicalPartCatalogId:
+                    input.mechanicalPartCatalogId === undefined ? undefined : cleanId(input.mechanicalPartCatalogId),
+                updatedAt: new Date(),
+            } as any,
+        });
+
+        await ensureTechnicalIssuePaymentTx(tx as any, id);
+
+        return updated;
     });
 }
 

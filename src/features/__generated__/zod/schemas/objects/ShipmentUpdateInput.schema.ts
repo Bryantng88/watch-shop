@@ -9,7 +9,8 @@ import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
 import { EnumShipmentStatusFieldUpdateOperationsInputObjectSchema as EnumShipmentStatusFieldUpdateOperationsInputObjectSchema } from './EnumShipmentStatusFieldUpdateOperationsInput.schema';
 import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { NullableEnumShippingFeePayerFieldUpdateOperationsInputObjectSchema as NullableEnumShippingFeePayerFieldUpdateOperationsInputObjectSchema } from './NullableEnumShippingFeePayerFieldUpdateOperationsInput.schema';
-import { OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema as OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutShipmentsNestedInput.schema'
+import { OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema as OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema } from './OrderUpdateOneRequiredWithoutShipmentsNestedInput.schema';
+import { TaskUpdateManyWithoutShipmentNestedInputObjectSchema as TaskUpdateManyWithoutShipmentNestedInputObjectSchema } from './TaskUpdateManyWithoutShipmentNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   refNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   orderRefNo: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   customerName: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema).optional()
+  order: z.lazy(() => OrderUpdateOneRequiredWithoutShipmentsNestedInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskUpdateManyWithoutShipmentNestedInputObjectSchema).optional()
 }).strict();
 export const ShipmentUpdateInputObjectSchema: z.ZodType<Prisma.ShipmentUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentUpdateInput>;
 export const ShipmentUpdateInputObjectZodSchema = makeSchema();

@@ -97,10 +97,12 @@ export default function ServiceRequestListClient(props: Props) {
             id: paymentServiceRequest.id,
             code: paymentServiceRequest.refNo,
             title: paymentServiceRequest.productTitle ?? paymentServiceRequest.product?.title ?? "Service request",
-            direction: "IN" as const,
+            direction: "OUT" as const,
             totalAmount,
             remainingAmount: paymentServiceRequest.remainingAmount ?? null,
             listEndpoint: `/api/admin/service-requests/${paymentServiceRequest.id}/payment`,
+            disableCreate: true,
+            createDisabledMessage: "Payment service được tạo UNPAID tự động khi hoàn tất từng Technical Issue. Tại đây chỉ xử lý Hoàn tất/Hủy payment.",
         };
     }, [paymentServiceRequest]);
 
@@ -224,8 +226,8 @@ export default function ServiceRequestListClient(props: Props) {
                     amount: payload.amount,
                     method: payload.method,
                     note: payload.note ?? null,
-                    markPaidNow: payload.markPaidNow,
-                    purpose: "SERVICE_REQUEST",
+                    markPaidNow: false,
+                    purpose: "MAINTENANCE_COST",
                 }),
             });
 

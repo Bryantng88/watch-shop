@@ -7,10 +7,12 @@ export const NotificationAggregateResultSchema = z.object({  _count: z.object({
     priority: z.number(),
     isRead: z.number(),
     userId: z.number(),
+    taskId: z.number(),
     metadata: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    user: z.number()
+    user: z.number(),
+    task: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -19,6 +21,7 @@ export const NotificationAggregateResultSchema = z.object({  _count: z.object({
     message: z.string().nullable(),
     priority: z.string().nullable(),
     userId: z.string().nullable(),
+    taskId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -29,6 +32,7 @@ export const NotificationAggregateResultSchema = z.object({  _count: z.object({
     message: z.string().nullable(),
     priority: z.string().nullable(),
     userId: z.string().nullable(),
+    taskId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()});

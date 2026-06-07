@@ -700,3 +700,16 @@ export { MediaAssetDeleteManyResultSchema } from './MediaAssetDeleteManyResult.s
 export { MediaAssetAggregateResultSchema } from './MediaAssetAggregateResult.schema';
 export { MediaAssetGroupByResultSchema } from './MediaAssetGroupByResult.schema';
 export { MediaAssetCountResultSchema } from './MediaAssetCountResult.schema';
+export { TaskFindUniqueResultSchema } from './TaskFindUniqueResult.schema';
+export { TaskFindFirstResultSchema } from './TaskFindFirstResult.schema';
+export { TaskFindManyResultSchema } from './TaskFindManyResult.schema';
+export { TaskCreateResultSchema } from './TaskCreateResult.schema';
+export { TaskCreateManyResultSchema } from './TaskCreateManyResult.schema';
+export { TaskUpdateResultSchema } from './TaskUpdateResult.schema';
+export { TaskUpdateManyResultSchema } from './TaskUpdateManyResult.schema';
+export { TaskUpsertResultSchema } from './TaskUpsertResult.schema';
+export { TaskDeleteResultSchema } from './TaskDeleteResult.schema';
+export { TaskDeleteManyResultSchema } from './TaskDeleteManyResult.schema';
+export { TaskAggregateResultSchema } from './TaskAggregateResult.schema';
+export { TaskGroupByResultSchema } from './TaskGroupByResult.schema';
+export { TaskCountResultSchema } from './TaskCountResult.schema';

@@ -24,7 +24,8 @@ export const AcquisitionResultSchema = z.object({
     customer: z.unknown().nullable(),
     vendor: z.unknown().nullable(),
     acquisitionItem: z.array(z.unknown()),
-    Invoice: z.array(z.unknown())
+    Invoice: z.array(z.unknown()),
+    Task: z.array(z.unknown())
 }).strict();
 
 export type AcquisitionResultType = z.infer<typeof AcquisitionResultSchema>;

@@ -31,6 +31,7 @@ export const AcquisitionFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Acquisiti
     vendor: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
+    Task: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionSelect>;
 
@@ -56,6 +57,7 @@ export const AcquisitionFindFirstOrThrowSelectZodSchema = z.object({
     vendor: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
+    Task: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

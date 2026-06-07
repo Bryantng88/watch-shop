@@ -8,7 +8,11 @@ import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOn
 import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
 import { NotificationUpdateManyWithoutUserNestedInputObjectSchema as NotificationUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUpdateManyWithoutUserNestedInput.schema';
 import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
-import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema'
+import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema';
+import { TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCreatedByUserNestedInput.schema';
+import { TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema as TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './TaskUpdateManyWithoutAssignedToUserNestedInput.schema';
+import { TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema as TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCompletedByUserNestedInput.schema';
+import { TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema as TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCancelledByUserNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -24,7 +28,11 @@ const makeSchema = () => z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   notification: z.lazy(() => NotificationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
-  roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional()
+  roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional(),
+  createdTasks: z.lazy(() => TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional(),
+  assignedTasks: z.lazy(() => TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
+  completedTasks: z.lazy(() => TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema).optional(),
+  cancelledTasks: z.lazy(() => TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutTechnicalIssueInput>;
 export const UserUpdateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

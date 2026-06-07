@@ -14,7 +14,8 @@ import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from
 import { VendorNullableScalarRelationFilterObjectSchema as VendorNullableScalarRelationFilterObjectSchema } from './VendorNullableScalarRelationFilter.schema';
 import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './VendorWhereInput.schema';
 import { AcquisitionItemListRelationFilterObjectSchema as AcquisitionItemListRelationFilterObjectSchema } from './AcquisitionItemListRelationFilter.schema';
-import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema'
+import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjectSchema } from './InvoiceListRelationFilter.schema';
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema'
 
 const acquisitionwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => AcquisitionWhereInputObjectSchema), z.lazy(() => AcquisitionWhereInputObjectSchema).array()]).optional(),
@@ -40,7 +41,8 @@ const acquisitionwhereinputSchema = z.object({
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemListRelationFilterObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
+  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional()
 }).strict();
 export const AcquisitionWhereInputObjectSchema: z.ZodType<Prisma.AcquisitionWhereInput> = acquisitionwhereinputSchema as unknown as z.ZodType<Prisma.AcquisitionWhereInput>;
 export const AcquisitionWhereInputObjectZodSchema = acquisitionwhereinputSchema;

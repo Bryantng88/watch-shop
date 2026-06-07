@@ -4,7 +4,8 @@ import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
 import { PaymentDirectionSchema } from '../enums/PaymentDirection.schema';
 import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
 import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
-import { PaymentTypeSchema } from '../enums/PaymentType.schema'
+import { PaymentTypeSchema } from '../enums/PaymentType.schema';
+import { TaskUncheckedCreateNestedManyWithoutPaymentInputObjectSchema as TaskUncheckedCreateNestedManyWithoutPaymentInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutPaymentInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -25,7 +26,9 @@ const makeSchema = () => z.object({
   shipment_id: z.string().optional().nullable(),
   type: PaymentTypeSchema.optional(),
   refNo: z.string().optional().nullable(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  technical_issue_id: z.string().optional().nullable(),
+  task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutPaymentInputObjectSchema).optional()
 }).strict();
 export const PaymentUncheckedCreateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.PaymentUncheckedCreateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUncheckedCreateWithoutMaintenanceRecordInput>;
 export const PaymentUncheckedCreateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

@@ -4,7 +4,8 @@ import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema as CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema } from './CustomerCreateNestedOneWithoutAcquisitionInput.schema';
 import { AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemCreateNestedManyWithoutAcquisitionInput.schema';
-import { InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceCreateNestedManyWithoutAcquisitionInput.schema'
+import { InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceCreateNestedManyWithoutAcquisitionInput.schema';
+import { TaskCreateNestedManyWithoutAcquisitionInputObjectSchema as TaskCreateNestedManyWithoutAcquisitionInputObjectSchema } from './TaskCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -24,7 +25,8 @@ const makeSchema = () => z.object({
   returnedAt: z.coerce.date().optional().nullable(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutAcquisitionInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
 }).strict();
 export const AcquisitionCreateWithoutVendorInputObjectSchema: z.ZodType<Prisma.AcquisitionCreateWithoutVendorInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionCreateWithoutVendorInput>;
 export const AcquisitionCreateWithoutVendorInputObjectZodSchema = makeSchema();

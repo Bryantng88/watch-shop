@@ -2,7 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
-import { AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
+import { AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInput.schema';
+import { TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -22,7 +23,8 @@ const makeSchema = () => z.object({
   updatedAt: z.coerce.date().optional(),
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
+  acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
 }).strict();
 export const AcquisitionUncheckedCreateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.AcquisitionUncheckedCreateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUncheckedCreateWithoutInvoiceInput>;
 export const AcquisitionUncheckedCreateWithoutInvoiceInputObjectZodSchema = makeSchema();

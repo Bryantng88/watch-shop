@@ -5,7 +5,8 @@ import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperations
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema as UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema } from './UserUpdateOneRequiredWithoutNotificationNestedInput.schema'
+import { UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema as UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema } from './UserUpdateOneRequiredWithoutNotificationNestedInput.schema';
+import { TaskUpdateOneWithoutNotificationsNestedInputObjectSchema as TaskUpdateOneWithoutNotificationsNestedInputObjectSchema } from './TaskUpdateOneWithoutNotificationsNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -19,7 +20,8 @@ const makeSchema = () => z.object({
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  user: z.lazy(() => UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema).optional()
+  user: z.lazy(() => UserUpdateOneRequiredWithoutNotificationNestedInputObjectSchema).optional(),
+  task: z.lazy(() => TaskUpdateOneWithoutNotificationsNestedInputObjectSchema).optional()
 }).strict();
 export const NotificationUpdateInputObjectSchema: z.ZodType<Prisma.NotificationUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.NotificationUpdateInput>;
 export const NotificationUpdateInputObjectZodSchema = makeSchema();

@@ -335,8 +335,12 @@ export async function submitWatchFormApplication(
         hashTags: (current.watchContent as any)?.hashTags,
     });
 
-    const afterContent = buildContentSnapshot(values.content);
+    const saveIntent = String((values as any).saveIntent ?? "NORMAL").toUpperCase();
 
+    const afterContent =
+        saveIntent === "SUBMIT_IMAGE"
+            ? beforeContent
+            : buildContentSnapshot(values.content);
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
@@ -345,7 +349,10 @@ export async function submitWatchFormApplication(
     const requestedGalleryImages = dedupeMediaItems(
         values.media.galleryImages ?? [],
     );
-    const afterImageKeysBeforeMove = normalizeImageKeys(requestedGalleryImages);
+    const afterImageKeysBeforeMove =
+        saveIntent === "SUBMIT_CONTENT"
+            ? beforeImageKeys
+            : normalizeImageKeys(requestedGalleryImages);
 
     const contentChanged = !sameJson(beforeContent, afterContent);
     const imagesChanged = !sameJson(beforeImageKeys, afterImageKeysBeforeMove);

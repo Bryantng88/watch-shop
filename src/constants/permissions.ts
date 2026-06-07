@@ -63,7 +63,7 @@ export const PERMISSIONS = {
 
     REPORT_VIEW: "REPORT_VIEW",
 
-    SYSTEM_JOB_VIEW: "SYSTEM_JOB_VIEW"
+    SYSTEM_JOB_VIEW: "SYSTEM_JOB_VIEW",
 
-
+    TASK_VIEW: "TASK_VIEW"
 } as const;

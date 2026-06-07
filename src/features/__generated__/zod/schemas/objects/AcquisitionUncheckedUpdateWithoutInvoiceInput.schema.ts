@@ -9,7 +9,8 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema as EnumAcquisitionStatusFieldUpdateOperationsInputObjectSchema } from './EnumAcquisitionStatusFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
-import { AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInput.schema'
+import { AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema as AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutAcquisitionNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -29,7 +30,8 @@ const makeSchema = () => z.object({
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   sentAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   returnedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  acquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
+  acquisitionItem: z.lazy(() => AcquisitionItemUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskUncheckedUpdateManyWithoutAcquisitionNestedInputObjectSchema).optional()
 }).strict();
 export const AcquisitionUncheckedUpdateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.AcquisitionUncheckedUpdateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUncheckedUpdateWithoutInvoiceInput>;
 export const AcquisitionUncheckedUpdateWithoutInvoiceInputObjectZodSchema = makeSchema();

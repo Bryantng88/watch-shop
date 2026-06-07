@@ -9,10 +9,12 @@ export const NotificationResultSchema = z.object({
     priority: z.string(),
     isRead: z.boolean(),
     userId: z.string(),
+    taskId: z.string().nullable(),
     metadata: z.unknown().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date(),
-    user: z.unknown()
+    user: z.unknown(),
+    task: z.unknown().nullable()
 }).strict();
 
 export type NotificationResultType = z.infer<typeof NotificationResultSchema>;

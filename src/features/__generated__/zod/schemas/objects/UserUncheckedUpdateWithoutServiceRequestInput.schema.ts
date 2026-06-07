@@ -8,7 +8,11 @@ import { CustomerUncheckedUpdateOneWithoutUserNestedInputObjectSchema as Custome
 import { MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInput.schema';
 import { NotificationUncheckedUpdateManyWithoutUserNestedInputObjectSchema as NotificationUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUncheckedUpdateManyWithoutUserNestedInput.schema';
 import { TechnicalIssueUncheckedUpdateManyWithoutUserNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutUserNestedInput.schema';
-import { RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema as RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUncheckedUpdateManyWithoutUsersNestedInput.schema'
+import { RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema as RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUncheckedUpdateManyWithoutUsersNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutCreatedByUserNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutAssignedToUserNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutAssignedToUserNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutCompletedByUserNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutCompletedByUserNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutCompletedByUserNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutCancelledByUserNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutCancelledByUserNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutCancelledByUserNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -24,7 +28,11 @@ const makeSchema = () => z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   notification: z.lazy(() => NotificationUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
-  roles: z.lazy(() => RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema).optional()
+  roles: z.lazy(() => RoleUncheckedUpdateManyWithoutUsersNestedInputObjectSchema).optional(),
+  createdTasks: z.lazy(() => TaskUncheckedUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional(),
+  assignedTasks: z.lazy(() => TaskUncheckedUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
+  completedTasks: z.lazy(() => TaskUncheckedUpdateManyWithoutCompletedByUserNestedInputObjectSchema).optional(),
+  cancelledTasks: z.lazy(() => TaskUncheckedUpdateManyWithoutCancelledByUserNestedInputObjectSchema).optional()
 }).strict();
 export const UserUncheckedUpdateWithoutServiceRequestInputObjectSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutServiceRequestInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUncheckedUpdateWithoutServiceRequestInput>;
 export const UserUncheckedUpdateWithoutServiceRequestInputObjectZodSchema = makeSchema();

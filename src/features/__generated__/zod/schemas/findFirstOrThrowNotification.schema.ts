@@ -17,10 +17,12 @@ export const NotificationFindFirstOrThrowSelectSchema: z.ZodType<Prisma.Notifica
     priority: z.boolean().optional(),
     isRead: z.boolean().optional(),
     userId: z.boolean().optional(),
+    taskId: z.boolean().optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    user: z.boolean().optional()
+    user: z.boolean().optional(),
+    task: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.NotificationSelect>;
 
 export const NotificationFindFirstOrThrowSelectZodSchema = z.object({
@@ -31,10 +33,12 @@ export const NotificationFindFirstOrThrowSelectZodSchema = z.object({
     priority: z.boolean().optional(),
     isRead: z.boolean().optional(),
     userId: z.boolean().optional(),
+    taskId: z.boolean().optional(),
     metadata: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    user: z.boolean().optional()
+    user: z.boolean().optional(),
+    task: z.boolean().optional()
   }).strict();
 
 export const NotificationFindFirstOrThrowSchema: z.ZodType<Prisma.NotificationFindFirstOrThrowArgs> = z.object({ select: NotificationFindFirstOrThrowSelectSchema.optional(), include: NotificationIncludeObjectSchema.optional(), orderBy: z.union([NotificationOrderByWithRelationInputObjectSchema, NotificationOrderByWithRelationInputObjectSchema.array()]).optional(), where: NotificationWhereInputObjectSchema.optional(), cursor: NotificationWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([NotificationScalarFieldEnumSchema, NotificationScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.NotificationFindFirstOrThrowArgs>;

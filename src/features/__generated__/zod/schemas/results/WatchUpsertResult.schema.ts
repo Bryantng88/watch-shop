@@ -27,5 +27,6 @@ export const WatchUpsertResultSchema = z.object({
   watchContent: z.unknown().optional(),
   watchPrice: z.unknown().optional(),
   watchSpecV2: z.unknown().optional(),
-  reviewStates: z.array(z.unknown())
+  reviewStates: z.array(z.unknown()),
+  Task: z.array(z.unknown())
 });

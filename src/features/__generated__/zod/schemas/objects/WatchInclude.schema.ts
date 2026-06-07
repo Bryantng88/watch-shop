@@ -5,6 +5,7 @@ import { WatchContentArgsObjectSchema as WatchContentArgsObjectSchema } from './
 import { WatchPriceArgsObjectSchema as WatchPriceArgsObjectSchema } from './WatchPriceArgs.schema';
 import { WatchSpecV2ArgsObjectSchema as WatchSpecV2ArgsObjectSchema } from './WatchSpecV2Args.schema';
 import { WatchReviewStateFindManySchema as WatchReviewStateFindManySchema } from '../findManyWatchReviewState.schema';
+import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { WatchCountOutputTypeArgsObjectSchema as WatchCountOutputTypeArgsObjectSchema } from './WatchCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -13,6 +14,7 @@ const makeSchema = () => z.object({
   watchPrice: z.union([z.boolean(), z.lazy(() => WatchPriceArgsObjectSchema)]).optional(),
   watchSpecV2: z.union([z.boolean(), z.lazy(() => WatchSpecV2ArgsObjectSchema)]).optional(),
   reviewStates: z.union([z.boolean(), z.lazy(() => WatchReviewStateFindManySchema)]).optional(),
+  Task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => WatchCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const WatchIncludeObjectSchema: z.ZodType<Prisma.WatchInclude> = makeSchema() as unknown as z.ZodType<Prisma.WatchInclude>;

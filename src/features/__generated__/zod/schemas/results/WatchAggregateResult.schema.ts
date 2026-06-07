@@ -27,7 +27,8 @@ export const WatchAggregateResultSchema = z.object({  _count: z.object({
     watchContent: z.number(),
     watchPrice: z.number(),
     watchSpecV2: z.number(),
-    reviewStates: z.number()
+    reviewStates: z.number(),
+    Task: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

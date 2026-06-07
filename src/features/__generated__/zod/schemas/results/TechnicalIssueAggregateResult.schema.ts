@@ -40,7 +40,9 @@ export const TechnicalIssueAggregateResultSchema = z.object({  _count: z.object(
     User: z.number(),
     Vendor: z.number(),
     technicalDetailCatalogId: z.number(),
-    technicalDetailCatalog: z.number()
+    technicalDetailCatalog: z.number(),
+    task: z.number(),
+    payments: z.number()
   }).optional(),
   _sum: z.object({
     estimatedCost: z.number().nullable(),

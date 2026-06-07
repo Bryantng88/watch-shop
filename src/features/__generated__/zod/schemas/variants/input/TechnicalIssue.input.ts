@@ -45,7 +45,9 @@ export const TechnicalIssueInputSchema = z.object({
     User: z.unknown().optional().nullable(),
     Vendor: z.unknown().optional().nullable(),
     technicalDetailCatalogId: z.string().optional().nullable(),
-    technicalDetailCatalog: z.unknown().optional().nullable()
+    technicalDetailCatalog: z.unknown().optional().nullable(),
+    task: z.array(z.unknown()),
+    payments: z.array(z.unknown())
 }).strict();
 
 export type TechnicalIssueInputType = z.infer<typeof TechnicalIssueInputSchema>;

@@ -51,6 +51,8 @@ export const TechnicalIssueFindManySelectSchema: z.ZodType<Prisma.TechnicalIssue
     Vendor: z.boolean().optional(),
     technicalDetailCatalogId: z.boolean().optional(),
     technicalDetailCatalog: z.boolean().optional(),
+    task: z.boolean().optional(),
+    payments: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;
 
@@ -96,6 +98,8 @@ export const TechnicalIssueFindManySelectZodSchema = z.object({
     Vendor: z.boolean().optional(),
     technicalDetailCatalogId: z.boolean().optional(),
     technicalDetailCatalog: z.boolean().optional(),
+    task: z.boolean().optional(),
+    payments: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

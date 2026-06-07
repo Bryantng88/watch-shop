@@ -10,6 +10,7 @@ const makeSchema = () => z.object({
   priority: SortOrderSchema.optional(),
   isRead: SortOrderSchema.optional(),
   userId: SortOrderSchema.optional(),
+  taskId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();

@@ -71,6 +71,8 @@ export default function TechnicalIssueBoardClient({
     actualCost: "",
     resolutionNote: "",
     technicalDetailCatalogId: "",
+    supplyCatalogId: "",
+    mechanicalPartCatalogId: "",
     actionMode: "INTERNAL",
     vendorId: "",
   });
@@ -119,6 +121,8 @@ export default function TechnicalIssueBoardClient({
           : "",
       resolutionNote: selectedIssue.resolutionNote ?? "",
       technicalDetailCatalogId: selectedIssue.technicalDetailCatalog?.id ?? "",
+      supplyCatalogId: selectedIssue.supplyCatalog?.id ?? "",
+      mechanicalPartCatalogId: selectedIssue.mechanicalPartCatalog?.id ?? "",
       actionMode: selectedIssue.actionMode ?? "INTERNAL",
       vendorId: selectedIssue.vendorId ?? "",
     });
@@ -230,6 +234,9 @@ export default function TechnicalIssueBoardClient({
             ? {
               actualCost: drawerState.actualCost.trim() === "" ? null : Number(drawerState.actualCost),
               resolutionNote: drawerState.resolutionNote.trim() || null,
+              technicalDetailCatalogId: drawerState.technicalDetailCatalogId || null,
+              supplyCatalogId: drawerState.supplyCatalogId || null,
+              mechanicalPartCatalogId: drawerState.mechanicalPartCatalogId || null,
               actionMode: drawerState.actionMode || "INTERNAL",
               vendorId: drawerState.vendorId || null,
             }
@@ -373,7 +380,9 @@ export default function TechnicalIssueBoardClient({
       return;
     }
     if (from === "IN_PROGRESS" && targetColumn === "DONE") {
-      void callAction(issueId, "complete", snapshot);
+      setBoardItems(snapshot);
+      setSelectedIssue(issue);
+      return;
     }
   }
 
@@ -600,10 +609,20 @@ export default function TechnicalIssueBoardClient({
           vendorOptions={localVendorOptions}
           onVendorOptionsChange={setLocalVendorOptions}
           technicalDetailCatalogId={drawerState.technicalDetailCatalogId}
+          supplyCatalogOptions={catalogs?.supplyCatalogOptions ?? catalogs?.supplyCatalogs ?? catalogs?.supplies ?? []}
+          mechanicalPartCatalogOptions={catalogs?.mechanicalPartCatalogOptions ?? catalogs?.mechanicalPartCatalogs ?? catalogs?.parts ?? []}
+          supplyCatalogId={drawerState.supplyCatalogId}
+          mechanicalPartCatalogId={drawerState.mechanicalPartCatalogId}
           actionMode={drawerState.actionMode}
           vendorId={drawerState.vendorId}
           onChangeTechnicalDetailCatalogId={(value) =>
             setDrawerState((prev) => ({ ...prev, technicalDetailCatalogId: value }))
+          }
+          onChangeSupplyCatalogId={(value) =>
+            setDrawerState((prev) => ({ ...prev, supplyCatalogId: value }))
+          }
+          onChangeMechanicalPartCatalogId={(value) =>
+            setDrawerState((prev) => ({ ...prev, mechanicalPartCatalogId: value }))
           }
           onChangeActionMode={(value) => setDrawerState((prev) => ({ ...prev, actionMode: value }))}
           onChangeVendorId={(value) => setDrawerState((prev) => ({ ...prev, vendorId: value }))}

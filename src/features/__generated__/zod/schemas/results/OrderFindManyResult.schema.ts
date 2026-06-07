@@ -32,7 +32,8 @@ export const OrderFindManyResultSchema = z.object({
   Invoice: z.array(z.unknown()),
   customer: z.unknown().optional(),
   orderItem: z.array(z.unknown()),
-  shipments: z.array(z.unknown())
+  shipments: z.array(z.unknown()),
+  Task: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

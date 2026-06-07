@@ -10,7 +10,9 @@ import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrd
 import { SupplyCatalogOrderByWithRelationInputObjectSchema as SupplyCatalogOrderByWithRelationInputObjectSchema } from './SupplyCatalogOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
-import { TechnicalDetailCatalogOrderByWithRelationInputObjectSchema as TechnicalDetailCatalogOrderByWithRelationInputObjectSchema } from './TechnicalDetailCatalogOrderByWithRelationInput.schema'
+import { TechnicalDetailCatalogOrderByWithRelationInputObjectSchema as TechnicalDetailCatalogOrderByWithRelationInputObjectSchema } from './TechnicalDetailCatalogOrderByWithRelationInput.schema';
+import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
+import { PaymentOrderByRelationAggregateInputObjectSchema as PaymentOrderByRelationAggregateInputObjectSchema } from './PaymentOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -53,7 +55,9 @@ const makeSchema = () => z.object({
   SupplyCatalog: z.lazy(() => SupplyCatalogOrderByWithRelationInputObjectSchema).optional(),
   User: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   Vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
-  technicalDetailCatalog: z.lazy(() => TechnicalDetailCatalogOrderByWithRelationInputObjectSchema).optional()
+  technicalDetailCatalog: z.lazy(() => TechnicalDetailCatalogOrderByWithRelationInputObjectSchema).optional(),
+  task: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
+  payments: z.lazy(() => PaymentOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.TechnicalIssueOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueOrderByWithRelationInput>;
 export const TechnicalIssueOrderByWithRelationInputObjectZodSchema = makeSchema();

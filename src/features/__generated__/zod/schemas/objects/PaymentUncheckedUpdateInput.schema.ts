@@ -15,7 +15,8 @@ import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
 import { EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema as EnumPaymentPurposeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentPurposeFieldUpdateOperationsInput.schema';
 import { PaymentTypeSchema } from '../enums/PaymentType.schema';
 import { EnumPaymentTypeFieldUpdateOperationsInputObjectSchema as EnumPaymentTypeFieldUpdateOperationsInputObjectSchema } from './EnumPaymentTypeFieldUpdateOperationsInput.schema';
-import { MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInput.schema'
+import { MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutPaymentNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -37,7 +38,9 @@ const makeSchema = () => z.object({
   type: z.union([PaymentTypeSchema, z.lazy(() => EnumPaymentTypeFieldUpdateOperationsInputObjectSchema)]).optional(),
   refNo: z.union([z.string().max(30), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema).optional()
+  technical_issue_id: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema).optional(),
+  task: z.lazy(() => TaskUncheckedUpdateManyWithoutPaymentNestedInputObjectSchema).optional()
 }).strict();
 export const PaymentUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.PaymentUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentUncheckedUpdateInput>;
 export const PaymentUncheckedUpdateInputObjectZodSchema = makeSchema();

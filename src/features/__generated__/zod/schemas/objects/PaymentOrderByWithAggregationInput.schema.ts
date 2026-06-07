@@ -28,6 +28,7 @@ const makeSchema = () => z.object({
   type: SortOrderSchema.optional(),
   refNo: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   updatedAt: SortOrderSchema.optional(),
+  technical_issue_id: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => PaymentCountOrderByAggregateInputObjectSchema).optional(),
   _avg: z.lazy(() => PaymentAvgOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => PaymentMaxOrderByAggregateInputObjectSchema).optional(),

@@ -7,7 +7,8 @@ import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as Maintenan
 import { NotificationOrderByRelationAggregateInputObjectSchema as NotificationOrderByRelationAggregateInputObjectSchema } from './NotificationOrderByRelationAggregateInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
 import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIssueOrderByRelationAggregateInputObjectSchema } from './TechnicalIssueOrderByRelationAggregateInput.schema';
-import { RoleOrderByRelationAggregateInputObjectSchema as RoleOrderByRelationAggregateInputObjectSchema } from './RoleOrderByRelationAggregateInput.schema'
+import { RoleOrderByRelationAggregateInputObjectSchema as RoleOrderByRelationAggregateInputObjectSchema } from './RoleOrderByRelationAggregateInput.schema';
+import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -24,7 +25,11 @@ const makeSchema = () => z.object({
   notification: z.lazy(() => NotificationOrderByRelationAggregateInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
-  roles: z.lazy(() => RoleOrderByRelationAggregateInputObjectSchema).optional()
+  roles: z.lazy(() => RoleOrderByRelationAggregateInputObjectSchema).optional(),
+  createdTasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
+  assignedTasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
+  completedTasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
+  cancelledTasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const UserOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.UserOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.UserOrderByWithRelationInput>;
 export const UserOrderByWithRelationInputObjectZodSchema = makeSchema();

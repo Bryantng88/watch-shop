@@ -8,6 +8,7 @@ export type PickedMediaItem = {
 
 export type WatchFormValues = {
     productId: string;
+    saveIntent?: "NORMAL" | "SUBMIT_CONTENT" | "SUBMIT_IMAGE";
     contentReviewStatus?: string | null;
     contentReviewNote?: string | null;
     imageReviewStatus?: string | null;

@@ -13,7 +13,8 @@ import { ServiceScopeSchema } from '../enums/ServiceScope.schema';
 import { NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema as NullableEnumServiceScopeFieldUpdateOperationsInputObjectSchema } from './NullableEnumServiceScopeFieldUpdateOperationsInput.schema';
 import { InvoiceUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema as InvoiceUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema } from './InvoiceUncheckedUpdateManyWithoutServiceRequestNestedInput.schema';
 import { MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInput.schema';
-import { TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema as TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInput.schema'
+import { TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema as TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInput.schema';
+import { TaskUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema as TaskUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema } from './TaskUncheckedUpdateManyWithoutServiceRequestNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -53,7 +54,8 @@ const makeSchema = () => z.object({
   priorityMarkedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
-  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional()
+  technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedUpdateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutTechnicalIssueInput>;
 export const ServiceRequestUncheckedUpdateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

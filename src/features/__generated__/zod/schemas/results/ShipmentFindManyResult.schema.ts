@@ -22,7 +22,8 @@ export const ShipmentFindManyResultSchema = z.object({
   refNo: z.string().optional(),
   orderRefNo: z.string().optional(),
   customerName: z.string().optional(),
-  order: z.unknown()
+  order: z.unknown(),
+  Task: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

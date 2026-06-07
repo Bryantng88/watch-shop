@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { AcquisitionTypeSchema } from '../enums/AcquisitionType.schema';
 import { AcquisitionStatusSchema } from '../enums/AcquisitionStatus.schema';
 import { AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInput.schema';
-import { InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
+import { InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './InvoiceUncheckedCreateNestedManyWithoutAcquisitionInput.schema';
+import { TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema as TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutAcquisitionInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -23,7 +24,8 @@ const makeSchema = () => z.object({
   sentAt: z.coerce.date().optional().nullable(),
   returnedAt: z.coerce.date().optional().nullable(),
   acquisitionItem: z.lazy(() => AcquisitionItemUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutAcquisitionInputObjectSchema).optional()
 }).strict();
 export const AcquisitionUncheckedCreateWithoutCustomerInputObjectSchema: z.ZodType<Prisma.AcquisitionUncheckedCreateWithoutCustomerInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionUncheckedCreateWithoutCustomerInput>;
 export const AcquisitionUncheckedCreateWithoutCustomerInputObjectZodSchema = makeSchema();

@@ -20,7 +20,10 @@ export const PaymentFindManyResultSchema = z.object({
   type: z.unknown(),
   refNo: z.string().optional(),
   updatedAt: z.date(),
-  maintenanceRecord: z.array(z.unknown())
+  maintenanceRecord: z.array(z.unknown()),
+  task: z.array(z.unknown()),
+  technical_issue_id: z.string().optional(),
+  technicalIssue: z.unknown().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

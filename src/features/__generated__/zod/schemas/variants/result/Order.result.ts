@@ -40,7 +40,8 @@ export const OrderResultSchema = z.object({
     Invoice: z.array(z.unknown()),
     customer: z.unknown().nullable(),
     orderItem: z.array(z.unknown()),
-    shipments: z.array(z.unknown())
+    shipments: z.array(z.unknown()),
+    Task: z.array(z.unknown())
 }).strict();
 
 export type OrderResultType = z.infer<typeof OrderResultSchema>;

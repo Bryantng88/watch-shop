@@ -5,7 +5,8 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { CustomerOrderByWithRelationInputObjectSchema as CustomerOrderByWithRelationInputObjectSchema } from './CustomerOrderByWithRelationInput.schema';
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { AcquisitionItemOrderByRelationAggregateInputObjectSchema as AcquisitionItemOrderByRelationAggregateInputObjectSchema } from './AcquisitionItemOrderByRelationAggregateInput.schema';
-import { InvoiceOrderByRelationAggregateInputObjectSchema as InvoiceOrderByRelationAggregateInputObjectSchema } from './InvoiceOrderByRelationAggregateInput.schema'
+import { InvoiceOrderByRelationAggregateInputObjectSchema as InvoiceOrderByRelationAggregateInputObjectSchema } from './InvoiceOrderByRelationAggregateInput.schema';
+import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -28,7 +29,8 @@ const makeSchema = () => z.object({
   customer: z.lazy(() => CustomerOrderByWithRelationInputObjectSchema).optional(),
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   acquisitionItem: z.lazy(() => AcquisitionItemOrderByRelationAggregateInputObjectSchema).optional(),
-  Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional()
+  Invoice: z.lazy(() => InvoiceOrderByRelationAggregateInputObjectSchema).optional(),
+  Task: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const AcquisitionOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.AcquisitionOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.AcquisitionOrderByWithRelationInput>;
 export const AcquisitionOrderByWithRelationInputObjectZodSchema = makeSchema();

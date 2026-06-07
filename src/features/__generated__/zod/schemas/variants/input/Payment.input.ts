@@ -26,7 +26,10 @@ export const PaymentInputSchema = z.object({
     type: PaymentTypeSchema,
     refNo: z.string().optional().nullable(),
     updatedAt: z.date(),
-    maintenanceRecord: z.array(z.unknown())
+    maintenanceRecord: z.array(z.unknown()),
+    task: z.array(z.unknown()),
+    technical_issue_id: z.string().optional().nullable(),
+    technicalIssue: z.unknown().optional().nullable()
 }).strict();
 
 export type PaymentInputType = z.infer<typeof PaymentInputSchema>;

@@ -25,7 +25,8 @@ const makeSchema = () => z.object({
   shipment_id: z.string().optional().nullable(),
   type: PaymentTypeSchema.optional(),
   refNo: z.string().max(30).optional().nullable(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  technical_issue_id: z.string().optional().nullable()
 }).strict();
 export const PaymentCreateManyInputObjectSchema: z.ZodType<Prisma.PaymentCreateManyInput> = makeSchema() as unknown as z.ZodType<Prisma.PaymentCreateManyInput>;
 export const PaymentCreateManyInputObjectZodSchema = makeSchema();

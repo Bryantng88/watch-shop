@@ -16,6 +16,7 @@ import {
     LayoutList,
     MonitorCog,
     CameraIcon,
+    CheckSquare,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -31,6 +32,8 @@ type NotificationCounts = Partial<{
     shipments: number;
     invoices: number;
     payments: number;
+    tasks: number;
+
 }>;
 
 type Props = {
@@ -61,6 +64,8 @@ const NAV: NavItem[] = [
     { href: "/admin/media", label: "Media", icon: CameraIcon, permission: PERMISSIONS.MEDIA_VIEW },
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
+    { href: "/admin/tasks", label: "Tasks", icon: CheckSquare, permission: PERMISSIONS.TASK_VIEW, notificationKey: "tasks" },
+
 ];
 
 function isCurrentRoute(pathname: string, item: NavItem) {

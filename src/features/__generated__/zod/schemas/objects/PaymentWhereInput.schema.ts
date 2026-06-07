@@ -15,7 +15,10 @@ import { EnumPaymentPurposeFilterObjectSchema as EnumPaymentPurposeFilterObjectS
 import { PaymentPurposeSchema } from '../enums/PaymentPurpose.schema';
 import { EnumPaymentTypeFilterObjectSchema as EnumPaymentTypeFilterObjectSchema } from './EnumPaymentTypeFilter.schema';
 import { PaymentTypeSchema } from '../enums/PaymentType.schema';
-import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema'
+import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
+import { TechnicalIssueNullableScalarRelationFilterObjectSchema as TechnicalIssueNullableScalarRelationFilterObjectSchema } from './TechnicalIssueNullableScalarRelationFilter.schema';
+import { TechnicalIssueWhereInputObjectSchema as TechnicalIssueWhereInputObjectSchema } from './TechnicalIssueWhereInput.schema'
 
 const paymentwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => PaymentWhereInputObjectSchema), z.lazy(() => PaymentWhereInputObjectSchema).array()]).optional(),
@@ -40,7 +43,10 @@ const paymentwhereinputSchema = z.object({
   type: z.union([z.lazy(() => EnumPaymentTypeFilterObjectSchema), PaymentTypeSchema]).optional(),
   refNo: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string().max(30)]).optional().nullable(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional()
+  technical_issue_id: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
+  task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  technicalIssue: z.union([z.lazy(() => TechnicalIssueNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema)]).optional()
 }).strict();
 export const PaymentWhereInputObjectSchema: z.ZodType<Prisma.PaymentWhereInput> = paymentwhereinputSchema as unknown as z.ZodType<Prisma.PaymentWhereInput>;
 export const PaymentWhereInputObjectZodSchema = paymentwhereinputSchema;

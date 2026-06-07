@@ -21,10 +21,8 @@ export default async function TechnicalIssueBoardPage({
         vendorOptions:
             data.catalogs?.vendorOptions ?? [],
     };
-    console.log(
-        "vendorOptions:",
-        JSON.stringify(data.catalogs?.vendorOptions, null, 2)
-    ); const technicalDetailCatalogOptions =
+
+    const technicalDetailCatalogOptions =
         catalogs.technicalDetailCatalogOptions ??
         data.technicalDetailCatalogOptions ??
         [];

@@ -502,14 +502,23 @@ export default function WatchFormClient({
         });
     };
 
-    const saveBeforeReview = async () => {
+    const saveBeforeReview = async (target?: "content" | "image") => {
         progress.show({
             title: "Đang lưu watch",
             message: "Hệ thống đang lưu thay đổi mới nhất trước khi duyệt.",
         });
 
         try {
-            const result = await submitWatchForm(buildSubmitValues());
+            const submitValues = buildSubmitValues();
+
+            submitValues.saveIntent =
+                target === "image"
+                    ? "SUBMIT_IMAGE"
+                    : target === "content"
+                        ? "SUBMIT_CONTENT"
+                        : "NORMAL";
+
+            const result = await submitWatchForm(submitValues);
 
             updateValuesAfterSave(result);
 
@@ -522,12 +531,9 @@ export default function WatchFormClient({
 
             return true;
         } catch (error: any) {
-            const message =
-                error?.message || "Không thể lưu watch trước khi duyệt.";
-
             notify.error({
                 title: "Không thể duyệt",
-                message,
+                message: error?.message || "Không thể lưu watch trước khi duyệt.",
             });
 
             return false;
@@ -535,7 +541,6 @@ export default function WatchFormClient({
             progress.hide();
         }
     };
-
     return (
         <div className="space-y-6">
             <WatchEditHeader

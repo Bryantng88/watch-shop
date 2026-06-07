@@ -322,11 +322,16 @@ model Notification {
   priority  String    @default("NORMAL")
   isRead    Boolean   @default(false)
   userId    String
+  taskId    String?
   metadata  Json?
   createdAt DateTime? @default(now()) @db.Timestamp(6)
   updatedAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
 
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+  task Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId, type], map: "notification_user_task_type_unique")
+  @@index([taskId])
   @@index([createdAt])
   @@index([userId, isRead])
   @@index([createdAt], map: "idx_notification_created")
@@ -451,7 +456,9 @@ model Payment {
   refNo              String?             @unique @db.VarChar(30)
   updatedAt          DateTime            @default(now())
   maintenanceRecord  MaintenanceRecord[]
-  Task               Task[]
+  task               Task[]
+  technical_issue_id String?
+  technicalIssue     TechnicalIssue?     @relation(fields: [technical_issue_id], references: [id])
 
   @@index([acquisition_id], map: "idx_payment_acquisition")
   @@index([direction], map: "idx_payment_direction")
@@ -865,7 +872,8 @@ model TechnicalIssue {
   Vendor                   Vendor?                       @relation(fields: [vendorId], references: [id])
   technicalDetailCatalogId String?
   technicalDetailCatalog   TechnicalDetailCatalog?       @relation(fields: [technicalDetailCatalogId], references: [id])
-  Task                     Task[]
+  task                     Task[]
+  payments                 Payment[]
 
   @@index([technicalDetailCatalogId])
   @@index([assessmentId])
@@ -896,21 +904,27 @@ model TechnicalDetailCatalog {
 }
 
 model User {
-  id                String              @id @default(dbgenerated("(gen_random_uuid())::text"))
-  email             String              @unique
-  passwordHash      String?
-  name              String?
-  avatarUrl         String?
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  roleId            String?
+  id           String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  roleId       String?
+
   customer          Customer?
   maintenanceRecord MaintenanceRecord[]
   notification      Notification[]
   serviceRequest    ServiceRequest[]
   technicalIssue    TechnicalIssue[]
   roles             Role[]              @relation("UserRoles")
+
+  createdTasks   Task[] @relation("TaskCreatedBy")
+  assignedTasks  Task[] @relation("TaskAssignedTo")
+  completedTasks Task[] @relation("TaskCompletedBy")
+  cancelledTasks Task[] @relation("TaskCancelledBy")
 
   @@index([isActive])
 }
@@ -1410,21 +1424,29 @@ enum TaskPriority {
   URGENT
 }
 
-enum TaskType {
-  PERSONAL
-  WATCH
-  ORDER
-  SHIPMENT
-  ACQUISITION
-  SERVICE
-  TECHNICAL_ISSUE
-  PAYMENT
-  OTHER
+enum TaskSource {
+  MANUAL
+  SYSTEM
 }
 
-enum TaskVisibility {
-  PRIVATE
-  TEAM
+enum TaskKind {
+  PERSONAL
+
+  WATCH_CONTENT
+  WATCH_IMAGE
+  WATCH_REVIEW
+
+  ORDER_FOLLOW_UP
+  PAYMENT_FOLLOW_UP
+
+  SHIPMENT_FOLLOW_UP
+  SHIPMENT_RETURN
+
+  SERVICE_FOLLOW_UP
+  TECHNICAL_ISSUE_FOLLOW_UP
+
+  ACQUISITION_FOLLOW_UP
+  OTHER
 }
 
 model Task {
@@ -1433,22 +1455,24 @@ model Task {
   title       String
   description String?
 
-  type       TaskType       @default(PERSONAL)
-  status     TaskStatus     @default(TODO)
-  priority   TaskPriority   @default(MEDIUM)
-  visibility TaskVisibility @default(PRIVATE)
+  source   TaskSource   @default(MANUAL)
+  kind     TaskKind     @default(PERSONAL)
+  status   TaskStatus   @default(TODO)
+  priority TaskPriority @default(MEDIUM)
 
   dueAt       DateTime?
   startedAt   DateTime?
   completedAt DateTime?
   cancelledAt DateTime?
 
-  createdByUserId  String?
-  assignedToUserId String?
+  createdByUserId   String?
+  assignedToUserId  String?
+  completedByUserId String?
+  cancelledByUserId String?
 
   watchId          String?
   orderId          String?
-  shipmentId       String?
+  shipmentId       String? @db.Uuid
   acquisitionId    String?
   serviceRequestId String?
   technicalIssueId String?
@@ -1457,6 +1481,11 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  createdByUser   User? @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignedToUser  User? @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  completedByUser User? @relation("TaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser User? @relation("TaskCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
   watch          Watch?          @relation(fields: [watchId], references: [id], onDelete: SetNull)
   order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
   shipment       Shipment?       @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
@@ -1464,15 +1493,18 @@ model Task {
   serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
   technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
   payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  notifications  Notification[]
 
-  @@index([type])
+  @@index([source])
+  @@index([kind])
   @@index([status])
   @@index([priority])
-  @@index([visibility])
   @@index([dueAt])
   @@index([createdAt])
   @@index([assignedToUserId])
   @@index([createdByUserId])
+  @@index([completedByUserId])
+  @@index([cancelledByUserId])
   @@index([watchId])
   @@index([orderId])
   @@index([shipmentId])

@@ -25,7 +25,8 @@ export const ShipmentModelSchema = z.object({
     refNo: z.string().nullable(),
     orderRefNo: z.string().nullable(),
     customerName: z.string().nullable(),
-    order: z.unknown()
+    order: z.unknown(),
+    Task: z.array(z.unknown())
 }).strict();
 
 export type ShipmentPureType = z.infer<typeof ShipmentModelSchema>;

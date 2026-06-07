@@ -36,7 +36,7 @@ type Props = {
     onChange: (patch: Partial<WatchFormValues["content"]>) => void;
     onOpenSpecModal: () => void;
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
-    onBeforeSubmitReview?: () => Promise<boolean>;
+    onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
     isFormDirty?: boolean;
 };
 
@@ -186,8 +186,7 @@ export default function WatchContentSection({
                     status={contentReviewStatus}
                     reviewNote={contentReviewNote}
                     canReviewContent={canReviewContent}
-                    onBeforeSubmit={onBeforeSubmitReview}
-                    isFormDirty={isFormDirty}
+                    onBeforeSubmit={() => onBeforeSubmitReview?.("content") ?? Promise.resolve(true)} isFormDirty={isFormDirty}
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}

@@ -2,7 +2,9 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TechnicalIssueTypeSchema } from '../enums/TechnicalIssueType.schema';
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
-import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema'
+import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
+import { TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
+import { PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -36,7 +38,9 @@ const makeSchema = () => z.object({
   confirmedAt: z.coerce.date().optional().nullable(),
   confirmedById: z.string().optional().nullable(),
   confirmedByNameSnap: z.string().optional().nullable(),
-  technicalDetailCatalogId: z.string().optional().nullable()
+  technicalDetailCatalogId: z.string().optional().nullable(),
+  task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional(),
+  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUncheckedCreateWithoutMaintenanceRecordInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutMaintenanceRecordInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutMaintenanceRecordInput>;
 export const TechnicalIssueUncheckedCreateWithoutMaintenanceRecordInputObjectZodSchema = makeSchema();

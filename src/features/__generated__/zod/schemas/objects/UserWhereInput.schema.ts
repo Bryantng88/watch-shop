@@ -10,7 +10,8 @@ import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordLis
 import { NotificationListRelationFilterObjectSchema as NotificationListRelationFilterObjectSchema } from './NotificationListRelationFilter.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
 import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
-import { RoleListRelationFilterObjectSchema as RoleListRelationFilterObjectSchema } from './RoleListRelationFilter.schema'
+import { RoleListRelationFilterObjectSchema as RoleListRelationFilterObjectSchema } from './RoleListRelationFilter.schema';
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema'
 
 const userwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => UserWhereInputObjectSchema), z.lazy(() => UserWhereInputObjectSchema).array()]).optional(),
@@ -30,7 +31,11 @@ const userwhereinputSchema = z.object({
   notification: z.lazy(() => NotificationListRelationFilterObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  roles: z.lazy(() => RoleListRelationFilterObjectSchema).optional()
+  roles: z.lazy(() => RoleListRelationFilterObjectSchema).optional(),
+  createdTasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  assignedTasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  completedTasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  cancelledTasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;

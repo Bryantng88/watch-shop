@@ -24,7 +24,8 @@ export const AcquisitionInputSchema = z.object({
     customer: z.unknown().optional().nullable(),
     vendor: z.unknown().optional().nullable(),
     acquisitionItem: z.array(z.unknown()),
-    Invoice: z.array(z.unknown())
+    Invoice: z.array(z.unknown()),
+    Task: z.array(z.unknown())
 }).strict();
 
 export type AcquisitionInputType = z.infer<typeof AcquisitionInputSchema>;

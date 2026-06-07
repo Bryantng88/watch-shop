@@ -1,6 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema'
+import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema';
+import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
+import { ShipmentCountOutputTypeArgsObjectSchema as ShipmentCountOutputTypeArgsObjectSchema } from './ShipmentCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
   id: z.boolean().optional(),
@@ -24,7 +26,9 @@ const makeSchema = () => z.object({
   refNo: z.boolean().optional(),
   orderRefNo: z.boolean().optional(),
   customerName: z.boolean().optional(),
-  order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional()
+  order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
+  Task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  _count: z.union([z.boolean(), z.lazy(() => ShipmentCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ShipmentSelectObjectSchema: z.ZodType<Prisma.ShipmentSelect> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentSelect>;
 export const ShipmentSelectObjectZodSchema = makeSchema();

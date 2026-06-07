@@ -25,7 +25,8 @@ import { InvoiceListRelationFilterObjectSchema as InvoiceListRelationFilterObjec
 import { CustomerNullableScalarRelationFilterObjectSchema as CustomerNullableScalarRelationFilterObjectSchema } from './CustomerNullableScalarRelationFilter.schema';
 import { CustomerWhereInputObjectSchema as CustomerWhereInputObjectSchema } from './CustomerWhereInput.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
-import { ShipmentListRelationFilterObjectSchema as ShipmentListRelationFilterObjectSchema } from './ShipmentListRelationFilter.schema'
+import { ShipmentListRelationFilterObjectSchema as ShipmentListRelationFilterObjectSchema } from './ShipmentListRelationFilter.schema';
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema'
 
 const orderwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => OrderWhereInputObjectSchema), z.lazy(() => OrderWhereInputObjectSchema).array()]).optional(),
@@ -62,7 +63,8 @@ const orderwhereinputSchema = z.object({
   Invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
   orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
-  shipments: z.lazy(() => ShipmentListRelationFilterObjectSchema).optional()
+  shipments: z.lazy(() => ShipmentListRelationFilterObjectSchema).optional(),
+  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional()
 }).strict();
 export const OrderWhereInputObjectSchema: z.ZodType<Prisma.OrderWhereInput> = orderwhereinputSchema as unknown as z.ZodType<Prisma.OrderWhereInput>;
 export const OrderWhereInputObjectZodSchema = orderwhereinputSchema;

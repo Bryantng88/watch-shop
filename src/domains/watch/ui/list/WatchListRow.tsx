@@ -301,6 +301,9 @@ export default function WatchListRow({
         saleState === "HOLD" ||
         saleState === "SOLD";
 
+    const isLockedForService =
+        saleState === "HOLD";
+
     const isLockedForEdit =
         saleState === "SOLD";
 
@@ -331,7 +334,7 @@ export default function WatchListRow({
         },
 
         onService &&
-        !isLockedForQuickOrder && {
+        !isLockedForService && {
             key: "service",
             label: "Service",
             icon: <Hammer className="h-4 w-4" />,

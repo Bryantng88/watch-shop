@@ -31,6 +31,7 @@ export const AcquisitionFindManySelectSchema: z.ZodType<Prisma.AcquisitionSelect
     vendor: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
+    Task: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.AcquisitionSelect>;
 
@@ -56,6 +57,7 @@ export const AcquisitionFindManySelectZodSchema = z.object({
     vendor: z.boolean().optional(),
     acquisitionItem: z.boolean().optional(),
     Invoice: z.boolean().optional(),
+    Task: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

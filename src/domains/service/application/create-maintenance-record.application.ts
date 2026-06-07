@@ -24,7 +24,7 @@ export type CreateMaintenanceRecordInput = {
 async function createPaymentTx(tx: Prisma.TransactionClient, input: {
   amount: Prisma.Decimal;
   currency: string;
-  service_request_id: string;
+  technical_issue_id: string;
   vendor_id?: string | null;
   note?: string | null;
   method: any;
@@ -37,7 +37,8 @@ async function createPaymentTx(tx: Prisma.TransactionClient, input: {
     data: {
       amount: input.amount,
       currency: input.currency,
-      service_request_id: input.service_request_id,
+      service_request_id: null,
+      technical_issue_id: input.technical_issue_id,
       vendor_id: input.vendor_id ?? null,
       note: input.note ?? null,
       method: input.method,
@@ -83,23 +84,25 @@ export async function createMaintenanceRecordForServiceRequestApplication(input:
     let paidAmount: Prisma.Decimal | null = null;
     let paidAt: Date | null = null;
 
-    if (input.totalCost != null && Number(input.totalCost) > 0) {
+    const technicalIssueId = String(input.technicalIssueId ?? "").trim() || null;
+
+    if (input.totalCost != null && Number(input.totalCost) >= 0 && technicalIssueId) {
       const amount = new Prisma.Decimal(String(input.totalCost));
       const createdPayment = await createPaymentTx(tx, {
         amount,
         currency,
-        service_request_id: sr.id,
+        technical_issue_id: technicalIssueId,
         vendor_id: vendorId,
         note: input.notes ?? null,
         method: (input.paymentMethod ?? "CASH") as any,
-        status: (input.paymentStatus ?? "UNPAID") as any,
+        status: "UNPAID" as any,
         direction: "OUT" as any,
         type: (input.paymentType ?? "SERVICE") as any,
         purpose: (input.paymentPurpose ?? "MAINTENANCE_COST") as any,
       });
       paymentId = createdPayment.id;
-      paidAmount = amount;
-      paidAt = new Date();
+      paidAmount = null;
+      paidAt = null;
     }
 
     const created = await maintenanceRepo.createLog(tx, {

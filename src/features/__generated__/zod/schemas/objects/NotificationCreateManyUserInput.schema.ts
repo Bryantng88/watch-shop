@@ -11,6 +11,7 @@ const makeSchema = () => z.object({
   message: z.string(),
   priority: z.string().optional(),
   isRead: z.boolean().optional(),
+  taskId: z.string().optional().nullable(),
   metadata: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   createdAt: z.coerce.date().optional().nullable(),
   updatedAt: z.coerce.date().optional()

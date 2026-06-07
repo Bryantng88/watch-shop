@@ -77,7 +77,7 @@ export async function getServiceRequestList(
         serviceCatalog: { select: { id: true, code: true, name: true } },
         _count: { select: { maintenanceRecord: true, technicalIssue: true } },
         technicalIssue: {
-          select: { executionStatus: true, actualCost: true, estimatedCost: true },
+          select: { id: true, executionStatus: true, actualCost: true, estimatedCost: true },
         },
         orderItem: {
           select: {
@@ -93,21 +93,29 @@ export async function getServiceRequestList(
     db.serviceRequest.count({ where }),
   ]);
 
-  const serviceRequestIds = rows.map((row) => row.id);
-  const paymentRows = serviceRequestIds.length
+  const issueToServiceRequestId = new Map<string, string>();
+  for (const row of rows as any[]) {
+    for (const issue of row.technicalIssue ?? []) {
+      if (issue?.id) issueToServiceRequestId.set(issue.id, row.id);
+    }
+  }
+
+  const technicalIssueIds = Array.from(issueToServiceRequestId.keys());
+  const paymentRows = technicalIssueIds.length
     ? await db.payment.findMany({
       where: {
-        service_request_id: { in: serviceRequestIds },
+        technical_issue_id: { in: technicalIssueIds },
         type: "SERVICE" as any,
-        direction: "IN" as any,
-      },
-      select: { service_request_id: true, status: true, amount: true },
+        direction: "OUT" as any,
+      } as any,
+      select: { technical_issue_id: true, status: true, amount: true } as any,
     })
     : [];
 
   const paymentByServiceRequestId = new Map<string, { paid: number; collected: number; unpaid: number; canceled: number }>();
   for (const payment of paymentRows as any[]) {
-    const key = payment.service_request_id;
+    const issueId = payment.technical_issue_id;
+    const key = issueId ? issueToServiceRequestId.get(issueId) : null;
     if (!key) continue;
     const current = paymentByServiceRequestId.get(key) ?? { paid: 0, collected: 0, unpaid: 0, canceled: 0 };
     const amount = Number(payment.amount ?? 0);

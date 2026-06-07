@@ -4,12 +4,13 @@ import {
   createInitialPaymentsForOrderTx,
   createPayment,
   ensureServiceRequestPaymentTx,
+  ensureTechnicalIssuePaymentTx,
   getAcquisitionPaymentSummary,
   getOrderPaymentSummary,
-  getServicePaymentSummary,
+  getServicePaymentSummaryByServiceRequest,
   listAcquisitionPayments,
   listOrderPayments,
-  listServicePayments,
+  listServicePaymentsByServiceRequest,
   markOrderShipmentDeliveredAndCollectCod,
   cancelPayment,
   finalizeOrderByPaidAmount,
@@ -61,15 +62,20 @@ export async function getAcquisitionPaymentSummaryApplication(acquisitionId: str
 }
 
 export async function listServicePaymentsApplication(serviceRequestId: string) {
-  return listServicePayments(serviceRequestId);
+  return listServicePaymentsByServiceRequest(serviceRequestId);
 }
 
 export async function getServicePaymentSummaryApplication(serviceRequestId: string) {
-  return getServicePaymentSummary(serviceRequestId);
+  return getServicePaymentSummaryByServiceRequest(serviceRequestId);
 }
 
+// Legacy name: route cũ vẫn truyền serviceRequestId, nhưng bên dưới sẽ gom payment theo TechnicalIssue.
 export async function ensureServiceRequestPaymentApplicationTx(tx: Tx, serviceRequestId: string) {
   return ensureServiceRequestPaymentTx(tx, serviceRequestId);
+}
+
+export async function ensureTechnicalIssuePaymentApplicationTx(tx: Tx, technicalIssueId: string) {
+  return ensureTechnicalIssuePaymentTx(tx, technicalIssueId);
 }
 
 export async function createInitialPaymentsForOrderApplicationTx(tx: Tx, orderId: string) {

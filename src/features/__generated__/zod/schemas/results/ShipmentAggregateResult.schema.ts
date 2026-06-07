@@ -21,7 +21,8 @@ export const ShipmentAggregateResultSchema = z.object({  _count: z.object({
     refNo: z.number(),
     orderRefNo: z.number(),
     customerName: z.number(),
-    order: z.number()
+    order: z.number(),
+    Task: z.number()
   }).optional(),
   _sum: z.object({
     shippingAmount: z.number().nullable()

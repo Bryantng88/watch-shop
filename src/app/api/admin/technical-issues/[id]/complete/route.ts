@@ -16,9 +16,11 @@ export async function POST(
 
         await completeTechnicalIssue({
             id,
-            serviceCatalogId: body.serviceCatalogId,
+            technicalDetailCatalogId: body.technicalDetailCatalogId,
             supplyCatalogId: body.supplyCatalogId,
             mechanicalPartCatalogId: body.mechanicalPartCatalogId,
+            actionMode: body.actionMode,
+            vendorId: body.vendorId,
             actualCost: body.actualCost,
             resolutionNote: body.resolutionNote,
         });

@@ -6,6 +6,7 @@ import { NotificationFindManySchema as NotificationFindManySchema } from '../fin
 import { ServiceRequestFindManySchema as ServiceRequestFindManySchema } from '../findManyServiceRequest.schema';
 import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
 import { RoleFindManySchema as RoleFindManySchema } from '../findManyRole.schema';
+import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { UserCountOutputTypeArgsObjectSchema as UserCountOutputTypeArgsObjectSchema } from './UserCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -15,6 +16,10 @@ const makeSchema = () => z.object({
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestFindManySchema)]).optional(),
   technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
   roles: z.union([z.boolean(), z.lazy(() => RoleFindManySchema)]).optional(),
+  createdTasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  assignedTasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  completedTasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  cancelledTasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => UserCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const UserIncludeObjectSchema: z.ZodType<Prisma.UserInclude> = makeSchema() as unknown as z.ZodType<Prisma.UserInclude>;

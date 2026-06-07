@@ -1,6 +1,6 @@
 import type { PaymentDirection, PaymentMethod, PaymentPurpose, PaymentStatus, PaymentType } from "@prisma/client";
 
-export type PaymentOwnerType = "ORDER" | "ACQUISITION" | "SHIPMENT" | "SERVICE";
+export type PaymentOwnerType = "ORDER" | "ACQUISITION" | "SHIPMENT" | "SERVICE" | "TECHNICAL_ISSUE";
 
 export type PaymentListItem = {
   id: string;

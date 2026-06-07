@@ -21,7 +21,7 @@ type Props = {
     imageReviewStatus?: string | null;
     imageReviewNote?: string | null;
     canReviewContent?: boolean;
-    onBeforeSubmitReview?: () => Promise<boolean>;
+    onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
     onReviewStatusChange?: (next: {
         status: ReviewStatus;
         reviewNote?: string | null;
@@ -210,7 +210,7 @@ export default function WatchImageSection({
                     reviewNote={imageReviewNote}
                     canReviewContent={canReviewContent}
                     isFormDirty={isFormDirty}
-                    onBeforeSubmit={onBeforeSubmitReview}
+                    onBeforeSubmit={() => onBeforeSubmitReview?.("image") ?? Promise.resolve(true)}
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}

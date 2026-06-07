@@ -14,7 +14,11 @@ export const UserAggregateResultSchema = z.object({  _count: z.object({
     notification: z.number(),
     serviceRequest: z.number(),
     technicalIssue: z.number(),
-    roles: z.number()
+    roles: z.number(),
+    createdTasks: z.number(),
+    assignedTasks: z.number(),
+    completedTasks: z.number(),
+    cancelledTasks: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

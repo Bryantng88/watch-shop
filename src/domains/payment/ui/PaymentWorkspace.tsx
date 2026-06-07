@@ -19,6 +19,8 @@ export type PaymentOwner = {
     remainingAmount?: number | null;
     codAmount?: number | null;
     listEndpoint: string;
+    disableCreate?: boolean;
+    createDisabledMessage?: string | null;
 };
 
 export type PaymentListItem = {
@@ -225,11 +227,13 @@ export default function PaymentWorkspace({
                             <PaymentCreatePanel
                                 owner={owner}
                                 defaultAmount={availableToCreate}
-                                locked={isFullyPaid || availableToCreate <= 0}
+                                locked={owner.disableCreate || isFullyPaid || availableToCreate <= 0}
                                 lockMessage={
-                                    isFullyPaid
-                                        ? "Payment đã thanh toán full. Không thể tạo thêm payment mới."
-                                        : "Owner đã có đủ payment đang mở. Hoàn tất hoặc hủy payment hiện có trước khi tạo thêm."
+                                    owner.disableCreate
+                                        ? owner.createDisabledMessage || "Payment service được tạo tự động khi hoàn tất technical issue. Vào Issue Board để hoàn tất TI, sau đó xử lý PAID tại đây."
+                                        : isFullyPaid
+                                            ? "Payment đã thanh toán full. Không thể tạo thêm payment mới."
+                                            : "Owner đã có đủ payment đang mở. Hoàn tất hoặc hủy payment hiện có trước khi tạo thêm."
                                 }
                                 submitting={submitting}
                                 onCreatePayment={onCreatePayment}
