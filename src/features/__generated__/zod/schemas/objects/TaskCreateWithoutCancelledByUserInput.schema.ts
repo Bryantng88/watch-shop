@@ -7,6 +7,7 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNestedOneWithoutCreatedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCreatedTasksInput.schema';
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
+import { TaskTypeCreateNestedOneWithoutTasksInputObjectSchema as TaskTypeCreateNestedOneWithoutTasksInputObjectSchema } from './TaskTypeCreateNestedOneWithoutTasksInput.schema';
 import { WatchCreateNestedOneWithoutTaskInputObjectSchema as WatchCreateNestedOneWithoutTaskInputObjectSchema } from './WatchCreateNestedOneWithoutTaskInput.schema';
 import { OrderCreateNestedOneWithoutTaskInputObjectSchema as OrderCreateNestedOneWithoutTaskInputObjectSchema } from './OrderCreateNestedOneWithoutTaskInput.schema';
 import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNestedOneWithoutTaskInputObjectSchema } from './ShipmentCreateNestedOneWithoutTaskInput.schema';
@@ -33,6 +34,7 @@ const makeSchema = () => z.object({
   createdByUser: z.lazy(() => UserCreateNestedOneWithoutCreatedTasksInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTasksInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserCreateNestedOneWithoutCompletedTasksInputObjectSchema).optional(),
+  taskType: z.lazy(() => TaskTypeCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   watch: z.lazy(() => WatchCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentCreateNestedOneWithoutTaskInputObjectSchema).optional(),

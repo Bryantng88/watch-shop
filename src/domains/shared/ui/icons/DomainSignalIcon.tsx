@@ -23,7 +23,12 @@ import {
     Wrench,
     Check,
     DollarSign,
-    PackageX
+    PackageX,
+    ClipboardList,
+    BookOpen,
+
+    Settings2,
+    Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -451,6 +456,108 @@ export function ShipmentStateSignalIcon({
             title="Chờ giao"
             icon={<Package />}
             className={cn("bg-blue-50 text-blue-600 ring-blue-100", className)}
+        />
+    );
+}
+
+export function TaskSignalIcon({
+    count,
+    title = "Task",
+    onClick,
+    disabled
+}: {
+    count?: number | string | null;
+    title?: string;
+    onClick?: () => void;
+    disabled?: boolean;
+}) {
+    const n = Number(count ?? 0);
+
+    return (
+        <button
+            type="button"
+            title={title}
+            aria-label={title}
+            onClick={onClick}
+            disabled={disabled}
+            className="relative inline-flex shrink-0"
+        >
+            <DomainSignalIcon
+                size="sm"
+                title={title}
+                icon={<ClipboardList />}
+                className={
+                    n > 0
+                        ? "bg-amber-50 text-amber-700 ring-amber-200"
+                        : "bg-slate-50 text-slate-400 ring-slate-200"
+                }
+            />
+
+            {n > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+                    {n > 9 ? "9+" : n}
+                </span>
+            ) : null}
+        </button>
+    );
+}
+
+export function WatchContentSectionSignalIcon({
+    title = "Content",
+}: {
+    title?: string;
+}) {
+    return (
+        <DomainSignalIcon
+            size="sm"
+            title={title}
+            icon={<BookOpen />}
+            className="bg-blue-50 text-blue-700 ring-blue-100"
+        />
+    );
+}
+
+export function WatchImageSectionSignalIcon({
+    title = "Hình ảnh",
+}: {
+    title?: string;
+}) {
+    return (
+        <DomainSignalIcon
+            size="sm"
+            title={title}
+            icon={<ImageIcon />}
+            className="bg-indigo-50 text-indigo-700 ring-indigo-100"
+        />
+    );
+}
+
+export function WatchSpecSectionSignalIcon({
+    title = "Thông số",
+}: {
+    title?: string;
+}) {
+    return (
+        <DomainSignalIcon
+            size="sm"
+            title={title}
+            icon={<Settings2 />}
+            className="bg-slate-50 text-slate-600 ring-slate-200"
+        />
+    );
+}
+
+export function WatchPricingSectionSignalIcon({
+    title = "Pricing",
+}: {
+    title?: string;
+}) {
+    return (
+        <DomainSignalIcon
+            size="sm"
+            title={title}
+            icon={<Tag />}
+            className="bg-emerald-50 text-emerald-700 ring-emerald-100"
         />
     );
 }

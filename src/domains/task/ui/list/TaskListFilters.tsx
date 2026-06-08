@@ -1,21 +1,19 @@
 "use client";
 
 import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
-import type { TaskDueKey } from "../../server/task.types";
-import { TASK_DUE_LABEL, TASK_KIND_LABEL, TASK_PRIORITY_LABEL, TASK_STATUS_LABEL } from "../../utils/task-labels";
+import { TASK_KIND_LABEL, TASK_PRIORITY_LABEL, TASK_STATUS_LABEL } from "../../utils/task-labels";
 
 export type TaskListFiltersValue = {
   q: string;
   status: TaskStatus | "OPEN" | "ALL";
   priority: TaskPriority | "ALL";
   kind: TaskKind | "ALL";
-  due: TaskDueKey;
   pageSize: string;
 };
 
 export default function TaskListFilters({ filters, onChange, onApply, onClear }: { filters: TaskListFiltersValue; onChange: (patch: Partial<TaskListFiltersValue>) => void; onApply: () => void; onClear: () => void }) {
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_170px_150px_210px_150px_120px]">
+    <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_180px_160px_220px_120px]">
       <input value={filters.q} onChange={(e) => onChange({ q: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") onApply(); }} placeholder="Tìm task, mã đơn, watch..." className="h-10 rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" />
       <select value={filters.status} onChange={(e) => onChange({ status: e.target.value as any })} className="h-10 rounded-2xl border border-slate-200 px-3 text-sm">
         <option value="OPEN">Đang mở</option>
@@ -29,9 +27,6 @@ export default function TaskListFilters({ filters, onChange, onApply, onClear }:
       <select value={filters.kind} onChange={(e) => onChange({ kind: e.target.value as any })} className="h-10 rounded-2xl border border-slate-200 px-3 text-sm">
         <option value="ALL">Mọi loại task</option>
         {Object.values(TaskKind).map((item) => <option key={item} value={item}>{TASK_KIND_LABEL[item]}</option>)}
-      </select>
-      <select value={filters.due} onChange={(e) => onChange({ due: e.target.value as TaskDueKey })} className="h-10 rounded-2xl border border-slate-200 px-3 text-sm">
-        {Object.entries(TASK_DUE_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
       <div className="flex gap-2">
         <button type="button" onClick={onApply} className="rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white">Lọc</button>

@@ -1429,6 +1429,43 @@ enum TaskSource {
   SYSTEM
 }
 
+model TaskType {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  code        String  @unique
+  name        String
+  description String?
+
+  domain     TaskDomain @default(GENERAL)
+  legacyKind TaskKind   @default(OTHER)
+
+  defaultPriority   TaskPriority       @default(MEDIUM)
+  completionMode    TaskCompletionMode @default(MANUAL_CONFIRM)
+  completionRuleKey String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([domain, isActive, sortOrder])
+  @@index([legacyKind])
+  @@index([completionMode])
+}
+
+enum TaskDomain {
+  GENERAL
+  WATCH
+  ORDER
+  SHIPMENT
+  SERVICE
+  PAYMENT
+  ACQUISITION
+}
+
 enum TaskKind {
   PERSONAL
 
@@ -1447,6 +1484,11 @@ enum TaskKind {
 
   ACQUISITION_FOLLOW_UP
   OTHER
+}
+
+enum TaskCompletionMode {
+  MANUAL_CONFIRM
+  BUSINESS_RULE
 }
 
 model Task {
@@ -1472,19 +1514,20 @@ model Task {
 
   watchId          String?
   orderId          String?
-  shipmentId       String? @db.Uuid
+  shipmentId       String?  @db.Uuid
   acquisitionId    String?
   serviceRequestId String?
   technicalIssueId String?
   paymentId        String?
+  taskTypeId       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdByUser   User? @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  assignedToUser  User? @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  completedByUser User? @relation("TaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
-  cancelledByUser User? @relation("TaskCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  createdByUser   User?     @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignedToUser  User?     @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  completedByUser User?     @relation("TaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser User?     @relation("TaskCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  taskType        TaskType? @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
 
   watch          Watch?          @relation(fields: [watchId], references: [id], onDelete: SetNull)
   order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
@@ -1512,6 +1555,7 @@ model Task {
   @@index([serviceRequestId])
   @@index([technicalIssueId])
   @@index([paymentId])
+  @@index([taskTypeId])
 }
 
 enum AcquisitionItemKind {

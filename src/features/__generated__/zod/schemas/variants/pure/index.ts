@@ -57,4 +57,5 @@ export { technicalAssessmentsModelSchema } from './technicalAssessments.pure';
 export { technicalPartCatalogModelSchema } from './technicalPartCatalog.pure';
 export { AcquisitionSpecJobLogModelSchema } from './AcquisitionSpecJobLog.pure';
 export { MediaAssetModelSchema } from './MediaAsset.pure';
+export { TaskTypeModelSchema } from './TaskType.pure';
 export { TaskModelSchema } from './Task.pure';

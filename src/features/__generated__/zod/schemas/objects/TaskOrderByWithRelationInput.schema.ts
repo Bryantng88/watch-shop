@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
+import { TaskTypeOrderByWithRelationInputObjectSchema as TaskTypeOrderByWithRelationInputObjectSchema } from './TaskTypeOrderByWithRelationInput.schema';
 import { WatchOrderByWithRelationInputObjectSchema as WatchOrderByWithRelationInputObjectSchema } from './WatchOrderByWithRelationInput.schema';
 import { OrderOrderByWithRelationInputObjectSchema as OrderOrderByWithRelationInputObjectSchema } from './OrderOrderByWithRelationInput.schema';
 import { ShipmentOrderByWithRelationInputObjectSchema as ShipmentOrderByWithRelationInputObjectSchema } from './ShipmentOrderByWithRelationInput.schema';
@@ -35,12 +36,14 @@ const makeSchema = () => z.object({
   serviceRequestId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   technicalIssueId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   paymentId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  taskTypeId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   createdByUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
+  taskType: z.lazy(() => TaskTypeOrderByWithRelationInputObjectSchema).optional(),
   watch: z.lazy(() => WatchOrderByWithRelationInputObjectSchema).optional(),
   order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentOrderByWithRelationInputObjectSchema).optional(),

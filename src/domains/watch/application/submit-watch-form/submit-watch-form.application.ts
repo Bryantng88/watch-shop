@@ -1,6 +1,8 @@
 import { prisma } from "@/server/db/client";
 import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
+import { findOpenRelatedTasks } from "@/domains/task/server/task.service";
+import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
 
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server/media";
@@ -49,6 +51,7 @@ type SubmitWatchFormResult = {
     askContinueContent: boolean;
     contentReviewStatus?: "DRAFT";
     imageReviewStatus?: "DRAFT";
+    relatedTaskSuggestions?: RelatedTaskSuggestion[];
 };
 
 function buildContentSnapshot(input: {
@@ -615,6 +618,14 @@ export async function submitWatchFormApplication(
         });
     }
 
+    const relatedTaskSuggestions = imagesChanged
+        ? await findOpenRelatedTasks(prisma, {
+            watchId: productId,
+            taskTypeCode: "WATCH_IMAGE",
+            limit: 10,
+        })
+        : [];
+
     return {
         ok: true,
         message: "Đã lưu watch.",
@@ -638,5 +649,6 @@ export async function submitWatchFormApplication(
             !context.canReviewContent && imagesChanged && !hasContentData,
         contentReviewStatus: contentChanged ? "DRAFT" : undefined,
         imageReviewStatus: imagesChanged ? "DRAFT" : undefined,
+        relatedTaskSuggestions,
     };
 }

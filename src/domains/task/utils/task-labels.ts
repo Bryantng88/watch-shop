@@ -1,5 +1,4 @@
-import { TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
-import type { TaskDueKey } from "../server/task.types";
+import { TaskCompletionMode, TaskDomain, TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   TODO: "Cần làm",
@@ -35,14 +34,6 @@ export const TASK_KIND_LABEL: Record<TaskKind, string> = {
   OTHER: "Khác",
 };
 
-export const TASK_DUE_LABEL: Record<TaskDueKey, string> = {
-  ALL: "Mọi hạn",
-  OVERDUE: "Quá hạn",
-  TODAY: "Hôm nay",
-  THIS_WEEK: "Tuần này",
-  NO_DUE: "Chưa có hạn",
-};
-
 export function formatTaskDomainLabel(task: {
   watchId?: string | null;
   orderId?: string | null;
@@ -62,19 +53,18 @@ export function formatTaskDomainLabel(task: {
   return "Không gắn domain";
 }
 
-export function getTaskDueState(value?: Date | string | null) {
-  if (!value) return "none" as const;
-  const due = new Date(value);
-  const now = new Date();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const next3Days = new Date(now);
-  next3Days.setDate(next3Days.getDate() + 3);
 
-  if (due < today) return "overdue" as const;
-  if (due < tomorrow) return "today" as const;
-  if (due <= next3Days) return "soon" as const;
-  return "normal" as const;
-}
+export const TASK_DOMAIN_LABEL: Record<TaskDomain, string> = {
+  GENERAL: "Chung",
+  WATCH: "Watch",
+  ORDER: "Order",
+  SHIPMENT: "Shipment",
+  SERVICE: "Service",
+  PAYMENT: "Payment",
+  ACQUISITION: "Acquisition",
+};
+
+export const TASK_COMPLETION_MODE_LABEL: Record<TaskCompletionMode, string> = {
+  MANUAL_CONFIRM: "Người xử lý xác nhận",
+  BUSINESS_RULE: "Theo business rule",
+};

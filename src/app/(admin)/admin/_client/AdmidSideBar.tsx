@@ -65,6 +65,7 @@ const NAV: NavItem[] = [
     { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
     { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
     { href: "/admin/tasks", label: "Tasks", icon: CheckSquare, permission: PERMISSIONS.TASK_VIEW, notificationKey: "tasks" },
+    { href: "/admin/settings", label: "Settings", icon: Settings, permission: PERMISSIONS.TASK_VIEW },
 
 ];
 

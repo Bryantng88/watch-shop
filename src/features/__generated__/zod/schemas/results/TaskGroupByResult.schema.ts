@@ -18,6 +18,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
   serviceRequestId: z.string(),
   technicalIssueId: z.string(),
   paymentId: z.string(),
+  taskTypeId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
   _count: z.object({
@@ -43,12 +44,14 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.number(),
     technicalIssueId: z.number(),
     paymentId: z.number(),
+    taskTypeId: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
     createdByUser: z.number(),
     assignedToUser: z.number(),
     completedByUser: z.number(),
     cancelledByUser: z.number(),
+    taskType: z.number(),
     watch: z.number(),
     order: z.number(),
     shipment: z.number(),
@@ -77,6 +80,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
+    taskTypeId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -99,6 +103,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
+    taskTypeId: z.string().nullable(),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()

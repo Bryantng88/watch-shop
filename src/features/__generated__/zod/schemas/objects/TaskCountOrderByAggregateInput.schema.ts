@@ -25,6 +25,7 @@ const makeSchema = () => z.object({
   serviceRequestId: SortOrderSchema.optional(),
   technicalIssueId: SortOrderSchema.optional(),
   paymentId: SortOrderSchema.optional(),
+  taskTypeId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional()
 }).strict();

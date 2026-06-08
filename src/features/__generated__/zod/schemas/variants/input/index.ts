@@ -57,4 +57,5 @@ export { technicalAssessmentsInputSchema } from './technicalAssessments.input';
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
 export { AcquisitionSpecJobLogInputSchema } from './AcquisitionSpecJobLog.input';
 export { MediaAssetInputSchema } from './MediaAsset.input';
+export { TaskTypeInputSchema } from './TaskType.input';
 export { TaskInputSchema } from './Task.input';

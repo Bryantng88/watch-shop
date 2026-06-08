@@ -7,6 +7,8 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
+import RelatedTaskCompleteModal from "@/domains/task/ui/related/RelatedTaskCompleteModal";
+import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
 
 import { submitWatchForm } from "./form/watch-form.actions";
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
@@ -169,6 +171,8 @@ export default function WatchFormClient({
 
     const [afterSaveOpen, setAfterSaveOpen] = useState(false);
     const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
+    const [relatedTaskOpen, setRelatedTaskOpen] = useState(false);
+    const [relatedTaskItems, setRelatedTaskItems] = useState<RelatedTaskSuggestion[]>([]);
 
     const contentRef = useRef<HTMLDivElement | null>(null);
     const pricingRef = useRef<HTMLDivElement | null>(null);
@@ -451,6 +455,12 @@ export default function WatchFormClient({
         });
     };
 
+    const showRelatedTaskSuggestions = (items?: RelatedTaskSuggestion[] | null) => {
+        const openItems = Array.isArray(items) ? items.filter((item) => item?.id) : [];
+        setRelatedTaskItems(openItems);
+        setRelatedTaskOpen(openItems.length > 0);
+    };
+
     const onSubmit = () => {
         setAfterSaveOpen(false);
         setAfterSaveMode("normal");
@@ -465,6 +475,7 @@ export default function WatchFormClient({
                 const result = await submitWatchForm(buildSubmitValues());
 
                 updateValuesAfterSave(result);
+                showRelatedTaskSuggestions(result?.relatedTaskSuggestions);
 
                 notify.success({
                     title: "Đã lưu watch",
@@ -521,6 +532,7 @@ export default function WatchFormClient({
             const result = await submitWatchForm(submitValues);
 
             updateValuesAfterSave(result);
+            showRelatedTaskSuggestions(result?.relatedTaskSuggestions);
 
             notify.success({
                 title: "Đã lưu watch",
@@ -607,6 +619,7 @@ export default function WatchFormClient({
                     <WatchImageSection
                         watchTitle={values.basic.title}
                         inlineImage={inlineImage}
+                        watchId={values.watchId}
                         productId={values.productId}
                         poolImages={values.media.poolImages || []}
                         galleryImages={values.media.galleryImages || []}
@@ -792,6 +805,21 @@ export default function WatchFormClient({
                     }
 
                     setAfterSaveOpen(false);
+                }}
+            />
+
+            <RelatedTaskCompleteModal
+                open={relatedTaskOpen}
+                items={relatedTaskItems}
+                title="Có task hình ảnh đang mở"
+                message="Bạn vừa cập nhật hình ảnh của watch này. Chọn task đã xử lý xong để đánh dấu hoàn thành."
+                onClose={() => setRelatedTaskOpen(false)}
+                onCompleted={() => {
+                    notify.success({
+                        title: "Đã hoàn thành task",
+                        message: "Task liên quan đã được đánh dấu hoàn thành.",
+                    });
+                    router.refresh();
                 }}
             />
         </div>

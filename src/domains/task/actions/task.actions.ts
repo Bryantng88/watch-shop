@@ -4,12 +4,24 @@ import { revalidatePath } from "next/cache";
 import { TaskStatus } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
-import { changeTaskStatus, createTask, updateTask } from "../server/task.service";
-import { syncPaymentTask, syncShipmentTask, syncTechnicalIssueTask, syncWatchContentAndImageTasks } from "../server/task.system";
-import type { CreateTaskInput, UpdateTaskInput } from "../server/task.types";
+import {
+  changeTaskStatus,
+  completeTasksByIds,
+  createTask,
+  findOpenRelatedTasks,
+  getTaskQuickCreateData,
+  updateTask,
+} from "../server/task.service";
+import type { CreateTaskInput, FindOpenRelatedTasksInput, UpdateTaskInput } from "../server/task.types";
 
 async function getTaskAuth() {
+  // Replace by a dedicated permission later if you add TASK_VIEW/TASK_MANAGE.
   return requirePermission("TASK_VIEW");
+}
+
+export async function getTaskQuickCreateDataAction() {
+  const auth = await getTaskAuth();
+  return getTaskQuickCreateData(prisma, auth);
 }
 
 export async function createTaskAction(input: CreateTaskInput) {
@@ -33,34 +45,15 @@ export async function changeTaskStatusAction(id: string, status: TaskStatus) {
   return { ok: true, task };
 }
 
-export async function syncTaskForWatchAction(watchId: string) {
-  const auth: any = await getTaskAuth();
-  const actorUserId = auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
-  await syncWatchContentAndImageTasks(prisma, { watchId, actorUserId });
-  revalidatePath("/admin/tasks");
-  return { ok: true };
+export async function findOpenRelatedTasksAction(input: FindOpenRelatedTasksInput) {
+  await getTaskAuth();
+  const items = await findOpenRelatedTasks(prisma, input);
+  return { ok: true, items };
 }
 
-export async function syncTaskForPaymentAction(paymentId: string) {
-  const auth: any = await getTaskAuth();
-  const actorUserId = auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
-  await syncPaymentTask(prisma, { paymentId, actorUserId });
+export async function completeTasksByIdsAction(ids: string[]) {
+  const auth = await getTaskAuth();
+  const result = await completeTasksByIds(prisma, ids, auth);
   revalidatePath("/admin/tasks");
-  return { ok: true };
-}
-
-export async function syncTaskForShipmentAction(shipmentId: string) {
-  const auth: any = await getTaskAuth();
-  const actorUserId = auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
-  await syncShipmentTask(prisma, { shipmentId, actorUserId });
-  revalidatePath("/admin/tasks");
-  return { ok: true };
-}
-
-export async function syncTaskForTechnicalIssueAction(technicalIssueId: string) {
-  const auth: any = await getTaskAuth();
-  const actorUserId = auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
-  await syncTechnicalIssueTask(prisma, { technicalIssueId, actorUserId });
-  revalidatePath("/admin/tasks");
-  return { ok: true };
+  return { ok: true, count: result.count };
 }

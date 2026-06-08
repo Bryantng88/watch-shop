@@ -1,18 +1,27 @@
-import { TaskKind, TaskStatus } from "@prisma/client";
+import { TaskStatus } from "@prisma/client";
 import type { DB } from "@/server/db/client";
+import { getActiveTaskTypeOptions } from "./task-type.service";
+import { getTaskTypeByIdRepo } from "./task-type.repo";
 import {
+  changeTaskStatusRepo,
   completeRelatedTasksRepo,
-  countTaskDueBucketsRepo,
+  completeTasksByIdsRepo,
   countTaskViewsRepo,
   createTaskRepo,
-  ensureSystemTaskRepo,
+  findOpenRelatedTasksRepo,
   getTaskByIdRepo,
   listAssignableUsersRepo,
   listTasksRepo,
   setTaskStatusRepo,
   updateTaskRepo,
 } from "./task.repo";
-import type { CompleteRelatedTasksInput, CreateTaskInput, EnsureSystemTaskInput, TaskListFilters, UpdateTaskInput } from "./task.types";
+import type {
+  CompleteRelatedTasksInput,
+  CreateTaskInput,
+  FindOpenRelatedTasksInput,
+  TaskListFilters,
+  UpdateTaskInput,
+} from "./task.types";
 
 export function getAuthUserId(auth: any): string | null {
   return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
@@ -34,6 +43,7 @@ async function assertCanAccessTask(db: DB, id: string, auth: any) {
 
   const task = await getTaskByIdRepo(db, id);
   if (!task) throw new Error("Không tìm thấy task");
+
   if (authCanViewAllTasks(auth)) return task;
 
   if (task.createdByUserId !== userId && task.assignedToUserId !== userId) {
@@ -48,55 +58,95 @@ export async function getTaskListPageData(db: DB, input: { auth: any; filters: T
   assertUser(userId);
 
   const canViewAll = authCanViewAllTasks(input.auth);
-  const view = input.filters.view || "mine";
-  const [list, counts, dueCounts, users] = await Promise.all([
+  const [list, counts, users, taskTypes] = await Promise.all([
     listTasksRepo(db, { userId, canViewAll, filters: input.filters }),
     countTaskViewsRepo(db, { userId, canViewAll }),
-    countTaskDueBucketsRepo(db, { userId, canViewAll, view }),
     listAssignableUsersRepo(db),
+    getActiveTaskTypeOptions(db),
   ]);
 
-  return { ...list, counts, dueCounts, users, currentUserId: userId, canViewAll };
+  return { ...list, counts, users, taskTypes, currentUserId: userId, canViewAll };
+}
+
+export async function getTaskQuickCreateData(db: DB, auth: any) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  const [users, taskTypes] = await Promise.all([
+    listAssignableUsersRepo(db),
+    getActiveTaskTypeOptions(db),
+  ]);
+
+  return { users, taskTypes, currentUserId: userId };
 }
 
 export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
+
   if (!input.title?.trim()) throw new Error("Vui lòng nhập tiêu đề task");
 
+  let nextInput = { ...input };
+
+  if (input.taskTypeId) {
+    const taskType = await getTaskTypeByIdRepo(db, input.taskTypeId);
+    if (!taskType) throw new Error("Loại task không hợp lệ");
+    if (!taskType.isActive) throw new Error("Loại task này đang tắt");
+    nextInput = {
+      ...nextInput,
+      kind: input.kind ?? taskType.legacyKind,
+      priority: input.priority ?? taskType.defaultPriority,
+    };
+  }
+
   return createTaskRepo(db, {
-    ...input,
+    ...nextInput,
     source: input.source ?? "MANUAL",
     createdByUserId: userId,
     assignedToUserId: input.assignedToUserId ?? userId,
   });
 }
 
-export async function ensureSystemTask(db: DB, input: EnsureSystemTaskInput) {
-  if (!input.title?.trim()) throw new Error("System task thiếu tiêu đề");
-  return ensureSystemTaskRepo(db, input);
-}
-
 export async function updateTask(db: DB, id: string, input: UpdateTaskInput, auth: any) {
   await assertCanAccessTask(db, id, auth);
   if (input.title !== undefined && !input.title.trim()) throw new Error("Vui lòng nhập tiêu đề task");
-  return updateTaskRepo(db, id, input);
+
+  let nextInput = { ...input };
+
+  if (input.taskTypeId) {
+    const taskType = await getTaskTypeByIdRepo(db, input.taskTypeId);
+    if (!taskType) throw new Error("Loại task không hợp lệ");
+    nextInput = {
+      ...nextInput,
+      kind: input.kind ?? taskType.legacyKind,
+      priority: input.priority ?? taskType.defaultPriority,
+    };
+  }
+
+  return updateTaskRepo(db, id, nextInput);
 }
 
 export async function changeTaskStatus(db: DB, id: string, status: TaskStatus, auth: any) {
   const userId = getAuthUserId(auth);
-  assertUser(userId);
   await assertCanAccessTask(db, id, auth);
-  const task = await setTaskStatusRepo(db, { id, status, actorUserId: userId });
+  return setTaskStatusRepo(db, { id, status, actorUserId: userId });
+}
 
-  if (status === TaskStatus.DONE || status === TaskStatus.CANCELLED) {
-    await markTaskNotificationsAsRead({ taskId: id, userId });
-  }
+export async function findOpenRelatedTasks(db: DB, input: FindOpenRelatedTasksInput) {
+  return findOpenRelatedTasksRepo(db, input);
+}
 
-  return task;
+export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  // Keep permission simple in phase 1: anyone with TASK_VIEW can complete selected related tasks.
+  // Row-level access can be tightened later if needed.
+  return completeTasksByIdsRepo(db, { ids, completedByUserId: userId });
 }
 
 export async function completeRelatedTasks(db: DB, input: CompleteRelatedTasksInput) {
+  // Best-effort helper for business domains. If no task matches, count = 0.
   return completeRelatedTasksRepo(db, input);
 }
 
@@ -107,17 +157,4 @@ export async function safeCompleteRelatedTasks(db: DB, input: CompleteRelatedTas
     console.error("[task] safeCompleteRelatedTasks failed", error);
     return { count: 0 };
   }
-}
-
-export async function safeEnsureSystemTask(db: DB, input: EnsureSystemTaskInput) {
-  try {
-    return await ensureSystemTaskRepo(db, input);
-  } catch (error) {
-    console.error("[task] safeEnsureSystemTask failed", error);
-    return null;
-  }
-}
-
-export async function completeTaskForPaymentIfSettled(db: DB, input: { paymentId: string; completedByUserId?: string | null }) {
-  return completeRelatedTasksRepo(db, { kind: TaskKind.PAYMENT_FOLLOW_UP, paymentId: input.paymentId, completedByUserId: input.completedByUserId });
 }

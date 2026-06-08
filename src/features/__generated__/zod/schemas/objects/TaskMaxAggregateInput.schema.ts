@@ -25,6 +25,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.literal(true).optional(),
   technicalIssueId: z.literal(true).optional(),
   paymentId: z.literal(true).optional(),
+  taskTypeId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional()
 }).strict();

@@ -15,6 +15,7 @@ import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOp
 import { UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema as UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema as UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCompletedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema as UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCancelledTasksNestedInput.schema';
+import { TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema as TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema } from './TaskTypeUpdateOneWithoutTasksNestedInput.schema';
 import { WatchUpdateOneWithoutTaskNestedInputObjectSchema as WatchUpdateOneWithoutTaskNestedInputObjectSchema } from './WatchUpdateOneWithoutTaskNestedInput.schema';
 import { OrderUpdateOneWithoutTaskNestedInputObjectSchema as OrderUpdateOneWithoutTaskNestedInputObjectSchema } from './OrderUpdateOneWithoutTaskNestedInput.schema';
 import { ShipmentUpdateOneWithoutTaskNestedInputObjectSchema as ShipmentUpdateOneWithoutTaskNestedInputObjectSchema } from './ShipmentUpdateOneWithoutTaskNestedInput.schema';
@@ -41,6 +42,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema).optional(),
+  taskType: z.lazy(() => TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
   watch: z.lazy(() => WatchUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
