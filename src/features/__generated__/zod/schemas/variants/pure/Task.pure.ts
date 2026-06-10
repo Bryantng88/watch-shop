@@ -28,18 +28,13 @@ export const TaskModelSchema = z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
-<<<<<<< HEAD
-    taskTypeId: z.string().nullable(),
-=======
     workCaseId: z.string().nullable(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date(),
     updatedAt: z.date(),
     createdByUser: z.unknown().nullable(),
     assignedToUser: z.unknown().nullable(),
     completedByUser: z.unknown().nullable(),
     cancelledByUser: z.unknown().nullable(),
-    taskType: z.unknown().nullable(),
     watch: z.unknown().nullable(),
     order: z.unknown().nullable(),
     shipment: z.unknown().nullable(),

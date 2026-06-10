@@ -37,7 +37,7 @@ export async function getAdminWatchRow(db: DB, productId: string) {
 export async function getAdminEditWatchDetail(db: DB, productId: string) {
   const client = dbOrTx(db);
 
-  return client.watch.findUnique({
+  const watch = await client.watch.findUnique({
     where: { productId },
     include: {
       product: {
@@ -49,12 +49,8 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           },
           postTargets: {
-            include: {
-              postTarget: true,
-            },
-            orderBy: {
-              createdAt: "asc",
-            },
+            include: { postTarget: true },
+            orderBy: { createdAt: "asc" },
           },
         },
       },
@@ -62,9 +58,32 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
       watchPrice: true,
       watchContent: true,
       reviewStates: true,
-
+      tasks: {
+        where: {
+          status: { in: ["TODO", "IN_PROGRESS"] },
+        },
+        select: {
+          id: true,
+          kind: true,
+          status: true,
+          title: true,
+        },
+      },
     },
   });
+
+  if (!watch) return null;
+
+  const tasks = watch.tasks ?? [];
+
+  return {
+    ...watch,
+    taskSummary: {
+      watchImage: tasks.filter((t) => t.kind === "WATCH_IMAGE").length,
+      watchContent: tasks.filter((t) => t.kind === "WATCH_CONTENT").length,
+      watchReview: tasks.filter((t) => t.kind === "WATCH_REVIEW").length,
+    },
+  };
 }
 
 export async function getAdminWatchDetail(db: DB, productId: string) {

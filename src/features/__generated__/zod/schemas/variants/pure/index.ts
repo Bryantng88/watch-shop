@@ -57,11 +57,7 @@ export { technicalAssessmentsModelSchema } from './technicalAssessments.pure';
 export { technicalPartCatalogModelSchema } from './technicalPartCatalog.pure';
 export { AcquisitionSpecJobLogModelSchema } from './AcquisitionSpecJobLog.pure';
 export { MediaAssetModelSchema } from './MediaAsset.pure';
-<<<<<<< HEAD
-export { TaskTypeModelSchema } from './TaskType.pure';
-=======
 export { WorkCaseCategoryModelSchema } from './WorkCaseCategory.pure';
 export { WorkCaseModelSchema } from './WorkCase.pure';
 export { WorkCaseActivityModelSchema } from './WorkCaseActivity.pure';
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 export { TaskModelSchema } from './Task.pure';

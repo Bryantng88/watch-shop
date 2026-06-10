@@ -54,8 +54,8 @@ const makeSchema = () => z.object({
   watchContent: z.lazy(() => WatchContentUpdateOneWithoutWatchNestedInputObjectSchema).optional(),
   watchPrice: z.lazy(() => WatchPriceUpdateOneWithoutWatchNestedInputObjectSchema).optional(),
   watchSpecV2: z.lazy(() => WatchSpecV2UpdateOneWithoutWatchNestedInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
-  WorkCase: z.lazy(() => WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema).optional()
+  tasks: z.lazy(() => TaskUpdateManyWithoutWatchNestedInputObjectSchema).optional(),
+  workCases: z.lazy(() => WorkCaseUpdateManyWithoutWatchNestedInputObjectSchema).optional()
 }).strict();
 export const WatchUpdateWithoutReviewStatesInputObjectSchema: z.ZodType<Prisma.WatchUpdateWithoutReviewStatesInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchUpdateWithoutReviewStatesInput>;
 export const WatchUpdateWithoutReviewStatesInputObjectZodSchema = makeSchema();

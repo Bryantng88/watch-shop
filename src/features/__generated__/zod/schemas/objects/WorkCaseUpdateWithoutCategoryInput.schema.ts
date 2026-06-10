@@ -10,7 +10,7 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskPriorityFieldUpdateOperationsInputObjectSchema as EnumTaskPriorityFieldUpdateOperationsInputObjectSchema } from './EnumTaskPriorityFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { WatchUpdateOneRequiredWithoutWorkCaseNestedInputObjectSchema as WatchUpdateOneRequiredWithoutWorkCaseNestedInputObjectSchema } from './WatchUpdateOneRequiredWithoutWorkCaseNestedInput.schema';
+import { WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema as WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema } from './WatchUpdateOneRequiredWithoutWorkCasesNestedInput.schema';
 import { UserUpdateOneWithoutRaisedWorkCasesNestedInputObjectSchema as UserUpdateOneWithoutRaisedWorkCasesNestedInputObjectSchema } from './UserUpdateOneWithoutRaisedWorkCasesNestedInput.schema';
 import { UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema as UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedWorkCasesNestedInput.schema';
 import { TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema as TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema } from './TaskUpdateManyWithoutWorkCaseNestedInput.schema';
@@ -30,7 +30,7 @@ const makeSchema = () => z.object({
   cancelledAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  watch: z.lazy(() => WatchUpdateOneRequiredWithoutWorkCaseNestedInputObjectSchema).optional(),
+  watch: z.lazy(() => WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema).optional(),
   raisedByUser: z.lazy(() => UserUpdateOneWithoutRaisedWorkCasesNestedInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema).optional(),

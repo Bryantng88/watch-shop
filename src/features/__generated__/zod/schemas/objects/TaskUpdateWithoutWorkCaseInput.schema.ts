@@ -16,7 +16,7 @@ import { UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema as UserUpdateOn
 import { UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema as UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema as UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCompletedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema as UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCancelledTasksNestedInput.schema';
-import { WatchUpdateOneWithoutTaskNestedInputObjectSchema as WatchUpdateOneWithoutTaskNestedInputObjectSchema } from './WatchUpdateOneWithoutTaskNestedInput.schema';
+import { WatchUpdateOneWithoutTasksNestedInputObjectSchema as WatchUpdateOneWithoutTasksNestedInputObjectSchema } from './WatchUpdateOneWithoutTasksNestedInput.schema';
 import { OrderUpdateOneWithoutTaskNestedInputObjectSchema as OrderUpdateOneWithoutTaskNestedInputObjectSchema } from './OrderUpdateOneWithoutTaskNestedInput.schema';
 import { ShipmentUpdateOneWithoutTaskNestedInputObjectSchema as ShipmentUpdateOneWithoutTaskNestedInputObjectSchema } from './ShipmentUpdateOneWithoutTaskNestedInput.schema';
 import { AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema as AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema } from './AcquisitionUpdateOneWithoutTaskNestedInput.schema';
@@ -43,7 +43,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema).optional(),
-  watch: z.lazy(() => WatchUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
+  watch: z.lazy(() => WatchUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
   order: z.lazy(() => OrderUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   acquisition: z.lazy(() => AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema).optional(),

@@ -22,18 +22,13 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     serviceRequestId: z.number(),
     technicalIssueId: z.number(),
     paymentId: z.number(),
-<<<<<<< HEAD
-    taskTypeId: z.number(),
-=======
     workCaseId: z.number(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.number(),
     updatedAt: z.number(),
     createdByUser: z.number(),
     assignedToUser: z.number(),
     completedByUser: z.number(),
     cancelledByUser: z.number(),
-    taskType: z.number(),
     watch: z.number(),
     order: z.number(),
     shipment: z.number(),
@@ -63,11 +58,7 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
-<<<<<<< HEAD
-    taskTypeId: z.string().nullable(),
-=======
     workCaseId: z.string().nullable(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -90,11 +81,7 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
-<<<<<<< HEAD
-    taskTypeId: z.string().nullable(),
-=======
     workCaseId: z.string().nullable(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()});

@@ -1,6 +1,7 @@
 import type { TaskKind, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
 
 export type TaskViewKey = "mine" | "assigned" | "delegated" | "all";
+export type TaskDueKey = "ALL" | "OVERDUE" | "TODAY" | "THIS_WEEK" | "NO_DUE";
 
 export type TaskListFilters = {
   view?: TaskViewKey;
@@ -8,7 +9,7 @@ export type TaskListFilters = {
   status?: TaskStatus | "OPEN" | "ALL";
   priority?: TaskPriority | "ALL";
   kind?: TaskKind | "ALL";
-  taskTypeId?: string | "ALL";
+  due?: TaskDueKey;
   page?: number;
   pageSize?: number;
 };
@@ -26,7 +27,6 @@ export type TaskDomainLinksInput = {
 
 export type CreateTaskInput = TaskDomainLinksInput & {
   title: string;
-  taskTypeId?: string | null;
   description?: string | null;
   source?: TaskSource;
   kind?: TaskKind;
@@ -37,7 +37,6 @@ export type CreateTaskInput = TaskDomainLinksInput & {
 
 export type UpdateTaskInput = TaskDomainLinksInput & {
   title?: string;
-  taskTypeId?: string | null;
   description?: string | null;
   kind?: TaskKind;
   priority?: TaskPriority;
@@ -50,34 +49,39 @@ export type CompleteRelatedTasksInput = TaskDomainLinksInput & {
   completedByUserId?: string | null;
 };
 
-export type FindOpenRelatedTasksInput = TaskDomainLinksInput & {
-  taskTypeCode?: string | null;
-  taskTypeId?: string | null;
-  kind?: TaskKind | null;
-  limit?: number;
-};
-
-export type RelatedTaskSuggestion = {
-  id: string;
+export type EnsureSystemTaskInput = TaskDomainLinksInput & {
+  kind: TaskKind;
   title: string;
   description?: string | null;
+  priority?: TaskPriority;
   dueAt?: Date | string | null;
-  priority: TaskPriority;
-  status: TaskStatus;
-  taskType?: {
-    id: string;
-    code: string;
-    name: string;
-  } | null;
-  assignedToUser?: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-  } | null;
+  assignedToUserId?: string | null;
+  createdByUserId?: string | null;
+};
+
+export type EnsureSystemTaskResult = {
+  id: string;
+  created: boolean;
+  reopened: boolean;
 };
 export type TaskTypeOption = {
   id: string;
   code: string;
   name: string;
   description?: string | null;
+};
+
+export type FindOpenRelatedTasksInput = {
+  kind?: TaskKind;
+  watchId?: string | null;
+  productId?: string | null;
+  paymentId?: string | null;
+  limit?: number;
+};
+
+export type RelatedTaskSuggestion = {
+  id: string;
+  title: string;
+  kind: TaskKind;
+  status: TaskStatus;
 };

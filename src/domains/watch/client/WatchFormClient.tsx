@@ -627,6 +627,7 @@ export default function WatchFormClient({
                         imageReviewNote={values.imageReviewNote}
                         canReviewContent={canReviewContent}
                         isFormDirty={isDirty}
+                        openTaskCount={detail.taskSummary?.watchImage ?? 0}
                         onBeforeSubmitReview={saveBeforeReview}
                         onPoolImagesChange={(items) => {
                             updateMedia({

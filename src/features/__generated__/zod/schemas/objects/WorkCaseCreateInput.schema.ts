@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { WorkCaseScopeSchema } from '../enums/WorkCaseScope.schema';
 import { WorkCaseStatusSchema } from '../enums/WorkCaseStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
-import { WatchCreateNestedOneWithoutWorkCaseInputObjectSchema as WatchCreateNestedOneWithoutWorkCaseInputObjectSchema } from './WatchCreateNestedOneWithoutWorkCaseInput.schema';
+import { WatchCreateNestedOneWithoutWorkCasesInputObjectSchema as WatchCreateNestedOneWithoutWorkCasesInputObjectSchema } from './WatchCreateNestedOneWithoutWorkCasesInput.schema';
 import { WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema as WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema } from './WorkCaseCategoryCreateNestedOneWithoutWorkCasesInput.schema';
 import { UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema as UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema } from './UserCreateNestedOneWithoutRaisedWorkCasesInput.schema';
 import { UserCreateNestedOneWithoutAssignedWorkCasesInputObjectSchema as UserCreateNestedOneWithoutAssignedWorkCasesInputObjectSchema } from './UserCreateNestedOneWithoutAssignedWorkCasesInput.schema';
@@ -23,7 +23,7 @@ const makeSchema = () => z.object({
   resolvedAt: z.coerce.date().optional().nullable(),
   cancelledAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  watch: z.lazy(() => WatchCreateNestedOneWithoutWorkCaseInputObjectSchema),
+  watch: z.lazy(() => WatchCreateNestedOneWithoutWorkCasesInputObjectSchema),
   category: z.lazy(() => WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema).optional(),
   raisedByUser: z.lazy(() => UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedWorkCasesInputObjectSchema).optional(),

@@ -22,18 +22,13 @@ export const TaskUpdateResultSchema = z.nullable(z.object({
   serviceRequestId: z.string().optional(),
   technicalIssueId: z.string().optional(),
   paymentId: z.string().optional(),
-<<<<<<< HEAD
-  taskTypeId: z.string().optional(),
-=======
   workCaseId: z.string().optional(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
   createdAt: z.date(),
   updatedAt: z.date(),
   createdByUser: z.unknown().optional(),
   assignedToUser: z.unknown().optional(),
   completedByUser: z.unknown().optional(),
   cancelledByUser: z.unknown().optional(),
-  taskType: z.unknown().optional(),
   watch: z.unknown().optional(),
   order: z.unknown().optional(),
   shipment: z.unknown().optional(),

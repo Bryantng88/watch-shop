@@ -1,20 +1,20 @@
-import { Prisma, TaskKind, TaskStatus, type TaskPriority } from "@prisma/client";
+import { Prisma, TaskKind, TaskSource, TaskStatus, type TaskPriority } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
-import type { CompleteRelatedTasksInput, CreateTaskInput, FindOpenRelatedTasksInput, RelatedTaskSuggestion, TaskListFilters, TaskViewKey, UpdateTaskInput } from "./task.types";
+import type { CompleteRelatedTasksInput, CreateTaskInput, EnsureSystemTaskInput, EnsureSystemTaskResult, TaskDueKey, TaskListFilters, TaskViewKey, UpdateTaskInput } from "./task.types";
+import type { FindOpenRelatedTasksInput } from "./task.types";
 
 export const TASK_INCLUDE = {
   createdByUser: { select: { id: true, name: true, email: true } },
   assignedToUser: { select: { id: true, name: true, email: true } },
   completedByUser: { select: { id: true, name: true, email: true } },
   cancelledByUser: { select: { id: true, name: true, email: true } },
-  watch: { select: { id: true, productId: true, product: { select: { title: true, primaryImageUrl: true } } } },
-  order: { select: { id: true, refNo: true, customerName: true } },
+  watch: { select: { id: true, productId: true, product: { select: { title: true, primaryImageUrl: true, sku: true } } } },
+  order: { select: { id: true, refNo: true, customerName: true, status: true, paymentStatus: true } },
   shipment: { select: { id: true, refNo: true, orderRefNo: true, status: true } },
   acquisition: { select: { id: true, refNo: true } },
   serviceRequest: { select: { id: true, refNo: true, status: true } },
-  technicalIssue: { select: { id: true, area: true, executionStatus: true, serviceRequestId: true } },
-  payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true } },
-  taskType: { select: { id: true, code: true, name: true, domain: true, legacyKind: true, defaultPriority: true, completionMode: true, completionRuleKey: true, isActive: true } },
+  technicalIssue: { select: { id: true, area: true, executionStatus: true, serviceRequestId: true, priority: true } },
+  payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
 } satisfies Prisma.TaskInclude;
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_INCLUDE }>;
@@ -24,33 +24,52 @@ function toDate(value: Date | string | null | undefined) {
   return value instanceof Date ? value : new Date(value);
 }
 
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfTomorrow() {
+  const d = startOfToday();
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function endOfThisWeek() {
+  const d = startOfToday();
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + (7 - day) + 1);
+  return d;
+}
+
 function buildAccessWhere(userId: string, canViewAll: boolean): Prisma.TaskWhereInput {
   if (canViewAll) return {};
-  return {
-    OR: [{ createdByUserId: userId }, { assignedToUserId: userId }],
-  };
+  return { OR: [{ createdByUserId: userId }, { assignedToUserId: userId }] };
 }
 
 function buildViewWhere(view: TaskViewKey, userId: string, canViewAll: boolean): Prisma.TaskWhereInput {
-  if (view === "mine") {
-    return { createdByUserId: userId, assignedToUserId: userId };
-  }
-
-  if (view === "assigned") {
-    return { assignedToUserId: userId, NOT: { createdByUserId: userId } };
-  }
-
-  if (view === "delegated") {
-    return { createdByUserId: userId, NOT: { assignedToUserId: userId } };
-  }
-
+  if (view === "mine") return { assignedToUserId: userId };
+  if (view === "assigned") return { assignedToUserId: userId, NOT: { createdByUserId: userId } };
+  if (view === "delegated") return { createdByUserId: userId, NOT: { assignedToUserId: userId } };
   return buildAccessWhere(userId, canViewAll);
+}
+
+function buildDueWhere(due?: TaskDueKey): Prisma.TaskWhereInput {
+  if (!due || due === "ALL") return {};
+  const today = startOfToday();
+  const tomorrow = startOfTomorrow();
+  if (due === "OVERDUE") return { dueAt: { lt: today }, status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } };
+  if (due === "TODAY") return { dueAt: { gte: today, lt: tomorrow } };
+  if (due === "THIS_WEEK") return { dueAt: { gte: today, lt: endOfThisWeek() } };
+  if (due === "NO_DUE") return { dueAt: null };
+  return {};
 }
 
 function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
   const where: Prisma.TaskWhereInput = {};
-
   const q = filters.q?.trim();
+
   if (q) {
     where.OR = [
       { title: { contains: q, mode: "insensitive" } },
@@ -60,32 +79,22 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
       { serviceRequest: { refNo: { contains: q, mode: "insensitive" } } },
       { payment: { refNo: { contains: q, mode: "insensitive" } } },
       { watch: { product: { title: { contains: q, mode: "insensitive" } } } },
+      { watch: { product: { sku: { contains: q, mode: "insensitive" } } } },
     ];
   }
 
   if (filters.status && filters.status !== "ALL") {
     where.status = filters.status === "OPEN" ? { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } : filters.status;
   }
-
   if (filters.priority && filters.priority !== "ALL") where.priority = filters.priority as TaskPriority;
   if (filters.kind && filters.kind !== "ALL") where.kind = filters.kind as TaskKind;
-  if (filters.taskTypeId && filters.taskTypeId !== "ALL") where.taskTypeId = filters.taskTypeId;
 
-  return where;
+  const dueWhere = buildDueWhere(filters.due);
+  return Object.keys(dueWhere).length ? { AND: [where, dueWhere] } : where;
 }
 
-
-function buildLinkWhere(input: Partial<FindOpenRelatedTasksInput | CompleteRelatedTasksInput>): Prisma.TaskWhereInput {
+function cleanLinks(input: Partial<CreateTaskInput | UpdateTaskInput | EnsureSystemTaskInput>) {
   return {
-<<<<<<< HEAD
-    ...(input.watchId ? { watchId: input.watchId } : {}),
-    ...(input.orderId ? { orderId: input.orderId } : {}),
-    ...(input.shipmentId ? { shipmentId: input.shipmentId } : {}),
-    ...(input.acquisitionId ? { acquisitionId: input.acquisitionId } : {}),
-    ...(input.serviceRequestId ? { serviceRequestId: input.serviceRequestId } : {}),
-    ...(input.technicalIssueId ? { technicalIssueId: input.technicalIssueId } : {}),
-    ...(input.paymentId ? { paymentId: input.paymentId } : {}),
-=======
     watchId: input.watchId ?? null,
     orderId: input.orderId ?? null,
     shipmentId: input.shipmentId ?? null,
@@ -94,37 +103,13 @@ function buildLinkWhere(input: Partial<FindOpenRelatedTasksInput | CompleteRelat
     technicalIssueId: input.technicalIssueId ?? null,
     paymentId: input.paymentId ?? null,
     workCaseId: input.workCaseId ?? null,
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
   };
 }
 
-function normalizeTaskTypeCode(code?: string | null) {
-  return String(code ?? "").trim().toUpperCase().replace(/[^A-Z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
-}
-
-function toRelatedTaskSuggestion(task: TaskWithRelations): RelatedTaskSuggestion {
+function systemTaskIdentityWhere(input: EnsureSystemTaskInput): Prisma.TaskWhereInput {
   return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    dueAt: task.dueAt,
-    priority: task.priority,
-    status: task.status,
-    taskType: task.taskType
-      ? { id: task.taskType.id, code: task.taskType.code, name: task.taskType.name }
-      : null,
-    assignedToUser: task.assignedToUser
-      ? {
-          id: task.assignedToUser.id,
-          name: task.assignedToUser.name,
-          email: task.assignedToUser.email,
-        }
-      : null,
-  };
-}
-
-function cleanLinks(input: Partial<CreateTaskInput | UpdateTaskInput>) {
-  return {
+    source: TaskSource.SYSTEM,
+    kind: input.kind,
     watchId: input.watchId ?? null,
     orderId: input.orderId ?? null,
     shipmentId: input.shipmentId ?? null,
@@ -142,17 +127,19 @@ export async function listTasksRepo(db: DB, input: { userId: string; canViewAll?
   const view = input.filters.view || "mine";
 
   const where: Prisma.TaskWhereInput = {
-    AND: [
-      buildViewWhere(view, input.userId, Boolean(input.canViewAll)),
-      buildFilterWhere(input.filters),
-    ],
+    AND: [buildViewWhere(view, input.userId, Boolean(input.canViewAll)), buildFilterWhere(input.filters)],
   };
 
   const [items, total] = await Promise.all([
     client.task.findMany({
       where,
       include: TASK_INCLUDE,
-      orderBy: [{ status: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
+      orderBy: [
+        { status: "asc" },
+        { priority: "desc" },
+        { dueAt: "asc" },
+        { createdAt: "desc" },
+      ],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -178,6 +165,25 @@ export async function countTaskViewsRepo(db: DB, input: { userId: string; canVie
   return { mine, assigned, delegated, all };
 }
 
+export async function countTaskDueBucketsRepo(db: DB, input: { userId: string; canViewAll?: boolean; view?: TaskViewKey }) {
+  const client = dbOrTx(db);
+  const base: Prisma.TaskWhereInput = {
+    AND: [buildViewWhere(input.view || "mine", input.userId, Boolean(input.canViewAll)), { status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } }],
+  };
+  const today = startOfToday();
+  const tomorrow = startOfTomorrow();
+  const weekEnd = endOfThisWeek();
+
+  const [overdue, todayCount, thisWeek, noDue] = await Promise.all([
+    client.task.count({ where: { AND: [base, { dueAt: { lt: today } }] } }),
+    client.task.count({ where: { AND: [base, { dueAt: { gte: today, lt: tomorrow } }] } }),
+    client.task.count({ where: { AND: [base, { dueAt: { gte: today, lt: weekEnd } }] } }),
+    client.task.count({ where: { AND: [base, { dueAt: null }] } }),
+  ]);
+
+  return { overdue, today: todayCount, thisWeek, noDue };
+}
+
 export async function createTaskRepo(db: DB, input: CreateTaskInput & { createdByUserId?: string | null }) {
   const client = dbOrTx(db);
   const createdByUserId = input.createdByUserId ?? null;
@@ -189,7 +195,6 @@ export async function createTaskRepo(db: DB, input: CreateTaskInput & { createdB
       description: input.description?.trim() || null,
       source: input.source ?? "MANUAL",
       kind: input.kind ?? TaskKind.PERSONAL,
-      taskTypeId: input.taskTypeId || null,
       priority: input.priority ?? "MEDIUM",
       dueAt: toDate(input.dueAt),
       createdByUserId,
@@ -200,6 +205,45 @@ export async function createTaskRepo(db: DB, input: CreateTaskInput & { createdB
   });
 }
 
+export async function ensureSystemTaskRepo(db: DB, input: EnsureSystemTaskInput): Promise<EnsureSystemTaskResult> {
+  const client = dbOrTx(db);
+  const existing = await client.task.findFirst({ where: systemTaskIdentityWhere(input), select: { id: true, status: true } });
+  const dueAt = toDate(input.dueAt);
+
+  if (!existing) {
+    const created = await client.task.create({
+      data: {
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        source: TaskSource.SYSTEM,
+        kind: input.kind,
+        priority: input.priority ?? "MEDIUM",
+        dueAt,
+        createdByUserId: input.createdByUserId ?? null,
+        assignedToUserId: input.assignedToUserId ?? input.createdByUserId ?? null,
+        ...cleanLinks(input),
+      },
+      select: { id: true },
+    });
+    return { id: created.id, created: true, reopened: false };
+  }
+
+  const reopened = existing.status === TaskStatus.DONE || existing.status === TaskStatus.CANCELLED;
+  await client.task.update({
+    where: { id: existing.id },
+    data: {
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      priority: input.priority ?? "MEDIUM",
+      dueAt,
+      assignedToUserId: input.assignedToUserId ?? input.createdByUserId ?? null,
+      ...(reopened ? { status: TaskStatus.TODO, completedAt: null, cancelledAt: null, completedByUserId: null, cancelledByUserId: null } : {}),
+    },
+  });
+
+  return { id: existing.id, created: false, reopened };
+}
+
 export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput) {
   const client = dbOrTx(db);
   return client.task.update({
@@ -208,7 +252,6 @@ export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput)
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
       ...(input.kind !== undefined ? { kind: input.kind } : {}),
-      ...(input.taskTypeId !== undefined ? { taskTypeId: input.taskTypeId || null } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
       ...(input.assignedToUserId !== undefined ? { assignedToUserId: input.assignedToUserId || null } : {}),
@@ -254,57 +297,18 @@ export async function completeRelatedTasksRepo(db: DB, input: CompleteRelatedTas
   const where: Prisma.TaskWhereInput = {
     kind: input.kind,
     status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-    ...buildLinkWhere(input),
+    ...(input.watchId ? { watchId: input.watchId } : {}),
+    ...(input.orderId ? { orderId: input.orderId } : {}),
+    ...(input.shipmentId ? { shipmentId: input.shipmentId } : {}),
+    ...(input.acquisitionId ? { acquisitionId: input.acquisitionId } : {}),
+    ...(input.serviceRequestId ? { serviceRequestId: input.serviceRequestId } : {}),
+    ...(input.technicalIssueId ? { technicalIssueId: input.technicalIssueId } : {}),
+    ...(input.paymentId ? { paymentId: input.paymentId } : {}),
   };
 
   return client.task.updateMany({
     where,
-    data: {
-      status: TaskStatus.DONE,
-      completedAt: new Date(),
-      completedByUserId: input.completedByUserId ?? null,
-    },
-  });
-}
-
-
-export async function findOpenRelatedTasksRepo(db: DB, input: FindOpenRelatedTasksInput) {
-  const client = dbOrTx(db);
-  const taskTypeCode = normalizeTaskTypeCode(input.taskTypeCode);
-  const where: Prisma.TaskWhereInput = {
-    status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-    ...buildLinkWhere(input),
-    ...(input.taskTypeId ? { taskTypeId: input.taskTypeId } : {}),
-    ...(taskTypeCode ? { taskType: { code: taskTypeCode } } : {}),
-    ...(!input.taskTypeId && !taskTypeCode && input.kind ? { kind: input.kind } : {}),
-  };
-
-  const items = await client.task.findMany({
-    where,
-    include: TASK_INCLUDE,
-    orderBy: [{ dueAt: "asc" }, { priority: "desc" }, { createdAt: "desc" }],
-    take: Math.min(50, Math.max(1, input.limit ?? 10)),
-  });
-
-  return items.map(toRelatedTaskSuggestion);
-}
-
-export async function completeTasksByIdsRepo(db: DB, input: { ids: string[]; completedByUserId?: string | null }) {
-  const client = dbOrTx(db);
-  const ids = Array.from(new Set(input.ids.map((id) => String(id).trim()).filter(Boolean)));
-  if (!ids.length) return { count: 0 };
-
-  return client.task.updateMany({
-    where: {
-      id: { in: ids },
-      status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-    },
-    data: {
-      status: TaskStatus.DONE,
-      completedAt: new Date(),
-      cancelledAt: null,
-      completedByUserId: input.completedByUserId ?? null,
-    },
+    data: { status: TaskStatus.DONE, completedAt: new Date(), completedByUserId: input.completedByUserId ?? null },
   });
 }
 
@@ -314,5 +318,31 @@ export async function listAssignableUsersRepo(db: DB) {
     where: { isActive: true },
     select: { id: true, name: true, email: true },
     orderBy: [{ name: "asc" }, { email: "asc" }],
+  });
+}
+export async function findOpenRelatedTasksRepo(
+  db: DB,
+  input: FindOpenRelatedTasksInput,
+) {
+  const client = dbOrTx(db);
+
+  return client.task.findMany({
+    where: {
+      status: {
+        in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS],
+      },
+      ...(input.kind ? { kind: input.kind } : {}),
+      ...(input.watchId ? { watchId: input.watchId } : {}),
+      ...(input.productId ? { productId: input.productId } : {}),
+      ...(input.paymentId ? { paymentId: input.paymentId } : {}),
+    },
+    select: {
+      id: true,
+      title: true,
+      kind: true,
+      status: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+    take: input.limit ?? 10,
   });
 }

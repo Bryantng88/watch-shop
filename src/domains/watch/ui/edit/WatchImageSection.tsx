@@ -42,6 +42,7 @@ type Props = {
     inlineImage?: PickedMediaItem | null;
     watchTitle?: string | null;
     isFormDirty?: boolean;
+    openTaskCount?: number;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -93,13 +94,13 @@ export default function WatchImageSection({
     canReviewContent = false,
     onReviewStatusChange,
     onBeforeSubmitReview,
-    isFormDirty
+    isFormDirty,
+    openTaskCount = 0,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
     const [taskModalOpen, setTaskModalOpen] = useState(false);
     const [taskUsers, setTaskUsers] = useState<TaskUserOption[]>([]);
-    const [taskTypes, setTaskTypes] = useState<TaskTypeOption[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string>("");
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
     const [taskPending, startTaskTransition] = useTransition();
@@ -200,11 +201,9 @@ export default function WatchImageSection({
             try {
                 const data = await getTaskQuickCreateDataAction();
                 setTaskUsers(data.users);
-                setTaskTypes(data.taskTypes);
                 setCurrentUserId(data.currentUserId);
                 setTaskContext({
                     watchId,
-                    taskTypeCode: "WATCH_IMAGE",
                     kind: TaskKind.WATCH_IMAGE,
                     titlePreset: watchTitle
                         ? `Bổ sung hình ảnh cho ${watchTitle}`
@@ -234,7 +233,11 @@ export default function WatchImageSection({
                             onClick={openImageTaskModal}
                             disabled={taskPending}
                         />
-
+                        {openTaskCount ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+                                {openTaskCount} task
+                            </span>
+                        ) : null}
                         <SectionReviewActions
                             productId={productId}
                             target="image"
@@ -318,7 +321,6 @@ export default function WatchImageSection({
             <TaskQuickCreateModal
                 open={taskModalOpen}
                 users={taskUsers}
-                taskTypes={taskTypes}
                 currentUserId={currentUserId}
                 context={taskContext}
                 onClose={() => setTaskModalOpen(false)}

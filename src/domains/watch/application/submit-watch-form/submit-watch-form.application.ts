@@ -3,7 +3,7 @@ import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 import { findOpenRelatedTasks } from "@/domains/task/server/task.service";
 import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
-
+import { TaskKind } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server/media";
 import {
@@ -620,8 +620,8 @@ export async function submitWatchFormApplication(
 
     const relatedTaskSuggestions = imagesChanged
         ? await findOpenRelatedTasks(prisma, {
-            watchId: productId,
-            taskTypeCode: "WATCH_IMAGE",
+            watchId: values.watchId,
+            kind: TaskKind.WATCH_IMAGE,
             limit: 10,
         })
         : [];

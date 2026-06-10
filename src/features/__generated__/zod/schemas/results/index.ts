@@ -700,21 +700,6 @@ export { MediaAssetDeleteManyResultSchema } from './MediaAssetDeleteManyResult.s
 export { MediaAssetAggregateResultSchema } from './MediaAssetAggregateResult.schema';
 export { MediaAssetGroupByResultSchema } from './MediaAssetGroupByResult.schema';
 export { MediaAssetCountResultSchema } from './MediaAssetCountResult.schema';
-<<<<<<< HEAD
-export { TaskTypeFindUniqueResultSchema } from './TaskTypeFindUniqueResult.schema';
-export { TaskTypeFindFirstResultSchema } from './TaskTypeFindFirstResult.schema';
-export { TaskTypeFindManyResultSchema } from './TaskTypeFindManyResult.schema';
-export { TaskTypeCreateResultSchema } from './TaskTypeCreateResult.schema';
-export { TaskTypeCreateManyResultSchema } from './TaskTypeCreateManyResult.schema';
-export { TaskTypeUpdateResultSchema } from './TaskTypeUpdateResult.schema';
-export { TaskTypeUpdateManyResultSchema } from './TaskTypeUpdateManyResult.schema';
-export { TaskTypeUpsertResultSchema } from './TaskTypeUpsertResult.schema';
-export { TaskTypeDeleteResultSchema } from './TaskTypeDeleteResult.schema';
-export { TaskTypeDeleteManyResultSchema } from './TaskTypeDeleteManyResult.schema';
-export { TaskTypeAggregateResultSchema } from './TaskTypeAggregateResult.schema';
-export { TaskTypeGroupByResultSchema } from './TaskTypeGroupByResult.schema';
-export { TaskTypeCountResultSchema } from './TaskTypeCountResult.schema';
-=======
 export { WorkCaseCategoryFindUniqueResultSchema } from './WorkCaseCategoryFindUniqueResult.schema';
 export { WorkCaseCategoryFindFirstResultSchema } from './WorkCaseCategoryFindFirstResult.schema';
 export { WorkCaseCategoryFindManyResultSchema } from './WorkCaseCategoryFindManyResult.schema';
@@ -754,7 +739,6 @@ export { WorkCaseActivityDeleteManyResultSchema } from './WorkCaseActivityDelete
 export { WorkCaseActivityAggregateResultSchema } from './WorkCaseActivityAggregateResult.schema';
 export { WorkCaseActivityGroupByResultSchema } from './WorkCaseActivityGroupByResult.schema';
 export { WorkCaseActivityCountResultSchema } from './WorkCaseActivityCountResult.schema';
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 export { TaskFindUniqueResultSchema } from './TaskFindUniqueResult.schema';
 export { TaskFindFirstResultSchema } from './TaskFindFirstResult.schema';
 export { TaskFindManyResultSchema } from './TaskFindManyResult.schema';

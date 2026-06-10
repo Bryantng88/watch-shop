@@ -53,28 +53,10 @@ type NavItem = {
     notificationKey?: keyof NotificationCounts;
 };
 
-<<<<<<< HEAD
-const NAV: NavItem[] = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: PERMISSIONS.DASHBOARD_VIEW },
-    { href: "/admin/watches", label: "Sản phẩm", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW, notificationKey: "products" },
-    { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags, permission: PERMISSIONS.ACQUISITION_VIEW, notificationKey: "acquisitions" },
-    { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList, permission: PERMISSIONS.ORDER_VIEW, notificationKey: "orders" },
-    { href: "/admin/services", label: "Service", icon: Settings, permission: PERMISSIONS.SERVICE_VIEW, notificationKey: "services" },
-    { href: "/admin/catalogs/technical", label: "Danh mục", icon: LayoutList, permission: PERMISSIONS.SERVICE_VIEW },
-    { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW, notificationKey: "shipments" },
-    { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
-    { href: "/admin/system/jobs", label: "Jobs", icon: MonitorCog, permission: PERMISSIONS.SYSTEM_JOB_VIEW },
-    { href: "/admin/media", label: "Media", icon: CameraIcon, permission: PERMISSIONS.MEDIA_VIEW },
-    { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
-    { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
-    { href: "/admin/tasks", label: "Tasks", icon: CheckSquare, permission: PERMISSIONS.TASK_VIEW, notificationKey: "tasks" },
-    { href: "/admin/settings", label: "Settings", icon: Settings, permission: PERMISSIONS.TASK_VIEW },
-=======
 type NavGroup = {
     type: "group";
     label: string;
 };
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 
 type NavEntry = NavItem | NavGroup;
 

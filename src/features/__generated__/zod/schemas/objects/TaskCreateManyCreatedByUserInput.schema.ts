@@ -27,11 +27,7 @@ const makeSchema = () => z.object({
   serviceRequestId: z.string().optional().nullable(),
   technicalIssueId: z.string().optional().nullable(),
   paymentId: z.string().optional().nullable(),
-<<<<<<< HEAD
-  taskTypeId: z.string().optional().nullable(),
-=======
   workCaseId: z.string().optional().nullable(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional()
 }).strict();

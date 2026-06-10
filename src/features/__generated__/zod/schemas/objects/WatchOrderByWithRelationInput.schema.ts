@@ -39,8 +39,8 @@ const makeSchema = () => z.object({
   watchPrice: z.lazy(() => WatchPriceOrderByWithRelationInputObjectSchema).optional(),
   watchSpecV2: z.lazy(() => WatchSpecV2OrderByWithRelationInputObjectSchema).optional(),
   reviewStates: z.lazy(() => WatchReviewStateOrderByRelationAggregateInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
-  WorkCase: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional()
+  tasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
+  workCases: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const WatchOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.WatchOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.WatchOrderByWithRelationInput>;
 export const WatchOrderByWithRelationInputObjectZodSchema = makeSchema();

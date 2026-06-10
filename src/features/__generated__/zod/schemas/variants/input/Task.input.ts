@@ -28,18 +28,13 @@ export const TaskInputSchema = z.object({
     serviceRequestId: z.string().optional().nullable(),
     technicalIssueId: z.string().optional().nullable(),
     paymentId: z.string().optional().nullable(),
-<<<<<<< HEAD
-    taskTypeId: z.string().optional().nullable(),
-=======
     workCaseId: z.string().optional().nullable(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date(),
     updatedAt: z.date(),
     createdByUser: z.unknown().optional().nullable(),
     assignedToUser: z.unknown().optional().nullable(),
     completedByUser: z.unknown().optional().nullable(),
     cancelledByUser: z.unknown().optional().nullable(),
-    taskType: z.unknown().optional().nullable(),
     watch: z.unknown().optional().nullable(),
     order: z.unknown().optional().nullable(),
     shipment: z.unknown().optional().nullable(),

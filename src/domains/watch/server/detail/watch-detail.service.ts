@@ -65,6 +65,11 @@ export async function getWatchEditDetail(productId: string) {
 
   return {
     ...mapped,
+    taskSummary: (row as any).taskSummary ?? {
+      watchImage: 0,
+      watchContent: 0,
+      watchReview: 0,
+    },
     media: {
       ...((mapped as any).media ?? {}),
       poolImages,
@@ -72,10 +77,7 @@ export async function getWatchEditDetail(productId: string) {
     acquisition: acq,
     price: {
       ...(mapped.price ?? {}),
-      costPrice:
-        mapped.price?.costPrice ??
-        acq?.unitCost ??
-        null,
+      costPrice: mapped.price?.costPrice ?? acq?.unitCost ?? null,
     },
   };
 }

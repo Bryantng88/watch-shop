@@ -32,18 +32,13 @@ export const TaskFindManySelectSchema: z.ZodType<Prisma.TaskSelect> = z.object({
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
     paymentId: z.boolean().optional(),
-<<<<<<< HEAD
-    taskTypeId: z.boolean().optional(),
-=======
     workCaseId: z.boolean().optional(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     assignedToUser: z.boolean().optional(),
     completedByUser: z.boolean().optional(),
     cancelledByUser: z.boolean().optional(),
-    taskType: z.boolean().optional(),
     watch: z.boolean().optional(),
     order: z.boolean().optional(),
     shipment: z.boolean().optional(),
@@ -79,18 +74,13 @@ export const TaskFindManySelectZodSchema = z.object({
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
     paymentId: z.boolean().optional(),
-<<<<<<< HEAD
-    taskTypeId: z.boolean().optional(),
-=======
     workCaseId: z.boolean().optional(),
->>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     assignedToUser: z.boolean().optional(),
     completedByUser: z.boolean().optional(),
     cancelledByUser: z.boolean().optional(),
-    taskType: z.boolean().optional(),
     watch: z.boolean().optional(),
     order: z.boolean().optional(),
     shipment: z.boolean().optional(),

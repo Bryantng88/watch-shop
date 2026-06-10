@@ -64,8 +64,8 @@ const watchwhereinputSchema = z.object({
   watchPrice: z.union([z.lazy(() => WatchPriceNullableScalarRelationFilterObjectSchema), z.lazy(() => WatchPriceWhereInputObjectSchema)]).optional(),
   watchSpecV2: z.union([z.lazy(() => WatchSpecV2NullableScalarRelationFilterObjectSchema), z.lazy(() => WatchSpecV2WhereInputObjectSchema)]).optional(),
   reviewStates: z.lazy(() => WatchReviewStateListRelationFilterObjectSchema).optional(),
-  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  WorkCase: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional()
+  tasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  workCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional()
 }).strict();
 export const WatchWhereInputObjectSchema: z.ZodType<Prisma.WatchWhereInput> = watchwhereinputSchema as unknown as z.ZodType<Prisma.WatchWhereInput>;
 export const WatchWhereInputObjectZodSchema = watchwhereinputSchema;

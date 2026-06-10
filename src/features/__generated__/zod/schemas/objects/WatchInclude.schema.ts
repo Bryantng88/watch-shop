@@ -15,8 +15,8 @@ const makeSchema = () => z.object({
   watchPrice: z.union([z.boolean(), z.lazy(() => WatchPriceArgsObjectSchema)]).optional(),
   watchSpecV2: z.union([z.boolean(), z.lazy(() => WatchSpecV2ArgsObjectSchema)]).optional(),
   reviewStates: z.union([z.boolean(), z.lazy(() => WatchReviewStateFindManySchema)]).optional(),
-  Task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
-  WorkCase: z.union([z.boolean(), z.lazy(() => WorkCaseFindManySchema)]).optional(),
+  tasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  workCases: z.union([z.boolean(), z.lazy(() => WorkCaseFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => WatchCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const WatchIncludeObjectSchema: z.ZodType<Prisma.WatchInclude> = makeSchema() as unknown as z.ZodType<Prisma.WatchInclude>;
