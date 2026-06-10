@@ -37,7 +37,8 @@ const makeSchema = () => z.object({
   priority_marked_at: SortOrderSchema.optional(),
   priorityReason: SortOrderSchema.optional(),
   prioritySource: SortOrderSchema.optional(),
-  priorityMarkedAt: SortOrderSchema.optional()
+  priorityMarkedAt: SortOrderSchema.optional(),
+  workCaseId: SortOrderSchema.optional()
 }).strict();
 export const ServiceRequestMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestMaxOrderByAggregateInput>;
 export const ServiceRequestMaxOrderByAggregateInputObjectZodSchema = makeSchema();

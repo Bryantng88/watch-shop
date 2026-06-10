@@ -9,6 +9,7 @@ import { AcquisitionArgsObjectSchema as AcquisitionArgsObjectSchema } from './Ac
 import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from './ServiceRequestArgs.schema';
 import { TechnicalIssueArgsObjectSchema as TechnicalIssueArgsObjectSchema } from './TechnicalIssueArgs.schema';
 import { PaymentArgsObjectSchema as PaymentArgsObjectSchema } from './PaymentArgs.schema';
+import { WorkCaseArgsObjectSchema as WorkCaseArgsObjectSchema } from './WorkCaseArgs.schema';
 import { NotificationFindManySchema as NotificationFindManySchema } from '../findManyNotification.schema';
 import { TaskCountOutputTypeArgsObjectSchema as TaskCountOutputTypeArgsObjectSchema } from './TaskCountOutputTypeArgs.schema'
 
@@ -25,6 +26,7 @@ const makeSchema = () => z.object({
   serviceRequest: z.union([z.boolean(), z.lazy(() => ServiceRequestArgsObjectSchema)]).optional(),
   technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueArgsObjectSchema)]).optional(),
   payment: z.union([z.boolean(), z.lazy(() => PaymentArgsObjectSchema)]).optional(),
+  workCase: z.union([z.boolean(), z.lazy(() => WorkCaseArgsObjectSchema)]).optional(),
   notifications: z.union([z.boolean(), z.lazy(() => NotificationFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TaskCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

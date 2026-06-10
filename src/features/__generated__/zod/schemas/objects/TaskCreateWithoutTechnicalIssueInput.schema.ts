@@ -15,6 +15,7 @@ import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNe
 import { AcquisitionCreateNestedOneWithoutTaskInputObjectSchema as AcquisitionCreateNestedOneWithoutTaskInputObjectSchema } from './AcquisitionCreateNestedOneWithoutTaskInput.schema';
 import { ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema as ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutTaskInput.schema';
 import { PaymentCreateNestedOneWithoutTaskInputObjectSchema as PaymentCreateNestedOneWithoutTaskInputObjectSchema } from './PaymentCreateNestedOneWithoutTaskInput.schema';
+import { WorkCaseCreateNestedOneWithoutTasksInputObjectSchema as WorkCaseCreateNestedOneWithoutTasksInputObjectSchema } from './WorkCaseCreateNestedOneWithoutTasksInput.schema';
 import { NotificationCreateNestedManyWithoutTaskInputObjectSchema as NotificationCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationCreateNestedManyWithoutTaskInput.schema'
 
 const makeSchema = () => z.object({
@@ -42,6 +43,7 @@ const makeSchema = () => z.object({
   acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   payment: z.lazy(() => PaymentCreateNestedOneWithoutTaskInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   notifications: z.lazy(() => NotificationCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();
 export const TaskCreateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.TaskCreateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCreateWithoutTechnicalIssueInput>;

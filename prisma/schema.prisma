@@ -729,6 +729,8 @@ model ServiceRequest {
   technicalAssessment     TechnicalAssessment?
   technicalIssue          TechnicalIssue[]
   Task                    Task[]
+  WorkCase                WorkCase?            @relation(fields: [workCaseId], references: [id])
+  workCaseId              String?
 
   @@index([customerId])
   @@index([orderItemId])
@@ -926,6 +928,10 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
+  raisedWorkCases    WorkCase[]         @relation("WorkCaseRaisedBy")
+  assignedWorkCases  WorkCase[]         @relation("WorkCaseAssignedTo")
+  workCaseActivities WorkCaseActivity[]
+
   @@index([isActive])
 }
 
@@ -1006,6 +1012,7 @@ model Watch {
   watchSpecV2  WatchSpecV2?
   reviewStates WatchReviewState[]
   Task         Task[]
+  WorkCase     WorkCase[]
 
   @@index([gender])
   @@index([saleStage])
@@ -1410,6 +1417,22 @@ model MediaAsset {
   @@index([isMissing, parentPrefix])
 }
 
+enum WorkCaseScope {
+  BUSINESS
+  SERVICE
+  PAYMENT
+  LOGISTIC
+  OTHER
+}
+
+enum WorkCaseStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -1486,9 +1509,90 @@ enum TaskKind {
   OTHER
 }
 
+<<<<<<< HEAD
 enum TaskCompletionMode {
   MANUAL_CONFIRM
   BUSINESS_RULE
+=======
+model WorkCaseCategory {
+  id          String        @id @default(dbgenerated("(gen_random_uuid())::text"))
+  code        String        @unique
+  name        String
+  description String?
+  scope       WorkCaseScope @default(BUSINESS)
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workCases WorkCase[]
+
+  @@index([scope])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model WorkCase {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  refNo       String? @unique
+  title       String
+  description String?
+
+  scope    WorkCaseScope  @default(BUSINESS)
+  status   WorkCaseStatus @default(NEW)
+  priority TaskPriority   @default(MEDIUM)
+
+  watchId    String
+  categoryId String?
+
+  raisedByUserId   String?
+  assignedToUserId String?
+
+  triagedAt   DateTime?
+  resolvedAt  DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  watch          Watch             @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  category       WorkCaseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  raisedByUser   User?             @relation("WorkCaseRaisedBy", fields: [raisedByUserId], references: [id], onDelete: SetNull)
+  assignedToUser User?             @relation("WorkCaseAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  tasks           Task[]
+  serviceRequests ServiceRequest[]
+  activities      WorkCaseActivity[]
+
+  @@index([scope])
+  @@index([status])
+  @@index([priority])
+  @@index([watchId])
+  @@index([categoryId])
+  @@index([raisedByUserId])
+  @@index([assignedToUserId])
+  @@index([createdAt])
+}
+
+model WorkCaseActivity {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  workCaseId String
+  actorId    String?
+  action     String
+  note       String?
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  workCase WorkCase @relation(fields: [workCaseId], references: [id], onDelete: Cascade)
+  actor    User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workCaseId])
+  @@index([actorId])
+  @@index([createdAt])
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 }
 
 model Task {
@@ -1519,9 +1623,13 @@ model Task {
   serviceRequestId String?
   technicalIssueId String?
   paymentId        String?
+<<<<<<< HEAD
   taskTypeId       String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+=======
+  workCaseId       String?
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 
   createdByUser   User?     @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   assignedToUser  User?     @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
@@ -1536,6 +1644,7 @@ model Task {
   serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
   technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
   payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  workCase       WorkCase?       @relation(fields: [workCaseId], references: [id], onDelete: SetNull)
   notifications  Notification[]
 
   @@index([source])
@@ -1555,7 +1664,11 @@ model Task {
   @@index([serviceRequestId])
   @@index([technicalIssueId])
   @@index([paymentId])
+<<<<<<< HEAD
   @@index([taskTypeId])
+=======
+  @@index([workCaseId])
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 }
 
 enum AcquisitionItemKind {

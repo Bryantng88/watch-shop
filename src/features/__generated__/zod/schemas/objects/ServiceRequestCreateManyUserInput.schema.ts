@@ -38,7 +38,8 @@ const makeSchema = () => z.object({
   priority_marked_at: z.coerce.date().optional().nullable(),
   priorityReason: z.string().optional().nullable(),
   prioritySource: z.string().optional().nullable(),
-  priorityMarkedAt: z.coerce.date().optional().nullable()
+  priorityMarkedAt: z.coerce.date().optional().nullable(),
+  workCaseId: z.string().optional().nullable()
 }).strict();
 export const ServiceRequestCreateManyUserInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateManyUserInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateManyUserInput>;
 export const ServiceRequestCreateManyUserInputObjectZodSchema = makeSchema();

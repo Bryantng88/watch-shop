@@ -28,7 +28,10 @@ export const UserGroupByResultSchema = z.array(z.object({
     createdTasks: z.number(),
     assignedTasks: z.number(),
     completedTasks: z.number(),
-    cancelledTasks: z.number()
+    cancelledTasks: z.number(),
+    raisedWorkCases: z.number(),
+    assignedWorkCases: z.number(),
+    workCaseActivities: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

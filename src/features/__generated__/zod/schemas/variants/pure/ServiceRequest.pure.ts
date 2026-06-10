@@ -51,7 +51,9 @@ export const ServiceRequestModelSchema = z.object({
     serviceCatalog: z.unknown().nullable(),
     technicalAssessment: z.unknown().nullable(),
     technicalIssue: z.array(z.unknown()),
-    Task: z.array(z.unknown())
+    Task: z.array(z.unknown()),
+    WorkCase: z.unknown().nullable(),
+    workCaseId: z.string().nullable()
 }).strict();
 
 export type ServiceRequestPureType = z.infer<typeof ServiceRequestModelSchema>;

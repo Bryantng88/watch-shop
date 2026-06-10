@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkCaseCategoryOrderByWithRelationInputObjectSchema as WorkCaseCategoryOrderByWithRelationInputObjectSchema } from './objects/WorkCaseCategoryOrderByWithRelationInput.schema';
+import { WorkCaseCategoryWhereInputObjectSchema as WorkCaseCategoryWhereInputObjectSchema } from './objects/WorkCaseCategoryWhereInput.schema';
+import { WorkCaseCategoryWhereUniqueInputObjectSchema as WorkCaseCategoryWhereUniqueInputObjectSchema } from './objects/WorkCaseCategoryWhereUniqueInput.schema';
+import { WorkCaseCategoryCountAggregateInputObjectSchema as WorkCaseCategoryCountAggregateInputObjectSchema } from './objects/WorkCaseCategoryCountAggregateInput.schema';
+
+export const WorkCaseCategoryCountSchema: z.ZodType<Prisma.WorkCaseCategoryCountArgs> = z.object({ orderBy: z.union([WorkCaseCategoryOrderByWithRelationInputObjectSchema, WorkCaseCategoryOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseCategoryWhereInputObjectSchema.optional(), cursor: WorkCaseCategoryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkCaseCategoryCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkCaseCategoryCountArgs>;
+
+export const WorkCaseCategoryCountZodSchema = z.object({ orderBy: z.union([WorkCaseCategoryOrderByWithRelationInputObjectSchema, WorkCaseCategoryOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseCategoryWhereInputObjectSchema.optional(), cursor: WorkCaseCategoryWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkCaseCategoryCountAggregateInputObjectSchema ]).optional() }).strict();

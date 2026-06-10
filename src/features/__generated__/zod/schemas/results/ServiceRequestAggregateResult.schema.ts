@@ -46,7 +46,9 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     serviceCatalog: z.number(),
     technicalAssessment: z.number(),
     technicalIssue: z.number(),
-    Task: z.number()
+    Task: z.number(),
+    WorkCase: z.number(),
+    workCaseId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -79,7 +81,8 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     priority_marked_at: z.date().nullable(),
     priorityReason: z.string().nullable(),
     prioritySource: z.string().nullable(),
-    priorityMarkedAt: z.date().nullable()
+    priorityMarkedAt: z.date().nullable(),
+    workCaseId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -112,5 +115,6 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     priority_marked_at: z.date().nullable(),
     priorityReason: z.string().nullable(),
     prioritySource: z.string().nullable(),
-    priorityMarkedAt: z.date().nullable()
+    priorityMarkedAt: z.date().nullable(),
+    workCaseId: z.string().nullable()
   }).nullable().optional()});

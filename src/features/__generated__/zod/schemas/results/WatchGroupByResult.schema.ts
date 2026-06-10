@@ -44,7 +44,8 @@ export const WatchGroupByResultSchema = z.array(z.object({
     watchPrice: z.number(),
     watchSpecV2: z.number(),
     reviewStates: z.number(),
-    Task: z.number()
+    Task: z.number(),
+    WorkCase: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

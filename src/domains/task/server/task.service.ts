@@ -132,9 +132,15 @@ export async function changeTaskStatus(db: DB, id: string, status: TaskStatus, a
   return setTaskStatusRepo(db, { id, status, actorUserId: userId });
 }
 
+<<<<<<< HEAD
 export async function findOpenRelatedTasks(db: DB, input: FindOpenRelatedTasksInput) {
   return findOpenRelatedTasksRepo(db, input);
 }
+=======
+  if (status === TaskStatus.DONE || status === TaskStatus.CANCELLED) {
+    //await markTaskNotificationsAsRead({ taskId: id, userId });
+  }
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
 
 export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
   const userId = getAuthUserId(auth);

@@ -21,6 +21,7 @@ import type {
     WatchRow,
 } from "../ui/list/types";
 import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
+import RaiseWorkCaseModal, { type RaiseWorkCaseWatchContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -273,6 +274,7 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
+    const [raiseCaseWatch, setRaiseCaseWatch] = React.useState<RaiseWorkCaseWatchContext | null>(null);
     const urlParams = useMemo(() => sanitizeParams(new URLSearchParams(sp.toString())), [sp]);
     const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
 
@@ -499,6 +501,16 @@ export default function WatchListClient(props: WatchListClientProps) {
         navigateWithProgress(`/admin/consignments/new?productId=${row.productId}`, "Đang mở ký gửi");
     }
 
+    function onRaiseCase(row: WatchRow) {
+        setRaiseCaseWatch({
+            watchId: row.id,
+            productId: row.productId,
+            title: row.title,
+            sku: row.sku,
+            imageUrl: row.imageUrl,
+        });
+    }
+
     function onBuyBack(row: WatchRow) {
         setBuyBackError(null);
         setBuyBackRow(row);
@@ -614,6 +626,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onQuickOrder={onQuickOrder}
                     onConsign={onConsign}
                     onBuyBack={onBuyBack}
+                    onRaiseCase={onRaiseCase}
                 />
             </div>
 
@@ -636,6 +649,15 @@ export default function WatchListClient(props: WatchListClientProps) {
                         setBuyBackError(null);
                     }}
                     onSubmit={submitBuyBack}
+                />
+            ) : null}
+
+            {raiseCaseWatch ? (
+                <RaiseWorkCaseModal
+                    open
+                    watch={raiseCaseWatch}
+                    onClose={() => setRaiseCaseWatch(null)}
+                    onSaved={() => router.refresh()}
                 />
             ) : null}
 

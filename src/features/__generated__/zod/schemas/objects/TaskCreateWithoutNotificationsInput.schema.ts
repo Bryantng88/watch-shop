@@ -15,7 +15,8 @@ import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNe
 import { AcquisitionCreateNestedOneWithoutTaskInputObjectSchema as AcquisitionCreateNestedOneWithoutTaskInputObjectSchema } from './AcquisitionCreateNestedOneWithoutTaskInput.schema';
 import { ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema as ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema } from './ServiceRequestCreateNestedOneWithoutTaskInput.schema';
 import { TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema as TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutTaskInput.schema';
-import { PaymentCreateNestedOneWithoutTaskInputObjectSchema as PaymentCreateNestedOneWithoutTaskInputObjectSchema } from './PaymentCreateNestedOneWithoutTaskInput.schema'
+import { PaymentCreateNestedOneWithoutTaskInputObjectSchema as PaymentCreateNestedOneWithoutTaskInputObjectSchema } from './PaymentCreateNestedOneWithoutTaskInput.schema';
+import { WorkCaseCreateNestedOneWithoutTasksInputObjectSchema as WorkCaseCreateNestedOneWithoutTasksInputObjectSchema } from './WorkCaseCreateNestedOneWithoutTasksInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -42,7 +43,8 @@ const makeSchema = () => z.object({
   acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema).optional(),
-  payment: z.lazy(() => PaymentCreateNestedOneWithoutTaskInputObjectSchema).optional()
+  payment: z.lazy(() => PaymentCreateNestedOneWithoutTaskInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutTasksInputObjectSchema).optional()
 }).strict();
 export const TaskCreateWithoutNotificationsInputObjectSchema: z.ZodType<Prisma.TaskCreateWithoutNotificationsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCreateWithoutNotificationsInput>;
 export const TaskCreateWithoutNotificationsInputObjectZodSchema = makeSchema();

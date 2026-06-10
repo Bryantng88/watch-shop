@@ -23,7 +23,8 @@ import { ShipmentUpdateOneWithoutTaskNestedInputObjectSchema as ShipmentUpdateOn
 import { AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema as AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema } from './AcquisitionUpdateOneWithoutTaskNestedInput.schema';
 import { ServiceRequestUpdateOneWithoutTaskNestedInputObjectSchema as ServiceRequestUpdateOneWithoutTaskNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutTaskNestedInput.schema';
 import { TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema as TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema } from './TechnicalIssueUpdateOneWithoutTaskNestedInput.schema';
-import { PaymentUpdateOneWithoutTaskNestedInputObjectSchema as PaymentUpdateOneWithoutTaskNestedInputObjectSchema } from './PaymentUpdateOneWithoutTaskNestedInput.schema'
+import { PaymentUpdateOneWithoutTaskNestedInputObjectSchema as PaymentUpdateOneWithoutTaskNestedInputObjectSchema } from './PaymentUpdateOneWithoutTaskNestedInput.schema';
+import { WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema as WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema } from './WorkCaseUpdateOneWithoutTasksNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -50,7 +51,8 @@ const makeSchema = () => z.object({
   acquisition: z.lazy(() => AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
-  payment: z.lazy(() => PaymentUpdateOneWithoutTaskNestedInputObjectSchema).optional()
+  payment: z.lazy(() => PaymentUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema).optional()
 }).strict();
 export const TaskUpdateWithoutNotificationsInputObjectSchema: z.ZodType<Prisma.TaskUpdateWithoutNotificationsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskUpdateWithoutNotificationsInput>;
 export const TaskUpdateWithoutNotificationsInputObjectZodSchema = makeSchema();

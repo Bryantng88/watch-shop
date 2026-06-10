@@ -21,6 +21,7 @@ export type TaskDomainLinksInput = {
   serviceRequestId?: string | null;
   technicalIssueId?: string | null;
   paymentId?: string | null;
+  workCaseId?: string | null;
 };
 
 export type CreateTaskInput = TaskDomainLinksInput & {
@@ -73,4 +74,10 @@ export type RelatedTaskSuggestion = {
     name?: string | null;
     email?: string | null;
   } | null;
+};
+export type TaskTypeOption = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
 };

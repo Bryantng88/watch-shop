@@ -77,6 +77,7 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
 
 function buildLinkWhere(input: Partial<FindOpenRelatedTasksInput | CompleteRelatedTasksInput>): Prisma.TaskWhereInput {
   return {
+<<<<<<< HEAD
     ...(input.watchId ? { watchId: input.watchId } : {}),
     ...(input.orderId ? { orderId: input.orderId } : {}),
     ...(input.shipmentId ? { shipmentId: input.shipmentId } : {}),
@@ -84,6 +85,16 @@ function buildLinkWhere(input: Partial<FindOpenRelatedTasksInput | CompleteRelat
     ...(input.serviceRequestId ? { serviceRequestId: input.serviceRequestId } : {}),
     ...(input.technicalIssueId ? { technicalIssueId: input.technicalIssueId } : {}),
     ...(input.paymentId ? { paymentId: input.paymentId } : {}),
+=======
+    watchId: input.watchId ?? null,
+    orderId: input.orderId ?? null,
+    shipmentId: input.shipmentId ?? null,
+    acquisitionId: input.acquisitionId ?? null,
+    serviceRequestId: input.serviceRequestId ?? null,
+    technicalIssueId: input.technicalIssueId ?? null,
+    paymentId: input.paymentId ?? null,
+    workCaseId: input.workCaseId ?? null,
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
   };
 }
 

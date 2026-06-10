@@ -18,7 +18,11 @@ export const TaskGroupByResultSchema = z.array(z.object({
   serviceRequestId: z.string(),
   technicalIssueId: z.string(),
   paymentId: z.string(),
+<<<<<<< HEAD
   taskTypeId: z.string(),
+=======
+  workCaseId: z.string(),
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
   createdAt: z.date(),
   updatedAt: z.date(),
   _count: z.object({
@@ -44,7 +48,11 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.number(),
     technicalIssueId: z.number(),
     paymentId: z.number(),
+<<<<<<< HEAD
     taskTypeId: z.number(),
+=======
+    workCaseId: z.number(),
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.number(),
     updatedAt: z.number(),
     createdByUser: z.number(),
@@ -59,6 +67,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequest: z.number(),
     technicalIssue: z.number(),
     payment: z.number(),
+    workCase: z.number(),
     notifications: z.number()
   }).optional(),
   _min: z.object({
@@ -80,7 +89,11 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
+<<<<<<< HEAD
     taskTypeId: z.string().nullable(),
+=======
+    workCaseId: z.string().nullable(),
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional(),
@@ -103,7 +116,11 @@ export const TaskGroupByResultSchema = z.array(z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
+<<<<<<< HEAD
     taskTypeId: z.string().nullable(),
+=======
+    workCaseId: z.string().nullable(),
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable()
   }).nullable().optional()

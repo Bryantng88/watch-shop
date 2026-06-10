@@ -21,7 +21,8 @@ import { ProductVariantUpdateOneWithoutServiceRequestNestedInputObjectSchema as 
 import { VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema as VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './VendorUpdateOneWithoutServiceRequestNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutServiceRequestNestedInput.schema';
 import { TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInputObjectSchema as TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInputObjectSchema } from './TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInput.schema';
-import { TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema as TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema } from './TaskUpdateManyWithoutServiceRequestNestedInput.schema'
+import { TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema as TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema } from './TaskUpdateManyWithoutServiceRequestNestedInput.schema';
+import { WorkCaseUpdateOneWithoutServiceRequestsNestedInputObjectSchema as WorkCaseUpdateOneWithoutServiceRequestsNestedInputObjectSchema } from './WorkCaseUpdateOneWithoutServiceRequestsNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -62,7 +63,8 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   serviceCatalog: z.lazy(() => ServiceCatalogUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional()
+  Task: z.lazy(() => TaskUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
+  WorkCase: z.lazy(() => WorkCaseUpdateOneWithoutServiceRequestsNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUpdateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.ServiceRequestUpdateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUpdateWithoutTechnicalIssueInput>;
 export const ServiceRequestUpdateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

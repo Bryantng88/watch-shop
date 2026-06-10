@@ -28,7 +28,11 @@ export const TaskResultSchema = z.object({
     serviceRequestId: z.string().nullable(),
     technicalIssueId: z.string().nullable(),
     paymentId: z.string().nullable(),
+<<<<<<< HEAD
     taskTypeId: z.string().nullable(),
+=======
+    workCaseId: z.string().nullable(),
+>>>>>>> a011cbb2d4ad4063b85485297cbe895b7833bd15
     createdAt: z.date(),
     updatedAt: z.date(),
     createdByUser: z.unknown().nullable(),
@@ -43,6 +47,7 @@ export const TaskResultSchema = z.object({
     serviceRequest: z.unknown().nullable(),
     technicalIssue: z.unknown().nullable(),
     payment: z.unknown().nullable(),
+    workCase: z.unknown().nullable(),
     notifications: z.array(z.unknown())
 }).strict();
 

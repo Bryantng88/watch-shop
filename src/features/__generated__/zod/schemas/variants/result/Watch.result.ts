@@ -38,7 +38,8 @@ export const WatchResultSchema = z.object({
     watchPrice: z.unknown().nullable(),
     watchSpecV2: z.unknown().nullable(),
     reviewStates: z.array(z.unknown()),
-    Task: z.array(z.unknown())
+    Task: z.array(z.unknown()),
+    WorkCase: z.array(z.unknown())
 }).strict();
 
 export type WatchResultType = z.infer<typeof WatchResultSchema>;

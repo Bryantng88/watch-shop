@@ -13,7 +13,8 @@ import { ProductVariantCreateNestedOneWithoutServiceRequestInputObjectSchema as 
 import { VendorCreateNestedOneWithoutServiceRequestInputObjectSchema as VendorCreateNestedOneWithoutServiceRequestInputObjectSchema } from './VendorCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceRequestInput.schema';
-import { TaskCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskCreateNestedManyWithoutServiceRequestInput.schema'
+import { TaskCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskCreateNestedManyWithoutServiceRequestInput.schema';
+import { WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema as WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema } from './WorkCaseCreateNestedOneWithoutServiceRequestsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -54,7 +55,8 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutServiceRequestInputObjectSchema).optional()
+  Task: z.lazy(() => TaskCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
+  WorkCase: z.lazy(() => WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestCreateWithoutServiceCatalogInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateWithoutServiceCatalogInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateWithoutServiceCatalogInput>;
 export const ServiceRequestCreateWithoutServiceCatalogInputObjectZodSchema = makeSchema();
