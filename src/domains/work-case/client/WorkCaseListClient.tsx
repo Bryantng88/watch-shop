@@ -8,7 +8,7 @@ import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import type { WorkCaseViewKey } from "../server/work-case.types";
 import { WORK_CASE_PRIORITY_LABEL, WORK_CASE_SCOPE_LABEL, WORK_CASE_STATUS_LABEL } from "../utils/work-case-labels";
 import WorkCaseListTable from "../ui/WorkCaseListTable";
-
+import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
 type Props = {
   items: WorkCaseWithRelations[];
   total: number;
@@ -20,6 +20,7 @@ type Props = {
   currentUserId: string;
   canManage?: boolean;
   rawSearchParams?: Record<string, string | string[] | undefined>;
+  taskTypes: TaskTypeOption[];
 };
 
 function firstRaw(value: string | string[] | undefined, fallback = "") {
@@ -44,6 +45,7 @@ const VIEWS: { key: WorkCaseViewKey; label: string }[] = [
 ];
 
 export default function WorkCaseListClient(props: Props) {
+  const [selectedItem, setSelectedItem] = useState<WorkCaseWithRelations | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -67,9 +69,7 @@ export default function WorkCaseListClient(props: Props) {
   }
 
   function openDetail(item: WorkCaseWithRelations) {
-    progress.show({ title: "Đang mở phiếu xử lý", message: item.refNo || item.title });
-    router.push(`/admin/work-cases/${item.id}`);
-    window.setTimeout(() => progress.hide(), 700);
+    setSelectedItem(item);
   }
 
   function applyFilters() {
@@ -126,6 +126,7 @@ export default function WorkCaseListClient(props: Props) {
       </div>
 
       <WorkCaseListTable items={props.items} page={props.page} totalPages={props.totalPages} onPage={(page) => navigate({ page: String(page) })} onOpen={openDetail} />
+
     </div>
   );
 }

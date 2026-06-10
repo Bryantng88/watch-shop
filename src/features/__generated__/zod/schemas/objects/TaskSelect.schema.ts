@@ -9,6 +9,8 @@ import { ServiceRequestArgsObjectSchema as ServiceRequestArgsObjectSchema } from
 import { TechnicalIssueArgsObjectSchema as TechnicalIssueArgsObjectSchema } from './TechnicalIssueArgs.schema';
 import { PaymentArgsObjectSchema as PaymentArgsObjectSchema } from './PaymentArgs.schema';
 import { WorkCaseArgsObjectSchema as WorkCaseArgsObjectSchema } from './WorkCaseArgs.schema';
+import { TaskTypeArgsObjectSchema as TaskTypeArgsObjectSchema } from './TaskTypeArgs.schema';
+import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
 import { NotificationFindManySchema as NotificationFindManySchema } from '../findManyNotification.schema';
 import { TaskCountOutputTypeArgsObjectSchema as TaskCountOutputTypeArgsObjectSchema } from './TaskCountOutputTypeArgs.schema'
 
@@ -17,7 +19,9 @@ const makeSchema = () => z.object({
   title: z.boolean().optional(),
   description: z.boolean().optional(),
   source: z.boolean().optional(),
-  kind: z.boolean().optional(),
+  domain: z.boolean().optional(),
+  taskTypeId: z.boolean().optional(),
+  mode: z.boolean().optional(),
   status: z.boolean().optional(),
   priority: z.boolean().optional(),
   dueAt: z.boolean().optional(),
@@ -50,6 +54,8 @@ const makeSchema = () => z.object({
   technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueArgsObjectSchema)]).optional(),
   payment: z.union([z.boolean(), z.lazy(() => PaymentArgsObjectSchema)]).optional(),
   workCase: z.union([z.boolean(), z.lazy(() => WorkCaseArgsObjectSchema)]).optional(),
+  taskType: z.union([z.boolean(), z.lazy(() => TaskTypeArgsObjectSchema)]).optional(),
+  executions: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
   notifications: z.union([z.boolean(), z.lazy(() => NotificationFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TaskCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();

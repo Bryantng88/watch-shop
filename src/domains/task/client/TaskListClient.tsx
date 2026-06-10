@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
+import { TaskDomain, TaskMode, TaskPriority, TaskStatus } from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { changeTaskStatusAction } from "../actions/task.actions";
@@ -55,7 +55,9 @@ export default function TaskListClient(props: Props) {
     q: firstRaw(props.rawSearchParams?.q),
     status: (firstRaw(props.rawSearchParams?.status, "OPEN") || "OPEN") as any,
     priority: (firstRaw(props.rawSearchParams?.priority, "ALL") || "ALL") as any,
-    kind: (firstRaw(props.rawSearchParams?.kind, "ALL") || "ALL") as any,
+    domain: (firstRaw(props.rawSearchParams?.domain, "ALL") || "ALL") as any,
+    taskTypeId: firstRaw(props.rawSearchParams?.taskTypeId, "ALL") || "ALL",
+    mode: (firstRaw(props.rawSearchParams?.mode, "ALL") || "ALL") as any,
     pageSize: String(props.pageSize),
   });
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,7 +69,9 @@ export default function TaskListClient(props: Props) {
       q: sp.get("q") ?? "",
       status: (sp.get("status") || "OPEN") as TaskStatus | "OPEN" | "ALL",
       priority: (sp.get("priority") || "ALL") as TaskPriority | "ALL",
-      kind: (sp.get("kind") || "ALL") as TaskKind | "ALL",
+      domain: (sp.get("domain") || "ALL") as TaskDomain | "ALL",
+      taskTypeId: sp.get("taskTypeId") || "ALL",
+      mode: (sp.get("mode") || "ALL") as TaskMode | "ALL",
       pageSize: sp.get("pageSize") || String(props.pageSize),
     });
   }, [sp, props.pageSize]);
@@ -87,15 +91,17 @@ export default function TaskListClient(props: Props) {
       q: filters.q.trim() || null,
       status: filters.status === "OPEN" ? null : filters.status,
       priority: filters.priority === "ALL" ? null : filters.priority,
-      kind: filters.kind === "ALL" ? null : filters.kind,
+      domain: filters.domain === "ALL" ? null : filters.domain,
+      taskTypeId: filters.taskTypeId === "ALL" ? null : filters.taskTypeId,
+      mode: filters.mode === "ALL" ? null : filters.mode,
       pageSize: filters.pageSize,
       page: "1",
     });
   }
 
   function clearFilters() {
-    setFilters({ q: "", status: "OPEN", priority: "ALL", kind: "ALL", pageSize: String(props.pageSize) });
-    navigate({ q: null, status: null, priority: null, kind: null, page: "1" });
+    setFilters({ q: "", status: "OPEN", priority: "ALL", domain: "ALL", taskTypeId: "ALL", mode: "ALL", pageSize: String(props.pageSize) });
+    navigate({ q: null, status: null, priority: null, domain: null, taskTypeId: null, mode: null, page: "1" });
   }
 
   function openCreate(context?: TaskQuickCreateContext) {
@@ -127,7 +133,7 @@ export default function TaskListClient(props: Props) {
       <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
         <TaskListViewTabs value={currentView} counts={props.counts} canViewAll={props.canViewAll} onChange={setView} />
         <div className="pt-4">
-          <TaskListFilters filters={filters} onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))} onApply={applyFilters} onClear={clearFilters} />
+          <TaskListFilters filters={filters} taskTypes={props.taskTypes ?? []} onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))} onApply={applyFilters} onClear={clearFilters} />
         </div>
       </div>
 

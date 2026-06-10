@@ -14,7 +14,9 @@ export const TaskFindFirstSelectSchema: z.ZodType<Prisma.TaskSelect> = z.object(
     title: z.boolean().optional(),
     description: z.boolean().optional(),
     source: z.boolean().optional(),
-    kind: z.boolean().optional(),
+    domain: z.boolean().optional(),
+    taskTypeId: z.boolean().optional(),
+    mode: z.boolean().optional(),
     status: z.boolean().optional(),
     priority: z.boolean().optional(),
     dueAt: z.boolean().optional(),
@@ -47,6 +49,8 @@ export const TaskFindFirstSelectSchema: z.ZodType<Prisma.TaskSelect> = z.object(
     technicalIssue: z.boolean().optional(),
     payment: z.boolean().optional(),
     workCase: z.boolean().optional(),
+    taskType: z.boolean().optional(),
+    executions: z.boolean().optional(),
     notifications: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskSelect>;
@@ -56,7 +60,9 @@ export const TaskFindFirstSelectZodSchema = z.object({
     title: z.boolean().optional(),
     description: z.boolean().optional(),
     source: z.boolean().optional(),
-    kind: z.boolean().optional(),
+    domain: z.boolean().optional(),
+    taskTypeId: z.boolean().optional(),
+    mode: z.boolean().optional(),
     status: z.boolean().optional(),
     priority: z.boolean().optional(),
     dueAt: z.boolean().optional(),
@@ -89,6 +95,8 @@ export const TaskFindFirstSelectZodSchema = z.object({
     technicalIssue: z.boolean().optional(),
     payment: z.boolean().optional(),
     workCase: z.boolean().optional(),
+    taskType: z.boolean().optional(),
+    executions: z.boolean().optional(),
     notifications: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

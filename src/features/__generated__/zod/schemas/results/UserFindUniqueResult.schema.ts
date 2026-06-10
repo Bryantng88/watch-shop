@@ -21,5 +21,6 @@ export const UserFindUniqueResultSchema = z.nullable(z.object({
   cancelledTasks: z.array(z.unknown()),
   raisedWorkCases: z.array(z.unknown()),
   assignedWorkCases: z.array(z.unknown()),
-  workCaseActivities: z.array(z.unknown())
+  workCaseActivities: z.array(z.unknown()),
+  TaskExecution: z.array(z.unknown())
 }));

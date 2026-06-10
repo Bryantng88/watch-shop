@@ -15,7 +15,8 @@ import { TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema as TaskUpdat
 import { TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema as TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCompletedByUserNestedInput.schema';
 import { TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema as TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCancelledByUserNestedInput.schema';
 import { WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema as WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutAssignedToUserNestedInput.schema';
-import { WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema as WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema } from './WorkCaseActivityUpdateManyWithoutActorNestedInput.schema'
+import { WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema as WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema } from './WorkCaseActivityUpdateManyWithoutActorNestedInput.schema';
+import { TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskExecutionUpdateManyWithoutCreatedByUserNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -38,7 +39,8 @@ const makeSchema = () => z.object({
   completedTasks: z.lazy(() => TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema).optional(),
   cancelledTasks: z.lazy(() => TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema).optional(),
   assignedWorkCases: z.lazy(() => WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
-  workCaseActivities: z.lazy(() => WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema).optional()
+  workCaseActivities: z.lazy(() => WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional()
 }).strict();
 export const UserUpdateWithoutRaisedWorkCasesInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutRaisedWorkCasesInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutRaisedWorkCasesInput>;
 export const UserUpdateWithoutRaisedWorkCasesInputObjectZodSchema = makeSchema();

@@ -1,6 +1,8 @@
 import { TaskPriority, WorkCaseScope, WorkCaseStatus } from "@prisma/client";
 import WorkCaseListClient from "@/domains/work-case/client/WorkCaseListClient";
 import { getWorkCaseListPageData } from "@/domains/work-case/server/work-case.service";
+import { listActiveTaskTypes } from "@/domains/task/server/task-type.service";
+
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import type { WorkCaseViewKey } from "@/domains/work-case/server/work-case.types";
@@ -40,6 +42,7 @@ export default async function AdminWorkCasesPage(props: PageProps) {
   );
 
   const data = await getWorkCaseListPageData(prisma, {
+
     auth,
     filters: {
       view: (first(searchParams.view) || "mine") as WorkCaseViewKey,
@@ -51,10 +54,11 @@ export default async function AdminWorkCasesPage(props: PageProps) {
       pageSize,
     },
   });
-
+  const taskTypes = await listActiveTaskTypes();
   return (
     <WorkCaseListClient
       {...data}
+      taskTypes={taskTypes}
       canManage={canManage}
       rawSearchParams={searchParams}
     />

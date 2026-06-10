@@ -1,4 +1,4 @@
-import type { TaskCompletionMode, TaskDomain, TaskKind, TaskPriority } from "@prisma/client";
+import type { TaskCompletionMode, TaskDomain, TaskPriority } from "@prisma/client";
 
 export type TaskTypeListFilters = {
   q?: string;
@@ -12,7 +12,6 @@ export type TaskTypeOption = {
   name: string;
   description?: string | null;
   domain: TaskDomain;
-  legacyKind: TaskKind;
   defaultPriority: TaskPriority;
   completionMode: TaskCompletionMode;
   completionRuleKey?: string | null;
@@ -25,7 +24,6 @@ export type UpsertTaskTypeInput = {
   name: string;
   description?: string | null;
   domain: TaskDomain;
-  legacyKind?: TaskKind;
   defaultPriority?: TaskPriority;
   completionMode?: TaskCompletionMode;
   completionRuleKey?: string | null;

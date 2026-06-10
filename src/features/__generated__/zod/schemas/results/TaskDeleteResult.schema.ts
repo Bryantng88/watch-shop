@@ -4,7 +4,9 @@ export const TaskDeleteResultSchema = z.nullable(z.object({
   title: z.string(),
   description: z.string().optional(),
   source: z.unknown(),
-  kind: z.unknown(),
+  domain: z.unknown(),
+  taskTypeId: z.string().optional(),
+  mode: z.unknown(),
   status: z.unknown(),
   priority: z.unknown(),
   dueAt: z.date().optional(),
@@ -37,5 +39,7 @@ export const TaskDeleteResultSchema = z.nullable(z.object({
   technicalIssue: z.unknown().optional(),
   payment: z.unknown().optional(),
   workCase: z.unknown().optional(),
+  taskType: z.unknown().optional(),
+  executions: z.array(z.unknown()),
   notifications: z.array(z.unknown())
 }));

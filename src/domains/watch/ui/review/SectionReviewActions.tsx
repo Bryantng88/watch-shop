@@ -16,7 +16,10 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import ReviewStatusBadge from "./ReviewStatusBadge";
-
+import { TaskKind } from "@prisma/client";
+import RelatedTaskCompleteModal from "@/domains/task/ui/related/RelatedTaskCompleteModal";
+import { findOpenRelatedTasksAction } from "@/domains/task/actions/task.actions";
+import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
 type ReviewTarget = "content" | "image";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -32,6 +35,8 @@ type Props = {
         status: ReviewStatus;
         reviewNote?: string | null;
     }) => void;
+
+    watchId?: string | null;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -66,12 +71,15 @@ export default function SectionReviewActions({
     onStatusChange,
     onBeforeSubmit,
     isFormDirty = false,
+    watchId,
 }: Props) {
     const router = useRouter();
     const dialog = useAppDialog();
     const progress = useAppProgress();
     const notify = useNotify();
-
+    const [relatedTaskOpen, setRelatedTaskOpen] = useState(false);
+    const [relatedTaskItems, setRelatedTaskItems] = useState<RelatedTaskSuggestion[]>([]);
+    const [approveAfterTaskModal, setApproveAfterTaskModal] = useState(false);
     const [pending, setPending] = useState<string | null>(null);
 
     const currentStatus = normalizeStatus(status);
@@ -127,7 +135,41 @@ export default function SectionReviewActions({
 
         return json;
     }
+    function taskKindForTarget(target: ReviewTarget) {
+        return target === "image" ? TaskKind.WATCH_IMAGE : TaskKind.WATCH_CONTENT;
+    }
+    async function getOpenReviewTasks() {
+        if (!watchId) return [];
 
+        const result = await findOpenRelatedTasksAction({
+            watchId,
+            kind: taskKindForTarget(target),
+            limit: 10,
+        });
+
+        console.log("TASK RESULT", result);
+
+        return Array.isArray(result?.items) ? result.items : [];
+    }
+
+    async function approveNow() {
+        await callReviewApi("approve");
+
+        onStatusChange?.({
+            status: "APPROVED",
+            reviewNote: null,
+        });
+
+        notify.success({
+            title: "Đã duyệt",
+            message:
+                target === "content"
+                    ? "Đã duyệt nội dung."
+                    : "Đã duyệt hình ảnh.",
+        });
+
+        router.refresh();
+    }
     async function ensureSavedBeforeReview() {
         if (!isFormDirty) return true;
 
@@ -213,8 +255,9 @@ export default function SectionReviewActions({
             setPending(null);
         }
     }
-
     async function handleApprove() {
+        console.log("watchId", watchId);
+
         const label = targetLabel(target);
 
         const ok = await dialog.confirm({
@@ -242,8 +285,16 @@ export default function SectionReviewActions({
 
             const saved = await ensureSavedBeforeReview();
             if (!saved) return;
+            const openTasks = await getOpenReviewTasks();
+            if (openTasks.length > 0 && !approveAfterTaskModal) {
+                setRelatedTaskItems(openTasks);
+                setApproveAfterTaskModal(true);
+                setRelatedTaskOpen(true);
+                return;
+            }
 
-            await callReviewApi("approve");
+
+            await approveNow();
 
             onStatusChange?.({
                 status: "APPROVED",
@@ -468,8 +519,34 @@ export default function SectionReviewActions({
                             {isFormDirty ? "Lưu & duyệt" : "Duyệt"}
                         </button>
                     ) : null}
+                    <RelatedTaskCompleteModal
+                        open={relatedTaskOpen}
+                        items={relatedTaskItems}
+                        title={target === "image" ? "Có task hình ảnh đang mở" : "Có task content đang mở"}
+                        message="Chọn task đã xử lý xong để hoàn thành, sau đó hệ thống sẽ tiếp tục duyệt."
+                        onClose={() => setRelatedTaskOpen(false)}
+                        onCompleted={async () => {
+                            setRelatedTaskOpen(false);
+                            setPending("approve");
+
+                            try {
+                                progress.show({
+                                    title: `Đang duyệt ${targetLabel(target)}`,
+                                    message: "Hệ thống đang cập nhật trạng thái duyệt.",
+                                });
+
+                                await approveNow();
+                            } finally {
+                                progress.hide();
+                                setPending(null);
+                            }
+                        }}
+                    />
                 </div>
             ) : null}
+
         </div>
+
     );
+
 }

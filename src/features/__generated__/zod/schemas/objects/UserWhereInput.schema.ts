@@ -13,7 +13,8 @@ import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelat
 import { RoleListRelationFilterObjectSchema as RoleListRelationFilterObjectSchema } from './RoleListRelationFilter.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
 import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
-import { WorkCaseActivityListRelationFilterObjectSchema as WorkCaseActivityListRelationFilterObjectSchema } from './WorkCaseActivityListRelationFilter.schema'
+import { WorkCaseActivityListRelationFilterObjectSchema as WorkCaseActivityListRelationFilterObjectSchema } from './WorkCaseActivityListRelationFilter.schema';
+import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema'
 
 const userwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => UserWhereInputObjectSchema), z.lazy(() => UserWhereInputObjectSchema).array()]).optional(),
@@ -40,7 +41,8 @@ const userwhereinputSchema = z.object({
   cancelledTasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
   raisedWorkCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
   assignedWorkCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
-  workCaseActivities: z.lazy(() => WorkCaseActivityListRelationFilterObjectSchema).optional()
+  workCaseActivities: z.lazy(() => WorkCaseActivityListRelationFilterObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;

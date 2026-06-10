@@ -931,6 +931,7 @@ model User {
   raisedWorkCases    WorkCase[]         @relation("WorkCaseRaisedBy")
   assignedWorkCases  WorkCase[]         @relation("WorkCaseAssignedTo")
   workCaseActivities WorkCaseActivity[]
+  TaskExecution      TaskExecution[]
 
   @@index([isActive])
 }
@@ -1458,28 +1459,67 @@ enum TaskDomain {
   ORDER
   SHIPMENT
   SERVICE
+  TECHNICAL_ISSUE
   PAYMENT
   ACQUISITION
+  WORK_CASE
 }
 
-enum TaskKind {
-  PERSONAL
+enum TaskMode {
+  NORMAL
+  APPROVAL
+  EXCEPTION
+  FOLLOW_UP
+  INVESTIGATION
+}
 
-  WATCH_CONTENT
-  WATCH_IMAGE
-  WATCH_REVIEW
+enum TaskCompletionMode {
+  MANUAL_CONFIRM
+  BUSINESS_RULE
+}
 
-  ORDER_FOLLOW_UP
-  PAYMENT_FOLLOW_UP
+enum TaskExecutionTargetType {
+  WATCH
+  ORDER
+  SHIPMENT
+  PAYMENT
+  SERVICE_REQUEST
+  TECHNICAL_ISSUE
+  ACQUISITION
+  WORK_CASE
+}
 
-  SHIPMENT_FOLLOW_UP
-  SHIPMENT_RETURN
+enum TaskExecutionActionType {
+  CREATED
+  LINKED
+  UPDATED
+  CANCELLED
+}
 
-  SERVICE_FOLLOW_UP
-  TECHNICAL_ISSUE_FOLLOW_UP
+model TaskType {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 
-  ACQUISITION_FOLLOW_UP
-  OTHER
+  code        String  @unique
+  name        String
+  description String?
+
+  domain TaskDomain @default(GENERAL)
+
+  defaultPriority   TaskPriority       @default(MEDIUM)
+  completionMode    TaskCompletionMode @default(MANUAL_CONFIRM)
+  completionRuleKey String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([domain])
+  @@index([isActive])
+  @@index([sortOrder])
 }
 
 model WorkCaseCategory {
@@ -1568,10 +1608,12 @@ model Task {
   title       String
   description String?
 
-  source   TaskSource   @default(MANUAL)
-  kind     TaskKind     @default(PERSONAL)
-  status   TaskStatus   @default(TODO)
-  priority TaskPriority @default(MEDIUM)
+  source     TaskSource   @default(MANUAL)
+  domain     TaskDomain   @default(GENERAL)
+  taskTypeId String?
+  mode       TaskMode     @default(NORMAL)
+  status     TaskStatus   @default(TODO)
+  priority   TaskPriority @default(MEDIUM)
 
   dueAt       DateTime?
   startedAt   DateTime?
@@ -1608,10 +1650,14 @@ model Task {
   technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
   payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   workCase       WorkCase?       @relation(fields: [workCaseId], references: [id], onDelete: SetNull)
+  taskType       TaskType?       @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
+  executions     TaskExecution[]
   notifications  Notification[]
 
   @@index([source])
-  @@index([kind])
+  @@index([domain])
+  @@index([taskTypeId])
+  @@index([mode])
   @@index([status])
   @@index([priority])
   @@index([dueAt])
@@ -1628,6 +1674,28 @@ model Task {
   @@index([technicalIssueId])
   @@index([paymentId])
   @@index([workCaseId])
+}
+
+model TaskExecution {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskId String
+
+  targetType TaskExecutionTargetType
+  targetId   String
+  actionType TaskExecutionActionType @default(CREATED)
+
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  task          Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdByUser User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([targetType, targetId])
+  @@index([createdByUserId])
+  @@index([createdAt])
 }
 
 enum AcquisitionItemKind {

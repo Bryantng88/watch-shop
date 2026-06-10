@@ -49,6 +49,7 @@ export function mapWatchDetailToFormValues(detail: any): WatchFormValues {
             .filter(Boolean)
         : [];
     return {
+        watchId: s(detail?.watchId),
         productId: s(detail?.productId),
         contentReviewStatus,
         contentReviewNote,

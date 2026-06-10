@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { CheckCircle2, ExternalLink, ImageIcon, ListChecks, PlayCircle, UserCheck, X } from "lucide-react";
-import { TaskKind, WorkCaseStatus } from "@prisma/client";
+import { TaskDomain, TaskMode, WorkCaseStatus } from "@prisma/client";
 import TaskQuickCreateModal, { type TaskQuickCreateContext, type TaskUserOption } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { updateWorkCaseAction } from "../actions/work-case.actions";
@@ -18,11 +18,11 @@ function imageSrc(item: WorkCaseWithRelations) {
   return inline?.imageUrl || inline?.fileKey || item.watch?.product?.primaryImageUrl || null;
 }
 
-function defaultTaskKind(item: WorkCaseWithRelations) {
-  if (item.scope === "SERVICE") return TaskKind.SERVICE_FOLLOW_UP;
-  if (item.scope === "PAYMENT") return TaskKind.PAYMENT_FOLLOW_UP;
-  if (item.scope === "LOGISTIC") return TaskKind.SHIPMENT_FOLLOW_UP;
-  return TaskKind.WATCH_CONTENT;
+function defaultTaskDomain(item: WorkCaseWithRelations) {
+  if (item.scope === "SERVICE") return TaskDomain.SERVICE;
+  if (item.scope === "PAYMENT") return TaskDomain.PAYMENT;
+  if (item.scope === "LOGISTIC") return TaskDomain.SHIPMENT;
+  return TaskDomain.WATCH;
 }
 
 function nextTriageStatus(item: WorkCaseWithRelations) {
@@ -114,7 +114,8 @@ export default function WorkCaseDetailDrawer({
     setTaskContext({
       watchId: activeItem.watchId,
       workCaseId: activeItem.id,
-      kind: defaultTaskKind(activeItem),
+      domain: defaultTaskDomain(activeItem),
+      mode: TaskMode.NORMAL,
       titlePreset: activeItem.refNo
         ? `Xử lý ${activeItem.refNo}: ${activeItem.title}`
         : `Xử lý phiếu: ${activeItem.title}`,
@@ -128,7 +129,8 @@ export default function WorkCaseDetailDrawer({
     setTaskContext({
       workCaseId: activeItem.id,
       watchId: activeItem.watchId,
-      kind: defaultTaskKind(activeItem),
+      domain: defaultTaskDomain(activeItem),
+      mode: TaskMode.NORMAL,
       titlePreset: activeItem.refNo
         ? `Xử lý ${activeItem.refNo}: ${activeItem.title}`
         : `Xử lý phiếu: ${activeItem.title}`,

@@ -57,7 +57,9 @@ export { technicalAssessmentsResultSchema } from './technicalAssessments.result'
 export { technicalPartCatalogResultSchema } from './technicalPartCatalog.result';
 export { AcquisitionSpecJobLogResultSchema } from './AcquisitionSpecJobLog.result';
 export { MediaAssetResultSchema } from './MediaAsset.result';
+export { TaskTypeResultSchema } from './TaskType.result';
 export { WorkCaseCategoryResultSchema } from './WorkCaseCategory.result';
 export { WorkCaseResultSchema } from './WorkCase.result';
 export { WorkCaseActivityResultSchema } from './WorkCaseActivity.result';
 export { TaskResultSchema } from './Task.result';
+export { TaskExecutionResultSchema } from './TaskExecution.result';

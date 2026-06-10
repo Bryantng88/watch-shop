@@ -1,5 +1,6 @@
-import { TaskKind, TaskStatus } from "@prisma/client";
+import { TaskDomain, TaskStatus } from "@prisma/client";
 import type { DB } from "@/server/db/client";
+import { listActiveTaskTypesRepo } from "./task-type.repo";
 import {
   completeRelatedTasksRepo,
   countTaskDueBucketsRepo,
@@ -50,14 +51,20 @@ export async function getTaskListPageData(db: DB, input: { auth: any; filters: T
 
   const canViewAll = authCanViewAllTasks(input.auth);
   const view = input.filters.view || "mine";
-  const [list, counts, dueCounts, users] = await Promise.all([
+  const [list, counts, dueCounts, users, taskTypes] = await Promise.all([
     listTasksRepo(db, { userId, canViewAll, filters: input.filters }),
     countTaskViewsRepo(db, { userId, canViewAll }),
     countTaskDueBucketsRepo(db, { userId, canViewAll, view }),
     listAssignableUsersRepo(db),
+    listActiveTaskTypesRepo(db),
   ]);
 
-  return { ...list, counts, dueCounts, users, currentUserId: userId, canViewAll };
+  return { ...list, counts, dueCounts, users, taskTypes, currentUserId: userId, canViewAll };
+}
+
+
+export async function getTaskDetail(db: DB, id: string, auth: any) {
+  return assertCanAccessTask(db, id, auth);
 }
 
 export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
@@ -120,11 +127,40 @@ export async function safeEnsureSystemTask(db: DB, input: EnsureSystemTaskInput)
 }
 
 export async function completeTaskForPaymentIfSettled(db: DB, input: { paymentId: string; completedByUserId?: string | null }) {
-  return completeRelatedTasksRepo(db, { kind: TaskKind.PAYMENT_FOLLOW_UP, paymentId: input.paymentId, completedByUserId: input.completedByUserId });
+  return completeRelatedTasksRepo(db, { domain: TaskDomain.PAYMENT, paymentId: input.paymentId, completedByUserId: input.completedByUserId });
 }
 export async function findOpenRelatedTasks(
   db: DB,
   input: FindOpenRelatedTasksInput,
 ) {
   return findOpenRelatedTasksRepo(db, input);
+}
+
+export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  const uniqueIds = Array.from(
+    new Set(ids.map((id) => String(id ?? "").trim()).filter(Boolean)),
+  );
+
+  if (!uniqueIds.length) return { count: 0 };
+
+  for (const id of uniqueIds) {
+    await assertCanAccessTask(db, id, auth);
+  }
+
+  return db.task.updateMany({
+    where: {
+      id: { in: uniqueIds },
+      status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
+    },
+    data: {
+      status: TaskStatus.DONE,
+      completedAt: new Date(),
+      completedByUserId: userId,
+      cancelledAt: null,
+      cancelledByUserId: null,
+    },
+  });
 }

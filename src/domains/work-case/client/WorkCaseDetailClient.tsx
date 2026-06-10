@@ -13,7 +13,7 @@ import {
     Wrench,
 } from "lucide-react";
 import { TaskStatusBadge } from "@/domains/task/ui/shared/TaskBadges";
-import { TaskKind, WorkCaseStatus } from "@prisma/client";
+import { TaskDomain, TaskMode, WorkCaseStatus } from "@prisma/client";
 
 import TaskQuickCreateModal, {
     type TaskQuickCreateContext,
@@ -40,11 +40,11 @@ function imageSrc(item: WorkCaseWithRelations) {
     return inline?.imageUrl || inline?.fileKey || item.watch?.product?.primaryImageUrl || null;
 }
 
-function defaultTaskKind(item: WorkCaseWithRelations) {
-    if (item.scope === "SERVICE") return TaskKind.SERVICE_FOLLOW_UP;
-    if (item.scope === "PAYMENT") return TaskKind.PAYMENT_FOLLOW_UP;
-    if (item.scope === "LOGISTIC") return TaskKind.SHIPMENT_FOLLOW_UP;
-    return TaskKind.WATCH_CONTENT;
+function defaultTaskDomain(item: WorkCaseWithRelations) {
+    if (item.scope === "SERVICE") return TaskDomain.SERVICE;
+    if (item.scope === "PAYMENT") return TaskDomain.PAYMENT;
+    if (item.scope === "LOGISTIC") return TaskDomain.SHIPMENT;
+    return TaskDomain.WATCH;
 }
 
 function formatDate(value: Date | string | null | undefined) {
@@ -105,7 +105,8 @@ export default function WorkCaseDetailClient({
         setTaskContext({
             workCaseId: localItem.id,
             watchId: localItem.watchId,
-            kind: defaultTaskKind(localItem),
+            domain: defaultTaskDomain(localItem),
+            mode: TaskMode.NORMAL,
             titlePreset: localItem.refNo
                 ? `Xử lý ${localItem.refNo}: ${localItem.title}`
                 : `Xử lý phiếu: ${localItem.title}`,

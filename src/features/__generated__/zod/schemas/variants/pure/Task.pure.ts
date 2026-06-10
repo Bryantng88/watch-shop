@@ -1,7 +1,8 @@
 import * as z from 'zod';
 
 import { TaskSourceSchema } from '../../enums/TaskSource.schema';
-import { TaskKindSchema } from '../../enums/TaskKind.schema';
+import { TaskDomainSchema } from '../../enums/TaskDomain.schema';
+import { TaskModeSchema } from '../../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../../enums/TaskPriority.schema';
 // prettier-ignore
@@ -10,7 +11,9 @@ export const TaskModelSchema = z.object({
     title: z.string(),
     description: z.string().nullable(),
     source: TaskSourceSchema,
-    kind: TaskKindSchema,
+    domain: TaskDomainSchema,
+    taskTypeId: z.string().nullable(),
+    mode: TaskModeSchema,
     status: TaskStatusSchema,
     priority: TaskPrioritySchema,
     dueAt: z.date().nullable(),
@@ -43,6 +46,8 @@ export const TaskModelSchema = z.object({
     technicalIssue: z.unknown().nullable(),
     payment: z.unknown().nullable(),
     workCase: z.unknown().nullable(),
+    taskType: z.unknown().nullable(),
+    executions: z.array(z.unknown()),
     notifications: z.array(z.unknown())
 }).strict();
 

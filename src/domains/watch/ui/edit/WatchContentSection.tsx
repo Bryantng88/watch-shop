@@ -38,6 +38,7 @@ type Props = {
     onReviewStatusChange?: (next: ReviewStatusChange) => void;
     onBeforeSubmitReview?: (target: "content" | "image") => Promise<boolean>;
     isFormDirty?: boolean;
+    watchId?: string;
 };
 
 function normalizeStatus(status?: string | null): ReviewStatus {
@@ -65,7 +66,8 @@ export default function WatchContentSection({
     onOpenSpecModal,
     onReviewStatusChange,
     onBeforeSubmitReview,
-    isFormDirty
+    isFormDirty,
+    watchId,
 }: Props) {
     const dialog = useAppDialog();
     const notify = useNotify();
@@ -190,6 +192,7 @@ export default function WatchContentSection({
                     onStatusChange={(next) => {
                         onReviewStatusChange?.(next);
                     }}
+                    watchId={watchId || watchValues.watchId}
                 />
             }
         >

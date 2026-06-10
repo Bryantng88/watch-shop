@@ -1,4 +1,4 @@
-import { Prisma, TaskKind, TaskSource, TaskStatus, type TaskPriority } from "@prisma/client";
+import { Prisma, TaskDomain, TaskSource, TaskStatus, type TaskPriority } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { CompleteRelatedTasksInput, CreateTaskInput, EnsureSystemTaskInput, EnsureSystemTaskResult, TaskDueKey, TaskListFilters, TaskViewKey, UpdateTaskInput } from "./task.types";
 import type { FindOpenRelatedTasksInput } from "./task.types";
@@ -15,6 +15,11 @@ export const TASK_INCLUDE = {
   serviceRequest: { select: { id: true, refNo: true, status: true } },
   technicalIssue: { select: { id: true, area: true, executionStatus: true, serviceRequestId: true, priority: true } },
   payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
+  taskType: { select: { id: true, code: true, name: true, domain: true } },
+  executions: {
+    orderBy: { createdAt: "desc" },
+    include: { createdByUser: { select: { id: true, name: true, email: true } } },
+  },
 } satisfies Prisma.TaskInclude;
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_INCLUDE }>;
@@ -22,6 +27,18 @@ export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_INC
 function toDate(value: Date | string | null | undefined) {
   if (!value) return null;
   return value instanceof Date ? value : new Date(value);
+}
+
+function inferTaskDomain(input: Partial<CreateTaskInput | UpdateTaskInput | EnsureSystemTaskInput>) {
+  if (input.watchId) return TaskDomain.WATCH;
+  if (input.orderId) return TaskDomain.ORDER;
+  if (input.shipmentId) return TaskDomain.SHIPMENT;
+  if (input.serviceRequestId) return TaskDomain.SERVICE;
+  if (input.technicalIssueId) return TaskDomain.TECHNICAL_ISSUE;
+  if (input.paymentId) return TaskDomain.PAYMENT;
+  if (input.acquisitionId) return TaskDomain.ACQUISITION;
+  if (input.workCaseId) return TaskDomain.WORK_CASE;
+  return TaskDomain.GENERAL;
 }
 
 function startOfToday() {
@@ -87,7 +104,9 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
     where.status = filters.status === "OPEN" ? { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] } : filters.status;
   }
   if (filters.priority && filters.priority !== "ALL") where.priority = filters.priority as TaskPriority;
-  if (filters.kind && filters.kind !== "ALL") where.kind = filters.kind as TaskKind;
+  if (filters.domain && filters.domain !== "ALL") where.domain = filters.domain;
+  if (filters.taskTypeId && filters.taskTypeId !== "ALL") where.taskTypeId = filters.taskTypeId;
+  if (filters.mode && filters.mode !== "ALL") where.mode = filters.mode;
 
   const dueWhere = buildDueWhere(filters.due);
   return Object.keys(dueWhere).length ? { AND: [where, dueWhere] } : where;
@@ -109,7 +128,9 @@ function cleanLinks(input: Partial<CreateTaskInput | UpdateTaskInput | EnsureSys
 function systemTaskIdentityWhere(input: EnsureSystemTaskInput): Prisma.TaskWhereInput {
   return {
     source: TaskSource.SYSTEM,
-    kind: input.kind,
+    domain: input.domain,
+    taskTypeId: input.taskTypeId ?? null,
+    mode: input.mode ?? "NORMAL",
     watchId: input.watchId ?? null,
     orderId: input.orderId ?? null,
     shipmentId: input.shipmentId ?? null,
@@ -194,7 +215,9 @@ export async function createTaskRepo(db: DB, input: CreateTaskInput & { createdB
       title: input.title.trim(),
       description: input.description?.trim() || null,
       source: input.source ?? "MANUAL",
-      kind: input.kind ?? TaskKind.PERSONAL,
+      domain: input.domain ?? inferTaskDomain(input),
+      taskTypeId: input.taskTypeId ?? null,
+      mode: input.mode ?? "NORMAL",
       priority: input.priority ?? "MEDIUM",
       dueAt: toDate(input.dueAt),
       createdByUserId,
@@ -216,7 +239,9 @@ export async function ensureSystemTaskRepo(db: DB, input: EnsureSystemTaskInput)
         title: input.title.trim(),
         description: input.description?.trim() || null,
         source: TaskSource.SYSTEM,
-        kind: input.kind,
+        domain: input.domain,
+        taskTypeId: input.taskTypeId ?? null,
+        mode: input.mode ?? "NORMAL",
         priority: input.priority ?? "MEDIUM",
         dueAt,
         createdByUserId: input.createdByUserId ?? null,
@@ -251,7 +276,9 @@ export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput)
     data: {
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
-      ...(input.kind !== undefined ? { kind: input.kind } : {}),
+      ...(input.domain !== undefined ? { domain: input.domain } : {}),
+      ...(input.taskTypeId !== undefined ? { taskTypeId: input.taskTypeId || null } : {}),
+      ...(input.mode !== undefined ? { mode: input.mode } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
       ...(input.assignedToUserId !== undefined ? { assignedToUserId: input.assignedToUserId || null } : {}),
@@ -295,7 +322,9 @@ export async function setTaskStatusRepo(db: DB, input: { id: string; status: Tas
 export async function completeRelatedTasksRepo(db: DB, input: CompleteRelatedTasksInput) {
   const client = dbOrTx(db);
   const where: Prisma.TaskWhereInput = {
-    kind: input.kind,
+    ...(input.domain ? { domain: input.domain } : {}),
+    ...(input.taskTypeId ? { taskTypeId: input.taskTypeId } : {}),
+    ...(input.mode ? { mode: input.mode } : {}),
     status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
     ...(input.watchId ? { watchId: input.watchId } : {}),
     ...(input.orderId ? { orderId: input.orderId } : {}),
@@ -331,16 +360,28 @@ export async function findOpenRelatedTasksRepo(
       status: {
         in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS],
       },
-      ...(input.kind ? { kind: input.kind } : {}),
+      ...(input.domain ? { domain: input.domain } : {}),
+      ...(input.taskTypeId ? { taskTypeId: input.taskTypeId } : {}),
       ...(input.watchId ? { watchId: input.watchId } : {}),
-      ...(input.productId ? { productId: input.productId } : {}),
       ...(input.paymentId ? { paymentId: input.paymentId } : {}),
     },
     select: {
       id: true,
       title: true,
-      kind: true,
+      description: true,
+      domain: true,
+      taskTypeId: true,
+      mode: true,
       status: true,
+      priority: true,
+      dueAt: true,
+      assignedToUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
     orderBy: [{ createdAt: "desc" }],
     take: input.limit ?? 10,

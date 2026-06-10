@@ -13,3 +13,12 @@ export function TaskPriorityBadge({ priority }: { priority: TaskPriority }) {
 export function TaskSourceBadge({ source }: { source: TaskSource }) {
   return <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", source === "SYSTEM" ? "bg-violet-50 text-violet-700" : "bg-slate-50 text-slate-600")}>{TASK_SOURCE_LABEL[source]}</span>;
 }
+export function TaskBadges({ task }: { task: any }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {task.status ? <TaskStatusBadge status={task.status} /> : null}
+      {task.priority ? <TaskPriorityBadge priority={task.priority} /> : null}
+      {task.source ? <TaskSourceBadge source={task.source} /> : null}
+    </div>
+  );
+}

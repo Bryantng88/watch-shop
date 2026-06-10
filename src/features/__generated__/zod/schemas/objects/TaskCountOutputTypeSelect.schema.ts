@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
+  executions: z.boolean().optional(),
   notifications: z.boolean().optional()
 }).strict();
 export const TaskCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.TaskCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.TaskCountOutputTypeSelect>;

@@ -604,6 +604,7 @@ export default function WatchFormClient({
                             onReviewStatusChange={(next) =>
                                 handleReviewStatusChange("content", next)
                             }
+                            watchId={values.watchId}
                         />
                     </div>
 

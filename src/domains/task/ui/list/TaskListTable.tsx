@@ -4,7 +4,7 @@ import { CheckCircle2, CirclePlay, RotateCcw, XCircle } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/task.repo";
-import { TASK_KIND_LABEL, formatTaskDomainLabel } from "../../utils/task-labels";
+import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL, formatTaskDomainLabel } from "../../utils/task-labels";
 import { TaskPriorityBadge, TaskSourceBadge, TaskStatusBadge } from "../shared/TaskBadges";
 import TaskPagination from "./TaskPagination";
 
@@ -58,12 +58,10 @@ export default function TaskListTable({ items, page, totalPages, onPage, onStatu
                   </div>
                 </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {row.taskType ? (
-                    <div>
-                      <div className="font-medium text-slate-800">{row.taskType.name}</div>
-                      <div className="mt-0.5 font-mono text-[11px] text-slate-400">{row.taskType.code}</div>
-                    </div>
-                  ) : TASK_KIND_LABEL[row.kind]}
+                  <div>
+                    <div className="font-medium text-slate-800">{row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-400">{row.taskType?.code ? `${row.taskType.code} · ` : ""}{TASK_MODE_LABEL[row.mode]}</div>
+                  </div>
                 </td>
                 <td className="px-4 py-3"><TaskStatusBadge status={row.status} /></td>
                 <td className="px-4 py-3"><TaskPriorityBadge priority={row.priority} /></td>

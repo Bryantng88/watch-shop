@@ -1,0 +1,13 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskExecutionWhereInputObjectSchema as TaskExecutionWhereInputObjectSchema } from './objects/TaskExecutionWhereInput.schema';
+import { TaskExecutionOrderByWithAggregationInputObjectSchema as TaskExecutionOrderByWithAggregationInputObjectSchema } from './objects/TaskExecutionOrderByWithAggregationInput.schema';
+import { TaskExecutionScalarWhereWithAggregatesInputObjectSchema as TaskExecutionScalarWhereWithAggregatesInputObjectSchema } from './objects/TaskExecutionScalarWhereWithAggregatesInput.schema';
+import { TaskExecutionScalarFieldEnumSchema } from './enums/TaskExecutionScalarFieldEnum.schema';
+import { TaskExecutionCountAggregateInputObjectSchema as TaskExecutionCountAggregateInputObjectSchema } from './objects/TaskExecutionCountAggregateInput.schema';
+import { TaskExecutionMinAggregateInputObjectSchema as TaskExecutionMinAggregateInputObjectSchema } from './objects/TaskExecutionMinAggregateInput.schema';
+import { TaskExecutionMaxAggregateInputObjectSchema as TaskExecutionMaxAggregateInputObjectSchema } from './objects/TaskExecutionMaxAggregateInput.schema';
+
+export const TaskExecutionGroupBySchema: z.ZodType<Prisma.TaskExecutionGroupByArgs> = z.object({ where: TaskExecutionWhereInputObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithAggregationInputObjectSchema, TaskExecutionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskExecutionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskExecutionScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskExecutionCountAggregateInputObjectSchema ]).optional(), _min: TaskExecutionMinAggregateInputObjectSchema.optional(), _max: TaskExecutionMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionGroupByArgs>;
+
+export const TaskExecutionGroupByZodSchema = z.object({ where: TaskExecutionWhereInputObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithAggregationInputObjectSchema, TaskExecutionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskExecutionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskExecutionScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskExecutionCountAggregateInputObjectSchema ]).optional(), _min: TaskExecutionMinAggregateInputObjectSchema.optional(), _max: TaskExecutionMaxAggregateInputObjectSchema.optional() }).strict();

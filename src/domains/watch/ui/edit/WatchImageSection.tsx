@@ -242,6 +242,7 @@ export default function WatchImageSection({
                             productId={productId}
                             target="image"
                             status={imageReviewStatus}
+                            watchId={watchId}
                             reviewNote={imageReviewNote}
                             canReviewContent={canReviewContent}
                             isFormDirty={isFormDirty}

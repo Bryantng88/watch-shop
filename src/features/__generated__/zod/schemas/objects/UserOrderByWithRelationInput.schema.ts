@@ -10,7 +10,8 @@ import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIss
 import { RoleOrderByRelationAggregateInputObjectSchema as RoleOrderByRelationAggregateInputObjectSchema } from './RoleOrderByRelationAggregateInput.schema';
 import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
 import { WorkCaseOrderByRelationAggregateInputObjectSchema as WorkCaseOrderByRelationAggregateInputObjectSchema } from './WorkCaseOrderByRelationAggregateInput.schema';
-import { WorkCaseActivityOrderByRelationAggregateInputObjectSchema as WorkCaseActivityOrderByRelationAggregateInputObjectSchema } from './WorkCaseActivityOrderByRelationAggregateInput.schema'
+import { WorkCaseActivityOrderByRelationAggregateInputObjectSchema as WorkCaseActivityOrderByRelationAggregateInputObjectSchema } from './WorkCaseActivityOrderByRelationAggregateInput.schema';
+import { TaskExecutionOrderByRelationAggregateInputObjectSchema as TaskExecutionOrderByRelationAggregateInputObjectSchema } from './TaskExecutionOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -34,7 +35,8 @@ const makeSchema = () => z.object({
   cancelledTasks: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
   raisedWorkCases: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional(),
   assignedWorkCases: z.lazy(() => WorkCaseOrderByRelationAggregateInputObjectSchema).optional(),
-  workCaseActivities: z.lazy(() => WorkCaseActivityOrderByRelationAggregateInputObjectSchema).optional()
+  workCaseActivities: z.lazy(() => WorkCaseActivityOrderByRelationAggregateInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const UserOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.UserOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.UserOrderByWithRelationInput>;
 export const UserOrderByWithRelationInputObjectZodSchema = makeSchema();

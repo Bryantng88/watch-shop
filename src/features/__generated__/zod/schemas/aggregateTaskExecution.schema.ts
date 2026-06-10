@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskExecutionOrderByWithRelationInputObjectSchema as TaskExecutionOrderByWithRelationInputObjectSchema } from './objects/TaskExecutionOrderByWithRelationInput.schema';
+import { TaskExecutionWhereInputObjectSchema as TaskExecutionWhereInputObjectSchema } from './objects/TaskExecutionWhereInput.schema';
+import { TaskExecutionWhereUniqueInputObjectSchema as TaskExecutionWhereUniqueInputObjectSchema } from './objects/TaskExecutionWhereUniqueInput.schema';
+import { TaskExecutionCountAggregateInputObjectSchema as TaskExecutionCountAggregateInputObjectSchema } from './objects/TaskExecutionCountAggregateInput.schema';
+import { TaskExecutionMinAggregateInputObjectSchema as TaskExecutionMinAggregateInputObjectSchema } from './objects/TaskExecutionMinAggregateInput.schema';
+import { TaskExecutionMaxAggregateInputObjectSchema as TaskExecutionMaxAggregateInputObjectSchema } from './objects/TaskExecutionMaxAggregateInput.schema';
+
+export const TaskExecutionAggregateSchema: z.ZodType<Prisma.TaskExecutionAggregateArgs> = z.object({ orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskExecutionCountAggregateInputObjectSchema ]).optional(), _min: TaskExecutionMinAggregateInputObjectSchema.optional(), _max: TaskExecutionMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionAggregateArgs>;
+
+export const TaskExecutionAggregateZodSchema = z.object({ orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskExecutionCountAggregateInputObjectSchema ]).optional(), _min: TaskExecutionMinAggregateInputObjectSchema.optional(), _max: TaskExecutionMaxAggregateInputObjectSchema.optional() }).strict();

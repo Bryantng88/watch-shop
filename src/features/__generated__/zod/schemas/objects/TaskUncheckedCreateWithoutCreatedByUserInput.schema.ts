@@ -1,9 +1,11 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
-import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { TaskDomainSchema } from '../enums/TaskDomain.schema';
+import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema as NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationUncheckedCreateNestedManyWithoutTaskInput.schema'
 
 const makeSchema = () => z.object({
@@ -11,7 +13,9 @@ const makeSchema = () => z.object({
   title: z.string(),
   description: z.string().optional().nullable(),
   source: TaskSourceSchema.optional(),
-  kind: TaskKindSchema.optional(),
+  domain: TaskDomainSchema.optional(),
+  taskTypeId: z.string().optional().nullable(),
+  mode: TaskModeSchema.optional(),
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   dueAt: z.coerce.date().optional().nullable(),
@@ -31,6 +35,7 @@ const makeSchema = () => z.object({
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   notifications: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();
 export const TaskUncheckedCreateWithoutCreatedByUserInputObjectSchema: z.ZodType<Prisma.TaskUncheckedCreateWithoutCreatedByUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskUncheckedCreateWithoutCreatedByUserInput>;

@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { TaskKind, TaskPriority } from "@prisma/client";
+import { TaskDomain, TaskMode, TaskPriority } from "@prisma/client";
 import { createTaskAction, updateTaskAction } from "../../actions/task.actions";
 import type { TaskWithRelations } from "../../server/task.repo";
 import type { CreateTaskInput, TaskDomainLinksInput } from "../../server/task.types";
-import { TASK_KIND_LABEL, TASK_PRIORITY_LABEL } from "../../utils/task-labels";
+import type { TaskTypeOption } from "../../server/task-type.types";
+import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL, TASK_PRIORITY_LABEL } from "../../utils/task-labels";
 
 export type TaskUserOption = { id: string; name?: string | null; email?: string | null };
-export type TaskQuickCreateContext = TaskDomainLinksInput & { kind?: TaskKind; titlePreset?: string; descriptionPreset?: string };
+export type TaskQuickCreateContext = TaskDomainLinksInput & {
+  domain?: TaskDomain;
+  taskTypeId?: string | null;
+  mode?: TaskMode;
+  titlePreset?: string;
+  descriptionPreset?: string;
+};
 
 function userLabel(user: TaskUserOption) {
   return user.name || user.email || user.id;
@@ -21,28 +28,53 @@ function toDateInput(value?: Date | string | null) {
   return date.toISOString().slice(0, 10);
 }
 
-export default function TaskQuickCreateModal({ open, users, currentUserId, context, editTask, onClose, onSaved }: { open: boolean; users: TaskUserOption[]; currentUserId: string; context?: TaskQuickCreateContext | null; editTask?: TaskWithRelations | null; onClose: () => void; onSaved?: () => void }) {
+function inferDomain(context?: TaskQuickCreateContext | null) {
+  if (context?.domain) return context.domain;
+  if (context?.watchId) return TaskDomain.WATCH;
+  if (context?.orderId) return TaskDomain.ORDER;
+  if (context?.shipmentId) return TaskDomain.SHIPMENT;
+  if (context?.serviceRequestId) return TaskDomain.SERVICE;
+  if (context?.technicalIssueId) return TaskDomain.TECHNICAL_ISSUE;
+  if (context?.paymentId) return TaskDomain.PAYMENT;
+  if (context?.acquisitionId) return TaskDomain.ACQUISITION;
+  if (context?.workCaseId) return TaskDomain.WORK_CASE;
+  return TaskDomain.GENERAL;
+}
+
+export default function TaskQuickCreateModal({ open, users, taskTypes = [], currentUserId, context, editTask, onClose, onSaved }: { open: boolean; users: TaskUserOption[]; taskTypes?: TaskTypeOption[]; currentUserId: string; context?: TaskQuickCreateContext | null; editTask?: TaskWithRelations | null; onClose: () => void; onSaved?: () => void }) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [kind, setKind] = useState<TaskKind>(TaskKind.PERSONAL);
+  const [domain, setDomain] = useState<TaskDomain>(TaskDomain.GENERAL);
+  const [taskTypeId, setTaskTypeId] = useState("");
+  const [mode, setMode] = useState<TaskMode>(TaskMode.NORMAL);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [assignedToUserId, setAssignedToUserId] = useState(currentUserId);
   const [dueAt, setDueAt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = Boolean(editTask);
+  const filteredTaskTypes = useMemo(() => taskTypes.filter((item) => item.isActive && item.domain === domain), [taskTypes, domain]);
 
   useEffect(() => {
     if (!open) return;
+    const nextDomain = editTask?.domain ?? inferDomain(context);
     setError(null);
     setTitle(editTask?.title ?? context?.titlePreset ?? "");
     setDescription(editTask?.description ?? context?.descriptionPreset ?? "");
-    setKind(editTask?.kind ?? context?.kind ?? TaskKind.PERSONAL);
+    setDomain(nextDomain);
+    setTaskTypeId(editTask?.taskTypeId ?? context?.taskTypeId ?? "");
+    setMode(editTask?.mode ?? context?.mode ?? TaskMode.NORMAL);
     setPriority(editTask?.priority ?? TaskPriority.MEDIUM);
     setAssignedToUserId(editTask?.assignedToUserId ?? currentUserId);
     setDueAt(toDateInput(editTask?.dueAt));
   }, [open, editTask, context, currentUserId]);
+
+  useEffect(() => {
+    if (!taskTypeId) return;
+    const selected = taskTypes.find((item) => item.id === taskTypeId);
+    if (selected && selected.domain !== domain) setTaskTypeId("");
+  }, [domain, taskTypeId, taskTypes]);
 
   const links = useMemo<TaskDomainLinksInput>(() => ({
     watchId: editTask?.watchId ?? context?.watchId ?? null,
@@ -54,6 +86,7 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
     paymentId: editTask?.paymentId ?? context?.paymentId ?? null,
     workCaseId: editTask?.workCaseId ?? context?.workCaseId ?? null,
   }), [editTask, context]);
+
   function submit() {
     if (!title.trim()) {
       setError("Vui lòng nhập tiêu đề task");
@@ -63,7 +96,9 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
     const payload: CreateTaskInput = {
       title,
       description,
-      kind,
+      domain,
+      taskTypeId: taskTypeId || null,
+      mode,
       priority,
       assignedToUserId,
       dueAt: dueAt || null,
@@ -89,7 +124,7 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
       <div className="w-full max-w-2xl rounded-[28px] bg-white shadow-2xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">{isEdit ? "Sửa task" : "Tạo task"}</h2>
-          <p className="mt-1 text-sm text-slate-500">Task cá nhân là task bạn tạo cho chính bạn. Task được giao sẽ nằm ở tab tương ứng của người nhận.</p>
+          <p className="mt-1 text-sm text-slate-500">Task là hướng xử lý được giao. Người nhận task sẽ thực thi nghiệp vụ liên quan ở bước sau.</p>
         </div>
 
         <div className="space-y-4 px-5 py-4">
@@ -97,7 +132,7 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Tiêu đề</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" placeholder="Ví dụ: Chụp gallery cho Seiko 7430" />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" placeholder="Ví dụ: Xử lý yêu cầu giao thử không cọc" />
           </label>
 
           <label className="block">
@@ -107,9 +142,22 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block">
+              <span className="text-sm font-medium text-slate-700">Domain</span>
+              <select value={domain} onChange={(e) => setDomain(e.target.value as TaskDomain)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
+                {Object.values(TaskDomain).map((item) => <option key={item} value={item}>{TASK_DOMAIN_LABEL[item]}</option>)}
+              </select>
+            </label>
+            <label className="block">
               <span className="text-sm font-medium text-slate-700">Loại task</span>
-              <select value={kind} onChange={(e) => setKind(e.target.value as TaskKind)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
-                {Object.values(TaskKind).map((item) => <option key={item} value={item}>{TASK_KIND_LABEL[item]}</option>)}
+              <select value={taskTypeId} onChange={(e) => setTaskTypeId(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
+                <option value="">Chưa chọn loại cụ thể</option>
+                {filteredTaskTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Kiểu xử lý</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value as TaskMode)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
+                {Object.values(TaskMode).map((item) => <option key={item} value={item}>{TASK_MODE_LABEL[item]}</option>)}
               </select>
             </label>
             <label className="block">

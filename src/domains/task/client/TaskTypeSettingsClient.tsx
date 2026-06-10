@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Settings2 } from "lucide-react";
 import { TaskDomain } from "@prisma/client";
 import type { TaskTypeOption } from "../server/task-type.types";
-import { TASK_COMPLETION_MODE_LABEL, TASK_DOMAIN_LABEL, TASK_KIND_LABEL, TASK_PRIORITY_LABEL } from "../utils/task-labels";
+import { TASK_COMPLETION_MODE_LABEL, TASK_DOMAIN_LABEL, TASK_PRIORITY_LABEL } from "../utils/task-labels";
 import TaskTypeFormModal from "../ui/settings/TaskTypeFormModal";
 
 type Props = {
@@ -72,25 +72,23 @@ export default function TaskTypeSettingsClient({ items }: Props) {
       </div>
 
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[160px_1.2fr_120px_150px_170px_100px_90px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="grid grid-cols-[160px_1.2fr_130px_180px_120px_90px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <div>Code</div>
           <div>Tên</div>
           <div>Domain</div>
-          <div>Legacy kind</div>
           <div>Completion</div>
           <div>Priority</div>
           <div>Status</div>
         </div>
 
         {filtered.length ? filtered.map((item) => (
-          <button key={item.id} type="button" onClick={() => openEdit(item)} className="grid w-full grid-cols-[160px_1.2fr_120px_150px_170px_100px_90px] gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm transition hover:bg-slate-50 last:border-b-0">
+          <button key={item.id} type="button" onClick={() => openEdit(item)} className="grid w-full grid-cols-[160px_1.2fr_130px_180px_120px_90px] gap-3 border-b border-slate-100 px-4 py-3 text-left text-sm transition hover:bg-slate-50 last:border-b-0">
             <div className="font-mono text-xs font-semibold text-slate-700">{item.code}</div>
             <div className="min-w-0">
               <div className="truncate font-semibold text-slate-950">{item.name}</div>
               {item.description ? <div className="mt-0.5 truncate text-xs text-slate-500">{item.description}</div> : null}
             </div>
             <div className="text-slate-600">{TASK_DOMAIN_LABEL[item.domain]}</div>
-            <div className="truncate text-slate-600">{TASK_KIND_LABEL[item.legacyKind]}</div>
             <div>
               <div className="text-slate-700">{TASK_COMPLETION_MODE_LABEL[item.completionMode]}</div>
               {item.completionRuleKey ? <div className="mt-0.5 font-mono text-[11px] text-slate-400">{item.completionRuleKey}</div> : null}
