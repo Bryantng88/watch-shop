@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
-
+import { ProductStatus, TaskKind, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import { completeRelatedTasks, ensureSystemTask } from "@/domains/task";
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -247,7 +247,40 @@ export async function approveWatchReview(input: ReviewInput) {
                 : "Hình ảnh hiện không thể duyệt.",
         );
     }
+    if (input.targetType === "IMAGE") {
+        const watch = await prisma.watch.findUnique({
+            where: { productId: input.productId },
+            select: { id: true },
+        });
 
+        if (watch) {
+            await completeRelatedTasks(
+                prisma,
+                {
+                    kind: TaskKind.WATCH_IMAGE,
+                    watchId: watch.id,
+                    completedByUserId: input.userId,
+                },
+            );
+        }
+    }
+    if (input.targetType === "CONTENT") {
+        const watch = await prisma.watch.findUnique({
+            where: { productId: input.productId },
+            select: { id: true },
+        });
+
+        if (watch) {
+            await completeRelatedTasks(
+                prisma,
+                {
+                    kind: TaskKind.WATCH_CONTENT,
+                    watchId: watch.id,
+                    completedByUserId: input.userId,
+                },
+            );
+        }
+    }
     const state = await prisma.watchReviewState.update({
         where: { id: current.id },
         data: {
@@ -291,6 +324,27 @@ export async function rejectWatchReview(input: RejectInput) {
             reviewNote: input.note ?? null,
         },
     });
+    await ensureSystemTask(
+        prisma,
+        {
+            kind: TaskKind.WATCH_IMAGE,
+            watchId: current.id,
+            title: `Bổ sung hình ảnh`,
+            description: input.note ?? "",
+        },
+    );
+
+    await ensureSystemTask(
+        prisma,
+        {
+            kind: TaskKind.WATCH_CONTENT,
+            watchId: current.id,
+            title: `Bổ sung nội dung`,
+            description: input.note ?? "",
+        },
+    );
+
+
 
     await writeReviewLog({
         reviewStateId: state.id,

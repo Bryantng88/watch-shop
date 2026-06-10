@@ -1,8 +1,7 @@
 import { prisma } from "@/server/db/client";
 import { markGalleryMediaAssetsAttached } from "@/domains/media/server";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
-import { findOpenRelatedTasks } from "@/domains/task/server/task.service";
-import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
+
 import { TaskKind } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import { replaceWatchGalleryImagesRepo } from "../../server/media";
@@ -51,7 +50,7 @@ type SubmitWatchFormResult = {
     askContinueContent: boolean;
     contentReviewStatus?: "DRAFT";
     imageReviewStatus?: "DRAFT";
-    relatedTaskSuggestions?: RelatedTaskSuggestion[];
+
 };
 
 function buildContentSnapshot(input: {
@@ -297,8 +296,6 @@ async function syncProductPostTargets(
         });
     }
 }
-
-
 
 export async function submitWatchFormApplication(
     values: WatchFormValues,
@@ -618,13 +615,6 @@ export async function submitWatchFormApplication(
         });
     }
 
-    const relatedTaskSuggestions = imagesChanged
-        ? await findOpenRelatedTasks(prisma, {
-            watchId: values.watchId,
-            kind: TaskKind.WATCH_IMAGE,
-            limit: 10,
-        })
-        : [];
 
     return {
         ok: true,
@@ -649,6 +639,5 @@ export async function submitWatchFormApplication(
             !context.canReviewContent && imagesChanged && !hasContentData,
         contentReviewStatus: contentChanged ? "DRAFT" : undefined,
         imageReviewStatus: imagesChanged ? "DRAFT" : undefined,
-        relatedTaskSuggestions,
     };
 }
