@@ -30,7 +30,9 @@ import { ServiceCatalogWhereInputObjectSchema as ServiceCatalogWhereInputObjectS
 import { TechnicalAssessmentNullableScalarRelationFilterObjectSchema as TechnicalAssessmentNullableScalarRelationFilterObjectSchema } from './TechnicalAssessmentNullableScalarRelationFilter.schema';
 import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereInputObjectSchema } from './TechnicalAssessmentWhereInput.schema';
 import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
-import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema'
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
+import { WorkCaseNullableScalarRelationFilterObjectSchema as WorkCaseNullableScalarRelationFilterObjectSchema } from './WorkCaseNullableScalarRelationFilter.schema';
+import { WorkCaseWhereInputObjectSchema as WorkCaseWhereInputObjectSchema } from './WorkCaseWhereInput.schema'
 
 const servicerequestwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceRequestWhereInputObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema).array()]).optional(),
@@ -71,6 +73,7 @@ const servicerequestwhereinputSchema = z.object({
   priorityReason: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   prioritySource: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  workCaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   invoice: z.lazy(() => InvoiceListRelationFilterObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   customer: z.union([z.lazy(() => CustomerNullableScalarRelationFilterObjectSchema), z.lazy(() => CustomerWhereInputObjectSchema)]).optional(),
@@ -82,7 +85,8 @@ const servicerequestwhereinputSchema = z.object({
   serviceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
   technicalAssessment: z.union([z.lazy(() => TechnicalAssessmentNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional()
+  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  WorkCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional()
 }).strict();
 export const ServiceRequestWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestWhereInput> = servicerequestwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestWhereInput>;
 export const ServiceRequestWhereInputObjectZodSchema = servicerequestwhereinputSchema;

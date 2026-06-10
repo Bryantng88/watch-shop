@@ -46,6 +46,7 @@ type Props = {
     onQuickOrder?: (row: WatchRow) => void;
     onConsign?: (row: WatchRow) => void;
     onBuyBack?: (row: WatchRow) => void;
+    onRaiseCase?: (row: WatchRow) => void;
 };
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -300,6 +301,7 @@ export default function WatchListTable({
     onQuickOrder,
     onConsign,
     onBuyBack,
+    onRaiseCase,
 }: Props) {
     const safeItems = Array.isArray(items) ? items : [];
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
@@ -380,6 +382,7 @@ export default function WatchListTable({
                                     onQuickOrder={onQuickOrder}
                                     onConsign={onConsign}
                                     onBuyBack={onBuyBack}
+                                    onRaiseCase={onRaiseCase}
                                 />
                             ))
                         )}

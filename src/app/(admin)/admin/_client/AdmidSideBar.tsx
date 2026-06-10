@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     Package,
-    Settings,
     LineChart,
     Tags,
     User,
@@ -17,6 +16,8 @@ import {
     MonitorCog,
     CameraIcon,
     CheckSquare,
+    Wrench,
+    AlertCircle,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -33,7 +34,7 @@ type NotificationCounts = Partial<{
     invoices: number;
     payments: number;
     tasks: number;
-
+    workCases: number;
 }>;
 
 type Props = {
@@ -43,6 +44,7 @@ type Props = {
 };
 
 type NavItem = {
+    type: "item";
     href: string;
     label: string;
     icon: any;
@@ -51,26 +53,160 @@ type NavItem = {
     notificationKey?: keyof NotificationCounts;
 };
 
-const NAV: NavItem[] = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: PERMISSIONS.DASHBOARD_VIEW },
-    { href: "/admin/watches", label: "Sản phẩm", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW, notificationKey: "products" },
-    { href: "/admin/acquisitions", label: "Phiếu nhập", icon: Tags, permission: PERMISSIONS.ACQUISITION_VIEW, notificationKey: "acquisitions" },
-    { href: "/admin/orders", label: "Đơn hàng", icon: ClipboardList, permission: PERMISSIONS.ORDER_VIEW, notificationKey: "orders" },
-    { href: "/admin/services", label: "Service", icon: Settings, permission: PERMISSIONS.SERVICE_VIEW, notificationKey: "services" },
-    { href: "/admin/catalogs/technical", label: "Danh mục", icon: LayoutList, permission: PERMISSIONS.SERVICE_VIEW },
-    { href: "/admin/shipments", label: "Shipment", icon: Warehouse, permission: PERMISSIONS.SHIPMENT_VIEW, notificationKey: "shipments" },
-    { href: "/admin/customers", label: "Khách hàng", icon: Users2, permission: PERMISSIONS.CUSTOMER_VIEW },
-    { href: "/admin/system/jobs", label: "Jobs", icon: MonitorCog, permission: PERMISSIONS.SYSTEM_JOB_VIEW },
-    { href: "/admin/media", label: "Media", icon: CameraIcon, permission: PERMISSIONS.MEDIA_VIEW },
-    { href: "/admin/users", label: "Người dùng", icon: User, permission: PERMISSIONS.USER_VIEW },
-    { href: "/admin/reports", label: "Báo cáo", icon: LineChart, permission: PERMISSIONS.REPORT_VIEW },
-    { href: "/admin/tasks", label: "Tasks", icon: CheckSquare, permission: PERMISSIONS.TASK_VIEW, notificationKey: "tasks" },
+type NavGroup = {
+    type: "group";
+    label: string;
+};
 
+type NavEntry = NavItem | NavGroup;
+
+const NAV: NavEntry[] = [
+    {
+        type: "item",
+        href: "/admin/dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        exact: true,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+    },
+
+    { type: "group", label: "Vận hành" },
+
+    {
+        type: "item",
+        href: "/admin/watches",
+        label: "Sản phẩm",
+        icon: Package,
+        permission: PERMISSIONS.PRODUCT_VIEW,
+        notificationKey: "products",
+    },
+    {
+        type: "item",
+        href: "/admin/acquisitions",
+        label: "Phiếu nhập",
+        icon: Tags,
+        permission: PERMISSIONS.ACQUISITION_VIEW,
+        notificationKey: "acquisitions",
+    },
+    {
+        type: "item",
+        href: "/admin/orders",
+        label: "Đơn hàng",
+        icon: ClipboardList,
+        permission: PERMISSIONS.ORDER_VIEW,
+        notificationKey: "orders",
+    },
+    {
+        type: "item",
+        href: "/admin/shipments",
+        label: "Shipment",
+        icon: Warehouse,
+        permission: PERMISSIONS.SHIPMENT_VIEW,
+        notificationKey: "shipments",
+    },
+    {
+        type: "item",
+        href: "/admin/services",
+        label: "Service",
+        icon: Wrench,
+        permission: PERMISSIONS.SERVICE_VIEW,
+        notificationKey: "services",
+    },
+
+    { type: "group", label: "Điều phối" },
+
+    {
+        type: "item",
+        href: "/admin/work-cases",
+        label: "Phiếu xử lý",
+        icon: AlertCircle,
+        permission: PERMISSIONS.TASK_VIEW,
+        notificationKey: "workCases",
+    },
+    {
+        type: "item",
+        href: "/admin/tasks",
+        label: "Tasks",
+        icon: CheckSquare,
+        permission: PERMISSIONS.TASK_VIEW,
+        notificationKey: "tasks",
+    },
+
+    { type: "group", label: "Hệ thống" },
+
+    {
+        type: "item",
+        href: "/admin/catalogs/technical",
+        label: "Danh mục",
+        icon: LayoutList,
+        permission: PERMISSIONS.SERVICE_VIEW,
+    },
+    {
+        type: "item",
+        href: "/admin/customers",
+        label: "Khách hàng",
+        icon: Users2,
+        permission: PERMISSIONS.CUSTOMER_VIEW,
+    },
+    {
+        type: "item",
+        href: "/admin/media",
+        label: "Media",
+        icon: CameraIcon,
+        permission: PERMISSIONS.MEDIA_VIEW,
+    },
+    {
+        type: "item",
+        href: "/admin/system/jobs",
+        label: "Jobs",
+        icon: MonitorCog,
+        permission: PERMISSIONS.SYSTEM_JOB_VIEW,
+    },
+    {
+        type: "item",
+        href: "/admin/users",
+        label: "Người dùng",
+        icon: User,
+        permission: PERMISSIONS.USER_VIEW,
+    },
+    {
+        type: "item",
+        href: "/admin/reports",
+        label: "Báo cáo",
+        icon: LineChart,
+        permission: PERMISSIONS.REPORT_VIEW,
+    },
 ];
 
 function isCurrentRoute(pathname: string, item: NavItem) {
     if (item.exact) return pathname === item.href;
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+function canAccess(user: Props["user"], item: NavItem) {
+    return !item.permission || user.permissions.includes(item.permission);
+}
+
+function buildAllowedNav(user: Props["user"]) {
+    const result: NavEntry[] = [];
+
+    for (let i = 0; i < NAV.length; i++) {
+        const entry = NAV[i];
+
+        if (entry.type === "item") {
+            if (canAccess(user, entry)) result.push(entry);
+            continue;
+        }
+
+        const hasAllowedItemAfterGroup = NAV.slice(i + 1).some((next) => {
+            if (next.type === "group") return false;
+            return canAccess(user, next);
+        });
+
+        if (hasAllowedItemAfterGroup) result.push(entry);
+    }
+
+    return result;
 }
 
 export default function AdminSidebar({
@@ -91,10 +227,7 @@ export default function AdminSidebar({
         };
     }, []);
 
-    const allowedNav = useMemo(
-        () => NAV.filter((n) => !n.permission || user.permissions.includes(n.permission)),
-        [user.permissions],
-    );
+    const allowedNav = useMemo(() => buildAllowedNav(user), [user]);
 
     const handleMenuSwitch = useCallback(
         (item: NavItem, event: React.MouseEvent) => {
@@ -185,7 +318,23 @@ export default function AdminSidebar({
                 </div>
 
                 <nav className="relative z-50 space-y-1 overflow-visible px-3 py-3">
-                    {allowedNav.map((n) => {
+                    {allowedNav.map((entry, index) => {
+                        if (entry.type === "group") {
+                            return (
+                                <div
+                                    key={`group-${entry.label}-${index}`}
+                                    className="pt-3 first:pt-0"
+                                >
+                                    <div className="mx-2 hidden border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 xl:block">
+                                        {entry.label}
+                                    </div>
+
+                                    <div className="mx-auto h-px w-7 bg-white/10 xl:hidden" />
+                                </div>
+                            );
+                        }
+
+                        const n = entry;
                         const Icon = n.icon;
                         const count = Number(
                             n.notificationKey ? notifications?.[n.notificationKey] ?? 0 : 0,

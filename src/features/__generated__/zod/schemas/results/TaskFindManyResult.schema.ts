@@ -23,6 +23,7 @@ export const TaskFindManyResultSchema = z.object({
   serviceRequestId: z.string().optional(),
   technicalIssueId: z.string().optional(),
   paymentId: z.string().optional(),
+  workCaseId: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdByUser: z.unknown().optional(),
@@ -36,6 +37,7 @@ export const TaskFindManyResultSchema = z.object({
   serviceRequest: z.unknown().optional(),
   technicalIssue: z.unknown().optional(),
   payment: z.unknown().optional(),
+  workCase: z.unknown().optional(),
   notifications: z.array(z.unknown())
 })),
   pagination: z.object({

@@ -13,7 +13,8 @@ import { VendorCreateNestedOneWithoutServiceRequestInputObjectSchema as VendorCr
 import { ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema as ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema } from './ServiceCatalogCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceRequestInput.schema';
-import { TaskCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskCreateNestedManyWithoutServiceRequestInput.schema'
+import { TaskCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskCreateNestedManyWithoutServiceRequestInput.schema';
+import { WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema as WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema } from './WorkCaseCreateNestedOneWithoutServiceRequestsInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -54,7 +55,8 @@ const makeSchema = () => z.object({
   serviceCatalog: z.lazy(() => ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutServiceRequestInputObjectSchema).optional()
+  Task: z.lazy(() => TaskCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
+  WorkCase: z.lazy(() => WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestCreateWithoutProductVariantInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateWithoutProductVariantInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateWithoutProductVariantInput>;
 export const ServiceRequestCreateWithoutProductVariantInputObjectZodSchema = makeSchema();

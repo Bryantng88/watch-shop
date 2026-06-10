@@ -32,6 +32,7 @@ export const TaskFindFirstSelectSchema: z.ZodType<Prisma.TaskSelect> = z.object(
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
     paymentId: z.boolean().optional(),
+    workCaseId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
@@ -45,6 +46,7 @@ export const TaskFindFirstSelectSchema: z.ZodType<Prisma.TaskSelect> = z.object(
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional(),
     payment: z.boolean().optional(),
+    workCase: z.boolean().optional(),
     notifications: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskSelect>;
@@ -72,6 +74,7 @@ export const TaskFindFirstSelectZodSchema = z.object({
     serviceRequestId: z.boolean().optional(),
     technicalIssueId: z.boolean().optional(),
     paymentId: z.boolean().optional(),
+    workCaseId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
@@ -85,6 +88,7 @@ export const TaskFindFirstSelectZodSchema = z.object({
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional(),
     payment: z.boolean().optional(),
+    workCase: z.boolean().optional(),
     notifications: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();

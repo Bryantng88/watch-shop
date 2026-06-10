@@ -50,7 +50,8 @@ const servicerequestscalarwherewithaggregatesinputSchema = z.object({
   priority_marked_at: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   priorityReason: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   prioritySource: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable()
+  priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  workCaseId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ServiceRequestScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.ServiceRequestScalarWhereWithAggregatesInput> = servicerequestscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.ServiceRequestScalarWhereWithAggregatesInput>;
 export const ServiceRequestScalarWhereWithAggregatesInputObjectZodSchema = servicerequestscalarwherewithaggregatesinputSchema;

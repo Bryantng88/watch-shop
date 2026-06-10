@@ -39,6 +39,7 @@ export const WatchFindManySelectSchema: z.ZodType<Prisma.WatchSelect> = z.object
     watchSpecV2: z.boolean().optional(),
     reviewStates: z.boolean().optional(),
     Task: z.boolean().optional(),
+    WorkCase: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.WatchSelect>;
 
@@ -72,6 +73,7 @@ export const WatchFindManySelectZodSchema = z.object({
     watchSpecV2: z.boolean().optional(),
     reviewStates: z.boolean().optional(),
     Task: z.boolean().optional(),
+    WorkCase: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

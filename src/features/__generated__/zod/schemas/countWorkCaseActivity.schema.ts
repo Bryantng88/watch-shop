@@ -1,0 +1,10 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkCaseActivityOrderByWithRelationInputObjectSchema as WorkCaseActivityOrderByWithRelationInputObjectSchema } from './objects/WorkCaseActivityOrderByWithRelationInput.schema';
+import { WorkCaseActivityWhereInputObjectSchema as WorkCaseActivityWhereInputObjectSchema } from './objects/WorkCaseActivityWhereInput.schema';
+import { WorkCaseActivityWhereUniqueInputObjectSchema as WorkCaseActivityWhereUniqueInputObjectSchema } from './objects/WorkCaseActivityWhereUniqueInput.schema';
+import { WorkCaseActivityCountAggregateInputObjectSchema as WorkCaseActivityCountAggregateInputObjectSchema } from './objects/WorkCaseActivityCountAggregateInput.schema';
+
+export const WorkCaseActivityCountSchema: z.ZodType<Prisma.WorkCaseActivityCountArgs> = z.object({ orderBy: z.union([WorkCaseActivityOrderByWithRelationInputObjectSchema, WorkCaseActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseActivityWhereInputObjectSchema.optional(), cursor: WorkCaseActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkCaseActivityCountAggregateInputObjectSchema ]).optional() }).strict() as unknown as z.ZodType<Prisma.WorkCaseActivityCountArgs>;
+
+export const WorkCaseActivityCountZodSchema = z.object({ orderBy: z.union([WorkCaseActivityOrderByWithRelationInputObjectSchema, WorkCaseActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseActivityWhereInputObjectSchema.optional(), cursor: WorkCaseActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), select: z.union([ z.literal(true), WorkCaseActivityCountAggregateInputObjectSchema ]).optional() }).strict();

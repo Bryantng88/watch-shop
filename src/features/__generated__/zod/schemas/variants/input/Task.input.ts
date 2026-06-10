@@ -28,6 +28,7 @@ export const TaskInputSchema = z.object({
     serviceRequestId: z.string().optional().nullable(),
     technicalIssueId: z.string().optional().nullable(),
     paymentId: z.string().optional().nullable(),
+    workCaseId: z.string().optional().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
     createdByUser: z.unknown().optional().nullable(),
@@ -41,6 +42,7 @@ export const TaskInputSchema = z.object({
     serviceRequest: z.unknown().optional().nullable(),
     technicalIssue: z.unknown().optional().nullable(),
     payment: z.unknown().optional().nullable(),
+    workCase: z.unknown().optional().nullable(),
     notifications: z.array(z.unknown())
 }).strict();
 

@@ -101,6 +101,7 @@ function cleanLinks(input: Partial<CreateTaskInput | UpdateTaskInput | EnsureSys
     serviceRequestId: input.serviceRequestId ?? null,
     technicalIssueId: input.technicalIssueId ?? null,
     paymentId: input.paymentId ?? null,
+    workCaseId: input.workCaseId ?? null,
   };
 }
 

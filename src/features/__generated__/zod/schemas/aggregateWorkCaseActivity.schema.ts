@@ -1,0 +1,12 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { WorkCaseActivityOrderByWithRelationInputObjectSchema as WorkCaseActivityOrderByWithRelationInputObjectSchema } from './objects/WorkCaseActivityOrderByWithRelationInput.schema';
+import { WorkCaseActivityWhereInputObjectSchema as WorkCaseActivityWhereInputObjectSchema } from './objects/WorkCaseActivityWhereInput.schema';
+import { WorkCaseActivityWhereUniqueInputObjectSchema as WorkCaseActivityWhereUniqueInputObjectSchema } from './objects/WorkCaseActivityWhereUniqueInput.schema';
+import { WorkCaseActivityCountAggregateInputObjectSchema as WorkCaseActivityCountAggregateInputObjectSchema } from './objects/WorkCaseActivityCountAggregateInput.schema';
+import { WorkCaseActivityMinAggregateInputObjectSchema as WorkCaseActivityMinAggregateInputObjectSchema } from './objects/WorkCaseActivityMinAggregateInput.schema';
+import { WorkCaseActivityMaxAggregateInputObjectSchema as WorkCaseActivityMaxAggregateInputObjectSchema } from './objects/WorkCaseActivityMaxAggregateInput.schema';
+
+export const WorkCaseActivityAggregateSchema: z.ZodType<Prisma.WorkCaseActivityAggregateArgs> = z.object({ orderBy: z.union([WorkCaseActivityOrderByWithRelationInputObjectSchema, WorkCaseActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseActivityWhereInputObjectSchema.optional(), cursor: WorkCaseActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkCaseActivityCountAggregateInputObjectSchema ]).optional(), _min: WorkCaseActivityMinAggregateInputObjectSchema.optional(), _max: WorkCaseActivityMaxAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.WorkCaseActivityAggregateArgs>;
+
+export const WorkCaseActivityAggregateZodSchema = z.object({ orderBy: z.union([WorkCaseActivityOrderByWithRelationInputObjectSchema, WorkCaseActivityOrderByWithRelationInputObjectSchema.array()]).optional(), where: WorkCaseActivityWhereInputObjectSchema.optional(), cursor: WorkCaseActivityWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), WorkCaseActivityCountAggregateInputObjectSchema ]).optional(), _min: WorkCaseActivityMinAggregateInputObjectSchema.optional(), _max: WorkCaseActivityMaxAggregateInputObjectSchema.optional() }).strict();

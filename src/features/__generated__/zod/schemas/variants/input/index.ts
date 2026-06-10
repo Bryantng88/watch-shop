@@ -57,4 +57,7 @@ export { technicalAssessmentsInputSchema } from './technicalAssessments.input';
 export { technicalPartCatalogInputSchema } from './technicalPartCatalog.input';
 export { AcquisitionSpecJobLogInputSchema } from './AcquisitionSpecJobLog.input';
 export { MediaAssetInputSchema } from './MediaAsset.input';
+export { WorkCaseCategoryInputSchema } from './WorkCaseCategory.input';
+export { WorkCaseInputSchema } from './WorkCase.input';
+export { WorkCaseActivityInputSchema } from './WorkCaseActivity.input';
 export { TaskInputSchema } from './Task.input';

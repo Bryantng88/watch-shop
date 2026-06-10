@@ -22,6 +22,7 @@ export type TaskDomainLinksInput = {
   serviceRequestId?: string | null;
   technicalIssueId?: string | null;
   paymentId?: string | null;
+  workCaseId?: string | null;
 };
 
 export type CreateTaskInput = TaskDomainLinksInput & {
@@ -62,4 +63,10 @@ export type EnsureSystemTaskResult = {
   id: string;
   created: boolean;
   reopened: boolean;
+};
+export type TaskTypeOption = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
 };

@@ -42,6 +42,7 @@ const makeSchema = () => z.object({
   priorityReason: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   prioritySource: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   priorityMarkedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  workCaseId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => ServiceRequestCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => ServiceRequestMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => ServiceRequestMinOrderByAggregateInputObjectSchema).optional()

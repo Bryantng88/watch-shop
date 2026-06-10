@@ -29,6 +29,8 @@ import { TechnicalIssueNullableScalarRelationFilterObjectSchema as TechnicalIssu
 import { TechnicalIssueWhereInputObjectSchema as TechnicalIssueWhereInputObjectSchema } from './TechnicalIssueWhereInput.schema';
 import { PaymentNullableScalarRelationFilterObjectSchema as PaymentNullableScalarRelationFilterObjectSchema } from './PaymentNullableScalarRelationFilter.schema';
 import { PaymentWhereInputObjectSchema as PaymentWhereInputObjectSchema } from './PaymentWhereInput.schema';
+import { WorkCaseNullableScalarRelationFilterObjectSchema as WorkCaseNullableScalarRelationFilterObjectSchema } from './WorkCaseNullableScalarRelationFilter.schema';
+import { WorkCaseWhereInputObjectSchema as WorkCaseWhereInputObjectSchema } from './WorkCaseWhereInput.schema';
 import { NotificationListRelationFilterObjectSchema as NotificationListRelationFilterObjectSchema } from './NotificationListRelationFilter.schema'
 
 const taskwhereinputSchema = z.object({
@@ -57,6 +59,7 @@ const taskwhereinputSchema = z.object({
   serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   technicalIssueId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   paymentId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  workCaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
@@ -70,6 +73,7 @@ const taskwhereinputSchema = z.object({
   serviceRequest: z.union([z.lazy(() => ServiceRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
   technicalIssue: z.union([z.lazy(() => TechnicalIssueNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema)]).optional(),
   payment: z.union([z.lazy(() => PaymentNullableScalarRelationFilterObjectSchema), z.lazy(() => PaymentWhereInputObjectSchema)]).optional(),
+  workCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional(),
   notifications: z.lazy(() => NotificationListRelationFilterObjectSchema).optional()
 }).strict();
 export const TaskWhereInputObjectSchema: z.ZodType<Prisma.TaskWhereInput> = taskwhereinputSchema as unknown as z.ZodType<Prisma.TaskWhereInput>;

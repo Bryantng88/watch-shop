@@ -8,7 +8,10 @@ import { TechnicalIssueCreateNestedManyWithoutUserInputObjectSchema as Technical
 import { RoleCreateNestedManyWithoutUsersInputObjectSchema as RoleCreateNestedManyWithoutUsersInputObjectSchema } from './RoleCreateNestedManyWithoutUsersInput.schema';
 import { TaskCreateNestedManyWithoutCreatedByUserInputObjectSchema as TaskCreateNestedManyWithoutCreatedByUserInputObjectSchema } from './TaskCreateNestedManyWithoutCreatedByUserInput.schema';
 import { TaskCreateNestedManyWithoutAssignedToUserInputObjectSchema as TaskCreateNestedManyWithoutAssignedToUserInputObjectSchema } from './TaskCreateNestedManyWithoutAssignedToUserInput.schema';
-import { TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema as TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema } from './TaskCreateNestedManyWithoutCompletedByUserInput.schema'
+import { TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema as TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema } from './TaskCreateNestedManyWithoutCompletedByUserInput.schema';
+import { WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema as WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema } from './WorkCaseCreateNestedManyWithoutRaisedByUserInput.schema';
+import { WorkCaseCreateNestedManyWithoutAssignedToUserInputObjectSchema as WorkCaseCreateNestedManyWithoutAssignedToUserInputObjectSchema } from './WorkCaseCreateNestedManyWithoutAssignedToUserInput.schema';
+import { WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema as WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema } from './WorkCaseActivityCreateNestedManyWithoutActorInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -28,7 +31,10 @@ const makeSchema = () => z.object({
   roles: z.lazy(() => RoleCreateNestedManyWithoutUsersInputObjectSchema).optional(),
   createdTasks: z.lazy(() => TaskCreateNestedManyWithoutCreatedByUserInputObjectSchema).optional(),
   assignedTasks: z.lazy(() => TaskCreateNestedManyWithoutAssignedToUserInputObjectSchema).optional(),
-  completedTasks: z.lazy(() => TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema).optional()
+  completedTasks: z.lazy(() => TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema).optional(),
+  raisedWorkCases: z.lazy(() => WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema).optional(),
+  assignedWorkCases: z.lazy(() => WorkCaseCreateNestedManyWithoutAssignedToUserInputObjectSchema).optional(),
+  workCaseActivities: z.lazy(() => WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutCancelledTasksInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutCancelledTasksInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutCancelledTasksInput>;
 export const UserCreateWithoutCancelledTasksInputObjectZodSchema = makeSchema();

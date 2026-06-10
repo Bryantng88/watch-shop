@@ -44,6 +44,7 @@ const makeSchema = () => z.object({
   priorityReason: z.string().optional().nullable(),
   prioritySource: z.string().optional().nullable(),
   priorityMarkedAt: z.coerce.date().optional().nullable(),
+  workCaseId: z.string().optional().nullable(),
   invoice: z.lazy(() => InvoiceUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema).optional(),

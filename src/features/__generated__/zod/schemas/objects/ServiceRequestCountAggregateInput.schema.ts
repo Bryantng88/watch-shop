@@ -38,6 +38,7 @@ const makeSchema = () => z.object({
   priorityReason: z.literal(true).optional(),
   prioritySource: z.literal(true).optional(),
   priorityMarkedAt: z.literal(true).optional(),
+  workCaseId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const ServiceRequestCountAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountAggregateInputType>;

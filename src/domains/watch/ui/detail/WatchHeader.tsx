@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ImageIcon, Pencil } from "lucide-react";
+import { AlertCircle, ImageIcon, Pencil } from "lucide-react";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { Button } from "@/domains/shared/ui/form/fields";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { fmtDate, StatusBadge } from "./shared";
+import RaiseWorkCaseModal from "@/domains/work-case/ui/RaiseWorkCaseModal";
 
 type Props = {
   detail: any;
@@ -20,9 +22,11 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const progress = useAppProgress();
+  const [raiseCaseOpen, setRaiseCaseOpen] = useState(false);
   const returnTo = searchParams.get("returnTo") || "/admin/watches";
   const title = detail?.title || "Untitled watch";
   const productId = detail?.productId;
+  const watchId = detail?.watch?.id;
   const imageSrc = getImageSrc(inlineImage);
 
   function navigateWithProgress(href: string, title = "Đang chuyển trang") {
@@ -116,6 +120,17 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
             Quay lại
           </Button>
 
+
+          {watchId ? (
+            <Button
+              variant="outline"
+              onClick={() => setRaiseCaseOpen(true)}
+            >
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Tạo phiếu xử lý
+            </Button>
+          ) : null}
+
           {productId ? (
             <Button
               onClick={() =>
@@ -131,6 +146,18 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
           ) : null}
         </div>
       </div>
+
+      <RaiseWorkCaseModal
+        open={raiseCaseOpen}
+        watch={watchId ? {
+          watchId,
+          productId,
+          title,
+          sku: detail?.sku,
+          imageUrl: imageSrc,
+        } : null}
+        onClose={() => setRaiseCaseOpen(false)}
+      />
     </div>
   );
 }

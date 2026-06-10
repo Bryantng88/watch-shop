@@ -50,7 +50,8 @@ const servicerequestscalarwhereinputSchema = z.object({
   priority_marked_at: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   priorityReason: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   prioritySource: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable()
+  priorityMarkedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  workCaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const ServiceRequestScalarWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestScalarWhereInput> = servicerequestscalarwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestScalarWhereInput>;
 export const ServiceRequestScalarWhereInputObjectZodSchema = servicerequestscalarwhereinputSchema;

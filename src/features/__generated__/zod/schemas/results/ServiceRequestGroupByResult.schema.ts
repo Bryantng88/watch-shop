@@ -32,6 +32,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
   priorityReason: z.string(),
   prioritySource: z.string(),
   priorityMarkedAt: z.date(),
+  workCaseId: z.string(),
   _count: z.object({
     id: z.number(),
     type: z.number(),
@@ -79,7 +80,9 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     serviceCatalog: z.number(),
     technicalAssessment: z.number(),
     technicalIssue: z.number(),
-    Task: z.number()
+    Task: z.number(),
+    WorkCase: z.number(),
+    workCaseId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -112,7 +115,8 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     priority_marked_at: z.date().nullable(),
     priorityReason: z.string().nullable(),
     prioritySource: z.string().nullable(),
-    priorityMarkedAt: z.date().nullable()
+    priorityMarkedAt: z.date().nullable(),
+    workCaseId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -145,6 +149,7 @@ export const ServiceRequestGroupByResultSchema = z.array(z.object({
     priority_marked_at: z.date().nullable(),
     priorityReason: z.string().nullable(),
     prioritySource: z.string().nullable(),
-    priorityMarkedAt: z.date().nullable()
+    priorityMarkedAt: z.date().nullable(),
+    workCaseId: z.string().nullable()
   }).nullable().optional()
 }));

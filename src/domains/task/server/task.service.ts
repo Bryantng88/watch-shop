@@ -90,7 +90,7 @@ export async function changeTaskStatus(db: DB, id: string, status: TaskStatus, a
   const task = await setTaskStatusRepo(db, { id, status, actorUserId: userId });
 
   if (status === TaskStatus.DONE || status === TaskStatus.CANCELLED) {
-    await markTaskNotificationsAsRead({ taskId: id, userId });
+    //await markTaskNotificationsAsRead({ taskId: id, userId });
   }
 
   return task;

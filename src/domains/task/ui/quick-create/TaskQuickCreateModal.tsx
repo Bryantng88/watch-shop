@@ -52,8 +52,8 @@ export default function TaskQuickCreateModal({ open, users, currentUserId, conte
     serviceRequestId: editTask?.serviceRequestId ?? context?.serviceRequestId ?? null,
     technicalIssueId: editTask?.technicalIssueId ?? context?.technicalIssueId ?? null,
     paymentId: editTask?.paymentId ?? context?.paymentId ?? null,
+    workCaseId: editTask?.workCaseId ?? context?.workCaseId ?? null,
   }), [editTask, context]);
-
   function submit() {
     if (!title.trim()) {
       setError("Vui lòng nhập tiêu đề task");

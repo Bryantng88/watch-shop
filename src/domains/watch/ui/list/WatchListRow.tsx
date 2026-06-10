@@ -12,6 +12,7 @@ import {
     Pencil,
     ShoppingCart,
     Trash2,
+    AlertCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ type Props = {
     onQuickOrder?: (row: WatchRow) => void;
     onConsign?: (row: WatchRow) => void;
     onBuyBack?: (row: WatchRow) => void;
+    onRaiseCase?: (row: WatchRow) => void;
 };
 
 function Thumb({ src, alt }: { src?: string | null; alt: string }) {
@@ -291,6 +293,7 @@ export default function WatchListRow({
     onQuickOrder,
     onConsign,
     onBuyBack,
+    onRaiseCase,
 }: Props) {
     const isRecent =
         product.updatedAt &&
@@ -347,6 +350,16 @@ export default function WatchListRow({
             label: "Consign",
             icon: <HandCoins className="h-4 w-4" />,
             onClick: onConsign,
+        },
+
+
+
+        onRaiseCase && {
+            key: "raise-case",
+            label: "Tạo phiếu xử lý",
+            icon: <AlertCircle className="h-4 w-4" />,
+            separatorBefore: true,
+            onClick: onRaiseCase,
         },
 
         onBuyBack &&

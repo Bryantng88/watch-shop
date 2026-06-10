@@ -37,7 +37,8 @@ const makeSchema = () => z.object({
   priority_marked_at: z.literal(true).optional(),
   priorityReason: z.literal(true).optional(),
   prioritySource: z.literal(true).optional(),
-  priorityMarkedAt: z.literal(true).optional()
+  priorityMarkedAt: z.literal(true).optional(),
+  workCaseId: z.literal(true).optional()
 }).strict();
 export const ServiceRequestMinAggregateInputObjectSchema: z.ZodType<Prisma.ServiceRequestMinAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestMinAggregateInputType>;
 export const ServiceRequestMinAggregateInputObjectZodSchema = makeSchema();

@@ -20,7 +20,10 @@ export const UserInputSchema = z.object({
     createdTasks: z.array(z.unknown()),
     assignedTasks: z.array(z.unknown()),
     completedTasks: z.array(z.unknown()),
-    cancelledTasks: z.array(z.unknown())
+    cancelledTasks: z.array(z.unknown()),
+    raisedWorkCases: z.array(z.unknown()),
+    assignedWorkCases: z.array(z.unknown()),
+    workCaseActivities: z.array(z.unknown())
 }).strict();
 
 export type UserInputType = z.infer<typeof UserInputSchema>;
