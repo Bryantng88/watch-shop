@@ -1,0 +1,19 @@
+import { notFound } from "next/navigation";
+import TaskDetailClient from "@/domains/task/client/TaskDetailClient";
+import { getTaskDetail } from "@/domains/task/server/task.service";
+import { requirePermission } from "@/server/auth/requirePermission";
+import { prisma } from "@/server/db/client";
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function AdminTaskDetailPage(props: PageProps) {
+  const { id } = await props.params;
+  const auth = await requirePermission("TASK_VIEW");
+  const task = await getTaskDetail(prisma, id, auth);
+
+  if (!task) notFound();
+
+  return <TaskDetailClient task={task} />;
+}

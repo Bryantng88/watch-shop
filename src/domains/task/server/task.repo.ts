@@ -15,6 +15,7 @@ export const TASK_INCLUDE = {
   serviceRequest: { select: { id: true, refNo: true, status: true } },
   technicalIssue: { select: { id: true, area: true, executionStatus: true, serviceRequestId: true, priority: true } },
   payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
+  workCase: { select: { id: true, refNo: true, title: true, status: true, watch: { select: { id: true, productId: true, product: { select: { title: true, sku: true, primaryImageUrl: true } } } } } },
   taskType: { select: { id: true, code: true, name: true, domain: true } },
   executions: {
     orderBy: { createdAt: "desc" },

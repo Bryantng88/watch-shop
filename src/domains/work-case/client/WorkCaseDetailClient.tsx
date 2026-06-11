@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,15 +10,14 @@ import {
     ImageIcon,
     ListChecks,
     Plus,
-    Wrench,
 } from "lucide-react";
-import { TaskStatusBadge } from "@/domains/task/ui/shared/TaskBadges";
 import { TaskDomain, TaskMode, WorkCaseStatus } from "@prisma/client";
-
+import { TaskStatusBadge } from "@/domains/task/ui/shared/TaskBadges";
 import TaskQuickCreateModal, {
     type TaskQuickCreateContext,
     type TaskUserOption,
 } from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
+import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { updateWorkCaseAction } from "../actions/work-case.actions";
 import {
@@ -61,11 +60,13 @@ function isClosed(status: WorkCaseStatus) {
 export default function WorkCaseDetailClient({
     item,
     users,
+    taskTypes,
     currentUserId,
     canManage,
 }: {
     item: WorkCaseWithRelations;
     users: TaskUserOption[];
+    taskTypes: TaskTypeOption[];
     currentUserId: string;
     canManage?: boolean;
 }) {
@@ -76,17 +77,20 @@ export default function WorkCaseDetailClient({
     const [taskContext, setTaskContext] = useState<TaskQuickCreateContext | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    useEffect(() => {
+        setLocalItem(item);
+    }, [item]);
+
     const title = localItem.watch?.product?.title || "Untitled watch";
     const sku = localItem.watch?.product?.sku || "-";
     const img = imageSrc(localItem);
-
     const tasks = localItem.tasks ?? [];
     const serviceRequests = localItem.serviceRequests ?? [];
     const activities = localItem.activities ?? [];
     const canClose = canManage && !isClosed(localItem.status);
-    useEffect(() => {
-        setLocalItem(item);
-    }, [item]);
+
+    const defaultDomain = useMemo(() => defaultTaskDomain(localItem), [localItem]);
+
     function mutateCase(input: Parameters<typeof updateWorkCaseAction>[1]) {
         setError(null);
 
@@ -101,11 +105,11 @@ export default function WorkCaseDetailClient({
         });
     }
 
-    function openCreateTask() {
+    function openCreateTask(domain = defaultDomain) {
         setTaskContext({
             workCaseId: localItem.id,
             watchId: localItem.watchId,
-            domain: defaultTaskDomain(localItem),
+            domain,
             mode: TaskMode.NORMAL,
             titlePreset: localItem.refNo
                 ? `Xử lý ${localItem.refNo}: ${localItem.title}`
@@ -127,7 +131,7 @@ export default function WorkCaseDetailClient({
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1180px] space-y-4 px-4 py-5 lg:px-6">
+        <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 py-5 lg:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     href="/admin/work-cases"
@@ -142,21 +146,11 @@ export default function WorkCaseDetailClient({
                         <button
                             type="button"
                             disabled={pending || isClosed(localItem.status)}
-                            onClick={openCreateTask}
+                            onClick={() => openCreateTask()}
                             className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                         >
                             <Plus className="h-4 w-4" />
                             Tạo task
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled
-                            title="Luồng tạo service request từ phiếu sẽ nối ở bước sau."
-                            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-400"
-                        >
-                            <Wrench className="h-4 w-4" />
-                            Tạo service
                         </button>
 
                         <button
@@ -192,10 +186,7 @@ export default function WorkCaseDetailClient({
 
                     <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                         <div>
-                            Ref:{" "}
-                            <span className="font-mono font-semibold text-slate-950">
-                                {localItem.refNo || localItem.id}
-                            </span>
+                            Ref: <span className="font-mono font-semibold text-slate-950">{localItem.refNo || localItem.id}</span>
                         </div>
                         <div className="mt-1">Tạo lúc: {formatDate(localItem.createdAt)}</div>
                     </div>
@@ -210,38 +201,30 @@ export default function WorkCaseDetailClient({
 
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                        Vấn đề
-                    </div>
+                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Vấn đề</div>
 
                     <div className="mt-4 flex gap-4 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
                         <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                            {img ? (
-                                <img src={img} alt={title} className="h-full w-full object-cover" />
-                            ) : (
-                                <ImageIcon className="h-6 w-6 text-slate-400" />
-                            )}
+                            {img ? <img src={img} alt={title} className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 text-slate-400" />}
                         </div>
 
                         <div className="min-w-0 py-1">
-                            <div className="line-clamp-2 text-lg font-semibold text-slate-950">
-                                {title}
-                            </div>
+                            <div className="line-clamp-2 text-lg font-semibold text-slate-950">{title}</div>
                             <div className="mt-1 text-sm text-slate-500">SKU: {sku}</div>
 
-                            <Link
-                                href={`/admin/watches/${localItem.watch.productId}`}
-                                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:text-blue-800"
-                            >
-                                Mở watch <ExternalLink className="h-4 w-4" />
-                            </Link>
+                            {localItem.watch?.productId ? (
+                                <Link
+                                    href={`/admin/watches/${localItem.watch.productId}`}
+                                    className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:text-blue-800"
+                                >
+                                    Mở watch <ExternalLink className="h-4 w-4" />
+                                </Link>
+                            ) : null}
                         </div>
                     </div>
 
                     <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-3">
-                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                            Mô tả
-                        </div>
+                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Mô tả</div>
                         <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">
                             {localItem.description || "Không có mô tả."}
                         </p>
@@ -249,29 +232,13 @@ export default function WorkCaseDetailClient({
                 </div>
 
                 <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                        Thông tin
-                    </div>
+                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Thông tin</div>
 
                     <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                        <div>
-                            Người tạo:{" "}
-                            <span className="font-medium text-slate-900">
-                                {userLabel(localItem.raisedByUser)}
-                            </span>
-                        </div>
-                        <div>
-                            Nhóm:{" "}
-                            <span className="font-medium text-slate-900">
-                                {localItem.category?.name || "-"}
-                            </span>
-                        </div>
-                        <div>
-                            Trạng thái:{" "}
-                            <span className="font-medium text-slate-900">
-                                {WORK_CASE_STATUS_LABEL[localItem.status]}
-                            </span>
-                        </div>
+                        <div>Người tạo: <span className="font-medium text-slate-900">{userLabel(localItem.raisedByUser)}</span></div>
+                        <div>Người phụ trách: <span className="font-medium text-slate-900">{userLabel(localItem.assignedToUser)}</span></div>
+                        <div>Nhóm: <span className="font-medium text-slate-900">{localItem.category?.name || "-"}</span></div>
+                        <div>Trạng thái: <span className="font-medium text-slate-900">{WORK_CASE_STATUS_LABEL[localItem.status]}</span></div>
                     </div>
                 </div>
             </section>
@@ -279,11 +246,9 @@ export default function WorkCaseDetailClient({
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                            Hướng xử lý
-                        </div>
+                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Điều phối xử lý</div>
                         <p className="mt-1 text-sm text-slate-500">
-                            Task/SR được tạo từ phiếu này. Người nhận xử lý ở task hoặc service.
+                            Người tiếp nhận tạo task để đưa ra hướng xử lý. Người nhận task sẽ tạo nghiệp vụ thật ở bước sau.
                         </p>
                     </div>
 
@@ -291,7 +256,7 @@ export default function WorkCaseDetailClient({
                         <button
                             type="button"
                             disabled={pending}
-                            onClick={openCreateTask}
+                            onClick={() => openCreateTask()}
                             className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                         >
                             <ListChecks className="h-4 w-4" />
@@ -300,7 +265,14 @@ export default function WorkCaseDetailClient({
                     ) : null}
                 </div>
 
-                <div className="mt-4 space-y-5">
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <button type="button" onClick={() => openCreateTask(TaskDomain.ORDER)} disabled={!canManage || isClosed(localItem.status)} className="rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Task Order</button>
+                    <button type="button" onClick={() => openCreateTask(TaskDomain.SHIPMENT)} disabled={!canManage || isClosed(localItem.status)} className="rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Task Shipment</button>
+                    <button type="button" onClick={() => openCreateTask(TaskDomain.PAYMENT)} disabled={!canManage || isClosed(localItem.status)} className="rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Task Payment</button>
+                    <button type="button" onClick={() => openCreateTask(TaskDomain.SERVICE)} disabled={!canManage || isClosed(localItem.status)} className="rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Task Service</button>
+                </div>
+
+                <div className="mt-5 space-y-5">
                     <div>
                         <div className="text-sm font-semibold text-slate-900">Tasks</div>
 
@@ -310,23 +282,17 @@ export default function WorkCaseDetailClient({
                                     <div key={task.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                                         <div className="min-w-0">
                                             <div className="font-medium text-slate-950">{task.title}</div>
-                                            <div className="mt-1 text-xs text-slate-500">
-                                                Người nhận: {userLabel(task.assignedToUser)} ·<TaskStatusBadge status={task.status} />
+                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                <span>Người nhận: {userLabel(task.assignedToUser)}</span>
+                                                <TaskStatusBadge status={task.status} />
                                             </div>
                                         </div>
-                                        <Link
-                                            href={`/admin/tasks?taskId=${task.id}`}
-                                            className="text-xs font-semibold text-blue-700 hover:text-blue-800"
-                                        >
-                                            Mở task
-                                        </Link>
+                                        <Link href={`/admin/tasks/${task.id}`} className="text-xs font-semibold text-blue-700 hover:text-blue-800">Mở task</Link>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                Chưa có task nào được tạo từ phiếu.
-                            </div>
+                            <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Chưa có task nào được tạo từ phiếu.</div>
                         )}
                     </div>
 
@@ -338,49 +304,33 @@ export default function WorkCaseDetailClient({
                                 {serviceRequests.map((sr) => (
                                     <div key={sr.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                                         <div>
-                                            <div className="font-medium text-slate-950">
-                                                {sr.refNo || sr.id}
-                                            </div>
-                                            <div className="mt-1 text-xs text-slate-500">
-                                                Status: {sr.status}
-                                            </div>
+                                            <div className="font-medium text-slate-950">{sr.refNo || sr.id}</div>
+                                            <div className="mt-1 text-xs text-slate-500">Status: {sr.status}</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                Chưa có service request nào được tạo từ phiếu.
-                            </div>
+                            <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Chưa có service request nào được tạo từ phiếu.</div>
                         )}
                     </div>
                 </div>
             </section>
 
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
-                    Activity
-                </div>
+                <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Activity</div>
 
                 <div className="mt-4 space-y-2">
                     {activities.length ? (
                         activities.map((activity) => (
                             <div key={activity.id} className="rounded-2xl bg-slate-50 px-4 py-3">
-                                <div className="text-xs font-bold text-slate-700">
-                                    {activity.action}
-                                </div>
-                                <div className="mt-1 text-sm text-slate-600">
-                                    {activity.note || "-"}
-                                </div>
-                                <div className="mt-1 text-xs text-slate-400">
-                                    {formatDate(activity.createdAt)}
-                                </div>
+                                <div className="text-xs font-bold text-slate-700">{activity.action}</div>
+                                <div className="mt-1 text-sm text-slate-600">{activity.note || "-"}</div>
+                                <div className="mt-1 text-xs text-slate-400">{formatDate(activity.createdAt)}</div>
                             </div>
                         ))
                     ) : (
-                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                            Chưa có activity.
-                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Chưa có activity.</div>
                     )}
                 </div>
             </section>
@@ -388,6 +338,7 @@ export default function WorkCaseDetailClient({
             <TaskQuickCreateModal
                 open={taskModalOpen}
                 users={users}
+                taskTypes={taskTypes}
                 currentUserId={currentUserId}
                 context={taskContext}
                 onClose={() => setTaskModalOpen(false)}

@@ -1,11 +1,21 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Link2, PackageCheck, ReceiptText, Truck, WalletCards, Wrench, X } from "lucide-react";
+import {
+  Link2,
+  PackageCheck,
+  ReceiptText,
+  ShoppingBag,
+  Truck,
+  WalletCards,
+  Wrench,
+  X,
+} from "lucide-react";
 import { TaskExecutionTargetType } from "@prisma/client";
+import { createOrderFromTaskAction } from "@/domains/order/actions/order-from-task.actions";
 import { createServiceRequestFromTaskAction } from "@/domains/service/actions/service-from-task.actions";
-import { linkTaskExecutionAction } from "../../actions/task-execution.actions";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { linkTaskExecutionAction } from "../../actions/task-execution.actions";
 
 type Props = {
   task: any;
@@ -44,19 +54,78 @@ function targetIcon(type: TaskExecutionTargetType) {
   return <Link2 className="h-4 w-4" />;
 }
 
+function resolveWatchProduct(task: any) {
+  return task?.watch?.product ?? task?.workCase?.watch?.product ?? null;
+}
+
+function resolveDefaultPrice(task: any) {
+  const product = resolveWatchProduct(task);
+  const price =
+    product?.watch?.watchPrice?.salePrice ??
+    product?.watch?.watchPrice?.listPrice ??
+    product?.watchPrice?.salePrice ??
+    product?.watchPrice?.listPrice ??
+    0;
+  const numberPrice = Number(price ?? 0);
+  return Number.isFinite(numberPrice) && numberPrice > 0 ? String(numberPrice) : "";
+}
+
 export default function TaskDomainActions({ task, onDone }: Props) {
   const notify = useNotify();
   const [pending, startTransition] = useTransition();
+
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [shipPhone, setShipPhone] = useState("");
+  const [orderPrice, setOrderPrice] = useState(() => resolveDefaultPrice(task));
+  const [orderNote, setOrderNote] = useState("");
+
   const [linkOpen, setLinkOpen] = useState(false);
   const [targetType, setTargetType] = useState<TaskExecutionTargetType>(() => suggestedTarget(task));
   const [targetId, setTargetId] = useState("");
   const [note, setNote] = useState("");
 
-  const canCreateService = Boolean(task?.watchId || task?.workCase?.watch?.id);
+  const canCreateOrder = Boolean(task?.watchId || task?.watch?.id || task?.workCase?.watch?.id);
+  const canCreateService = Boolean(task?.watchId || task?.watch?.id || task?.workCase?.watch?.id);
   const currentTarget = useMemo(
     () => LINK_TARGET_OPTIONS.find((item) => item.type === targetType) ?? LINK_TARGET_OPTIONS[0],
     [targetType],
   );
+
+  function openOrderModal() {
+    setOrderPrice(resolveDefaultPrice(task));
+    setOrderNote(task?.description ?? "");
+    setOrderOpen(true);
+  }
+
+  function createOrder() {
+    const cleanCustomerName = customerName.trim();
+    if (!cleanCustomerName) {
+      notify.error("Vui lòng nhập tên khách hàng");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await createOrderFromTaskAction({
+          taskId: task.id,
+          customerName: cleanCustomerName,
+          shipPhone: shipPhone.trim() || null,
+          unitPriceAgreed: orderPrice.trim() || null,
+          note: orderNote.trim() || null,
+        });
+        notify.success(`Đã tạo Order${result?.order?.refNo ? ` ${result.order.refNo}` : ""} từ task`);
+        setCustomerName("");
+        setShipPhone("");
+        setOrderPrice("");
+        setOrderNote("");
+        setOrderOpen(false);
+        onDone?.();
+      } catch (error: any) {
+        notify.error(error?.message || "Không tạo được Order");
+      }
+    });
+  }
 
   function createService() {
     startTransition(async () => {
@@ -112,9 +181,19 @@ export default function TaskDomainActions({ task, onDone }: Props) {
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={!canCreateOrder || pending}
+          onClick={openOrderModal}
+          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <ShoppingBag className="h-4 w-4" />
+          Tạo Order
+        </button>
+
+        <button
+          type="button"
           disabled={!canCreateService || pending}
           onClick={createService}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100"
         >
           <Wrench className="h-4 w-4" />
           {pending ? "Đang tạo..." : "Tạo Service Request"}
@@ -131,8 +210,96 @@ export default function TaskDomainActions({ task, onDone }: Props) {
         </button>
       </div>
 
-      {!canCreateService ? (
-        <p className="mt-3 text-xs text-amber-600">Task cần gắn Watch hoặc Work Case có Watch để tạo Service Request.</p>
+      {!canCreateOrder ? (
+        <p className="mt-3 text-xs text-amber-600">Task cần gắn Watch hoặc Work Case có Watch để tạo Order.</p>
+      ) : null}
+
+      {orderOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+              <div>
+                <h4 className="text-base font-semibold text-slate-950">Tạo Order từ task</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Order được tạo ở trạng thái DRAFT, reserve/cọc = NONE. Watch sẽ được HOLD theo rule Order hiện tại.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOrderOpen(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <label className="block text-sm font-medium text-slate-700">
+                Tên khách hàng
+                <input
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder="Nhập tên khách hàng"
+                  className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Số điện thoại
+                <input
+                  value={shipPhone}
+                  onChange={(event) => setShipPhone(event.target.value)}
+                  placeholder="Không bắt buộc"
+                  className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Giá chốt
+                <input
+                  value={orderPrice}
+                  onChange={(event) => setOrderPrice(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="Ví dụ: 3500000"
+                  className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
+                />
+                <span className="mt-1 block text-xs font-normal text-slate-400">
+                  Giá này là giá trị order. Cọc đang để NONE, phù hợp case giao xem thử/không cọc.
+                </span>
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Ghi chú
+                <textarea
+                  value={orderNote}
+                  onChange={(event) => setOrderNote(event.target.value)}
+                  rows={3}
+                  placeholder="Ví dụ: Khách xin giao đồng hồ xem thử, chưa cọc."
+                  className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setOrderOpen(false)}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={createOrder}
+                disabled={pending}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {pending ? "Đang tạo..." : "Tạo Order"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {linkOpen ? (

@@ -1,4 +1,4 @@
-import type { DB } from "@/server/db/client";
+import { prisma, type DB } from "@/server/db/client";
 import { createTaskTypeRepo, getTaskTypeByCodeRepo, getTaskTypeByIdRepo, listActiveTaskTypesRepo, listTaskTypesRepo, updateTaskTypeRepo } from "./task-type.repo";
 import type { TaskTypeListFilters, UpsertTaskTypeInput } from "./task-type.types";
 

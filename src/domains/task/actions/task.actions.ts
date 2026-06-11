@@ -10,6 +10,7 @@ import {
   createTask,
   findOpenRelatedTasks,
   getTaskQuickCreateData,
+  getTaskDetail,
   updateTask,
 } from "../server/task.service";
 import type { CreateTaskInput, FindOpenRelatedTasksInput, UpdateTaskInput } from "../server/task.types";
@@ -22,6 +23,12 @@ async function getTaskAuth() {
 export async function getTaskQuickCreateDataAction() {
   const auth = await getTaskAuth();
   return getTaskQuickCreateData(prisma, auth);
+}
+
+export async function getTaskDetailAction(id: string) {
+  const auth = await getTaskAuth();
+  const task = await getTaskDetail(prisma, id, auth);
+  return { ok: true, task };
 }
 
 export async function createTaskAction(input: CreateTaskInput) {

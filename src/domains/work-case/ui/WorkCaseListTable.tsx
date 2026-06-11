@@ -1,6 +1,7 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
+import { Eye, ImageIcon } from "lucide-react";
+import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { WorkCasePriorityBadge, WorkCaseScopeBadge, WorkCaseStatusBadge } from "./WorkCaseBadges";
 
@@ -9,7 +10,10 @@ function userLabel(user: { name?: string | null; email?: string | null; id?: str
 }
 
 function imageSrc(item: WorkCaseWithRelations) {
-  const inline = item.watch?.product?.productImage?.[0] as any;
+  const inline =
+    (item.watch?.product as any)?.productImage?.[0] ??
+    (item.watch?.product as any)?.productImages?.[0];
+
   return inline?.imageUrl || inline?.fileKey || item.watch?.product?.primaryImageUrl || null;
 }
 
@@ -39,6 +43,7 @@ export default function WorkCaseListTable({
               <th className="px-4 py-3">Người tạo</th>
               <th className="px-4 py-3">Output</th>
               <th className="px-4 py-3">Ngày tạo</th>
+              <th className="w-[72px] px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -46,7 +51,7 @@ export default function WorkCaseListTable({
               const img = imageSrc(item);
               const title = item.watch?.product?.title || "Untitled watch";
               return (
-                <tr key={item.id} className="cursor-pointer hover:bg-slate-50/70" onClick={() => onOpen(item)}>
+                <tr key={item.id} className="hover:bg-slate-50/70">
                   <td className="px-4 py-4 align-top">
                     <div className="min-w-[240px]">
                       <div className="flex flex-wrap gap-2"><WorkCaseStatusBadge status={item.status} /></div>
@@ -73,12 +78,25 @@ export default function WorkCaseListTable({
                     <div>{item.tasks.length} task</div>
                     <div>{item.serviceRequests.length} SR</div>
                   </td>
-                  <td className="px-4 py-4 align-top text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-4 align-top text-slate-500">{new Date(item.createdAt).toLocaleDateString("vi-VN")}</td>
+                  <td className="px-4 py-4 align-top text-right">
+                    <RowActions
+                      row={item}
+                      actions={[
+                        {
+                          key: "view",
+                          label: "Xem chi tiết",
+                          icon: <Eye className="h-4 w-4" />,
+                          onClick: onOpen,
+                        },
+                      ]}
+                    />
+                  </td>
                 </tr>
               );
             })}
             {!items.length ? (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">Chưa có phiếu xử lý.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Chưa có phiếu xử lý.</td></tr>
             ) : null}
           </tbody>
         </table>

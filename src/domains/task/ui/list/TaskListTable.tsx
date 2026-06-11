@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CirclePlay, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, CirclePlay, Eye, RotateCcw, XCircle } from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/task.repo";
@@ -28,7 +28,23 @@ function domainTitle(row: TaskWithRelations) {
   return "—";
 }
 
-export default function TaskListTable({ items, page, totalPages, onPage, onStatus, onEdit }: { items: TaskWithRelations[]; page: number; totalPages: number; onPage: (page: number) => void; onStatus: (row: TaskWithRelations, status: TaskStatus) => void; onEdit: (row: TaskWithRelations) => void }) {
+export default function TaskListTable({
+  items,
+  page,
+  totalPages,
+  onPage,
+  onStatus,
+  onEdit,
+  onOpen,
+}: {
+  items: TaskWithRelations[];
+  page: number;
+  totalPages: number;
+  onPage: (page: number) => void;
+  onStatus: (row: TaskWithRelations, status: TaskStatus) => void;
+  onEdit: (row: TaskWithRelations) => void;
+  onOpen: (row: TaskWithRelations) => void;
+}) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -72,6 +88,7 @@ export default function TaskListTable({ items, page, totalPages, onPage, onStatu
                   <RowActions
                     row={row}
                     actions={[
+                      { key: "view", label: "Mở task", icon: <Eye className="h-4 w-4" />, onClick: onOpen },
                       { key: "edit", label: "Sửa task", onClick: onEdit },
                       row.status !== "IN_PROGRESS" && row.status !== "DONE" && row.status !== "CANCELLED" ? { key: "start", label: "Bắt đầu", icon: <CirclePlay className="h-4 w-4" />, onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS) } : null,
                       row.status !== "DONE" ? { key: "done", label: "Hoàn thành", icon: <CheckCircle2 className="h-4 w-4" />, onClick: (r) => onStatus(r, TaskStatus.DONE) } : null,

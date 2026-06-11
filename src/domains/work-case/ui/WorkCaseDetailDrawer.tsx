@@ -8,7 +8,7 @@ import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import { updateWorkCaseAction } from "../actions/work-case.actions";
 import { WorkCasePriorityBadge, WorkCaseScopeBadge, WorkCaseStatusBadge } from "./WorkCaseBadges";
 import { WORK_CASE_STATUS_LABEL } from "../utils/work-case-labels";
-
+import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
 function userLabel(user: { name?: string | null; email?: string | null; id?: string | null } | null | undefined) {
   return user?.name || user?.email || user?.id || "-";
 }
@@ -37,6 +37,7 @@ export default function WorkCaseDetailDrawer({
   canManage,
   onClose,
   onChanged,
+  taskTypes,
 }: {
   item: WorkCaseWithRelations | null;
   users: TaskUserOption[];
@@ -44,6 +45,7 @@ export default function WorkCaseDetailDrawer({
   canManage?: boolean;
   onClose: () => void;
   onChanged?: () => void;
+  taskTypes: TaskTypeOption[];
 }) {
   const [localItem, setLocalItem] = useState<WorkCaseWithRelations | null>(item);
   const [pending, startTransition] = useTransition();
@@ -342,6 +344,7 @@ export default function WorkCaseDetailDrawer({
         open={taskModalOpen}
         users={safeUsers}
         currentUserId={currentUserId}
+        taskTypes={taskTypes}
         context={taskContext}
         onClose={() => setTaskModalOpen(false)}
         onSaved={() => {

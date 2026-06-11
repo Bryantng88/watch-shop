@@ -116,6 +116,12 @@ export default function TaskListClient(props: Props) {
     setModalOpen(true);
   }
 
+  function openDetail(row: TaskWithRelations) {
+    progress.show({ title: "Đang mở task", message: row.title });
+    router.push(`/admin/tasks/${row.id}`);
+    window.setTimeout(() => progress.hide(), 700);
+  }
+
   async function changeStatus(row: TaskWithRelations, status: TaskStatus) {
     try {
       await changeTaskStatusAction(row.id, status);
@@ -137,7 +143,7 @@ export default function TaskListClient(props: Props) {
         </div>
       </div>
 
-      <TaskListTable items={props.items} page={props.page} totalPages={props.totalPages} onPage={(page) => navigate({ page: String(page) })} onStatus={changeStatus} onEdit={openEdit} />
+      <TaskListTable items={props.items} page={props.page} totalPages={props.totalPages} onPage={(page) => navigate({ page: String(page) })} onStatus={changeStatus} onEdit={openEdit} onOpen={openDetail} />
 
       <TaskQuickCreateModal open={modalOpen} users={props.users} taskTypes={props.taskTypes ?? []} currentUserId={props.currentUserId} context={modalContext} editTask={editTask} onClose={() => setModalOpen(false)} onSaved={() => router.refresh()} />
     </div>
