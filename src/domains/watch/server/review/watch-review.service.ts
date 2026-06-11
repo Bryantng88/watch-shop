@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/client";
-import { ProductStatus, TaskKind, WatchSaleStage, WatchStockStage } from "@prisma/client";
+import { ProductStatus, WatchSaleStage, WatchStockStage } from "@prisma/client";
 import { completeRelatedTasks, ensureSystemTask } from "@/domains/task";
 type ReviewTargetType = "CONTENT" | "IMAGE";
 type ReviewStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
@@ -257,7 +257,7 @@ export async function approveWatchReview(input: ReviewInput) {
             await completeRelatedTasks(
                 prisma,
                 {
-                    kind: TaskKind.WATCH_IMAGE,
+                    taskTypeCode: "WATCH_IMAGE",
                     watchId: watch.id,
                     completedByUserId: input.userId,
                 },
@@ -271,14 +271,11 @@ export async function approveWatchReview(input: ReviewInput) {
         });
 
         if (watch) {
-            await completeRelatedTasks(
-                prisma,
-                {
-                    kind: TaskKind.WATCH_CONTENT,
-                    watchId: watch.id,
-                    completedByUserId: input.userId,
-                },
-            );
+            await completeRelatedTasks(prisma, {
+                taskTypeCode: "WATCH_CONTENT",
+                watchId: watch.id,
+                completedByUserId: input.userId,
+            });
         }
     }
     const state = await prisma.watchReviewState.update({
@@ -327,7 +324,7 @@ export async function rejectWatchReview(input: RejectInput) {
     await ensureSystemTask(
         prisma,
         {
-            kind: TaskKind.WATCH_IMAGE,
+            taskTypeCode: "WATCH_IMAGE",
             watchId: current.id,
             title: `Bổ sung hình ảnh`,
             description: input.note ?? "",
@@ -337,7 +334,7 @@ export async function rejectWatchReview(input: RejectInput) {
     await ensureSystemTask(
         prisma,
         {
-            kind: TaskKind.WATCH_CONTENT,
+            taskTypeCode: "WATCH_CONTENT",
             watchId: current.id,
             title: `Bổ sung nội dung`,
             description: input.note ?? "",

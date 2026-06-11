@@ -21,11 +21,29 @@ export function getAuthUserId(auth: any): string | null {
 }
 
 export function authCanViewAllTasks(auth: any): boolean {
-  const roleName = String(auth?.user?.role?.name ?? auth?.role?.name ?? auth?.roleName ?? "").toUpperCase();
-  const permissions = auth?.permissions ?? auth?.user?.permissions ?? auth?.role?.permissions ?? [];
-  return roleName === "ADMIN" || (Array.isArray(permissions) && (permissions.includes("TASK_VIEW_ALL") || permissions.includes("task:view_all")));
-}
+  const roleName = String(
+    auth?.user?.role ??
+    auth?.role ??
+    auth?.user?.role?.name ??
+    auth?.role?.name ??
+    auth?.roleName ??
+    ""
+  ).toUpperCase();
 
+  const permissions =
+    auth?.permissions ??
+    auth?.user?.permissions ??
+    auth?.role?.permissions ??
+    [];
+
+  return (
+    roleName === "ADMIN" ||
+    (
+      Array.isArray(permissions) &&
+      permissions.includes("TASK_VIEW_ALL")
+    )
+  );
+}
 function assertUser(userId: string | null): asserts userId is string {
   if (!userId) throw new Error("Không xác định được user hiện tại");
 }

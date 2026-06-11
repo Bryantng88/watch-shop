@@ -21,16 +21,26 @@ export type CreateOrderFromTaskActionInput = {
   shipPhone?: string | null;
   unitPriceAgreed?: number | string | null;
   note?: string | null;
+
+  hasShipment?: boolean;
+  shipAddress?: string | null;
+  shipCity?: string | null;
+  shipDistrict?: string | null;
+  shipWard?: string | null;
 };
 
 export async function createOrderFromTaskAction(input: CreateOrderFromTaskActionInput) {
-  const auth = await requirePermission("ORDER_MANAGE");
+  const auth = await requirePermission("ORDER_CREATE");
+
   const result = await createOrderFromTask(prisma, input, auth);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${input.taskId}`);
   revalidatePath("/admin/orders");
-  if (result?.order?.id) revalidatePath(`/admin/orders/${result.order.id}`);
+
+  if (result?.order?.id) {
+    revalidatePath(`/admin/orders/${result.order.id}`);
+  }
 
   return serialize({ ok: true, ...result });
 }

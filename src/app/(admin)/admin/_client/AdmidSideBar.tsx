@@ -150,6 +150,13 @@ const NAV: NavEntry[] = [
     },
     {
         type: "item",
+        href: "/admin/settings/task-types",
+        label: "Loại task",
+        icon: CheckSquare,
+        permission: PERMISSIONS.TASK_MANAGE,
+    },
+    {
+        type: "item",
         href: "/admin/media",
         label: "Media",
         icon: CameraIcon,

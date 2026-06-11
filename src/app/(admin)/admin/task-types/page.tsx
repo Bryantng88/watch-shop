@@ -4,7 +4,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 
 export default async function AdminTaskTypesSettingsPage() {
-  await requirePermission("TASK_VIEW");
+  await requirePermission("TASK_MANAGE");
   const data = await getTaskTypeSettingsPageData(prisma, {
     isActive: "ALL",
   });

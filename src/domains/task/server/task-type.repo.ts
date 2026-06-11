@@ -30,6 +30,7 @@ function buildWhere(filters?: TaskTypeListFilters): Prisma.TaskTypeWhereInput {
       { code: { contains: q, mode: "insensitive" } },
       { name: { contains: q, mode: "insensitive" } },
       { description: { contains: q, mode: "insensitive" } },
+      { completionRuleKey: { contains: q, mode: "insensitive" } },
     ];
   }
 

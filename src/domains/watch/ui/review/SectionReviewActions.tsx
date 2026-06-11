@@ -16,7 +16,6 @@ import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import ReviewStatusBadge from "./ReviewStatusBadge";
-import { TaskKind } from "@prisma/client";
 import RelatedTaskCompleteModal from "@/domains/task/ui/related/RelatedTaskCompleteModal";
 import { findOpenRelatedTasksAction } from "@/domains/task/actions/task.actions";
 import type { RelatedTaskSuggestion } from "@/domains/task/server/task.types";
@@ -135,15 +134,15 @@ export default function SectionReviewActions({
 
         return json;
     }
-    function taskKindForTarget(target: ReviewTarget) {
-        return target === "image" ? TaskKind.WATCH_IMAGE : TaskKind.WATCH_CONTENT;
+    function taskTypeCodeForTarget(target: ReviewTarget) {
+        return target === "image" ? "WATCH_IMAGE" : "WATCH_CONTENT";
     }
     async function getOpenReviewTasks() {
         if (!watchId) return [];
 
         const result = await findOpenRelatedTasksAction({
             watchId,
-            kind: taskKindForTarget(target),
+            taskTypeCode: taskTypeCodeForTarget(target),
             limit: 10,
         });
 

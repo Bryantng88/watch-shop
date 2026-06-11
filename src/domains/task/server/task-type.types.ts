@@ -17,6 +17,8 @@ export type TaskTypeOption = {
   completionRuleKey?: string | null;
   isActive: boolean;
   sortOrder: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 };
 
 export type UpsertTaskTypeInput = {

@@ -53,6 +53,7 @@ export type UpdateTaskInput = TaskDomainLinksInput & {
 export type CompleteRelatedTasksInput = TaskDomainLinksInput & {
   domain?: TaskDomain;
   taskTypeId?: string | null;
+  taskTypeCode?: string | null;
   mode?: TaskMode;
   completedByUserId?: string | null;
 };
@@ -85,6 +86,7 @@ export type TaskTypeOption = {
 export type FindOpenRelatedTasksInput = {
   domain?: TaskDomain;
   taskTypeId?: string | null;
+  taskTypeCode?: string | null;
   watchId?: string | null;
   paymentId?: string | null;
   limit?: number;

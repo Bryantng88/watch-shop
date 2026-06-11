@@ -1,4 +1,5 @@
 import { TaskCompletionMode, TaskDomain, TaskMode, TaskPriority, TaskSource, TaskStatus } from "@prisma/client";
+import { getTaskCompletionRuleLabel } from "../server/task-rule-keys";
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   TODO: "Cần làm",
@@ -43,6 +44,8 @@ export const TASK_COMPLETION_MODE_LABEL: Record<TaskCompletionMode, string> = {
   MANUAL_CONFIRM: "Người xử lý xác nhận",
   BUSINESS_RULE: "Theo business rule",
 };
+
+export { getTaskCompletionRuleLabel };
 
 export function formatTaskDomainLabel(task: {
   domain?: TaskDomain | null;
