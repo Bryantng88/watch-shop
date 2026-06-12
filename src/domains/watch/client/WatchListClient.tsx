@@ -22,6 +22,13 @@ import type {
 } from "../ui/list/types";
 import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
 import RaiseWorkCaseModal, { type RaiseWorkCaseWatchContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
+import { getTaskQuickCreateDataAction } from "@/domains/task/actions/task.actions";
+import TaskQuickCreateModal, {
+    type TaskQuickCreateContext,
+    type TaskUserOption,
+} from "@/domains/task/ui/quick-create/TaskQuickCreateModal";
+import type { TaskTypeOption } from "@/domains/task/server/task-type.types";
+import { TaskDomain, TaskMode } from "@prisma/client";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
     initialResult?: WatchListResult;
@@ -275,6 +282,11 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
     const [raiseCaseWatch, setRaiseCaseWatch] = React.useState<RaiseWorkCaseWatchContext | null>(null);
+    const [taskModalOpen, setTaskModalOpen] = React.useState(false);
+    const [taskUsers, setTaskUsers] = React.useState<TaskUserOption[]>([]);
+    const [taskTypes, setTaskTypes] = React.useState<TaskTypeOption[]>([]);
+    const [taskCurrentUserId, setTaskCurrentUserId] = React.useState("");
+    const [taskContext, setTaskContext] = React.useState<TaskQuickCreateContext | null>(null);
     const urlParams = useMemo(() => sanitizeParams(new URLSearchParams(sp.toString())), [sp]);
     const urlKey = useMemo(() => paramsKey(urlParams), [urlParams]);
 
@@ -501,6 +513,35 @@ export default function WatchListClient(props: WatchListClientProps) {
         navigateWithProgress(`/admin/consignments/new?productId=${row.productId}`, "Đang mở ký gửi");
     }
 
+    function inferWatchTaskTitle(row: WatchRow) {
+        return row.title ? `Xử lý watch: ${row.title}` : "Xử lý watch";
+    }
+
+    async function onCreateTask(row: WatchRow) {
+        try {
+            const data = await getTaskQuickCreateDataAction();
+            setTaskUsers(data.users ?? []);
+            setTaskTypes(data.taskTypes ?? []);
+            setTaskCurrentUserId(data.currentUserId ?? "");
+            setTaskContext({
+                watchId: row.id,
+                domain: TaskDomain.WATCH,
+                mode: TaskMode.NORMAL,
+                titlePreset: inferWatchTaskTitle(row),
+                descriptionPreset: [
+                    row.sku ? `SKU: ${row.sku}` : null,
+                    row.title ? `Watch: ${row.title}` : null,
+                ].filter(Boolean).join("\n"),
+            });
+            setTaskModalOpen(true);
+        } catch (error: any) {
+            notify.error({
+                title: "Không thể mở tạo task",
+                message: error?.message || "Không tải được dữ liệu tạo task.",
+            });
+        }
+    }
+
     function onRaiseCase(row: WatchRow) {
         setRaiseCaseWatch({
             watchId: row.id,
@@ -627,6 +668,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onConsign={onConsign}
                     onBuyBack={onBuyBack}
                     onRaiseCase={onRaiseCase}
+                    onCreateTask={onCreateTask}
                 />
             </div>
 
@@ -658,6 +700,25 @@ export default function WatchListClient(props: WatchListClientProps) {
                     watch={raiseCaseWatch}
                     onClose={() => setRaiseCaseWatch(null)}
                     onSaved={() => router.refresh()}
+                />
+            ) : null}
+
+            {taskModalOpen ? (
+                <TaskQuickCreateModal
+                    open
+                    users={taskUsers}
+                    taskTypes={taskTypes}
+                    currentUserId={taskCurrentUserId}
+                    context={taskContext}
+                    onClose={() => setTaskModalOpen(false)}
+                    onSaved={() => {
+                        setTaskModalOpen(false);
+                        notify.success({
+                            title: "Đã tạo task",
+                            message: "Task đã được gắn với watch đang chọn.",
+                        });
+                        router.refresh();
+                    }}
                 />
             ) : null}
 

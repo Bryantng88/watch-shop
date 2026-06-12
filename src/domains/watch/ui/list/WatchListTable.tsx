@@ -47,6 +47,7 @@ type Props = {
     onConsign?: (row: WatchRow) => void;
     onBuyBack?: (row: WatchRow) => void;
     onRaiseCase?: (row: WatchRow) => void;
+    onCreateTask?: (row: WatchRow) => void;
 };
 
 function cn(...parts: Array<string | false | null | undefined>) {
@@ -302,6 +303,7 @@ export default function WatchListTable({
     onConsign,
     onBuyBack,
     onRaiseCase,
+    onCreateTask,
 }: Props) {
     const safeItems = Array.isArray(items) ? items : [];
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
@@ -383,6 +385,7 @@ export default function WatchListTable({
                                     onConsign={onConsign}
                                     onBuyBack={onBuyBack}
                                     onRaiseCase={onRaiseCase}
+                                    onCreateTask={onCreateTask}
                                 />
                             ))
                         )}

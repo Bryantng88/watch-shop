@@ -182,3 +182,18 @@ export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
     },
   });
 }
+export async function getTaskQuickCreateData(db: DB, auth: any) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  const [users, taskTypes] = await Promise.all([
+    listAssignableUsersRepo(db),
+    listActiveTaskTypesRepo(db),
+  ]);
+
+  return {
+    users,
+    taskTypes,
+    currentUserId: userId,
+  };
+}
