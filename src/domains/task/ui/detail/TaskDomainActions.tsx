@@ -15,11 +15,11 @@ import {
 } from "lucide-react";
 import { TaskExecutionTargetType } from "@prisma/client";
 import { createOrderFromTaskAction } from "@/domains/order/actions/order-from-task.actions";
-import { createServiceRequestFromTaskAction } from "@/domains/service/actions/service-from-task.actions";
+import { createServiceRequestFromTaskAction } from "@/domains/service/actions/service-request-from-task.actions";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { resolveTaskActions } from "../../utils/task-action-revolver";
 import { linkTaskExecutionAction } from "../../actions/task-execution.actions";
-
+import ServiceRequestFromTaskModal from "@/domains/service/ui/quick-service/ServiceRequestModal";
 type Props = {
   task: any;
   onDone?: () => void;
@@ -128,7 +128,7 @@ function firstExecution(task: any, targetType: TaskExecutionTargetType) {
 export default function TaskDomainActions({ task, onDone }: Props) {
   const notify = useNotify();
   const [pending, startTransition] = useTransition();
-
+  const [serviceOpen, setServiceOpen] = useState(false);
   const actions = useMemo(() => resolveTaskActions(task), [task]);
 
   const shouldCreateOrder = actions.includes("ORDER_CREATE");
@@ -239,10 +239,7 @@ export default function TaskDomainActions({ task, onDone }: Props) {
   function createService() {
     startTransition(async () => {
       try {
-        await createServiceRequestFromTaskAction({
-          taskId: task.id,
-          note: `Tạo từ task: ${task.title}`,
-        });
+        await createServiceRequestFromTaskAction(task.id);
 
         notify.success("Đã tạo/link Service Request từ task");
         onDone?.();
@@ -355,11 +352,11 @@ export default function TaskDomainActions({ task, onDone }: Props) {
           <button
             type="button"
             disabled={!canCreateService || pending}
-            onClick={createService}
+            onClick={() => setServiceOpen(true)}
             className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             <Wrench className="h-4 w-4" />
-            {pending ? "Đang tạo..." : "Tạo Service Request"}
+            Tạo Service Request
           </button>
         ) : null}
 
@@ -661,6 +658,12 @@ export default function TaskDomainActions({ task, onDone }: Props) {
           </div>
         </div>
       ) : null}
+      <ServiceRequestFromTaskModal
+        open={serviceOpen}
+        task={task}
+        onClose={() => setServiceOpen(false)}
+        onSaved={onDone}
+      />
     </section>
   );
 }
