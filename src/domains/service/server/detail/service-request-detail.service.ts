@@ -1,7 +1,5 @@
 import { prisma } from "@/server/db/client";
-import {
-  getServiceRequestTechnicalSummary,
-} from "@/domains/service/server/technical/technical-assessment.service";
+import { getServiceRequestTechnicalSummary } from "@/domains/service/server/technical/technical-assessment.service";
 import { getTechnicalIssueBoardData } from "@/domains/service/server/issue-board";
 
 function toNumber(value: unknown) {
@@ -14,9 +12,7 @@ function serialize<T>(obj: T): T {
   return JSON.parse(
     JSON.stringify(obj, (_key, value) => {
       if (value instanceof Date) return value.toISOString();
-      if (typeof value === "object" && value && "_isDecimal" in value) {
-        return Number(value);
-      }
+      if (typeof value === "object" && value && "_isDecimal" in value) return Number(value);
       return value;
     }),
   );
@@ -32,16 +28,12 @@ function buildAppearanceScore(assessment: any) {
     assessment.crownStatus,
   ];
 
-  const issueCount = sections.filter(
-    (x) => String(x ?? "").toUpperCase() === "ISSUE",
-  ).length;
-
+  const issueCount = sections.filter((x) => String(x ?? "").toUpperCase() === "ISSUE").length;
   return Math.max(0, 100 - issueCount * 15);
 }
 
 function mapCatalog(item: any) {
   if (!item) return null;
-
   return {
     id: item.id,
     code: item.code ?? null,
@@ -53,7 +45,7 @@ function mapCatalog(item: any) {
 function mapIssue(issue: any) {
   return {
     id: issue.id,
-    refNo: issue.refNo ?? issue.code ?? null,
+    refNo: null,
     area: issue.area ?? null,
     summary: issue.summary ?? null,
     note: issue.note ?? null,
@@ -63,7 +55,6 @@ function mapIssue(issue: any) {
     actualCost: toNumber(issue.actualCost),
     estimatedCost: toNumber(issue.estimatedCost),
     resolutionNote: issue.resolutionNote ?? null,
-
     technicalDetailCatalog: mapCatalog(issue.technicalDetailCatalog),
     serviceCatalog: mapCatalog(issue.serviceCatalog),
     supplyCatalog: mapCatalog(issue.SupplyCatalog),
@@ -73,15 +64,7 @@ function mapIssue(issue: any) {
 }
 
 function getProductImage(product: any) {
-  return (
-    product?.productImage?.[0]?.fileKey ??
-    product?.ProductImage?.[0]?.fileKey ??
-    null
-  );
-}
-
-function getSpec(product: any) {
-  return product?.watchSpecV2 ?? null;
+  return product?.productImage?.[0]?.fileKey ?? null;
 }
 
 export async function getServiceRequestDetailPageData(serviceRequestId: string) {
@@ -96,21 +79,25 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
           id: true,
           title: true,
           sku: true,
+          primaryImageUrl: true,
           productImage: {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             take: 1,
             select: {
               fileKey: true,
-              imageKey: true,
-              url: true,
             },
           },
-          watchSpecV2: {
+          watch: {
             select: {
-              referenceNumber: true,
-              model: true,
-              movementType: true,
-              brand: true,
+              id: true,
+              watchSpecV2: {
+                select: {
+                  referenceNumber: true,
+                  model: true,
+                  movementType: true,
+                  brand: true,
+                },
+              },
             },
           },
         },
@@ -125,14 +112,10 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
             where: { executionStatus: { not: "CANCELED" as any } },
             orderBy: [{ openedAt: "desc" }, { createdAt: "desc" }],
             include: {
-              technicalDetailCatalog: {
-                select: { id: true, code: true, name: true, area: true },
-              },
+              technicalDetailCatalog: { select: { id: true, code: true, name: true, area: true } },
               serviceCatalog: { select: { id: true, code: true, name: true } },
               SupplyCatalog: { select: { id: true, code: true, name: true } },
-              MechanicalPartCatalog: {
-                select: { id: true, code: true, name: true },
-              },
+              MechanicalPartCatalog: { select: { id: true, code: true, name: true } },
               Vendor: { select: { id: true, name: true } },
             },
           },
@@ -143,24 +126,20 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
         where: { executionStatus: { not: "CANCELED" as any } },
         orderBy: [{ openedAt: "desc" }, { createdAt: "desc" }],
         include: {
-          technicalDetailCatalog: {
-            select: { id: true, code: true, name: true, area: true },
-          },
+          technicalDetailCatalog: { select: { id: true, code: true, name: true, area: true } },
           serviceCatalog: { select: { id: true, code: true, name: true } },
           SupplyCatalog: { select: { id: true, code: true, name: true } },
-          MechanicalPartCatalog: {
-            select: { id: true, code: true, name: true },
-          },
+          MechanicalPartCatalog: { select: { id: true, code: true, name: true } },
           Vendor: { select: { id: true, name: true } },
         },
       },
     },
-  } as any);
+  });
 
   if (!sr) return null;
 
   const assessment = (sr as any).technicalAssessment ?? null;
-  const spec = getSpec((sr as any).product);
+  const spec = (sr as any).product?.watch?.watchSpecV2 ?? null;
 
   const [technicalSummary, rawIssueBoard]: any = await Promise.all([
     getServiceRequestTechnicalSummary(id).catch(() => null),
@@ -178,16 +157,13 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
     })),
   ]);
 
-  const issues = (
-    (sr as any).technicalIssue ??
-    assessment?.TechnicalIssue ??
-    []
-  ).map(mapIssue);
+  const issues = ((sr as any).technicalIssue ?? assessment?.TechnicalIssue ?? []).map(mapIssue);
 
   const totalCost = issues.reduce(
     (sum: number, issue: any) => sum + Number(issue.actualCost ?? 0),
     0,
   );
+
   const technicalDetailCatalogOptions =
     rawIssueBoard.technicalDetailCatalogOptions ??
     rawIssueBoard.catalogs?.technicalDetailCatalogOptions ??
@@ -201,19 +177,14 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
       inProgress: 0,
       done: 0,
       readyToCloseSrCount: 0,
-    }, technicalDetailCatalogOptions,
+    },
+    technicalDetailCatalogOptions,
     catalogs: {
       ...(rawIssueBoard.catalogs ?? {}),
-      technicalDetailCatalogOptions:
-        rawIssueBoard.technicalDetailCatalogOptions ??
-        rawIssueBoard.catalogs?.technicalDetailCatalogOptions ??
-        [],
+      technicalDetailCatalogOptions,
     },
   };
-  console.log("[service-request-detail] rawIssueBoard", {
-    topLevelCount: rawIssueBoard.technicalDetailCatalogOptions?.length,
-    catalogsCount: rawIssueBoard.catalogs?.technicalDetailCatalogOptions?.length,
-  });
+
   return serialize({
     detail: {
       serviceRequest: {
@@ -222,14 +193,14 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
         status: sr.status ?? null,
         scope: sr.scope ?? null,
         priority: (sr as any).priority ?? "NORMAL",
-        priorityReason:
-          (sr as any).priorityReason ?? (sr as any).priority_reason ?? null,
+        priorityReason: (sr as any).priorityReason ?? (sr as any).priority_reason ?? null,
 
         productId: sr.productId ?? sr.product?.id ?? null,
         productTitle: sr.modelSnapshot ?? sr.product?.title ?? null,
         skuSnapshot: sr.skuSnapshot ?? sr.product?.sku ?? null,
         primaryImageUrl:
           sr.primaryImageUrlSnapshot ??
+          sr.product?.primaryImageUrl ??
           getProductImage(sr.product) ??
           null,
 
@@ -237,8 +208,7 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
         model: sr.modelSnapshot ?? spec?.model ?? null,
         movement: spec?.movementType ?? null,
 
-        technicianNameSnap:
-          sr.technicianNameSnap ?? sr.user?.name ?? sr.user?.email ?? null,
+        technicianNameSnap: sr.technicianNameSnap ?? sr.user?.name ?? sr.user?.email ?? null,
         vendorNameSnap: sr.vendorNameSnap ?? sr.vendor?.name ?? null,
         customerItemNote: sr.notes ?? null,
         serviceName: sr.serviceCatalog?.name ?? "Kiểm tra kỹ thuật",
@@ -249,10 +219,7 @@ export async function getServiceRequestDetailPageData(serviceRequestId: string) 
       technicalSummary: technicalSummary ?? {
         issueCount: issues.length,
         openIssueCount: issues.filter(
-          (x: any) =>
-            !["DONE", "COMPLETED"].includes(
-              String(x.executionStatus ?? "").toUpperCase(),
-            ),
+          (x: any) => !["DONE", "COMPLETED"].includes(String(x.executionStatus ?? "").toUpperCase()),
         ).length,
       },
 
