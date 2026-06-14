@@ -121,3 +121,6 @@ export function canMarkReturned(item: ShipmentListItem) {
 export function canReceiveReturn(item: ShipmentListItem) {
   return String(item.status ?? "").toUpperCase() === "RETURNING";
 }
+export function canReceiveReturnedShipment(item: ShipmentListItem) {
+  return ["RETURNING", "RETURNED"].includes(String(item.status ?? "").toUpperCase());
+}
