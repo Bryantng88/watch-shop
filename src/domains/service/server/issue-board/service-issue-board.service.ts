@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { ensureTechnicalIssuePaymentTx } from "@/domains/payment/server/payment.service";
+import { syncTechnicalIssueToTasks } from "@/domains/task/server/task-technical-issue-sync.service";
 
 function cleanId(v: unknown): string | null {
     const text = String(v ?? "").trim();
@@ -203,7 +204,7 @@ export async function confirmTechnicalIssue(input: {
     const id = cleanId(input.id);
     if (!id) throw new Error("Missing issue id");
 
-    return prisma.technicalIssue.update({
+    const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
             isConfirmed: true,
@@ -214,8 +215,16 @@ export async function confirmTechnicalIssue(input: {
             updatedAt: new Date(),
         } as any,
     });
-}
 
+    await syncTechnicalIssueToTasks(prisma as any, {
+        technicalIssueId: id,
+        event: "TECHNICAL_ISSUE_CONFIRMED",
+        actorUserId: cleanId(input.actorId),
+        note: "Technical Issue đã xác nhận",
+    });
+
+    return updated;
+}
 export async function startTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
@@ -254,7 +263,7 @@ export async function startTechnicalIssue(input: {
         throw new Error("Vui lòng chọn vendor khi xử lý bởi vendor.");
     }
 
-    return prisma.technicalIssue.update({
+    const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
             isConfirmed: true,
@@ -268,8 +277,15 @@ export async function startTechnicalIssue(input: {
             updatedAt: new Date(),
         } as any,
     });
-}
 
+    await syncTechnicalIssueToTasks(prisma as any, {
+        technicalIssueId: id,
+        event: "TECHNICAL_ISSUE_STARTED",
+        note: "Technical Issue đã bắt đầu xử lý",
+    });
+
+    return updated;
+}
 export async function completeTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
@@ -320,10 +336,15 @@ export async function completeTechnicalIssue(input: {
 
         await ensureTechnicalIssuePaymentTx(tx as any, id);
 
+        await syncTechnicalIssueToTasks(tx as any, {
+            technicalIssueId: id,
+            event: "TECHNICAL_ISSUE_DONE",
+            note: "Technical Issue đã hoàn tất",
+        });
+
         return updated;
     });
 }
-
 export async function cancelTechnicalIssue(
     idInput: string,
     input: { reason?: string | null } = {}
@@ -331,7 +352,7 @@ export async function cancelTechnicalIssue(
     const id = cleanId(idInput);
     if (!id) throw new Error("Missing issue id");
 
-    return prisma.technicalIssue.update({
+    const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
             executionStatus: "CANCELED" as any,
@@ -340,8 +361,15 @@ export async function cancelTechnicalIssue(
             updatedAt: new Date(),
         } as any,
     });
-}
 
+    await syncTechnicalIssueToTasks(prisma as any, {
+        technicalIssueId: id,
+        event: "TECHNICAL_ISSUE_CANCELED",
+        note: cleanId(input.reason) ?? "Technical Issue đã hủy",
+    });
+
+    return updated;
+}
 export async function updateTechnicalIssue(input: {
     id: string;
     note?: string | null;
@@ -362,7 +390,7 @@ export async function updateTechnicalIssue(input: {
 
     const vendorId = cleanId(input.vendorId);
 
-    return prisma.technicalIssue.update({
+    const updated = await prisma.technicalIssue.update({
         where: { id },
         data: {
             note: input.note === undefined ? undefined : cleanId(input.note),
@@ -383,6 +411,14 @@ export async function updateTechnicalIssue(input: {
             updatedAt: new Date(),
         } as any,
     });
+
+    await syncTechnicalIssueToTasks(prisma as any, {
+        technicalIssueId: id,
+        event: "TECHNICAL_ISSUE_UPDATED",
+        note: "Technical Issue đã được cập nhật",
+    });
+
+    return updated;
 }
 
 export async function removeTechnicalIssue(idInput: string) {

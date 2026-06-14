@@ -364,3 +364,60 @@ export async function executeTaskAction(
       : "Đã gán Service Request active và tạo Technical Issue từ action",
   };
 }
+
+export async function previewTaskAction(
+  db: DB,
+  input: { taskId: string },
+  auth: any,
+) {
+  const client = dbOrTx(db);
+  const { task, userId } = await assertTaskCanExecute(client as any, input.taskId, auth);
+  const action = task.taskAction;
+
+  if (!isServiceRequestAction(action)) {
+    return {
+      mode: "NOOP",
+      message: "Action này không có nghiệp vụ tự động.",
+    };
+  }
+
+  const watch = getWatchFromTask(task);
+  const productId = clean(watch?.productId);
+  if (!productId) throw new Error("Task chưa gắn product/watch.");
+
+  const existingSr = await client.serviceRequest.findFirst({
+    where: activeSrWhere(productId),
+    orderBy: { createdAt: "desc" },
+    select: { id: true, refNo: true, status: true },
+  });
+
+  return {
+    mode: isTechnicalIssueAction(action) ? "TECHNICAL_ISSUE" : "SERVICE_REQUEST",
+    serviceRequest: existingSr
+      ? {
+        id: existingSr.id,
+        refNo: existingSr.refNo,
+        status: existingSr.status,
+        willCreate: false,
+      }
+      : {
+        id: null,
+        refNo: null,
+        status: "DRAFT",
+        willCreate: true,
+      },
+    technicalIssue: isTechnicalIssueAction(action)
+      ? {
+        willCreate: true,
+        summary: buildIssueSummary(task),
+        actionName: actionTitle(task),
+        area: inferArea(action),
+        issueType: inferIssueType(action),
+        actionMode: action?.technicalActionMode ?? "INTERNAL",
+      }
+      : null,
+    message: existingSr
+      ? "Sẽ gán vào Service Request active hiện có và tạo Technical Issue mới."
+      : "Sẽ tạo Service Request mới và Technical Issue mới.",
+  };
+}

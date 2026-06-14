@@ -16,7 +16,7 @@ import {
 import { TaskExecutionTargetType } from "@prisma/client";
 import { createOrderFromTaskAction } from "@/domains/order/actions/order-from-task.actions";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { executeTaskActionAction } from "../../actions/task-action-execution.actions";
+import { executeTaskActionAction, previewTaskActionAction, } from "../../actions/task-action-execution.actions";
 import { linkTaskExecutionAction } from "../../actions/task-execution.actions";
 import { resolveTaskActions } from "../../utils/task-action-revolver";
 
@@ -128,7 +128,8 @@ export default function TaskDomainActions({ task, onDone }: Props) {
   const [shipCity, setShipCity] = useState("");
   const [shipDistrict, setShipDistrict] = useState("");
   const [shipWard, setShipWard] = useState("");
-
+  const [serviceConfirmOpen, setServiceConfirmOpen] = useState(false);
+  const [servicePreview, setServicePreview] = useState<any>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [targetType, setTargetType] = useState<TaskExecutionTargetType>(() => suggestedTarget(task));
   const [targetId, setTargetId] = useState("");
@@ -209,7 +210,17 @@ export default function TaskDomainActions({ task, onDone }: Props) {
       }
     });
   }
-
+  function openServiceConfirm() {
+    startTransition(async () => {
+      try {
+        const preview = await previewTaskActionAction(task.id);
+        setServicePreview(preview);
+        setServiceConfirmOpen(true);
+      } catch (error: any) {
+        notify.error(error?.message || "Không xem trước được nghiệp vụ sẽ tạo");
+      }
+    });
+  }
   function linkExisting() {
     const cleanTargetId = targetId.trim();
     if (!cleanTargetId) return notify.error("Bạn cần nhập ID nghiệp vụ cần link");
@@ -276,14 +287,14 @@ export default function TaskDomainActions({ task, onDone }: Props) {
         ) : null}
 
         {shouldCreateTechnicalIssue ? (
-          <button type="button" disabled={!canUseWatch || pending} onClick={executeBusinessAction} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+          <button type="button" disabled={!canUseWatch || pending} onClick={openServiceConfirm} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Wrench className="h-4 w-4" />
             {pending ? "Đang tạo..." : `Tạo issue: ${actionLabel(task)}`}
           </button>
         ) : null}
 
         {shouldCreateService && !shouldCreateTechnicalIssue ? (
-          <button type="button" disabled={!canUseWatch || pending} onClick={executeBusinessAction} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+          <button type="button" disabled={!canUseWatch || pending} onClick={openServiceConfirm} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
             <Wrench className="h-4 w-4" />
             {pending ? "Đang tạo..." : "Tạo/Gán Service Request"}
           </button>
@@ -396,6 +407,96 @@ export default function TaskDomainActions({ task, onDone }: Props) {
           </div>
         </div>
       ) : null}
+      {serviceConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+              <div>
+                <h4 className="text-base font-semibold text-slate-950">
+                  Xác nhận tạo/gán Service Request
+                </h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Kiểm tra nghiệp vụ sắp được tạo trước khi thực thi.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setServiceConfirmOpen(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5 text-sm">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                  Service Request
+                </div>
+
+                {servicePreview?.serviceRequest?.willCreate ? (
+                  <p className="mt-2 font-semibold text-slate-950">
+                    Sẽ tạo Service Request mới
+                  </p>
+                ) : (
+                  <p className="mt-2 font-semibold text-slate-950">
+                    Sẽ dùng SR active: {servicePreview?.serviceRequest?.refNo || servicePreview?.serviceRequest?.id}
+                  </p>
+                )}
+
+                <p className="mt-1 text-slate-500">
+                  Trạng thái: {servicePreview?.serviceRequest?.status || "DRAFT"}
+                </p>
+              </div>
+
+              {servicePreview?.technicalIssue ? (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-blue-400">
+                    Technical Issue mới
+                  </div>
+
+                  <p className="mt-2 font-semibold text-slate-950">
+                    {servicePreview.technicalIssue.summary}
+                  </p>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>Loại: {servicePreview.technicalIssue.issueType}</div>
+                    <div>Khu vực: {servicePreview.technicalIssue.area || "-"}</div>
+                    <div>Xử lý: {servicePreview.technicalIssue.actionMode}</div>
+                    <div>Action: {servicePreview.technicalIssue.actionName}</div>
+                  </div>
+                </div>
+              ) : null}
+
+              <p className="text-sm text-slate-500">{servicePreview?.message}</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setServiceConfirmOpen(false)}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setServiceConfirmOpen(false);
+                  executeBusinessAction();
+                }}
+                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300"
+              >
+                Xác nhận tạo/gán
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
+
   );
 }

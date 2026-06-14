@@ -96,14 +96,43 @@ function shouldHideServiceRequestExecution(item: any, executions: any[]) {
   });
 }
 
+function groupExecutions(executions: any[]) {
+  const map = new Map<string, any>();
 
+  for (const item of executions) {
+    const key = `${item.targetType}:${item.targetId}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        ...item,
+        events: [item],
+        latestAt: item.createdAt,
+      });
+    } else {
+      const group = map.get(key);
+      group.events.push(item);
+
+      if (new Date(item.createdAt).getTime() > new Date(group.latestAt).getTime()) {
+        group.latestAt = item.createdAt;
+        group.actionType = item.actionType;
+        group.note = item.note;
+        group.targetStatus = item.targetStatus;
+        group.status = item.status;
+      }
+    }
+  }
+
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
+  );
+}
 export default function TaskExecutionPanel({ executions = [] }: { executions?: any[] }) {
   const latest = executions[0] ?? null;
   const hasDoneSignal = executions.some((item) =>
     ["DONE", "COMPLETED", "DELIVERED", "PAID"].includes(String(getStatus(item) ?? "").toUpperCase()),
   );
-  const visibleExecutions = executions.filter(
-    (item) => !shouldHideServiceRequestExecution(item, executions),
+  const visibleExecutions = groupExecutions(
+    executions.filter((item) => !shouldHideServiceRequestExecution(item, executions)),
   );
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -188,6 +217,23 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
 
                       {item.note ? (
                         <p className="mt-2 text-sm text-slate-600">{item.note}</p>
+                      ) : null}
+                      {item.events?.length > 1 ? (
+                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-3">
+                          {item.events
+                            .slice()
+                            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                            .map((event: any) => (
+                              <div key={event.id} className="flex gap-2 text-xs text-slate-500">
+                                <span className={cn("mt-0.5 h-2 w-2 rounded-full", event.actionType === "CREATED" ? "bg-emerald-400" : event.actionType === "CANCELLED" ? "bg-slate-400" : "bg-amber-400")} />
+                                <div>
+                                  <span className="font-semibold text-slate-700">{actionLabel(event.actionType)}</span>
+                                  {event.note ? <span> · {event.note}</span> : null}
+                                  <div className="text-slate-400">{formatDate(event.createdAt)}</div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
                       ) : null}
                       {item.targetType === "TECHNICAL_ISSUE" && meta(item)?.serviceRequestId ? (
                         <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">

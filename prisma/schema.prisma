@@ -373,7 +373,8 @@ model Order {
   customer              Customer?               @relation(fields: [customerId], references: [id])
   orderItem             OrderItem[]
   shipments             Shipment[]
-  Task                  Task[]
+  task                  Task[]
+  workCase              WorkCase[]
 
   @@index([createdAt])
   @@index([customerId])
@@ -769,8 +770,9 @@ model Shipment {
   refNo        String?
   orderRefNo   String?
   customerName String?
-  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
-  Task         Task[]
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_shipment_order")
+  task         Task[]
+  workCase     WorkCase[]
 }
 
 model StrapVariantSpec {
@@ -1604,9 +1606,10 @@ model WorkCase {
   status   WorkCaseStatus @default(NEW)
   priority TaskPriority   @default(MEDIUM)
 
-  watchId    String
-  categoryId String?
-
+  watchId          String?
+  categoryId       String?
+  orderId          String?
+  shipmentId       String?
   raisedByUserId   String?
   assignedToUserId String?
 
@@ -1617,7 +1620,9 @@ model WorkCase {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  watch          Watch             @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  watch          Watch?            @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  order          Order?            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shipment       Shipment?         @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   category       WorkCaseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   raisedByUser   User?             @relation("WorkCaseRaisedBy", fields: [raisedByUserId], references: [id], onDelete: SetNull)
   assignedToUser User?             @relation("WorkCaseAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
@@ -1634,6 +1639,8 @@ model WorkCase {
   @@index([raisedByUserId])
   @@index([assignedToUserId])
   @@index([createdAt])
+  @@index([orderId])
+  @@index([shipmentId])
 }
 
 model WorkCaseActivity {
