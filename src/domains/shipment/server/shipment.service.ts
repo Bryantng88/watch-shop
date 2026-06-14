@@ -9,7 +9,8 @@ import {
 } from "@prisma/client";
 import { buildPaymentRef } from "./shipment.utils";
 import { prisma } from "@/server/db/client";
-import { recomputeOrderPaymentRollupTx } from "@/domains/payment/server";
+
+import { recomputeOrderPaymentRollupTx } from "@/domains/payment/payment/server";
 import { syncWatchInventoryFromOrderId } from "@/domains/order/server/order-watch-sync.service";
 import type {
   CompleteShipmentInput,

@@ -69,7 +69,7 @@ async function getOrderPaymentSeedTx(tx: Tx, orderId: string): Promise<OrderPaym
       id: true,
       subtotal: true,
       status: true,
-      shippingFee: true,
+      shippingAmount: true,
       paymentMethod: true,
       depositRequired: true,
     },
