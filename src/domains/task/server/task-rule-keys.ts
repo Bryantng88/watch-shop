@@ -9,9 +9,12 @@ export type TaskCompletionRuleKey =
   | "PAYMENT_PAID"
   | "SHIPMENT_CREATED"
   | "SHIPMENT_DELIVERED"
-  | "SERVICE_COMPLETED";
+  | "SERVICE_COMPLETED"
+  | "SERVICE_REQUEST_COMPLETED"
+  | "SERVICE_REQUEST_DELIVERED"
+  | "TECHNICAL_ISSUE_DONE";
 
-export type TaskBusinessEventKey = TaskCompletionRuleKey | "PAYMENT_CREATED";
+export type TaskBusinessEventKey = TaskCompletionRuleKey | "PAYMENT_CREATED" | "TECHNICAL_ISSUE_CREATED" | "TECHNICAL_ISSUE_STARTED" | "TECHNICAL_ISSUE_CANCELED";
 
 export type TaskCompletionRuleDefinition = {
   key: TaskCompletionRuleKey;
@@ -81,10 +84,32 @@ export const TASK_COMPLETION_RULES: TaskCompletionRuleDefinition[] = [
   {
     key: "SERVICE_COMPLETED",
     label: "Service completed",
-    description: "Hoàn tất system task khi service request hoặc technical issue liên quan hoàn tất.",
+    description: "Hoàn tất task khi service request hoặc technical issue liên quan hoàn tất.",
     domain: TaskDomain.SERVICE,
     requiredEvents: ["SERVICE_COMPLETED"],
   },
+  {
+    key: "SERVICE_REQUEST_COMPLETED",
+    label: "Service request completed",
+    description: "Hoàn tất task khi phiếu service liên quan được hoàn tất kỹ thuật.",
+    domain: TaskDomain.SERVICE,
+    requiredEvents: ["SERVICE_REQUEST_COMPLETED"],
+  },
+  {
+    key: "SERVICE_REQUEST_DELIVERED",
+    label: "Service request delivered",
+    description: "Hoàn tất task khi phiếu service đã bàn giao/kết thúc.",
+    domain: TaskDomain.SERVICE,
+    requiredEvents: ["SERVICE_REQUEST_DELIVERED"],
+  },
+  {
+    key: "TECHNICAL_ISSUE_DONE",
+    label: "Technical issue done",
+    description: "Hoàn tất task khi technical issue cụ thể được tạo/link từ task đã hoàn tất. Phù hợp các action như thay dây, thay pin, đánh bóng.",
+    domain: TaskDomain.WATCH,
+    requiredEvents: ["TECHNICAL_ISSUE_DONE"],
+  },
+
 ];
 
 export function normalizeTaskCompletionRuleKey(value: unknown) {

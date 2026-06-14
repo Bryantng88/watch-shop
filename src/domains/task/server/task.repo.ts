@@ -17,6 +17,7 @@ export const TASK_INCLUDE = {
   payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
   workCase: { select: { id: true, refNo: true, title: true, status: true, watch: { select: { id: true, productId: true, product: { select: { title: true, sku: true, primaryImageUrl: true } } } } } },
   taskType: { select: { id: true, code: true, name: true, domain: true } },
+  taskAction: { select: { id: true, code: true, name: true, completionMode: true, completionRuleKey: true, targetType: true, serviceCatalogId: true, technicalDetailCatalogId: true, supplyCatalogId: true, mechanicalPartCatalogId: true, technicalActionMode: true } },
   executions: {
     orderBy: { createdAt: "desc" },
     include: { createdByUser: { select: { id: true, name: true, email: true } } },
@@ -107,6 +108,7 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
   if (filters.priority && filters.priority !== "ALL") where.priority = filters.priority as TaskPriority;
   if (filters.domain && filters.domain !== "ALL") where.domain = filters.domain;
   if (filters.taskTypeId && filters.taskTypeId !== "ALL") where.taskTypeId = filters.taskTypeId;
+  if (filters.taskActionId && filters.taskActionId !== "ALL") where.taskActionId = filters.taskActionId;
   if (filters.mode && filters.mode !== "ALL") where.mode = filters.mode;
 
   const dueWhere = buildDueWhere(filters.due);
@@ -131,6 +133,7 @@ function systemTaskIdentityWhere(input: EnsureSystemTaskInput): Prisma.TaskWhere
     source: TaskSource.SYSTEM,
     domain: input.domain,
     taskTypeId: input.taskTypeId ?? null,
+    taskActionId: input.taskActionId ?? null,
     mode: input.mode ?? "NORMAL",
     watchId: input.watchId ?? null,
     orderId: input.orderId ?? null,
@@ -218,6 +221,7 @@ export async function createTaskRepo(db: DB, input: CreateTaskInput & { createdB
       source: input.source ?? "MANUAL",
       domain: input.domain ?? inferTaskDomain(input),
       taskTypeId: input.taskTypeId ?? null,
+      taskActionId: input.taskActionId ?? null,
       mode: input.mode ?? "NORMAL",
       priority: input.priority ?? "MEDIUM",
       dueAt: toDate(input.dueAt),
@@ -242,6 +246,7 @@ export async function ensureSystemTaskRepo(db: DB, input: EnsureSystemTaskInput)
         source: TaskSource.SYSTEM,
         domain: input.domain,
         taskTypeId: input.taskTypeId ?? null,
+        taskActionId: input.taskActionId ?? null,
         mode: input.mode ?? "NORMAL",
         priority: input.priority ?? "MEDIUM",
         dueAt,
@@ -279,6 +284,7 @@ export async function updateTaskRepo(db: DB, id: string, input: UpdateTaskInput)
       ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
       ...(input.domain !== undefined ? { domain: input.domain } : {}),
       ...(input.taskTypeId !== undefined ? { taskTypeId: input.taskTypeId || null } : {}),
+      ...(input.taskActionId !== undefined ? { taskActionId: input.taskActionId || null } : {}),
       ...(input.mode !== undefined ? { mode: input.mode } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.dueAt !== undefined ? { dueAt: toDate(input.dueAt) } : {}),
@@ -325,6 +331,7 @@ export async function completeRelatedTasksRepo(db: DB, input: CompleteRelatedTas
   const where: Prisma.TaskWhereInput = {
     ...(input.domain ? { domain: input.domain } : {}),
     ...(input.taskTypeId ? { taskTypeId: input.taskTypeId } : {}),
+    ...(input.taskActionId ? { taskActionId: input.taskActionId } : {}),
     ...(input.mode ? { mode: input.mode } : {}),
     status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
     ...(input.watchId ? { watchId: input.watchId } : {}),
@@ -363,6 +370,7 @@ export async function findOpenRelatedTasksRepo(
       },
       ...(input.domain ? { domain: input.domain } : {}),
       ...(input.taskTypeId ? { taskTypeId: input.taskTypeId } : {}),
+      ...(input.taskActionId ? { taskActionId: input.taskActionId } : {}),
       ...(input.watchId ? { watchId: input.watchId } : {}),
       ...(input.paymentId ? { paymentId: input.paymentId } : {}),
     },
@@ -372,6 +380,7 @@ export async function findOpenRelatedTasksRepo(
       description: true,
       domain: true,
       taskTypeId: true,
+      taskActionId: true,
       mode: true,
       status: true,
       priority: true,

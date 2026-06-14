@@ -48,7 +48,9 @@ export const TaskInputSchema = z.object({
     workCase: z.unknown().optional().nullable(),
     taskType: z.unknown().optional().nullable(),
     executions: z.array(z.unknown()),
-    notifications: z.array(z.unknown())
+    notifications: z.array(z.unknown()),
+    taskAction: z.unknown().optional().nullable(),
+    taskActionId: z.string().optional().nullable()
 }).strict();
 
 export type TaskInputType = z.infer<typeof TaskInputSchema>;

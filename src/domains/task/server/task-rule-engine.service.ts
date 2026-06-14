@@ -1,7 +1,6 @@
 import {
   TaskExecutionActionType,
   TaskExecutionTargetType,
-  TaskSource,
   TaskStatus,
 } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
@@ -64,19 +63,34 @@ export async function recordTaskBusinessEvent(db: DB, input: RecordTaskBusinessE
 
   const tasks = await client.task.findMany({
     where: {
-      source: TaskSource.SYSTEM,
       status: { in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS] },
-      taskType: {
-        completionMode: "BUSINESS_RULE",
-        completionRuleKey: { in: relatedRules.map((rule) => rule.key) },
-      },
       OR: [
-        { executions: { some: { targetType: input.targetType, targetId: cleanTargetId } } },
-        ...directWhere,
+        {
+          taskAction: {
+            completionMode: "BUSINESS_RULE",
+            completionRuleKey: { in: relatedRules.map((rule) => rule.key) },
+          },
+        },
+        {
+          taskActionId: null,
+          taskType: {
+            completionMode: "BUSINESS_RULE",
+            completionRuleKey: { in: relatedRules.map((rule) => rule.key) },
+          },
+        },
+      ],
+      AND: [
+        {
+          OR: [
+            { executions: { some: { targetType: input.targetType, targetId: cleanTargetId } } },
+            ...directWhere,
+          ],
+        },
       ],
     },
     include: {
       taskType: true,
+      taskAction: true,
       executions: true,
     },
   });
@@ -84,7 +98,7 @@ export async function recordTaskBusinessEvent(db: DB, input: RecordTaskBusinessE
   let completed = 0;
 
   for (const task of tasks) {
-    const rule = getTaskCompletionRuleDefinition(task.taskType?.completionRuleKey);
+    const rule = getTaskCompletionRuleDefinition(task.taskAction?.completionRuleKey ?? task.taskType?.completionRuleKey);
     if (!rule) continue;
 
     const marker = eventMarker(rule.key, cleanEventKey);

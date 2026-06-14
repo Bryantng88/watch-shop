@@ -15,6 +15,32 @@ export const TASK_TYPE_SELECT = {
   sortOrder: true,
   createdAt: true,
   updatedAt: true,
+  taskAction: {
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      taskTypeId: true,
+      code: true,
+      name: true,
+      description: true,
+      completionMode: true,
+      completionRuleKey: true,
+      targetType: true,
+      serviceCatalogId: true,
+      technicalDetailCatalogId: true,
+      supplyCatalogId: true,
+      mechanicalPartCatalogId: true,
+      technicalActionMode: true,
+      defaultTitleTemplate: true,
+      defaultDescriptionTemplate: true,
+      metadataJson: true,
+      isActive: true,
+      sortOrder: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
 } satisfies Prisma.TaskTypeSelect;
 
 function normalizeCode(code: string) {

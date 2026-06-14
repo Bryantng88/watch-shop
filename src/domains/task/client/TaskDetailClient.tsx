@@ -76,6 +76,11 @@ export default function TaskDetailClient({ task }: { task: any }) {
             <div>
               Loại: <span className="font-semibold text-slate-950">{task.taskType?.name || task.domain}</span>
             </div>
+            {task.taskAction ? (
+              <div className="mt-1">
+                Action: <span className="font-semibold text-slate-950">{task.taskAction.name}</span>
+              </div>
+            ) : null}
             <div className="mt-1">
               Kiểu xử lý: <span className="font-semibold text-slate-950">{task.mode}</span>
             </div>

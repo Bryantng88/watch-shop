@@ -12,6 +12,7 @@ export type TaskUserOption = { id: string; name?: string | null; email?: string 
 export type TaskQuickCreateContext = TaskDomainLinksInput & {
   domain?: TaskDomain;
   taskTypeId?: string | null;
+  taskActionId?: string | null;
   mode?: TaskMode;
   titlePreset?: string;
   descriptionPreset?: string;
@@ -26,6 +27,15 @@ function toDateInput(value?: Date | string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
+}
+
+
+function renderTemplate(template: string, context?: TaskQuickCreateContext | null) {
+  const map: Record<string, string> = {
+    title: context?.titlePreset ?? "",
+    description: context?.descriptionPreset ?? "",
+  };
+  return template.replace(/\{\{\s*(title|description)\s*\}\}/g, (_m, key) => map[key] ?? "");
 }
 
 function inferDomain(context?: TaskQuickCreateContext | null) {
@@ -47,6 +57,7 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
   const [description, setDescription] = useState("");
   const [domain, setDomain] = useState<TaskDomain>(TaskDomain.GENERAL);
   const [taskTypeId, setTaskTypeId] = useState("");
+  const [taskActionId, setTaskActionId] = useState("");
   const [mode, setMode] = useState<TaskMode>(TaskMode.NORMAL);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [assignedToUserId, setAssignedToUserId] = useState(currentUserId);
@@ -55,6 +66,10 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
 
   const isEdit = Boolean(editTask);
   const filteredTaskTypes = useMemo(() => taskTypes.filter((item) => item.isActive && item.domain === domain), [taskTypes, domain]);
+  const filteredTaskActions = useMemo(() => {
+    const selected = taskTypes.find((item) => item.id === taskTypeId);
+    return (selected?.taskAction ?? []).filter((item: any) => item.isActive);
+  }, [taskTypes, taskTypeId]);
 
   useEffect(() => {
     if (!open) return;
@@ -64,6 +79,7 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
     setDescription(editTask?.description ?? context?.descriptionPreset ?? "");
     setDomain(nextDomain);
     setTaskTypeId(editTask?.taskTypeId ?? context?.taskTypeId ?? "");
+    setTaskActionId((editTask as any)?.taskActionId ?? context?.taskActionId ?? "");
     setMode(editTask?.mode ?? context?.mode ?? TaskMode.NORMAL);
     setPriority(editTask?.priority ?? TaskPriority.MEDIUM);
     setAssignedToUserId(editTask?.assignedToUserId ?? currentUserId);
@@ -73,8 +89,23 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
   useEffect(() => {
     if (!taskTypeId) return;
     const selected = taskTypes.find((item) => item.id === taskTypeId);
-    if (selected && selected.domain !== domain) setTaskTypeId("");
+    if (selected && selected.domain !== domain) {
+      setTaskTypeId("");
+      setTaskActionId("");
+    }
   }, [domain, taskTypeId, taskTypes]);
+
+  useEffect(() => {
+    if (!taskActionId) return;
+    if (!filteredTaskActions.some((item: any) => item.id === taskActionId)) setTaskActionId("");
+  }, [taskActionId, filteredTaskActions]);
+
+  useEffect(() => {
+    const action: any = filteredTaskActions.find((item: any) => item.id === taskActionId);
+    if (!action || editTask) return;
+    if (action.defaultTitleTemplate && !title.trim()) setTitle(renderTemplate(action.defaultTitleTemplate, context));
+    if (action.defaultDescriptionTemplate && !description.trim()) setDescription(renderTemplate(action.defaultDescriptionTemplate, context));
+  }, [taskActionId]);
 
   const links = useMemo<TaskDomainLinksInput>(() => ({
     watchId: editTask?.watchId ?? context?.watchId ?? null,
@@ -98,6 +129,7 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
       description,
       domain,
       taskTypeId: taskTypeId || null,
+      taskActionId: taskActionId || null,
       mode,
       priority,
       assignedToUserId,
@@ -152,6 +184,13 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
               <select value={taskTypeId} onChange={(e) => setTaskTypeId(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
                 <option value="">Chưa chọn loại cụ thể</option>
                 {filteredTaskTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Action</span>
+              <select value={taskActionId} onChange={(e) => setTaskActionId(e.target.value)} disabled={!taskTypeId || !filteredTaskActions.length} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400">
+                <option value="">{taskTypeId ? "Chưa chọn action cụ thể" : "Chọn loại task trước"}</option>
+                {filteredTaskActions.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             </label>
             <label className="block">

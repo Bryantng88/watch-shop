@@ -5,7 +5,8 @@ import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } 
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema'
+import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
+import { TaskActionListRelationFilterObjectSchema as TaskActionListRelationFilterObjectSchema } from './TaskActionListRelationFilter.schema'
 
 const technicaldetailcatalogwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalDetailCatalogWhereInputObjectSchema), z.lazy(() => TechnicalDetailCatalogWhereInputObjectSchema).array()]).optional(),
@@ -20,7 +21,8 @@ const technicaldetailcatalogwhereinputSchema = z.object({
   isActive: z.union([z.lazy(() => BoolFilterObjectSchema), z.boolean()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  technicalIssues: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
+  technicalIssues: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
+  taskAction: z.lazy(() => TaskActionListRelationFilterObjectSchema).optional()
 }).strict();
 export const TechnicalDetailCatalogWhereInputObjectSchema: z.ZodType<Prisma.TechnicalDetailCatalogWhereInput> = technicaldetailcatalogwhereinputSchema as unknown as z.ZodType<Prisma.TechnicalDetailCatalogWhereInput>;
 export const TechnicalDetailCatalogWhereInputObjectZodSchema = technicaldetailcatalogwhereinputSchema;

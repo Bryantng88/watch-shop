@@ -19,6 +19,7 @@ export function TaskBadges({ task }: { task: any }) {
       {task.status ? <TaskStatusBadge status={task.status} /> : null}
       {task.priority ? <TaskPriorityBadge priority={task.priority} /> : null}
       {task.source ? <TaskSourceBadge source={task.source} /> : null}
+      {task.taskAction?.name ? <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">{task.taskAction.name}</span> : null}
     </div>
   );
 }

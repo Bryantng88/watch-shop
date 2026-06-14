@@ -9,6 +9,7 @@ export const TaskExecutionResultSchema = z.object({
     targetType: TaskExecutionTargetTypeSchema,
     targetId: z.string(),
     actionType: TaskExecutionActionTypeSchema,
+    metadataJson: z.unknown().nullable(),
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
     createdAt: z.date(),

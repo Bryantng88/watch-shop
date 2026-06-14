@@ -11,7 +11,8 @@ export const MechanicalPartCatalogFindManyResultSchema = z.object({
   sortOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  TechnicalIssue: z.array(z.unknown())
+  TechnicalIssue: z.array(z.unknown()),
+  taskAction: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

@@ -11,7 +11,8 @@ import { EnumTaskCompletionModeFieldUpdateOperationsInputObjectSchema as EnumTas
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema as TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema } from './TaskUpdateManyWithoutTaskTypeNestedInput.schema'
+import { TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema as TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema } from './TaskUpdateManyWithoutTaskTypeNestedInput.schema';
+import { TaskActionUpdateManyWithoutTaskTypeNestedInputObjectSchema as TaskActionUpdateManyWithoutTaskTypeNestedInputObjectSchema } from './TaskActionUpdateManyWithoutTaskTypeNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -26,7 +27,8 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  tasks: z.lazy(() => TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema).optional()
+  tasks: z.lazy(() => TaskUpdateManyWithoutTaskTypeNestedInputObjectSchema).optional(),
+  taskAction: z.lazy(() => TaskActionUpdateManyWithoutTaskTypeNestedInputObjectSchema).optional()
 }).strict();
 export const TaskTypeUpdateInputObjectSchema: z.ZodType<Prisma.TaskTypeUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskTypeUpdateInput>;
 export const TaskTypeUpdateInputObjectZodSchema = makeSchema();

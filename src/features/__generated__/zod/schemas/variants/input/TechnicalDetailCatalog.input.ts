@@ -11,7 +11,8 @@ export const TechnicalDetailCatalogInputSchema = z.object({
     isActive: z.boolean(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    technicalIssues: z.array(z.unknown())
+    technicalIssues: z.array(z.unknown()),
+    taskAction: z.array(z.unknown())
 }).strict();
 
 export type TechnicalDetailCatalogInputType = z.infer<typeof TechnicalDetailCatalogInputSchema>;

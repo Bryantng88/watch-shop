@@ -1,4 +1,5 @@
 import type { TaskCompletionMode, TaskDomain, TaskPriority } from "@prisma/client";
+import type { TaskActionOption } from "./task-action.types";
 
 export type TaskTypeListFilters = {
   q?: string;
@@ -19,6 +20,7 @@ export type TaskTypeOption = {
   sortOrder: number;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  taskAction?: TaskActionOption[];
 };
 
 export type UpsertTaskTypeInput = {

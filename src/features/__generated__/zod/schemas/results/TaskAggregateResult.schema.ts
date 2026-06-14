@@ -41,7 +41,9 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     workCase: z.number(),
     taskType: z.number(),
     executions: z.number(),
-    notifications: z.number()
+    notifications: z.number(),
+    taskAction: z.number(),
+    taskActionId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -65,7 +67,8 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     paymentId: z.string().nullable(),
     workCaseId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    taskActionId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -89,5 +92,6 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     paymentId: z.string().nullable(),
     workCaseId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    taskActionId: z.string().nullable()
   }).nullable().optional()});

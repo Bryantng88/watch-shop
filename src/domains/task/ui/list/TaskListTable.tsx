@@ -67,7 +67,7 @@ export default function TaskListTable({
             ) : items.map((row) => (
               <tr key={row.id} className="hover:bg-slate-50/70">
                 <td className="max-w-[360px] px-4 py-3">
-                  <div className="font-semibold text-slate-950">{row.title}</div>
+                  <div className="font-semibold text-slate-950">{row.description}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <TaskSourceBadge source={row.source} />
                     <span>{formatTaskDomainLabel(row)}: {domainTitle(row)}</span>

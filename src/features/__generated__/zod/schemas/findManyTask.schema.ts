@@ -52,6 +52,8 @@ export const TaskFindManySelectSchema: z.ZodType<Prisma.TaskSelect> = z.object({
     taskType: z.boolean().optional(),
     executions: z.boolean().optional(),
     notifications: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
+    taskActionId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskSelect>;
 
@@ -98,6 +100,8 @@ export const TaskFindManySelectZodSchema = z.object({
     taskType: z.boolean().optional(),
     executions: z.boolean().optional(),
     notifications: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
+    taskActionId: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

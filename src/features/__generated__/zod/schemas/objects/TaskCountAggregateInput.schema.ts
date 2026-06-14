@@ -30,6 +30,7 @@ const makeSchema = () => z.object({
   workCaseId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   updatedAt: z.literal(true).optional(),
+  taskActionId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TaskCountAggregateInputObjectSchema: z.ZodType<Prisma.TaskCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TaskCountAggregateInputType>;

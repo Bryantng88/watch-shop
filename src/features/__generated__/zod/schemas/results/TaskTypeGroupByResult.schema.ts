@@ -22,7 +22,8 @@ export const TaskTypeGroupByResultSchema = z.array(z.object({
     sortOrder: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    tasks: z.number()
+    tasks: z.number(),
+    taskAction: z.number()
   }).optional(),
   _sum: z.object({
     sortOrder: z.number().nullable()

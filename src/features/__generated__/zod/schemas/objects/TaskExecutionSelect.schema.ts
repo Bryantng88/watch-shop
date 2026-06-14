@@ -9,6 +9,7 @@ const makeSchema = () => z.object({
   targetType: z.boolean().optional(),
   targetId: z.boolean().optional(),
   actionType: z.boolean().optional(),
+  metadataJson: z.boolean().optional(),
   note: z.boolean().optional(),
   createdByUserId: z.boolean().optional(),
   createdAt: z.boolean().optional(),

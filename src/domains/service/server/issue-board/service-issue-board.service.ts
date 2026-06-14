@@ -457,7 +457,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
             },
             orderBy: [{ openedAt: "desc" }, { createdAt: "desc" as any }],
             include: {
-                ServiceRequest: {
+                serviceRequest: {
                     select: {
                         id: true,
                         refNo: true,
@@ -505,7 +505,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                         },
                     } as any,
                 },
-                Vendor: {
+                vendor: {
                     select: { id: true, name: true },
                 },
                 serviceCatalog: {
@@ -520,7 +520,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                 technicalDetailCatalog: {
                     select: { id: true, area: true, code: true, name: true },
                 },
-                TechnicalAssessment: {
+                technicalAssessment: {
                     select: {
                         id: true,
                         status: true,
@@ -541,7 +541,7 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
 
     const items = rows
         .map((x: any) => {
-            const sr = x.ServiceRequest;
+            const sr = x.serviceRequest;
             if (!sr?.id) return null;
 
             const assessments = normalizeAssessments(sr.technicalAssessment).sort(

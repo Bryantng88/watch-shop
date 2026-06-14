@@ -35,6 +35,7 @@ const makeSchema = () => z.object({
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  taskActionId: z.string().optional().nullable(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();
 export const TaskUncheckedCreateWithoutNotificationsInputObjectSchema: z.ZodType<Prisma.TaskUncheckedCreateWithoutNotificationsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskUncheckedCreateWithoutNotificationsInput>;

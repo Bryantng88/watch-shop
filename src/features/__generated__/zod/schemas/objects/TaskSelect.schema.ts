@@ -12,6 +12,7 @@ import { WorkCaseArgsObjectSchema as WorkCaseArgsObjectSchema } from './WorkCase
 import { TaskTypeArgsObjectSchema as TaskTypeArgsObjectSchema } from './TaskTypeArgs.schema';
 import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
 import { NotificationFindManySchema as NotificationFindManySchema } from '../findManyNotification.schema';
+import { TaskActionArgsObjectSchema as TaskActionArgsObjectSchema } from './TaskActionArgs.schema';
 import { TaskCountOutputTypeArgsObjectSchema as TaskCountOutputTypeArgsObjectSchema } from './TaskCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -57,6 +58,8 @@ const makeSchema = () => z.object({
   taskType: z.union([z.boolean(), z.lazy(() => TaskTypeArgsObjectSchema)]).optional(),
   executions: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
   notifications: z.union([z.boolean(), z.lazy(() => NotificationFindManySchema)]).optional(),
+  taskAction: z.union([z.boolean(), z.lazy(() => TaskActionArgsObjectSchema)]).optional(),
+  taskActionId: z.boolean().optional(),
   _count: z.union([z.boolean(), z.lazy(() => TaskCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const TaskSelectObjectSchema: z.ZodType<Prisma.TaskSelect> = makeSchema() as unknown as z.ZodType<Prisma.TaskSelect>;

@@ -5,6 +5,7 @@ export const TaskExecutionCreateResultSchema = z.object({
   targetType: z.unknown(),
   targetId: z.string(),
   actionType: z.unknown(),
+  metadataJson: z.unknown().optional(),
   note: z.string().optional(),
   createdByUserId: z.string().optional(),
   createdAt: z.date(),

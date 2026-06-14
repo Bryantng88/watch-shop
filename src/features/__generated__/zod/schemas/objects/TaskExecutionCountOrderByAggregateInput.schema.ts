@@ -8,6 +8,7 @@ const makeSchema = () => z.object({
   targetType: SortOrderSchema.optional(),
   targetId: SortOrderSchema.optional(),
   actionType: SortOrderSchema.optional(),
+  metadataJson: SortOrderSchema.optional(),
   note: SortOrderSchema.optional(),
   createdByUserId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional()

@@ -22,6 +22,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
   workCaseId: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  taskActionId: z.string(),
   _count: z.object({
     id: z.number(),
     title: z.number(),
@@ -64,7 +65,9 @@ export const TaskGroupByResultSchema = z.array(z.object({
     workCase: z.number(),
     taskType: z.number(),
     executions: z.number(),
-    notifications: z.number()
+    notifications: z.number(),
+    taskAction: z.number(),
+    taskActionId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -88,7 +91,8 @@ export const TaskGroupByResultSchema = z.array(z.object({
     paymentId: z.string().nullable(),
     workCaseId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    taskActionId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -112,6 +116,7 @@ export const TaskGroupByResultSchema = z.array(z.object({
     paymentId: z.string().nullable(),
     workCaseId: z.string().nullable(),
     createdAt: z.date().nullable(),
-    updatedAt: z.date().nullable()
+    updatedAt: z.date().nullable(),
+    taskActionId: z.string().nullable()
   }).nullable().optional()
 }));

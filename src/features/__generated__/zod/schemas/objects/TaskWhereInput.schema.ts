@@ -36,7 +36,9 @@ import { WorkCaseWhereInputObjectSchema as WorkCaseWhereInputObjectSchema } from
 import { TaskTypeNullableScalarRelationFilterObjectSchema as TaskTypeNullableScalarRelationFilterObjectSchema } from './TaskTypeNullableScalarRelationFilter.schema';
 import { TaskTypeWhereInputObjectSchema as TaskTypeWhereInputObjectSchema } from './TaskTypeWhereInput.schema';
 import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema';
-import { NotificationListRelationFilterObjectSchema as NotificationListRelationFilterObjectSchema } from './NotificationListRelationFilter.schema'
+import { NotificationListRelationFilterObjectSchema as NotificationListRelationFilterObjectSchema } from './NotificationListRelationFilter.schema';
+import { TaskActionNullableScalarRelationFilterObjectSchema as TaskActionNullableScalarRelationFilterObjectSchema } from './TaskActionNullableScalarRelationFilter.schema';
+import { TaskActionWhereInputObjectSchema as TaskActionWhereInputObjectSchema } from './TaskActionWhereInput.schema'
 
 const taskwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TaskWhereInputObjectSchema), z.lazy(() => TaskWhereInputObjectSchema).array()]).optional(),
@@ -69,6 +71,7 @@ const taskwhereinputSchema = z.object({
   workCaseId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  taskActionId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   assignedToUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
   completedByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
@@ -83,7 +86,8 @@ const taskwhereinputSchema = z.object({
   workCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional(),
   taskType: z.union([z.lazy(() => TaskTypeNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskTypeWhereInputObjectSchema)]).optional(),
   executions: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional(),
-  notifications: z.lazy(() => NotificationListRelationFilterObjectSchema).optional()
+  notifications: z.lazy(() => NotificationListRelationFilterObjectSchema).optional(),
+  taskAction: z.union([z.lazy(() => TaskActionNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskActionWhereInputObjectSchema)]).optional()
 }).strict();
 export const TaskWhereInputObjectSchema: z.ZodType<Prisma.TaskWhereInput> = taskwhereinputSchema as unknown as z.ZodType<Prisma.TaskWhereInput>;
 export const TaskWhereInputObjectZodSchema = taskwhereinputSchema;

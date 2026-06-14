@@ -11,7 +11,8 @@ import { EnumServiceDetailFieldUpdateOperationsInputObjectSchema as EnumServiceD
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInput.schema';
 import { ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema as ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutServiceCatalogNestedInput.schema';
-import { TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutServiceCatalogNestedInput.schema'
+import { TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutServiceCatalogNestedInput.schema';
+import { TaskActionUpdateManyWithoutServiceCatalogNestedInputObjectSchema as TaskActionUpdateManyWithoutServiceCatalogNestedInputObjectSchema } from './TaskActionUpdateManyWithoutServiceCatalogNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -32,7 +33,8 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
-  technicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
+  technicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional(),
+  taskAction: z.lazy(() => TaskActionUpdateManyWithoutServiceCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogUpdateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.ServiceCatalogUpdateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogUpdateWithoutOrderItemInput>;
 export const ServiceCatalogUpdateWithoutOrderItemInputObjectZodSchema = makeSchema();

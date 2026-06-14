@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
+import { TaskActionFindManySchema as TaskActionFindManySchema } from '../findManyTaskAction.schema';
 import { TaskTypeCountOutputTypeArgsObjectSchema as TaskTypeCountOutputTypeArgsObjectSchema } from './TaskTypeCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -17,6 +18,7 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   tasks: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  taskAction: z.union([z.boolean(), z.lazy(() => TaskActionFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TaskTypeCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const TaskTypeSelectObjectSchema: z.ZodType<Prisma.TaskTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.TaskTypeSelect>;

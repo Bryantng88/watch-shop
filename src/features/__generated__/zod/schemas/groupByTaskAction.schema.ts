@@ -1,0 +1,15 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskActionWhereInputObjectSchema as TaskActionWhereInputObjectSchema } from './objects/TaskActionWhereInput.schema';
+import { TaskActionOrderByWithAggregationInputObjectSchema as TaskActionOrderByWithAggregationInputObjectSchema } from './objects/TaskActionOrderByWithAggregationInput.schema';
+import { TaskActionScalarWhereWithAggregatesInputObjectSchema as TaskActionScalarWhereWithAggregatesInputObjectSchema } from './objects/TaskActionScalarWhereWithAggregatesInput.schema';
+import { TaskActionScalarFieldEnumSchema } from './enums/TaskActionScalarFieldEnum.schema';
+import { TaskActionCountAggregateInputObjectSchema as TaskActionCountAggregateInputObjectSchema } from './objects/TaskActionCountAggregateInput.schema';
+import { TaskActionMinAggregateInputObjectSchema as TaskActionMinAggregateInputObjectSchema } from './objects/TaskActionMinAggregateInput.schema';
+import { TaskActionMaxAggregateInputObjectSchema as TaskActionMaxAggregateInputObjectSchema } from './objects/TaskActionMaxAggregateInput.schema';
+import { TaskActionAvgAggregateInputObjectSchema as TaskActionAvgAggregateInputObjectSchema } from './objects/TaskActionAvgAggregateInput.schema';
+import { TaskActionSumAggregateInputObjectSchema as TaskActionSumAggregateInputObjectSchema } from './objects/TaskActionSumAggregateInput.schema';
+
+export const TaskActionGroupBySchema: z.ZodType<Prisma.TaskActionGroupByArgs> = z.object({ where: TaskActionWhereInputObjectSchema.optional(), orderBy: z.union([TaskActionOrderByWithAggregationInputObjectSchema, TaskActionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskActionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskActionScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskActionCountAggregateInputObjectSchema ]).optional(), _min: TaskActionMinAggregateInputObjectSchema.optional(), _max: TaskActionMaxAggregateInputObjectSchema.optional(), _avg: TaskActionAvgAggregateInputObjectSchema.optional(), _sum: TaskActionSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskActionGroupByArgs>;
+
+export const TaskActionGroupByZodSchema = z.object({ where: TaskActionWhereInputObjectSchema.optional(), orderBy: z.union([TaskActionOrderByWithAggregationInputObjectSchema, TaskActionOrderByWithAggregationInputObjectSchema.array()]).optional(), having: TaskActionScalarWhereWithAggregatesInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), by: z.array(TaskActionScalarFieldEnumSchema), _count: z.union([ z.literal(true), TaskActionCountAggregateInputObjectSchema ]).optional(), _min: TaskActionMinAggregateInputObjectSchema.optional(), _max: TaskActionMaxAggregateInputObjectSchema.optional(), _avg: TaskActionAvgAggregateInputObjectSchema.optional(), _sum: TaskActionSumAggregateInputObjectSchema.optional() }).strict();

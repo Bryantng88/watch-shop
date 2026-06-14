@@ -9,6 +9,7 @@ export const TaskExecutionInputSchema = z.object({
     targetType: TaskExecutionTargetTypeSchema,
     targetId: z.string(),
     actionType: TaskExecutionActionTypeSchema,
+    metadataJson: z.unknown().optional().nullable(),
     note: z.string().optional().nullable(),
     createdByUserId: z.string().optional().nullable(),
     createdAt: z.date(),

@@ -5,6 +5,7 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     targetType: z.number(),
     targetId: z.number(),
     actionType: z.number(),
+    metadataJson: z.number(),
     note: z.number(),
     createdByUserId: z.number(),
     createdAt: z.number(),

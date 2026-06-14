@@ -19,7 +19,8 @@ import { PaymentCreateNestedOneWithoutTaskInputObjectSchema as PaymentCreateNest
 import { WorkCaseCreateNestedOneWithoutTasksInputObjectSchema as WorkCaseCreateNestedOneWithoutTasksInputObjectSchema } from './WorkCaseCreateNestedOneWithoutTasksInput.schema';
 import { TaskTypeCreateNestedOneWithoutTasksInputObjectSchema as TaskTypeCreateNestedOneWithoutTasksInputObjectSchema } from './TaskTypeCreateNestedOneWithoutTasksInput.schema';
 import { TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTaskInput.schema';
-import { NotificationCreateNestedManyWithoutTaskInputObjectSchema as NotificationCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationCreateNestedManyWithoutTaskInput.schema'
+import { NotificationCreateNestedManyWithoutTaskInputObjectSchema as NotificationCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationCreateNestedManyWithoutTaskInput.schema';
+import { TaskActionCreateNestedOneWithoutTasksInputObjectSchema as TaskActionCreateNestedOneWithoutTasksInputObjectSchema } from './TaskActionCreateNestedOneWithoutTasksInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -49,7 +50,8 @@ const makeSchema = () => z.object({
   workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   taskType: z.lazy(() => TaskTypeCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema),
-  notifications: z.lazy(() => NotificationCreateNestedManyWithoutTaskInputObjectSchema)
+  notifications: z.lazy(() => NotificationCreateNestedManyWithoutTaskInputObjectSchema),
+  taskAction: z.lazy(() => TaskActionCreateNestedOneWithoutTasksInputObjectSchema).optional()
 }).strict();
 export const TaskCreateInputObjectSchema: z.ZodType<Prisma.TaskCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCreateInput>;
 export const TaskCreateInputObjectZodSchema = makeSchema();

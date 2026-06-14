@@ -12,7 +12,8 @@ export const TaskTypeAggregateResultSchema = z.object({  _count: z.object({
     sortOrder: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    tasks: z.number()
+    tasks: z.number(),
+    taskAction: z.number()
   }).optional(),
   _sum: z.object({
     sortOrder: z.number().nullable()

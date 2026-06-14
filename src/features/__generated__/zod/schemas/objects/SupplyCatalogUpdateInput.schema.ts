@@ -6,7 +6,8 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInput.schema'
+import { TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInput.schema';
+import { TaskActionUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TaskActionUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TaskActionUpdateManyWithoutSupplyCatalogNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -20,7 +21,8 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional()
+  TechnicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional(),
+  taskAction: z.lazy(() => TaskActionUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const SupplyCatalogUpdateInputObjectSchema: z.ZodType<Prisma.SupplyCatalogUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.SupplyCatalogUpdateInput>;
 export const SupplyCatalogUpdateInputObjectZodSchema = makeSchema();

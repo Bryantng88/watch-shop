@@ -1,0 +1,14 @@
+import type { Prisma } from '@prisma/client';
+import * as z from 'zod';
+import { TaskActionOrderByWithRelationInputObjectSchema as TaskActionOrderByWithRelationInputObjectSchema } from './objects/TaskActionOrderByWithRelationInput.schema';
+import { TaskActionWhereInputObjectSchema as TaskActionWhereInputObjectSchema } from './objects/TaskActionWhereInput.schema';
+import { TaskActionWhereUniqueInputObjectSchema as TaskActionWhereUniqueInputObjectSchema } from './objects/TaskActionWhereUniqueInput.schema';
+import { TaskActionCountAggregateInputObjectSchema as TaskActionCountAggregateInputObjectSchema } from './objects/TaskActionCountAggregateInput.schema';
+import { TaskActionMinAggregateInputObjectSchema as TaskActionMinAggregateInputObjectSchema } from './objects/TaskActionMinAggregateInput.schema';
+import { TaskActionMaxAggregateInputObjectSchema as TaskActionMaxAggregateInputObjectSchema } from './objects/TaskActionMaxAggregateInput.schema';
+import { TaskActionAvgAggregateInputObjectSchema as TaskActionAvgAggregateInputObjectSchema } from './objects/TaskActionAvgAggregateInput.schema';
+import { TaskActionSumAggregateInputObjectSchema as TaskActionSumAggregateInputObjectSchema } from './objects/TaskActionSumAggregateInput.schema';
+
+export const TaskActionAggregateSchema: z.ZodType<Prisma.TaskActionAggregateArgs> = z.object({ orderBy: z.union([TaskActionOrderByWithRelationInputObjectSchema, TaskActionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskActionWhereInputObjectSchema.optional(), cursor: TaskActionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskActionCountAggregateInputObjectSchema ]).optional(), _min: TaskActionMinAggregateInputObjectSchema.optional(), _max: TaskActionMaxAggregateInputObjectSchema.optional(), _avg: TaskActionAvgAggregateInputObjectSchema.optional(), _sum: TaskActionSumAggregateInputObjectSchema.optional() }).strict() as unknown as z.ZodType<Prisma.TaskActionAggregateArgs>;
+
+export const TaskActionAggregateZodSchema = z.object({ orderBy: z.union([TaskActionOrderByWithRelationInputObjectSchema, TaskActionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskActionWhereInputObjectSchema.optional(), cursor: TaskActionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), _count: z.union([ z.literal(true), TaskActionCountAggregateInputObjectSchema ]).optional(), _min: TaskActionMinAggregateInputObjectSchema.optional(), _max: TaskActionMaxAggregateInputObjectSchema.optional(), _avg: TaskActionAvgAggregateInputObjectSchema.optional(), _sum: TaskActionSumAggregateInputObjectSchema.optional() }).strict();

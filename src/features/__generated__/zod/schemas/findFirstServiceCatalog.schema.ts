@@ -30,6 +30,7 @@ export const ServiceCatalogFindFirstSelectSchema: z.ZodType<Prisma.ServiceCatalo
     orderItem: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceCatalogSelect>;
 
@@ -54,6 +55,7 @@ export const ServiceCatalogFindFirstSelectZodSchema = z.object({
     orderItem: z.boolean().optional(),
     serviceRequest: z.boolean().optional(),
     technicalIssue: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

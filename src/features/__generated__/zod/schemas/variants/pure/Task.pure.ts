@@ -48,7 +48,9 @@ export const TaskModelSchema = z.object({
     workCase: z.unknown().nullable(),
     taskType: z.unknown().nullable(),
     executions: z.array(z.unknown()),
-    notifications: z.array(z.unknown())
+    notifications: z.array(z.unknown()),
+    taskAction: z.unknown().nullable(),
+    taskActionId: z.string().nullable()
 }).strict();
 
 export type TaskPureType = z.infer<typeof TaskModelSchema>;

@@ -19,7 +19,8 @@ export const TechnicalDetailCatalogGroupByResultSchema = z.array(z.object({
     isActive: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    technicalIssues: z.number()
+    technicalIssues: z.number(),
+    taskAction: z.number()
   }).optional(),
   _sum: z.object({
     sortOrder: z.number().nullable()

@@ -13,7 +13,8 @@ export const TaskTypeFindManyResultSchema = z.object({
   sortOrder: z.number().int(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  tasks: z.array(z.unknown())
+  tasks: z.array(z.unknown()),
+  taskAction: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

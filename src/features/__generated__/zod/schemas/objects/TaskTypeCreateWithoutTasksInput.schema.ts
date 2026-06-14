@@ -2,7 +2,8 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskDomainSchema } from '../enums/TaskDomain.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
-import { TaskCompletionModeSchema } from '../enums/TaskCompletionMode.schema'
+import { TaskCompletionModeSchema } from '../enums/TaskCompletionMode.schema';
+import { TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema as TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema } from './TaskActionCreateNestedManyWithoutTaskTypeInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -16,7 +17,8 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  taskAction: z.lazy(() => TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema).optional()
 }).strict();
 export const TaskTypeCreateWithoutTasksInputObjectSchema: z.ZodType<Prisma.TaskTypeCreateWithoutTasksInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskTypeCreateWithoutTasksInput>;
 export const TaskTypeCreateWithoutTasksInputObjectZodSchema = makeSchema();

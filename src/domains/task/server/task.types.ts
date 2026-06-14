@@ -10,6 +10,7 @@ export type TaskListFilters = {
   priority?: TaskPriority | "ALL";
   domain?: TaskDomain | "ALL";
   taskTypeId?: string | "ALL" | null;
+  taskActionId?: string | "ALL" | null;
   mode?: TaskMode | "ALL";
   due?: TaskDueKey;
   page?: number;
@@ -33,6 +34,7 @@ export type CreateTaskInput = TaskDomainLinksInput & {
   source?: TaskSource;
   domain?: TaskDomain;
   taskTypeId?: string | null;
+  taskActionId?: string | null;
   mode?: TaskMode;
   priority?: TaskPriority;
   dueAt?: Date | string | null;
@@ -44,6 +46,7 @@ export type UpdateTaskInput = TaskDomainLinksInput & {
   description?: string | null;
   domain?: TaskDomain;
   taskTypeId?: string | null;
+  taskActionId?: string | null;
   mode?: TaskMode;
   priority?: TaskPriority;
   dueAt?: Date | string | null;
@@ -54,6 +57,7 @@ export type CompleteRelatedTasksInput = TaskDomainLinksInput & {
   domain?: TaskDomain;
   taskTypeId?: string | null;
   taskTypeCode?: string | null;
+  taskActionId?: string | null;
   mode?: TaskMode;
   completedByUserId?: string | null;
 };
@@ -61,6 +65,7 @@ export type CompleteRelatedTasksInput = TaskDomainLinksInput & {
 export type EnsureSystemTaskInput = TaskDomainLinksInput & {
   domain: TaskDomain;
   taskTypeId?: string | null;
+  taskActionId?: string | null;
   mode?: TaskMode;
   title: string;
   description?: string | null;
@@ -87,6 +92,7 @@ export type FindOpenRelatedTasksInput = {
   domain?: TaskDomain;
   taskTypeId?: string | null;
   taskTypeCode?: string | null;
+  taskActionId?: string | null;
   watchId?: string | null;
   paymentId?: string | null;
   limit?: number;

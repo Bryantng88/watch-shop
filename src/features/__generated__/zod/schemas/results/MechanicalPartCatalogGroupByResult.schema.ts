@@ -20,7 +20,8 @@ export const MechanicalPartCatalogGroupByResultSchema = z.array(z.object({
     sortOrder: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    TechnicalIssue: z.number()
+    TechnicalIssue: z.number(),
+    taskAction: z.number()
   }).optional(),
   _sum: z.object({
     defaultCost: z.number().nullable(),

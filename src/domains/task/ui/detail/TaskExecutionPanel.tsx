@@ -80,13 +80,31 @@ function getDisplayRef(item: any) {
 function getStatus(item: any) {
   return item.targetStatus || item.status || null;
 }
+function meta(item: any) {
+  return item?.metadataJson ?? item?.metadata ?? {};
+}
+
+function shouldHideServiceRequestExecution(item: any, executions: any[]) {
+  if (item.targetType !== "SERVICE_REQUEST") return false;
+
+  return executions.some((x) => {
+    const m = meta(x);
+    return (
+      x.targetType === "TECHNICAL_ISSUE" &&
+      m?.serviceRequestId === item.targetId
+    );
+  });
+}
+
 
 export default function TaskExecutionPanel({ executions = [] }: { executions?: any[] }) {
   const latest = executions[0] ?? null;
   const hasDoneSignal = executions.some((item) =>
     ["DONE", "COMPLETED", "DELIVERED", "PAID"].includes(String(getStatus(item) ?? "").toUpperCase()),
   );
-
+  const visibleExecutions = executions.filter(
+    (item) => !shouldHideServiceRequestExecution(item, executions),
+  );
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -131,7 +149,7 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
         </div>
       ) : (
         <div className="space-y-3">
-          {executions.map((item) => {
+          {visibleExecutions.map((item) => {
             const href = targetHref(item.targetType, item.targetId);
             const status = getStatus(item);
             const displayRef = getDisplayRef(item);
@@ -171,7 +189,22 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
                       {item.note ? (
                         <p className="mt-2 text-sm text-slate-600">{item.note}</p>
                       ) : null}
-
+                      {item.targetType === "TECHNICAL_ISSUE" && meta(item)?.serviceRequestId ? (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                          Nằm trong SR:{" "}
+                          <Link
+                            href={`/admin/services/${meta(item).serviceRequestId}`}
+                            className="font-semibold text-blue-700 hover:text-blue-900"
+                          >
+                            {meta(item).serviceRequestRefNo || meta(item).serviceRequestId}
+                          </Link>
+                          {meta(item).serviceRequestStatus ? (
+                            <span className="ml-1 text-slate-400">
+                              · {meta(item).serviceRequestStatus}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <p className="mt-1 text-xs text-slate-400">
                         {formatDate(item.createdAt)}
                         {item.createdByUser ? ` · ${item.createdByUser.name ?? item.createdByUser.email}` : ""}

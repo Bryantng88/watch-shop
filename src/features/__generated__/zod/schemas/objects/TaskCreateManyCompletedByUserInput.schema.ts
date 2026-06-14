@@ -32,7 +32,8 @@ const makeSchema = () => z.object({
   paymentId: z.string().optional().nullable(),
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  taskActionId: z.string().optional().nullable()
 }).strict();
 export const TaskCreateManyCompletedByUserInputObjectSchema: z.ZodType<Prisma.TaskCreateManyCompletedByUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCreateManyCompletedByUserInput>;
 export const TaskCreateManyCompletedByUserInputObjectZodSchema = makeSchema();

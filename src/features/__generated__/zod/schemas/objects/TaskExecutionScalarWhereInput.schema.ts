@@ -5,6 +5,7 @@ import { EnumTaskExecutionTargetTypeFilterObjectSchema as EnumTaskExecutionTarge
 import { TaskExecutionTargetTypeSchema } from '../enums/TaskExecutionTargetType.schema';
 import { EnumTaskExecutionActionTypeFilterObjectSchema as EnumTaskExecutionActionTypeFilterObjectSchema } from './EnumTaskExecutionActionTypeFilter.schema';
 import { TaskExecutionActionTypeSchema } from '../enums/TaskExecutionActionType.schema';
+import { JsonNullableFilterObjectSchema as JsonNullableFilterObjectSchema } from './JsonNullableFilter.schema';
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
 
@@ -17,6 +18,7 @@ const taskexecutionscalarwhereinputSchema = z.object({
   targetType: z.union([z.lazy(() => EnumTaskExecutionTargetTypeFilterObjectSchema), TaskExecutionTargetTypeSchema]).optional(),
   targetId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   actionType: z.union([z.lazy(() => EnumTaskExecutionActionTypeFilterObjectSchema), TaskExecutionActionTypeSchema]).optional(),
+  metadataJson: z.lazy(() => JsonNullableFilterObjectSchema).optional(),
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()

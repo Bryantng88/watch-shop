@@ -35,6 +35,7 @@ const makeSchema = () => z.object({
   paymentId: z.string().optional().nullable(),
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  taskActionId: z.string().optional().nullable(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema),
   notifications: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema)
 }).strict();

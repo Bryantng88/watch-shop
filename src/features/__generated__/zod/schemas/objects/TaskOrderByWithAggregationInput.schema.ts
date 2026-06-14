@@ -34,6 +34,7 @@ const makeSchema = () => z.object({
   workCaseId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
+  taskActionId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TaskCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TaskMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => TaskMinOrderByAggregateInputObjectSchema).optional()

@@ -20,7 +20,8 @@ export const ServiceCatalogFindManyResultSchema = z.object({
   maintenanceRecord: z.array(z.unknown()),
   orderItem: z.array(z.unknown()),
   serviceRequest: z.array(z.unknown()),
-  technicalIssue: z.array(z.unknown())
+  technicalIssue: z.array(z.unknown()),
+  taskAction: z.array(z.unknown())
 })),
   pagination: z.object({
   page: z.number().int().min(1),

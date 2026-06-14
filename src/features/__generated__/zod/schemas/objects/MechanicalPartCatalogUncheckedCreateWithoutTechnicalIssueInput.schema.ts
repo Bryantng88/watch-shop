@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { MechanicalPartGroupSchema } from '../enums/MechanicalPartGroup.schema'
+import { MechanicalPartGroupSchema } from '../enums/MechanicalPartGroup.schema';
+import { TaskActionUncheckedCreateNestedManyWithoutMechanicalPartCatalogInputObjectSchema as TaskActionUncheckedCreateNestedManyWithoutMechanicalPartCatalogInputObjectSchema } from './TaskActionUncheckedCreateNestedManyWithoutMechanicalPartCatalogInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,7 +13,8 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional()
+  updatedAt: z.coerce.date().optional(),
+  taskAction: z.lazy(() => TaskActionUncheckedCreateNestedManyWithoutMechanicalPartCatalogInputObjectSchema).optional()
 }).strict();
 export const MechanicalPartCatalogUncheckedCreateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.MechanicalPartCatalogUncheckedCreateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.MechanicalPartCatalogUncheckedCreateWithoutTechnicalIssueInput>;
 export const MechanicalPartCatalogUncheckedCreateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

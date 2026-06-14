@@ -42,7 +42,9 @@ export const TaskFindManyResultSchema = z.object({
   workCase: z.unknown().optional(),
   taskType: z.unknown().optional(),
   executions: z.array(z.unknown()),
-  notifications: z.array(z.unknown())
+  notifications: z.array(z.unknown()),
+  taskAction: z.unknown().optional(),
+  taskActionId: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

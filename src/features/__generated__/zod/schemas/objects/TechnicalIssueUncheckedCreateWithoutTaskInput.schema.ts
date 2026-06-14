@@ -39,7 +39,7 @@ const makeSchema = () => z.object({
   confirmedById: z.string().optional().nullable(),
   confirmedByNameSnap: z.string().optional().nullable(),
   technicalDetailCatalogId: z.string().optional().nullable(),
-  MaintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional(),
   payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUncheckedCreateWithoutTaskInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutTaskInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutTaskInput>;

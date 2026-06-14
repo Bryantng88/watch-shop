@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { TaskDomainSchema } from '../enums/TaskDomain.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { TaskCompletionModeSchema } from '../enums/TaskCompletionMode.schema';
-import { TaskCreateNestedManyWithoutTaskTypeInputObjectSchema as TaskCreateNestedManyWithoutTaskTypeInputObjectSchema } from './TaskCreateNestedManyWithoutTaskTypeInput.schema'
+import { TaskCreateNestedManyWithoutTaskTypeInputObjectSchema as TaskCreateNestedManyWithoutTaskTypeInputObjectSchema } from './TaskCreateNestedManyWithoutTaskTypeInput.schema';
+import { TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema as TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema } from './TaskActionCreateNestedManyWithoutTaskTypeInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -17,7 +18,8 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  tasks: z.lazy(() => TaskCreateNestedManyWithoutTaskTypeInputObjectSchema)
+  tasks: z.lazy(() => TaskCreateNestedManyWithoutTaskTypeInputObjectSchema),
+  taskAction: z.lazy(() => TaskActionCreateNestedManyWithoutTaskTypeInputObjectSchema)
 }).strict();
 export const TaskTypeCreateInputObjectSchema: z.ZodType<Prisma.TaskTypeCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskTypeCreateInput>;
 export const TaskTypeCreateInputObjectZodSchema = makeSchema();

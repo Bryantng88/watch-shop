@@ -23,6 +23,7 @@ export const TaskTypeFindFirstOrThrowSelectSchema: z.ZodType<Prisma.TaskTypeSele
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     tasks: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskTypeSelect>;
 
@@ -40,6 +41,7 @@ export const TaskTypeFindFirstOrThrowSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     tasks: z.boolean().optional(),
+    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

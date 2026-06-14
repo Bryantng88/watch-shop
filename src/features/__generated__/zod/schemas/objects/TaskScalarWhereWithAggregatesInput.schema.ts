@@ -46,7 +46,8 @@ const taskscalarwherewithaggregatesinputSchema = z.object({
   paymentId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   workCaseId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
+  taskActionId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()
 }).strict();
 export const TaskScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TaskScalarWhereWithAggregatesInput> = taskscalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TaskScalarWhereWithAggregatesInput>;
 export const TaskScalarWhereWithAggregatesInputObjectZodSchema = taskscalarwherewithaggregatesinputSchema;

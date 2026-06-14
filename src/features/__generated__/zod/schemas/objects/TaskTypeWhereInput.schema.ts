@@ -11,7 +11,8 @@ import { TaskCompletionModeSchema } from '../enums/TaskCompletionMode.schema';
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema'
+import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
+import { TaskActionListRelationFilterObjectSchema as TaskActionListRelationFilterObjectSchema } from './TaskActionListRelationFilter.schema'
 
 const tasktypewhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TaskTypeWhereInputObjectSchema), z.lazy(() => TaskTypeWhereInputObjectSchema).array()]).optional(),
@@ -29,7 +30,8 @@ const tasktypewhereinputSchema = z.object({
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  tasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional()
+  tasks: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  taskAction: z.lazy(() => TaskActionListRelationFilterObjectSchema).optional()
 }).strict();
 export const TaskTypeWhereInputObjectSchema: z.ZodType<Prisma.TaskTypeWhereInput> = tasktypewhereinputSchema as unknown as z.ZodType<Prisma.TaskTypeWhereInput>;
 export const TaskTypeWhereInputObjectZodSchema = tasktypewhereinputSchema;

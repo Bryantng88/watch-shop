@@ -309,6 +309,7 @@ model MechanicalPartCatalog {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @default(now())
   TechnicalIssue TechnicalIssue[]
+  taskAction     TaskAction[]
 
   @@index([group, sortOrder])
   @@index([isActive, sortOrder])
@@ -677,6 +678,7 @@ model ServiceCatalog {
   orderItem         OrderItem[]
   serviceRequest    ServiceRequest[]
   technicalIssue    TechnicalIssue[]
+  taskAction        TaskAction[]
 
   @@index([detail], map: "idx_service_catalog_detail")
 }
@@ -800,6 +802,7 @@ model SupplyCatalog {
   createdAt      DateTime         @default(now()) @db.Timestamp(6)
   updatedAt      DateTime         @default(now()) @db.Timestamp(6)
   TechnicalIssue TechnicalIssue[]
+  taskAction     TaskAction[]
 }
 
 model TechnicalAssessment {
@@ -864,14 +867,14 @@ model TechnicalIssue {
   confirmedAt              DateTime?                     @db.Timestamp(6)
   confirmedById            String?
   confirmedByNameSnap      String?
-  MaintenanceRecord        MaintenanceRecord[]
-  TechnicalAssessment      TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  maintenanceRecord        MaintenanceRecord[]
+  technicalAssessment      TechnicalAssessment           @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   MechanicalPartCatalog    MechanicalPartCatalog?        @relation(fields: [mechanicalPartCatalogId], references: [id])
   serviceCatalog           ServiceCatalog?               @relation(fields: [serviceCatalogId], references: [id])
-  ServiceRequest           ServiceRequest                @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  serviceRequest           ServiceRequest                @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   SupplyCatalog            SupplyCatalog?                @relation(fields: [supplyCatalogId], references: [id])
-  User                     User?                         @relation(fields: [technicianId], references: [id])
-  Vendor                   Vendor?                       @relation(fields: [vendorId], references: [id])
+  user                     User?                         @relation(fields: [technicianId], references: [id])
+  vendor                   Vendor?                       @relation(fields: [vendorId], references: [id])
   technicalDetailCatalogId String?
   technicalDetailCatalog   TechnicalDetailCatalog?       @relation(fields: [technicalDetailCatalogId], references: [id])
   task                     Task[]
@@ -899,6 +902,7 @@ model TechnicalDetailCatalog {
   updatedAt   DateTime @updatedAt
 
   technicalIssues TechnicalIssue[]
+  taskAction      TaskAction[]
 
   @@index([area])
   @@index([isActive])
@@ -1515,11 +1519,60 @@ model TaskType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tasks Task[]
+  tasks      Task[]
+  taskAction TaskAction[]
 
   @@index([domain])
   @@index([isActive])
   @@index([sortOrder])
+}
+
+model TaskAction {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+
+  taskTypeId  String
+  code        String
+  name        String
+  description String?
+
+  completionMode    TaskCompletionMode @default(MANUAL_CONFIRM)
+  completionRuleKey String?
+
+  targetType TaskExecutionTargetType?
+
+  serviceCatalogId         String?
+  technicalDetailCatalogId String?
+  supplyCatalogId          String?
+  mechanicalPartCatalogId  String?
+  technicalActionMode      TechnicalActionMode?
+
+  defaultTitleTemplate       String?
+  defaultDescriptionTemplate String?
+  metadataJson               Json?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskType TaskType @relation(fields: [taskTypeId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+
+  serviceCatalog         ServiceCatalog?         @relation(fields: [serviceCatalogId], references: [id], onDelete: SetNull)
+  technicalDetailCatalog TechnicalDetailCatalog? @relation(fields: [technicalDetailCatalogId], references: [id], onDelete: SetNull)
+  supplyCatalog          SupplyCatalog?          @relation(fields: [supplyCatalogId], references: [id], onDelete: SetNull)
+  mechanicalPartCatalog  MechanicalPartCatalog?  @relation(fields: [mechanicalPartCatalogId], references: [id], onDelete: SetNull)
+
+  @@unique([taskTypeId, code])
+  @@index([taskTypeId])
+  @@index([isActive])
+  @@index([targetType])
+  @@index([completionRuleKey])
+  @@index([serviceCatalogId])
+  @@index([technicalDetailCatalogId])
+  @@index([supplyCatalogId])
+  @@index([mechanicalPartCatalogId])
 }
 
 model WorkCaseCategory {
@@ -1653,6 +1706,8 @@ model Task {
   taskType       TaskType?       @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
   executions     TaskExecution[]
   notifications  Notification[]
+  taskAction     TaskAction?     @relation(fields: [taskActionId], references: [id])
+  taskActionId   String?
 
   @@index([source])
   @@index([domain])
@@ -1681,13 +1736,13 @@ model TaskExecution {
 
   taskId String
 
-  targetType TaskExecutionTargetType
-  targetId   String
-  actionType TaskExecutionActionType @default(CREATED)
-
+  targetType      TaskExecutionTargetType
+  targetId        String
+  actionType      TaskExecutionActionType @default(CREATED)
+  metadataJson    Json?
   note            String?
   createdByUserId String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime                @default(now())
 
   task          Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdByUser User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)

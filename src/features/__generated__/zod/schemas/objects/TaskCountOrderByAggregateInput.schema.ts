@@ -29,7 +29,8 @@ const makeSchema = () => z.object({
   paymentId: SortOrderSchema.optional(),
   workCaseId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  taskActionId: SortOrderSchema.optional()
 }).strict();
 export const TaskCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TaskCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCountOrderByAggregateInput>;
 export const TaskCountOrderByAggregateInputObjectZodSchema = makeSchema();
