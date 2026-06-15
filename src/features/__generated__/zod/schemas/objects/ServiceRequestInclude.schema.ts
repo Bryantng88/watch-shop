@@ -27,8 +27,8 @@ const makeSchema = () => z.object({
   serviceCatalog: z.union([z.boolean(), z.lazy(() => ServiceCatalogArgsObjectSchema)]).optional(),
   technicalAssessment: z.union([z.boolean(), z.lazy(() => TechnicalAssessmentArgsObjectSchema)]).optional(),
   technicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
-  Task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
-  WorkCase: z.union([z.boolean(), z.lazy(() => WorkCaseArgsObjectSchema)]).optional(),
+  task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
+  workCase: z.union([z.boolean(), z.lazy(() => WorkCaseArgsObjectSchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceRequestCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceRequestIncludeObjectSchema: z.ZodType<Prisma.ServiceRequestInclude> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestInclude>;

@@ -46,8 +46,8 @@ export const ServiceRequestAggregateResultSchema = z.object({  _count: z.object(
     serviceCatalog: z.number(),
     technicalAssessment: z.number(),
     technicalIssue: z.number(),
-    Task: z.number(),
-    WorkCase: z.number(),
+    task: z.number(),
+    workCase: z.number(),
     workCaseId: z.number()
   }).optional(),
   _min: z.object({

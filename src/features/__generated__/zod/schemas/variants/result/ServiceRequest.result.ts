@@ -51,8 +51,8 @@ export const ServiceRequestResultSchema = z.object({
     serviceCatalog: z.unknown().nullable(),
     technicalAssessment: z.unknown().nullable(),
     technicalIssue: z.array(z.unknown()),
-    Task: z.array(z.unknown()),
-    WorkCase: z.unknown().nullable(),
+    task: z.array(z.unknown()),
+    workCase: z.unknown().nullable(),
     workCaseId: z.string().nullable()
 }).strict();
 

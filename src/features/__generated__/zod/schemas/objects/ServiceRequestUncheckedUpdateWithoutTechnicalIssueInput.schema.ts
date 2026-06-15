@@ -56,7 +56,7 @@ const makeSchema = () => z.object({
   invoice: z.lazy(() => InvoiceUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional(),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedUpdateOneWithoutServiceRequestNestedInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional()
+  task: z.lazy(() => TaskUncheckedUpdateManyWithoutServiceRequestNestedInputObjectSchema).optional()
 }).strict();
 export const ServiceRequestUncheckedUpdateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedUpdateWithoutTechnicalIssueInput>;
 export const ServiceRequestUncheckedUpdateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

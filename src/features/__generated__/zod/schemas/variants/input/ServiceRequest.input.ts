@@ -51,8 +51,8 @@ export const ServiceRequestInputSchema = z.object({
     serviceCatalog: z.unknown().optional().nullable(),
     technicalAssessment: z.unknown().optional().nullable(),
     technicalIssue: z.array(z.unknown()),
-    Task: z.array(z.unknown()),
-    WorkCase: z.unknown().optional().nullable(),
+    task: z.array(z.unknown()),
+    workCase: z.unknown().optional().nullable(),
     workCaseId: z.string().optional().nullable()
 }).strict();
 

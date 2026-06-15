@@ -21,13 +21,27 @@ function serialize<T>(value: T): T {
   }));
 }
 
-export async function executeTaskActionAction(taskId: string) {
+// task/actions/task-action-execution.actions.ts
+
+export async function executeTaskActionAction(
+  taskId: string,
+  serviceMode?: "SR_ONLY" | "SR_WITH_TECHNICAL_ISSUE",
+) {
   const auth = await requirePermission("TASK_UPDATE");
-  const result = await executeTaskAction(prisma, { taskId }, auth);
+
+  const result = await executeTaskAction(
+    prisma,
+    { taskId, serviceMode },
+    auth,
+  );
 
   revalidatePath(`/admin/tasks/${taskId}`);
   revalidatePath("/admin/tasks");
-  if (result.serviceRequest?.id) revalidatePath(`/admin/services/${result.serviceRequest.id}`);
+
+  if (result.serviceRequest?.id) {
+    revalidatePath(`/admin/services/${result.serviceRequest.id}`);
+  }
+
   revalidatePath("/admin/services");
 
   return serialize(result);

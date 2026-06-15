@@ -85,8 +85,8 @@ const servicerequestwhereinputSchema = z.object({
   serviceCatalog: z.union([z.lazy(() => ServiceCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema)]).optional(),
   technicalAssessment: z.union([z.lazy(() => TechnicalAssessmentNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  Task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  WorkCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional()
+  task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
+  workCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional()
 }).strict();
 export const ServiceRequestWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestWhereInput> = servicerequestwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestWhereInput>;
 export const ServiceRequestWhereInputObjectZodSchema = servicerequestwhereinputSchema;

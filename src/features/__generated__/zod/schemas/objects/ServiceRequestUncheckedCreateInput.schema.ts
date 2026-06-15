@@ -49,7 +49,7 @@ const makeSchema = () => z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema),
   technicalAssessment: z.lazy(() => TechnicalAssessmentUncheckedCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema),
-  Task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema)
+  task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutServiceRequestInputObjectSchema)
 }).strict();
 export const ServiceRequestUncheckedCreateInputObjectSchema: z.ZodType<Prisma.ServiceRequestUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestUncheckedCreateInput>;
 export const ServiceRequestUncheckedCreateInputObjectZodSchema = makeSchema();

@@ -148,8 +148,12 @@ async function ensureActiveServiceRequest(client: any, input: { task: any; userI
 
   const created = await client.serviceRequest.create({
     data: {
-      productId,
-      workCaseId: input.task.workCaseId ?? null,
+      product: { connect: { id: productId } },
+      workCase: {
+        connect: {
+          id: input.task.workCaseId,
+        },
+      },
       technicianId: input.task.assignedToUserId ?? input.userId,
       status: ServiceRequestStatus.DRAFT,
       notes,
@@ -263,13 +267,27 @@ async function createExecutionIfMissing(
   });
 }
 
+// task/server/task-action-execution.service.ts
+
+export type ServiceTaskExecutionMode =
+  | "SR_ONLY"
+  | "SR_WITH_TECHNICAL_ISSUE";
+
 export async function executeTaskAction(
   db: DB,
-  input: { taskId: string },
+  input: {
+    taskId: string;
+    serviceMode?: ServiceTaskExecutionMode;
+  },
   auth: any,
 ): Promise<ExecuteTaskActionResult> {
   const client = dbOrTx(db);
-  const { task, userId } = await assertTaskCanExecute(client as any, input.taskId, auth);
+  const { task, userId } = await assertTaskCanExecute(
+    client as any,
+    input.taskId,
+    auth,
+  );
+
   const action = task.taskAction;
 
   if (!isServiceRequestAction(action)) {
@@ -281,18 +299,29 @@ export async function executeTaskAction(
     };
   }
 
-  const { serviceRequest, created: srCreated } = await ensureActiveServiceRequest(client as any, {
-    task,
-    userId,
-  });
+  const selectedMode = input.serviceMode ?? "SR_ONLY";
 
-  if (!isTechnicalIssueAction(action)) {
+  const { serviceRequest, created: srCreated } =
+    await ensureActiveServiceRequest(client as any, {
+      task,
+      userId,
+    });
+
+  const shouldCreateIssue =
+    selectedMode === "SR_WITH_TECHNICAL_ISSUE" &&
+    isTechnicalIssueAction(action);
+
+  if (!shouldCreateIssue) {
     await createExecutionIfMissing(client as any, {
       taskId: task.id,
       targetType: TaskExecutionTargetType.SERVICE_REQUEST,
       targetId: serviceRequest.id,
-      actionType: TaskExecutionActionType.CREATED,
-      note: srCreated ? "Tạo Service Request từ task action" : "Gán Service Request active vào task action",
+      actionType: srCreated
+        ? TaskExecutionActionType.CREATED
+        : TaskExecutionActionType.LINKED,
+      note: srCreated
+        ? "Tạo Service Request từ task action"
+        : "Gán Service Request active vào task action",
       userId,
     });
 
@@ -312,13 +341,28 @@ export async function executeTaskAction(
         refNo: serviceRequest.refNo ?? null,
         created: srCreated,
       },
-      message: srCreated ? "Đã tạo Service Request từ action" : "Đã gán Service Request active vào task",
+      message: srCreated
+        ? "Đã tạo Service Request từ task"
+        : "Đã gán Service Request active vào task",
     };
   }
 
   const issue = await createTechnicalIssueForTaskAction(client as any, {
     task,
     serviceRequestId: serviceRequest.id,
+    userId,
+  });
+
+  await createExecutionIfMissing(client as any, {
+    taskId: task.id,
+    targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+    targetId: serviceRequest.id,
+    actionType: srCreated
+      ? TaskExecutionActionType.CREATED
+      : TaskExecutionActionType.LINKED,
+    note: srCreated
+      ? "Tạo Service Request từ task action"
+      : "Gán Service Request active vào task action",
     userId,
   });
 
@@ -368,11 +412,10 @@ export async function executeTaskAction(
       created: true,
     },
     message: srCreated
-      ? "Đã tạo Service Request và Technical Issue từ action"
-      : "Đã gán Service Request active và tạo Technical Issue từ action",
+      ? "Đã tạo Service Request và Technical Issue từ task"
+      : "Đã gán Service Request active và tạo Technical Issue từ task",
   };
 }
-
 export async function previewTaskAction(
   db: DB,
   input: { taskId: string },

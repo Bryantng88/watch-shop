@@ -731,8 +731,8 @@ model ServiceRequest {
   serviceCatalog          ServiceCatalog?      @relation(fields: [servicecatalogid], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_service_requests_service_catalog")
   technicalAssessment     TechnicalAssessment?
   technicalIssue          TechnicalIssue[]
-  Task                    Task[]
-  WorkCase                WorkCase?            @relation(fields: [workCaseId], references: [id])
+  task                    Task[]
+  workCase                WorkCase?            @relation(fields: [workCaseId], references: [id])
   workCaseId              String?
 
   @@index([customerId])

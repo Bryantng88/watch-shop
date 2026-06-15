@@ -47,8 +47,8 @@ export const ServiceRequestFindManyResultSchema = z.object({
   serviceCatalog: z.unknown().optional(),
   technicalAssessment: z.unknown().optional(),
   technicalIssue: z.array(z.unknown()),
-  Task: z.array(z.unknown()),
-  WorkCase: z.unknown().optional(),
+  task: z.array(z.unknown()),
+  workCase: z.unknown().optional(),
   workCaseId: z.string().optional()
 })),
   pagination: z.object({

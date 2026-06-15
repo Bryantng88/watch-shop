@@ -63,7 +63,10 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
   const [assignedToUserId, setAssignedToUserId] = useState(currentUserId);
   const [dueAt, setDueAt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  type ServiceExecutionMode = "SR_ONLY" | "SR_WITH_TECHNICAL_ISSUE";
 
+  const [serviceMode, setServiceMode] =
+    useState<ServiceExecutionMode>("SR_ONLY");
   const isEdit = Boolean(editTask);
   const filteredTaskTypes = useMemo(() => taskTypes.filter((item) => item.isActive && item.domain === domain), [taskTypes, domain]);
   const filteredTaskActions = useMemo(() => {
