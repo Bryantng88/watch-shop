@@ -1,0 +1,51 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { OrderStatusSchema } from '../enums/OrderStatus.schema';
+import { PaymentStatusSchema } from '../enums/PaymentStatus.schema';
+import { PaymentMethodSchema } from '../enums/PaymentMethod.schema';
+import { ReserveTypeSchema } from '../enums/ReserveType.schema';
+import { OrderSourceSchema } from '../enums/OrderSource.schema';
+import { OrderVerificationStatusSchema } from '../enums/OrderVerificationStatus.schema';
+import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
+import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceCreateNestedManyWithoutOrderInput.schema';
+import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateNestedOneWithoutOrderInputObjectSchema } from './CustomerCreateNestedOneWithoutOrderInput.schema';
+import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema';
+import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema';
+import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema'
+
+const makeSchema = () => z.object({
+  id: z.string().optional(),
+  refNo: z.string().optional().nullable(),
+  shipPhone: z.string(),
+  shipAddress: z.string(),
+  shipWard: z.string().optional().nullable(),
+  shipCity: z.string(),
+  subtotal: z.number(),
+  shippingAmount: z.number().optional().nullable(),
+  status: OrderStatusSchema.optional(),
+  paymentStatus: PaymentStatusSchema.optional(),
+  paymentMethod: PaymentMethodSchema.optional().nullable(),
+  depositPaymentMethod: PaymentMethodSchema.optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  customerName: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  shipDistrict: z.string().optional().nullable(),
+  hasShipment: z.boolean(),
+  reserveType: ReserveTypeSchema.optional().nullable(),
+  reserveUntil: z.coerce.date().optional().nullable(),
+  depositRequired: z.number().optional().nullable(),
+  depositPaid: z.number().optional().nullable(),
+  source: OrderSourceSchema.optional(),
+  verificationStatus: OrderVerificationStatusSchema.optional(),
+  quick_from_product_id: z.string().optional().nullable(),
+  quickFromProductId: z.string().optional().nullable(),
+  quickFlowType: OrderFlowTypeSchema.optional(),
+  Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema).optional(),
+  customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
+  orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema).optional(),
+  shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema).optional(),
+  task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional()
+}).strict();
+export const OrderCreateWithoutWorkCaseInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutWorkCaseInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutWorkCaseInput>;
+export const OrderCreateWithoutWorkCaseInputObjectZodSchema = makeSchema();

@@ -12,6 +12,8 @@ const makeSchema = () => z.object({
   priority: z.literal(true).optional(),
   watchId: z.literal(true).optional(),
   categoryId: z.literal(true).optional(),
+  orderId: z.literal(true).optional(),
+  shipmentId: z.literal(true).optional(),
   raisedByUserId: z.literal(true).optional(),
   assignedToUserId: z.literal(true).optional(),
   triagedAt: z.literal(true).optional(),

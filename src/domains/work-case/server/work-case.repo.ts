@@ -33,6 +33,25 @@ export const WORK_CASE_INCLUDE = {
       },
     },
   },
+  order: {
+    select: {
+      id: true,
+      refNo: true,
+      customerName: true,
+      orderItem: {
+        select: { id: true },
+      },
+    },
+  },
+  shipment: {
+    select: {
+      id: true,
+      refNo: true,
+      trackingCode: true,
+      orderRefNo: true,
+      status: true,
+    },
+  },
   tasks: {
     orderBy: { createdAt: "desc" },
     select: { id: true, title: true, status: true, priority: true, assignedToUser: { select: { id: true, name: true, email: true } } },
@@ -148,6 +167,7 @@ function buildRefNo() {
 
 export async function createWorkCaseRepo(db: DB, input: CreateWorkCaseInput & { raisedByUserId?: string | null }) {
   const client = dbOrTx(db);
+
   return client.workCase.create({
     data: {
       refNo: buildRefNo(),
@@ -155,10 +175,15 @@ export async function createWorkCaseRepo(db: DB, input: CreateWorkCaseInput & { 
       description: input.description?.trim() || null,
       scope: input.scope,
       priority: input.priority ?? "MEDIUM",
-      watchId: input.watchId,
+
+      watchId: input.watchId || null,
+      orderId: input.orderId || null,
+      shipmentId: input.shipmentId || null,
+
       categoryId: input.categoryId || null,
       raisedByUserId: input.raisedByUserId ?? null,
       assignedToUserId: input.assignedToUserId || null,
+
       activities: {
         create: {
           actorId: input.raisedByUserId ?? null,

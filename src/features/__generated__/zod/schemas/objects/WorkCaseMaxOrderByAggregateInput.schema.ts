@@ -12,6 +12,8 @@ const makeSchema = () => z.object({
   priority: SortOrderSchema.optional(),
   watchId: SortOrderSchema.optional(),
   categoryId: SortOrderSchema.optional(),
+  orderId: SortOrderSchema.optional(),
+  shipmentId: SortOrderSchema.optional(),
   raisedByUserId: SortOrderSchema.optional(),
   assignedToUserId: SortOrderSchema.optional(),
   triagedAt: SortOrderSchema.optional(),

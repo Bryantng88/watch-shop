@@ -10,7 +10,8 @@ import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNestedManyWithoutOrderInputObjectSchema } from './InvoiceCreateNestedManyWithoutOrderInput.schema';
 import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateNestedOneWithoutOrderInputObjectSchema } from './CustomerCreateNestedOneWithoutOrderInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema';
-import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema'
+import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema';
+import { WorkCaseCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -43,7 +44,8 @@ const makeSchema = () => z.object({
   Invoice: z.lazy(() => InvoiceCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional()
+  task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderCreateWithoutShipmentsInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutShipmentsInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutShipmentsInput>;
 export const OrderCreateWithoutShipmentsInputObjectZodSchema = makeSchema();

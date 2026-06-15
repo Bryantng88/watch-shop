@@ -26,7 +26,8 @@ export const ShipmentInputSchema = z.object({
     orderRefNo: z.string().optional().nullable(),
     customerName: z.string().optional().nullable(),
     order: z.unknown(),
-    Task: z.array(z.unknown())
+    task: z.array(z.unknown()),
+    workCase: z.array(z.unknown())
 }).strict();
 
 export type ShipmentInputType = z.infer<typeof ShipmentInputSchema>;

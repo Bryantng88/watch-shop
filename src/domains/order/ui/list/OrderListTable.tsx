@@ -28,6 +28,7 @@ type Props = {
   onCancel?: (row: OrderListItem) => void;
   onManagePayments?: (row: OrderListItem) => void;
   onManageShipment?: (row: OrderListItem) => void;
+  onCreateWorkCase?: (row: OrderListItem) => void;
 };
 
 export default function OrderListTable({
@@ -48,6 +49,7 @@ export default function OrderListTable({
   onCancel,
   onManagePayments,
   onManageShipment,
+  onCreateWorkCase
 }: Props) {
   const selectableIds = items.filter(isOrderSelectable).map((item) => item.id);
 
@@ -112,6 +114,7 @@ export default function OrderListTable({
                 onManagePayments={onManagePayments}
                 onManageShipment={onManageShipment}
                 isCancelledOrder={isCancelledOrder}
+                onCreateWorkCase={onCreateWorkCase}
               />
             ))}
 

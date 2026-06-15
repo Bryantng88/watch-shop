@@ -8,7 +8,10 @@ import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import PaymentManageModal from "@/domains/payment/ui/PaymentManageModal";
 import { ShipmentManageModal } from "@/domains/shipment/ui";
-
+import RaiseWorkCaseModal, {
+  type RaiseWorkCaseSourceContext,
+} from "@/domains/work-case/ui/RaiseWorkCaseModal";
+import { buildOrderWorkCaseSource } from "@/domains/work-case/utils/work-case-source";
 import {
   OrderListBulkActions,
   OrderListFilters,
@@ -87,7 +90,8 @@ export default function OrderListClient({
   rawSearchParams,
   counts,
 }: Props) {
-  const router = useRouter();
+  const [workCaseSource, setWorkCaseSource] =
+    useState<RaiseWorkCaseSourceContext | null>(null); const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const notify = useNotify();
@@ -95,7 +99,6 @@ export default function OrderListClient({
   const progress = useAppProgress();
   const currentView = normalizeOrderView(sp.get("view"));
   const currentSubFilter = normalizeOrderProcessingSubFilter(sp.get("subFilter"));
-
   const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
@@ -475,7 +478,9 @@ export default function OrderListClient({
 
     router.push(`/admin/orders/${row.id}/edit`);
   }
-
+  function openWorkCaseFromOrder(row: OrderListItem) {
+    setWorkCaseSource(buildOrderWorkCaseSource(row));
+  }
   return (
     <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
       <OrderListToolbar selectedCount={selectedIds.length} />
@@ -500,6 +505,7 @@ export default function OrderListClient({
 
       <OrderListTable
         items={items}
+        onCreateWorkCase={openWorkCaseFromOrder}
         total={total}
         page={page}
         totalPages={totalPages}
@@ -541,6 +547,16 @@ export default function OrderListClient({
         onCancelPayment={cancelPayment}
         onFinalizeByPaidAmount={finalizeOrderByPaidAmount}
         onUpdated={() => router.refresh()}
+      />
+      <RaiseWorkCaseModal
+        open={!!workCaseSource}
+        source={workCaseSource}
+        categories={[]}
+        onClose={() => setWorkCaseSource(null)}
+        onSaved={() => {
+          setWorkCaseSource(null);
+          router.refresh();
+        }}
       />
     </div>
   );

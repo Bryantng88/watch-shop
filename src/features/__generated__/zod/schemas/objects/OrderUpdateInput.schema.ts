@@ -25,7 +25,8 @@ import { InvoiceUpdateManyWithoutOrderNestedInputObjectSchema as InvoiceUpdateMa
 import { CustomerUpdateOneWithoutOrderNestedInputObjectSchema as CustomerUpdateOneWithoutOrderNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrderNestedInput.schema';
 import { OrderItemUpdateManyWithoutOrderNestedInputObjectSchema as OrderItemUpdateManyWithoutOrderNestedInputObjectSchema } from './OrderItemUpdateManyWithoutOrderNestedInput.schema';
 import { ShipmentUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateManyWithoutOrderNestedInput.schema';
-import { TaskUpdateManyWithoutOrderNestedInputObjectSchema as TaskUpdateManyWithoutOrderNestedInputObjectSchema } from './TaskUpdateManyWithoutOrderNestedInput.schema'
+import { TaskUpdateManyWithoutOrderNestedInputObjectSchema as TaskUpdateManyWithoutOrderNestedInputObjectSchema } from './TaskUpdateManyWithoutOrderNestedInput.schema';
+import { WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema as WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -59,7 +60,8 @@ const makeSchema = () => z.object({
   customer: z.lazy(() => CustomerUpdateOneWithoutOrderNestedInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   shipments: z.lazy(() => ShipmentUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskUpdateManyWithoutOrderNestedInputObjectSchema).optional()
+  task: z.lazy(() => TaskUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUpdateInputObjectSchema: z.ZodType<Prisma.OrderUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUpdateInput>;
 export const OrderUpdateInputObjectZodSchema = makeSchema();

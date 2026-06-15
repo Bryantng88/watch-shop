@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { WatchOrderByWithRelationInputObjectSchema as WatchOrderByWithRelationInputObjectSchema } from './WatchOrderByWithRelationInput.schema';
+import { OrderOrderByWithRelationInputObjectSchema as OrderOrderByWithRelationInputObjectSchema } from './OrderOrderByWithRelationInput.schema';
+import { ShipmentOrderByWithRelationInputObjectSchema as ShipmentOrderByWithRelationInputObjectSchema } from './ShipmentOrderByWithRelationInput.schema';
 import { WorkCaseCategoryOrderByWithRelationInputObjectSchema as WorkCaseCategoryOrderByWithRelationInputObjectSchema } from './WorkCaseCategoryOrderByWithRelationInput.schema';
 import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInputObjectSchema } from './UserOrderByWithRelationInput.schema';
 import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
@@ -17,8 +19,10 @@ const makeSchema = () => z.object({
   scope: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
   priority: SortOrderSchema.optional(),
-  watchId: SortOrderSchema.optional(),
+  watchId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   categoryId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  orderId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
+  shipmentId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   raisedByUserId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   assignedToUserId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   triagedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -27,6 +31,8 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   watch: z.lazy(() => WatchOrderByWithRelationInputObjectSchema).optional(),
+  order: z.lazy(() => OrderOrderByWithRelationInputObjectSchema).optional(),
+  shipment: z.lazy(() => ShipmentOrderByWithRelationInputObjectSchema).optional(),
   category: z.lazy(() => WorkCaseCategoryOrderByWithRelationInputObjectSchema).optional(),
   raisedByUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),

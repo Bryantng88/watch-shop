@@ -15,7 +15,7 @@ import type {
   UpdateWorkCaseCategoryInput,
   UpdateWorkCaseInput,
 } from "../server/work-case.types";
-
+import { TaskPriority, WorkCaseScope } from "@prisma/client";
 async function getWorkCaseAuth() {
   return requirePermission("TASK_VIEW");
 }
@@ -48,3 +48,31 @@ export async function updateWorkCaseCategoryAction(id: string, input: UpdateWork
   revalidatePath("/admin/work-cases/settings");
   return { ok: true, item };
 }
+export async function createWorkCaseFromOrderAction(input: {
+  orderId: string;
+  title: string;
+  description?: string | null;
+  scope: WorkCaseScope;
+  priority?: TaskPriority;
+  categoryId?: string | null;
+}) {
+  const auth = await getWorkCaseAuth();
+
+  const item = await createWorkCase(
+    prisma,
+    {
+      title: input.title,
+      description: input.description,
+      scope: input.scope,
+      priority: input.priority ?? TaskPriority.MEDIUM,
+      categoryId: input.categoryId ?? null,
+      orderId: input.orderId,
+    },
+    auth,
+  );
+
+  revalidatePath("/admin/work-cases");
+  revalidatePath("/admin/orders");
+
+  return { ok: true, item };
+}     

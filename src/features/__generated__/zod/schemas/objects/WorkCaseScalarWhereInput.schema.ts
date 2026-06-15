@@ -8,6 +8,7 @@ import { EnumWorkCaseStatusFilterObjectSchema as EnumWorkCaseStatusFilterObjectS
 import { WorkCaseStatusSchema } from '../enums/WorkCaseStatus.schema';
 import { EnumTaskPriorityFilterObjectSchema as EnumTaskPriorityFilterObjectSchema } from './EnumTaskPriorityFilter.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { UuidNullableFilterObjectSchema as UuidNullableFilterObjectSchema } from './UuidNullableFilter.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
 
@@ -22,8 +23,10 @@ const workcasescalarwhereinputSchema = z.object({
   scope: z.union([z.lazy(() => EnumWorkCaseScopeFilterObjectSchema), WorkCaseScopeSchema]).optional(),
   status: z.union([z.lazy(() => EnumWorkCaseStatusFilterObjectSchema), WorkCaseStatusSchema]).optional(),
   priority: z.union([z.lazy(() => EnumTaskPriorityFilterObjectSchema), TaskPrioritySchema]).optional(),
-  watchId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
+  watchId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   categoryId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  orderId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  shipmentId: z.union([z.lazy(() => UuidNullableFilterObjectSchema), z.string()]).optional().nullable(),
   raisedByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   assignedToUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   triagedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),

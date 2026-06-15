@@ -10,7 +10,9 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskPriorityFieldUpdateOperationsInputObjectSchema as EnumTaskPriorityFieldUpdateOperationsInputObjectSchema } from './EnumTaskPriorityFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema as WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema } from './WatchUpdateOneRequiredWithoutWorkCasesNestedInput.schema';
+import { WatchUpdateOneWithoutWorkCasesNestedInputObjectSchema as WatchUpdateOneWithoutWorkCasesNestedInputObjectSchema } from './WatchUpdateOneWithoutWorkCasesNestedInput.schema';
+import { OrderUpdateOneWithoutWorkCaseNestedInputObjectSchema as OrderUpdateOneWithoutWorkCaseNestedInputObjectSchema } from './OrderUpdateOneWithoutWorkCaseNestedInput.schema';
+import { ShipmentUpdateOneWithoutWorkCaseNestedInputObjectSchema as ShipmentUpdateOneWithoutWorkCaseNestedInputObjectSchema } from './ShipmentUpdateOneWithoutWorkCaseNestedInput.schema';
 import { WorkCaseCategoryUpdateOneWithoutWorkCasesNestedInputObjectSchema as WorkCaseCategoryUpdateOneWithoutWorkCasesNestedInputObjectSchema } from './WorkCaseCategoryUpdateOneWithoutWorkCasesNestedInput.schema';
 import { UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema as UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedWorkCasesNestedInput.schema';
 import { TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema as TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema } from './TaskUpdateManyWithoutWorkCaseNestedInput.schema';
@@ -30,7 +32,9 @@ const makeSchema = () => z.object({
   cancelledAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  watch: z.lazy(() => WatchUpdateOneRequiredWithoutWorkCasesNestedInputObjectSchema).optional(),
+  watch: z.lazy(() => WatchUpdateOneWithoutWorkCasesNestedInputObjectSchema).optional(),
+  order: z.lazy(() => OrderUpdateOneWithoutWorkCaseNestedInputObjectSchema).optional(),
+  shipment: z.lazy(() => ShipmentUpdateOneWithoutWorkCaseNestedInputObjectSchema).optional(),
   category: z.lazy(() => WorkCaseCategoryUpdateOneWithoutWorkCasesNestedInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedWorkCasesNestedInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutWorkCaseNestedInputObjectSchema).optional(),

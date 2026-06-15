@@ -10,7 +10,8 @@ import { OrderFlowTypeSchema } from '../enums/OrderFlowType.schema';
 import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateNestedOneWithoutOrderInputObjectSchema } from './CustomerCreateNestedOneWithoutOrderInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema';
 import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema';
-import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema'
+import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema';
+import { WorkCaseCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -43,7 +44,8 @@ const makeSchema = () => z.object({
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema).optional(),
   shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional()
+  task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutOrderInputObjectSchema).optional()
 }).strict();
 export const OrderCreateWithoutInvoiceInputObjectSchema: z.ZodType<Prisma.OrderCreateWithoutInvoiceInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateWithoutInvoiceInput>;
 export const OrderCreateWithoutInvoiceInputObjectZodSchema = makeSchema();

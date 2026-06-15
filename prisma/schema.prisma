@@ -1609,7 +1609,7 @@ model WorkCase {
   watchId          String?
   categoryId       String?
   orderId          String?
-  shipmentId       String?
+  shipmentId       String? @db.Uuid
   raisedByUserId   String?
   assignedToUserId String?
 

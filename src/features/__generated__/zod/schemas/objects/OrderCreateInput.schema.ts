@@ -11,7 +11,8 @@ import { InvoiceCreateNestedManyWithoutOrderInputObjectSchema as InvoiceCreateNe
 import { CustomerCreateNestedOneWithoutOrderInputObjectSchema as CustomerCreateNestedOneWithoutOrderInputObjectSchema } from './CustomerCreateNestedOneWithoutOrderInput.schema';
 import { OrderItemCreateNestedManyWithoutOrderInputObjectSchema as OrderItemCreateNestedManyWithoutOrderInputObjectSchema } from './OrderItemCreateNestedManyWithoutOrderInput.schema';
 import { ShipmentCreateNestedManyWithoutOrderInputObjectSchema as ShipmentCreateNestedManyWithoutOrderInputObjectSchema } from './ShipmentCreateNestedManyWithoutOrderInput.schema';
-import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema'
+import { TaskCreateNestedManyWithoutOrderInputObjectSchema as TaskCreateNestedManyWithoutOrderInputObjectSchema } from './TaskCreateNestedManyWithoutOrderInput.schema';
+import { WorkCaseCreateNestedManyWithoutOrderInputObjectSchema as WorkCaseCreateNestedManyWithoutOrderInputObjectSchema } from './WorkCaseCreateNestedManyWithoutOrderInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -44,7 +45,8 @@ const makeSchema = () => z.object({
   customer: z.lazy(() => CustomerCreateNestedOneWithoutOrderInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutOrderInputObjectSchema),
   shipments: z.lazy(() => ShipmentCreateNestedManyWithoutOrderInputObjectSchema),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema)
+  task: z.lazy(() => TaskCreateNestedManyWithoutOrderInputObjectSchema),
+  workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutOrderInputObjectSchema)
 }).strict();
 export const OrderCreateInputObjectSchema: z.ZodType<Prisma.OrderCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderCreateInput>;
 export const OrderCreateInputObjectZodSchema = makeSchema();

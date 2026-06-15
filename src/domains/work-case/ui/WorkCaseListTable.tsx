@@ -21,36 +21,31 @@ function watchImage(item: WorkCaseWithRelations) {
 function getRelatedInfo(item: WorkCaseWithRelations) {
   const anyItem = item as any;
 
-  if (anyItem.order) {
+  if (anyItem.orderId || anyItem.order) {
     const order = anyItem.order;
-    const lines = order.items ?? order.orderItems ?? [];
-    const firstLine = lines[0];
-    const firstProduct = firstLine?.product ?? firstLine?.watch?.product;
-    const count = lines.length;
 
     return {
       type: "ORDER",
-      title: order.refNo || order.orderCode || order.id,
-      subtitle: `${count || 0} sản phẩm${order.customerName ? ` · ${order.customerName}` : ""}`,
-      meta: count > 1 ? `+${count - 1} watch khác` : null,
-      img: productImage(firstProduct),
+      title: order?.refNo || anyItem.orderId,
+      subtitle: order?.customerName
+        ? `Khách: ${order.customerName}`
+        : "Phiếu phát sinh từ đơn hàng",
+      meta: order?.orderItem?.length
+        ? `${order.orderItem.length} sản phẩm`
+        : null,
+      img: null,
     };
   }
 
-  if (anyItem.shipment) {
+  if (anyItem.shipmentId || anyItem.shipment) {
     const shipment = anyItem.shipment;
-    const order = shipment.order;
-    const lines = order?.items ?? order?.orderItems ?? [];
-    const firstLine = lines[0];
-    const firstProduct = firstLine?.product ?? firstLine?.watch?.product;
-    const count = lines.length;
 
     return {
       type: "SHIPMENT",
-      title: shipment.refNo || shipment.trackingCode || shipment.id,
-      subtitle: `${order?.refNo || "Order"}${count ? ` · ${count} sản phẩm` : ""}`,
-      meta: shipment.status || null,
-      img: productImage(firstProduct),
+      title: shipment?.refNo || shipment?.trackingCode || anyItem.shipmentId,
+      subtitle: shipment?.orderRefNo ? `Order: ${shipment.orderRefNo}` : "Phiếu phát sinh từ vận đơn",
+      meta: shipment?.status || null,
+      img: null,
     };
   }
 
@@ -64,7 +59,6 @@ function getRelatedInfo(item: WorkCaseWithRelations) {
     img: watchImage(item),
   };
 }
-
 function PrioritySignal({ priority }: { priority: any }) {
   const label = WORK_CASE_PRIORITY_LABEL[priority] || String(priority || "-");
 

@@ -12,7 +12,7 @@ import WatchListTable from "../ui/list/WatchListTable";
 import BuyBackWatchModal from "../ui/buy-back/BuyBackWatchModal";
 import { buildCounts } from "../ui/list/helpers";
 import { normalizeWatchListView } from "../shared/watch-status";
-
+import { buildWatchWorkCaseSource } from "@/domains/work-case/utils/work-case-source";
 import type {
     ViewKey,
     WatchListPageProps,
@@ -21,7 +21,7 @@ import type {
     WatchRow,
 } from "../ui/list/types";
 import { WatchServiceQuickModal } from "@/domains/service/ui/quick-service";
-import RaiseWorkCaseModal, { type RaiseWorkCaseWatchContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
+import RaiseWorkCaseModal, { type RaiseWorkCaseSourceContext } from "@/domains/work-case/ui/RaiseWorkCaseModal";
 import { getTaskQuickCreateDataAction } from "@/domains/task/actions/task.actions";
 import TaskQuickCreateModal, {
     type TaskQuickCreateContext,
@@ -281,7 +281,8 @@ export default function WatchListClient(props: WatchListClientProps) {
     const [buyBackRow, setBuyBackRow] = React.useState<WatchRow | null>(null);
     const [buyBackSubmitting, setBuyBackSubmitting] = React.useState(false);
     const [buyBackError, setBuyBackError] = React.useState<string | null>(null);
-    const [raiseCaseWatch, setRaiseCaseWatch] = React.useState<RaiseWorkCaseWatchContext | null>(null);
+    const [workCaseSource, setWorkCaseSource] =
+        useState<RaiseWorkCaseSourceContext | null>(null);
     const [taskModalOpen, setTaskModalOpen] = React.useState(false);
     const [taskUsers, setTaskUsers] = React.useState<TaskUserOption[]>([]);
     const [taskTypes, setTaskTypes] = React.useState<TaskTypeOption[]>([]);
@@ -542,14 +543,15 @@ export default function WatchListClient(props: WatchListClientProps) {
         }
     }
 
-    function onRaiseCase(row: WatchRow) {
-        setRaiseCaseWatch({
-            watchId: row.id,
-            productId: row.productId,
-            title: row.title,
-            sku: row.sku,
-            imageUrl: row.imageUrl,
-        });
+    function openWorkCaseFromWatch(row: WatchRow) {
+        setWorkCaseSource(
+            buildWatchWorkCaseSource({
+                watchId: row.id,
+                title: row.title,
+                sku: row.sku,
+                imageUrl: row.imageUrl,
+            }),
+        );
     }
 
     function onBuyBack(row: WatchRow) {
@@ -667,7 +669,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                     onQuickOrder={onQuickOrder}
                     onConsign={onConsign}
                     onBuyBack={onBuyBack}
-                    onRaiseCase={onRaiseCase}
+                    onRaiseCase={openWorkCaseFromWatch}
                     onCreateTask={onCreateTask}
                 />
             </div>
@@ -694,14 +696,16 @@ export default function WatchListClient(props: WatchListClientProps) {
                 />
             ) : null}
 
-            {raiseCaseWatch ? (
-                <RaiseWorkCaseModal
-                    open
-                    watch={raiseCaseWatch}
-                    onClose={() => setRaiseCaseWatch(null)}
-                    onSaved={() => router.refresh()}
-                />
-            ) : null}
+            <RaiseWorkCaseModal
+                open={!!workCaseSource}
+                source={workCaseSource}
+                categories={[]}
+                onClose={() => setWorkCaseSource(null)}
+                onSaved={() => {
+                    setWorkCaseSource(null);
+                    router.refresh();
+                }}
+            />
 
             {taskModalOpen ? (
                 <TaskQuickCreateModal

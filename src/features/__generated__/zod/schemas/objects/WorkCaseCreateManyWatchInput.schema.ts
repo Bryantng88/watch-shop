@@ -13,6 +13,8 @@ const makeSchema = () => z.object({
   status: WorkCaseStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   categoryId: z.string().optional().nullable(),
+  orderId: z.string().optional().nullable(),
+  shipmentId: z.string().optional().nullable(),
   raisedByUserId: z.string().optional().nullable(),
   assignedToUserId: z.string().optional().nullable(),
   triagedAt: z.coerce.date().optional().nullable(),

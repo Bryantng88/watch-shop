@@ -17,9 +17,11 @@ export type CreateWorkCaseInput = {
   description?: string | null;
   scope: WorkCaseScope;
   priority?: TaskPriority;
-  watchId: string;
+  watchId?: string | null;
   categoryId?: string | null;
   assignedToUserId?: string | null;
+  orderId?: string | null;
+  shipmentId?: string | null;
 };
 
 export type UpdateWorkCaseInput = {

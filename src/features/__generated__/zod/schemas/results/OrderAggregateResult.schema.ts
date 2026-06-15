@@ -32,7 +32,8 @@ export const OrderAggregateResultSchema = z.object({  _count: z.object({
     customer: z.number(),
     orderItem: z.number(),
     shipments: z.number(),
-    Task: z.number()
+    task: z.number(),
+    workCase: z.number()
   }).optional(),
   _sum: z.object({
     subtotal: z.number().nullable(),

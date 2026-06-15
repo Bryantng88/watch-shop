@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Pencil, Send, Truck, WalletCards, XCircle } from "lucide-react";
+import { Eye, Pencil, Send, Truck, WalletCards, XCircle, ClipboardPlus } from "lucide-react";
 
 import {
   ReserveTypeSignalIcon,
@@ -26,7 +26,7 @@ type Props = {
   item: OrderListItem;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-
+  onCreateWorkCase?: (row: OrderListItem) => void;
   onView?: (row: OrderListItem) => void;
   onEdit?: (row: OrderListItem) => void;
   onPost?: (row: OrderListItem) => void;
@@ -64,6 +64,7 @@ export default function OrderListRow({
   onEdit,
   onPost,
   onManagePayments,
+  onCreateWorkCase,
   onManageShipment,
   onMarkShipmentDelivered,
   onCancel,
@@ -175,6 +176,12 @@ export default function OrderListRow({
               label: "Xem đơn",
               icon: <Eye className="h-4 w-4" />,
               onClick: onView,
+            },
+            onCreateWorkCase && {
+              key: "create-work-case",
+              label: "Tạo phiếu xử lý",
+              icon: <ClipboardPlus className="h-4 w-4" />,
+              onClick: onCreateWorkCase,
             },
             !cancelled &&
             canPostOrder(item) &&

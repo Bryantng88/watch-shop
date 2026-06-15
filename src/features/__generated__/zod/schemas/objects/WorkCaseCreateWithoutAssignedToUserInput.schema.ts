@@ -4,6 +4,8 @@ import { WorkCaseScopeSchema } from '../enums/WorkCaseScope.schema';
 import { WorkCaseStatusSchema } from '../enums/WorkCaseStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { WatchCreateNestedOneWithoutWorkCasesInputObjectSchema as WatchCreateNestedOneWithoutWorkCasesInputObjectSchema } from './WatchCreateNestedOneWithoutWorkCasesInput.schema';
+import { OrderCreateNestedOneWithoutWorkCaseInputObjectSchema as OrderCreateNestedOneWithoutWorkCaseInputObjectSchema } from './OrderCreateNestedOneWithoutWorkCaseInput.schema';
+import { ShipmentCreateNestedOneWithoutWorkCaseInputObjectSchema as ShipmentCreateNestedOneWithoutWorkCaseInputObjectSchema } from './ShipmentCreateNestedOneWithoutWorkCaseInput.schema';
 import { WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema as WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema } from './WorkCaseCategoryCreateNestedOneWithoutWorkCasesInput.schema';
 import { UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema as UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema } from './UserCreateNestedOneWithoutRaisedWorkCasesInput.schema';
 import { TaskCreateNestedManyWithoutWorkCaseInputObjectSchema as TaskCreateNestedManyWithoutWorkCaseInputObjectSchema } from './TaskCreateNestedManyWithoutWorkCaseInput.schema';
@@ -23,7 +25,9 @@ const makeSchema = () => z.object({
   cancelledAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  watch: z.lazy(() => WatchCreateNestedOneWithoutWorkCasesInputObjectSchema),
+  watch: z.lazy(() => WatchCreateNestedOneWithoutWorkCasesInputObjectSchema).optional(),
+  order: z.lazy(() => OrderCreateNestedOneWithoutWorkCaseInputObjectSchema).optional(),
+  shipment: z.lazy(() => ShipmentCreateNestedOneWithoutWorkCaseInputObjectSchema).optional(),
   category: z.lazy(() => WorkCaseCategoryCreateNestedOneWithoutWorkCasesInputObjectSchema).optional(),
   raisedByUser: z.lazy(() => UserCreateNestedOneWithoutRaisedWorkCasesInputObjectSchema).optional(),
   tasks: z.lazy(() => TaskCreateNestedManyWithoutWorkCaseInputObjectSchema).optional(),

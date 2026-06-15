@@ -24,7 +24,8 @@ import { EnumOrderFlowTypeFieldUpdateOperationsInputObjectSchema as EnumOrderFlo
 import { InvoiceUpdateManyWithoutOrderNestedInputObjectSchema as InvoiceUpdateManyWithoutOrderNestedInputObjectSchema } from './InvoiceUpdateManyWithoutOrderNestedInput.schema';
 import { CustomerUpdateOneWithoutOrderNestedInputObjectSchema as CustomerUpdateOneWithoutOrderNestedInputObjectSchema } from './CustomerUpdateOneWithoutOrderNestedInput.schema';
 import { ShipmentUpdateManyWithoutOrderNestedInputObjectSchema as ShipmentUpdateManyWithoutOrderNestedInputObjectSchema } from './ShipmentUpdateManyWithoutOrderNestedInput.schema';
-import { TaskUpdateManyWithoutOrderNestedInputObjectSchema as TaskUpdateManyWithoutOrderNestedInputObjectSchema } from './TaskUpdateManyWithoutOrderNestedInput.schema'
+import { TaskUpdateManyWithoutOrderNestedInputObjectSchema as TaskUpdateManyWithoutOrderNestedInputObjectSchema } from './TaskUpdateManyWithoutOrderNestedInput.schema';
+import { WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema as WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutOrderNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -57,7 +58,8 @@ const makeSchema = () => z.object({
   Invoice: z.lazy(() => InvoiceUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
   customer: z.lazy(() => CustomerUpdateOneWithoutOrderNestedInputObjectSchema).optional(),
   shipments: z.lazy(() => ShipmentUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
-  Task: z.lazy(() => TaskUpdateManyWithoutOrderNestedInputObjectSchema).optional()
+  task: z.lazy(() => TaskUpdateManyWithoutOrderNestedInputObjectSchema).optional(),
+  workCase: z.lazy(() => WorkCaseUpdateManyWithoutOrderNestedInputObjectSchema).optional()
 }).strict();
 export const OrderUpdateWithoutOrderItemInputObjectSchema: z.ZodType<Prisma.OrderUpdateWithoutOrderItemInput> = makeSchema() as unknown as z.ZodType<Prisma.OrderUpdateWithoutOrderItemInput>;
 export const OrderUpdateWithoutOrderItemInputObjectZodSchema = makeSchema();

@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { ShipmentStatusSchema } from '../enums/ShipmentStatus.schema';
 import { ShippingFeePayerSchema } from '../enums/ShippingFeePayer.schema';
 import { OrderCreateNestedOneWithoutShipmentsInputObjectSchema as OrderCreateNestedOneWithoutShipmentsInputObjectSchema } from './OrderCreateNestedOneWithoutShipmentsInput.schema';
-import { TaskCreateNestedManyWithoutShipmentInputObjectSchema as TaskCreateNestedManyWithoutShipmentInputObjectSchema } from './TaskCreateNestedManyWithoutShipmentInput.schema'
+import { TaskCreateNestedManyWithoutShipmentInputObjectSchema as TaskCreateNestedManyWithoutShipmentInputObjectSchema } from './TaskCreateNestedManyWithoutShipmentInput.schema';
+import { WorkCaseCreateNestedManyWithoutShipmentInputObjectSchema as WorkCaseCreateNestedManyWithoutShipmentInputObjectSchema } from './WorkCaseCreateNestedManyWithoutShipmentInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -27,7 +28,8 @@ const makeSchema = () => z.object({
   orderRefNo: z.string().optional().nullable(),
   customerName: z.string().optional().nullable(),
   order: z.lazy(() => OrderCreateNestedOneWithoutShipmentsInputObjectSchema),
-  Task: z.lazy(() => TaskCreateNestedManyWithoutShipmentInputObjectSchema)
+  task: z.lazy(() => TaskCreateNestedManyWithoutShipmentInputObjectSchema),
+  workCase: z.lazy(() => WorkCaseCreateNestedManyWithoutShipmentInputObjectSchema)
 }).strict();
 export const ShipmentCreateInputObjectSchema: z.ZodType<Prisma.ShipmentCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ShipmentCreateInput>;
 export const ShipmentCreateInputObjectZodSchema = makeSchema();

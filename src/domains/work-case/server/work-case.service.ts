@@ -78,7 +78,10 @@ export async function createWorkCase(db: DB, input: CreateWorkCaseInput, auth: a
   assertUser(userId);
 
   if (!input.title?.trim()) throw new Error("Vui lòng nhập tiêu đề phiếu xử lý");
-  if (!input.watchId?.trim()) throw new Error("Phiếu xử lý phải gắn với watch");
+
+  if (!input.watchId?.trim() && !input.orderId?.trim() && !input.shipmentId?.trim()) {
+    throw new Error("Phiếu xử lý phải gắn với watch, order hoặc shipment.");
+  }
 
   return createWorkCaseRepo(db, {
     ...input,

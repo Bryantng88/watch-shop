@@ -22,5 +22,6 @@ export const ShipmentUpsertResultSchema = z.object({
   orderRefNo: z.string().optional(),
   customerName: z.string().optional(),
   order: z.unknown(),
-  Task: z.array(z.unknown())
+  task: z.array(z.unknown()),
+  workCase: z.array(z.unknown())
 });

@@ -1,6 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { WatchArgsObjectSchema as WatchArgsObjectSchema } from './WatchArgs.schema';
+import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema';
+import { ShipmentArgsObjectSchema as ShipmentArgsObjectSchema } from './ShipmentArgs.schema';
 import { WorkCaseCategoryArgsObjectSchema as WorkCaseCategoryArgsObjectSchema } from './WorkCaseCategoryArgs.schema';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
@@ -10,6 +12,8 @@ import { WorkCaseCountOutputTypeArgsObjectSchema as WorkCaseCountOutputTypeArgsO
 
 const makeSchema = () => z.object({
   watch: z.union([z.boolean(), z.lazy(() => WatchArgsObjectSchema)]).optional(),
+  order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
+  shipment: z.union([z.boolean(), z.lazy(() => ShipmentArgsObjectSchema)]).optional(),
   category: z.union([z.boolean(), z.lazy(() => WorkCaseCategoryArgsObjectSchema)]).optional(),
   raisedByUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   assignedToUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
