@@ -4,28 +4,37 @@ import { CheckCircle2, CirclePlay, Eye, RotateCcw, XCircle } from "lucide-react"
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/task.repo";
-import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL, formatTaskDomainLabel } from "../../utils/task-labels";
-import { TaskPriorityBadge, TaskSourceBadge, TaskStatusBadge } from "../shared/TaskBadges";
+import {
+  TASK_DOMAIN_LABEL,
+  TASK_MODE_LABEL,
+} from "../../utils/task-labels";
+import {
+  TaskPriorityBadge,
+  TaskStatusBadge,
+} from "../shared/TaskBadges";
 import TaskPagination from "./TaskPagination";
 
 function formatDate(value?: Date | string | null) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
 function userLabel(user?: { name?: string | null; email?: string | null } | null) {
   return user?.name || user?.email || "—";
 }
 
-function domainTitle(row: TaskWithRelations) {
-  if (row.watch?.product?.title) return row.watch.product.title;
-  if (row.order?.refNo) return row.order.refNo;
-  if (row.shipment?.refNo || row.shipment?.orderRefNo) return row.shipment.refNo || row.shipment.orderRefNo;
-  if (row.acquisition?.refNo) return row.acquisition.refNo;
-  if (row.serviceRequest?.refNo) return row.serviceRequest.refNo;
-  if (row.technicalIssue?.area) return row.technicalIssue.area;
-  if (row.payment?.refNo) return row.payment.refNo;
-  return "—";
+function userInitial(user?: { name?: string | null; email?: string | null } | null) {
+  const label = userLabel(user);
+  if (!label || label === "—") return "?";
+  return label.trim().slice(0, 1).toUpperCase();
+}
+
+function taskText(row: TaskWithRelations) {
+  return row.description?.trim() || row.title?.trim() || "Không có mô tả";
 }
 
 export default function TaskListTable({
@@ -51,57 +60,129 @@ export default function TaskListTable({
         <table className="min-w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Task</th>
+              <th className="px-4 py-3">Nội dung</th>
               <th className="px-4 py-3">Loại</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Ưu tiên</th>
-              <th className="px-4 py-3">Người tạo</th>
+              <th className="px-4 py-3 text-center">Trạng thái</th>
+              <th className="px-4 py-3 text-center">Ưu tiên</th>
               <th className="px-4 py-3">Người nhận</th>
               <th className="px-4 py-3">Due</th>
               <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-500">Chưa có task phù hợp.</td></tr>
-            ) : items.map((row) => (
-              <tr key={row.id} className="hover:bg-slate-50/70">
-                <td className="max-w-[360px] px-4 py-3">
-                  <div className="font-semibold text-slate-950">{row.description}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <TaskSourceBadge source={row.source} />
-                    <span>{formatTaskDomainLabel(row)}: {domainTitle(row)}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  <div>
-                    <div className="font-medium text-slate-800">{row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}</div>
-                    <div className="mt-0.5 text-[11px] text-slate-400">{row.taskType?.code ? `${row.taskType.code} · ` : ""}{TASK_MODE_LABEL[row.mode]}</div>
-                  </div>
-                </td>
-                <td className="px-4 py-3"><TaskStatusBadge status={row.status} /></td>
-                <td className="px-4 py-3"><TaskPriorityBadge priority={row.priority} /></td>
-                <td className="px-4 py-3 text-slate-600">{userLabel(row.createdByUser)}</td>
-                <td className="px-4 py-3 text-slate-600">{userLabel(row.assignedToUser)}</td>
-                <td className="px-4 py-3 text-slate-600">{formatDate(row.dueAt)}</td>
-                <td className="px-4 py-3">
-                  <RowActions
-                    row={row}
-                    actions={[
-                      { key: "view", label: "Mở task", icon: <Eye className="h-4 w-4" />, onClick: onOpen },
-                      { key: "edit", label: "Sửa task", onClick: onEdit },
-                      row.status !== "IN_PROGRESS" && row.status !== "DONE" && row.status !== "CANCELLED" ? { key: "start", label: "Bắt đầu", icon: <CirclePlay className="h-4 w-4" />, onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS) } : null,
-                      row.status !== "DONE" ? { key: "done", label: "Hoàn thành", icon: <CheckCircle2 className="h-4 w-4" />, onClick: (r) => onStatus(r, TaskStatus.DONE) } : null,
-                      row.status !== "TODO" ? { key: "reopen", label: "Mở lại", icon: <RotateCcw className="h-4 w-4" />, onClick: (r) => onStatus(r, TaskStatus.TODO) } : null,
-                      row.status !== "CANCELLED" ? { key: "cancel", label: "Hủy task", icon: <XCircle className="h-4 w-4" />, tone: "danger", separatorBefore: true, onClick: (r) => onStatus(r, TaskStatus.CANCELLED) } : null,
-                    ]}
-                  />
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-4 py-12 text-center text-sm text-slate-500"
+                >
+                  Chưa có task phù hợp.
                 </td>
               </tr>
-            ))}
+            ) : (
+              items.map((row) => (
+                <tr key={row.id} className="hover:bg-slate-50/70">
+                  <td className="max-w-[460px] px-4 py-3">
+                    <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
+                      {taskText(row)}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-slate-600">
+                    <div className="font-medium text-slate-800">
+                      {row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-slate-400">
+                      {row.taskType?.code ? `${row.taskType.code} · ` : ""}
+                      {TASK_MODE_LABEL[row.mode]}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-center">
+                    <TaskStatusBadge status={row.status} />
+                  </td>
+
+                  <td className="px-4 py-3 text-center">
+                    <TaskPriorityBadge priority={row.priority} />
+                  </td>
+
+                  <td className="px-4 py-3 text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                        {userInitial(row.assignedToUser)}
+                      </span>
+                      <span className="font-medium text-slate-700">
+                        {userLabel(row.assignedToUser)}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-slate-600">
+                    {formatDate(row.dueAt)}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <RowActions
+                      row={row}
+                      actions={[
+                        {
+                          key: "view",
+                          label: "Mở task",
+                          icon: <Eye className="h-4 w-4" />,
+                          onClick: onOpen,
+                        },
+                        {
+                          key: "edit",
+                          label: "Sửa task",
+                          onClick: onEdit,
+                        },
+                        row.status !== "IN_PROGRESS" &&
+                          row.status !== "DONE" &&
+                          row.status !== "CANCELLED"
+                          ? {
+                            key: "start",
+                            label: "Bắt đầu",
+                            icon: <CirclePlay className="h-4 w-4" />,
+                            onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS),
+                          }
+                          : null,
+                        row.status !== "DONE"
+                          ? {
+                            key: "done",
+                            label: "Hoàn thành",
+                            icon: <CheckCircle2 className="h-4 w-4" />,
+                            onClick: (r) => onStatus(r, TaskStatus.DONE),
+                          }
+                          : null,
+                        row.status !== "TODO"
+                          ? {
+                            key: "reopen",
+                            label: "Mở lại",
+                            icon: <RotateCcw className="h-4 w-4" />,
+                            onClick: (r) => onStatus(r, TaskStatus.TODO),
+                          }
+                          : null,
+                        row.status !== "CANCELLED"
+                          ? {
+                            key: "cancel",
+                            label: "Hủy task",
+                            icon: <XCircle className="h-4 w-4" />,
+                            tone: "danger",
+                            separatorBefore: true,
+                            onClick: (r) => onStatus(r, TaskStatus.CANCELLED),
+                          }
+                          : null,
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
       <TaskPagination page={page} totalPages={totalPages} onPage={onPage} />
     </div>
   );

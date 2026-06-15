@@ -36,6 +36,10 @@ function activeSrWhere(productId: string) {
 function isTechnicalIssueAction(action: any) {
   const targetType = String(action?.targetType ?? "").toUpperCase();
   const code = String(action?.code ?? "").toUpperCase();
+  const name = String(action?.name ?? "").toUpperCase();
+  const completionRuleKey = String(action?.completionRuleKey ?? "").toUpperCase();
+
+  const text = `${code} ${name} ${completionRuleKey}`;
 
   return (
     targetType === String(TaskExecutionTargetType.TECHNICAL_ISSUE) ||
@@ -43,12 +47,16 @@ function isTechnicalIssueAction(action: any) {
     Boolean(action?.serviceCatalogId) ||
     Boolean(action?.supplyCatalogId) ||
     Boolean(action?.mechanicalPartCatalogId) ||
-    code.includes("TECHNICAL") ||
-    code.includes("ISSUE") ||
-    code.includes("STRAP") ||
-    code.includes("BATTERY") ||
-    code.includes("POLISH") ||
-    code.includes("SERVICE")
+    completionRuleKey.includes("TECHNICAL_ISSUE") ||
+    completionRuleKey.includes("ISSUE_DONE") ||
+    text.includes("TECHNICAL") ||
+    text.includes("ISSUE") ||
+    text.includes("SERVICE") ||
+    text.includes("KIỂM TRA") ||
+    text.includes("KIEM TRA") ||
+    text.includes("STRAP") ||
+    text.includes("BATTERY") ||
+    text.includes("POLISH")
   );
 }
 
@@ -148,7 +156,7 @@ async function ensureActiveServiceRequest(client: any, input: { task: any; userI
       modelSnapshot: product?.title ?? null,
       skuSnapshot: product?.sku ?? null,
       primaryImageUrlSnapshot: product?.primaryImageUrl ?? null,
-      servicecatalogid: input.task.taskAction?.serviceCatalogId ?? null,
+      serviceCatalogId: input.task.taskAction?.serviceCatalogId ?? null,
     } as any,
     select: { id: true, refNo: true, status: true },
   });
