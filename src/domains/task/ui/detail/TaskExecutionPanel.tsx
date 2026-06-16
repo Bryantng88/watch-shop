@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type Props = {
+  task: any;
+  executions?: any[];
+};
+
 function targetLabel(type: string) {
   if (type === "SERVICE_REQUEST") return "Service Request";
   if (type === "TECHNICAL_ISSUE") return "Technical Issue";
@@ -68,32 +73,15 @@ function formatDate(value?: Date | string | null) {
 }
 
 function getDisplayRef(item: any) {
-  return (
-    item.targetRefNo ||
-    item.targetCode ||
-    item.targetTitle ||
-    item.refNo ||
-    item.targetId
-  );
+  return item.targetRefNo || item.targetCode || item.targetTitle || item.refNo || item.targetId;
 }
 
 function getStatus(item: any) {
   return item.targetStatus || item.status || null;
 }
+
 function meta(item: any) {
   return item?.metadataJson ?? item?.metadata ?? {};
-}
-
-function shouldHideServiceRequestExecution(item: any, executions: any[]) {
-  if (item.targetType !== "SERVICE_REQUEST") return false;
-
-  return executions.some((x) => {
-    const m = meta(x);
-    return (
-      x.targetType === "TECHNICAL_ISSUE" &&
-      m?.serviceRequestId === item.targetId
-    );
-  });
 }
 
 function groupExecutions(executions: any[]) {
@@ -126,14 +114,277 @@ function groupExecutions(executions: any[]) {
     (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
   );
 }
-export default function TaskExecutionPanel({ executions = [] }: { executions?: any[] }) {
+
+function isIssueDone(issue: any) {
+  const status = String(issue?.executionStatus ?? "").toUpperCase();
+  return status === "DONE" || status === "COMPLETED";
+}
+
+function isIssueInProgress(issue: any) {
+  const status = String(issue?.executionStatus ?? "").toUpperCase();
+  return status === "IN_PROGRESS";
+}
+
+function getSrProgress(sr: any) {
+  const issues = sr?.technicalIssue ?? [];
+  const total = issues.length;
+  const done = issues.filter(isIssueDone).length;
+  const inProgress = issues.filter(isIssueInProgress).length;
+
+  if (!sr?.id) {
+    return {
+      total,
+      done,
+      label: "Chưa có Service Request",
+      tone: "bg-slate-50 text-slate-500 ring-slate-200",
+      percent: 0,
+    };
+  }
+
+  if (total === 0) {
+    return {
+      total,
+      done,
+      label: "SR đã tạo, chưa có issue",
+      tone: "bg-slate-50 text-slate-600 ring-slate-200",
+      percent: 0,
+    };
+  }
+
+  if (done === total) {
+    return {
+      total,
+      done,
+      label: "Tất cả issue đã xong",
+      tone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+      percent: 100,
+    };
+  }
+
+  if (done > 0 || inProgress > 0) {
+    return {
+      total,
+      done,
+      label: "Đang xử lý issue",
+      tone: "bg-blue-50 text-blue-700 ring-blue-100",
+      percent: Math.round((done / total) * 100),
+    };
+  }
+
+  return {
+    total,
+    done,
+    label: "Issue đang mở",
+    tone: "bg-amber-50 text-amber-700 ring-amber-100",
+    percent: 0,
+  };
+}
+
+function issueLineStatus(issue: any) {
+  return isIssueDone(issue) ? "✓" : "○";
+}
+
+function ServiceRequestProgressCard({
+  task,
+  execution,
+}: {
+  task: any;
+  execution: any;
+}) {
+  const sr = task?.serviceRequest ?? null;
+  const issues = sr?.technicalIssue ?? [];
+  const progress = getSrProgress(sr);
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              <Wrench className="h-3.5 w-3.5" />
+              Service Request
+            </span>
+
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+              Đã tạo
+            </span>
+
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                progress.tone,
+              )}
+            >
+              {progress.label}
+            </span>
+          </div>
+
+          <div className="mt-3 font-semibold text-slate-950">
+            {sr?.refNo || sr?.id || execution.targetId}
+          </div>
+
+          <div className="mt-1 text-sm text-slate-600">
+            SR status:{" "}
+            <span className="font-semibold text-slate-900">
+              {sr?.status ?? "-"}
+            </span>
+          </div>
+
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+              <span>Tiến độ kỹ thuật</span>
+              <span className="font-semibold text-slate-700">
+                {progress.done}/{progress.total}
+              </span>
+            </div>
+
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  progress.total > 0 && progress.done === progress.total
+                    ? "bg-emerald-500"
+                    : "bg-blue-500",
+                )}
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+          </div>
+
+          {issues.length > 0 ? (
+            <div className="mt-3 space-y-1.5">
+              {issues.slice(0, 5).map((issue: any) => (
+                <div
+                  key={issue.id}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs ring-1 ring-slate-100"
+                >
+                  <div className="min-w-0">
+                    <span className="mr-1 text-slate-400">
+                      {issueLineStatus(issue)}
+                    </span>
+                    <span className="font-medium text-slate-700">
+                      {issue.summary || issue.area || "Technical issue"}
+                    </span>
+                  </div>
+
+                  <div className="shrink-0 text-slate-400">
+                    {issue.executionStatus}
+                  </div>
+                </div>
+              ))}
+
+              {issues.length > 5 ? (
+                <div className="pl-3 text-xs text-slate-400">
+                  +{issues.length - 5} issue khác
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+              Chưa có Technical Issue nào trong SR này.
+            </div>
+          )}
+
+          <div className="mt-3 text-xs text-slate-300">
+            ID: {sr?.id || execution.targetId}
+          </div>
+        </div>
+
+        {sr?.id ? (
+          <Link
+            href={`/admin/services/${sr.id}`}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+          >
+            Mở
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DefaultExecutionCard({ item }: { item: any }) {
+  const href = targetHref(item.targetType, item.targetId);
+  const status = getStatus(item);
+  const displayRef = getDisplayRef(item);
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              {targetIcon(item.targetType)}
+              {targetLabel(item.targetType)}
+            </span>
+
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                actionTone(item.actionType),
+              )}
+            >
+              {actionLabel(item.actionType)}
+            </span>
+
+            {status ? (
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                {status}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-3 break-all font-semibold text-slate-950">
+            {displayRef}
+          </div>
+
+          {item.note ? (
+            <p className="mt-2 text-sm text-slate-600">{item.note}</p>
+          ) : null}
+
+          <p className="mt-2 text-xs text-slate-400">
+            {formatDate(item.createdAt)}
+            {item.createdByUser?.name ? ` · ${item.createdByUser.name}` : ""}
+          </p>
+
+          {item.targetId ? (
+            <p className="mt-1 break-all text-[11px] text-slate-300">
+              ID: {item.targetId}
+            </p>
+          ) : null}
+        </div>
+
+        {href ? (
+          <Link
+            href={href}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+          >
+            Mở
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export default function TaskExecutionPanel({
+  task,
+  executions = [],
+}: Props) {
   const latest = executions[0] ?? null;
+
   const hasDoneSignal = executions.some((item) =>
-    ["DONE", "COMPLETED", "DELIVERED", "PAID"].includes(String(getStatus(item) ?? "").toUpperCase()),
+    ["DONE", "COMPLETED", "DELIVERED", "PAID"].includes(
+      String(getStatus(item) ?? "").toUpperCase(),
+    ),
   );
+
   const visibleExecutions = groupExecutions(
-    executions.filter((item) => !shouldHideServiceRequestExecution(item, executions)),
+    executions.filter((item) => item.targetType !== "TECHNICAL_ISSUE"),
   );
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -145,7 +396,7 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
             Timeline nghiệp vụ từ task
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Theo dõi các nghiệp vụ thật được tạo/link từ task này.
+            Theo dõi Service Request, Technical Issue và các nghiệp vụ thật được tạo/link từ task này.
           </p>
         </div>
 
@@ -168,7 +419,12 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
           ) : (
             <Link2 className="h-3.5 w-3.5" />
           )}
-          {executions.length ? (hasDoneSignal ? "Có kết quả hoàn tất" : "Đang thực hiện") : "Chưa có kết quả"}
+
+          {executions.length
+            ? hasDoneSignal
+              ? "Có kết quả hoàn tất"
+              : "Đang thực hiện"
+            : "Chưa có kết quả"}
         </div>
       </div>
 
@@ -178,104 +434,20 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
         </div>
       ) : (
         <div className="space-y-3">
-          {visibleExecutions.map((item) => {
-            const href = targetHref(item.targetType, item.targetId);
-            const status = getStatus(item);
-            const displayRef = getDisplayRef(item);
-
-            return (
-              <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                        {targetIcon(item.targetType)}
-                        {targetLabel(item.targetType)}
-                      </span>
-
-                      <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold ring-1", actionTone(item.actionType))}>
-                        {actionLabel(item.actionType)}
-                      </span>
-
-                      {status ? (
-                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                          {String(status)}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-3">
-                      <div className="text-sm font-semibold text-slate-950">
-                        {displayRef}
-                      </div>
-
-                      {item.targetTitle ? (
-                        <div className="mt-1 line-clamp-2 text-sm text-slate-600">
-                          {item.targetTitle}
-                        </div>
-                      ) : null}
-
-                      {item.note ? (
-                        <p className="mt-2 text-sm text-slate-600">{item.note}</p>
-                      ) : null}
-                      {item.events?.length > 1 ? (
-                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-3">
-                          {item.events
-                            .slice()
-                            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                            .map((event: any) => (
-                              <div key={event.id} className="flex gap-2 text-xs text-slate-500">
-                                <span className={cn("mt-0.5 h-2 w-2 rounded-full", event.actionType === "CREATED" ? "bg-emerald-400" : event.actionType === "CANCELLED" ? "bg-slate-400" : "bg-amber-400")} />
-                                <div>
-                                  <span className="font-semibold text-slate-700">{actionLabel(event.actionType)}</span>
-                                  {event.note ? <span> · {event.note}</span> : null}
-                                  <div className="text-slate-400">{formatDate(event.createdAt)}</div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      ) : null}
-                      {item.targetType === "TECHNICAL_ISSUE" && meta(item)?.serviceRequestId ? (
-                        <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-                          Nằm trong SR:{" "}
-                          <Link
-                            href={`/admin/services/${meta(item).serviceRequestId}`}
-                            className="font-semibold text-blue-700 hover:text-blue-900"
-                          >
-                            {meta(item).serviceRequestRefNo || meta(item).serviceRequestId}
-                          </Link>
-                          {meta(item).serviceRequestStatus ? (
-                            <span className="ml-1 text-slate-400">
-                              · {meta(item).serviceRequestStatus}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <p className="mt-1 text-xs text-slate-400">
-                        {formatDate(item.createdAt)}
-                        {item.createdByUser ? ` · ${item.createdByUser.name ?? item.createdByUser.email}` : ""}
-                      </p>
-
-                      {!item.targetRefNo && !item.targetTitle ? (
-                        <p className="mt-1 break-all text-[11px] text-slate-300">
-                          ID: {item.targetId}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {href ? (
-                    <Link
-                      href={href}
-                      className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900"
-                    >
-                      Mở <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
+          {visibleExecutions.map((item) =>
+            item.targetType === "SERVICE_REQUEST" ? (
+              <ServiceRequestProgressCard
+                key={`${item.targetType}:${item.targetId}`}
+                task={task}
+                execution={item}
+              />
+            ) : (
+              <DefaultExecutionCard
+                key={`${item.targetType}:${item.targetId}`}
+                item={item}
+              />
+            ),
+          )}
         </div>
       )}
 
@@ -283,7 +455,8 @@ export default function TaskExecutionPanel({ executions = [] }: { executions?: a
         <div className="mt-4 rounded-2xl bg-slate-950 px-4 py-3 text-sm text-white">
           <span className="text-slate-300">Cập nhật mới nhất:</span>{" "}
           <span className="font-semibold">{targetLabel(latest.targetType)}</span>{" "}
-          {actionLabel(latest.actionType).toLowerCase()} lúc {formatDate(latest.createdAt)}
+          {actionLabel(latest.actionType).toLowerCase()} lúc{" "}
+          {formatDate(latest.createdAt)}
         </div>
       ) : null}
     </section>

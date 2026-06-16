@@ -127,10 +127,16 @@ async function assertTaskCanExecute(db: DB, taskId: string, auth: any) {
   return { task: task as any, userId };
 }
 
-async function ensureActiveServiceRequest(client: any, input: { task: any; userId: string }) {
+async function ensureActiveServiceRequest(
+  client: any,
+  input: { task: any; userId: string },
+) {
   const watch = getWatchFromTask(input.task);
   const productId = clean(watch?.productId);
-  if (!productId) throw new Error("Task chưa gắn product/watch nên không thể tạo Service Request");
+
+  if (!productId) {
+    throw new Error("Task chưa gắn product/watch nên không thể tạo Service Request");
+  }
 
   const existing = await client.serviceRequest.findFirst({
     where: activeSrWhere(productId),
@@ -138,36 +144,65 @@ async function ensureActiveServiceRequest(client: any, input: { task: any; userI
     select: { id: true, refNo: true, status: true },
   });
 
-  if (existing?.id) return { serviceRequest: existing, created: false };
+  if (existing?.id) {
+    return { serviceRequest: existing, created: false };
+  }
 
   const product = watch?.product ?? null;
-  const notes = [
-    `Tạo từ task: ${input.task.title}`,
-    input.task.description ?? null,
-  ].filter(Boolean).join("\n\n") || null;
+
+  const notes =
+    [
+      `Tạo từ task: ${input.task.title}`,
+      input.task.description ?? null,
+    ]
+      .filter(Boolean)
+      .join("\n\n") || null;
+
+  const workCaseId = clean(input.task.workCaseId);
+  const technicianId = clean(input.task.assignedToUserId ?? input.userId);
+  const serviceCatalogId = clean(input.task.taskAction?.serviceCatalogId);
 
   const created = await client.serviceRequest.create({
     data: {
-      product: { connect: { id: productId } },
-      workCase: {
-        connect: {
-          id: input.task.workCaseId,
-        },
+      product: {
+        connect: { id: productId },
       },
-      technicianId: input.task.assignedToUserId ?? input.userId,
+
+      ...(workCaseId
+        ? {
+          workCase: {
+            connect: { id: workCaseId },
+          },
+        }
+        : {}),
+
+      ...(technicianId
+        ? {
+          user: {
+            connect: { id: technicianId },
+          },
+        }
+        : {}),
+
+      ...(serviceCatalogId
+        ? {
+          serviceCatalog: {
+            connect: { id: serviceCatalogId },
+          },
+        }
+        : {}),
+
       status: ServiceRequestStatus.DRAFT,
       notes,
       modelSnapshot: product?.title ?? null,
       skuSnapshot: product?.sku ?? null,
       primaryImageUrlSnapshot: product?.primaryImageUrl ?? null,
-      serviceCatalogId: input.task.taskAction?.serviceCatalogId ?? null,
-    } as any,
+    },
     select: { id: true, refNo: true, status: true },
   });
 
   return { serviceRequest: created, created: true };
 }
-
 async function ensureAssessment(client: any, serviceRequestId: string) {
   const existing = await client.technicalAssessment.findUnique({
     where: { serviceRequestId },

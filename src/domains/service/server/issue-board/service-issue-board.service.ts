@@ -21,11 +21,65 @@ function decimalOrNull(v: unknown): number | null {
 async function vendorName(vendorId?: string | null) {
     const id = cleanId(vendorId);
     if (!id) return null;
+
     const vendor = await prisma.vendor.findUnique({
         where: { id },
         select: { name: true },
     });
+
     return vendor?.name ?? null;
+}
+
+function normalizeIssueStatus(value: unknown) {
+    return String(value ?? "").trim().toUpperCase();
+}
+
+function isIssueCancelled(status: unknown) {
+    const s = normalizeIssueStatus(status);
+    return s === "CANCELED" || s === "CANCELLED";
+}
+
+function isIssueDone(status: unknown) {
+    const s = normalizeIssueStatus(status);
+    return s === "DONE" || s === "COMPLETED";
+}
+
+function isIssueStarted(status: unknown) {
+    const s = normalizeIssueStatus(status);
+    return ["OPEN", "CONFIRMED", "IN_PROGRESS", "DONE", "COMPLETED"].includes(s);
+}
+
+async function syncServiceRequestStatusFromIssues(client: any, serviceRequestId?: string | null) {
+    const srId = cleanId(serviceRequestId);
+    if (!srId) return;
+
+    const issues = await client.technicalIssue.findMany({
+        where: { serviceRequestId: srId },
+        select: {
+            id: true,
+            executionStatus: true,
+        },
+    });
+
+    const activeIssues = issues.filter((issue: any) => !isIssueCancelled(issue.executionStatus));
+
+    let nextStatus: any = "DRAFT";
+
+    if (activeIssues.length > 0) {
+        const allDone = activeIssues.every((issue: any) => isIssueDone(issue.executionStatus));
+        const hasStarted = activeIssues.some((issue: any) => isIssueStarted(issue.executionStatus));
+
+        if (allDone) nextStatus = "DONE";
+        else if (hasStarted) nextStatus = "IN_PROGRESS";
+    }
+
+    await client.serviceRequest.update({
+        where: { id: srId },
+        data: {
+            status: nextStatus,
+            updatedAt: new Date(),
+        } as any,
+    });
 }
 
 function normalizeAreaKey(value?: string | null) {
@@ -54,7 +108,7 @@ function normalizeAreaKey(value?: string | null) {
         "MAT SO": "DIAL",
 
         HANDS: "HANDS",
-        "KIM": "HANDS",
+        KIM: "HANDS",
 
         BRACELET: "BRACELET",
         STRAP: "BRACELET",
@@ -102,13 +156,10 @@ async function resolveTechnicalDetailCatalog(input: {
 
     return catalog;
 }
+
 export async function listTechnicalDetailCatalogOptions() {
     const rows = await (prisma as any).technicalDetailCatalog.findMany({
-        orderBy: [
-            { area: "asc" },
-            { sortOrder: "asc" },
-            { name: "asc" },
-        ],
+        orderBy: [{ area: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
         select: {
             id: true,
             area: true,
@@ -129,6 +180,7 @@ export async function listTechnicalDetailCatalogOptions() {
             sortOrder: x.sortOrder ?? null,
         }));
 }
+
 export async function createTechnicalIssue(input: {
     assessmentId?: string | null;
     serviceRequestId?: string | null;
@@ -159,20 +211,20 @@ export async function createTechnicalIssue(input: {
     }
 
     if (!assessmentId) {
-        const created = await prisma.technicalAssessment.create({
+        const createdAssessment = await prisma.technicalAssessment.create({
             data: {
                 serviceRequestId,
                 status: "DRAFT" as any,
             } as any,
             select: { id: true },
         });
-        assessmentId = created.id;
+        assessmentId = createdAssessment.id;
     }
 
     const now = new Date();
     const vendorId = cleanId(input.vendorId);
 
-    return prisma.technicalIssue.create({
+    const created = await prisma.technicalIssue.create({
         data: {
             assessmentId,
             serviceRequestId,
@@ -194,6 +246,10 @@ export async function createTechnicalIssue(input: {
             updatedAt: now,
         } as any,
     });
+
+    await syncServiceRequestStatusFromIssues(prisma as any, serviceRequestId);
+
+    return created;
 }
 
 export async function confirmTechnicalIssue(input: {
@@ -216,6 +272,8 @@ export async function confirmTechnicalIssue(input: {
         } as any,
     });
 
+    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_CONFIRMED",
@@ -225,6 +283,7 @@ export async function confirmTechnicalIssue(input: {
 
     return updated;
 }
+
 export async function startTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
@@ -242,6 +301,7 @@ export async function startTechnicalIssue(input: {
             area: true,
             executionStatus: true,
             isConfirmed: true,
+            serviceRequestId: true,
         } as any,
     });
 
@@ -278,6 +338,8 @@ export async function startTechnicalIssue(input: {
         } as any,
     });
 
+    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_STARTED",
@@ -286,6 +348,7 @@ export async function startTechnicalIssue(input: {
 
     return updated;
 }
+
 export async function completeTechnicalIssue(input: {
     id: string;
     actorName?: string | null;
@@ -309,6 +372,7 @@ export async function completeTechnicalIssue(input: {
                 id: true,
                 technicalDetailCatalogId: true,
                 executionStatus: true,
+                serviceRequestId: true,
             } as any,
         });
 
@@ -336,6 +400,8 @@ export async function completeTechnicalIssue(input: {
 
         await ensureTechnicalIssuePaymentTx(tx as any, id);
 
+        await syncServiceRequestStatusFromIssues(tx as any, (updated as any).serviceRequestId);
+
         await syncTechnicalIssueToTasks(tx as any, {
             technicalIssueId: id,
             event: "TECHNICAL_ISSUE_DONE",
@@ -345,9 +411,10 @@ export async function completeTechnicalIssue(input: {
         return updated;
     });
 }
+
 export async function cancelTechnicalIssue(
     idInput: string,
-    input: { reason?: string | null } = {}
+    input: { reason?: string | null } = {},
 ) {
     const id = cleanId(idInput);
     if (!id) throw new Error("Missing issue id");
@@ -362,6 +429,8 @@ export async function cancelTechnicalIssue(
         } as any,
     });
 
+    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_CANCELED",
@@ -370,6 +439,7 @@ export async function cancelTechnicalIssue(
 
     return updated;
 }
+
 export async function updateTechnicalIssue(input: {
     id: string;
     note?: string | null;
@@ -412,6 +482,8 @@ export async function updateTechnicalIssue(input: {
         } as any,
     });
 
+    await syncServiceRequestStatusFromIssues(prisma as any, (updated as any).serviceRequestId);
+
     await syncTechnicalIssueToTasks(prisma as any, {
         technicalIssueId: id,
         event: "TECHNICAL_ISSUE_UPDATED",
@@ -424,7 +496,16 @@ export async function updateTechnicalIssue(input: {
 export async function removeTechnicalIssue(idInput: string) {
     const id = cleanId(idInput);
     if (!id) throw new Error("Missing issue id");
+
+    const issue = await prisma.technicalIssue.findUnique({
+        where: { id },
+        select: { serviceRequestId: true },
+    });
+
     await prisma.technicalIssue.delete({ where: { id } });
+
+    await syncServiceRequestStatusFromIssues(prisma as any, issue?.serviceRequestId);
+
     return { ok: true };
 }
 

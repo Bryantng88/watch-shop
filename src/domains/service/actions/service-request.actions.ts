@@ -9,7 +9,7 @@ import {
   createTechnicalChecksFromProductsApplication,
   postServiceRequestsApplication,
 } from "../application";
-
+import { createTechnicalIssue } from "../server/issue-board";
 function serialize<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj, (_key, value) => {
     if (value instanceof Date) return value.toISOString();
@@ -59,5 +59,30 @@ export async function createMaintenanceRecordForServiceRequestAction(input: Para
   const result = await createMaintenanceRecordForServiceRequestApplication(input);
   revalidateService();
   revalidatePath(`/admin/services/${input.serviceRequestId}`);
+  return serialize(result);
+}
+export async function createTechnicalIssueForServiceRequestAction(input: {
+  serviceRequestId: string;
+  summary: string;
+  area?: string | null;
+  actionMode?: string | null;
+  note?: string | null;
+  technicalDetailCatalogId?: string | null;
+  vendorId?: string | null;
+}) {
+  const result = await createTechnicalIssue({
+    serviceRequestId: input.serviceRequestId,
+    summary: input.summary,
+    area: input.area ?? "GENERAL",
+    issueType: "CHECK",
+    actionMode: input.actionMode ?? "INTERNAL",
+    note: input.note ?? null,
+    technicalDetailCatalogId: input.technicalDetailCatalogId ?? null,
+    vendorId: input.vendorId ?? null,
+  });
+
+  revalidateService();
+  revalidatePath(`/admin/services/${input.serviceRequestId}`);
+
   return serialize(result);
 }

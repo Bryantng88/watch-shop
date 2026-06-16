@@ -92,7 +92,7 @@ export default function TaskDetailClient({ task }: { task: any }) {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
           <TaskDomainActions task={task} onDone={() => router.refresh()} />
-          <TaskExecutionPanel executions={task.executions ?? []} />
+          <TaskExecutionPanel task={task} executions={task.executions ?? []} />
         </div>
 
         <aside className="space-y-5">

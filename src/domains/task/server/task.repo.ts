@@ -12,15 +12,46 @@ export const TASK_INCLUDE = {
   order: { select: { id: true, refNo: true, customerName: true, status: true, paymentStatus: true } },
   shipment: { select: { id: true, refNo: true, orderRefNo: true, status: true } },
   acquisition: { select: { id: true, refNo: true } },
-  serviceRequest: { select: { id: true, refNo: true, status: true } },
-  technicalIssue: { select: { id: true, area: true, executionStatus: true, serviceRequestId: true, priority: true } },
-  payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
+  serviceRequest: {
+    include: {
+      technicalIssue: {
+        select: {
+          id: true,
+          summary: true,
+          area: true,
+          executionStatus: true,
+          actualCost: true,
+          completedAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  },
+  technicalIssue: {
+    select: {
+      id: true,
+      summary: true,
+      area: true,
+      executionStatus: true,
+      serviceRequestId: true,
+      priority: true,
+      actualCost: true,
+      completedAt: true,
+      createdAt: true,
+    },
+  }, payment: { select: { id: true, refNo: true, status: true, amount: true, currency: true, type: true, purpose: true } },
   workCase: { select: { id: true, refNo: true, title: true, status: true, watch: { select: { id: true, productId: true, product: { select: { title: true, sku: true, primaryImageUrl: true } } } } } },
   taskType: { select: { id: true, code: true, name: true, domain: true } },
   taskAction: { select: { id: true, code: true, name: true, completionMode: true, completionRuleKey: true, targetType: true, serviceCatalogId: true, technicalDetailCatalogId: true, supplyCatalogId: true, mechanicalPartCatalogId: true, technicalActionMode: true } },
   executions: {
     orderBy: { createdAt: "desc" },
-    include: { createdByUser: { select: { id: true, name: true, email: true } } },
+    include: {
+      createdByUser: {
+        select: { id: true, name: true, email: true },
+      },
+    },
   },
 } satisfies Prisma.TaskInclude;
 
