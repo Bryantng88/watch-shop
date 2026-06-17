@@ -9,7 +9,9 @@ import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWit
 import { DecimalNullableWithAggregatesFilterObjectSchema as DecimalNullableWithAggregatesFilterObjectSchema } from './DecimalNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema';
 import { EnumMaintenanceEventTypeWithAggregatesFilterObjectSchema as EnumMaintenanceEventTypeWithAggregatesFilterObjectSchema } from './EnumMaintenanceEventTypeWithAggregatesFilter.schema';
-import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
+import { EnumMaintenanceApprovalStatusWithAggregatesFilterObjectSchema as EnumMaintenanceApprovalStatusWithAggregatesFilterObjectSchema } from './EnumMaintenanceApprovalStatusWithAggregatesFilter.schema';
+import { MaintenanceApprovalStatusSchema } from '../enums/MaintenanceApprovalStatus.schema'
 
 const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   AND: z.union([z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema), z.lazy(() => MaintenanceRecordScalarWhereWithAggregatesInputObjectSchema).array()]).optional(),
@@ -48,6 +50,12 @@ const maintenancerecordscalarwherewithaggregatesinputSchema = z.object({
   diagnosis: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   workSummary: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  approvalStatus: z.union([z.lazy(() => EnumMaintenanceApprovalStatusWithAggregatesFilterObjectSchema), MaintenanceApprovalStatusSchema]).optional(),
+  approvedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  approvedByUserId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  rejectedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  rejectedByUserId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
+  rejectionReason: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   processingMode: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   imageFileKey: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   technicalIssueId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable()

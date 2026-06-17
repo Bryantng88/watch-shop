@@ -36,6 +36,12 @@ const makeSchema = () => z.object({
   diagnosis: SortOrderSchema.optional(),
   workSummary: SortOrderSchema.optional(),
   serviceCatalogId: SortOrderSchema.optional(),
+  approvalStatus: SortOrderSchema.optional(),
+  approvedAt: SortOrderSchema.optional(),
+  approvedByUserId: SortOrderSchema.optional(),
+  rejectedAt: SortOrderSchema.optional(),
+  rejectedByUserId: SortOrderSchema.optional(),
+  rejectionReason: SortOrderSchema.optional(),
   processingMode: SortOrderSchema.optional(),
   imageFileKey: SortOrderSchema.optional(),
   technicalIssueId: SortOrderSchema.optional()

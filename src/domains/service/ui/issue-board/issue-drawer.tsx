@@ -342,7 +342,11 @@ export function IssueDrawer({
   const sr = issue?.serviceRequest ?? null;
   const issueAreaKey = normalizeAreaKey(issue.area);
   const isVendorMode = String(actionMode || "").toUpperCase() === "VENDOR";
-
+  const [logEventType, setLogEventType] = React.useState("NOTE");
+  const [logNotes, setLogNotes] = React.useState("");
+  const [logCost, setLogCost] = React.useState("");
+  const [logNeedApproval, setLogNeedApproval] = React.useState(false);
+  const [logPending, setLogPending] = React.useState(false);
   const detailOptions = React.useMemo(() => {
     const options = Array.isArray(technicalDetailCatalogOptions)
       ? technicalDetailCatalogOptions
@@ -368,7 +372,32 @@ export function IssueDrawer({
     actualCost.trim() !== "" &&
     Boolean(technicalDetailCatalogId) &&
     (!isVendorMode || Boolean(vendorId));
+  async function submitMaintenanceLog() {
+    try {
+      setLogPending(true);
 
+      const res = await fetch(`/api/admin/technical-issues/${issue.id}/maintenance-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: logEventType,
+          notes: logNotes.trim() || null,
+          totalCost: logCost.trim() === "" ? null : Number(logCost),
+          needApproval: logNeedApproval,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Không thêm được nhật ký xử lý.");
+
+      setLogNotes("");
+      setLogCost("");
+      setLogNeedApproval(false);
+      window.location.reload();
+    } finally {
+      setLogPending(false);
+    }
+  }
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-stone-950/35" onClick={onClose} />
@@ -658,7 +687,188 @@ export function IssueDrawer({
                   Bắt đầu xử lý
                 </button>
               )}
+              <section className="rounded-2xl border border-stone-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-stone-900">
+                      Nhật ký xử lý
+                    </div>
+                    <p className="mt-1 text-sm text-stone-500">
+                      Ghi lại cập nhật từ vendor/kỹ thuật: dự kiến xong, phát sinh, chậm tiến độ, chi phí.
+                    </p>
+                  </div>
 
+                  {issue.hasPendingMaintenanceApproval ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+                      Chờ duyệt phát sinh
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {(issue.maintenanceLogs ?? []).length ? (
+                    (issue.maintenanceLogs ?? []).map((log) => (
+                      <div
+                        key={log.id}
+                        className="rounded-xl border border-stone-100 bg-stone-50 px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                            {log.eventType}
+                          </div>
+
+                          <span className="text-xs text-stone-400">
+                            {fmtDT(log.createdAt)}
+                          </span>
+                        </div>
+
+                        {log.notes ? (
+                          <div className="mt-1 text-sm text-stone-800">{log.notes}</div>
+                        ) : null}
+
+                        {log.totalCost != null ? (
+                          <div className="mt-1 text-sm font-semibold text-stone-900">
+                            Chi phí: {Number(log.totalCost).toLocaleString("vi-VN")}đ
+                          </div>
+                        ) : null}
+
+                        {log.approvalStatus && log.approvalStatus !== "NOT_REQUIRED" ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-stone-600 ring-1 ring-stone-200">
+                              {log.approvalStatus}
+                            </span>
+
+                            {log.approvalStatus === "PENDING" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await fetch(`/api/admin/maintenance-records/${log.id}/approve`, {
+                                      method: "POST",
+                                    });
+                                    window.location.reload();
+                                  }}
+                                  className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                                >
+                                  Duyệt
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const reason = window.prompt("Lý do từ chối phát sinh?");
+                                    if (reason == null) return;
+
+                                    const nextAction = window.confirm(
+                                      "OK = Đổi vendor, Cancel = Hủy issue",
+                                    )
+                                      ? "CHANGE_VENDOR"
+                                      : "CANCEL_ISSUE";
+
+                                    let newVendorId: string | null = null;
+                                    if (nextAction === "CHANGE_VENDOR") {
+                                      newVendorId = window.prompt("Nhập vendorId mới") || null;
+                                    }
+
+                                    await fetch(`/api/admin/maintenance-records/${log.id}/reject`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        reason,
+                                        nextAction,
+                                        newVendorId,
+                                      }),
+                                    });
+
+                                    window.location.reload();
+                                  }}
+                                  className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100"
+                                >
+                                  Từ chối
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-500">
+                      Chưa có nhật ký xử lý.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-stone-100 bg-stone-50 p-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                        Loại cập nhật
+                      </label>
+                      <select
+                        value={logEventType}
+                        onChange={(e) => setLogEventType(e.target.value)}
+                        className="h-10 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                      >
+                        <option value="NOTE">Ghi chú</option>
+                        <option value="ESTIMATE">Dự kiến hoàn thành</option>
+                        <option value="EXTRA_ISSUE">Phát sinh vấn đề</option>
+                        <option value="COST">Phát sinh chi phí</option>
+                        <option value="DELAY">Chậm tiến độ</option>
+                        <option value="COMPLETED">Đã xong</option>
+                      </select>
+                    </div>
+
+                    {logEventType === "COST" ? (
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                          Chi phí phát sinh
+                        </label>
+                        <input
+                          value={logCost}
+                          onChange={(e) => setLogCost(e.target.value)}
+                          className="h-10 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm outline-none focus:border-stone-400"
+                          placeholder="0"
+                        />
+                      </div>
+                    ) : null}
+
+                    <div className="md:col-span-2">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">
+                        Nội dung
+                      </label>
+                      <textarea
+                        value={logNotes}
+                        onChange={(e) => setLogNotes(e.target.value)}
+                        className="min-h-[80px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-stone-400"
+                        placeholder="Ví dụ: Vendor báo dự kiến 3 ngày xong..."
+                      />
+                    </div>
+
+                    {(logEventType === "COST" || logEventType === "EXTRA_ISSUE") ? (
+                      <label className="md:col-span-2 flex items-center gap-2 text-sm font-medium text-stone-700">
+                        <input
+                          type="checkbox"
+                          checked={logNeedApproval}
+                          onChange={(e) => setLogNeedApproval(e.target.checked)}
+                        />
+                        Cần duyệt phát sinh
+                      </label>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={logPending || !logNotes.trim()}
+                      onClick={submitMaintenanceLog}
+                      className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {logPending ? "Đang lưu..." : "Thêm nhật ký"}
+                    </button>
+                  </div>
+                </div>
+              </section>
               {issue.boardColumn === "IN_PROGRESS" && (
                 <button
                   type="button"

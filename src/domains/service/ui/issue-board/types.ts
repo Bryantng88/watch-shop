@@ -52,6 +52,19 @@ export type IssueItem = {
   serviceRequestClosed?: boolean;
   isLastDoneIssueOfServiceRequest?: boolean;
   priority?: PriorityLevel | string | null;
+  maintenanceLogs?: {
+    id: string;
+    eventType?: string | null;
+    notes?: string | null;
+    totalCost?: number | null;
+    approvalStatus?: string | null;
+    approvedAt?: string | null;
+    rejectedAt?: string | null;
+    rejectionReason?: string | null;
+    createdAt?: string | null;
+  }[];
+
+  hasPendingMaintenanceApproval?: boolean;
   serviceRequest?: {
     id: string;
     refNo?: string | null;

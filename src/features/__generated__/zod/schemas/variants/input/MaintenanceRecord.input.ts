@@ -2,6 +2,7 @@ import * as z from 'zod';
 
 import { ServiceTypeSchema } from '../../enums/ServiceType.schema';
 import { MaintenanceEventTypeSchema } from '../../enums/MaintenanceEventType.schema';
+import { MaintenanceApprovalStatusSchema } from '../../enums/MaintenanceApprovalStatus.schema';
 // prettier-ignore
 export const MaintenanceRecordInputSchema = z.object({
     id: z.string(),
@@ -37,6 +38,12 @@ export const MaintenanceRecordInputSchema = z.object({
     diagnosis: z.string().optional().nullable(),
     workSummary: z.string().optional().nullable(),
     serviceCatalogId: z.string().optional().nullable(),
+    approvalStatus: MaintenanceApprovalStatusSchema,
+    approvedAt: z.date().optional().nullable(),
+    approvedByUserId: z.string().optional().nullable(),
+    rejectedAt: z.date().optional().nullable(),
+    rejectedByUserId: z.string().optional().nullable(),
+    rejectionReason: z.string().optional().nullable(),
     processingMode: z.string().optional().nullable(),
     imageFileKey: z.string().optional().nullable(),
     technicalIssueId: z.string().optional().nullable(),

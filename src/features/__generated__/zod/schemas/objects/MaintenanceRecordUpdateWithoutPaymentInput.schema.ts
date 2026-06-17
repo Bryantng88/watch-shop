@@ -10,6 +10,8 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
+import { MaintenanceApprovalStatusSchema } from '../enums/MaintenanceApprovalStatus.schema';
+import { EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema as EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceApprovalStatusFieldUpdateOperationsInput.schema';
 import { MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInput.schema';
 import { ProductUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ProductUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ProductUpdateOneWithoutMaintenanceRecordNestedInput.schema';
 import { ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema as ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInputObjectSchema } from './ServiceCatalogUpdateOneWithoutMaintenanceRecordNestedInput.schema';
@@ -46,6 +48,12 @@ const makeSchema = () => z.object({
   technicianNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   diagnosis: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   workSummary: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  approvalStatus: z.union([MaintenanceApprovalStatusSchema, z.lazy(() => EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  approvedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  approvedByUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectedByUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectionReason: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   MaintenancePart: z.lazy(() => MaintenancePartUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema).optional(),

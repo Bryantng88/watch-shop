@@ -10,6 +10,8 @@ import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema 
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
 import { EnumMaintenanceEventTypeFilterObjectSchema as EnumMaintenanceEventTypeFilterObjectSchema } from './EnumMaintenanceEventTypeFilter.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
+import { EnumMaintenanceApprovalStatusFilterObjectSchema as EnumMaintenanceApprovalStatusFilterObjectSchema } from './EnumMaintenanceApprovalStatusFilter.schema';
+import { MaintenanceApprovalStatusSchema } from '../enums/MaintenanceApprovalStatus.schema';
 import { MaintenancePartListRelationFilterObjectSchema as MaintenancePartListRelationFilterObjectSchema } from './MaintenancePartListRelationFilter.schema';
 import { PaymentNullableScalarRelationFilterObjectSchema as PaymentNullableScalarRelationFilterObjectSchema } from './PaymentNullableScalarRelationFilter.schema';
 import { PaymentWhereInputObjectSchema as PaymentWhereInputObjectSchema } from './PaymentWhereInput.schema';
@@ -65,6 +67,12 @@ const maintenancerecordwhereinputSchema = z.object({
   diagnosis: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   workSummary: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   serviceCatalogId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  approvalStatus: z.union([z.lazy(() => EnumMaintenanceApprovalStatusFilterObjectSchema), MaintenanceApprovalStatusSchema]).optional(),
+  approvedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  approvedByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  rejectedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
+  rejectedByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  rejectionReason: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   processingMode: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   imageFileKey: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   technicalIssueId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),

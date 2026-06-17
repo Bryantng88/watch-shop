@@ -1,7 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { ServiceTypeSchema } from '../enums/ServiceType.schema';
-import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema'
+import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
+import { MaintenanceApprovalStatusSchema } from '../enums/MaintenanceApprovalStatus.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -37,6 +38,12 @@ const makeSchema = () => z.object({
   diagnosis: z.string().optional().nullable(),
   workSummary: z.string().optional().nullable(),
   serviceCatalogId: z.string().optional().nullable(),
+  approvalStatus: MaintenanceApprovalStatusSchema.optional(),
+  approvedAt: z.coerce.date().optional().nullable(),
+  approvedByUserId: z.string().optional().nullable(),
+  rejectedAt: z.coerce.date().optional().nullable(),
+  rejectedByUserId: z.string().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
   processingMode: z.string().optional().nullable(),
   imageFileKey: z.string().optional().nullable()
 }).strict();

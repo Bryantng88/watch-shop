@@ -10,6 +10,8 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { MaintenanceEventTypeSchema } from '../enums/MaintenanceEventType.schema';
 import { EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema as EnumMaintenanceEventTypeFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceEventTypeFieldUpdateOperationsInput.schema';
+import { MaintenanceApprovalStatusSchema } from '../enums/MaintenanceApprovalStatus.schema';
+import { EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema as EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema } from './EnumMaintenanceApprovalStatusFieldUpdateOperationsInput.schema';
 import { MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema as MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInputObjectSchema } from './MaintenancePartUncheckedUpdateManyWithoutMaintenanceRecordNestedInput.schema'
 
 const makeSchema = () => z.object({
@@ -45,6 +47,12 @@ const makeSchema = () => z.object({
   diagnosis: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   workSummary: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   serviceCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  approvalStatus: z.union([MaintenanceApprovalStatusSchema, z.lazy(() => EnumMaintenanceApprovalStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
+  approvedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  approvedByUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectedByUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  rejectionReason: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   processingMode: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   imageFileKey: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   technicalIssueId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),

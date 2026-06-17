@@ -644,6 +644,20 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                         status: true,
                     },
                 },
+                maintenanceRecord: {
+                    orderBy: { createdAt: "desc" },
+                    select: {
+                        id: true,
+                        eventType: true,
+                        notes: true,
+                        totalCost: true,
+                        approvalStatus: true,
+                        approvedAt: true,
+                        rejectedAt: true,
+                        rejectionReason: true,
+                        createdAt: true,
+                    },
+                },
             } as any,
         }),
         listTechnicalDetailCatalogOptions(),
@@ -740,7 +754,20 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
                         status: x.TechnicalAssessment.status ?? null,
                     }
                     : null,
-
+                maintenanceLogs: (x.maintenanceRecord ?? []).map((log: any) => ({
+                    id: log.id,
+                    eventType: log.eventType,
+                    notes: log.notes,
+                    totalCost: toNumber(log.totalCost),
+                    approvalStatus: log.approvalStatus,
+                    approvedAt: log.approvedAt,
+                    rejectedAt: log.rejectedAt,
+                    rejectionReason: log.rejectionReason,
+                    createdAt: log.createdAt,
+                })),
+                hasPendingMaintenanceApproval: (x.MaintenanceRecord ?? []).some(
+                    (log: any) => log.approvalStatus === "PENDING",
+                ),
                 technicalDetailCatalog: x.technicalDetailCatalog
                     ? {
                         id: x.technicalDetailCatalog.id,
@@ -814,4 +841,150 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
             vendorOptions,
         },
     };
+}
+export async function createTechnicalIssueMaintenanceLog(input: {
+    technicalIssueId: string;
+    eventType: string;
+    notes?: string | null;
+    totalCost?: unknown;
+    needApproval?: boolean;
+}) {
+    const technicalIssueId = cleanId(input.technicalIssueId);
+    if (!technicalIssueId) throw new Error("Missing technicalIssueId");
+
+    const issue = await prisma.technicalIssue.findUnique({
+        where: { id: technicalIssueId },
+        select: {
+            id: true,
+            serviceRequestId: true,
+            vendorId: true,
+            vendorNameSnap: true,
+            technicianId: true,
+            technicalDetailCatalogId: true,
+        } as any,
+    });
+
+    if (!issue) throw new Error("Không tìm thấy issue.");
+
+    const approvalStatus = input.needApproval ? "PENDING" : "NOT_REQUIRED";
+
+    return prisma.maintenanceRecord.create({
+        data: {
+            technicalIssueId,
+            serviceRequestId: (issue as any).serviceRequestId,
+            vendorId: (issue as any).vendorId,
+            vendorName: (issue as any).vendorNameSnap,
+            technicianId: (issue as any).technicianId,
+            serviceCatalogId: (issue as any).technicalDetailCatalogId,
+            eventType: input.eventType as any,
+            notes: cleanText(input.notes),
+            totalCost: decimalOrNull(input.totalCost),
+            approvalStatus: approvalStatus as any,
+            billable: input.eventType === "COST",
+            billed: false,
+            servicedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function approveTechnicalIssueMaintenanceLog(input: {
+    id: string;
+    actorId?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing maintenance log id");
+
+    return prisma.maintenanceRecord.update({
+        where: { id },
+        data: {
+            approvalStatus: "APPROVED" as any,
+            approvedAt: new Date(),
+            approvedByUserId: cleanId(input.actorId),
+            updatedAt: new Date(),
+        } as any,
+    });
+}
+
+export async function rejectTechnicalIssueMaintenanceLog(input: {
+    id: string;
+    actorId?: string | null;
+    reason?: string | null;
+    nextAction: "CHANGE_VENDOR" | "CANCEL_ISSUE";
+    newVendorId?: string | null;
+}) {
+    const id = cleanId(input.id);
+    if (!id) throw new Error("Missing maintenance log id");
+
+    return prisma.$transaction(async (tx) => {
+        const log = await tx.maintenanceRecord.update({
+            where: { id },
+            data: {
+                approvalStatus: "REJECTED" as any,
+                rejectedAt: new Date(),
+                rejectedByUserId: cleanId(input.actorId),
+                rejectionReason: cleanText(input.reason),
+                updatedAt: new Date(),
+            } as any,
+        });
+
+        const technicalIssueId = (log as any).technicalIssueId;
+        if (!technicalIssueId) return log;
+
+        if (input.nextAction === "CHANGE_VENDOR") {
+            const newVendorId = cleanId(input.newVendorId);
+            if (!newVendorId) throw new Error("Vui lòng chọn vendor mới.");
+
+            const vendorNameSnap = await vendorName(newVendorId);
+
+            await tx.technicalIssue.update({
+                where: { id: technicalIssueId },
+                data: {
+                    vendorId: newVendorId,
+                    vendorNameSnap,
+                    executionStatus: "CONFIRMED" as any,
+                    updatedAt: new Date(),
+                } as any,
+            });
+
+            await tx.maintenanceRecord.create({
+                data: {
+                    technicalIssueId,
+                    serviceRequestId: (log as any).serviceRequestId,
+                    eventType: "CHANGE_VENDOR" as any,
+                    vendorId: newVendorId,
+                    vendorName: vendorNameSnap,
+                    notes: cleanText(input.reason) || "Đổi vendor sau khi từ chối phát sinh.",
+                    approvalStatus: "NOT_REQUIRED" as any,
+                    billable: false,
+                    servicedAt: new Date(),
+                } as any,
+            });
+        }
+
+        if (input.nextAction === "CANCEL_ISSUE") {
+            await tx.technicalIssue.update({
+                where: { id: technicalIssueId },
+                data: {
+                    executionStatus: "CANCELED" as any,
+                    canceledAt: new Date(),
+                    resolutionNote: cleanText(input.reason),
+                    updatedAt: new Date(),
+                } as any,
+            });
+
+            await tx.maintenanceRecord.create({
+                data: {
+                    technicalIssueId,
+                    serviceRequestId: (log as any).serviceRequestId,
+                    eventType: "CANCELLED" as any,
+                    notes: cleanText(input.reason) || "Hủy issue sau khi từ chối phát sinh.",
+                    approvalStatus: "NOT_REQUIRED" as any,
+                    billable: false,
+                    servicedAt: new Date(),
+                } as any,
+            });
+        }
+
+        return log;
+    });
 }

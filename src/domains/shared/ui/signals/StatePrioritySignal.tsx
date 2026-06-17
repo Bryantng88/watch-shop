@@ -128,9 +128,9 @@ export function PrioritySignal({ priority }: { priority: TaskPriority }) {
         >
             <span
                 className={cn(
-                    "inline-flex h-2.5 w-2.5 items-center justify-center rounded-full text-[9px] font-black leading-none text-white",
+                    "inline-flex items-center justify-center rounded-full text-[10px] font-black leading-none text-white",
+                    item.content ? "h-4 w-4" : "h-2.5 w-2.5",
                     item.dot,
-                    item.content ? "h-4 w-4" : "",
                 )}
             >
                 {item.content}

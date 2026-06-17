@@ -22,9 +22,7 @@ export default function TaskListViewTabs({
   onChange: (value: TaskViewKey) => void;
 }) {
   const items = [
-    ...(canViewAll
-      ? [{ key: "all" as TaskViewKey, label: "Tất cả", count: counts.all ?? 0 }]
-      : []),
+    { key: "all" as TaskViewKey, label: "Tất cả", count: counts.all ?? 0 },
     { key: "mine" as TaskViewKey, label: "Task của tôi", count: counts.mine ?? 0 },
     { key: "assigned" as TaskViewKey, label: "Được giao cho tôi", count: counts.assigned ?? 0 },
     { key: "delegated" as TaskViewKey, label: "Tôi đã giao", count: counts.delegated ?? 0 },

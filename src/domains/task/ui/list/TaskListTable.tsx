@@ -4,6 +4,7 @@ import { CheckCircle2, CirclePlay, Eye, RotateCcw, XCircle } from "lucide-react"
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/task.repo";
+import { TaskStatusSignal, PrioritySignal } from "@/domains/shared/ui/signals/StatePrioritySignal";
 import {
   TASK_DOMAIN_LABEL,
   TASK_MODE_LABEL,
@@ -100,12 +101,10 @@ export default function TaskListTable({
                   </td>
 
                   <td className="px-4 py-3 text-center">
-                    <TaskStatusBadge status={row.status} />
-                  </td>
+                    <TaskStatusSignal status={row.status} />                  </td>
 
                   <td className="px-4 py-3 text-center">
-                    <TaskPriorityBadge priority={row.priority} />
-                  </td>
+                    <PrioritySignal priority={row.priority} />                  </td>
 
                   <td className="px-4 py-3 text-slate-600">
                     <div className="flex items-center gap-2">
