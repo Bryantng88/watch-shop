@@ -1,22 +1,27 @@
 "use client";
 
-import { CheckCircle2, CirclePlay, Eye, RotateCcw, XCircle } from "lucide-react";
+import { Fragment } from "react";
+import {
+  CheckCircle2,
+  CirclePlay,
+  Eye,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import { TaskStatus } from "@prisma/client";
 import RowActions from "@/domains/shared/ui/list/RowActions";
 import type { TaskWithRelations } from "../../server/task.repo";
-import { TaskStatusSignal, PrioritySignal } from "@/domains/shared/ui/signals/StatePrioritySignal";
 import {
-  TASK_DOMAIN_LABEL,
-  TASK_MODE_LABEL,
-} from "../../utils/task-labels";
-import {
-  TaskPriorityBadge,
-  TaskStatusBadge,
-} from "../shared/TaskBadges";
+  TaskStatusSignal,
+  PrioritySignal,
+} from "@/domains/shared/ui/signals/StatePrioritySignal";
+import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL } from "../../utils/task-labels";
+import TaskExecutionPanel from "../detail/TaskExecutionPanel";
 import TaskPagination from "./TaskPagination";
 
 function formatDate(value?: Date | string | null) {
   if (!value) return "—";
+
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
     month: "2-digit",
@@ -24,11 +29,15 @@ function formatDate(value?: Date | string | null) {
   }).format(new Date(value));
 }
 
-function userLabel(user?: { name?: string | null; email?: string | null } | null) {
+function userLabel(
+  user?: { name?: string | null; email?: string | null } | null,
+) {
   return user?.name || user?.email || "—";
 }
 
-function userInitial(user?: { name?: string | null; email?: string | null } | null) {
+function userInitial(
+  user?: { name?: string | null; email?: string | null } | null,
+) {
   const label = userLabel(user);
   if (!label || label === "—") return "?";
   return label.trim().slice(0, 1).toUpperCase();
@@ -46,6 +55,8 @@ export default function TaskListTable({
   onStatus,
   onEdit,
   onOpen,
+  expandedTaskId,
+  onToggleExpand,
 }: {
   items: TaskWithRelations[];
   page: number;
@@ -54,6 +65,8 @@ export default function TaskListTable({
   onStatus: (row: TaskWithRelations, status: TaskStatus) => void;
   onEdit: (row: TaskWithRelations) => void;
   onOpen: (row: TaskWithRelations) => void;
+  expandedTaskId?: string | null;
+  onToggleExpand?: (row: TaskWithRelations) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -82,101 +95,130 @@ export default function TaskListTable({
                 </td>
               </tr>
             ) : (
-              items.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50/70">
-                  <td className="max-w-[460px] px-4 py-3">
-                    <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
-                      {taskText(row)}
-                    </div>
-                  </td>
+              items.map((row) => {
+                const expanded = expandedTaskId === row.id;
 
-                  <td className="px-4 py-3 text-slate-600">
-                    <div className="font-medium text-slate-800">
-                      {row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-slate-400">
-                      {row.taskType?.code ? `${row.taskType.code} · ` : ""}
-                      {TASK_MODE_LABEL[row.mode]}
-                    </div>
-                  </td>
+                return (
+                  <Fragment key={row.id}>
+                    <tr
+                      onClick={() => onToggleExpand?.(row)}
+                      className="cursor-pointer hover:bg-slate-50/70"
+                    >
+                      <td className="max-w-[460px] px-4 py-3">
+                        <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
+                          {taskText(row)}
+                        </div>
+                      </td>
 
-                  <td className="px-4 py-3 text-center">
-                    <TaskStatusSignal status={row.status} />                  </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        <div className="font-medium text-slate-800">
+                          {row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-400">
+                          {row.taskType?.code ? `${row.taskType.code} · ` : ""}
+                          {TASK_MODE_LABEL[row.mode]}
+                        </div>
+                      </td>
 
-                  <td className="px-4 py-3 text-center">
-                    <PrioritySignal priority={row.priority} />                  </td>
+                      <td className="px-4 py-3 text-center">
+                        <TaskStatusSignal status={row.status} />
+                      </td>
 
-                  <td className="px-4 py-3 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-                        {userInitial(row.assignedToUser)}
-                      </span>
-                      <span className="font-medium text-slate-700">
-                        {userLabel(row.assignedToUser)}
-                      </span>
-                    </div>
-                  </td>
+                      <td className="px-4 py-3 text-center">
+                        <PrioritySignal priority={row.priority} />
+                      </td>
 
-                  <td className="px-4 py-3 text-slate-600">
-                    {formatDate(row.dueAt)}
-                  </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                            {userInitial(row.assignedToUser)}
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {userLabel(row.assignedToUser)}
+                          </span>
+                        </div>
+                      </td>
 
-                  <td className="px-4 py-3">
-                    <RowActions
-                      row={row}
-                      actions={[
-                        {
-                          key: "view",
-                          label: "Mở task",
-                          icon: <Eye className="h-4 w-4" />,
-                          onClick: onOpen,
-                        },
-                        {
-                          key: "edit",
-                          label: "Sửa task",
-                          onClick: onEdit,
-                        },
-                        row.status !== "IN_PROGRESS" &&
-                          row.status !== "DONE" &&
-                          row.status !== "CANCELLED"
-                          ? {
-                            key: "start",
-                            label: "Bắt đầu",
-                            icon: <CirclePlay className="h-4 w-4" />,
-                            onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS),
-                          }
-                          : null,
-                        row.status !== "DONE"
-                          ? {
-                            key: "done",
-                            label: "Hoàn thành",
-                            icon: <CheckCircle2 className="h-4 w-4" />,
-                            onClick: (r) => onStatus(r, TaskStatus.DONE),
-                          }
-                          : null,
-                        row.status !== "TODO"
-                          ? {
-                            key: "reopen",
-                            label: "Mở lại",
-                            icon: <RotateCcw className="h-4 w-4" />,
-                            onClick: (r) => onStatus(r, TaskStatus.TODO),
-                          }
-                          : null,
-                        row.status !== "CANCELLED"
-                          ? {
-                            key: "cancel",
-                            label: "Hủy task",
-                            icon: <XCircle className="h-4 w-4" />,
-                            tone: "danger",
-                            separatorBefore: true,
-                            onClick: (r) => onStatus(r, TaskStatus.CANCELLED),
-                          }
-                          : null,
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ))
+                      <td className="px-4 py-3 text-slate-600">
+                        {formatDate(row.dueAt)}
+                      </td>
+
+                      <td
+                        className="px-4 py-3"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <RowActions
+                          row={row}
+                          actions={[
+                            {
+                              key: "toggle",
+                              label: expanded ? "Thu gọn xử lý" : "Xem xử lý",
+                              icon: <Eye className="h-4 w-4" />,
+                              onClick: (r) => onToggleExpand?.(r) ?? onOpen(r),
+                            },
+                            {
+                              key: "edit",
+                              label: "Sửa task",
+                              onClick: onEdit,
+                            },
+                            row.status !== "IN_PROGRESS" &&
+                              row.status !== "DONE" &&
+                              row.status !== "CANCELLED"
+                              ? {
+                                key: "start",
+                                label: "Bắt đầu",
+                                icon: <CirclePlay className="h-4 w-4" />,
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.IN_PROGRESS),
+                              }
+                              : null,
+                            row.status !== "DONE"
+                              ? {
+                                key: "done",
+                                label: "Hoàn thành",
+                                icon: <CheckCircle2 className="h-4 w-4" />,
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.DONE),
+                              }
+                              : null,
+                            row.status !== "TODO"
+                              ? {
+                                key: "reopen",
+                                label: "Mở lại",
+                                icon: <RotateCcw className="h-4 w-4" />,
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.TODO),
+                              }
+                              : null,
+                            row.status !== "CANCELLED"
+                              ? {
+                                key: "cancel",
+                                label: "Hủy task",
+                                icon: <XCircle className="h-4 w-4" />,
+                                tone: "danger",
+                                separatorBefore: true,
+                                onClick: (r) =>
+                                  onStatus(r, TaskStatus.CANCELLED),
+                              }
+                              : null,
+                          ]}
+                        />
+                      </td>
+                    </tr>
+
+                    {expanded ? (
+                      <tr>
+                        <td colSpan={7} className="bg-slate-50 px-4 py-4">
+                          <TaskExecutionPanel
+                            task={row}
+                            executions={row.executions ?? []}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
