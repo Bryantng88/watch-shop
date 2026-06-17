@@ -16,8 +16,10 @@ function userLabel(user?: { name?: string | null; email?: string | null } | null
 
 function formatDate(value?: Date | string | null) {
   if (!value) return "-";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
+
   return date.toLocaleString("vi-VN");
 }
 
@@ -28,7 +30,9 @@ function workCaseLabel(workCase: any) {
 export default function TaskDetailClient({ task }: { task: any }) {
   const router = useRouter();
   const notify = useNotify();
-  const closed = task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED;
+
+  const closed =
+    task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED;
 
   async function markDone() {
     try {
@@ -51,39 +55,61 @@ export default function TaskDetailClient({ task }: { task: any }) {
           Quay lại danh sách task
         </Link>
 
-        <button
-          type="button"
-          onClick={markDone}
-          disabled={closed}
-          className="inline-flex h-10 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          Hoàn tất task
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <TaskDomainActions task={task} onDone={() => router.refresh()} />
+
+          <button
+            type="button"
+            onClick={markDone}
+            disabled={closed}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Hoàn tất task
+          </button>
+        </div>
       </div>
 
       <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <TaskBadges task={task} />
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{task.title}</h1>
+
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+              {task.title}
+            </h1>
+
             {task.description ? (
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">{task.description}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+                {task.description}
+              </p>
             ) : null}
           </div>
 
           <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
             <div>
-              Loại: <span className="font-semibold text-slate-950">{task.taskType?.name || task.domain}</span>
+              Loại:{" "}
+              <span className="font-semibold text-slate-950">
+                {task.taskType?.name || task.domain}
+              </span>
             </div>
+
             {task.taskAction ? (
               <div className="mt-1">
-                Action: <span className="font-semibold text-slate-950">{task.taskAction.name}</span>
+                Action:{" "}
+                <span className="font-semibold text-slate-950">
+                  {task.taskAction.name}
+                </span>
               </div>
             ) : null}
+
             <div className="mt-1">
-              Kiểu xử lý: <span className="font-semibold text-slate-950">{task.mode}</span>
+              Kiểu xử lý:{" "}
+              <span className="font-semibold text-slate-950">
+                {task.mode}
+              </span>
             </div>
+
             <div className="mt-1">Tạo lúc: {formatDate(task.createdAt)}</div>
           </div>
         </div>
@@ -91,19 +117,25 @@ export default function TaskDetailClient({ task }: { task: any }) {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
-          <TaskDomainActions task={task} onDone={() => router.refresh()} />
           <TaskExecutionPanel task={task} executions={task.executions ?? []} />
         </div>
 
         <aside className="space-y-5">
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Context</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+              Context
+            </p>
+
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               {task.workCase ? (
                 <div>
                   <span className="text-slate-400">Phiếu xử lý:</span>{" "}
-                  <Link href={`/admin/work-cases/${task.workCase.id}`} className="font-semibold text-blue-700 hover:text-blue-900">
-                    {workCaseLabel(task.workCase)} <ExternalLink className="inline h-3.5 w-3.5" />
+                  <Link
+                    href={`/admin/work-cases/${task.workCase.id}`}
+                    className="font-semibold text-blue-700 hover:text-blue-900"
+                  >
+                    {workCaseLabel(task.workCase)}{" "}
+                    <ExternalLink className="inline h-3.5 w-3.5" />
                   </Link>
                 </div>
               ) : null}
@@ -111,30 +143,43 @@ export default function TaskDetailClient({ task }: { task: any }) {
               {task.watch?.product ? (
                 <div>
                   <span className="text-slate-400">Watch:</span>{" "}
-                  <Link href={`/admin/watches/${task.watch.productId}`} className="font-semibold text-blue-700 hover:text-blue-900">
-                    {task.watch.product.title} <ExternalLink className="inline h-3.5 w-3.5" />
+                  <Link
+                    href={`/admin/watches/${task.watch.productId}`}
+                    className="font-semibold text-blue-700 hover:text-blue-900"
+                  >
+                    {task.watch.product.title}{" "}
+                    <ExternalLink className="inline h-3.5 w-3.5" />
                   </Link>
-                  <div className="mt-1 text-xs text-slate-400">SKU: {task.watch.product.sku || "-"}</div>
+
+                  <div className="mt-1 text-xs text-slate-400">
+                    SKU: {task.watch.product.sku || "-"}
+                  </div>
                 </div>
               ) : null}
 
               {task.assignedToUser ? (
                 <div>
                   <span className="text-slate-400">Người nhận:</span>{" "}
-                  <span className="font-semibold text-slate-800">{userLabel(task.assignedToUser)}</span>
+                  <span className="font-semibold text-slate-800">
+                    {userLabel(task.assignedToUser)}
+                  </span>
                 </div>
               ) : null}
 
               {task.createdByUser ? (
                 <div>
                   <span className="text-slate-400">Người tạo:</span>{" "}
-                  <span className="font-semibold text-slate-800">{userLabel(task.createdByUser)}</span>
+                  <span className="font-semibold text-slate-800">
+                    {userLabel(task.createdByUser)}
+                  </span>
                 </div>
               ) : null}
 
               <div>
                 <span className="text-slate-400">Due:</span>{" "}
-                <span className="font-semibold text-slate-800">{formatDate(task.dueAt)}</span>
+                <span className="font-semibold text-slate-800">
+                  {formatDate(task.dueAt)}
+                </span>
               </div>
             </div>
           </section>

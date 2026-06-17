@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
+  CheckCircle2,
+  CirclePlay,
   ExternalLink,
   Link2,
   PackageCheck,
   ReceiptText,
+  RotateCcw,
   ShoppingBag,
   Truck,
   WalletCards,
   Wrench,
   X,
+  XCircle,
 } from "lucide-react";
 import { TaskExecutionTargetType } from "@prisma/client";
 import { createOrderFromTaskAction } from "@/domains/order/actions/order-from-task.actions";
@@ -81,7 +85,9 @@ function suggestedTarget(task: any): TaskExecutionTargetType {
   if (domain === "ORDER") return TaskExecutionTargetType.ORDER;
   if (domain === "SHIPMENT") return TaskExecutionTargetType.SHIPMENT;
   if (domain === "PAYMENT") return TaskExecutionTargetType.PAYMENT;
-  if (domain === "TECHNICAL_ISSUE") return TaskExecutionTargetType.TECHNICAL_ISSUE;
+  if (domain === "TECHNICAL_ISSUE") {
+    return TaskExecutionTargetType.TECHNICAL_ISSUE;
+  }
   if (domain === "SERVICE") return TaskExecutionTargetType.SERVICE_REQUEST;
 
   return TaskExecutionTargetType.ORDER;
@@ -178,10 +184,15 @@ export default function TaskDomainActions({ task, onDone }: Props) {
   const shouldEditWatchImage = actions.includes("WATCH_IMAGE_EDIT");
 
   const watchProductId = resolveWatchProductId(task);
-  const canUseWatch = Boolean(task?.watchId || task?.watch?.id || task?.workCase?.watch?.id);
+  const canUseWatch = Boolean(
+    task?.watchId || task?.watch?.id || task?.workCase?.watch?.id,
+  );
 
   const orderExecution = firstExecution(task, TaskExecutionTargetType.ORDER);
-  const hasOrderExecution = hasActiveExecution(task, TaskExecutionTargetType.ORDER);
+  const hasOrderExecution = hasActiveExecution(
+    task,
+    TaskExecutionTargetType.ORDER,
+  );
 
   const [serviceMode, setServiceMode] =
     useState<ServiceExecutionMode>("SR_ONLY");
@@ -213,6 +224,16 @@ export default function TaskDomainActions({ task, onDone }: Props) {
       LINK_TARGET_OPTIONS[0],
     [targetType],
   );
+
+  const hasAnyPrimaryAction =
+    shouldCreateOrder ||
+    shouldLinkPayment ||
+    shouldLinkShipment ||
+    shouldCreateService ||
+    shouldCreateTechnicalIssue ||
+    shouldUpdateWatchPrice ||
+    shouldEditWatchContent ||
+    shouldEditWatchImage;
 
   function resetOrderForm() {
     setCustomerName("");
@@ -273,7 +294,8 @@ export default function TaskDomainActions({ task, onDone }: Props) {
         });
 
         notify.success(
-          `Đã tạo Order${result?.order?.refNo ? ` ${result.order.refNo}` : ""} từ task`,
+          `Đã tạo Order${result?.order?.refNo ? ` ${result.order.refNo}` : ""
+          } từ task`,
         );
 
         resetOrderForm();
@@ -349,169 +371,122 @@ export default function TaskDomainActions({ task, onDone }: Props) {
     });
   }
 
-  const hasAnyPrimaryAction =
-    shouldCreateOrder ||
-    shouldLinkPayment ||
-    shouldLinkShipment ||
-    shouldCreateService ||
-    shouldCreateTechnicalIssue ||
-    shouldUpdateWatchPrice ||
-    shouldEditWatchContent ||
-    shouldEditWatchImage;
-
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-        Thực thi nghiệp vụ
-      </p>
+    <>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
 
-      <h3 className="mt-1 text-base font-semibold text-slate-950">
-        Action theo task
-      </h3>
 
-      <p className="mt-1 text-sm text-slate-500">
-        Task Type là nhóm việc, Action là việc cụ thể. Action sẽ quyết định
-        tạo/link nghiệp vụ nào và task sẽ theo dõi target nào.
-      </p>
+          {shouldCreateOrder ? (
+            <>
+              <button
+                type="button"
+                disabled={!canUseWatch || pending || hasOrderExecution}
+                onClick={openOrderModal}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {hasOrderExecution ? "Đã tạo Order" : "Tạo Order"}
+              </button>
 
-      {task?.taskAction ? (
-        <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          Action:{" "}
-          <span className="font-semibold text-slate-950">
-            {task.taskAction.name}
-          </span>
-
-          {task.taskAction.completionRuleKey ? (
-            <span className="ml-2 text-xs text-slate-400">
-              Rule: {task.taskAction.completionRuleKey}
-            </span>
+              {orderExecution ? (
+                <Link
+                  href={`/admin/orders/${orderExecution.targetId}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  Mở Order <ExternalLink className="h-4 w-4" />
+                </Link>
+              ) : null}
+            </>
           ) : null}
-        </div>
-      ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {shouldCreateOrder ? (
-          <>
+          {shouldCreateTechnicalIssue ? (
             <button
               type="button"
-              disabled={!canUseWatch || pending || hasOrderExecution}
-              onClick={openOrderModal}
+              disabled={!canUseWatch || pending}
+              onClick={openServiceConfirm}
               className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              <ShoppingBag className="h-4 w-4" />
-              {hasOrderExecution ? "Đã tạo Order" : "Tạo Order"}
+              <Wrench className="h-4 w-4" />
+              {pending ? "Đang tạo..." : `Thực thi service`}
             </button>
+          ) : null}
 
-            {orderExecution ? (
-              <Link
-                href={`/admin/orders/${orderExecution.targetId}`}
-                className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
-              >
-                Mở Order <ExternalLink className="h-4 w-4" />
-              </Link>
-            ) : null}
-          </>
-        ) : null}
+          {shouldCreateService && !shouldCreateTechnicalIssue ? (
+            <button
+              type="button"
+              disabled={!canUseWatch || pending}
+              onClick={openServiceConfirm}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Wrench className="h-4 w-4" />
+              {pending ? "Đang tạo..." : "Tạo/Gán SR"}
+            </button>
+          ) : null}
 
-        {shouldCreateTechnicalIssue ? (
-          <button
-            type="button"
-            disabled={!canUseWatch || pending}
-            onClick={openServiceConfirm}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <Wrench className="h-4 w-4" />
-            {pending ? "Đang tạo..." : `Thực thi service: ${actionLabel(task)}`}
-          </button>
-        ) : null}
+          {shouldLinkPayment ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => openLinkModal(TaskExecutionTargetType.PAYMENT)}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <WalletCards className="h-4 w-4" />
+              Link Payment
+            </button>
+          ) : null}
 
-        {shouldCreateService && !shouldCreateTechnicalIssue ? (
-          <button
-            type="button"
-            disabled={!canUseWatch || pending}
-            onClick={openServiceConfirm}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <Wrench className="h-4 w-4" />
-            {pending ? "Đang tạo..." : "Tạo/Gán Service Request"}
-          </button>
-        ) : null}
+          {shouldLinkShipment ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => openLinkModal(TaskExecutionTargetType.SHIPMENT)}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Truck className="h-4 w-4" />
+              Link Shipment
+            </button>
+          ) : null}
 
-        {shouldLinkPayment ? (
+          {shouldUpdateWatchPrice && watchProductId ? (
+            <Link
+              href={`/admin/watches/${watchProductId}/edit`}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Cập nhật giá Watch <ExternalLink className="h-4 w-4" />
+            </Link>
+          ) : null}
+
+          {shouldEditWatchContent && watchProductId ? (
+            <Link
+              href={`/admin/watches/${watchProductId}/edit`}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Sửa content Watch <ExternalLink className="h-4 w-4" />
+            </Link>
+          ) : null}
+
+          {shouldEditWatchImage && watchProductId ? (
+            <Link
+              href={`/admin/watches/${watchProductId}/edit`}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Sửa hình Watch <ExternalLink className="h-4 w-4" />
+            </Link>
+          ) : null}
+
           <button
             type="button"
             disabled={pending}
-            onClick={() => openLinkModal(TaskExecutionTargetType.PAYMENT)}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            onClick={() => openLinkModal(suggestedTarget(task))}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
           >
-            <WalletCards className="h-4 w-4" />
-            Link Payment
+            <Link2 className="h-4 w-4" />
+            Liên kết nghiệp vụ
           </button>
-        ) : null}
 
-        {shouldLinkShipment ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => openLinkModal(TaskExecutionTargetType.SHIPMENT)}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <Truck className="h-4 w-4" />
-            Link Shipment
-          </button>
-        ) : null}
-
-        {shouldUpdateWatchPrice && watchProductId ? (
-          <Link
-            href={`/admin/watches/${watchProductId}/edit`}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            Cập nhật giá Watch <ExternalLink className="h-4 w-4" />
-          </Link>
-        ) : null}
-
-        {shouldEditWatchContent && watchProductId ? (
-          <Link
-            href={`/admin/watches/${watchProductId}/edit`}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            Sửa content Watch <ExternalLink className="h-4 w-4" />
-          </Link>
-        ) : null}
-
-        {shouldEditWatchImage && watchProductId ? (
-          <Link
-            href={`/admin/watches/${watchProductId}/edit`}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            Sửa hình Watch <ExternalLink className="h-4 w-4" />
-          </Link>
-        ) : null}
-
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => openLinkModal(suggestedTarget(task))}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
-        >
-          <Link2 className="h-4 w-4" />
-          Liên kết nghiệp vụ
-        </button>
-      </div>
-
-      {!hasAnyPrimaryAction ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-          Action này chưa có nghiệp vụ tự động. Người nhận có thể xử lý thủ
-          công hoặc link nghiệp vụ đã có.
         </div>
-      ) : null}
-
-      {(shouldCreateService || shouldCreateTechnicalIssue || shouldCreateOrder) &&
-        !canUseWatch ? (
-        <p className="mt-3 text-xs text-amber-600">
-          Task cần gắn Watch hoặc Work Case có Watch để thực thi action này.
-        </p>
-      ) : null}
+      </div>
 
       {orderOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
@@ -522,8 +497,8 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                   Tạo Order từ task
                 </h4>
                 <p className="mt-1 text-sm text-slate-500">
-                  Order được tạo ở trạng thái DRAFT, reserve/cọc = NONE. Nếu
-                  tick shipment, đơn sẽ có thông tin giao hàng để xử lý tiếp.
+                  Order được tạo ở trạng thái DRAFT. Nếu tick shipment, đơn sẽ
+                  có thông tin giao hàng để xử lý tiếp.
                 </p>
               </div>
 
@@ -569,11 +544,6 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                     Tạo shipment cho đơn hàng này
                   </span>
                 </label>
-
-                <p className="mt-1 pl-6 text-xs text-slate-500">
-                  Dùng cho case giao xem thử/đeo thử hoặc đơn cần giao hàng ngay
-                  sau khi tạo.
-                </p>
               </div>
 
               {hasShipment ? (
@@ -603,7 +573,9 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                       Quận / Huyện
                       <input
                         value={shipDistrict}
-                        onChange={(event) => setShipDistrict(event.target.value)}
+                        onChange={(event) =>
+                          setShipDistrict(event.target.value)
+                        }
                         placeholder="Ví dụ: Quận 1"
                         className="mt-1 h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
                       />
@@ -631,9 +603,6 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                   placeholder="Ví dụ: 3500000"
                   className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
                 />
-                <span className="mt-1 block text-xs font-normal text-slate-400">
-                  Giá này là giá trị order. Cọc đang để NONE.
-                </span>
               </label>
 
               <label className="block text-sm font-medium text-slate-700">
@@ -642,7 +611,7 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                   value={orderNote}
                   onChange={(event) => setOrderNote(event.target.value)}
                   rows={3}
-                  placeholder="Ví dụ: Khách xin giao đồng hồ xem thử, chưa cọc."
+                  placeholder="Ghi chú đơn hàng"
                   className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                 />
               </label>
@@ -680,8 +649,8 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                   Liên kết nghiệp vụ
                 </h4>
                 <p className="mt-1 text-sm text-slate-500">
-                  Dùng khi người xử lý đã tạo Order/Shipment/Payment/SR/TI ở
-                  màn hình nghiệp vụ rồi muốn gắn kết quả về task.
+                  Dùng khi nghiệp vụ đã được tạo ở màn hình khác và cần gắn về
+                  task.
                 </p>
               </div>
 
@@ -734,7 +703,7 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   rows={3}
-                  placeholder="Ví dụ: Nghiệp vụ đã được tạo để xử lý task này."
+                  placeholder="Ghi chú liên kết"
                   className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                 />
               </label>
@@ -797,7 +766,9 @@ export default function TaskDomainActions({ task, onDone }: Props) {
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                   ].join(" ")}
                 >
-                  <div className="font-semibold">Tạo / gán Service Request</div>
+                  <div className="font-semibold">
+                    Tạo / gán Service Request
+                  </div>
                   <div
                     className={[
                       "mt-1 text-xs",
@@ -867,7 +838,9 @@ export default function TaskDomainActions({ task, onDone }: Props) {
 
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div>Loại: {servicePreview.technicalIssue.issueType}</div>
-                    <div>Khu vực: {servicePreview.technicalIssue.area || "-"}</div>
+                    <div>
+                      Khu vực: {servicePreview.technicalIssue.area || "-"}
+                    </div>
                     <div>Xử lý: {servicePreview.technicalIssue.actionMode}</div>
                     <div>Action: {servicePreview.technicalIssue.actionName}</div>
                   </div>
@@ -907,6 +880,6 @@ export default function TaskDomainActions({ task, onDone }: Props) {
           </div>
         </div>
       ) : null}
-    </section>
+    </>
   );
 }
