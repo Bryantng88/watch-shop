@@ -50,8 +50,9 @@ export default function TaskListClient(props: Props) {
   const progress = useAppProgress();
   const notify = useNotify();
 
-  const currentView = normalizeTaskView(sp.get("view") || firstRaw(props.rawSearchParams?.view));
-  const [filters, setFilters] = useState<TaskListFiltersValue>({
+  const currentView = normalizeTaskView(
+    sp.get("view") || firstRaw(props.rawSearchParams?.view, "all"),
+  ); const [filters, setFilters] = useState<TaskListFiltersValue>({
     q: firstRaw(props.rawSearchParams?.q),
     status: (firstRaw(props.rawSearchParams?.status, "OPEN") || "OPEN") as any,
     priority: (firstRaw(props.rawSearchParams?.priority, "ALL") || "ALL") as any,
@@ -83,7 +84,7 @@ export default function TaskListClient(props: Props) {
   }
 
   function setView(view: TaskViewKey) {
-    navigate({ view: view === "mine" ? null : view, page: "1" });
+    navigate({ view: view === "all" ? null : view, page: "1" });
   }
 
   function applyFilters() {

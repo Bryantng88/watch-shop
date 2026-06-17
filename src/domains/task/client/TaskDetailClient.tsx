@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ExternalLink,
+  MoreHorizontal,
+} from "lucide-react";
 import { TaskStatus } from "@prisma/client";
+import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { changeTaskStatusAction } from "../actions/task.actions";
 import TaskDomainActions from "../ui/detail/TaskDomainActions";
 import TaskExecutionPanel from "../ui/detail/TaskExecutionPanel";
-import { TaskBadges } from "../ui/shared/TaskBadges";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 function userLabel(user?: { name?: string | null; email?: string | null } | null) {
@@ -30,6 +37,7 @@ function workCaseLabel(workCase: any) {
 export default function TaskDetailClient({ task }: { task: any }) {
   const router = useRouter();
   const notify = useNotify();
+  const [actionOpen, setActionOpen] = useState(false);
 
   const closed =
     task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED;
@@ -38,6 +46,7 @@ export default function TaskDetailClient({ task }: { task: any }) {
     try {
       await changeTaskStatusAction(task.id, TaskStatus.DONE);
       notify.success("Đã hoàn tất task");
+      setActionOpen(false);
       router.refresh();
     } catch (error: any) {
       notify.error(error?.message || "Không hoàn tất được task");
@@ -45,72 +54,114 @@ export default function TaskDetailClient({ task }: { task: any }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] space-y-5 px-4 py-5 lg:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/admin/tasks"
-          className="inline-flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Quay lại danh sách task
-        </Link>
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <TaskDomainActions task={task} onDone={() => router.refresh()} />
-
-          <button
-            type="button"
-            onClick={markDone}
-            disabled={closed}
-            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Hoàn tất task
-          </button>
-        </div>
-      </div>
-
-      <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 lg:px-6 xl:px-8">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="min-w-0">
-            <TaskBadges task={task} />
+            <AdminBreadcrumbs
+              items={[
+                { label: "Tasks", href: "/admin/tasks" },
+                { label: task.title || "Chi tiết task" },
+              ]}
+            />
 
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-              {task.title}
-            </h1>
+            <div className="mt-4">
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                {task.title}
+              </h1>
 
-            {task.description ? (
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
-                {task.description}
-              </p>
-            ) : null}
+              {task.description ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+                  {task.description}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="relative mt-4 inline-block">
+              <button
+                type="button"
+                onClick={() => setActionOpen((v) => !v)}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                Thao tác
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              {actionOpen ? (
+                <div className="absolute left-0 z-30 mt-2 w-[260px] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                  <Link
+                    href="/admin/tasks"
+                    className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    onClick={() => setActionOpen(false)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Quay lại
+                  </Link>
+
+                  <div className="my-2 h-px bg-slate-100" />
+
+                  <div className="[&>*]:w-full [&_button]:w-full [&_a]:w-full">
+                    <TaskDomainActions
+                      task={task}
+                      onDone={() => {
+                        setActionOpen(false);
+                        router.refresh();
+                      }}
+                    />
+                  </div>
+
+                  <div className="my-2 h-px bg-slate-100" />
+
+                  <button
+                    type="button"
+                    onClick={markDone}
+                    disabled={closed}
+                    className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Hoàn tất task
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            <div>
-              Loại:{" "}
-              <span className="font-semibold text-slate-950">
+          <div className="flex h-full flex-col justify-center rounded-2xl bg-slate-50 px-4 py-4 text-xs text-slate-500">
+            <div className="flex justify-between gap-3">
+              <span>Loại</span>
+              <span className="font-semibold text-slate-900">
                 {task.taskType?.name || task.domain}
               </span>
             </div>
 
             {task.taskAction ? (
-              <div className="mt-1">
-                Action:{" "}
-                <span className="font-semibold text-slate-950">
+              <div className="mt-2 flex justify-between gap-3">
+                <span>Action</span>
+                <span className="font-semibold text-slate-900">
                   {task.taskAction.name}
                 </span>
               </div>
             ) : null}
 
-            <div className="mt-1">
-              Kiểu xử lý:{" "}
-              <span className="font-semibold text-slate-950">
-                {task.mode}
+            <div className="mt-2 flex justify-between gap-3">
+              <span>Kiểu</span>
+              <span className="font-semibold text-slate-900">{task.mode}</span>
+            </div>
+
+            <div className="mt-2 flex justify-between gap-3">
+              <span>Ưu tiên</span>
+              <span className="font-semibold text-slate-900">
+                {task.priority || "-"}
               </span>
             </div>
 
-            <div className="mt-1">Tạo lúc: {formatDate(task.createdAt)}</div>
+            <div className="mt-2 flex justify-between gap-3">
+              <span>Tạo lúc</span>
+              <span className="font-semibold text-slate-900">
+                {formatDate(task.createdAt)}
+              </span>
+            </div>
           </div>
         </div>
       </section>

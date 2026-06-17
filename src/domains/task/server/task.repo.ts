@@ -98,10 +98,27 @@ function buildAccessWhere(userId: string, canViewAll: boolean): Prisma.TaskWhere
   return { OR: [{ createdByUserId: userId }, { assignedToUserId: userId }] };
 }
 
-function buildViewWhere(view: TaskViewKey, userId: string, canViewAll: boolean): Prisma.TaskWhereInput {
-  if (view === "mine") return { assignedToUserId: userId };
-  if (view === "assigned") return { assignedToUserId: userId, NOT: { createdByUserId: userId } };
-  if (view === "delegated") return { createdByUserId: userId, NOT: { assignedToUserId: userId } };
+function buildViewWhere(
+  view: TaskViewKey,
+  userId: string,
+  canViewAll: boolean,
+): Prisma.TaskWhereInput {
+  if (view === "all") {
+    return buildAccessWhere(userId, canViewAll);
+  }
+
+  if (view === "mine") {
+    return { OR: [{ createdByUserId: userId }, { assignedToUserId: userId }] };
+  }
+
+  if (view === "assigned") {
+    return { assignedToUserId: userId };
+  }
+
+  if (view === "delegated") {
+    return { createdByUserId: userId };
+  }
+
   return buildAccessWhere(userId, canViewAll);
 }
 

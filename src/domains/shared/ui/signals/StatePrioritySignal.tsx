@@ -83,27 +83,36 @@ export function PrioritySignal({ priority }: { priority: TaskPriority }) {
     const map = {
         LOW: {
             label: "Ưu tiên thấp",
-            icon: <Triangle className="h-3 w-3 rotate-180 fill-current stroke-[2.5]" />,
-            className: "bg-cyan-50 text-cyan-600 ring-cyan-200",
+            dot: "bg-slate-400",
+            ring: "ring-slate-100",
+            content: null,
         },
         MEDIUM: {
             label: "Ưu tiên vừa",
-            icon: <MoreHorizontal className="h-3.5 w-3.5 stroke-[3]" />,
-            className: "bg-emerald-50 text-emerald-600 ring-emerald-200",
+            dot: "bg-sky-500",
+            ring: "ring-sky-100",
+            content: null,
         },
         HIGH: {
             label: "Ưu tiên cao",
-            icon: <Triangle className="h-3 w-3 fill-current stroke-[2.5]" />,
-            className: "bg-amber-50 text-amber-600 ring-amber-200",
+            dot: "bg-orange-500",
+            ring: "ring-orange-100",
+            content: null,
         },
         URGENT: {
             label: "Khẩn cấp",
-            icon: <AlertOctagon className="h-3.5 w-3.5 stroke-[2.5]" />,
-            className: "bg-rose-50 text-rose-600 ring-rose-200",
+            dot: "bg-rose-500",
+            ring: "ring-rose-100",
+            content: "!",
         },
     } satisfies Record<
         TaskPriority,
-        { label: string; icon: React.ReactNode; className: string }
+        {
+            label: string;
+            dot: string;
+            ring: string;
+            content: string | null;
+        }
     >;
 
     const item = map[priority];
@@ -113,15 +122,22 @@ export function PrioritySignal({ priority }: { priority: TaskPriority }) {
             title={item.label}
             aria-label={item.label}
             className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-full ring-1",
-                item.className,
+                "inline-flex h-5 w-5 items-center justify-center rounded-full bg-white ring-4",
+                item.ring,
             )}
         >
-            {item.icon}
+            <span
+                className={cn(
+                    "inline-flex h-2.5 w-2.5 items-center justify-center rounded-full text-[9px] font-black leading-none text-white",
+                    item.dot,
+                    item.content ? "h-4 w-4" : "",
+                )}
+            >
+                {item.content}
+            </span>
         </span>
     );
 }
-
 export function WorkCaseStatusSignal({ status }: { status: WorkCaseStatus }) {
     const map = {
         NEW: "Chưa xử lý",

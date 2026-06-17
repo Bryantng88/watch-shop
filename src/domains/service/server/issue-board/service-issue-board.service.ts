@@ -525,10 +525,11 @@ function normalizeBoardColumn(issue: {
 
     if (status === "DONE" || status === "COMPLETED") return "DONE";
     if (status === "IN_PROGRESS") return "IN_PROGRESS";
+    if (status === "CONFIRMED") return "READY";
     if (status === "OPEN" && issue.isConfirmed) return "READY";
+
     return "PENDING_CONFIRM";
 }
-
 function normalizeAssessments(
     raw: unknown
 ): Array<{
@@ -678,7 +679,8 @@ export async function getTechnicalIssueBoardData(input: { serviceRequestId?: str
 
             const hasOpenIssue = activeIssues.some((i) => {
                 const status = String(i.executionStatus || "").toUpperCase();
-                return status === "OPEN" || status === "IN_PROGRESS";
+
+                return ["OPEN", "CONFIRMED", "IN_PROGRESS"].includes(status);
             });
 
             const serviceRequestReadyToClose =
