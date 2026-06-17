@@ -6,7 +6,10 @@ import {
     MoreHorizontal,
     Play,
     Triangle,
-    X,
+    PlayCircle,
+    CheckCircle2,
+
+    XCircle,
 } from "lucide-react";
 import { TaskPriority, TaskStatus, WorkCaseStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -31,72 +34,48 @@ function stepIndex(status: TaskStatus) {
     return TASK_PROGRESS_ORDER.indexOf(status);
 }
 
-export function TaskStatusSignal({ status }: { status: TaskStatus }) {
-    const activeIndex = stepIndex(status);
-    const isCancelled = status === TaskStatus.CANCELLED;
 
-    if (isCancelled) {
-        return (
-            <span
-                title="Đã hủy"
-                className="inline-flex h-7 items-center gap-1.5 rounded-full bg-slate-100 px-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
-            >
-                <X className="h-3.5 w-3.5" />
-                Hủy
-            </span>
-        );
-    }
+
+export function TaskStatusSignal({ status }: { status: TaskStatus }) {
+    const map = {
+        TODO: {
+            label: "Cần làm",
+            icon: <Clock3 className="h-3.5 w-3.5" />,
+            className: "bg-amber-50 text-amber-700 ring-amber-100",
+        },
+        IN_PROGRESS: {
+            label: "Đang làm",
+            icon: <PlayCircle className="h-3.5 w-3.5" />,
+            className: "bg-blue-50 text-blue-700 ring-blue-100",
+        },
+        DONE: {
+            label: "Đã xong",
+            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+            className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+        },
+        CANCELLED: {
+            label: "Đã hủy",
+            icon: <XCircle className="h-3.5 w-3.5" />,
+            className: "bg-slate-50 text-slate-500 ring-slate-200",
+        },
+    } satisfies Record<
+        TaskStatus,
+        { label: string; icon: React.ReactNode; className: string }
+    >;
+
+    const item = map[status];
 
     return (
-        <div
-            title={TASK_STATUS_LABEL[status]}
-            className="inline-flex items-center justify-center gap-1.5"
+        <span
+            title={item.label}
+            className={cn(
+                "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold ring-1",
+                item.className,
+            )}
         >
-            {TASK_PROGRESS_ORDER.map((step, index) => {
-                const done = index <= activeIndex;
-                const current = index === activeIndex;
-
-                return (
-                    <span key={step} className="inline-flex items-center gap-1.5">
-                        <span
-                            className={cn(
-                                "inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] transition",
-                                done
-                                    ? "border-blue-500 bg-blue-500 text-white"
-                                    : "border-slate-200 bg-slate-50 text-slate-300",
-                                current && status !== TaskStatus.DONE
-                                    ? "ring-2 ring-blue-100"
-                                    : "",
-                                status === TaskStatus.DONE && done
-                                    ? "border-emerald-500 bg-emerald-500"
-                                    : "",
-                            )}
-                        >
-                            {step === TaskStatus.TODO ? (
-                                <Clock3 className="h-3 w-3" />
-                            ) : step === TaskStatus.IN_PROGRESS ? (
-                                <Play className="h-3 w-3 fill-current" />
-                            ) : (
-                                <Check className="h-3 w-3" />
-                            )}
-                        </span>
-
-                        {index < TASK_PROGRESS_ORDER.length - 1 ? (
-                            <span
-                                className={cn(
-                                    "h-px w-4 rounded-full",
-                                    index < activeIndex
-                                        ? status === TaskStatus.DONE
-                                            ? "bg-emerald-400"
-                                            : "bg-blue-400"
-                                        : "bg-slate-200",
-                                )}
-                            />
-                        ) : null}
-                    </span>
-                );
-            })}
-        </div>
+            {item.icon}
+            {item.label}
+        </span>
     );
 }
 

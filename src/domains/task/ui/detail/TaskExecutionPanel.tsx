@@ -196,7 +196,7 @@ function ServiceRequestProgressCard({
   const progress = getSrProgress(sr);
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -219,46 +219,46 @@ function ServiceRequestProgressCard({
             </span>
           </div>
 
-          <div className="mt-3 font-semibold text-slate-950">
-            {sr?.refNo || sr?.id || execution.targetId}
-          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="font-semibold text-slate-950">
+              {sr?.refNo || sr?.id || execution.targetId}
+            </div>
 
-          <div className="mt-1 text-sm text-slate-600">
-            SR status:{" "}
-            <span className="font-semibold text-slate-900">
-              {sr?.status ?? "-"}
-            </span>
-          </div>
-
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
-              <span>Tiến độ kỹ thuật</span>
-              <span className="font-semibold text-slate-700">
-                {progress.done}/{progress.total}
+            <div className="text-sm text-slate-500">
+              SR:{" "}
+              <span className="font-semibold text-slate-800">
+                {sr?.status ?? "-"}
               </span>
             </div>
 
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  progress.total > 0 && progress.done === progress.total
-                    ? "bg-emerald-500"
-                    : "bg-blue-500",
-                )}
-                style={{ width: `${progress.percent}%` }}
-              />
+            <div className="text-sm text-slate-500">
+              TI:{" "}
+              <span className="font-semibold text-slate-800">
+                {progress.done}/{progress.total}
+              </span>
             </div>
           </div>
 
+          <div className="mt-3 h-1.5 max-w-[520px] overflow-hidden rounded-full bg-slate-200">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                progress.total > 0 && progress.done === progress.total
+                  ? "bg-emerald-500"
+                  : "bg-blue-500",
+              )}
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+
           {issues.length > 0 ? (
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-white">
               {issues.slice(0, 5).map((issue: any) => (
                 <div
                   key={issue.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs ring-1 ring-slate-100"
+                  className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-xs last:border-b-0"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 truncate">
                     <span className="mr-1 text-slate-400">
                       {issueLineStatus(issue)}
                     </span>
@@ -267,25 +267,15 @@ function ServiceRequestProgressCard({
                     </span>
                   </div>
 
-                  <div className="shrink-0 text-slate-400">
+                  <span className="shrink-0 text-slate-400">
                     {issue.executionStatus}
-                  </div>
+                  </span>
                 </div>
               ))}
-
-              {issues.length > 5 ? (
-                <div className="pl-3 text-xs text-slate-400">
-                  +{issues.length - 5} issue khác
-                </div>
-              ) : null}
             </div>
-          ) : (
-            <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-              Chưa có Technical Issue nào trong SR này.
-            </div>
-          )}
+          ) : null}
 
-          <div className="mt-3 text-xs text-slate-300">
+          <div className="mt-2 text-xs text-slate-300">
             ID: {sr?.id || execution.targetId}
           </div>
         </div>
@@ -425,7 +415,13 @@ export default function TaskExecutionPanel({
               ? "Có kết quả hoàn tất"
               : "Đang thực hiện"
             : "Chưa có kết quả"}
+
         </div>
+        {latest ? (
+          <p className="mt-1 text-xs text-slate-400">
+            Cập nhật cuối: {targetLabel(latest.targetType)} · {formatDate(latest.createdAt)}
+          </p>
+        ) : null}
       </div>
 
       {!executions.length ? (
@@ -451,14 +447,6 @@ export default function TaskExecutionPanel({
         </div>
       )}
 
-      {latest ? (
-        <div className="mt-4 rounded-2xl bg-slate-950 px-4 py-3 text-sm text-white">
-          <span className="text-slate-300">Cập nhật mới nhất:</span>{" "}
-          <span className="font-semibold">{targetLabel(latest.targetType)}</span>{" "}
-          {actionLabel(latest.actionType).toLowerCase()} lúc{" "}
-          {formatDate(latest.createdAt)}
-        </div>
-      ) : null}
     </section>
   );
 }

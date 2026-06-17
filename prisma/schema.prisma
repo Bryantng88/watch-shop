@@ -2195,6 +2195,7 @@ enum TechnicalAssessmentStatus {
 }
 
 enum TechnicalIssueExecutionStatus {
+  CONFIRMED
   OPEN
   IN_PROGRESS
   DONE

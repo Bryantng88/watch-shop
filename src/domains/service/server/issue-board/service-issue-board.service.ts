@@ -267,7 +267,7 @@ export async function confirmTechnicalIssue(input: {
             confirmedAt: new Date(),
             confirmedById: cleanId(input.actorId),
             confirmedByNameSnap: cleanId(input.actorName),
-            executionStatus: "OPEN" as any,
+            executionStatus: "CONFIRMED" as any,
             updatedAt: new Date(),
         } as any,
     });
