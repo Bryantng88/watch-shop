@@ -13,10 +13,14 @@ export const TaskExecutionResultSchema = z.object({
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
     createdAt: z.date(),
+    checklistItemId: z.string().nullable(),
+    serviceRequestId: z.string().nullable(),
+    technicalIssueId: z.string().nullable(),
     task: z.unknown(),
     createdByUser: z.unknown().nullable(),
     checklistItem: z.unknown().nullable(),
-    checklistItemId: z.string().nullable()
+    serviceRequest: z.unknown().nullable(),
+    technicalIssue: z.unknown().nullable()
 }).strict();
 
 export type TaskExecutionResultType = z.infer<typeof TaskExecutionResultSchema>;

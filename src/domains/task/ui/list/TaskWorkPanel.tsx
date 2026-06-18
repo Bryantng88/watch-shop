@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
     Check,
+    ChevronDown,
     ExternalLink,
     PackageCheck,
     Trash2,
     Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TaskDomainActions from "../detail/TaskDomainActions";
 
 function targetLabel(type: string) {
     if (type === "SERVICE_REQUEST") return "Service Request";
@@ -31,8 +33,27 @@ function targetHref(type: string, id: string) {
     if (type === "WORK_CASE") return `/admin/work-cases/${id}`;
     return null;
 }
-
 function getExecutionTitle(item: any) {
+    if (item.targetType === "TECHNICAL_ISSUE") {
+        return (
+            item.technicalIssue?.summary ||
+            item.targetTitle ||
+            item.targetRefNo ||
+            item.targetCode ||
+            item.targetId
+        );
+    }
+
+    if (item.targetType === "SERVICE_REQUEST") {
+        return (
+            item.serviceRequest?.refNo ||
+            item.targetRefNo ||
+            item.targetCode ||
+            item.targetTitle ||
+            item.targetId
+        );
+    }
+
     return (
         item.targetRefNo ||
         item.targetCode ||
@@ -40,6 +61,23 @@ function getExecutionTitle(item: any) {
         item.refNo ||
         item.targetId
     );
+}
+function getTechnicalIssueTitle(item: any) {
+    return (
+        item.technicalIssue?.summary ||
+        item.targetTitle ||
+        item.targetRefNo ||
+        item.targetCode ||
+        item.targetId
+    );
+}
+
+function getTechnicalIssueArea(item: any) {
+    return item.technicalIssue?.area || "-";
+}
+
+function getTechnicalIssueStatus(item: any) {
+    return item.technicalIssue?.executionStatus || getExecutionStatus(item);
 }
 
 function getExecutionStatus(item: any) {
@@ -86,7 +124,10 @@ function groupByTarget(items: any[]) {
         const group = map.get(key);
         group.events.push(item);
 
-        if (new Date(item.createdAt).getTime() > new Date(group.latestAt).getTime()) {
+        if (
+            new Date(item.createdAt).getTime() >
+            new Date(group.latestAt).getTime()
+        ) {
             group.latestAt = item.createdAt;
             group.actionType = item.actionType;
             group.note = item.note;
@@ -96,87 +137,149 @@ function groupByTarget(items: any[]) {
     }
 
     return Array.from(map.values()).sort(
-        (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
+        (a, b) =>
+            new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
     );
 }
 
-function WorkItemBadge({
-    children,
-    tone = "default",
-}: {
-    children: React.ReactNode;
-    tone?: "default" | "blue";
-}) {
-    return (
-        <span
-            className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-                tone === "blue"
-                    ? "bg-blue-50 text-blue-700 ring-blue-100"
-                    : "bg-white text-slate-700 ring-slate-200",
-            )}
-        >
-            {children}
-        </span>
+function splitExecutions(executions: any[]) {
+    const grouped = groupByTarget(executions);
+
+    const serviceRequests = grouped.filter(
+        (x) => x.targetType === "SERVICE_REQUEST",
     );
+
+    const technicalIssues = grouped.filter(
+        (x) => x.targetType === "TECHNICAL_ISSUE",
+    );
+
+    const otherExecutions = grouped.filter(
+        (x) =>
+            x.targetType !== "SERVICE_REQUEST" &&
+            x.targetType !== "TECHNICAL_ISSUE",
+    );
+
+    return {
+        grouped,
+        serviceRequests,
+        technicalIssues,
+        otherExecutions,
+    };
 }
 
 function ChecklistRow({
     item,
+    active,
+    task,
+    onToggleActive,
     onToggle,
     onDelete,
 }: {
     item: any;
+    active: boolean;
+    task: any;
+    onToggleActive: (item: any) => void;
     onToggle: (item: any) => Promise<void>;
     onDelete: (item: any) => Promise<void>;
 }) {
-    return (
-        <div className="flex items-center justify-between gap-4 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
-            <div className="flex min-w-0 items-center gap-3">
-                <button
-                    type="button"
-                    onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        await onToggle(item);
-                    }}
-                    className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
-                        item.isDone
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                            : "bg-white text-slate-300 ring-slate-300",
-                    )}
-                >
-                    {item.isDone ? <Check className="h-3.5 w-3.5" /> : null}
-                </button>
+    const itemExecutions = splitExecutions(item.executions ?? []);
+    const hasExecutions = itemExecutions.grouped.length > 0;
 
-                <div className="min-w-0">
-                    <div
+    return (
+        <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            await onToggle(item);
+                        }}
                         className={cn(
-                            "line-clamp-1 font-semibold",
-                            item.isDone ? "text-slate-400 line-through" : "text-slate-950",
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
+                            item.isDone
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                : "bg-white text-slate-300 ring-slate-300",
                         )}
                     >
-                        {item.title}
-                    </div>
+                        {item.isDone ? <Check className="h-3.5 w-3.5" /> : null}
+                    </button>
 
-                    <div className="mt-1 text-xs text-slate-400">
-                        Dòng xử lý · {item.isDone ? "Đã xong" : "Chưa xong"}
+                    <div className="min-w-0">
+                        <div
+                            className={cn(
+                                "line-clamp-1 font-semibold",
+                                item.isDone ? "text-slate-400 line-through" : "text-slate-950",
+                            )}
+                        >
+                            {item.title}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-400">
+                            Dòng xử lý · {item.isDone ? "Đã xong" : "Chưa xong"}
+                            {hasExecutions ? ` · ${itemExecutions.grouped.length} nghiệp vụ` : ""}
+                        </div>
                     </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onToggleActive(item);
+                        }}
+                        className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+                            active
+                                ? "bg-slate-950 text-white"
+                                : "text-blue-600 hover:bg-blue-50",
+                        )}
+                    >
+                        Tạo nghiệp vụ
+                        <ChevronDown
+                            className={cn(
+                                "h-3.5 w-3.5 transition-transform",
+                                active ? "rotate-180" : "",
+                            )}
+                        />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            await onDelete(item);
+                        }}
+                        className="rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    await onDelete(item);
-                }}
-                className="shrink-0 rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600"
-            >
-                <Trash2 className="h-4 w-4" />
-            </button>
+            {active ? (
+                <div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                    <TaskDomainActions
+                        task={task}
+                        checklistItemId={item.id}
+                        onDone={() => onToggleActive(item)}
+                    />
+                </div>
+            ) : null}
+
+            {hasExecutions ? (
+                <div className="mt-3 space-y-2">
+                    <ExecutionGroup
+                        serviceRequests={itemExecutions.serviceRequests}
+                        technicalIssues={itemExecutions.technicalIssues}
+                        otherExecutions={itemExecutions.otherExecutions}
+                    />
+                </div>
+            ) : null}
         </div>
     );
 }
@@ -257,10 +360,10 @@ function TechnicalIssueChildList({ items }: { items: any[] }) {
                     >
                         <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-slate-800">
-                                {getExecutionTitle(ti)}
+                                {getTechnicalIssueTitle(ti)}
                             </div>
                             <div className="mt-0.5 text-xs text-slate-400">
-                                Technical Issue
+                                Khu vực: {getTechnicalIssueArea(ti)}
                             </div>
                         </div>
 
@@ -276,6 +379,43 @@ function TechnicalIssueChildList({ items }: { items: any[] }) {
                 );
             })}
         </div>
+    );
+}
+
+function ExecutionGroup({
+    serviceRequests,
+    technicalIssues,
+    otherExecutions,
+}: {
+    serviceRequests: any[];
+    technicalIssues: any[];
+    otherExecutions: any[];
+}) {
+    return (
+        <>
+            {serviceRequests.map((sr) => (
+                <ExecutionRow key={`${sr.targetType}:${sr.targetId}`} item={sr}>
+                    <TechnicalIssueChildList items={technicalIssues} />
+                </ExecutionRow>
+            ))}
+
+            {!serviceRequests.length && technicalIssues.length ? (
+                <ExecutionRow
+                    item={{
+                        targetType: "SERVICE_REQUEST",
+                        targetId: "technical-issues",
+                        targetTitle: "Technical Issues",
+                        targetStatus: "UPDATED",
+                    }}
+                >
+                    <TechnicalIssueChildList items={technicalIssues} />
+                </ExecutionRow>
+            ) : null}
+
+            {otherExecutions.map((item) => (
+                <ExecutionRow key={`${item.targetType}:${item.targetId}`} item={item} />
+            ))}
+        </>
     );
 }
 
@@ -297,26 +437,15 @@ export default function TaskWorkPanel({
     const [title, setTitle] = useState("");
     const [pending, setPending] = useState(false);
     const [localItems, setLocalItems] = useState(checklistItems);
+    const [activeChecklistItemId, setActiveChecklistItemId] = useState<string | null>(null);
 
     useEffect(() => {
         setLocalItems(checklistItems);
     }, [checklistItems]);
 
     const orphanExecutions = useMemo(
-        () => groupByTarget(executions.filter((x) => !x.checklistItemId)),
+        () => splitExecutions(executions.filter((x) => !x.checklistItemId)),
         [executions],
-    );
-
-    const serviceRequests = orphanExecutions.filter(
-        (x) => x.targetType === "SERVICE_REQUEST",
-    );
-
-    const technicalIssues = orphanExecutions.filter(
-        (x) => x.targetType === "TECHNICAL_ISSUE",
-    );
-
-    const otherExecutions = orphanExecutions.filter(
-        (x) => x.targetType !== "SERVICE_REQUEST" && x.targetType !== "TECHNICAL_ISSUE",
     );
 
     async function submit() {
@@ -344,7 +473,18 @@ export default function TaskWorkPanel({
 
     async function deleteItem(item: any) {
         setLocalItems((prev) => prev.filter((x) => x.id !== item.id));
+
+        if (activeChecklistItemId === item.id) {
+            setActiveChecklistItemId(null);
+        }
+
         await onDeleteChecklistItem?.(item.id);
+    }
+
+    function toggleActiveChecklist(item: any) {
+        setActiveChecklistItemId((current) =>
+            current === item.id ? null : item.id,
+        );
     }
 
     return (
@@ -386,38 +526,24 @@ export default function TaskWorkPanel({
                     <ChecklistRow
                         key={item.id}
                         item={item}
+                        task={task}
+                        active={activeChecklistItemId === item.id}
+                        onToggleActive={toggleActiveChecklist}
                         onToggle={toggleItem}
                         onDelete={deleteItem}
                     />
                 ))}
 
-                {serviceRequests.map((sr) => (
-                    <ExecutionRow key={`${sr.targetType}:${sr.targetId}`} item={sr}>
-                        <TechnicalIssueChildList items={technicalIssues} />
-                    </ExecutionRow>
-                ))}
-
-                {!serviceRequests.length && technicalIssues.length ? (
-                    <ExecutionRow
-                        item={{
-                            targetType: "SERVICE_REQUEST",
-                            targetId: "technical-issues",
-                            targetTitle: "Technical Issues",
-                            targetStatus: "UPDATED",
-                        }}
-                    >
-                        <TechnicalIssueChildList items={technicalIssues} />
-                    </ExecutionRow>
-                ) : null}
-
-                {otherExecutions.map((item) => (
-                    <ExecutionRow key={`${item.targetType}:${item.targetId}`} item={item} />
-                ))}
+                <ExecutionGroup
+                    serviceRequests={orphanExecutions.serviceRequests}
+                    technicalIssues={orphanExecutions.technicalIssues}
+                    otherExecutions={orphanExecutions.otherExecutions}
+                />
 
                 {!localItems.length &&
-                    !serviceRequests.length &&
-                    !technicalIssues.length &&
-                    !otherExecutions.length ? (
+                    !orphanExecutions.serviceRequests.length &&
+                    !orphanExecutions.technicalIssues.length &&
+                    !orphanExecutions.otherExecutions.length ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-400">
                         Chưa có dòng xử lý hoặc nghiệp vụ nào.
                     </div>

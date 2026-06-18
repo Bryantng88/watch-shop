@@ -13,7 +13,11 @@ import { TaskWhereInputObjectSchema as TaskWhereInputObjectSchema } from './Task
 import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
 import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema';
 import { TaskChecklistItemNullableScalarRelationFilterObjectSchema as TaskChecklistItemNullableScalarRelationFilterObjectSchema } from './TaskChecklistItemNullableScalarRelationFilter.schema';
-import { TaskChecklistItemWhereInputObjectSchema as TaskChecklistItemWhereInputObjectSchema } from './TaskChecklistItemWhereInput.schema'
+import { TaskChecklistItemWhereInputObjectSchema as TaskChecklistItemWhereInputObjectSchema } from './TaskChecklistItemWhereInput.schema';
+import { ServiceRequestNullableScalarRelationFilterObjectSchema as ServiceRequestNullableScalarRelationFilterObjectSchema } from './ServiceRequestNullableScalarRelationFilter.schema';
+import { ServiceRequestWhereInputObjectSchema as ServiceRequestWhereInputObjectSchema } from './ServiceRequestWhereInput.schema';
+import { TechnicalIssueNullableScalarRelationFilterObjectSchema as TechnicalIssueNullableScalarRelationFilterObjectSchema } from './TechnicalIssueNullableScalarRelationFilter.schema';
+import { TechnicalIssueWhereInputObjectSchema as TechnicalIssueWhereInputObjectSchema } from './TechnicalIssueWhereInput.schema'
 
 const taskexecutionwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TaskExecutionWhereInputObjectSchema), z.lazy(() => TaskExecutionWhereInputObjectSchema).array()]).optional(),
@@ -29,9 +33,13 @@ const taskexecutionwhereinputSchema = z.object({
   createdByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   checklistItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  serviceRequestId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
+  technicalIssueId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   task: z.union([z.lazy(() => TaskScalarRelationFilterObjectSchema), z.lazy(() => TaskWhereInputObjectSchema)]).optional(),
   createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
-  checklistItem: z.union([z.lazy(() => TaskChecklistItemNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskChecklistItemWhereInputObjectSchema)]).optional()
+  checklistItem: z.union([z.lazy(() => TaskChecklistItemNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskChecklistItemWhereInputObjectSchema)]).optional(),
+  serviceRequest: z.union([z.lazy(() => ServiceRequestNullableScalarRelationFilterObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema)]).optional(),
+  technicalIssue: z.union([z.lazy(() => TechnicalIssueNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema)]).optional()
 }).strict();
 export const TaskExecutionWhereInputObjectSchema: z.ZodType<Prisma.TaskExecutionWhereInput> = taskexecutionwhereinputSchema as unknown as z.ZodType<Prisma.TaskExecutionWhereInput>;
 export const TaskExecutionWhereInputObjectZodSchema = taskexecutionwhereinputSchema;

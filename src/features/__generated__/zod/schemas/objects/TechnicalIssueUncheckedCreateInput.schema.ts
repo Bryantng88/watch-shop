@@ -5,7 +5,8 @@ import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
 import { TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
-import { PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema'
+import { PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
+import { TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -42,7 +43,8 @@ const makeSchema = () => z.object({
   technicalDetailCatalogId: z.string().optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
   task: z.lazy(() => TaskUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
-  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema)
+  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
+  TaskExecution: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema)
 }).strict();
 export const TechnicalIssueUncheckedCreateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateInput>;
 export const TechnicalIssueUncheckedCreateInputObjectZodSchema = makeSchema();

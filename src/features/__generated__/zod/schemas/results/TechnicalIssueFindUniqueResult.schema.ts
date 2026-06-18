@@ -42,5 +42,6 @@ export const TechnicalIssueFindUniqueResultSchema = z.nullable(z.object({
   technicalDetailCatalogId: z.string().optional(),
   technicalDetailCatalog: z.unknown().optional(),
   task: z.array(z.unknown()),
-  payments: z.array(z.unknown())
+  payments: z.array(z.unknown()),
+  TaskExecution: z.array(z.unknown())
 }));

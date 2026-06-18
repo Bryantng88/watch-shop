@@ -59,6 +59,7 @@ export const ServiceRequestFindManySelectSchema: z.ZodType<Prisma.ServiceRequest
     task: z.boolean().optional(),
     workCase: z.boolean().optional(),
     workCaseId: z.boolean().optional(),
+    TaskExecution: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;
 
@@ -112,6 +113,7 @@ export const ServiceRequestFindManySelectZodSchema = z.object({
     task: z.boolean().optional(),
     workCase: z.boolean().optional(),
     workCaseId: z.boolean().optional(),
+    TaskExecution: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

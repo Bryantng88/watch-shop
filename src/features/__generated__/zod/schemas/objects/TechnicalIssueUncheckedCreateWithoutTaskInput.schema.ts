@@ -4,7 +4,8 @@ import { TechnicalIssueTypeSchema } from '../enums/TechnicalIssueType.schema';
 import { TechnicalActionModeSchema } from '../enums/TechnicalActionMode.schema';
 import { TechnicalIssueExecutionStatusSchema } from '../enums/TechnicalIssueExecutionStatus.schema';
 import { MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
-import { PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema'
+import { PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema';
+import { TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -40,7 +41,8 @@ const makeSchema = () => z.object({
   confirmedByNameSnap: z.string().optional().nullable(),
   technicalDetailCatalogId: z.string().optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional(),
-  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional()
+  payments: z.lazy(() => PaymentUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTechnicalIssueInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUncheckedCreateWithoutTaskInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutTaskInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedCreateWithoutTaskInput>;
 export const TechnicalIssueUncheckedCreateWithoutTaskInputObjectZodSchema = makeSchema();

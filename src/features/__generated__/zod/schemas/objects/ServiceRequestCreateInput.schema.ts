@@ -15,7 +15,8 @@ import { ServiceCatalogCreateNestedOneWithoutServiceRequestInputObjectSchema as 
 import { TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema as TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema } from './TechnicalAssessmentCreateNestedOneWithoutServiceRequestInput.schema';
 import { TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceRequestInput.schema';
 import { TaskCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskCreateNestedManyWithoutServiceRequestInput.schema';
-import { WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema as WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema } from './WorkCaseCreateNestedOneWithoutServiceRequestsInput.schema'
+import { WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema as WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema } from './WorkCaseCreateNestedOneWithoutServiceRequestsInput.schema';
+import { TaskExecutionCreateNestedManyWithoutServiceRequestInputObjectSchema as TaskExecutionCreateNestedManyWithoutServiceRequestInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutServiceRequestInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -57,7 +58,8 @@ const makeSchema = () => z.object({
   technicalAssessment: z.lazy(() => TechnicalAssessmentCreateNestedOneWithoutServiceRequestInputObjectSchema).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceRequestInputObjectSchema),
   task: z.lazy(() => TaskCreateNestedManyWithoutServiceRequestInputObjectSchema),
-  workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema).optional()
+  workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutServiceRequestsInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionCreateNestedManyWithoutServiceRequestInputObjectSchema)
 }).strict();
 export const ServiceRequestCreateInputObjectSchema: z.ZodType<Prisma.ServiceRequestCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCreateInput>;
 export const ServiceRequestCreateInputObjectZodSchema = makeSchema();

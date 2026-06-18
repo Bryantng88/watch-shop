@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TaskDomain, TaskMode, TaskPriority, TaskStatus } from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { changeTaskStatusAction, createTaskChecklistItemAction, changeTaskChecklistItemDoneAction } from "../actions/task.actions";
+import { changeTaskStatusAction, createTaskChecklistItemAction, changeTaskChecklistItemDoneAction, deleteTaskChecklistItemAction } from "../actions/task.actions";
 import type { TaskWithRelations } from "../server/task.repo";
 import type { TaskTypeOption } from "../server/task-type.types";
 import type { TaskViewKey } from "../server/task.types";
@@ -111,11 +111,34 @@ export default function TaskListClient(props: Props) {
   }
   async function toggleChecklistItem(itemId: string, isDone: boolean) {
     try {
-      await changeTaskChecklistItemDoneAction(itemId, isDone);
+      const result = await changeTaskChecklistItemDoneAction(itemId, isDone);
+
+      if (!result?.ok) {
+        throw new Error("Không cập nhật được dòng xử lý.");
+      }
+
       router.refresh();
     } catch (error: any) {
       notify.error({
         title: "Không thể cập nhật dòng xử lý",
+        message: error?.message || "Có lỗi xảy ra.",
+      });
+    }
+  }
+  async function deleteChecklistItem(itemId: string) {
+    if (!window.confirm("Xóa dòng xử lý này?")) return;
+
+    try {
+      const result = await deleteTaskChecklistItemAction(itemId);
+
+      if (!result?.ok) {
+        throw new Error("Không xóa được dòng xử lý.");
+      }
+
+      router.refresh();
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể xóa dòng xử lý",
         message: error?.message || "Có lỗi xảy ra.",
       });
     }
@@ -253,6 +276,8 @@ export default function TaskListClient(props: Props) {
         onOpen={toggleExpand}
         onAddChecklistItem={addChecklistItem}
         onCreateRelatedTask={createRelatedTask}
+        onToggleChecklistItem={toggleChecklistItem}
+        onDeleteChecklistItem={deleteChecklistItem}
       />
 
       <TaskQuickCreateModal

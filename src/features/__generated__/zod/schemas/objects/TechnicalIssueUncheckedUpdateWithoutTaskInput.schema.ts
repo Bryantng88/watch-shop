@@ -14,7 +14,8 @@ import { EnumTechnicalIssueExecutionStatusFieldUpdateOperationsInputObjectSchema
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { MaintenanceRecordUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as MaintenanceRecordUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './MaintenanceRecordUncheckedUpdateManyWithoutTechnicalIssueNestedInput.schema';
-import { PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInput.schema'
+import { PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInput.schema';
+import { TaskExecutionUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema as TaskExecutionUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema } from './TaskExecutionUncheckedUpdateManyWithoutTechnicalIssueNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -50,7 +51,8 @@ const makeSchema = () => z.object({
   confirmedByNameSnap: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   technicalDetailCatalogId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional(),
-  payments: z.lazy(() => PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional()
+  payments: z.lazy(() => PaymentUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionUncheckedUpdateManyWithoutTechnicalIssueNestedInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueUncheckedUpdateWithoutTaskInputObjectSchema: z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutTaskInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueUncheckedUpdateWithoutTaskInput>;
 export const TechnicalIssueUncheckedUpdateWithoutTaskInputObjectZodSchema = makeSchema();

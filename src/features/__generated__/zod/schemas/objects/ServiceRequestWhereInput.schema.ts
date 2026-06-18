@@ -32,7 +32,8 @@ import { TechnicalAssessmentWhereInputObjectSchema as TechnicalAssessmentWhereIn
 import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
 import { WorkCaseNullableScalarRelationFilterObjectSchema as WorkCaseNullableScalarRelationFilterObjectSchema } from './WorkCaseNullableScalarRelationFilter.schema';
-import { WorkCaseWhereInputObjectSchema as WorkCaseWhereInputObjectSchema } from './WorkCaseWhereInput.schema'
+import { WorkCaseWhereInputObjectSchema as WorkCaseWhereInputObjectSchema } from './WorkCaseWhereInput.schema';
+import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema'
 
 const servicerequestwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceRequestWhereInputObjectSchema), z.lazy(() => ServiceRequestWhereInputObjectSchema).array()]).optional(),
@@ -86,7 +87,8 @@ const servicerequestwhereinputSchema = z.object({
   technicalAssessment: z.union([z.lazy(() => TechnicalAssessmentNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalAssessmentWhereInputObjectSchema)]).optional(),
   technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
   task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  workCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional()
+  workCase: z.union([z.lazy(() => WorkCaseNullableScalarRelationFilterObjectSchema), z.lazy(() => WorkCaseWhereInputObjectSchema)]).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional()
 }).strict();
 export const ServiceRequestWhereInputObjectSchema: z.ZodType<Prisma.ServiceRequestWhereInput> = servicerequestwhereinputSchema as unknown as z.ZodType<Prisma.ServiceRequestWhereInput>;
 export const ServiceRequestWhereInputObjectZodSchema = servicerequestwhereinputSchema;

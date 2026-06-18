@@ -19,10 +19,14 @@ export const TaskExecutionFindFirstSelectSchema: z.ZodType<Prisma.TaskExecutionS
     note: z.boolean().optional(),
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    checklistItemId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     checklistItem: z.boolean().optional(),
-    checklistItemId: z.boolean().optional()
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskExecutionSelect>;
 
 export const TaskExecutionFindFirstSelectZodSchema = z.object({
@@ -35,10 +39,14 @@ export const TaskExecutionFindFirstSelectZodSchema = z.object({
     note: z.boolean().optional(),
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    checklistItemId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     checklistItem: z.boolean().optional(),
-    checklistItemId: z.boolean().optional()
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional()
   }).strict();
 
 export const TaskExecutionFindFirstSchema: z.ZodType<Prisma.TaskExecutionFindFirstArgs> = z.object({ select: TaskExecutionFindFirstSelectSchema.optional(), include: TaskExecutionIncludeObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TaskExecutionScalarFieldEnumSchema, TaskExecutionScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionFindFirstArgs>;

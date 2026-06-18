@@ -10,7 +10,9 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema as TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema } from './TaskUpdateOneRequiredWithoutExecutionsNestedInput.schema';
 import { UserUpdateOneWithoutTaskExecutionNestedInputObjectSchema as UserUpdateOneWithoutTaskExecutionNestedInputObjectSchema } from './UserUpdateOneWithoutTaskExecutionNestedInput.schema';
-import { TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema as TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema } from './TaskChecklistItemUpdateOneWithoutExecutionsNestedInput.schema'
+import { TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema as TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema } from './TaskChecklistItemUpdateOneWithoutExecutionsNestedInput.schema';
+import { ServiceRequestUpdateOneWithoutTaskExecutionNestedInputObjectSchema as ServiceRequestUpdateOneWithoutTaskExecutionNestedInputObjectSchema } from './ServiceRequestUpdateOneWithoutTaskExecutionNestedInput.schema';
+import { TechnicalIssueUpdateOneWithoutTaskExecutionNestedInputObjectSchema as TechnicalIssueUpdateOneWithoutTaskExecutionNestedInputObjectSchema } from './TechnicalIssueUpdateOneWithoutTaskExecutionNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -24,7 +26,9 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   task: z.lazy(() => TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema).optional(),
   createdByUser: z.lazy(() => UserUpdateOneWithoutTaskExecutionNestedInputObjectSchema).optional(),
-  checklistItem: z.lazy(() => TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema).optional()
+  checklistItem: z.lazy(() => TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUpdateOneWithoutTaskExecutionNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUpdateOneWithoutTaskExecutionNestedInputObjectSchema).optional()
 }).strict();
 export const TaskExecutionUpdateInputObjectSchema: z.ZodType<Prisma.TaskExecutionUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionUpdateInput>;
 export const TaskExecutionUpdateInputObjectZodSchema = makeSchema();

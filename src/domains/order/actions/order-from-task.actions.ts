@@ -21,7 +21,7 @@ export type CreateOrderFromTaskActionInput = {
   shipPhone?: string | null;
   unitPriceAgreed?: number | string | null;
   note?: string | null;
-
+  checklistItemId?: string | null;
   hasShipment?: boolean;
   shipAddress?: string | null;
   shipCity?: string | null;

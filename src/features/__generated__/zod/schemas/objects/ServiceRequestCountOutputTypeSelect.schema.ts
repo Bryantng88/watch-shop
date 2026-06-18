@@ -6,7 +6,8 @@ const makeSchema = () => z.object({
   invoice: z.boolean().optional(),
   maintenanceRecord: z.boolean().optional(),
   technicalIssue: z.boolean().optional(),
-  task: z.boolean().optional()
+  task: z.boolean().optional(),
+  TaskExecution: z.boolean().optional()
 }).strict();
 export const ServiceRequestCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.ServiceRequestCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestCountOutputTypeSelect>;
 export const ServiceRequestCountOutputTypeSelectObjectZodSchema = makeSchema();

@@ -29,6 +29,7 @@ import { resolveTaskActions } from "../../utils/task-action-revolver";
 
 type Props = {
   task: any;
+  checklistItemId?: string | null;
   onDone?: () => void;
 };
 
@@ -168,7 +169,11 @@ function actionLabel(task: any) {
   return task?.taskAction?.name || task?.taskType?.name || "Thực thi action";
 }
 
-export default function TaskDomainActions({ task, onDone }: Props) {
+export default function TaskDomainActions({
+  task,
+  checklistItemId = null,
+  onDone,
+}: Props) {
   const notify = useNotify();
   const [pending, startTransition] = useTransition();
 
@@ -188,9 +193,24 @@ export default function TaskDomainActions({ task, onDone }: Props) {
     task?.watchId || task?.watch?.id || task?.workCase?.watch?.id,
   );
 
-  const orderExecution = firstExecution(task, TaskExecutionTargetType.ORDER);
+  const scopedExecutions = useMemo(() => {
+    const items = task?.executions ?? [];
+
+    if (!checklistItemId) {
+      return items.filter((item: any) => !item.checklistItemId);
+    }
+
+    return items.filter((item: any) => item.checklistItemId === checklistItemId);
+  }, [task, checklistItemId]);
+
+  const scopedTask = useMemo(
+    () => ({ ...task, executions: scopedExecutions }),
+    [task, scopedExecutions],
+  );
+
+  const orderExecution = firstExecution(scopedTask, TaskExecutionTargetType.ORDER);
   const hasOrderExecution = hasActiveExecution(
-    task,
+    scopedTask,
     TaskExecutionTargetType.ORDER,
   );
 
@@ -282,6 +302,7 @@ export default function TaskDomainActions({ task, onDone }: Props) {
       try {
         const result = await createOrderFromTaskAction({
           taskId: task.id,
+          checklistItemId: checklistItemId ?? null,
           customerName: cleanCustomerName,
           shipPhone: shipPhone.trim() || null,
           unitPriceAgreed: orderPrice.trim() || null,
@@ -310,7 +331,11 @@ export default function TaskDomainActions({ task, onDone }: Props) {
   function executeBusinessAction(mode: ServiceExecutionMode) {
     startTransition(async () => {
       try {
-        const result = await executeTaskActionAction(task.id, mode);
+        const result = await executeTaskActionAction({
+          taskId: task.id,
+          checklistItemId: checklistItemId ?? null,
+          mode,
+        } as any);
 
         notify.success(result?.message || "Đã thực thi action từ task");
         setServicePreview(null);
@@ -353,6 +378,7 @@ export default function TaskDomainActions({ task, onDone }: Props) {
       try {
         await linkTaskExecutionAction({
           taskId: task.id,
+          checklistItemId: checklistItemId ?? null,
           targetType,
           targetId: cleanTargetId,
           actionType: "LINKED",

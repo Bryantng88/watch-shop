@@ -12,7 +12,8 @@ import { UserOrderByWithRelationInputObjectSchema as UserOrderByWithRelationInpu
 import { VendorOrderByWithRelationInputObjectSchema as VendorOrderByWithRelationInputObjectSchema } from './VendorOrderByWithRelationInput.schema';
 import { TechnicalDetailCatalogOrderByWithRelationInputObjectSchema as TechnicalDetailCatalogOrderByWithRelationInputObjectSchema } from './TechnicalDetailCatalogOrderByWithRelationInput.schema';
 import { TaskOrderByRelationAggregateInputObjectSchema as TaskOrderByRelationAggregateInputObjectSchema } from './TaskOrderByRelationAggregateInput.schema';
-import { PaymentOrderByRelationAggregateInputObjectSchema as PaymentOrderByRelationAggregateInputObjectSchema } from './PaymentOrderByRelationAggregateInput.schema'
+import { PaymentOrderByRelationAggregateInputObjectSchema as PaymentOrderByRelationAggregateInputObjectSchema } from './PaymentOrderByRelationAggregateInput.schema';
+import { TaskExecutionOrderByRelationAggregateInputObjectSchema as TaskExecutionOrderByRelationAggregateInputObjectSchema } from './TaskExecutionOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -57,7 +58,8 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorOrderByWithRelationInputObjectSchema).optional(),
   technicalDetailCatalog: z.lazy(() => TechnicalDetailCatalogOrderByWithRelationInputObjectSchema).optional(),
   task: z.lazy(() => TaskOrderByRelationAggregateInputObjectSchema).optional(),
-  payments: z.lazy(() => PaymentOrderByRelationAggregateInputObjectSchema).optional()
+  payments: z.lazy(() => PaymentOrderByRelationAggregateInputObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const TechnicalIssueOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.TechnicalIssueOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueOrderByWithRelationInput>;
 export const TechnicalIssueOrderByWithRelationInputObjectZodSchema = makeSchema();

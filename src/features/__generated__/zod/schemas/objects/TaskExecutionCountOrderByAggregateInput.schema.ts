@@ -12,7 +12,9 @@ const makeSchema = () => z.object({
   note: SortOrderSchema.optional(),
   createdByUserId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  checklistItemId: SortOrderSchema.optional()
+  checklistItemId: SortOrderSchema.optional(),
+  serviceRequestId: SortOrderSchema.optional(),
+  technicalIssueId: SortOrderSchema.optional()
 }).strict();
 export const TaskExecutionCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TaskExecutionCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionCountOrderByAggregateInput>;
 export const TaskExecutionCountOrderByAggregateInputObjectZodSchema = makeSchema();

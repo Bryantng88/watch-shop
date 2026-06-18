@@ -13,6 +13,8 @@ const makeSchema = () => z.object({
   createdByUserId: z.literal(true).optional(),
   createdAt: z.literal(true).optional(),
   checklistItemId: z.literal(true).optional(),
+  serviceRequestId: z.literal(true).optional(),
+  technicalIssueId: z.literal(true).optional(),
   _all: z.literal(true).optional()
 }).strict();
 export const TaskExecutionCountAggregateInputObjectSchema: z.ZodType<Prisma.TaskExecutionCountAggregateInputType> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionCountAggregateInputType>;

@@ -2,7 +2,28 @@ import { Prisma, TaskDomain, TaskSource, TaskStatus, type TaskPriority } from "@
 import { dbOrTx, type DB } from "@/server/db/client";
 import type { CompleteRelatedTasksInput, CreateTaskInput, EnsureSystemTaskInput, EnsureSystemTaskResult, TaskDueKey, TaskListFilters, TaskViewKey, UpdateTaskInput } from "./task.types";
 import type { FindOpenRelatedTasksInput } from "./task.types";
-
+const TASK_EXECUTION_INCLUDE = {
+  createdByUser: {
+    select: { id: true, name: true, email: true },
+  },
+  serviceRequest: {
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+    },
+  },
+  technicalIssue: {
+    select: {
+      id: true,
+      summary: true,
+      area: true,
+      executionStatus: true,
+      priority: true,
+      serviceRequestId: true,
+    },
+  },
+} satisfies Prisma.TaskExecutionInclude;
 export const TASK_INCLUDE = {
   createdByUser: { select: { id: true, name: true, email: true } },
   assignedToUser: { select: { id: true, name: true, email: true } },
@@ -17,18 +38,11 @@ export const TASK_INCLUDE = {
     include: {
       executions: {
         orderBy: { createdAt: "desc" },
-        include: {
-          createdByUser: true,
-        },
+        include: TASK_EXECUTION_INCLUDE,
       },
     },
   },
-  executions: {
-    orderBy: { createdAt: "desc" },
-    include: {
-      createdByUser: true,
-    },
-  },
+
   serviceRequest: {
     include: {
       technicalIssue: {
@@ -64,11 +78,7 @@ export const TASK_INCLUDE = {
   taskAction: { select: { id: true, code: true, name: true, completionMode: true, completionRuleKey: true, targetType: true, serviceCatalogId: true, technicalDetailCatalogId: true, supplyCatalogId: true, mechanicalPartCatalogId: true, technicalActionMode: true } },
   executions: {
     orderBy: { createdAt: "desc" },
-    include: {
-      createdByUser: {
-        select: { id: true, name: true, email: true },
-      },
-    },
+    include: TASK_EXECUTION_INCLUDE,
   },
 } satisfies Prisma.TaskInclude;
 
@@ -460,5 +470,50 @@ export async function findOpenRelatedTasksRepo(
     },
     orderBy: [{ createdAt: "desc" }],
     take: input.limit ?? 10,
+  });
+}
+export async function createTaskChecklistItemRepo(
+  db: DB,
+  input: { taskId: string; title: string },
+) {
+  const client = dbOrTx(db);
+
+  const last = await client.taskChecklistItem.findFirst({
+    where: { taskId: input.taskId },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+
+  return client.taskChecklistItem.create({
+    data: {
+      taskId: input.taskId,
+      title: input.title.trim(),
+      sortOrder: (last?.sortOrder ?? -1) + 1,
+    },
+  });
+}
+
+export async function setTaskChecklistItemDoneRepo(
+  db: DB,
+  input: { itemId: string; isDone: boolean },
+) {
+  const client = dbOrTx(db);
+
+  return client.taskChecklistItem.update({
+    where: { id: input.itemId },
+    data: { isDone: input.isDone },
+  });
+}
+
+export async function deleteTaskChecklistItemRepo(db: DB, itemId: string) {
+  const client = dbOrTx(db);
+
+  await client.taskExecution.updateMany({
+    where: { checklistItemId: itemId },
+    data: { checklistItemId: null },
+  });
+
+  return client.taskChecklistItem.delete({
+    where: { id: itemId },
   });
 }

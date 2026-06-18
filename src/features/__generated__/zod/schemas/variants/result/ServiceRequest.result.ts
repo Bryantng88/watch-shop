@@ -53,7 +53,8 @@ export const ServiceRequestResultSchema = z.object({
     technicalIssue: z.array(z.unknown()),
     task: z.array(z.unknown()),
     workCase: z.unknown().nullable(),
-    workCaseId: z.string().nullable()
+    workCaseId: z.string().nullable(),
+    TaskExecution: z.array(z.unknown())
 }).strict();
 
 export type ServiceRequestResultType = z.infer<typeof ServiceRequestResultSchema>;

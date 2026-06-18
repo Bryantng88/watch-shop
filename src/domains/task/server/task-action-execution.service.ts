@@ -7,6 +7,10 @@ import {
 import { dbOrTx, type DB } from "@/server/db/client";
 import { authCanViewAllTasks, getAuthUserId } from "./task.service";
 
+export type ServiceTaskExecutionMode =
+  | "SR_ONLY"
+  | "SR_WITH_TECHNICAL_ISSUE";
+
 export type ExecuteTaskActionResult = {
   ok: true;
   mode: "SERVICE_REQUEST" | "TECHNICAL_ISSUE" | "NOOP";
@@ -38,7 +42,6 @@ function isTechnicalIssueAction(action: any) {
   const code = String(action?.code ?? "").toUpperCase();
   const name = String(action?.name ?? "").toUpperCase();
   const completionRuleKey = String(action?.completionRuleKey ?? "").toUpperCase();
-
   const text = `${code} ${name} ${completionRuleKey}`;
 
   return (
@@ -62,32 +65,48 @@ function isTechnicalIssueAction(action: any) {
 
 function isServiceRequestAction(action: any) {
   const targetType = String(action?.targetType ?? "").toUpperCase();
-  return targetType === String(TaskExecutionTargetType.SERVICE_REQUEST) || isTechnicalIssueAction(action);
+
+  return (
+    targetType === String(TaskExecutionTargetType.SERVICE_REQUEST) ||
+    isTechnicalIssueAction(action)
+  );
 }
 
 function inferIssueType(action: any) {
   const code = String(action?.code ?? "").toUpperCase();
   const metadata = action?.metadataJson ?? {};
   const fromMetadata = clean(metadata?.issueType);
+
   if (fromMetadata) return fromMetadata;
   if (code.includes("REPLACE") || code.includes("THAY")) return "REPLACE";
   if (code.includes("REPAIR") || code.includes("SUA")) return "REPAIR";
   if (code.includes("SERVICE")) return "SERVICE";
+
   return "CHECK";
 }
 
 function inferArea(action: any) {
   const metadata = action?.metadataJson ?? {};
+
   return clean(metadata?.area) ?? clean(metadata?.technicalArea) ?? null;
 }
 
 function actionTitle(task: any) {
-  return clean(task?.taskAction?.name) ?? clean(task?.taskType?.name) ?? clean(task?.title) ?? "Nghiệp vụ task";
+  return (
+    clean(task?.taskAction?.name) ??
+    clean(task?.taskType?.name) ??
+    clean(task?.title) ??
+    "Nghiệp vụ task"
+  );
 }
 
 function buildIssueSummary(task: any) {
   const actionName = actionTitle(task);
-  const productTitle = task?.watch?.product?.title ?? task?.workCase?.watch?.product?.title ?? null;
+  const productTitle =
+    task?.watch?.product?.title ??
+    task?.workCase?.watch?.product?.title ??
+    null;
+
   return productTitle ? `${actionName}: ${productTitle}` : actionName;
 }
 
@@ -98,6 +117,7 @@ function getWatchFromTask(task: any) {
 async function assertTaskCanExecute(db: DB, taskId: string, auth: any) {
   const client = dbOrTx(db);
   const userId = getAuthUserId(auth);
+
   if (!userId) throw new Error("Không xác định được user hiện tại");
 
   const task = await client.task.findUnique({
@@ -114,12 +134,19 @@ async function assertTaskCanExecute(db: DB, taskId: string, auth: any) {
   });
 
   if (!task) throw new Error("Không tìm thấy task");
-  if (!authCanViewAllTasks(auth) && task.createdByUserId !== userId && task.assignedToUserId !== userId) {
+
+  if (
+    !authCanViewAllTasks(auth) &&
+    task.createdByUserId !== userId &&
+    task.assignedToUserId !== userId
+  ) {
     throw new Error("Bạn không có quyền thực thi task này");
   }
+
   if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
     throw new Error("Task đã đóng, không thể thực thi action");
   }
+
   if (!(task as any).taskAction) {
     throw new Error("Task chưa chọn action cụ thể");
   }
@@ -151,10 +178,7 @@ async function ensureActiveServiceRequest(
   const product = watch?.product ?? null;
 
   const notes =
-    [
-      `Tạo từ task: ${input.task.title}`,
-      input.task.description ?? null,
-    ]
+    [`Tạo từ task: ${input.task.title}`, input.task.description ?? null]
       .filter(Boolean)
       .join("\n\n") || null;
 
@@ -164,31 +188,23 @@ async function ensureActiveServiceRequest(
 
   const created = await client.serviceRequest.create({
     data: {
-      product: {
-        connect: { id: productId },
-      },
+      product: { connect: { id: productId } },
 
       ...(workCaseId
         ? {
-          workCase: {
-            connect: { id: workCaseId },
-          },
+          workCase: { connect: { id: workCaseId } },
         }
         : {}),
 
       ...(technicianId
         ? {
-          user: {
-            connect: { id: technicianId },
-          },
+          user: { connect: { id: technicianId } },
         }
         : {}),
 
       ...(serviceCatalogId
         ? {
-          serviceCatalog: {
-            connect: { id: serviceCatalogId },
-          },
+          serviceCatalog: { connect: { id: serviceCatalogId } },
         }
         : {}),
 
@@ -203,11 +219,13 @@ async function ensureActiveServiceRequest(
 
   return { serviceRequest: created, created: true };
 }
+
 async function ensureAssessment(client: any, serviceRequestId: string) {
   const existing = await client.technicalAssessment.findUnique({
     where: { serviceRequestId },
     select: { id: true },
   });
+
   if (existing?.id) return existing;
 
   return client.technicalAssessment.create({
@@ -264,10 +282,25 @@ async function createTechnicalIssueForTaskAction(
   });
 }
 
+function executionRelationData(
+  targetType: TaskExecutionTargetType,
+  targetId: string,
+) {
+  return {
+    ...(targetType === TaskExecutionTargetType.SERVICE_REQUEST
+      ? { serviceRequestId: targetId }
+      : {}),
+    ...(targetType === TaskExecutionTargetType.TECHNICAL_ISSUE
+      ? { technicalIssueId: targetId }
+      : {}),
+  };
+}
+
 async function createExecutionIfMissing(
   client: any,
   input: {
     taskId: string;
+    checklistItemId?: string | null;
     targetType: TaskExecutionTargetType;
     targetId: string;
     actionType: TaskExecutionActionType;
@@ -279,6 +312,7 @@ async function createExecutionIfMissing(
   const existing = await client.taskExecution.findFirst({
     where: {
       taskId: input.taskId,
+      checklistItemId: input.checklistItemId ?? null,
       targetType: input.targetType,
       targetId: input.targetId,
       actionType: input.actionType,
@@ -291,35 +325,52 @@ async function createExecutionIfMissing(
   return client.taskExecution.create({
     data: {
       taskId: input.taskId,
+      checklistItemId: input.checklistItemId ?? null,
       targetType: input.targetType,
       targetId: input.targetId,
       actionType: input.actionType,
       note: input.note ?? null,
       createdByUserId: input.userId ?? null,
       metadataJson: input.metadataJson ?? undefined,
+      ...executionRelationData(input.targetType, input.targetId),
     } as any,
     select: { id: true },
   });
 }
 
-// task/server/task-action-execution.service.ts
+async function completeChecklistItemIfNeeded(
+  client: any,
+  checklistItemId?: string | null,
+) {
+  const id = clean(checklistItemId);
+  if (!id) return;
 
-export type ServiceTaskExecutionMode =
-  | "SR_ONLY"
-  | "SR_WITH_TECHNICAL_ISSUE";
+  await client.taskChecklistItem
+    .update({
+      where: { id },
+      data: { isDone: true },
+    })
+    .catch(() => null);
+}
 
 export async function executeTaskAction(
   db: DB,
   input: {
     taskId: string;
+    checklistItemId?: string | null;
     serviceMode?: ServiceTaskExecutionMode;
+    mode?: ServiceTaskExecutionMode;
   },
   auth: any,
 ): Promise<ExecuteTaskActionResult> {
   const client = dbOrTx(db);
+  const taskId = clean(input.taskId);
+
+  if (!taskId) throw new Error("Missing taskId");
+
   const { task, userId } = await assertTaskCanExecute(
     client as any,
-    input.taskId,
+    taskId,
     auth,
   );
 
@@ -334,7 +385,8 @@ export async function executeTaskAction(
     };
   }
 
-  const selectedMode = input.serviceMode ?? "SR_ONLY";
+  const selectedMode = input.serviceMode ?? input.mode ?? "SR_ONLY";
+  const checklistItemId = input.checklistItemId ?? null;
 
   const { serviceRequest, created: srCreated } =
     await ensureActiveServiceRequest(client as any, {
@@ -346,20 +398,21 @@ export async function executeTaskAction(
     selectedMode === "SR_WITH_TECHNICAL_ISSUE" &&
     isTechnicalIssueAction(action);
 
-  if (!shouldCreateIssue) {
-    await createExecutionIfMissing(client as any, {
-      taskId: task.id,
-      targetType: TaskExecutionTargetType.SERVICE_REQUEST,
-      targetId: serviceRequest.id,
-      actionType: srCreated
-        ? TaskExecutionActionType.CREATED
-        : TaskExecutionActionType.LINKED,
-      note: srCreated
-        ? "Tạo Service Request từ task action"
-        : "Gán Service Request active vào task action",
-      userId,
-    });
+  await createExecutionIfMissing(client as any, {
+    taskId: task.id,
+    checklistItemId,
+    targetType: TaskExecutionTargetType.SERVICE_REQUEST,
+    targetId: serviceRequest.id,
+    actionType: srCreated
+      ? TaskExecutionActionType.CREATED
+      : TaskExecutionActionType.LINKED,
+    note: srCreated
+      ? "Tạo Service Request từ task action"
+      : "Gán Service Request active vào task action",
+    userId,
+  });
 
+  if (!shouldCreateIssue) {
     await client.task.update({
       where: { id: task.id },
       data: {
@@ -367,6 +420,8 @@ export async function executeTaskAction(
         status: TaskStatus.IN_PROGRESS,
       } as any,
     });
+
+    await completeChecklistItemIfNeeded(client as any, checklistItemId);
 
     return {
       ok: true,
@@ -390,19 +445,7 @@ export async function executeTaskAction(
 
   await createExecutionIfMissing(client as any, {
     taskId: task.id,
-    targetType: TaskExecutionTargetType.SERVICE_REQUEST,
-    targetId: serviceRequest.id,
-    actionType: srCreated
-      ? TaskExecutionActionType.CREATED
-      : TaskExecutionActionType.LINKED,
-    note: srCreated
-      ? "Tạo Service Request từ task action"
-      : "Gán Service Request active vào task action",
-    userId,
-  });
-
-  await createExecutionIfMissing(client as any, {
-    taskId: task.id,
+    checklistItemId,
     targetType: TaskExecutionTargetType.TECHNICAL_ISSUE,
     targetId: issue.id,
     actionType: TaskExecutionActionType.CREATED,
@@ -434,6 +477,8 @@ export async function executeTaskAction(
     })
     .catch(() => null);
 
+  await completeChecklistItemIfNeeded(client as any, checklistItemId);
+
   return {
     ok: true,
     mode: "TECHNICAL_ISSUE",
@@ -451,13 +496,14 @@ export async function executeTaskAction(
       : "Đã gán Service Request active và tạo Technical Issue từ task",
   };
 }
+
 export async function previewTaskAction(
   db: DB,
   input: { taskId: string },
   auth: any,
 ) {
   const client = dbOrTx(db);
-  const { task, userId } = await assertTaskCanExecute(client as any, input.taskId, auth);
+  const { task } = await assertTaskCanExecute(client as any, input.taskId, auth);
   const action = task.taskAction;
 
   if (!isServiceRequestAction(action)) {
@@ -469,6 +515,7 @@ export async function previewTaskAction(
 
   const watch = getWatchFromTask(task);
   const productId = clean(watch?.productId);
+
   if (!productId) throw new Error("Task chưa gắn product/watch.");
 
   const existingSr = await client.serviceRequest.findFirst({
@@ -478,7 +525,9 @@ export async function previewTaskAction(
   });
 
   return {
-    mode: isTechnicalIssueAction(action) ? "TECHNICAL_ISSUE" : "SERVICE_REQUEST",
+    mode: isTechnicalIssueAction(action)
+      ? "TECHNICAL_ISSUE"
+      : "SERVICE_REQUEST",
     serviceRequest: existingSr
       ? {
         id: existingSr.id,

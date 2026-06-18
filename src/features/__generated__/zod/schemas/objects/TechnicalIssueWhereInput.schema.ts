@@ -31,7 +31,8 @@ import { VendorWhereInputObjectSchema as VendorWhereInputObjectSchema } from './
 import { TechnicalDetailCatalogNullableScalarRelationFilterObjectSchema as TechnicalDetailCatalogNullableScalarRelationFilterObjectSchema } from './TechnicalDetailCatalogNullableScalarRelationFilter.schema';
 import { TechnicalDetailCatalogWhereInputObjectSchema as TechnicalDetailCatalogWhereInputObjectSchema } from './TechnicalDetailCatalogWhereInput.schema';
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
-import { PaymentListRelationFilterObjectSchema as PaymentListRelationFilterObjectSchema } from './PaymentListRelationFilter.schema'
+import { PaymentListRelationFilterObjectSchema as PaymentListRelationFilterObjectSchema } from './PaymentListRelationFilter.schema';
+import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema'
 
 const technicalissuewhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TechnicalIssueWhereInputObjectSchema), z.lazy(() => TechnicalIssueWhereInputObjectSchema).array()]).optional(),
@@ -79,7 +80,8 @@ const technicalissuewhereinputSchema = z.object({
   vendor: z.union([z.lazy(() => VendorNullableScalarRelationFilterObjectSchema), z.lazy(() => VendorWhereInputObjectSchema)]).optional(),
   technicalDetailCatalog: z.union([z.lazy(() => TechnicalDetailCatalogNullableScalarRelationFilterObjectSchema), z.lazy(() => TechnicalDetailCatalogWhereInputObjectSchema)]).optional(),
   task: z.lazy(() => TaskListRelationFilterObjectSchema).optional(),
-  payments: z.lazy(() => PaymentListRelationFilterObjectSchema).optional()
+  payments: z.lazy(() => PaymentListRelationFilterObjectSchema).optional(),
+  TaskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional()
 }).strict();
 export const TechnicalIssueWhereInputObjectSchema: z.ZodType<Prisma.TechnicalIssueWhereInput> = technicalissuewhereinputSchema as unknown as z.ZodType<Prisma.TechnicalIssueWhereInput>;
 export const TechnicalIssueWhereInputObjectZodSchema = technicalissuewhereinputSchema;

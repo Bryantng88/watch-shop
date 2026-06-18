@@ -72,7 +72,8 @@ export const TechnicalIssueGroupByResultSchema = z.array(z.object({
     technicalDetailCatalogId: z.number(),
     technicalDetailCatalog: z.number(),
     task: z.number(),
-    payments: z.number()
+    payments: z.number(),
+    TaskExecution: z.number()
   }).optional(),
   _sum: z.object({
     estimatedCost: z.number().nullable(),

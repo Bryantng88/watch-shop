@@ -4,8 +4,41 @@ import type { LinkTaskExecutionInput } from "./task-execution.types";
 
 export const TASK_EXECUTION_INCLUDE = {
   createdByUser: { select: { id: true, name: true, email: true } },
+  serviceRequest: {
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+    },
+  },
+  technicalIssue: {
+    select: {
+      id: true,
+      summary: true,
+      area: true,
+      executionStatus: true,
+      priority: true,
+      serviceRequestId: true,
+    },
+  },
 } satisfies Prisma.TaskExecutionInclude;
+function executionRelationPatch(
+  targetType: TaskExecutionTargetType,
+  targetId: string,
+): Pick<
+  Prisma.TaskExecutionUncheckedCreateInput,
+  "serviceRequestId" | "technicalIssueId"
+> {
+  if (targetType === TaskExecutionTargetType.SERVICE_REQUEST) {
+    return { serviceRequestId: targetId };
+  }
 
+  if (targetType === TaskExecutionTargetType.TECHNICAL_ISSUE) {
+    return { technicalIssueId: targetId };
+  }
+
+  return {};
+}
 function relationPatchForTarget(targetType: TaskExecutionTargetType, targetId: string): Prisma.TaskUpdateInput {
   if (targetType === TaskExecutionTargetType.WATCH) return { watch: { connect: { id: targetId } } };
   if (targetType === TaskExecutionTargetType.ORDER) return { order: { connect: { id: targetId } } };
@@ -37,40 +70,43 @@ export async function createTaskExecutionRepo(
   if (!taskId) throw new Error("Missing taskId");
   if (!targetId) throw new Error("Missing targetId");
 
-  return client.$transaction(async (tx) => {
-    const duplicated = await tx.taskExecution.findFirst({
-      where: {
-        taskId,
-        targetType: input.targetType,
-        targetId,
-        actionType: input.actionType ?? "CREATED",
-      },
-      select: { id: true },
-    });
+  const actionType = input.actionType ?? "CREATED";
 
-    if (duplicated) {
-      throw new Error("Nghiệp vụ này đã được gắn với task");
-    }
-
-    const execution = await tx.taskExecution.create({
-      data: {
-        taskId,
-        targetType: input.targetType,
-        targetId,
-        actionType: input.actionType ?? "CREATED",
-        note: input.note?.trim() || null,
-        createdByUserId: input.createdByUserId ?? null,
-      },
-      include: TASK_EXECUTION_INCLUDE,
-    });
-
-    if (input.syncTaskRelation !== false) {
-      await tx.task.update({
-        where: { id: taskId },
-        data: relationPatchForTarget(input.targetType, targetId),
-      });
-    }
-
-    return execution;
+  const duplicated = await client.taskExecution.findFirst({
+    where: {
+      taskId,
+      targetType: input.targetType,
+      targetId,
+      actionType,
+      checklistItemId: input.checklistItemId ?? null,
+    },
+    select: { id: true },
   });
+
+  if (duplicated) {
+    throw new Error("Nghiệp vụ này đã được gắn với task");
+  }
+
+  const execution = await client.taskExecution.create({
+    data: {
+      taskId,
+      checklistItemId: input.checklistItemId ?? null,
+      targetType: input.targetType,
+      targetId,
+      actionType,
+      note: input.note?.trim() || null,
+      createdByUserId: input.createdByUserId ?? null,
+      ...executionRelationPatch(input.targetType, targetId),
+    },
+    include: TASK_EXECUTION_INCLUDE,
+  });
+
+  if (input.syncTaskRelation !== false) {
+    await client.task.update({
+      where: { id: taskId },
+      data: relationPatchForTarget(input.targetType, targetId),
+    });
+  }
+
+  return execution;
 }

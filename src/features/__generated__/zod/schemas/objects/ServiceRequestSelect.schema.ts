@@ -13,6 +13,7 @@ import { TechnicalAssessmentArgsObjectSchema as TechnicalAssessmentArgsObjectSch
 import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { WorkCaseArgsObjectSchema as WorkCaseArgsObjectSchema } from './WorkCaseArgs.schema';
+import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
 import { ServiceRequestCountOutputTypeArgsObjectSchema as ServiceRequestCountOutputTypeArgsObjectSchema } from './ServiceRequestCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -65,6 +66,7 @@ const makeSchema = () => z.object({
   task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   workCase: z.union([z.boolean(), z.lazy(() => WorkCaseArgsObjectSchema)]).optional(),
   workCaseId: z.boolean().optional(),
+  TaskExecution: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => ServiceRequestCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const ServiceRequestSelectObjectSchema: z.ZodType<Prisma.ServiceRequestSelect> = makeSchema() as unknown as z.ZodType<Prisma.ServiceRequestSelect>;

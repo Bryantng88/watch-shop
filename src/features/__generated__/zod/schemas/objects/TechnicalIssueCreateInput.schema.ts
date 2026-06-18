@@ -13,7 +13,8 @@ import { UserCreateNestedOneWithoutTechnicalIssueInputObjectSchema as UserCreate
 import { VendorCreateNestedOneWithoutTechnicalIssueInputObjectSchema as VendorCreateNestedOneWithoutTechnicalIssueInputObjectSchema } from './VendorCreateNestedOneWithoutTechnicalIssueInput.schema';
 import { TechnicalDetailCatalogCreateNestedOneWithoutTechnicalIssuesInputObjectSchema as TechnicalDetailCatalogCreateNestedOneWithoutTechnicalIssuesInputObjectSchema } from './TechnicalDetailCatalogCreateNestedOneWithoutTechnicalIssuesInput.schema';
 import { TaskCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskCreateNestedManyWithoutTechnicalIssueInput.schema';
-import { PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentCreateNestedManyWithoutTechnicalIssueInput.schema'
+import { PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema as PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './PaymentCreateNestedManyWithoutTechnicalIssueInput.schema';
+import { TaskExecutionCreateNestedManyWithoutTechnicalIssueInputObjectSchema as TaskExecutionCreateNestedManyWithoutTechnicalIssueInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTechnicalIssueInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -50,7 +51,8 @@ const makeSchema = () => z.object({
   vendor: z.lazy(() => VendorCreateNestedOneWithoutTechnicalIssueInputObjectSchema).optional(),
   technicalDetailCatalog: z.lazy(() => TechnicalDetailCatalogCreateNestedOneWithoutTechnicalIssuesInputObjectSchema).optional(),
   task: z.lazy(() => TaskCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
-  payments: z.lazy(() => PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema)
+  payments: z.lazy(() => PaymentCreateNestedManyWithoutTechnicalIssueInputObjectSchema),
+  TaskExecution: z.lazy(() => TaskExecutionCreateNestedManyWithoutTechnicalIssueInputObjectSchema)
 }).strict();
 export const TechnicalIssueCreateInputObjectSchema: z.ZodType<Prisma.TechnicalIssueCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueCreateInput>;
 export const TechnicalIssueCreateInputObjectZodSchema = makeSchema();

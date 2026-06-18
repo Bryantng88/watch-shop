@@ -95,9 +95,9 @@ export type FindOpenRelatedTasksInput = {
   taskActionId?: string | null;
   watchId?: string | null;
   paymentId?: string | null;
+  checklistItemId?: string | null;
   limit?: number;
 };
-
 export type RelatedTaskSuggestion = {
   id: string;
   title: string;

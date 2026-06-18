@@ -53,7 +53,8 @@ export const ServiceRequestInputSchema = z.object({
     technicalIssue: z.array(z.unknown()),
     task: z.array(z.unknown()),
     workCase: z.unknown().optional().nullable(),
-    workCaseId: z.string().optional().nullable()
+    workCaseId: z.string().optional().nullable(),
+    TaskExecution: z.array(z.unknown())
 }).strict();
 
 export type ServiceRequestInputType = z.infer<typeof ServiceRequestInputSchema>;

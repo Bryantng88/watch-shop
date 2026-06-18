@@ -11,6 +11,7 @@ import { VendorArgsObjectSchema as VendorArgsObjectSchema } from './VendorArgs.s
 import { TechnicalDetailCatalogArgsObjectSchema as TechnicalDetailCatalogArgsObjectSchema } from './TechnicalDetailCatalogArgs.schema';
 import { TaskFindManySchema as TaskFindManySchema } from '../findManyTask.schema';
 import { PaymentFindManySchema as PaymentFindManySchema } from '../findManyPayment.schema';
+import { TaskExecutionFindManySchema as TaskExecutionFindManySchema } from '../findManyTaskExecution.schema';
 import { TechnicalIssueCountOutputTypeArgsObjectSchema as TechnicalIssueCountOutputTypeArgsObjectSchema } from './TechnicalIssueCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -57,6 +58,7 @@ const makeSchema = () => z.object({
   technicalDetailCatalog: z.union([z.boolean(), z.lazy(() => TechnicalDetailCatalogArgsObjectSchema)]).optional(),
   task: z.union([z.boolean(), z.lazy(() => TaskFindManySchema)]).optional(),
   payments: z.union([z.boolean(), z.lazy(() => PaymentFindManySchema)]).optional(),
+  TaskExecution: z.union([z.boolean(), z.lazy(() => TaskExecutionFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => TechnicalIssueCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const TechnicalIssueSelectObjectSchema: z.ZodType<Prisma.TechnicalIssueSelect> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalIssueSelect>;

@@ -13,10 +13,14 @@ export const TaskExecutionInputSchema = z.object({
     note: z.string().optional().nullable(),
     createdByUserId: z.string().optional().nullable(),
     createdAt: z.date(),
+    checklistItemId: z.string().optional().nullable(),
+    serviceRequestId: z.string().optional().nullable(),
+    technicalIssueId: z.string().optional().nullable(),
     task: z.unknown(),
     createdByUser: z.unknown().optional().nullable(),
     checklistItem: z.unknown().optional().nullable(),
-    checklistItemId: z.string().optional().nullable()
+    serviceRequest: z.unknown().optional().nullable(),
+    technicalIssue: z.unknown().optional().nullable()
 }).strict();
 
 export type TaskExecutionInputType = z.infer<typeof TaskExecutionInputSchema>;

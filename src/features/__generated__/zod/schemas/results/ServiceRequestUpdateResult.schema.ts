@@ -48,5 +48,6 @@ export const ServiceRequestUpdateResultSchema = z.nullable(z.object({
   technicalIssue: z.array(z.unknown()),
   task: z.array(z.unknown()),
   workCase: z.unknown().optional(),
-  workCaseId: z.string().optional()
+  workCaseId: z.string().optional(),
+  TaskExecution: z.array(z.unknown())
 }));

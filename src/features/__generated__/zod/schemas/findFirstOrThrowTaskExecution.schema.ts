@@ -19,10 +19,14 @@ export const TaskExecutionFindFirstOrThrowSelectSchema: z.ZodType<Prisma.TaskExe
     note: z.boolean().optional(),
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    checklistItemId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     checklistItem: z.boolean().optional(),
-    checklistItemId: z.boolean().optional()
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskExecutionSelect>;
 
 export const TaskExecutionFindFirstOrThrowSelectZodSchema = z.object({
@@ -35,10 +39,14 @@ export const TaskExecutionFindFirstOrThrowSelectZodSchema = z.object({
     note: z.boolean().optional(),
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
+    checklistItemId: z.boolean().optional(),
+    serviceRequestId: z.boolean().optional(),
+    technicalIssueId: z.boolean().optional(),
     task: z.boolean().optional(),
     createdByUser: z.boolean().optional(),
     checklistItem: z.boolean().optional(),
-    checklistItemId: z.boolean().optional()
+    serviceRequest: z.boolean().optional(),
+    technicalIssue: z.boolean().optional()
   }).strict();
 
 export const TaskExecutionFindFirstOrThrowSchema: z.ZodType<Prisma.TaskExecutionFindFirstOrThrowArgs> = z.object({ select: TaskExecutionFindFirstOrThrowSelectSchema.optional(), include: TaskExecutionIncludeObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TaskExecutionScalarFieldEnumSchema, TaskExecutionScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionFindFirstOrThrowArgs>;

@@ -740,6 +740,7 @@ model ServiceRequest {
   task                    Task[]
   workCase                WorkCase?            @relation(fields: [workCaseId], references: [id])
   workCaseId              String?
+  TaskExecution           TaskExecution[]
 
   @@index([customerId])
   @@index([orderItemId])
@@ -887,6 +888,7 @@ model TechnicalIssue {
   technicalDetailCatalog   TechnicalDetailCatalog?       @relation(fields: [technicalDetailCatalogId], references: [id])
   task                     Task[]
   payments                 Payment[]
+  TaskExecution            TaskExecution[]
 
   @@index([technicalDetailCatalogId])
   @@index([assessmentId])
@@ -1773,15 +1775,24 @@ model TaskExecution {
   createdByUserId String?
   createdAt       DateTime                @default(now())
 
-  task            Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  createdByUser   User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-  checklistItem   TaskChecklistItem? @relation(fields: [checklistItemId], references: [id])
-  checklistItemId String?
+  checklistItemId  String?
+  serviceRequestId String?
+  technicalIssueId String?
+
+  task          Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdByUser User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  checklistItem TaskChecklistItem? @relation(fields: [checklistItemId], references: [id], onDelete: SetNull)
+
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
   @@index([targetType, targetId])
   @@index([createdByUserId])
   @@index([createdAt])
+  @@index([checklistItemId])
+  @@index([serviceRequestId])
+  @@index([technicalIssueId])
 }
 
 enum AcquisitionItemKind {
