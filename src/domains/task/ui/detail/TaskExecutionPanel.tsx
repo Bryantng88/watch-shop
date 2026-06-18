@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import {
-  CheckCircle2,
-  Clock3,
   ExternalLink,
-  Link2,
   PackageCheck,
   ReceiptText,
   Truck,
@@ -32,11 +29,11 @@ function targetLabel(type: string) {
 }
 
 function targetIcon(type: string) {
-  if (type === "ORDER") return <ReceiptText className="h-4 w-4" />;
-  if (type === "SHIPMENT") return <Truck className="h-4 w-4" />;
-  if (type === "PAYMENT") return <WalletCards className="h-4 w-4" />;
-  if (type === "SERVICE_REQUEST") return <Wrench className="h-4 w-4" />;
-  return <PackageCheck className="h-4 w-4" />;
+  if (type === "ORDER") return <ReceiptText className="h-3.5 w-3.5" />;
+  if (type === "SHIPMENT") return <Truck className="h-3.5 w-3.5" />;
+  if (type === "PAYMENT") return <WalletCards className="h-3.5 w-3.5" />;
+  if (type === "SERVICE_REQUEST") return <Wrench className="h-3.5 w-3.5" />;
+  return <PackageCheck className="h-3.5 w-3.5" />;
 }
 
 function actionLabel(type: string) {
@@ -52,6 +49,28 @@ function actionTone(type: string) {
   if (type === "LINKED") return "bg-blue-50 text-blue-700 ring-blue-100";
   if (type === "UPDATED") return "bg-amber-50 text-amber-700 ring-amber-100";
   if (type === "CANCELLED") return "bg-slate-100 text-slate-500 ring-slate-200";
+  return "bg-slate-50 text-slate-600 ring-slate-200";
+}
+
+function statusTone(status?: string | null) {
+  const value = String(status ?? "").toUpperCase();
+
+  if (["DONE", "COMPLETED", "DELIVERED", "PAID", "RESOLVED"].includes(value)) {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+  }
+
+  if (["IN_PROGRESS", "PROCESSING", "SHIPPED", "POSTED"].includes(value)) {
+    return "bg-blue-50 text-blue-700 ring-blue-100";
+  }
+
+  if (["CONFIRMED", "READY", "OPEN"].includes(value)) {
+    return "bg-amber-50 text-amber-700 ring-amber-100";
+  }
+
+  if (["CANCELLED", "CANCELED", "RETURNED"].includes(value)) {
+    return "bg-slate-100 text-slate-500 ring-slate-200";
+  }
+
   return "bg-slate-50 text-slate-600 ring-slate-200";
 }
 
@@ -73,15 +92,17 @@ function formatDate(value?: Date | string | null) {
 }
 
 function getDisplayRef(item: any) {
-  return item.targetRefNo || item.targetCode || item.targetTitle || item.refNo || item.targetId;
+  return (
+    item.targetRefNo ||
+    item.targetCode ||
+    item.targetTitle ||
+    item.refNo ||
+    item.targetId
+  );
 }
 
 function getStatus(item: any) {
   return item.targetStatus || item.status || null;
-}
-
-function meta(item: any) {
-  return item?.metadataJson ?? item?.metadata ?? {};
 }
 
 function groupExecutions(executions: any[]) {
@@ -180,8 +201,81 @@ function getSrProgress(sr: any) {
   };
 }
 
-function issueLineStatus(issue: any) {
-  return isIssueDone(issue) ? "✓" : "○";
+function IssueStatusBadge({ status }: { status?: string | null }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
+        statusTone(status),
+      )}
+    >
+      {status || "-"}
+    </span>
+  );
+}
+
+function ExecutionShell({
+  type,
+  actionType,
+  status,
+  href,
+  children,
+}: {
+  type: string;
+  actionType?: string | null;
+  status?: string | null;
+  href?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              {targetIcon(type)}
+              {targetLabel(type)}
+            </span>
+
+            {actionType ? (
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                  actionTone(actionType),
+                )}
+              >
+                {actionLabel(actionType)}
+              </span>
+            ) : null}
+
+            {status ? (
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                  statusTone(status),
+                )}
+              >
+                {status}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-3">{children}</div>
+        </div>
+
+        {href ? (
+          <Link
+            href={href}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Mở
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function ServiceRequestProgressCard({
@@ -194,123 +288,73 @@ function ServiceRequestProgressCard({
   const sr = task?.serviceRequest ?? null;
   const issues = sr?.technicalIssue ?? [];
   const progress = getSrProgress(sr);
+  const href = sr?.id ? `/admin/services/${sr.id}` : null;
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-              <Wrench className="h-3.5 w-3.5" />
-              Service Request
-            </span>
-
-
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-                progress.tone,
-              )}
-            >
-              {progress.label}
-            </span>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-            <div className="font-semibold text-slate-950">
-              {sr?.refNo || sr?.id || execution.targetId}
-            </div>
-
-            <div className="text-sm text-slate-500">
-              SR:{" "}
-              <span className="font-semibold text-slate-800">
-                {sr?.status ?? "-"}
-              </span>
-            </div>
-
-            <div className="text-sm text-slate-500">
-              TI:{" "}
-              <span className="font-semibold text-slate-800">
-                {progress.done}/{progress.total}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 h-1.5 max-w-[520px] overflow-hidden rounded-full bg-slate-200">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                progress.total > 0 && progress.done === progress.total
-                  ? "bg-emerald-500"
-                  : "bg-blue-500",
-              )}
-              style={{ width: `${progress.percent}%` }}
-            />
-          </div>
-
-          {issues.length > 0 ? (
-            <div className="mt-3 w-full space-y-2">
-              {issues.slice(0, 5).map((issue: any) => {
-                const done = isIssueDone(issue);
-                const issueStatus = String(
-                  issue.executionStatus ?? "",
-                ).toUpperCase();
-
-                const issueTone =
-                  issueStatus === "DONE" ||
-                    issueStatus === "COMPLETED"
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-
-                    : issueStatus === "CONFIRMED"
-                      ? "bg-amber-50 text-amber-700 ring-amber-100"
-
-                      : issueStatus === "IN_PROGRESS"
-                        ? "bg-blue-50 text-blue-700 ring-blue-100"
-
-                        : "bg-amber-50 text-amber-700 ring-amber-100";
-                return (
-                  <div
-                    key={issue.id}
-                    className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-900">
-                        {issue.summary || issue.area || "Technical issue"}
-                      </div>
-
-                      <div className="mt-1 text-xs text-slate-400">
-                        Khu vực: {issue.area || "-"}
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
-                        issueTone,
-                      )}
-                    >
-                      {issue.executionStatus || "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-          <div className="mt-2 text-xs text-slate-300">
-            ID: {sr?.id || execution.targetId}
-          </div>
+    <ExecutionShell
+      type="SERVICE_REQUEST"
+      status={progress.label}
+      href={href}
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="font-semibold text-slate-950">
+          {sr?.refNo || sr?.id || execution.targetId}
         </div>
 
-        {sr?.id ? (
-          <Link
-            href={`/admin/services/${sr.id}`}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
-          >
-            Mở
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        ) : null}
+        <div className="text-sm text-slate-500">
+          SR:{" "}
+          <span className="font-semibold text-slate-800">
+            {sr?.status ?? "-"}
+          </span>
+        </div>
+
+        <div className="text-sm text-slate-500">
+          TI:{" "}
+          <span className="font-semibold text-slate-800">
+            {progress.done}/{progress.total}
+          </span>
+        </div>
       </div>
-    </div>
+
+      <div className="mt-3 h-1.5 max-w-[520px] overflow-hidden rounded-full bg-slate-200">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            progress.total > 0 && progress.done === progress.total
+              ? "bg-emerald-500"
+              : "bg-blue-500",
+          )}
+          style={{ width: `${progress.percent}%` }}
+        />
+      </div>
+
+      {issues.length > 0 ? (
+        <div className="mt-3 w-full space-y-2">
+          {issues.slice(0, 5).map((issue: any) => (
+            <div
+              key={issue.id}
+              className="flex w-full items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">
+                  {issue.summary || issue.area || "Technical issue"}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Khu vực: {issue.area || "-"}
+                </div>
+              </div>
+
+              <IssueStatusBadge status={issue.executionStatus} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-2 text-xs text-slate-300">
+        ID: {sr?.id || execution.targetId}
+      </div>
+    </ExecutionShell>
   );
 }
 
@@ -320,62 +364,31 @@ function DefaultExecutionCard({ item }: { item: any }) {
   const displayRef = getDisplayRef(item);
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-              {targetIcon(item.targetType)}
-              {targetLabel(item.targetType)}
-            </span>
-
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-                actionTone(item.actionType),
-              )}
-            >
-              {actionLabel(item.actionType)}
-            </span>
-
-            {status ? (
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                {status}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="mt-3 break-all font-semibold text-slate-950">
-            {displayRef}
-          </div>
-
-          {item.note ? (
-            <p className="mt-2 text-sm text-slate-600">{item.note}</p>
-          ) : null}
-
-          <p className="mt-2 text-xs text-slate-400">
-            {formatDate(item.createdAt)}
-            {item.createdByUser?.name ? ` · ${item.createdByUser.name}` : ""}
-          </p>
-
-          {item.targetId ? (
-            <p className="mt-1 break-all text-[11px] text-slate-300">
-              ID: {item.targetId}
-            </p>
-          ) : null}
-        </div>
-
-        {href ? (
-          <Link
-            href={href}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
-          >
-            Mở
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        ) : null}
+    <ExecutionShell
+      type={item.targetType}
+      actionType={item.actionType}
+      status={status}
+      href={href}
+    >
+      <div className="break-all font-semibold text-slate-950">
+        {displayRef}
       </div>
-    </div>
+
+      {item.note ? (
+        <p className="mt-2 text-sm text-slate-600">{item.note}</p>
+      ) : null}
+
+      <p className="mt-2 text-xs text-slate-400">
+        {formatDate(item.createdAt)}
+        {item.createdByUser?.name ? ` · ${item.createdByUser.name}` : ""}
+      </p>
+
+      {item.targetId ? (
+        <p className="mt-1 break-all text-[11px] text-slate-300">
+          ID: {item.targetId}
+        </p>
+      ) : null}
+    </ExecutionShell>
   );
 }
 
@@ -383,22 +396,34 @@ export default function TaskExecutionPanel({
   task,
   executions = [],
 }: Props) {
-  const latest = executions[0] ?? null;
-
-  const hasDoneSignal = executions.some((item) =>
-    ["DONE", "COMPLETED", "DELIVERED", "PAID"].includes(
-      String(getStatus(item) ?? "").toUpperCase(),
-    ),
-  );
-
   const visibleExecutions = groupExecutions(
     executions.filter((item) => item.targetType !== "TECHNICAL_ISSUE"),
   );
 
+  if (!executions.length) return null;
+
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+    <section className="border-y border-slate-100 bg-slate-50 px-3 py-4">
+      <div className="space-y-3">
+        {visibleExecutions.map((item) =>
+          item.targetType === "SERVICE_REQUEST" ? (
+            <ServiceRequestProgressCard
+              key={`${item.targetType}:${item.targetId}`}
+              task={task}
+              execution={item}
+            />
+          ) : (
+            <DefaultExecutionCard
+              key={`${item.targetType}:${item.targetId}`}
+              item={item}
+            />
+          ),
+        )}
+      </div>
+    </section>
+  );
+}
+{/* <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             Kết quả thực thi
           </p>
@@ -446,31 +471,4 @@ export default function TaskExecutionPanel({
             </span>
           ) : null}
         </div>
-      </div>
-
-      {!executions.length ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-          Chưa có nghiệp vụ nào được tạo hoặc link từ task này.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {visibleExecutions.map((item) =>
-            item.targetType === "SERVICE_REQUEST" ? (
-              <ServiceRequestProgressCard
-                key={`${item.targetType}:${item.targetId}`}
-                task={task}
-                execution={item}
-              />
-            ) : (
-              <DefaultExecutionCard
-                key={`${item.targetType}:${item.targetId}`}
-                item={item}
-              />
-            ),
-          )}
-        </div>
-      )}
-
-    </section>
-  );
-}
+      </div> */}

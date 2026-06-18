@@ -3,6 +3,8 @@
 import { Fragment } from "react";
 import {
   CheckCircle2,
+  ChevronRight,
+  ChevronDown,
   CirclePlay,
   Eye,
   RotateCcw,
@@ -105,11 +107,34 @@ export default function TaskListTable({
                       className="cursor-pointer hover:bg-slate-50/70"
                     >
                       <td className="max-w-[460px] px-4 py-3">
-                        <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
-                          {taskText(row)}
+                        <div className="flex items-start gap-2">
+                          {(row.executions?.length ?? 0) > 0 ? (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onToggleExpand?.(row);
+                              }}
+                              className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                              aria-label={expanded ? "Thu gọn task" : "Mở rộng task"}
+                            >
+                              {expanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="mt-0.5 h-5 w-5 shrink-0" />
+                          )}
+
+                          <div className="min-w-0">
+                            <div className="line-clamp-2 font-semibold leading-5 text-slate-950">
+                              {taskText(row)}
+                            </div>
+                          </div>
                         </div>
                       </td>
-
                       <td className="px-4 py-3 text-slate-600">
                         <div className="font-medium text-slate-800">
                           {row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}
@@ -206,9 +231,9 @@ export default function TaskListTable({
                       </td>
                     </tr>
 
-                    {expanded ? (
+                    {expanded && (row.executions?.length ?? 0) > 0 ? (
                       <tr>
-                        <td colSpan={7} className="bg-slate-50 px-4 py-4">
+                        <td colSpan={7} className="bg-slate-50 px-4 py-0">
                           <TaskExecutionPanel
                             task={row}
                             executions={row.executions ?? []}

@@ -54,7 +54,7 @@ export const WORK_CASE_INCLUDE = {
   },
   tasks: {
     orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, status: true, priority: true, assignedToUser: { select: { id: true, name: true, email: true } } },
+    select: { id: true, title: true, taskType: true, taskAction: true, status: true, priority: true, assignedToUser: { select: { id: true, name: true, email: true } } },
   },
   serviceRequests: {
     orderBy: { createdAt: "desc" },

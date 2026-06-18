@@ -36,44 +36,49 @@ function stepIndex(status: TaskStatus) {
 
 
 
-export function TaskStatusSignal({ status }: { status: TaskStatus }) {
+export function TaskStatusSignal({
+    status,
+}: {
+    status: TaskStatus;
+}) {
     const map = {
         TODO: {
             label: "Cần làm",
-            icon: <Clock3 className="h-3.5 w-3.5" />,
-            className: "bg-amber-50 text-amber-700 ring-amber-100",
+            className:
+                "bg-amber-50 text-amber-700 ring-amber-100",
         },
         IN_PROGRESS: {
             label: "Đang làm",
-            icon: <PlayCircle className="h-3.5 w-3.5" />,
-            className: "bg-blue-50 text-blue-700 ring-blue-100",
+            className:
+                "bg-blue-50 text-blue-700 ring-blue-100",
         },
         DONE: {
             label: "Đã xong",
-            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-            className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+            className:
+                "bg-emerald-50 text-emerald-700 ring-emerald-100",
         },
         CANCELLED: {
             label: "Đã hủy",
-            icon: <XCircle className="h-3.5 w-3.5" />,
-            className: "bg-slate-50 text-slate-500 ring-slate-200",
+            className:
+                "bg-slate-50 text-slate-500 ring-slate-200",
         },
     } satisfies Record<
         TaskStatus,
-        { label: string; icon: React.ReactNode; className: string }
+        {
+            label: string;
+            className: string;
+        }
     >;
 
     const item = map[status];
 
     return (
         <span
-            title={item.label}
             className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold ring-1",
+                "inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold ring-1",
                 item.className,
             )}
         >
-            {item.icon}
             {item.label}
         </span>
     );
@@ -122,19 +127,22 @@ export function PrioritySignal({ priority }: { priority: TaskPriority }) {
             title={item.label}
             aria-label={item.label}
             className={cn(
-                "inline-flex h-5 w-5 items-center justify-center rounded-full bg-white ring-4",
+                "inline-flex h-6 w-6 items-center justify-center rounded-full bg-white ring-4",
                 item.ring,
             )}
         >
-            <span
-                className={cn(
-                    "inline-flex items-center justify-center rounded-full text-[10px] font-black leading-none text-white",
-                    item.content ? "h-4 w-4" : "h-2.5 w-2.5",
-                    item.dot,
-                )}
-            >
-                {item.content}
-            </span>
+            {item.content ? (
+                <span className="text-[15px] font-black leading-none text-rose-600">
+                    {item.content}
+                </span>
+            ) : (
+                <span
+                    className={cn(
+                        "h-2.5 w-2.5 rounded-full",
+                        item.dot,
+                    )}
+                />
+            )}
         </span>
     );
 }

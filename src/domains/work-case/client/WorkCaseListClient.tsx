@@ -56,7 +56,7 @@ export default function WorkCaseListClient(props: Props) {
   const pathname = usePathname();
   const sp = useSearchParams();
   const progress = useAppProgress();
-
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [q, setQ] = useState(firstRaw(props.rawSearchParams?.q));
   const [status, setStatus] = useState(firstRaw(props.rawSearchParams?.status, "OPEN"));
   const [priority, setPriority] = useState(firstRaw(props.rawSearchParams?.priority, "ALL"));
@@ -72,7 +72,12 @@ export default function WorkCaseListClient(props: Props) {
     router.push(buildHref(pathname, sp, patch));
     window.setTimeout(() => progress.hide(), 700);
   }
+  function toggleExpand(item: WorkCaseWithRelations) {
+    const hasTasks = (item.tasks?.length ?? 0) > 0;
+    if (!hasTasks) return;
 
+    setExpandedId((current) => (current === item.id ? null : item.id));
+  }
   function openDetail(item: WorkCaseWithRelations) {
     progress.show({ title: "Đang mở phiếu xử lý", message: item.refNo || item.title });
     router.push(`/admin/work-cases/${item.id}`);
@@ -189,6 +194,8 @@ export default function WorkCaseListClient(props: Props) {
         items={props.items}
         page={props.page}
         totalPages={props.totalPages}
+        expandedId={expandedId}
+        onToggleExpand={toggleExpand}
         onPage={(page) => navigate({ page: String(page) })}
         onOpen={openDetail}
       />
