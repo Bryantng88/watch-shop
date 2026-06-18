@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { UserArgsObjectSchema as UserArgsObjectSchema } from './UserArgs.schema';
+import { TaskChecklistItemFindManySchema as TaskChecklistItemFindManySchema } from '../findManyTaskChecklistItem.schema';
 import { WatchArgsObjectSchema as WatchArgsObjectSchema } from './WatchArgs.schema';
 import { OrderArgsObjectSchema as OrderArgsObjectSchema } from './OrderArgs.schema';
 import { ShipmentArgsObjectSchema as ShipmentArgsObjectSchema } from './ShipmentArgs.schema';
@@ -47,6 +48,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   completedByUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
   cancelledByUser: z.union([z.boolean(), z.lazy(() => UserArgsObjectSchema)]).optional(),
+  checklistItems: z.union([z.boolean(), z.lazy(() => TaskChecklistItemFindManySchema)]).optional(),
   watch: z.union([z.boolean(), z.lazy(() => WatchArgsObjectSchema)]).optional(),
   order: z.union([z.boolean(), z.lazy(() => OrderArgsObjectSchema)]).optional(),
   shipment: z.union([z.boolean(), z.lazy(() => ShipmentArgsObjectSchema)]).optional(),

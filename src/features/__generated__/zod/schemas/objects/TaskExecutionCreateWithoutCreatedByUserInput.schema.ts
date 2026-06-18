@@ -3,7 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { TaskExecutionTargetTypeSchema } from '../enums/TaskExecutionTargetType.schema';
 import { TaskExecutionActionTypeSchema } from '../enums/TaskExecutionActionType.schema';
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
-import { TaskCreateNestedOneWithoutExecutionsInputObjectSchema as TaskCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskCreateNestedOneWithoutExecutionsInput.schema'
+import { TaskCreateNestedOneWithoutExecutionsInputObjectSchema as TaskCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskCreateNestedOneWithoutExecutionsInput.schema';
+import { TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema as TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema } from './TaskChecklistItemCreateNestedOneWithoutExecutionsInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -15,7 +16,8 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
-  task: z.lazy(() => TaskCreateNestedOneWithoutExecutionsInputObjectSchema)
+  task: z.lazy(() => TaskCreateNestedOneWithoutExecutionsInputObjectSchema),
+  checklistItem: z.lazy(() => TaskChecklistItemCreateNestedOneWithoutExecutionsInputObjectSchema).optional()
 }).strict();
 export const TaskExecutionCreateWithoutCreatedByUserInputObjectSchema: z.ZodType<Prisma.TaskExecutionCreateWithoutCreatedByUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionCreateWithoutCreatedByUserInput>;
 export const TaskExecutionCreateWithoutCreatedByUserInputObjectZodSchema = makeSchema();

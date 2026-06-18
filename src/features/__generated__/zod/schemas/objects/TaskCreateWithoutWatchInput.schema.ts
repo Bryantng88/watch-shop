@@ -9,6 +9,7 @@ import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNe
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
 import { UserCreateNestedOneWithoutCancelledTasksInputObjectSchema as UserCreateNestedOneWithoutCancelledTasksInputObjectSchema } from './UserCreateNestedOneWithoutCancelledTasksInput.schema';
+import { TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemCreateNestedManyWithoutTaskInput.schema';
 import { OrderCreateNestedOneWithoutTaskInputObjectSchema as OrderCreateNestedOneWithoutTaskInputObjectSchema } from './OrderCreateNestedOneWithoutTaskInput.schema';
 import { ShipmentCreateNestedOneWithoutTaskInputObjectSchema as ShipmentCreateNestedOneWithoutTaskInputObjectSchema } from './ShipmentCreateNestedOneWithoutTaskInput.schema';
 import { AcquisitionCreateNestedOneWithoutTaskInputObjectSchema as AcquisitionCreateNestedOneWithoutTaskInputObjectSchema } from './AcquisitionCreateNestedOneWithoutTaskInput.schema';
@@ -40,6 +41,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTasksInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserCreateNestedOneWithoutCompletedTasksInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserCreateNestedOneWithoutCancelledTasksInputObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskChecklistItemCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   order: z.lazy(() => OrderCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   acquisition: z.lazy(() => AcquisitionCreateNestedOneWithoutTaskInputObjectSchema).optional(),

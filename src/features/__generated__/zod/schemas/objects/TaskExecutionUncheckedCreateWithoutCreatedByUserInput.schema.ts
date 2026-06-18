@@ -14,7 +14,8 @@ const makeSchema = () => z.object({
   actionType: TaskExecutionActionTypeSchema.optional(),
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional()
+  createdAt: z.coerce.date().optional(),
+  checklistItemId: z.string().optional().nullable()
 }).strict();
 export const TaskExecutionUncheckedCreateWithoutCreatedByUserInputObjectSchema: z.ZodType<Prisma.TaskExecutionUncheckedCreateWithoutCreatedByUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionUncheckedCreateWithoutCreatedByUserInput>;
 export const TaskExecutionUncheckedCreateWithoutCreatedByUserInputObjectZodSchema = makeSchema();

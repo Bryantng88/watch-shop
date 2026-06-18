@@ -14,7 +14,9 @@ export const TaskExecutionInputSchema = z.object({
     createdByUserId: z.string().optional().nullable(),
     createdAt: z.date(),
     task: z.unknown(),
-    createdByUser: z.unknown().optional().nullable()
+    createdByUser: z.unknown().optional().nullable(),
+    checklistItem: z.unknown().optional().nullable(),
+    checklistItemId: z.string().optional().nullable()
 }).strict();
 
 export type TaskExecutionInputType = z.infer<typeof TaskExecutionInputSchema>;

@@ -10,7 +10,8 @@ const makeSchema = () => z.object({
   actionType: SortOrderSchema.optional(),
   note: SortOrderSchema.optional(),
   createdByUserId: SortOrderSchema.optional(),
-  createdAt: SortOrderSchema.optional()
+  createdAt: SortOrderSchema.optional(),
+  checklistItemId: SortOrderSchema.optional()
 }).strict();
 export const TaskExecutionMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TaskExecutionMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionMaxOrderByAggregateInput>;
 export const TaskExecutionMaxOrderByAggregateInputObjectZodSchema = makeSchema();

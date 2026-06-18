@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TaskDomain, TaskMode, TaskPriority, TaskStatus } from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { changeTaskStatusAction } from "../actions/task.actions";
+import { changeTaskStatusAction, createTaskChecklistItemAction, changeTaskChecklistItemDoneAction } from "../actions/task.actions";
 import type { TaskWithRelations } from "../server/task.repo";
 import type { TaskTypeOption } from "../server/task-type.types";
 import type { TaskViewKey } from "../server/task.types";
-import TaskQuickCreateModal, { type TaskQuickCreateContext, type TaskUserOption } from "../ui/quick-create/TaskQuickCreateModal";
-import TaskListFilters, { type TaskListFiltersValue } from "../ui/list/TaskListFilters";
+import TaskQuickCreateModal, {
+  type TaskQuickCreateContext,
+  type TaskUserOption,
+} from "../ui/quick-create/TaskQuickCreateModal";
+import TaskListFilters, {
+  type TaskListFiltersValue,
+} from "../ui/list/TaskListFilters";
 import TaskListTable from "../ui/list/TaskListTable";
 import TaskListToolbar from "../ui/list/TaskListToolbar";
-import TaskListViewTabs, { normalizeTaskView } from "../ui/list/TaskListViewTabs";
-
+import TaskListViewTabs, {
+  normalizeTaskView,
+} from "../ui/list/TaskListViewTabs";
 type Props = {
   items: TaskWithRelations[];
   total: number;
@@ -30,15 +36,23 @@ type Props = {
 };
 
 function firstRaw(value: string | string[] | undefined, fallback = "") {
-  return Array.isArray(value) ? String(value[0] ?? fallback) : String(value ?? fallback);
+  return Array.isArray(value)
+    ? String(value[0] ?? fallback)
+    : String(value ?? fallback);
 }
 
-function buildHref(pathname: string, current: URLSearchParams, patch: Record<string, string | null | undefined>) {
+function buildHref(
+  pathname: string,
+  current: URLSearchParams,
+  patch: Record<string, string | null | undefined>,
+) {
   const next = new URLSearchParams(current.toString());
+
   Object.entries(patch).forEach(([key, value]) => {
     if (!value) next.delete(key);
     else next.set(key, value);
   });
+
   const query = next.toString();
   return query ? `${pathname}?${query}` : pathname;
 }
@@ -52,7 +66,9 @@ export default function TaskListClient(props: Props) {
 
   const currentView = normalizeTaskView(
     sp.get("view") || firstRaw(props.rawSearchParams?.view, "all"),
-  ); const [filters, setFilters] = useState<TaskListFiltersValue>({
+  );
+
+  const [filters, setFilters] = useState<TaskListFiltersValue>({
     q: firstRaw(props.rawSearchParams?.q),
     status: (firstRaw(props.rawSearchParams?.status, "OPEN") || "OPEN") as any,
     priority: (firstRaw(props.rawSearchParams?.priority, "ALL") || "ALL") as any,
@@ -61,10 +77,13 @@ export default function TaskListClient(props: Props) {
     mode: (firstRaw(props.rawSearchParams?.mode, "ALL") || "ALL") as any,
     pageSize: String(props.pageSize),
   });
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalContext, setModalContext] = useState<TaskQuickCreateContext | null>(null);
+  const [modalContext, setModalContext] =
+    useState<TaskQuickCreateContext | null>(null);
   const [editTask, setEditTask] = useState<TaskWithRelations | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+
   useEffect(() => {
     setFilters({
       q: sp.get("q") ?? "",
@@ -78,7 +97,11 @@ export default function TaskListClient(props: Props) {
   }, [sp, props.pageSize]);
 
   function navigate(patch: Record<string, string | null | undefined>) {
-    progress.show({ title: "Đang tải task", message: "Hệ thống đang cập nhật danh sách công việc." });
+    progress.show({
+      title: "Đang tải task",
+      message: "Hệ thống đang cập nhật danh sách công việc.",
+    });
+
     router.push(buildHref(pathname, sp, patch));
     window.setTimeout(() => progress.hide(), 700);
   }
@@ -86,7 +109,17 @@ export default function TaskListClient(props: Props) {
   function setView(view: TaskViewKey) {
     navigate({ view: view === "all" ? null : view, page: "1" });
   }
-
+  async function toggleChecklistItem(itemId: string, isDone: boolean) {
+    try {
+      await changeTaskChecklistItemDoneAction(itemId, isDone);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể cập nhật dòng xử lý",
+        message: error?.message || "Có lỗi xảy ra.",
+      });
+    }
+  }
   function applyFilters() {
     navigate({
       q: filters.q.trim() || null,
@@ -101,8 +134,25 @@ export default function TaskListClient(props: Props) {
   }
 
   function clearFilters() {
-    setFilters({ q: "", status: "OPEN", priority: "ALL", domain: "ALL", taskTypeId: "ALL", mode: "ALL", pageSize: String(props.pageSize) });
-    navigate({ q: null, status: null, priority: null, domain: null, taskTypeId: null, mode: null, page: "1" });
+    setFilters({
+      q: "",
+      status: "OPEN",
+      priority: "ALL",
+      domain: "ALL",
+      taskTypeId: "ALL",
+      mode: "ALL",
+      pageSize: String(props.pageSize),
+    });
+
+    navigate({
+      q: null,
+      status: null,
+      priority: null,
+      domain: null,
+      taskTypeId: null,
+      mode: null,
+      page: "1",
+    });
   }
 
   function openCreate(context?: TaskQuickCreateContext) {
@@ -117,16 +167,52 @@ export default function TaskListClient(props: Props) {
     setModalOpen(true);
   }
 
-  function openDetail(row: TaskWithRelations) {
+  function toggleExpand(row: TaskWithRelations) {
     setExpandedTaskId((current) => (current === row.id ? null : row.id));
   }
+
+  async function addChecklistItem(row: TaskWithRelations, title: string) {
+    try {
+      await createTaskChecklistItemAction(row.id, title.trim());
+
+      notify.success({
+        title: "Đã thêm dòng xử lý",
+        message: "Checklist của task đã được cập nhật.",
+      });
+
+      setExpandedTaskId(row.id);
+      router.refresh();
+    } catch (error: any) {
+      notify.error({
+        title: "Không thể thêm dòng xử lý",
+        message: error?.message || "Có lỗi xảy ra.",
+      });
+    }
+  }
+  function createRelatedTask(row: TaskWithRelations) {
+    openCreate({
+      workCaseId: row.workCaseId ?? undefined,
+      watchId: row.watchId ?? undefined,
+      domain: row.domain,
+      mode: row.mode,
+      titlePreset: `Liên quan: ${row.title}`,
+      descriptionPreset: row.description || "",
+    } as any);
+  }
+
   async function changeStatus(row: TaskWithRelations, status: TaskStatus) {
     try {
       await changeTaskStatusAction(row.id, status);
-      notify.success({ title: "Đã cập nhật task", message: "Trạng thái task đã được cập nhật." });
+      notify.success({
+        title: "Đã cập nhật task",
+        message: "Trạng thái task đã được cập nhật.",
+      });
       router.refresh();
     } catch (error: any) {
-      notify.error({ title: "Không thể cập nhật task", message: error?.message || "Có lỗi xảy ra." });
+      notify.error({
+        title: "Không thể cập nhật task",
+        message: error?.message || "Có lỗi xảy ra.",
+      });
     }
   }
 
@@ -135,9 +221,23 @@ export default function TaskListClient(props: Props) {
       <TaskListToolbar total={props.total} onCreate={() => openCreate()} />
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-        <TaskListViewTabs value={currentView} counts={props.counts} canViewAll={props.canViewAll} onChange={setView} />
+        <TaskListViewTabs
+          value={currentView}
+          counts={props.counts}
+          canViewAll={props.canViewAll}
+          onChange={setView}
+        />
+
         <div className="pt-4">
-          <TaskListFilters filters={filters} taskTypes={props.taskTypes ?? []} onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))} onApply={applyFilters} onClear={clearFilters} />
+          <TaskListFilters
+            filters={filters}
+            taskTypes={props.taskTypes ?? []}
+            onChange={(patch) =>
+              setFilters((prev) => ({ ...prev, ...patch }))
+            }
+            onApply={applyFilters}
+            onClear={clearFilters}
+          />
         </div>
       </div>
 
@@ -146,13 +246,25 @@ export default function TaskListClient(props: Props) {
         page={props.page}
         totalPages={props.totalPages}
         expandedTaskId={expandedTaskId}
-        onToggleExpand={openDetail}
+        onToggleExpand={toggleExpand}
         onPage={(page) => navigate({ page: String(page) })}
         onStatus={changeStatus}
         onEdit={openEdit}
-        onOpen={openDetail}
+        onOpen={toggleExpand}
+        onAddChecklistItem={addChecklistItem}
+        onCreateRelatedTask={createRelatedTask}
       />
-      <TaskQuickCreateModal open={modalOpen} users={props.users} taskTypes={props.taskTypes ?? []} currentUserId={props.currentUserId} context={modalContext} editTask={editTask} onClose={() => setModalOpen(false)} onSaved={() => router.refresh()} />
+
+      <TaskQuickCreateModal
+        open={modalOpen}
+        users={props.users}
+        taskTypes={props.taskTypes ?? []}
+        currentUserId={props.currentUserId}
+        context={modalContext}
+        editTask={editTask}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => router.refresh()}
+      />
     </div>
   );
 }

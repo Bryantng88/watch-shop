@@ -63,4 +63,5 @@ export { WorkCaseCategoryModelSchema } from './WorkCaseCategory.pure';
 export { WorkCaseModelSchema } from './WorkCase.pure';
 export { WorkCaseActivityModelSchema } from './WorkCaseActivity.pure';
 export { TaskModelSchema } from './Task.pure';
+export { TaskChecklistItemModelSchema } from './TaskChecklistItem.pure';
 export { TaskExecutionModelSchema } from './TaskExecution.pure';

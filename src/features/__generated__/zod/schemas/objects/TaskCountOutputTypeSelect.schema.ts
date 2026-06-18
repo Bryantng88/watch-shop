@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
+  checklistItems: z.boolean().optional(),
   executions: z.boolean().optional(),
   notifications: z.boolean().optional()
 }).strict();

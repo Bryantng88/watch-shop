@@ -12,6 +12,23 @@ export const TASK_INCLUDE = {
   order: { select: { id: true, refNo: true, customerName: true, status: true, paymentStatus: true } },
   shipment: { select: { id: true, refNo: true, orderRefNo: true, status: true } },
   acquisition: { select: { id: true, refNo: true } },
+  checklistItems: {
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: {
+      executions: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          createdByUser: true,
+        },
+      },
+    },
+  },
+  executions: {
+    orderBy: { createdAt: "desc" },
+    include: {
+      createdByUser: true,
+    },
+  },
   serviceRequest: {
     include: {
       technicalIssue: {

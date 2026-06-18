@@ -8,7 +8,8 @@ import { EnumTaskExecutionActionTypeFieldUpdateOperationsInputObjectSchema as En
 import { NullableJsonNullValueInputSchema } from '../enums/NullableJsonNullValueInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema as TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema } from './TaskUpdateOneRequiredWithoutExecutionsNestedInput.schema'
+import { TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema as TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema } from './TaskUpdateOneRequiredWithoutExecutionsNestedInput.schema';
+import { TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema as TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema } from './TaskChecklistItemUpdateOneWithoutExecutionsNestedInput.schema'
 
 import { JsonValueSchema as jsonSchema } from '../../helpers/json-helpers';
 
@@ -20,7 +21,8 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  task: z.lazy(() => TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema).optional()
+  task: z.lazy(() => TaskUpdateOneRequiredWithoutExecutionsNestedInputObjectSchema).optional(),
+  checklistItem: z.lazy(() => TaskChecklistItemUpdateOneWithoutExecutionsNestedInputObjectSchema).optional()
 }).strict();
 export const TaskExecutionUpdateWithoutCreatedByUserInputObjectSchema: z.ZodType<Prisma.TaskExecutionUpdateWithoutCreatedByUserInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionUpdateWithoutCreatedByUserInput>;
 export const TaskExecutionUpdateWithoutCreatedByUserInputObjectZodSchema = makeSchema();

@@ -11,7 +11,9 @@ import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './Date
 import { TaskScalarRelationFilterObjectSchema as TaskScalarRelationFilterObjectSchema } from './TaskScalarRelationFilter.schema';
 import { TaskWhereInputObjectSchema as TaskWhereInputObjectSchema } from './TaskWhereInput.schema';
 import { UserNullableScalarRelationFilterObjectSchema as UserNullableScalarRelationFilterObjectSchema } from './UserNullableScalarRelationFilter.schema';
-import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema'
+import { UserWhereInputObjectSchema as UserWhereInputObjectSchema } from './UserWhereInput.schema';
+import { TaskChecklistItemNullableScalarRelationFilterObjectSchema as TaskChecklistItemNullableScalarRelationFilterObjectSchema } from './TaskChecklistItemNullableScalarRelationFilter.schema';
+import { TaskChecklistItemWhereInputObjectSchema as TaskChecklistItemWhereInputObjectSchema } from './TaskChecklistItemWhereInput.schema'
 
 const taskexecutionwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => TaskExecutionWhereInputObjectSchema), z.lazy(() => TaskExecutionWhereInputObjectSchema).array()]).optional(),
@@ -26,8 +28,10 @@ const taskexecutionwhereinputSchema = z.object({
   note: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdByUserId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
+  checklistItemId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   task: z.union([z.lazy(() => TaskScalarRelationFilterObjectSchema), z.lazy(() => TaskWhereInputObjectSchema)]).optional(),
-  createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional()
+  createdByUser: z.union([z.lazy(() => UserNullableScalarRelationFilterObjectSchema), z.lazy(() => UserWhereInputObjectSchema)]).optional(),
+  checklistItem: z.union([z.lazy(() => TaskChecklistItemNullableScalarRelationFilterObjectSchema), z.lazy(() => TaskChecklistItemWhereInputObjectSchema)]).optional()
 }).strict();
 export const TaskExecutionWhereInputObjectSchema: z.ZodType<Prisma.TaskExecutionWhereInput> = taskexecutionwhereinputSchema as unknown as z.ZodType<Prisma.TaskExecutionWhereInput>;
 export const TaskExecutionWhereInputObjectZodSchema = taskexecutionwhereinputSchema;

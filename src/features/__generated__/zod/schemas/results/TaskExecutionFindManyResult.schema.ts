@@ -11,7 +11,9 @@ export const TaskExecutionFindManyResultSchema = z.object({
   createdByUserId: z.string().optional(),
   createdAt: z.date(),
   task: z.unknown(),
-  createdByUser: z.unknown().optional()
+  createdByUser: z.unknown().optional(),
+  checklistItem: z.unknown().optional(),
+  checklistItemId: z.string().optional()
 })),
   pagination: z.object({
   page: z.number().int().min(1),

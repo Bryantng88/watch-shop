@@ -18,6 +18,7 @@ import { UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema as UserUpdateOn
 import { UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema as UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutAssignedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema as UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCompletedTasksNestedInput.schema';
 import { UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema as UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCancelledTasksNestedInput.schema';
+import { TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema as TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskChecklistItemUpdateManyWithoutTaskNestedInput.schema';
 import { WatchUpdateOneWithoutTasksNestedInputObjectSchema as WatchUpdateOneWithoutTasksNestedInputObjectSchema } from './WatchUpdateOneWithoutTasksNestedInput.schema';
 import { ShipmentUpdateOneWithoutTaskNestedInputObjectSchema as ShipmentUpdateOneWithoutTaskNestedInputObjectSchema } from './ShipmentUpdateOneWithoutTaskNestedInput.schema';
 import { AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema as AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema } from './AcquisitionUpdateOneWithoutTaskNestedInput.schema';
@@ -49,6 +50,7 @@ const makeSchema = () => z.object({
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema).optional(),
   cancelledByUser: z.lazy(() => UserUpdateOneWithoutCancelledTasksNestedInputObjectSchema).optional(),
+  checklistItems: z.lazy(() => TaskChecklistItemUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
   watch: z.lazy(() => WatchUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
   shipment: z.lazy(() => ShipmentUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   acquisition: z.lazy(() => AcquisitionUpdateOneWithoutTaskNestedInputObjectSchema).optional(),

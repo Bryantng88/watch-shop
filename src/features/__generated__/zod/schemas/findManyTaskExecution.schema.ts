@@ -20,7 +20,9 @@ export const TaskExecutionFindManySelectSchema: z.ZodType<Prisma.TaskExecutionSe
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     task: z.boolean().optional(),
-    createdByUser: z.boolean().optional()
+    createdByUser: z.boolean().optional(),
+    checklistItem: z.boolean().optional(),
+    checklistItemId: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskExecutionSelect>;
 
 export const TaskExecutionFindManySelectZodSchema = z.object({
@@ -34,7 +36,9 @@ export const TaskExecutionFindManySelectZodSchema = z.object({
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     task: z.boolean().optional(),
-    createdByUser: z.boolean().optional()
+    createdByUser: z.boolean().optional(),
+    checklistItem: z.boolean().optional(),
+    checklistItemId: z.boolean().optional()
   }).strict();
 
 export const TaskExecutionFindManySchema: z.ZodType<Prisma.TaskExecutionFindManyArgs> = z.object({ select: TaskExecutionFindManySelectSchema.optional(), include: TaskExecutionIncludeObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TaskExecutionScalarFieldEnumSchema, TaskExecutionScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionFindManyArgs>;

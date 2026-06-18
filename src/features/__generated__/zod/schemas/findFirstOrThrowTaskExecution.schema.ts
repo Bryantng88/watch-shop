@@ -20,7 +20,9 @@ export const TaskExecutionFindFirstOrThrowSelectSchema: z.ZodType<Prisma.TaskExe
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     task: z.boolean().optional(),
-    createdByUser: z.boolean().optional()
+    createdByUser: z.boolean().optional(),
+    checklistItem: z.boolean().optional(),
+    checklistItemId: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TaskExecutionSelect>;
 
 export const TaskExecutionFindFirstOrThrowSelectZodSchema = z.object({
@@ -34,7 +36,9 @@ export const TaskExecutionFindFirstOrThrowSelectZodSchema = z.object({
     createdByUserId: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     task: z.boolean().optional(),
-    createdByUser: z.boolean().optional()
+    createdByUser: z.boolean().optional(),
+    checklistItem: z.boolean().optional(),
+    checklistItemId: z.boolean().optional()
   }).strict();
 
 export const TaskExecutionFindFirstOrThrowSchema: z.ZodType<Prisma.TaskExecutionFindFirstOrThrowArgs> = z.object({ select: TaskExecutionFindFirstOrThrowSelectSchema.optional(), include: TaskExecutionIncludeObjectSchema.optional(), orderBy: z.union([TaskExecutionOrderByWithRelationInputObjectSchema, TaskExecutionOrderByWithRelationInputObjectSchema.array()]).optional(), where: TaskExecutionWhereInputObjectSchema.optional(), cursor: TaskExecutionWhereUniqueInputObjectSchema.optional(), take: z.number().optional(), skip: z.number().optional(), distinct: z.union([TaskExecutionScalarFieldEnumSchema, TaskExecutionScalarFieldEnumSchema.array()]).optional() }).strict() as unknown as z.ZodType<Prisma.TaskExecutionFindFirstOrThrowArgs>;

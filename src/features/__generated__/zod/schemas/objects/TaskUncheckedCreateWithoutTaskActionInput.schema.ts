@@ -5,6 +5,7 @@ import { TaskDomainSchema } from '../enums/TaskDomain.schema';
 import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema as NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationUncheckedCreateNestedManyWithoutTaskInput.schema'
 
@@ -36,6 +37,7 @@ const makeSchema = () => z.object({
   workCaseId: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  checklistItems: z.lazy(() => TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   notifications: z.lazy(() => NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();

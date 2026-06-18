@@ -10,5 +10,7 @@ export const TaskExecutionFindFirstResultSchema = z.nullable(z.object({
   createdByUserId: z.string().optional(),
   createdAt: z.date(),
   task: z.unknown(),
-  createdByUser: z.unknown().optional()
+  createdByUser: z.unknown().optional(),
+  checklistItem: z.unknown().optional(),
+  checklistItemId: z.string().optional()
 }));

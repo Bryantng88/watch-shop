@@ -7,6 +7,7 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
   note: z.string(),
   createdByUserId: z.string(),
   createdAt: z.date(),
+  checklistItemId: z.string(),
   _count: z.object({
     id: z.number(),
     taskId: z.number(),
@@ -18,7 +19,9 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     createdByUserId: z.number(),
     createdAt: z.number(),
     task: z.number(),
-    createdByUser: z.number()
+    createdByUser: z.number(),
+    checklistItem: z.number(),
+    checklistItemId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -26,7 +29,8 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     targetId: z.string().nullable(),
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    checklistItemId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -34,6 +38,7 @@ export const TaskExecutionGroupByResultSchema = z.array(z.object({
     targetId: z.string().nullable(),
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    checklistItemId: z.string().nullable()
   }).nullable().optional()
 }));

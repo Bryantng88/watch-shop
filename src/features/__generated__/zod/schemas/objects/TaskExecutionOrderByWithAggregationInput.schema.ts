@@ -16,6 +16,7 @@ const makeSchema = () => z.object({
   note: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdByUserId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   createdAt: SortOrderSchema.optional(),
+  checklistItemId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   _count: z.lazy(() => TaskExecutionCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TaskExecutionMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => TaskExecutionMinOrderByAggregateInputObjectSchema).optional()

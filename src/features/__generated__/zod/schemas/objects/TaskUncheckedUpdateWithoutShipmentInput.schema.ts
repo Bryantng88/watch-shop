@@ -14,6 +14,7 @@ import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskPriorityFieldUpdateOperationsInputObjectSchema as EnumTaskPriorityFieldUpdateOperationsInputObjectSchema } from './EnumTaskPriorityFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { TaskChecklistItemUncheckedUpdateManyWithoutTaskNestedInputObjectSchema as TaskChecklistItemUncheckedUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskChecklistItemUncheckedUpdateManyWithoutTaskNestedInput.schema';
 import { TaskExecutionUncheckedUpdateManyWithoutTaskNestedInputObjectSchema as TaskExecutionUncheckedUpdateManyWithoutTaskNestedInputObjectSchema } from './TaskExecutionUncheckedUpdateManyWithoutTaskNestedInput.schema';
 import { NotificationUncheckedUpdateManyWithoutTaskNestedInputObjectSchema as NotificationUncheckedUpdateManyWithoutTaskNestedInputObjectSchema } from './NotificationUncheckedUpdateManyWithoutTaskNestedInput.schema'
 
@@ -45,6 +46,7 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   taskActionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  checklistItems: z.lazy(() => TaskChecklistItemUncheckedUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionUncheckedUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
   notifications: z.lazy(() => NotificationUncheckedUpdateManyWithoutTaskNestedInputObjectSchema).optional()
 }).strict();

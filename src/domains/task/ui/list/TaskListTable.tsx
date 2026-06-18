@@ -3,10 +3,10 @@
 import { Fragment } from "react";
 import {
   CheckCircle2,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
   CirclePlay,
-  Eye,
+  ListPlus,
   RotateCcw,
   XCircle,
 } from "lucide-react";
@@ -18,7 +18,7 @@ import {
   PrioritySignal,
 } from "@/domains/shared/ui/signals/StatePrioritySignal";
 import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL } from "../../utils/task-labels";
-import TaskExecutionPanel from "../detail/TaskExecutionPanel";
+import TaskWorkPanel from "./TaskWorkPanel";
 import TaskPagination from "./TaskPagination";
 
 function formatDate(value?: Date | string | null) {
@@ -31,15 +31,11 @@ function formatDate(value?: Date | string | null) {
   }).format(new Date(value));
 }
 
-function userLabel(
-  user?: { name?: string | null; email?: string | null } | null,
-) {
+function userLabel(user?: { name?: string | null; email?: string | null } | null) {
   return user?.name || user?.email || "—";
 }
 
-function userInitial(
-  user?: { name?: string | null; email?: string | null } | null,
-) {
+function userInitial(user?: { name?: string | null; email?: string | null } | null) {
   const label = userLabel(user);
   if (!label || label === "—") return "?";
   return label.trim().slice(0, 1).toUpperCase();
@@ -47,6 +43,18 @@ function userInitial(
 
 function taskText(row: TaskWithRelations) {
   return row.description?.trim() || row.title?.trim() || "Không có mô tả";
+}
+
+function hasChecklist(row: any) {
+  return (row.checklistItems?.length ?? 0) > 0;
+}
+
+function hasExecutions(row: any) {
+  return (row.executions?.length ?? 0) > 0;
+}
+
+function canExpand(_row: any) {
+  return true;
 }
 
 export default function TaskListTable({
@@ -59,6 +67,10 @@ export default function TaskListTable({
   onOpen,
   expandedTaskId,
   onToggleExpand,
+  onAddChecklistItem,
+  onCreateRelatedTask,
+  onToggleChecklistItem,
+  onDeleteChecklistItem
 }: {
   items: TaskWithRelations[];
   page: number;
@@ -69,6 +81,9 @@ export default function TaskListTable({
   onOpen: (row: TaskWithRelations) => void;
   expandedTaskId?: string | null;
   onToggleExpand?: (row: TaskWithRelations) => void;
+  onToggleChecklistItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
+  onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
+  onAddChecklistItem?: (row: TaskWithRelations, title: string) => Promise<void> | void; onCreateRelatedTask?: (row: TaskWithRelations) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -89,26 +104,30 @@ export default function TaskListTable({
           <tbody className="divide-y divide-slate-100">
             {items.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-12 text-center text-sm text-slate-500"
-                >
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
                   Chưa có task phù hợp.
                 </td>
               </tr>
             ) : (
               items.map((row) => {
                 const expanded = expandedTaskId === row.id;
+                const expandable = canExpand(row);
 
                 return (
                   <Fragment key={row.id}>
                     <tr
-                      onClick={() => onToggleExpand?.(row)}
-                      className="cursor-pointer hover:bg-slate-50/70"
+                      onClick={() => {
+                        if (expandable) onToggleExpand?.(row);
+                      }}
+                      className={
+                        expandable
+                          ? "cursor-pointer hover:bg-slate-50/70"
+                          : "hover:bg-slate-50/70"
+                      }
                     >
                       <td className="max-w-[460px] px-4 py-3">
                         <div className="flex items-start gap-2">
-                          {(row.executions?.length ?? 0) > 0 ? (
+                          {expandable ? (
                             <button
                               type="button"
                               onClick={(event) => {
@@ -135,6 +154,7 @@ export default function TaskListTable({
                           </div>
                         </div>
                       </td>
+
                       <td className="px-4 py-3 text-slate-600">
                         <div className="font-medium text-slate-800">
                           {row.taskType?.name ?? TASK_DOMAIN_LABEL[row.domain]}
@@ -175,12 +195,19 @@ export default function TaskListTable({
                         <RowActions
                           row={row}
                           actions={[
+
                             {
-                              key: "toggle",
-                              label: expanded ? "Thu gọn xử lý" : "Xem xử lý",
-                              icon: <Eye className="h-4 w-4" />,
-                              onClick: (r) => onToggleExpand?.(r) ?? onOpen(r),
+                              key: "create-related-task",
+                              label: "Tạo task liên quan",
+                              onClick: (r) => onCreateRelatedTask?.(r),
                             },
+                            expandable
+                              ? {
+                                key: "toggle",
+                                label: expanded ? "Thu gọn xử lý" : "Xem xử lý",
+                                onClick: (r) => onToggleExpand?.(r),
+                              }
+                              : null,
                             {
                               key: "edit",
                               label: "Sửa task",
@@ -193,8 +220,7 @@ export default function TaskListTable({
                                 key: "start",
                                 label: "Bắt đầu",
                                 icon: <CirclePlay className="h-4 w-4" />,
-                                onClick: (r) =>
-                                  onStatus(r, TaskStatus.IN_PROGRESS),
+                                onClick: (r) => onStatus(r, TaskStatus.IN_PROGRESS),
                               }
                               : null,
                             row.status !== "DONE"
@@ -202,8 +228,7 @@ export default function TaskListTable({
                                 key: "done",
                                 label: "Hoàn thành",
                                 icon: <CheckCircle2 className="h-4 w-4" />,
-                                onClick: (r) =>
-                                  onStatus(r, TaskStatus.DONE),
+                                onClick: (r) => onStatus(r, TaskStatus.DONE),
                               }
                               : null,
                             row.status !== "TODO"
@@ -211,8 +236,7 @@ export default function TaskListTable({
                                 key: "reopen",
                                 label: "Mở lại",
                                 icon: <RotateCcw className="h-4 w-4" />,
-                                onClick: (r) =>
-                                  onStatus(r, TaskStatus.TODO),
+                                onClick: (r) => onStatus(r, TaskStatus.TODO),
                               }
                               : null,
                             row.status !== "CANCELLED"
@@ -222,8 +246,7 @@ export default function TaskListTable({
                                 icon: <XCircle className="h-4 w-4" />,
                                 tone: "danger",
                                 separatorBefore: true,
-                                onClick: (r) =>
-                                  onStatus(r, TaskStatus.CANCELLED),
+                                onClick: (r) => onStatus(r, TaskStatus.CANCELLED),
                               }
                               : null,
                           ]}
@@ -231,12 +254,20 @@ export default function TaskListTable({
                       </td>
                     </tr>
 
-                    {expanded && (row.executions?.length ?? 0) > 0 ? (
+                    {expanded && expandable ? (
                       <tr>
-                        <td colSpan={7} className="bg-slate-50 px-4 py-0">
-                          <TaskExecutionPanel
+                        <td
+                          colSpan={7}
+                          className="bg-slate-50 px-4 py-0"
+                          onClick={(event) => event.stopPropagation()}
+                        >                          <TaskWorkPanel
                             task={row}
-                            executions={row.executions ?? []}
+                            checklistItems={(row as any).checklistItems ?? []}
+                            executions={(row as any).executions ?? []}
+                            onAddChecklistItem={onAddChecklistItem}
+                            onToggleChecklistItem={onToggleChecklistItem}
+                            onDeleteChecklistItem={onDeleteChecklistItem}
+
                           />
                         </td>
                       </tr>

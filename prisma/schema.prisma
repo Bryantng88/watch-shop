@@ -1703,24 +1703,24 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdByUser   User? @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  assignedToUser  User? @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  completedByUser User? @relation("TaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
-  cancelledByUser User? @relation("TaskCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
-
-  watch          Watch?          @relation(fields: [watchId], references: [id], onDelete: SetNull)
-  order          Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  shipment       Shipment?       @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
-  acquisition    Acquisition?    @relation(fields: [acquisitionId], references: [id], onDelete: SetNull)
-  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
-  technicalIssue TechnicalIssue? @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
-  payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  workCase       WorkCase?       @relation(fields: [workCaseId], references: [id], onDelete: SetNull)
-  taskType       TaskType?       @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
-  executions     TaskExecution[]
-  notifications  Notification[]
-  taskAction     TaskAction?     @relation(fields: [taskActionId], references: [id])
-  taskActionId   String?
+  createdByUser   User?               @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignedToUser  User?               @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  completedByUser User?               @relation("TaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser User?               @relation("TaskCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  checklistItems  TaskChecklistItem[]
+  watch           Watch?              @relation(fields: [watchId], references: [id], onDelete: SetNull)
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  shipment        Shipment?           @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  acquisition     Acquisition?        @relation(fields: [acquisitionId], references: [id], onDelete: SetNull)
+  serviceRequest  ServiceRequest?     @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  technicalIssue  TechnicalIssue?     @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
+  payment         Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  workCase        WorkCase?           @relation(fields: [workCaseId], references: [id], onDelete: SetNull)
+  taskType        TaskType?           @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
+  executions      TaskExecution[]
+  notifications   Notification[]
+  taskAction      TaskAction?         @relation(fields: [taskActionId], references: [id])
+  taskActionId    String?
 
   @@index([source])
   @@index([domain])
@@ -1744,6 +1744,22 @@ model Task {
   @@index([workCaseId])
 }
 
+model TaskChecklistItem {
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskId    String
+  title     String
+  note      String?
+  isDone    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task       Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  executions TaskExecution[]
+
+  @@index([taskId])
+}
+
 model TaskExecution {
   id String @id @default(dbgenerated("(gen_random_uuid())::text"))
 
@@ -1757,8 +1773,10 @@ model TaskExecution {
   createdByUserId String?
   createdAt       DateTime                @default(now())
 
-  task          Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  createdByUser User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  task            Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdByUser   User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  checklistItem   TaskChecklistItem? @relation(fields: [checklistItemId], references: [id])
+  checklistItemId String?
 
   @@index([taskId])
   @@index([targetType, targetId])

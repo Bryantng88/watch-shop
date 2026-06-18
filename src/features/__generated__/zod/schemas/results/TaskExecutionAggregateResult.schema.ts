@@ -10,7 +10,9 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     createdByUserId: z.number(),
     createdAt: z.number(),
     task: z.number(),
-    createdByUser: z.number()
+    createdByUser: z.number(),
+    checklistItem: z.number(),
+    checklistItemId: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),
@@ -18,7 +20,8 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     targetId: z.string().nullable(),
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    checklistItemId: z.string().nullable()
   }).nullable().optional(),
   _max: z.object({
     id: z.string().nullable(),
@@ -26,5 +29,6 @@ export const TaskExecutionAggregateResultSchema = z.object({  _count: z.object({
     targetId: z.string().nullable(),
     note: z.string().nullable(),
     createdByUserId: z.string().nullable(),
-    createdAt: z.date().nullable()
+    createdAt: z.date().nullable(),
+    checklistItemId: z.string().nullable()
   }).nullable().optional()});

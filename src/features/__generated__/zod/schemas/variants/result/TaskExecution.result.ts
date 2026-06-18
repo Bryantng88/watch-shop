@@ -14,7 +14,9 @@ export const TaskExecutionResultSchema = z.object({
     createdByUserId: z.string().nullable(),
     createdAt: z.date(),
     task: z.unknown(),
-    createdByUser: z.unknown().nullable()
+    createdByUser: z.unknown().nullable(),
+    checklistItem: z.unknown().nullable(),
+    checklistItemId: z.string().nullable()
 }).strict();
 
 export type TaskExecutionResultType = z.infer<typeof TaskExecutionResultSchema>;

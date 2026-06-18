@@ -20,7 +20,8 @@ const makeSchema = () => z.object({
   metadataJson: z.union([NullableJsonNullValueInputSchema, jsonSchema]).optional(),
   note: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdByUserId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
-  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional()
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  checklistItemId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable()
 }).strict();
 export const TaskExecutionUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.TaskExecutionUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskExecutionUncheckedUpdateInput>;
 export const TaskExecutionUncheckedUpdateInputObjectZodSchema = makeSchema();

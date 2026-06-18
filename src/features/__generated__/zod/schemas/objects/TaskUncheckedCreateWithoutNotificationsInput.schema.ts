@@ -5,6 +5,7 @@ import { TaskDomainSchema } from '../enums/TaskDomain.schema';
 import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema'
 
 const makeSchema = () => z.object({
@@ -36,6 +37,7 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   taskActionId: z.string().optional().nullable(),
+  checklistItems: z.lazy(() => TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();
 export const TaskUncheckedCreateWithoutNotificationsInputObjectSchema: z.ZodType<Prisma.TaskUncheckedCreateWithoutNotificationsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskUncheckedCreateWithoutNotificationsInput>;
