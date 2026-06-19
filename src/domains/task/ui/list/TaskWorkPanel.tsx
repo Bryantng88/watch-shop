@@ -167,6 +167,29 @@ function splitExecutions(executions: any[]) {
     };
 }
 
+
+function businessStatusDone(value?: string | null) {
+    const status = String(value ?? "").toUpperCase();
+    return ["DONE", "COMPLETED", "DELIVERED", "PAID", "RESOLVED", "CLOSED", "POSTED"].includes(status);
+}
+
+function businessStatusOfExecution(item: any) {
+    return (
+        item?.technicalIssue?.executionStatus ||
+        item?.serviceRequest?.status ||
+        item?.targetStatus ||
+        item?.status ||
+        item?.actionType ||
+        null
+    );
+}
+
+function checklistBusinessDone(item: any) {
+    const executions = item?.executions ?? [];
+    if (!executions.length) return Boolean(item?.isDone);
+    return executions.some((execution: any) => businessStatusDone(businessStatusOfExecution(execution)));
+}
+
 function ChecklistRow({
     item,
     active,
@@ -184,6 +207,7 @@ function ChecklistRow({
 }) {
     const itemExecutions = splitExecutions(item.executions ?? []);
     const hasExecutions = itemExecutions.grouped.length > 0;
+    const done = checklistBusinessDone(item);
 
     return (
         <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
@@ -194,30 +218,34 @@ function ChecklistRow({
                         onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (hasExecutions) return;
                             await onToggle(item);
                         }}
+                        disabled={hasExecutions}
+                        title={hasExecutions ? "Dòng này đã gắn nghiệp vụ, trạng thái sẽ đi theo nghiệp vụ" : undefined}
                         className={cn(
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
-                            item.isDone
+                            done
                                 ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                                 : "bg-white text-slate-300 ring-slate-300",
+                            hasExecutions ? "cursor-default" : "",
                         )}
                     >
-                        {item.isDone ? <Check className="h-3.5 w-3.5" /> : null}
+                        {done ? <Check className="h-3.5 w-3.5" /> : null}
                     </button>
 
                     <div className="min-w-0">
                         <div
                             className={cn(
                                 "line-clamp-1 font-semibold",
-                                item.isDone ? "text-slate-400 line-through" : "text-slate-950",
+                                done ? "text-slate-400 line-through" : "text-slate-950",
                             )}
                         >
                             {item.title}
                         </div>
 
                         <div className="mt-1 text-xs text-slate-400">
-                            Dòng xử lý · {item.isDone ? "Đã xong" : "Chưa xong"}
+                            {hasExecutions ? "Dòng nghiệp vụ" : "Dòng xử lý"} · {done ? "Đã xong" : "Chưa xong"}
                             {hasExecutions ? ` · ${itemExecutions.grouped.length} nghiệp vụ` : ""}
                         </div>
                     </div>
@@ -238,7 +266,7 @@ function ChecklistRow({
                                 : "text-blue-600 hover:bg-blue-50",
                         )}
                     >
-                        Tạo nghiệp vụ
+                        {hasExecutions ? "Xem / link thêm" : "Tạo nghiệp vụ"}
                         <ChevronDown
                             className={cn(
                                 "h-3.5 w-3.5 transition-transform",

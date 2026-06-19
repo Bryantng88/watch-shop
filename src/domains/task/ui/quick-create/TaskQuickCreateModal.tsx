@@ -68,6 +68,7 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
   const [serviceMode, setServiceMode] =
     useState<ServiceExecutionMode>("SR_ONLY");
   const isEdit = Boolean(editTask);
+  const isWorkCaseDispatch = Boolean(context?.workCaseId) && !editTask;
   const filteredTaskTypes = useMemo(() => taskTypes.filter((item) => item.isActive && item.domain === domain), [taskTypes, domain]);
   const filteredTaskActions = useMemo(() => {
     const selected = taskTypes.find((item) => item.id === taskTypeId);
@@ -130,10 +131,10 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
     const payload: CreateTaskInput = {
       title,
       description,
-      domain,
-      taskTypeId: taskTypeId || null,
-      taskActionId: taskActionId || null,
-      mode,
+      domain: isWorkCaseDispatch ? TaskDomain.WORK_CASE : domain,
+      taskTypeId: isWorkCaseDispatch ? null : taskTypeId || null,
+      taskActionId: isWorkCaseDispatch ? null : taskActionId || null,
+      mode: isWorkCaseDispatch ? TaskMode.NORMAL : mode,
       priority,
       assignedToUserId,
       dueAt: dueAt || null,
@@ -175,7 +176,15 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400" />
           </label>
 
+          {isWorkCaseDispatch ? (
+            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-100">
+              Task này được tạo từ phiếu xử lý. Manager chỉ giao việc và assign user; nghiệp vụ sẽ phát sinh sau ở checklist của task.
+            </div>
+          ) : null}
+
           <div className="grid gap-3 md:grid-cols-2">
+            {!isWorkCaseDispatch ? (
+              <>
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Domain</span>
               <select value={domain} onChange={(e) => setDomain(e.target.value as TaskDomain)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
@@ -202,6 +211,8 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
                 {Object.values(TaskMode).map((item) => <option key={item} value={item}>{TASK_MODE_LABEL[item]}</option>)}
               </select>
             </label>
+            </>
+            ) : null}
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Ưu tiên</span>
               <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">

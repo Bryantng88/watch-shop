@@ -119,3 +119,44 @@ export async function deleteTaskChecklistItemAction(itemId: string) {
 
   return { ok: true, item };
 }
+
+export async function createWorkCaseFeedbackFromTaskAction(input: {
+  taskId: string;
+  note: string;
+  requestNewTask?: boolean;
+}) {
+  const auth = await getTaskAuth();
+  const cleanTaskId = String(input.taskId || "").trim();
+  const cleanNote = String(input.note || "").trim();
+
+  if (!cleanTaskId) throw new Error("Missing taskId");
+  if (!cleanNote) throw new Error("Vui lòng nhập nội dung feedback.");
+
+  const task = await getTaskDetail(prisma, cleanTaskId, auth);
+  if (!task.workCaseId) {
+    throw new Error("Task này không thuộc phiếu xử lý nào.");
+  }
+
+  const actorId = (auth as any)?.user?.id ?? (auth as any)?.id ?? (auth as any)?.userId ?? null;
+
+  const activity = await prisma.workCaseActivity.create({
+    data: {
+      workCaseId: task.workCaseId,
+      actorId,
+      action: input.requestNewTask ? "TASK_REQUEST" : "TASK_FEEDBACK",
+      note: cleanNote,
+      metadata: {
+        taskId: task.id,
+        taskTitle: task.title,
+        requestNewTask: Boolean(input.requestNewTask),
+      },
+    },
+  });
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${task.id}`);
+  revalidatePath("/admin/work-cases");
+  revalidatePath(`/admin/work-cases/${task.workCaseId}`);
+
+  return { ok: true, activity };
+}

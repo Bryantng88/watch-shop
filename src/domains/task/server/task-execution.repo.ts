@@ -104,7 +104,10 @@ export async function createTaskExecutionRepo(
   if (input.syncTaskRelation !== false) {
     await client.task.update({
       where: { id: taskId },
-      data: relationPatchForTarget(input.targetType, targetId),
+      data: {
+        ...relationPatchForTarget(input.targetType, targetId),
+        status: "IN_PROGRESS",
+      },
     });
   }
 

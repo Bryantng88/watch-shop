@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -36,12 +36,6 @@ function imageSrc(item: WorkCaseWithRelations) {
     return inline?.imageUrl || inline?.fileKey || item.watch?.product?.primaryImageUrl || null;
 }
 
-function defaultTaskDomain(item: WorkCaseWithRelations) {
-    if (item.scope === "SERVICE") return TaskDomain.SERVICE;
-    if (item.scope === "PAYMENT") return TaskDomain.PAYMENT;
-    if (item.scope === "LOGISTIC") return TaskDomain.SHIPMENT;
-    return TaskDomain.WATCH;
-}
 
 function formatDate(value: Date | string | null | undefined) {
     if (!value) return "-";
@@ -85,7 +79,6 @@ export default function WorkCaseDetailClient({
     const tasks = localItem.tasks ?? [];
     const serviceRequests = localItem.serviceRequests ?? [];
     const canClose = canManage && !isClosed(localItem.status);
-    const defaultDomain = useMemo(() => defaultTaskDomain(localItem), [localItem]);
 
     function mutateCase(input: Parameters<typeof updateWorkCaseAction>[1]) {
         setError(null);
@@ -101,12 +94,12 @@ export default function WorkCaseDetailClient({
         });
     }
 
-    function openCreateTask(domain = defaultDomain) {
+    function openCreateTask() {
         setActionOpen(false);
         setTaskContext({
             workCaseId: localItem.id,
             watchId: localItem.watchId,
-            domain,
+            domain: TaskDomain.WORK_CASE,
             mode: TaskMode.NORMAL,
             titlePreset: localItem.refNo
                 ? `Xử lý ${localItem.refNo}: ${localItem.title}`
@@ -184,42 +177,6 @@ export default function WorkCaseDetailClient({
                                             >
                                                 <Plus className="h-4 w-4" />
                                                 Tạo task
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => openCreateTask(TaskDomain.ORDER)}
-                                                disabled={pending}
-                                                className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                            >
-                                                Task Order
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => openCreateTask(TaskDomain.SHIPMENT)}
-                                                disabled={pending}
-                                                className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                            >
-                                                Task Shipment
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => openCreateTask(TaskDomain.PAYMENT)}
-                                                disabled={pending}
-                                                className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                            >
-                                                Task Payment
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => openCreateTask(TaskDomain.SERVICE)}
-                                                disabled={pending}
-                                                className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                            >
-                                                Task Service
                                             </button>
 
                                             <div className="my-2 h-px bg-slate-100" />
@@ -433,6 +390,48 @@ export default function WorkCaseDetailClient({
                                     {WORK_CASE_STATUS_LABEL[localItem.status]}
                                 </span>
                             </div>
+                        </div>
+                    </section>
+
+                    <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                            Feedback / Activity
+                        </p>
+
+                        <div className="mt-4 space-y-2">
+                            {(localItem.activities ?? []).length ? (
+                                (localItem.activities ?? []).map((activity: any) => (
+                                    <div
+                                        key={activity.id}
+                                        className="rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-slate-100"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="font-semibold text-slate-900">
+                                                {activity.action === "TASK_REQUEST" ? "Yêu cầu tạo task" : activity.action === "TASK_FEEDBACK" ? "Feedback từ task" : activity.action}
+                                            </span>
+                                            <span className="text-[11px] text-slate-400">
+                                                {formatDate(activity.createdAt)}
+                                            </span>
+                                        </div>
+
+                                        {activity.note ? (
+                                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                                                {activity.note}
+                                            </p>
+                                        ) : null}
+
+                                        {activity.actor ? (
+                                            <div className="mt-2 text-xs text-slate-400">
+                                                Bởi: <span className="font-semibold text-slate-700">{userLabel(activity.actor)}</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                    Chưa có feedback mới.
+                                </div>
+                            )}
                         </div>
                     </section>
 

@@ -179,11 +179,12 @@ export default function TaskDomainActions({
 
   const actions = useMemo(() => resolveTaskActions(task), [task]);
 
-  const shouldCreateOrder = actions.includes("ORDER_CREATE");
+  const checklistBusinessMode = Boolean(checklistItemId);
+  const shouldCreateOrder = checklistBusinessMode || actions.includes("ORDER_CREATE");
   const shouldLinkPayment = actions.includes("PAYMENT_LINK");
   const shouldLinkShipment = actions.includes("SHIPMENT_LINK");
   const shouldCreateService = actions.includes("SERVICE_CREATE");
-  const shouldCreateTechnicalIssue = actions.includes("TECHNICAL_ISSUE_CREATE");
+  const shouldCreateTechnicalIssue = checklistBusinessMode || actions.includes("TECHNICAL_ISSUE_CREATE");
   const shouldUpdateWatchPrice = actions.includes("WATCH_PRICE_UPDATE");
   const shouldEditWatchContent = actions.includes("WATCH_CONTENT_EDIT");
   const shouldEditWatchImage = actions.includes("WATCH_IMAGE_EDIT");
@@ -434,7 +435,7 @@ export default function TaskDomainActions({
               className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <Wrench className="h-4 w-4" />
-              {pending ? "Đang tạo..." : `Thực thi service`}
+              {pending ? "Đang tạo..." : `Tạo/Gán SR/TI`}
             </button>
           ) : null}
 
