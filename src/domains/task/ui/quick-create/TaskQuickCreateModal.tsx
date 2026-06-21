@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { TaskDomain, TaskMode, TaskPriority } from "@prisma/client";
+import { TaskKind, TaskPriority } from "@prisma/client";
 import { createTaskAction, updateTaskAction } from "../../actions/task.actions";
 import type { TaskWithRelations } from "../../server/task.repo";
 import type { CreateTaskInput, TaskDomainLinksInput } from "../../server/task.types";
-import type { TaskTypeOption } from "../../server/task-type.types";
-import { TASK_DOMAIN_LABEL, TASK_MODE_LABEL, TASK_PRIORITY_LABEL } from "../../utils/task-labels";
+import { TASK_KIND_LABEL, TASK_PRIORITY_LABEL } from "../../utils/task-labels";
 
 export type TaskUserOption = { id: string; name?: string | null; email?: string | null };
 export type TaskQuickCreateContext = TaskDomainLinksInput & {
-  domain?: TaskDomain;
-  taskTypeId?: string | null;
-  taskActionId?: string | null;
-  mode?: TaskMode;
+  kind?: TaskKind;
   titlePreset?: string;
   descriptionPreset?: string;
 };
@@ -29,87 +25,59 @@ function toDateInput(value?: Date | string | null) {
   return date.toISOString().slice(0, 10);
 }
 
-
-function renderTemplate(template: string, context?: TaskQuickCreateContext | null) {
-  const map: Record<string, string> = {
-    title: context?.titlePreset ?? "",
-    description: context?.descriptionPreset ?? "",
-  };
-  return template.replace(/\{\{\s*(title|description)\s*\}\}/g, (_m, key) => map[key] ?? "");
+function hasBusinessContext(context?: TaskQuickCreateContext | null) {
+  return Boolean(
+    context?.watchId ||
+    context?.orderId ||
+    context?.shipmentId ||
+    context?.acquisitionId ||
+    context?.serviceRequestId ||
+    context?.technicalIssueId ||
+    context?.paymentId ||
+    context?.workCaseId,
+  );
 }
 
-function inferDomain(context?: TaskQuickCreateContext | null) {
-  if (context?.domain) return context.domain;
-  if (context?.watchId) return TaskDomain.WATCH;
-  if (context?.orderId) return TaskDomain.ORDER;
-  if (context?.shipmentId) return TaskDomain.SHIPMENT;
-  if (context?.serviceRequestId) return TaskDomain.SERVICE;
-  if (context?.technicalIssueId) return TaskDomain.TECHNICAL_ISSUE;
-  if (context?.paymentId) return TaskDomain.PAYMENT;
-  if (context?.acquisitionId) return TaskDomain.ACQUISITION;
-  if (context?.workCaseId) return TaskDomain.WORK_CASE;
-  return TaskDomain.GENERAL;
-}
-
-export default function TaskQuickCreateModal({ open, users, taskTypes = [], currentUserId, context, editTask, onClose, onSaved }: { open: boolean; users: TaskUserOption[]; taskTypes?: TaskTypeOption[]; currentUserId: string; context?: TaskQuickCreateContext | null; editTask?: TaskWithRelations | null; onClose: () => void; onSaved?: () => void }) {
+export default function TaskQuickCreateModal({
+  open,
+  users,
+  currentUserId,
+  context,
+  editTask,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  users: TaskUserOption[];
+  currentUserId: string;
+  context?: TaskQuickCreateContext | null;
+  editTask?: TaskWithRelations | null;
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [domain, setDomain] = useState<TaskDomain>(TaskDomain.GENERAL);
-  const [taskTypeId, setTaskTypeId] = useState("");
-  const [taskActionId, setTaskActionId] = useState("");
-  const [mode, setMode] = useState<TaskMode>(TaskMode.NORMAL);
+  const [kind, setKind] = useState<TaskKind>(TaskKind.BUSINESS);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [assignedToUserId, setAssignedToUserId] = useState(currentUserId);
   const [dueAt, setDueAt] = useState("");
   const [error, setError] = useState<string | null>(null);
-  type ServiceExecutionMode = "SR_ONLY" | "SR_WITH_TECHNICAL_ISSUE";
 
-  const [serviceMode, setServiceMode] =
-    useState<ServiceExecutionMode>("SR_ONLY");
   const isEdit = Boolean(editTask);
-  const isWorkCaseDispatch = Boolean(context?.workCaseId) && !editTask;
-  const filteredTaskTypes = useMemo(() => taskTypes.filter((item) => item.isActive && item.domain === domain), [taskTypes, domain]);
-  const filteredTaskActions = useMemo(() => {
-    const selected = taskTypes.find((item) => item.id === taskTypeId);
-    return (selected?.taskAction ?? []).filter((item: any) => item.isActive);
-  }, [taskTypes, taskTypeId]);
+  const lockedBusiness = hasBusinessContext(context);
 
   useEffect(() => {
     if (!open) return;
-    const nextDomain = editTask?.domain ?? inferDomain(context);
+
     setError(null);
     setTitle(editTask?.title ?? context?.titlePreset ?? "");
     setDescription(editTask?.description ?? context?.descriptionPreset ?? "");
-    setDomain(nextDomain);
-    setTaskTypeId(editTask?.taskTypeId ?? context?.taskTypeId ?? "");
-    setTaskActionId((editTask as any)?.taskActionId ?? context?.taskActionId ?? "");
-    setMode(editTask?.mode ?? context?.mode ?? TaskMode.NORMAL);
+    setKind((editTask as any)?.kind ?? context?.kind ?? (hasBusinessContext(context) ? TaskKind.BUSINESS : TaskKind.PERSONAL));
     setPriority(editTask?.priority ?? TaskPriority.MEDIUM);
     setAssignedToUserId(editTask?.assignedToUserId ?? currentUserId);
     setDueAt(toDateInput(editTask?.dueAt));
   }, [open, editTask, context, currentUserId]);
-
-  useEffect(() => {
-    if (!taskTypeId) return;
-    const selected = taskTypes.find((item) => item.id === taskTypeId);
-    if (selected && selected.domain !== domain) {
-      setTaskTypeId("");
-      setTaskActionId("");
-    }
-  }, [domain, taskTypeId, taskTypes]);
-
-  useEffect(() => {
-    if (!taskActionId) return;
-    if (!filteredTaskActions.some((item: any) => item.id === taskActionId)) setTaskActionId("");
-  }, [taskActionId, filteredTaskActions]);
-
-  useEffect(() => {
-    const action: any = filteredTaskActions.find((item: any) => item.id === taskActionId);
-    if (!action || editTask) return;
-    if (action.defaultTitleTemplate && !title.trim()) setTitle(renderTemplate(action.defaultTitleTemplate, context));
-    if (action.defaultDescriptionTemplate && !description.trim()) setDescription(renderTemplate(action.defaultDescriptionTemplate, context));
-  }, [taskActionId]);
 
   const links = useMemo<TaskDomainLinksInput>(() => ({
     watchId: editTask?.watchId ?? context?.watchId ?? null,
@@ -123,20 +91,20 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
   }), [editTask, context]);
 
   function submit() {
-    if (!title.trim()) {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
       setError("Vui lòng nhập tiêu đề task");
       return;
     }
 
+    const finalKind = lockedBusiness ? TaskKind.BUSINESS : kind;
+
     const payload: CreateTaskInput = {
-      title,
+      title: cleanTitle,
       description,
-      domain: isWorkCaseDispatch ? TaskDomain.WORK_CASE : domain,
-      taskTypeId: isWorkCaseDispatch ? null : taskTypeId || null,
-      taskActionId: isWorkCaseDispatch ? null : taskActionId || null,
-      mode: isWorkCaseDispatch ? TaskMode.NORMAL : mode,
+      kind: finalKind,
       priority,
-      assignedToUserId,
+      assignedToUserId: finalKind === TaskKind.PERSONAL ? currentUserId : assignedToUserId,
       dueAt: dueAt || null,
       ...links,
     };
@@ -157,10 +125,12 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div className="w-full max-w-2xl rounded-[28px] bg-white shadow-2xl">
+      <div className="w-full max-w-xl rounded-[28px] bg-white shadow-2xl">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">{isEdit ? "Sửa task" : "Tạo task"}</h2>
-          <p className="mt-1 text-sm text-slate-500">Task là hướng xử lý được giao. Người nhận task sẽ thực thi nghiệp vụ liên quan ở bước sau.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Task chỉ là việc được giao. Nghiệp vụ sẽ phát sinh ở từng dòng checklist khi cần.
+          </p>
         </div>
 
         <div className="space-y-4 px-5 py-4">
@@ -168,63 +138,64 @@ export default function TaskQuickCreateModal({ open, users, taskTypes = [], curr
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Tiêu đề</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400" placeholder="Ví dụ: Xử lý yêu cầu giao thử không cọc" />
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
+              placeholder="Ví dụ: Báo giá cho khách"
+            />
           </label>
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Mô tả</span>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400" />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+            />
           </label>
 
-          {isWorkCaseDispatch ? (
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-100">
-              Task này được tạo từ phiếu xử lý. Manager chỉ giao việc và assign user; nghiệp vụ sẽ phát sinh sau ở checklist của task.
-            </div>
-          ) : null}
-
           <div className="grid gap-3 md:grid-cols-2">
-            {!isWorkCaseDispatch ? (
-              <>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Domain</span>
-              <select value={domain} onChange={(e) => setDomain(e.target.value as TaskDomain)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
-                {Object.values(TaskDomain).map((item) => <option key={item} value={item}>{TASK_DOMAIN_LABEL[item]}</option>)}
-              </select>
-            </label>
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Loại task</span>
-              <select value={taskTypeId} onChange={(e) => setTaskTypeId(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
-                <option value="">Chưa chọn loại cụ thể</option>
-                {filteredTaskTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as TaskKind)}
+                disabled={lockedBusiness}
+                className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                {Object.values(TaskKind).map((item) => (
+                  <option key={item} value={item}>{TASK_KIND_LABEL[item]}</option>
+                ))}
               </select>
+              {lockedBusiness ? (
+                <p className="mt-1 text-xs text-slate-400">Task gắn phiếu/nghiệp vụ luôn là Business.</p>
+              ) : null}
             </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Action</span>
-              <select value={taskActionId} onChange={(e) => setTaskActionId(e.target.value)} disabled={!taskTypeId || !filteredTaskActions.length} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400">
-                <option value="">{taskTypeId ? "Chưa chọn action cụ thể" : "Chọn loại task trước"}</option>
-                {filteredTaskActions.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Kiểu xử lý</span>
-              <select value={mode} onChange={(e) => setMode(e.target.value as TaskMode)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
-                {Object.values(TaskMode).map((item) => <option key={item} value={item}>{TASK_MODE_LABEL[item]}</option>)}
-              </select>
-            </label>
-            </>
-            ) : null}
+
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Ưu tiên</span>
               <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
                 {Object.values(TaskPriority).map((item) => <option key={item} value={item}>{TASK_PRIORITY_LABEL[item]}</option>)}
               </select>
             </label>
+
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Giao cho</span>
-              <select value={assignedToUserId} onChange={(e) => setAssignedToUserId(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm">
+              <select
+                value={assignedToUserId}
+                onChange={(e) => setAssignedToUserId(e.target.value)}
+                disabled={kind === TaskKind.PERSONAL && !lockedBusiness}
+                className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+              >
                 {users.map((user) => <option key={user.id} value={user.id}>{userLabel(user)}</option>)}
               </select>
+              {kind === TaskKind.PERSONAL && !lockedBusiness ? (
+                <p className="mt-1 text-xs text-slate-400">Personal task chỉ dành cho chính bạn.</p>
+              ) : null}
             </label>
+
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Due date</span>
               <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm" />

@@ -32,7 +32,9 @@ export const UserFindManySelectSchema: z.ZodType<Prisma.UserSelect> = z.object({
     raisedWorkCases: z.boolean().optional(),
     assignedWorkCases: z.boolean().optional(),
     workCaseActivities: z.boolean().optional(),
-    TaskExecution: z.boolean().optional(),
+    taskExecution: z.boolean().optional(),
+    assignedChecklistItems: z.boolean().optional(),
+    taskChecklistItem: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.UserSelect>;
 
@@ -59,7 +61,9 @@ export const UserFindManySelectZodSchema = z.object({
     raisedWorkCases: z.boolean().optional(),
     assignedWorkCases: z.boolean().optional(),
     workCaseActivities: z.boolean().optional(),
-    TaskExecution: z.boolean().optional(),
+    taskExecution: z.boolean().optional(),
+    assignedChecklistItems: z.boolean().optional(),
+    taskChecklistItem: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

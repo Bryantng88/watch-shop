@@ -4,14 +4,12 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
 import { EnumTaskSourceFieldUpdateOperationsInputObjectSchema as EnumTaskSourceFieldUpdateOperationsInputObjectSchema } from './EnumTaskSourceFieldUpdateOperationsInput.schema';
-import { TaskDomainSchema } from '../enums/TaskDomain.schema';
-import { EnumTaskDomainFieldUpdateOperationsInputObjectSchema as EnumTaskDomainFieldUpdateOperationsInputObjectSchema } from './EnumTaskDomainFieldUpdateOperationsInput.schema';
-import { TaskModeSchema } from '../enums/TaskMode.schema';
-import { EnumTaskModeFieldUpdateOperationsInputObjectSchema as EnumTaskModeFieldUpdateOperationsInputObjectSchema } from './EnumTaskModeFieldUpdateOperationsInput.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { EnumTaskStatusFieldUpdateOperationsInputObjectSchema as EnumTaskStatusFieldUpdateOperationsInputObjectSchema } from './EnumTaskStatusFieldUpdateOperationsInput.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
 import { EnumTaskPriorityFieldUpdateOperationsInputObjectSchema as EnumTaskPriorityFieldUpdateOperationsInputObjectSchema } from './EnumTaskPriorityFieldUpdateOperationsInput.schema';
+import { TaskKindSchema } from '../enums/TaskKind.schema';
+import { EnumTaskKindFieldUpdateOperationsInputObjectSchema as EnumTaskKindFieldUpdateOperationsInputObjectSchema } from './EnumTaskKindFieldUpdateOperationsInput.schema';
 import { NullableDateTimeFieldUpdateOperationsInputObjectSchema as NullableDateTimeFieldUpdateOperationsInputObjectSchema } from './NullableDateTimeFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema as UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema } from './UserUpdateOneWithoutCreatedTasksNestedInput.schema';
@@ -27,25 +25,24 @@ import { ServiceRequestUpdateOneWithoutTaskNestedInputObjectSchema as ServiceReq
 import { TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema as TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema } from './TechnicalIssueUpdateOneWithoutTaskNestedInput.schema';
 import { PaymentUpdateOneWithoutTaskNestedInputObjectSchema as PaymentUpdateOneWithoutTaskNestedInputObjectSchema } from './PaymentUpdateOneWithoutTaskNestedInput.schema';
 import { WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema as WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema } from './WorkCaseUpdateOneWithoutTasksNestedInput.schema';
-import { TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema as TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema } from './TaskTypeUpdateOneWithoutTasksNestedInput.schema';
-import { NotificationUpdateManyWithoutTaskNestedInputObjectSchema as NotificationUpdateManyWithoutTaskNestedInputObjectSchema } from './NotificationUpdateManyWithoutTaskNestedInput.schema';
-import { TaskActionUpdateOneWithoutTasksNestedInputObjectSchema as TaskActionUpdateOneWithoutTasksNestedInputObjectSchema } from './TaskActionUpdateOneWithoutTasksNestedInput.schema'
+import { NotificationUpdateManyWithoutTaskNestedInputObjectSchema as NotificationUpdateManyWithoutTaskNestedInputObjectSchema } from './NotificationUpdateManyWithoutTaskNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   title: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
   description: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   source: z.union([TaskSourceSchema, z.lazy(() => EnumTaskSourceFieldUpdateOperationsInputObjectSchema)]).optional(),
-  domain: z.union([TaskDomainSchema, z.lazy(() => EnumTaskDomainFieldUpdateOperationsInputObjectSchema)]).optional(),
-  mode: z.union([TaskModeSchema, z.lazy(() => EnumTaskModeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  taskTypeId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   status: z.union([TaskStatusSchema, z.lazy(() => EnumTaskStatusFieldUpdateOperationsInputObjectSchema)]).optional(),
   priority: z.union([TaskPrioritySchema, z.lazy(() => EnumTaskPriorityFieldUpdateOperationsInputObjectSchema)]).optional(),
+  kind: z.union([TaskKindSchema, z.lazy(() => EnumTaskKindFieldUpdateOperationsInputObjectSchema)]).optional(),
   dueAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   startedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   completedAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   cancelledAt: z.union([z.coerce.date(), z.lazy(() => NullableDateTimeFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  taskActionId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdByUser: z.lazy(() => UserUpdateOneWithoutCreatedTasksNestedInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserUpdateOneWithoutAssignedTasksNestedInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserUpdateOneWithoutCompletedTasksNestedInputObjectSchema).optional(),
@@ -59,9 +56,7 @@ const makeSchema = () => z.object({
   technicalIssue: z.lazy(() => TechnicalIssueUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   payment: z.lazy(() => PaymentUpdateOneWithoutTaskNestedInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
-  taskType: z.lazy(() => TaskTypeUpdateOneWithoutTasksNestedInputObjectSchema).optional(),
-  notifications: z.lazy(() => NotificationUpdateManyWithoutTaskNestedInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionUpdateOneWithoutTasksNestedInputObjectSchema).optional()
+  notifications: z.lazy(() => NotificationUpdateManyWithoutTaskNestedInputObjectSchema).optional()
 }).strict();
 export const TaskUpdateWithoutExecutionsInputObjectSchema: z.ZodType<Prisma.TaskUpdateWithoutExecutionsInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskUpdateWithoutExecutionsInput>;
 export const TaskUpdateWithoutExecutionsInputObjectZodSchema = makeSchema();

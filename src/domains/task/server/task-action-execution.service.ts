@@ -421,6 +421,7 @@ export async function executeTaskAction(
       } as any,
     });
 
+    await completeChecklistItemIfNeeded(client as any, checklistItemId);
 
     return {
       ok: true,
@@ -476,6 +477,7 @@ export async function executeTaskAction(
     })
     .catch(() => null);
 
+  await completeChecklistItemIfNeeded(client as any, checklistItemId);
 
   return {
     ok: true,

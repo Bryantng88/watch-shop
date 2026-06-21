@@ -1,20 +1,26 @@
-import { TaskDomain, TaskStatus } from "@prisma/client";
+import { TaskKind, TaskStatus } from "@prisma/client";
 import type { DB } from "@/server/db/client";
-import { listActiveTaskTypesRepo } from "./task-type.repo";
 import {
   completeRelatedTasksRepo,
   countTaskDueBucketsRepo,
   countTaskViewsRepo,
   createTaskRepo,
   ensureSystemTaskRepo,
+  findOpenRelatedTasksRepo,
   getTaskByIdRepo,
   listAssignableUsersRepo,
   listTasksRepo,
   setTaskStatusRepo,
   updateTaskRepo,
-  findOpenRelatedTasksRepo,
 } from "./task.repo";
-import type { FindOpenRelatedTasksInput, CompleteRelatedTasksInput, CreateTaskInput, EnsureSystemTaskInput, TaskListFilters, UpdateTaskInput } from "./task.types";
+import type {
+  CompleteRelatedTasksInput,
+  CreateTaskInput,
+  EnsureSystemTaskInput,
+  FindOpenRelatedTasksInput,
+  TaskListFilters,
+  UpdateTaskInput,
+} from "./task.types";
 
 export function getAuthUserId(auth: any): string | null {
   return auth?.user?.id ?? auth?.id ?? auth?.userId ?? null;
@@ -27,23 +33,18 @@ export function authCanViewAllTasks(auth: any): boolean {
     auth?.user?.role?.name ??
     auth?.role?.name ??
     auth?.roleName ??
-    ""
+    "",
   ).toUpperCase();
 
   const permissions =
-    auth?.permissions ??
-    auth?.user?.permissions ??
-    auth?.role?.permissions ??
-    [];
+    auth?.permissions ?? auth?.user?.permissions ?? auth?.role?.permissions ?? [];
 
   return (
     roleName === "ADMIN" ||
-    (
-      Array.isArray(permissions) &&
-      permissions.includes("TASK_VIEW_ALL")
-    )
+    (Array.isArray(permissions) && permissions.includes("TASK_VIEW_ALL"))
   );
 }
+
 function assertUser(userId: string | null): asserts userId is string {
   if (!userId) throw new Error("Không xác định được user hiện tại");
 }
@@ -54,6 +55,7 @@ async function assertCanAccessTask(db: DB, id: string, auth: any) {
 
   const task = await getTaskByIdRepo(db, id);
   if (!task) throw new Error("Không tìm thấy task");
+
   if (authCanViewAllTasks(auth)) return task;
 
   if (task.createdByUserId !== userId && task.assignedToUserId !== userId) {
@@ -63,23 +65,32 @@ async function assertCanAccessTask(db: DB, id: string, auth: any) {
   return task;
 }
 
-export async function getTaskListPageData(db: DB, input: { auth: any; filters: TaskListFilters }) {
+export async function getTaskListPageData(
+  db: DB,
+  input: { auth: any; filters: TaskListFilters },
+) {
   const userId = getAuthUserId(input.auth);
   assertUser(userId);
 
   const canViewAll = authCanViewAllTasks(input.auth);
   const view = input.filters.view || "mine";
-  const [list, counts, dueCounts, users, taskTypes] = await Promise.all([
+
+  const [list, counts, dueCounts, users] = await Promise.all([
     listTasksRepo(db, { userId, canViewAll, filters: input.filters }),
     countTaskViewsRepo(db, { userId, canViewAll }),
     countTaskDueBucketsRepo(db, { userId, canViewAll, view }),
     listAssignableUsersRepo(db),
-    listActiveTaskTypesRepo(db),
   ]);
 
-  return { ...list, counts, dueCounts, users, taskTypes, currentUserId: userId, canViewAll };
+  return {
+    ...list,
+    counts,
+    dueCounts,
+    users,
+    currentUserId: userId,
+    canViewAll,
+  };
 }
-
 
 export async function getTaskDetail(db: DB, id: string, auth: any) {
   return assertCanAccessTask(db, id, auth);
@@ -88,13 +99,22 @@ export async function getTaskDetail(db: DB, id: string, auth: any) {
 export async function createTask(db: DB, input: CreateTaskInput, auth: any) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
-  if (!input.title?.trim()) throw new Error("Vui lòng nhập tiêu đề task");
+
+  if (!input.title?.trim()) {
+    throw new Error("Vui lòng nhập tiêu đề task");
+  }
+
+  const kind = input.kind ?? TaskKind.BUSINESS;
 
   return createTaskRepo(db, {
     ...input,
+    kind,
     source: input.source ?? "MANUAL",
     createdByUserId: userId,
-    assignedToUserId: input.assignedToUserId ?? userId,
+    assignedToUserId:
+      kind === TaskKind.PERSONAL
+        ? userId
+        : input.assignedToUserId ?? userId,
   });
 }
 
@@ -103,30 +123,59 @@ export async function ensureSystemTask(db: DB, input: EnsureSystemTaskInput) {
   return ensureSystemTaskRepo(db, input);
 }
 
-export async function updateTask(db: DB, id: string, input: UpdateTaskInput, auth: any) {
-  await assertCanAccessTask(db, id, auth);
-  if (input.title !== undefined && !input.title.trim()) throw new Error("Vui lòng nhập tiêu đề task");
-  return updateTaskRepo(db, id, input);
-}
-
-export async function changeTaskStatus(db: DB, id: string, status: TaskStatus, auth: any) {
+export async function updateTask(
+  db: DB,
+  id: string,
+  input: UpdateTaskInput,
+  auth: any,
+) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
-  await assertCanAccessTask(db, id, auth);
-  const task = await setTaskStatusRepo(db, { id, status, actorUserId: userId });
 
-  if (status === TaskStatus.DONE || status === TaskStatus.CANCELLED) {
-    //await markTaskNotificationsAsRead({ taskId: id, userId });
+  await assertCanAccessTask(db, id, auth);
+
+  if (input.title !== undefined && !input.title.trim()) {
+    throw new Error("Vui lòng nhập tiêu đề task");
   }
 
-  return task;
+  const nextInput = { ...input };
+
+  if (nextInput.kind === TaskKind.PERSONAL) {
+    nextInput.assignedToUserId = userId;
+  }
+
+  return updateTaskRepo(db, id, nextInput);
 }
 
-export async function completeRelatedTasks(db: DB, input: CompleteRelatedTasksInput) {
+export async function changeTaskStatus(
+  db: DB,
+  id: string,
+  status: TaskStatus,
+  auth: any,
+) {
+  const userId = getAuthUserId(auth);
+  assertUser(userId);
+
+  await assertCanAccessTask(db, id, auth);
+
+  return setTaskStatusRepo(db, {
+    id,
+    status,
+    actorUserId: userId,
+  });
+}
+
+export async function completeRelatedTasks(
+  db: DB,
+  input: CompleteRelatedTasksInput,
+) {
   return completeRelatedTasksRepo(db, input);
 }
 
-export async function safeCompleteRelatedTasks(db: DB, input: CompleteRelatedTasksInput) {
+export async function safeCompleteRelatedTasks(
+  db: DB,
+  input: CompleteRelatedTasksInput,
+) {
   try {
     return await completeRelatedTasksRepo(db, input);
   } catch (error) {
@@ -144,9 +193,16 @@ export async function safeEnsureSystemTask(db: DB, input: EnsureSystemTaskInput)
   }
 }
 
-export async function completeTaskForPaymentIfSettled(db: DB, input: { paymentId: string; completedByUserId?: string | null }) {
-  return completeRelatedTasksRepo(db, { domain: TaskDomain.PAYMENT, paymentId: input.paymentId, completedByUserId: input.completedByUserId });
+export async function completeTaskForPaymentIfSettled(
+  db: DB,
+  input: { paymentId: string; completedByUserId?: string | null },
+) {
+  return completeRelatedTasksRepo(db, {
+    paymentId: input.paymentId,
+    completedByUserId: input.completedByUserId,
+  });
 }
+
 export async function findOpenRelatedTasks(
   db: DB,
   input: FindOpenRelatedTasksInput,
@@ -182,18 +238,15 @@ export async function completeTasksByIds(db: DB, ids: string[], auth: any) {
     },
   });
 }
+
 export async function getTaskQuickCreateData(db: DB, auth: any) {
   const userId = getAuthUserId(auth);
   assertUser(userId);
 
-  const [users, taskTypes] = await Promise.all([
-    listAssignableUsersRepo(db),
-    listActiveTaskTypesRepo(db),
-  ]);
+  const users = await listAssignableUsersRepo(db);
 
   return {
     users,
-    taskTypes,
     currentUserId: userId,
   };
 }

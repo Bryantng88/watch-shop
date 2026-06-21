@@ -22,8 +22,8 @@ export type CreateWorkCaseInput = {
   assignedToUserId?: string | null;
   orderId?: string | null;
   shipmentId?: string | null;
+  serviceRequestId?: string | null;
 };
-
 export type UpdateWorkCaseInput = {
   title?: string;
   description?: string | null;

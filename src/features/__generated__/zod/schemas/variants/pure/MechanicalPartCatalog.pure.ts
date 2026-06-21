@@ -13,8 +13,7 @@ export const MechanicalPartCatalogModelSchema = z.object({
     sortOrder: z.number().int(),
     createdAt: z.date(),
     updatedAt: z.date(),
-    TechnicalIssue: z.array(z.unknown()),
-    taskAction: z.array(z.unknown())
+    TechnicalIssue: z.array(z.unknown())
 }).strict();
 
 export type MechanicalPartCatalogPureType = z.infer<typeof MechanicalPartCatalogModelSchema>;

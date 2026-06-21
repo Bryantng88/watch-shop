@@ -116,6 +116,7 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: {
     });
 
     const summary = await getPaymentSummaryTx(tx, "ORDER", order.id);
+
     const remainingCodAmount = Math.max(0, summary.totalDue - summary.paidTotal - summary.collectedTotal);
 
     if (order.paymentMethod === PaymentMethod.COD && remainingCodAmount > 0) {
@@ -156,6 +157,21 @@ export async function markOrderShipmentDeliveredAndCollectCod(input: {
     }
 
     const nextSummary = await recomputePaymentOwnerRollupTx(tx, "ORDER", order.id);
+
+    const shouldCompleteOrder = Number(nextSummary.remaining ?? 0) <= 0;
+
+    if (shouldCompleteOrder) {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: OrderStatus.COMPLETED,
+          paymentStatus: PaymentStatus.PAID,
+          updatedAt: new Date(),
+        },
+      });
+
+      await syncWatchInventoryFromOrderId(tx, order.id);
+    }
     return toPlain({ orderId: order.id, summary: nextSummary });
   });
 }

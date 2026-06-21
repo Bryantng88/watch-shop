@@ -1,10 +1,9 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
-import { TaskDomainSchema } from '../enums/TaskDomain.schema';
-import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { UserCreateNestedOneWithoutCreatedTasksInputObjectSchema as UserCreateNestedOneWithoutCreatedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCreatedTasksInput.schema';
 import { UserCreateNestedOneWithoutAssignedTasksInputObjectSchema as UserCreateNestedOneWithoutAssignedTasksInputObjectSchema } from './UserCreateNestedOneWithoutAssignedTasksInput.schema';
 import { UserCreateNestedOneWithoutCompletedTasksInputObjectSchema as UserCreateNestedOneWithoutCompletedTasksInputObjectSchema } from './UserCreateNestedOneWithoutCompletedTasksInput.schema';
@@ -17,26 +16,25 @@ import { ServiceRequestCreateNestedOneWithoutTaskInputObjectSchema as ServiceReq
 import { TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema as TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema } from './TechnicalIssueCreateNestedOneWithoutTaskInput.schema';
 import { PaymentCreateNestedOneWithoutTaskInputObjectSchema as PaymentCreateNestedOneWithoutTaskInputObjectSchema } from './PaymentCreateNestedOneWithoutTaskInput.schema';
 import { WorkCaseCreateNestedOneWithoutTasksInputObjectSchema as WorkCaseCreateNestedOneWithoutTasksInputObjectSchema } from './WorkCaseCreateNestedOneWithoutTasksInput.schema';
-import { TaskTypeCreateNestedOneWithoutTasksInputObjectSchema as TaskTypeCreateNestedOneWithoutTasksInputObjectSchema } from './TaskTypeCreateNestedOneWithoutTasksInput.schema';
 import { TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutTaskInput.schema';
-import { NotificationCreateNestedManyWithoutTaskInputObjectSchema as NotificationCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationCreateNestedManyWithoutTaskInput.schema';
-import { TaskActionCreateNestedOneWithoutTasksInputObjectSchema as TaskActionCreateNestedOneWithoutTasksInputObjectSchema } from './TaskActionCreateNestedOneWithoutTasksInput.schema'
+import { NotificationCreateNestedManyWithoutTaskInputObjectSchema as NotificationCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationCreateNestedManyWithoutTaskInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
   title: z.string(),
   description: z.string().optional().nullable(),
   source: TaskSourceSchema.optional(),
-  domain: TaskDomainSchema.optional(),
-  mode: TaskModeSchema.optional(),
+  taskTypeId: z.string().optional().nullable(),
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
+  kind: TaskKindSchema.optional(),
   dueAt: z.coerce.date().optional().nullable(),
   startedAt: z.coerce.date().optional().nullable(),
   completedAt: z.coerce.date().optional().nullable(),
   cancelledAt: z.coerce.date().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  taskActionId: z.string().optional().nullable(),
   createdByUser: z.lazy(() => UserCreateNestedOneWithoutCreatedTasksInputObjectSchema).optional(),
   assignedToUser: z.lazy(() => UserCreateNestedOneWithoutAssignedTasksInputObjectSchema).optional(),
   completedByUser: z.lazy(() => UserCreateNestedOneWithoutCompletedTasksInputObjectSchema).optional(),
@@ -49,10 +47,8 @@ const makeSchema = () => z.object({
   technicalIssue: z.lazy(() => TechnicalIssueCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   payment: z.lazy(() => PaymentCreateNestedOneWithoutTaskInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseCreateNestedOneWithoutTasksInputObjectSchema).optional(),
-  taskType: z.lazy(() => TaskTypeCreateNestedOneWithoutTasksInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionCreateNestedManyWithoutTaskInputObjectSchema).optional(),
-  notifications: z.lazy(() => NotificationCreateNestedManyWithoutTaskInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionCreateNestedOneWithoutTasksInputObjectSchema).optional()
+  notifications: z.lazy(() => NotificationCreateNestedManyWithoutTaskInputObjectSchema).optional()
 }).strict();
 export const TaskCreateWithoutAcquisitionInputObjectSchema: z.ZodType<Prisma.TaskCreateWithoutAcquisitionInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskCreateWithoutAcquisitionInput>;
 export const TaskCreateWithoutAcquisitionInputObjectZodSchema = makeSchema();

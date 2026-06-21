@@ -121,13 +121,10 @@ export async function getQuickOrderProductForOrderForm(productId: string) {
 
   const productStatus = String(product.status ?? "").toUpperCase();
   const watchSaleStage = String(product.watch?.saleStage ?? "").toUpperCase();
-  if (
-    BLOCKED_ORDER_PRODUCT_STATUSES.includes(productStatus as any) ||
-    BLOCKED_ORDER_WATCH_SALE_STAGES.includes(watchSaleStage as any)
-  ) {
+
+  if (watchSaleStage === "SOLD" || productStatus === "SOLD") {
     return null;
   }
-
   const variant =
     product.productVariant.find(
       (item) =>

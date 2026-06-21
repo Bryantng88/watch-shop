@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { createOrderFromTask } from "../server/task-execution/order-from-task.service";
+import { syncTaskStatusFromChecklistRepo } from "@/domains/task/server/task.repo";
 
 function serialize<T>(obj: T): T {
   return JSON.parse(
@@ -29,10 +30,14 @@ export type CreateOrderFromTaskActionInput = {
   shipWard?: string | null;
 };
 
-export async function createOrderFromTaskAction(input: CreateOrderFromTaskActionInput) {
+export async function createOrderFromTaskAction(
+  input: CreateOrderFromTaskActionInput,
+) {
   const auth = await requirePermission("ORDER_CREATE");
 
   const result = await createOrderFromTask(prisma, input, auth);
+
+  await syncTaskStatusFromChecklistRepo(prisma, input.taskId);
 
   revalidatePath("/admin/tasks");
   revalidatePath(`/admin/tasks/${input.taskId}`);

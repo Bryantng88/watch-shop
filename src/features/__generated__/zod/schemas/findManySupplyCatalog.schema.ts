@@ -22,7 +22,6 @@ export const SupplyCatalogFindManySelectSchema: z.ZodType<Prisma.SupplyCatalogSe
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     TechnicalIssue: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.SupplyCatalogSelect>;
 
@@ -39,7 +38,6 @@ export const SupplyCatalogFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     TechnicalIssue: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

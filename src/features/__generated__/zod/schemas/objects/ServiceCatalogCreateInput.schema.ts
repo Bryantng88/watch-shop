@@ -4,8 +4,7 @@ import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
 import { MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutServiceCatalogInput.schema';
 import { OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema as OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './OrderItemCreateNestedManyWithoutServiceCatalogInput.schema';
 import { ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema as ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutServiceCatalogInput.schema';
-import { TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceCatalogInput.schema';
-import { TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema as TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TaskActionCreateNestedManyWithoutServiceCatalogInput.schema'
+import { TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema as TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutServiceCatalogInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -27,8 +26,7 @@ const makeSchema = () => z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema),
   serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema),
-  technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema),
-  taskAction: z.lazy(() => TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema)
+  technicalIssue: z.lazy(() => TechnicalIssueCreateNestedManyWithoutServiceCatalogInputObjectSchema)
 }).strict();
 export const ServiceCatalogCreateInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCreateInput>;
 export const ServiceCatalogCreateInputObjectZodSchema = makeSchema();

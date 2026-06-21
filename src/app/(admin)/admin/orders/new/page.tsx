@@ -29,7 +29,8 @@ export default async function NewOrderPage({
             ? getQuickOrderProductForOrderForm(productId)
             : Promise.resolve(null),
     ]);
-
+    console.log("quick productId", productId);
+    console.log("quickProduct", quickProduct);
     return (
         <div className="mx-auto w-full max-w-[1500px] px-4 pt-6 lg:px-6">
             <OrderFormClient

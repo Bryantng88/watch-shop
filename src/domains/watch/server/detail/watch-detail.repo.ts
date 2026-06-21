@@ -66,7 +66,6 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
           id: true,
           status: true,
           title: true,
-          taskType: true,
         },
       },
     },
@@ -78,11 +77,9 @@ export async function getAdminEditWatchDetail(db: DB, productId: string) {
 
   return {
     ...watch,
-    taskSummary: {
-      watchImage: tasks.filter((t) => t.taskType?.code === "WATCH_IMAGE").length,
-      watchContent: tasks.filter((t) => t.taskType?.code === "WATCH_CONTENT").length,
-      watchReview: tasks.filter((t) => t.taskType?.code === "WATCH_REVIEW").length,
-    },
+    watchReview: tasks.filter((t) =>
+      String(t.title ?? "").toLowerCase().includes("review")
+    ).length,
   };
 }
 

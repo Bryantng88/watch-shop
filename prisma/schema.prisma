@@ -315,7 +315,6 @@ model MechanicalPartCatalog {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @default(now())
   TechnicalIssue TechnicalIssue[]
-  taskAction     TaskAction[]
 
   @@index([group, sortOrder])
   @@index([isActive, sortOrder])
@@ -685,7 +684,6 @@ model ServiceCatalog {
   orderItem         OrderItem[]
   serviceRequest    ServiceRequest[]
   technicalIssue    TechnicalIssue[]
-  taskAction        TaskAction[]
 
   @@index([detail], map: "idx_service_catalog_detail")
 }
@@ -811,7 +809,6 @@ model SupplyCatalog {
   createdAt      DateTime         @default(now()) @db.Timestamp(6)
   updatedAt      DateTime         @default(now()) @db.Timestamp(6)
   TechnicalIssue TechnicalIssue[]
-  taskAction     TaskAction[]
 }
 
 model TechnicalAssessment {
@@ -912,7 +909,6 @@ model TechnicalDetailCatalog {
   updatedAt   DateTime @updatedAt
 
   technicalIssues TechnicalIssue[]
-  taskAction      TaskAction[]
 
   @@index([area])
   @@index([isActive])
@@ -942,10 +938,12 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   cancelledTasks Task[] @relation("TaskCancelledBy")
 
-  raisedWorkCases    WorkCase[]         @relation("WorkCaseRaisedBy")
-  assignedWorkCases  WorkCase[]         @relation("WorkCaseAssignedTo")
-  workCaseActivities WorkCaseActivity[]
-  TaskExecution      TaskExecution[]
+  raisedWorkCases        WorkCase[]          @relation("WorkCaseRaisedBy")
+  assignedWorkCases      WorkCase[]          @relation("WorkCaseAssignedTo")
+  workCaseActivities     WorkCaseActivity[]
+  taskExecution          TaskExecution[]
+  assignedChecklistItems TaskChecklistItem[] @relation("TaskChecklistAssignedTo")
+  taskChecklistItem      TaskChecklistItem[]
 
   @@index([isActive])
 }
@@ -1467,29 +1465,9 @@ enum TaskSource {
   SYSTEM
 }
 
-enum TaskDomain {
-  GENERAL
-  WATCH
-  ORDER
-  SHIPMENT
-  SERVICE
-  TECHNICAL_ISSUE
-  PAYMENT
-  ACQUISITION
-  WORK_CASE
-}
-
-enum TaskMode {
-  NORMAL
-  APPROVAL
-  EXCEPTION
-  FOLLOW_UP
-  INVESTIGATION
-}
-
-enum TaskCompletionMode {
-  MANUAL_CONFIRM
-  BUSINESS_RULE
+enum TaskKind {
+  PERSONAL
+  BUSINESS
 }
 
 enum TaskExecutionTargetType {
@@ -1508,81 +1486,6 @@ enum TaskExecutionActionType {
   LINKED
   UPDATED
   CANCELLED
-}
-
-model TaskType {
-  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
-
-  code        String  @unique
-  name        String
-  description String?
-
-  domain TaskDomain @default(GENERAL)
-
-  defaultPriority   TaskPriority       @default(MEDIUM)
-  completionMode    TaskCompletionMode @default(MANUAL_CONFIRM)
-  completionRuleKey String?
-
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tasks      Task[]
-  taskAction TaskAction[]
-
-  @@index([domain])
-  @@index([isActive])
-  @@index([sortOrder])
-}
-
-model TaskAction {
-  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
-
-  taskTypeId  String
-  code        String
-  name        String
-  description String?
-
-  completionMode    TaskCompletionMode @default(MANUAL_CONFIRM)
-  completionRuleKey String?
-
-  targetType TaskExecutionTargetType?
-
-  serviceCatalogId         String?
-  technicalDetailCatalogId String?
-  supplyCatalogId          String?
-  mechanicalPartCatalogId  String?
-  technicalActionMode      TechnicalActionMode?
-
-  defaultTitleTemplate       String?
-  defaultDescriptionTemplate String?
-  metadataJson               Json?
-
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  taskType TaskType @relation(fields: [taskTypeId], references: [id], onDelete: Cascade)
-  tasks    Task[]
-
-  serviceCatalog         ServiceCatalog?         @relation(fields: [serviceCatalogId], references: [id], onDelete: SetNull)
-  technicalDetailCatalog TechnicalDetailCatalog? @relation(fields: [technicalDetailCatalogId], references: [id], onDelete: SetNull)
-  supplyCatalog          SupplyCatalog?          @relation(fields: [supplyCatalogId], references: [id], onDelete: SetNull)
-  mechanicalPartCatalog  MechanicalPartCatalog?  @relation(fields: [mechanicalPartCatalogId], references: [id], onDelete: SetNull)
-
-  @@unique([taskTypeId, code])
-  @@index([taskTypeId])
-  @@index([isActive])
-  @@index([targetType])
-  @@index([completionRuleKey])
-  @@index([serviceCatalogId])
-  @@index([technicalDetailCatalogId])
-  @@index([supplyCatalogId])
-  @@index([mechanicalPartCatalogId])
 }
 
 model WorkCaseCategory {
@@ -1676,13 +1579,11 @@ model Task {
   title       String
   description String?
 
-  source     TaskSource   @default(MANUAL)
-  domain     TaskDomain   @default(GENERAL)
-  taskTypeId String?
-  mode       TaskMode     @default(NORMAL)
-  status     TaskStatus   @default(TODO)
-  priority   TaskPriority @default(MEDIUM)
-
+  source      TaskSource   @default(MANUAL)
+  taskTypeId  String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  kind        TaskKind     @default(BUSINESS)
   dueAt       DateTime?
   startedAt   DateTime?
   completedAt DateTime?
@@ -1718,16 +1619,12 @@ model Task {
   technicalIssue  TechnicalIssue?     @relation(fields: [technicalIssueId], references: [id], onDelete: SetNull)
   payment         Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   workCase        WorkCase?           @relation(fields: [workCaseId], references: [id], onDelete: SetNull)
-  taskType        TaskType?           @relation(fields: [taskTypeId], references: [id], onDelete: SetNull)
   executions      TaskExecution[]
   notifications   Notification[]
-  taskAction      TaskAction?         @relation(fields: [taskActionId], references: [id])
   taskActionId    String?
 
   @@index([source])
-  @@index([domain])
   @@index([taskTypeId])
-  @@index([mode])
   @@index([status])
   @@index([priority])
   @@index([dueAt])
@@ -1744,22 +1641,41 @@ model Task {
   @@index([technicalIssueId])
   @@index([paymentId])
   @@index([workCaseId])
+  @@index([kind])
 }
 
 model TaskChecklistItem {
-  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
-  taskId    String
-  title     String
-  note      String?
-  isDone    Boolean  @default(false)
-  sortOrder Int      @default(0)
+  id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskId String
+  title  String
+  note   String?
+
+  status   TaskStatus   @default(TODO)
+  priority TaskPriority @default(MEDIUM)
+  dueAt    DateTime?
+
+  assignedToUserId String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+
+  isDone    Boolean @default(false) // giữ tạm để không vỡ code cũ
+  sortOrder Int     @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  task       Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  executions TaskExecution[]
+  task           Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignedToUser User?           @relation("TaskChecklistAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  executions     TaskExecution[]
+  User           User?           @relation(fields: [userId], references: [id])
+  userId         String?
 
   @@index([taskId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToUserId])
+  @@index([dueAt])
 }
 
 model TaskExecution {

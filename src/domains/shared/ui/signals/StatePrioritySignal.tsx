@@ -84,66 +84,53 @@ export function TaskStatusSignal({
     );
 }
 
-export function PrioritySignal({ priority }: { priority: TaskPriority }) {
+export function PrioritySignal({
+    priority,
+    showLabel = false,
+}: {
+    priority: TaskPriority;
+    showLabel?: boolean;
+}) {
     const map = {
         LOW: {
-            label: "Ưu tiên thấp",
+            label: "Thấp",
             dot: "bg-slate-400",
-            ring: "ring-slate-100",
-            content: null,
         },
         MEDIUM: {
-            label: "Ưu tiên vừa",
+            label: "Vừa",
             dot: "bg-sky-500",
-            ring: "ring-sky-100",
-            content: null,
         },
         HIGH: {
-            label: "Ưu tiên cao",
+            label: "Gấp",
             dot: "bg-orange-500",
-            ring: "ring-orange-100",
-            content: null,
         },
         URGENT: {
-            label: "Khẩn cấp",
+            label: "Ưu tiên",
             dot: "bg-rose-500",
-            ring: "ring-rose-100",
-            content: "!",
         },
-    } satisfies Record<
-        TaskPriority,
-        {
-            label: string;
-            dot: string;
-            ring: string;
-            content: string | null;
-        }
-    >;
+    } satisfies Record<TaskPriority, { label: string; dot: string }>;
 
     const item = map[priority];
+
+    if (showLabel) {
+        return (
+            <span
+                title={item.label}
+                aria-label={item.label}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700"
+            >
+                <span className={cn("h-2.5 w-2.5 rounded-full", item.dot)} />
+                {item.label}
+            </span>
+        );
+    }
 
     return (
         <span
             title={item.label}
             aria-label={item.label}
-            className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-full bg-white ring-4",
-                item.ring,
-            )}
-        >
-            {item.content ? (
-                <span className="text-[15px] font-black leading-none text-rose-600">
-                    {item.content}
-                </span>
-            ) : (
-                <span
-                    className={cn(
-                        "h-2.5 w-2.5 rounded-full",
-                        item.dot,
-                    )}
-                />
-            )}
-        </span>
+            className={cn("inline-flex h-2.5 w-2.5 rounded-full", item.dot)}
+        />
     );
 }
 export function WorkCaseStatusSignal({ status }: { status: WorkCaseStatus }) {

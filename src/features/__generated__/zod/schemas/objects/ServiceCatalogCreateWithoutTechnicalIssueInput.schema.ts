@@ -3,8 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { ServiceDetailSchema } from '../enums/ServiceDetail.schema';
 import { MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema as MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './MaintenanceRecordCreateNestedManyWithoutServiceCatalogInput.schema';
 import { OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema as OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './OrderItemCreateNestedManyWithoutServiceCatalogInput.schema';
-import { ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema as ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutServiceCatalogInput.schema';
-import { TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema as TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './TaskActionCreateNestedManyWithoutServiceCatalogInput.schema'
+import { ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema as ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema } from './ServiceRequestCreateNestedManyWithoutServiceCatalogInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -25,8 +24,7 @@ const makeSchema = () => z.object({
   sortOrder: z.number().int().optional(),
   maintenanceRecord: z.lazy(() => MaintenanceRecordCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
-  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional()
+  serviceRequest: z.lazy(() => ServiceRequestCreateNestedManyWithoutServiceCatalogInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogCreateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.ServiceCatalogCreateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogCreateWithoutTechnicalIssueInput>;
 export const ServiceCatalogCreateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

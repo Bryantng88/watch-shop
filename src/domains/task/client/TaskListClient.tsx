@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { TaskDomain, TaskMode, TaskPriority, TaskStatus } from "@prisma/client";
+import { TaskKind, TaskPriority, TaskStatus } from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { changeTaskStatusAction, createTaskChecklistItemAction, changeTaskChecklistItemDoneAction, deleteTaskChecklistItemAction } from "../actions/task.actions";
 import type { TaskWithRelations } from "../server/task.repo";
-import type { TaskTypeOption } from "../server/task-type.types";
 import type { TaskViewKey } from "../server/task.types";
 import TaskQuickCreateModal, {
   type TaskQuickCreateContext,
@@ -29,7 +28,6 @@ type Props = {
   totalPages: number;
   counts: Record<string, number>;
   users: TaskUserOption[];
-  taskTypes?: TaskTypeOption[];
   currentUserId: string;
   canViewAll?: boolean;
   rawSearchParams?: Record<string, string | string[] | undefined>;
@@ -72,9 +70,7 @@ export default function TaskListClient(props: Props) {
     q: firstRaw(props.rawSearchParams?.q),
     status: (firstRaw(props.rawSearchParams?.status, "OPEN") || "OPEN") as any,
     priority: (firstRaw(props.rawSearchParams?.priority, "ALL") || "ALL") as any,
-    domain: (firstRaw(props.rawSearchParams?.domain, "ALL") || "ALL") as any,
-    taskTypeId: firstRaw(props.rawSearchParams?.taskTypeId, "ALL") || "ALL",
-    mode: (firstRaw(props.rawSearchParams?.mode, "ALL") || "ALL") as any,
+    kind: (firstRaw(props.rawSearchParams?.kind, "ALL") || "ALL") as any,
     pageSize: String(props.pageSize),
   });
 
@@ -89,9 +85,7 @@ export default function TaskListClient(props: Props) {
       q: sp.get("q") ?? "",
       status: (sp.get("status") || "OPEN") as TaskStatus | "OPEN" | "ALL",
       priority: (sp.get("priority") || "ALL") as TaskPriority | "ALL",
-      domain: (sp.get("domain") || "ALL") as TaskDomain | "ALL",
-      taskTypeId: sp.get("taskTypeId") || "ALL",
-      mode: (sp.get("mode") || "ALL") as TaskMode | "ALL",
+      kind: (sp.get("kind") || "ALL") as TaskKind | "ALL",
       pageSize: sp.get("pageSize") || String(props.pageSize),
     });
   }, [sp, props.pageSize]);
@@ -148,9 +142,7 @@ export default function TaskListClient(props: Props) {
       q: filters.q.trim() || null,
       status: filters.status === "OPEN" ? null : filters.status,
       priority: filters.priority === "ALL" ? null : filters.priority,
-      domain: filters.domain === "ALL" ? null : filters.domain,
-      taskTypeId: filters.taskTypeId === "ALL" ? null : filters.taskTypeId,
-      mode: filters.mode === "ALL" ? null : filters.mode,
+      kind: filters.kind === "ALL" ? null : filters.kind,
       pageSize: filters.pageSize,
       page: "1",
     });
@@ -161,9 +153,7 @@ export default function TaskListClient(props: Props) {
       q: "",
       status: "OPEN",
       priority: "ALL",
-      domain: "ALL",
-      taskTypeId: "ALL",
-      mode: "ALL",
+      kind: "ALL",
       pageSize: String(props.pageSize),
     });
 
@@ -171,9 +161,7 @@ export default function TaskListClient(props: Props) {
       q: null,
       status: null,
       priority: null,
-      domain: null,
-      taskTypeId: null,
-      mode: null,
+      kind: null,
       page: "1",
     });
   }
@@ -194,30 +182,25 @@ export default function TaskListClient(props: Props) {
     setExpandedTaskId((current) => (current === row.id ? null : row.id));
   }
 
-  async function addChecklistItem(row: TaskWithRelations, title: string) {
+  async function addChecklistItem(input: {
+    taskId: string;
+    title: string;
+    assignedToUserId?: string | null;
+    priority?: string | null;
+    dueAt?: string | null;
+  }) {
     try {
-      await createTaskChecklistItemAction(row.id, title.trim());
-
-      notify.success({
-        title: "Đã thêm dòng xử lý",
-        message: "Checklist của task đã được cập nhật.",
-      });
-
-      setExpandedTaskId(row.id);
+      await createTaskChecklistItemAction(input);
+      notify.success("Đã thêm subtask");
       router.refresh();
     } catch (error: any) {
-      notify.error({
-        title: "Không thể thêm dòng xử lý",
-        message: error?.message || "Có lỗi xảy ra.",
-      });
+      notify.error(error?.message || "Không thể thêm subtask");
     }
   }
   function createRelatedTask(row: TaskWithRelations) {
     openCreate({
       workCaseId: row.workCaseId ?? undefined,
       watchId: row.watchId ?? undefined,
-      domain: row.domain,
-      mode: row.mode,
       titlePreset: `Liên quan: ${row.title}`,
       descriptionPreset: row.description || "",
     } as any);
@@ -254,7 +237,6 @@ export default function TaskListClient(props: Props) {
         <div className="pt-4">
           <TaskListFilters
             filters={filters}
-            taskTypes={props.taskTypes ?? []}
             onChange={(patch) =>
               setFilters((prev) => ({ ...prev, ...patch }))
             }
@@ -266,6 +248,7 @@ export default function TaskListClient(props: Props) {
 
       <TaskListTable
         items={props.items}
+        users={props.users}
         page={props.page}
         totalPages={props.totalPages}
         expandedTaskId={expandedTaskId}
@@ -279,11 +262,9 @@ export default function TaskListClient(props: Props) {
         onToggleChecklistItem={toggleChecklistItem}
         onDeleteChecklistItem={deleteChecklistItem}
       />
-
       <TaskQuickCreateModal
         open={modalOpen}
         users={props.users}
-        taskTypes={props.taskTypes ?? []}
         currentUserId={props.currentUserId}
         context={modalContext}
         editTask={editTask}

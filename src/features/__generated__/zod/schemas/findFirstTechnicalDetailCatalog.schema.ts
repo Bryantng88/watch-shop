@@ -20,7 +20,6 @@ export const TechnicalDetailCatalogFindFirstSelectSchema: z.ZodType<Prisma.Techn
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     technicalIssues: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TechnicalDetailCatalogSelect>;
 
@@ -35,7 +34,6 @@ export const TechnicalDetailCatalogFindFirstSelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     technicalIssues: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

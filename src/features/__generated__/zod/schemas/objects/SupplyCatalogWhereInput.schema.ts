@@ -6,8 +6,7 @@ import { DecimalNullableFilterObjectSchema as DecimalNullableFilterObjectSchema 
 import { BoolFilterObjectSchema as BoolFilterObjectSchema } from './BoolFilter.schema';
 import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
-import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
-import { TaskActionListRelationFilterObjectSchema as TaskActionListRelationFilterObjectSchema } from './TaskActionListRelationFilter.schema'
+import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema'
 
 const supplycatalogwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => SupplyCatalogWhereInputObjectSchema), z.lazy(() => SupplyCatalogWhereInputObjectSchema).array()]).optional(),
@@ -24,8 +23,7 @@ const supplycatalogwhereinputSchema = z.object({
   sortOrder: z.union([z.lazy(() => IntFilterObjectSchema), z.number().int()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
   updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionListRelationFilterObjectSchema).optional()
+  TechnicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
 }).strict();
 export const SupplyCatalogWhereInputObjectSchema: z.ZodType<Prisma.SupplyCatalogWhereInput> = supplycatalogwhereinputSchema as unknown as z.ZodType<Prisma.SupplyCatalogWhereInput>;
 export const SupplyCatalogWhereInputObjectZodSchema = supplycatalogwhereinputSchema;

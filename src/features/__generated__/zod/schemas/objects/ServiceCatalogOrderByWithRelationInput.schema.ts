@@ -5,8 +5,7 @@ import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './Sort
 import { MaintenanceRecordOrderByRelationAggregateInputObjectSchema as MaintenanceRecordOrderByRelationAggregateInputObjectSchema } from './MaintenanceRecordOrderByRelationAggregateInput.schema';
 import { OrderItemOrderByRelationAggregateInputObjectSchema as OrderItemOrderByRelationAggregateInputObjectSchema } from './OrderItemOrderByRelationAggregateInput.schema';
 import { ServiceRequestOrderByRelationAggregateInputObjectSchema as ServiceRequestOrderByRelationAggregateInputObjectSchema } from './ServiceRequestOrderByRelationAggregateInput.schema';
-import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIssueOrderByRelationAggregateInputObjectSchema } from './TechnicalIssueOrderByRelationAggregateInput.schema';
-import { TaskActionOrderByRelationAggregateInputObjectSchema as TaskActionOrderByRelationAggregateInputObjectSchema } from './TaskActionOrderByRelationAggregateInput.schema'
+import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIssueOrderByRelationAggregateInputObjectSchema } from './TechnicalIssueOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -28,8 +27,7 @@ const makeSchema = () => z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordOrderByRelationAggregateInputObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemOrderByRelationAggregateInputObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestOrderByRelationAggregateInputObjectSchema).optional(),
-  technicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionOrderByRelationAggregateInputObjectSchema).optional()
+  technicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const ServiceCatalogOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.ServiceCatalogOrderByWithRelationInput>;
 export const ServiceCatalogOrderByWithRelationInputObjectZodSchema = makeSchema();

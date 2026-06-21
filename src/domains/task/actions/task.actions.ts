@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { TaskStatus } from "@prisma/client";
+import { TaskStatus, TaskPriority } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import {
@@ -9,18 +9,26 @@ import {
   completeTasksByIds,
   createTask,
   findOpenRelatedTasks,
-  getTaskQuickCreateData,
   getTaskDetail,
+  getTaskQuickCreateData,
   updateTask,
 } from "../server/task.service";
-import type { CreateTaskInput, FindOpenRelatedTasksInput, UpdateTaskInput } from "../server/task.types";
+import type {
+  CreateTaskChecklistItemInput,
+  CreateTaskInput,
+  FindOpenRelatedTasksInput,
+  UpdateTaskChecklistItemInput,
+  UpdateTaskInput,
+} from "../server/task.types";
 import {
   createTaskChecklistItemRepo,
-  setTaskChecklistItemDoneRepo,
   deleteTaskChecklistItemRepo,
+  setTaskChecklistItemDoneRepo,
+  syncTaskStatusFromChecklistRepo,
+  updateTaskChecklistItemRepo,
 } from "../server/task.repo";
+
 async function getTaskAuth() {
-  // Replace by a dedicated permission later if you add TASK_VIEW/TASK_MANAGE.
   return requirePermission("TASK_VIEW");
 }
 
@@ -46,6 +54,7 @@ export async function updateTaskAction(id: string, input: UpdateTaskInput) {
   const auth = await getTaskAuth();
   const task = await updateTask(prisma, id, input, auth);
   revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${id}`);
   return { ok: true, task };
 }
 
@@ -53,6 +62,7 @@ export async function changeTaskStatusAction(id: string, status: TaskStatus) {
   const auth = await getTaskAuth();
   const task = await changeTaskStatus(prisma, id, status, auth);
   revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${id}`);
   return { ok: true, task };
 }
 
@@ -69,23 +79,62 @@ export async function completeTasksByIdsAction(ids: string[]) {
   return { ok: true, count: result.count };
 }
 
-export async function createTaskChecklistItemAction(taskId: string, title: string) {
+export async function createTaskChecklistItemAction(input: {
+  taskId: string;
+  title: string;
+  assignedToUserId?: string | null;
+  priority?: TaskPriority | null;
+  dueAt?: string | null;
+}) {
   await getTaskAuth();
 
-  const cleanTaskId = String(taskId || "").trim();
-  const cleanTitle = String(title || "").trim();
+  const cleanTaskId = String(input?.taskId || "").trim();
+  const cleanTitle = String(input?.title || "").trim();
 
   if (!cleanTaskId) throw new Error("Missing taskId");
-  if (!cleanTitle) throw new Error("Vui lòng nhập nội dung dòng xử lý.");
+  if (!cleanTitle) throw new Error("Vui lòng nhập nội dung subtask.");
 
   const item = await createTaskChecklistItemRepo(prisma, {
     taskId: cleanTaskId,
     title: cleanTitle,
+    assignedToUserId: input.assignedToUserId || null,
+    priority: input.priority || "MEDIUM",
+    dueAt: input.dueAt || null,
   });
 
   revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${cleanTaskId}`);
 
   return { ok: true, item };
+}
+// Backward-compatible alias if old UI still calls createTaskChecklistItemAction(taskId, title).
+export async function createTaskChecklistItemLegacyAction(taskId: string, title: string) {
+  return createTaskChecklistItemAction({ taskId, title });
+}
+
+export async function updateTaskChecklistItemAction(
+  itemId: string,
+  input: UpdateTaskChecklistItemInput,
+) {
+  await getTaskAuth();
+
+  const cleanItemId = String(itemId || "").trim();
+  if (!cleanItemId) throw new Error("Missing checklist item id");
+
+  const item = await updateTaskChecklistItemRepo(prisma, cleanItemId, input);
+  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+
+  revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${item.taskId}`);
+
+  return { ok: true, item };
+}
+
+export async function changeTaskChecklistItemStatusAction(
+  itemId: string,
+  status: TaskStatus,
+) {
+  return updateTaskChecklistItemAction(itemId, { status });
 }
 
 export async function changeTaskChecklistItemDoneAction(
@@ -102,7 +151,10 @@ export async function changeTaskChecklistItemDoneAction(
     isDone,
   });
 
+  await syncTaskStatusFromChecklistRepo(prisma, item.taskId);
+
   revalidatePath("/admin/tasks");
+  revalidatePath(`/admin/tasks/${item.taskId}`);
 
   return { ok: true, item };
 }
@@ -113,50 +165,19 @@ export async function deleteTaskChecklistItemAction(itemId: string) {
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
+  const taskItem = await prisma.taskChecklistItem.findUnique({
+    where: { id: cleanItemId },
+    select: { taskId: true },
+  });
+
   const item = await deleteTaskChecklistItemRepo(prisma, cleanItemId);
+
+  if (taskItem?.taskId) {
+    await syncTaskStatusFromChecklistRepo(prisma, taskItem.taskId);
+    revalidatePath(`/admin/tasks/${taskItem.taskId}`);
+  }
 
   revalidatePath("/admin/tasks");
 
   return { ok: true, item };
-}
-
-export async function createWorkCaseFeedbackFromTaskAction(input: {
-  taskId: string;
-  note: string;
-  requestNewTask?: boolean;
-}) {
-  const auth = await getTaskAuth();
-  const cleanTaskId = String(input.taskId || "").trim();
-  const cleanNote = String(input.note || "").trim();
-
-  if (!cleanTaskId) throw new Error("Missing taskId");
-  if (!cleanNote) throw new Error("Vui lòng nhập nội dung feedback.");
-
-  const task = await getTaskDetail(prisma, cleanTaskId, auth);
-  if (!task.workCaseId) {
-    throw new Error("Task này không thuộc phiếu xử lý nào.");
-  }
-
-  const actorId = (auth as any)?.user?.id ?? (auth as any)?.id ?? (auth as any)?.userId ?? null;
-
-  const activity = await prisma.workCaseActivity.create({
-    data: {
-      workCaseId: task.workCaseId,
-      actorId,
-      action: input.requestNewTask ? "TASK_REQUEST" : "TASK_FEEDBACK",
-      note: cleanNote,
-      metadata: {
-        taskId: task.id,
-        taskTitle: task.title,
-        requestNewTask: Boolean(input.requestNewTask),
-      },
-    },
-  });
-
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/tasks/${task.id}`);
-  revalidatePath("/admin/work-cases");
-  revalidatePath(`/admin/work-cases/${task.workCaseId}`);
-
-  return { ok: true, activity };
 }

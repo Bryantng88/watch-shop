@@ -12,7 +12,9 @@ import { TaskCreateNestedManyWithoutCompletedByUserInputObjectSchema as TaskCrea
 import { TaskCreateNestedManyWithoutCancelledByUserInputObjectSchema as TaskCreateNestedManyWithoutCancelledByUserInputObjectSchema } from './TaskCreateNestedManyWithoutCancelledByUserInput.schema';
 import { WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema as WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema } from './WorkCaseCreateNestedManyWithoutRaisedByUserInput.schema';
 import { WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema as WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema } from './WorkCaseActivityCreateNestedManyWithoutActorInput.schema';
-import { TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema as TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutCreatedByUserInput.schema'
+import { TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema as TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema } from './TaskExecutionCreateNestedManyWithoutCreatedByUserInput.schema';
+import { TaskChecklistItemCreateNestedManyWithoutAssignedToUserInputObjectSchema as TaskChecklistItemCreateNestedManyWithoutAssignedToUserInputObjectSchema } from './TaskChecklistItemCreateNestedManyWithoutAssignedToUserInput.schema';
+import { TaskChecklistItemCreateNestedManyWithoutUserInputObjectSchema as TaskChecklistItemCreateNestedManyWithoutUserInputObjectSchema } from './TaskChecklistItemCreateNestedManyWithoutUserInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -36,7 +38,9 @@ const makeSchema = () => z.object({
   cancelledTasks: z.lazy(() => TaskCreateNestedManyWithoutCancelledByUserInputObjectSchema).optional(),
   raisedWorkCases: z.lazy(() => WorkCaseCreateNestedManyWithoutRaisedByUserInputObjectSchema).optional(),
   workCaseActivities: z.lazy(() => WorkCaseActivityCreateNestedManyWithoutActorInputObjectSchema).optional(),
-  TaskExecution: z.lazy(() => TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema).optional()
+  taskExecution: z.lazy(() => TaskExecutionCreateNestedManyWithoutCreatedByUserInputObjectSchema).optional(),
+  assignedChecklistItems: z.lazy(() => TaskChecklistItemCreateNestedManyWithoutAssignedToUserInputObjectSchema).optional(),
+  taskChecklistItem: z.lazy(() => TaskChecklistItemCreateNestedManyWithoutUserInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutAssignedWorkCasesInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutAssignedWorkCasesInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutAssignedWorkCasesInput>;
 export const UserCreateWithoutAssignedWorkCasesInputObjectZodSchema = makeSchema();

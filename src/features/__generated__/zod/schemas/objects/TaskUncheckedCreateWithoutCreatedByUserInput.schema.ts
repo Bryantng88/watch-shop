@@ -1,10 +1,9 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
-import { TaskDomainSchema } from '../enums/TaskDomain.schema';
-import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskChecklistItemUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema as TaskExecutionUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './TaskExecutionUncheckedCreateNestedManyWithoutTaskInput.schema';
 import { NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema as NotificationUncheckedCreateNestedManyWithoutTaskInputObjectSchema } from './NotificationUncheckedCreateNestedManyWithoutTaskInput.schema'
@@ -14,11 +13,10 @@ const makeSchema = () => z.object({
   title: z.string(),
   description: z.string().optional().nullable(),
   source: TaskSourceSchema.optional(),
-  domain: TaskDomainSchema.optional(),
   taskTypeId: z.string().optional().nullable(),
-  mode: TaskModeSchema.optional(),
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
+  kind: TaskKindSchema.optional(),
   dueAt: z.coerce.date().optional().nullable(),
   startedAt: z.coerce.date().optional().nullable(),
   completedAt: z.coerce.date().optional().nullable(),

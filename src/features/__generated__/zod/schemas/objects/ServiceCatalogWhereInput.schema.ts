@@ -12,8 +12,7 @@ import { IntFilterObjectSchema as IntFilterObjectSchema } from './IntFilter.sche
 import { MaintenanceRecordListRelationFilterObjectSchema as MaintenanceRecordListRelationFilterObjectSchema } from './MaintenanceRecordListRelationFilter.schema';
 import { OrderItemListRelationFilterObjectSchema as OrderItemListRelationFilterObjectSchema } from './OrderItemListRelationFilter.schema';
 import { ServiceRequestListRelationFilterObjectSchema as ServiceRequestListRelationFilterObjectSchema } from './ServiceRequestListRelationFilter.schema';
-import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema';
-import { TaskActionListRelationFilterObjectSchema as TaskActionListRelationFilterObjectSchema } from './TaskActionListRelationFilter.schema'
+import { TechnicalIssueListRelationFilterObjectSchema as TechnicalIssueListRelationFilterObjectSchema } from './TechnicalIssueListRelationFilter.schema'
 
 const servicecatalogwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => ServiceCatalogWhereInputObjectSchema), z.lazy(() => ServiceCatalogWhereInputObjectSchema).array()]).optional(),
@@ -38,8 +37,7 @@ const servicecatalogwhereinputSchema = z.object({
   maintenanceRecord: z.lazy(() => MaintenanceRecordListRelationFilterObjectSchema).optional(),
   orderItem: z.lazy(() => OrderItemListRelationFilterObjectSchema).optional(),
   serviceRequest: z.lazy(() => ServiceRequestListRelationFilterObjectSchema).optional(),
-  technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionListRelationFilterObjectSchema).optional()
+  technicalIssue: z.lazy(() => TechnicalIssueListRelationFilterObjectSchema).optional()
 }).strict();
 export const ServiceCatalogWhereInputObjectSchema: z.ZodType<Prisma.ServiceCatalogWhereInput> = servicecatalogwhereinputSchema as unknown as z.ZodType<Prisma.ServiceCatalogWhereInput>;
 export const ServiceCatalogWhereInputObjectZodSchema = servicecatalogwhereinputSchema;

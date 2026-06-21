@@ -1,5 +1,6 @@
 import { Prisma, WorkCaseStatus, type TaskPriority } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
+import { genRefNo } from "@/domains/shared/utils/AutoGenRef";
 import type {
   CreateWorkCaseCategoryInput,
   CreateWorkCaseInput,
@@ -54,7 +55,7 @@ export const WORK_CASE_INCLUDE = {
   },
   tasks: {
     orderBy: { createdAt: "desc" },
-    select: { id: true, title: true, taskType: true, taskAction: true, status: true, priority: true, assignedToUser: { select: { id: true, name: true, email: true } } },
+    select: { id: true, title: true, status: true, priority: true, assignedToUser: { select: { id: true, name: true, email: true } } },
   },
   serviceRequests: {
     orderBy: { createdAt: "desc" },
@@ -156,21 +157,17 @@ export async function countWorkCaseViewsRepo(db: DB, input: { userId: string; ca
   return { mine, raised, assigned, all };
 }
 
-function buildRefNo() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const suffix = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return `WC-${y}${m}${d}-${suffix}`;
-}
 
 export async function createWorkCaseRepo(db: DB, input: CreateWorkCaseInput & { raisedByUserId?: string | null }) {
   const client = dbOrTx(db);
+  const refNo = await genRefNo(client, {
+    model: client.workCase,
+    prefix: "WC",
+  });
 
   return client.workCase.create({
     data: {
-      refNo: buildRefNo(),
+      refNo,
       title: input.title.trim(),
       description: input.description?.trim() || null,
       scope: input.scope,
@@ -183,7 +180,13 @@ export async function createWorkCaseRepo(db: DB, input: CreateWorkCaseInput & { 
       categoryId: input.categoryId || null,
       raisedByUserId: input.raisedByUserId ?? null,
       assignedToUserId: input.assignedToUserId || null,
-
+      ...(input.serviceRequestId
+        ? {
+          serviceRequests: {
+            connect: { id: input.serviceRequestId },
+          },
+        }
+        : {}),
       activities: {
         create: {
           actorId: input.raisedByUserId ?? null,

@@ -14,7 +14,8 @@ import { RoleListRelationFilterObjectSchema as RoleListRelationFilterObjectSchem
 import { TaskListRelationFilterObjectSchema as TaskListRelationFilterObjectSchema } from './TaskListRelationFilter.schema';
 import { WorkCaseListRelationFilterObjectSchema as WorkCaseListRelationFilterObjectSchema } from './WorkCaseListRelationFilter.schema';
 import { WorkCaseActivityListRelationFilterObjectSchema as WorkCaseActivityListRelationFilterObjectSchema } from './WorkCaseActivityListRelationFilter.schema';
-import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema'
+import { TaskExecutionListRelationFilterObjectSchema as TaskExecutionListRelationFilterObjectSchema } from './TaskExecutionListRelationFilter.schema';
+import { TaskChecklistItemListRelationFilterObjectSchema as TaskChecklistItemListRelationFilterObjectSchema } from './TaskChecklistItemListRelationFilter.schema'
 
 const userwhereinputSchema = z.object({
   AND: z.union([z.lazy(() => UserWhereInputObjectSchema), z.lazy(() => UserWhereInputObjectSchema).array()]).optional(),
@@ -42,7 +43,9 @@ const userwhereinputSchema = z.object({
   raisedWorkCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
   assignedWorkCases: z.lazy(() => WorkCaseListRelationFilterObjectSchema).optional(),
   workCaseActivities: z.lazy(() => WorkCaseActivityListRelationFilterObjectSchema).optional(),
-  TaskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional()
+  taskExecution: z.lazy(() => TaskExecutionListRelationFilterObjectSchema).optional(),
+  assignedChecklistItems: z.lazy(() => TaskChecklistItemListRelationFilterObjectSchema).optional(),
+  taskChecklistItem: z.lazy(() => TaskChecklistItemListRelationFilterObjectSchema).optional()
 }).strict();
 export const UserWhereInputObjectSchema: z.ZodType<Prisma.UserWhereInput> = userwhereinputSchema as unknown as z.ZodType<Prisma.UserWhereInput>;
 export const UserWhereInputObjectZodSchema = userwhereinputSchema;

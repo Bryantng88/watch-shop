@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { TaskActionUncheckedCreateNestedManyWithoutSupplyCatalogInputObjectSchema as TaskActionUncheckedCreateNestedManyWithoutSupplyCatalogInputObjectSchema } from './TaskActionUncheckedCreateNestedManyWithoutSupplyCatalogInput.schema'
+
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -13,8 +13,7 @@ const makeSchema = () => z.object({
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  taskAction: z.lazy(() => TaskActionUncheckedCreateNestedManyWithoutSupplyCatalogInputObjectSchema).optional()
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const SupplyCatalogUncheckedCreateWithoutTechnicalIssueInputObjectSchema: z.ZodType<Prisma.SupplyCatalogUncheckedCreateWithoutTechnicalIssueInput> = makeSchema() as unknown as z.ZodType<Prisma.SupplyCatalogUncheckedCreateWithoutTechnicalIssueInput>;
 export const SupplyCatalogUncheckedCreateWithoutTechnicalIssueInputObjectZodSchema = makeSchema();

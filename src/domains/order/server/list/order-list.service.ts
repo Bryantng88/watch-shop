@@ -5,7 +5,7 @@ import type { OrderSearchInput } from "../shared";
 import { toNumberPrice, toPlain } from "../shared";
 import { buildOrderPaymentFlow } from "../../shared";
 import { listAdminOrdersRepo } from "./order-list.repo";
-
+import { syncWatchInventoryFromOrderId } from "../order-watch-sync.service";
 function totalAmount(order: any) {
   // Order total chỉ lấy giá trị order. Không cộng shipment fee / payment OUT / payment khác domain.
   return toNumberPrice(order.subtotal);
@@ -209,15 +209,21 @@ async function syncCompletedDeliveredOrders() {
 
   if (!completedIds.length) return;
 
-  await prisma.order.updateMany({
-    where: {
-      id: { in: completedIds },
-    },
-    data: {
-      status: "COMPLETED" as any,
-      paymentStatus: "PAID" as any,
-      updatedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.order.updateMany({
+      where: {
+        id: { in: completedIds },
+      },
+      data: {
+        status: "COMPLETED" as any,
+        paymentStatus: "PAID" as any,
+        updatedAt: new Date(),
+      },
+    });
+
+    for (const orderId of completedIds) {
+      await syncWatchInventoryFromOrderId(tx as any, orderId);
+    }
   });
 }
 export async function getAdminOrderList(input: OrderSearchInput) {

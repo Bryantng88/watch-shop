@@ -1,7 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { TechnicalIssueFindManySchema as TechnicalIssueFindManySchema } from '../findManyTechnicalIssue.schema';
-import { TaskActionFindManySchema as TaskActionFindManySchema } from '../findManyTaskAction.schema';
 import { MechanicalPartCatalogCountOutputTypeArgsObjectSchema as MechanicalPartCatalogCountOutputTypeArgsObjectSchema } from './MechanicalPartCatalogCountOutputTypeArgs.schema'
 
 const makeSchema = () => z.object({
@@ -16,7 +15,6 @@ const makeSchema = () => z.object({
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   TechnicalIssue: z.union([z.boolean(), z.lazy(() => TechnicalIssueFindManySchema)]).optional(),
-  taskAction: z.union([z.boolean(), z.lazy(() => TaskActionFindManySchema)]).optional(),
   _count: z.union([z.boolean(), z.lazy(() => MechanicalPartCatalogCountOutputTypeArgsObjectSchema)]).optional()
 }).strict();
 export const MechanicalPartCatalogSelectObjectSchema: z.ZodType<Prisma.MechanicalPartCatalogSelect> = makeSchema() as unknown as z.ZodType<Prisma.MechanicalPartCatalogSelect>;

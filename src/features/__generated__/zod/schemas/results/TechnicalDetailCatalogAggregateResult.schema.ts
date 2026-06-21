@@ -9,8 +9,7 @@ export const TechnicalDetailCatalogAggregateResultSchema = z.object({  _count: z
     isActive: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
-    technicalIssues: z.number(),
-    taskAction: z.number()
+    technicalIssues: z.number()
   }).optional(),
   _sum: z.object({
     sortOrder: z.number().nullable()

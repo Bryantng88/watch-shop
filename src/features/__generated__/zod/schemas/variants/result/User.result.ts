@@ -24,7 +24,9 @@ export const UserResultSchema = z.object({
     raisedWorkCases: z.array(z.unknown()),
     assignedWorkCases: z.array(z.unknown()),
     workCaseActivities: z.array(z.unknown()),
-    TaskExecution: z.array(z.unknown())
+    taskExecution: z.array(z.unknown()),
+    assignedChecklistItems: z.array(z.unknown()),
+    taskChecklistItem: z.array(z.unknown())
 }).strict();
 
 export type UserResultType = z.infer<typeof UserResultSchema>;

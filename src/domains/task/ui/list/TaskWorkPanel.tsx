@@ -12,6 +12,24 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TaskDomainActions from "../detail/TaskDomainActions";
+import EntityLinkPicker from "@/domains/shared/ui/pickers/EntityLinkPicker";
+import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
+
+type TaskLinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
+
+const TASK_LINK_TARGET_MAP = {
+    WATCH: "WATCH",
+    ORDER: "ORDER",
+    SHIPMENT: "SHIPMENT",
+    SERVICE: "SERVICE_REQUEST",
+} as const;
+
+function taskLinkTargetLabel(type: TaskLinkTargetType) {
+    if (type === "WATCH") return "Watch";
+    if (type === "ORDER") return "Đơn hàng";
+    if (type === "SHIPMENT") return "Vận đơn";
+    return "Phiếu service";
+}
 
 function targetLabel(type: string) {
     if (type === "SERVICE_REQUEST") return "Service Request";
@@ -21,18 +39,22 @@ function targetLabel(type: string) {
     if (type === "PAYMENT") return "Payment";
     if (type === "WATCH") return "Watch";
     if (type === "WORK_CASE") return "Phiếu xử lý";
+    if (type === "ACQUISITION") return "Acquisition";
     return type || "Nghiệp vụ";
 }
 
 function targetHref(type: string, id: string) {
-    if (type === "SERVICE_REQUEST") return `/admin/services/${id}`;
+    if (type === "SERVICE_REQUEST") return `/admin/service/${id}`;
+    if (type === "TECHNICAL_ISSUE") return `/admin/service/issues?issueId=${id}`;
     if (type === "ORDER") return `/admin/orders/${id}`;
     if (type === "SHIPMENT") return `/admin/shipments/${id}`;
     if (type === "PAYMENT") return `/admin/payments`;
     if (type === "WATCH") return `/admin/watches/${id}`;
     if (type === "WORK_CASE") return `/admin/work-cases/${id}`;
+    if (type === "ACQUISITION") return `/admin/acquisitions/${id}`;
     return null;
 }
+
 function getExecutionTitle(item: any) {
     if (item.targetType === "TECHNICAL_ISSUE") {
         return (
@@ -62,6 +84,7 @@ function getExecutionTitle(item: any) {
         item.targetId
     );
 }
+
 function getTechnicalIssueTitle(item: any) {
     return (
         item.technicalIssue?.summary ||
@@ -72,16 +95,29 @@ function getTechnicalIssueTitle(item: any) {
     );
 }
 
+function businessStageTone(tone?: string | null) {
+    if (tone === "done") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    if (tone === "progress") return "bg-blue-50 text-blue-700 ring-blue-100";
+    if (tone === "cancelled") return "bg-slate-100 text-slate-500 ring-slate-200";
+    return "bg-amber-50 text-amber-700 ring-amber-100";
+}
+
 function getTechnicalIssueArea(item: any) {
     return item.technicalIssue?.area || "-";
 }
 
-function getTechnicalIssueStatus(item: any) {
-    return item.technicalIssue?.executionStatus || getExecutionStatus(item);
+function getBusinessStatus(item: any) {
+    return (
+        item.businessStageLabel ||
+        item.targetStatus ||
+        item.status ||
+        item.actionType ||
+        "-"
+    );
 }
 
-function getExecutionStatus(item: any) {
-    return item.targetStatus || item.status || item.actionType || "-";
+function isBusinessDone(item: any) {
+    return Boolean(item.isBusinessDone);
 }
 
 function statusTone(status: string) {
@@ -124,70 +160,33 @@ function groupByTarget(items: any[]) {
         const group = map.get(key);
         group.events.push(item);
 
-        if (
-            new Date(item.createdAt).getTime() >
-            new Date(group.latestAt).getTime()
-        ) {
+        if (new Date(item.createdAt).getTime() > new Date(group.latestAt).getTime()) {
             group.latestAt = item.createdAt;
             group.actionType = item.actionType;
             group.note = item.note;
             group.targetStatus = item.targetStatus;
             group.status = item.status;
+            group.serviceRequest = item.serviceRequest ?? group.serviceRequest;
+            group.technicalIssue = item.technicalIssue ?? group.technicalIssue;
         }
     }
 
     return Array.from(map.values()).sort(
-        (a, b) =>
-            new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
+        (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
     );
 }
 
 function splitExecutions(executions: any[]) {
     const grouped = groupByTarget(executions);
 
-    const serviceRequests = grouped.filter(
-        (x) => x.targetType === "SERVICE_REQUEST",
-    );
-
-    const technicalIssues = grouped.filter(
-        (x) => x.targetType === "TECHNICAL_ISSUE",
-    );
-
-    const otherExecutions = grouped.filter(
-        (x) =>
-            x.targetType !== "SERVICE_REQUEST" &&
-            x.targetType !== "TECHNICAL_ISSUE",
-    );
-
     return {
         grouped,
-        serviceRequests,
-        technicalIssues,
-        otherExecutions,
+        serviceRequests: grouped.filter((x) => x.targetType === "SERVICE_REQUEST"),
+        technicalIssues: grouped.filter((x) => x.targetType === "TECHNICAL_ISSUE"),
+        otherExecutions: grouped.filter(
+            (x) => x.targetType !== "SERVICE_REQUEST" && x.targetType !== "TECHNICAL_ISSUE",
+        ),
     };
-}
-
-
-function businessStatusDone(value?: string | null) {
-    const status = String(value ?? "").toUpperCase();
-    return ["DONE", "COMPLETED", "DELIVERED", "PAID", "RESOLVED", "CLOSED", "POSTED"].includes(status);
-}
-
-function businessStatusOfExecution(item: any) {
-    return (
-        item?.technicalIssue?.executionStatus ||
-        item?.serviceRequest?.status ||
-        item?.targetStatus ||
-        item?.status ||
-        item?.actionType ||
-        null
-    );
-}
-
-function checklistBusinessDone(item: any) {
-    const executions = item?.executions ?? [];
-    if (!executions.length) return Boolean(item?.isDone);
-    return executions.some((execution: any) => businessStatusDone(businessStatusOfExecution(execution)));
 }
 
 function ChecklistRow({
@@ -205,48 +204,63 @@ function ChecklistRow({
     onToggle: (item: any) => Promise<void>;
     onDelete: (item: any) => Promise<void>;
 }) {
+    const [linkTargetType, setLinkTargetType] = useState<TaskLinkTargetType>("ORDER");
+    const [linkTargetId, setLinkTargetId] = useState("");
+
     const itemExecutions = splitExecutions(item.executions ?? []);
     const hasExecutions = itemExecutions.grouped.length > 0;
-    const done = checklistBusinessDone(item);
+    const canManualToggle = !hasExecutions;
+    const done = hasExecutions
+        ? itemExecutions.grouped.every(isBusinessDone)
+        : Boolean(item.isDone);
 
     return (
         <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
             <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                     <button
                         type="button"
-                        onClick={async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (hasExecutions) return;
+                        onClick={async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (!canManualToggle) return;
                             await onToggle(item);
                         }}
-                        disabled={hasExecutions}
-                        title={hasExecutions ? "Dòng này đã gắn nghiệp vụ, trạng thái sẽ đi theo nghiệp vụ" : undefined}
                         className={cn(
                             "flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
                             done
                                 ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                : "bg-white text-slate-300 ring-slate-300",
-                            hasExecutions ? "cursor-default" : "",
+                                : hasExecutions
+                                    ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                    : "bg-white text-slate-300 ring-slate-300",
+                            !canManualToggle ? "cursor-not-allowed" : "",
                         )}
+                        title={
+                            hasExecutions
+                                ? "Dòng nghiệp vụ tự hoàn tất theo trạng thái nghiệp vụ"
+                                : "Tick hoàn tất dòng xử lý"
+                        }
                     >
                         {done ? <Check className="h-3.5 w-3.5" /> : null}
                     </button>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <div
                             className={cn(
-                                "line-clamp-1 font-semibold",
+                                "line-clamp-1 text-sm font-semibold",
                                 done ? "text-slate-400 line-through" : "text-slate-950",
                             )}
                         >
                             {item.title}
                         </div>
 
-                        <div className="mt-1 text-xs text-slate-400">
-                            {hasExecutions ? "Dòng nghiệp vụ" : "Dòng xử lý"} · {done ? "Đã xong" : "Chưa xong"}
-                            {hasExecutions ? ` · ${itemExecutions.grouped.length} nghiệp vụ` : ""}
+                        <div className="mt-0.5 text-[11px] text-slate-400">
+                            {hasExecutions
+                                ? `${itemExecutions.grouped.length} link nghiệp vụ · ${done ? "Đã xong" : "Đang theo dõi"
+                                }`
+                                : item.assignedToUser
+                                    ? `Giao cho ${item.assignedToUser.name || item.assignedToUser.email}`
+                                    : "Dòng xử lý"}
                         </div>
                     </div>
                 </div>
@@ -254,19 +268,23 @@ function ChecklistRow({
                 <div className="flex shrink-0 items-center gap-1">
                     <button
                         type="button"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                        onClick={async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                            if (hasExecutions) {
+                                await onDelete(item);
+                                return;
+                            }
+
                             onToggleActive(item);
                         }}
                         className={cn(
                             "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                            active
-                                ? "bg-slate-950 text-white"
-                                : "text-blue-600 hover:bg-blue-50",
+                            active ? "bg-slate-950 text-white" : "text-blue-600 hover:bg-blue-50",
                         )}
                     >
-                        {hasExecutions ? "Xem / link thêm" : "Tạo nghiệp vụ"}
+                        {hasExecutions ? "Hủy link" : "Link nghiệp vụ"}
                         <ChevronDown
                             className={cn(
                                 "h-3.5 w-3.5 transition-transform",
@@ -277,9 +295,9 @@ function ChecklistRow({
 
                     <button
                         type="button"
-                        onClick={async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                        onClick={async (event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
                             await onDelete(item);
                         }}
                         className="rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600"
@@ -289,13 +307,47 @@ function ChecklistRow({
                 </div>
             </div>
 
-            {active ? (
+            {active && !hasExecutions ? (
                 <div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                    <TaskDomainActions
-                        task={task}
-                        checklistItemId={item.id}
-                        onDone={() => onToggleActive(item)}
-                    />
+                    <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
+                        <select
+                            value={linkTargetType}
+                            onChange={(event) => {
+                                setLinkTargetType(event.target.value as TaskLinkTargetType);
+                                setLinkTargetId("");
+                            }}
+                            className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                        >
+                            <option value="WATCH">Watch</option>
+                            <option value="ORDER">Đơn hàng</option>
+                            <option value="SHIPMENT">Vận đơn</option>
+                            <option value="SERVICE">Phiếu service</option>
+                        </select>
+
+                        <EntityLinkPicker
+                            type={linkTargetType}
+                            label={taskLinkTargetLabel(linkTargetType)}
+                            value={linkTargetId}
+                            onChange={(id) => setLinkTargetId(id ?? "")}
+                            search={searchWorkCaseLinkTargetsAction}
+                        />
+                    </div>
+
+                    {linkTargetId ? (
+                        <div className="mt-3">
+                            <TaskDomainActions
+                                task={task}
+                                checklistItemId={item.id}
+                                mode="LINK_ONLY"
+                                defaultTargetType={TASK_LINK_TARGET_MAP[linkTargetType]}
+                                defaultTargetId={linkTargetId}
+                                onDone={() => {
+                                    setLinkTargetId("");
+                                    onToggleActive(item);
+                                }}
+                            />
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
 
@@ -312,22 +364,16 @@ function ChecklistRow({
     );
 }
 
-function ExecutionRow({
-    item,
-    children,
-}: {
-    item: any;
-    children?: React.ReactNode;
-}) {
+function ExecutionRow({ item, children }: { item: any; children?: React.ReactNode }) {
     const href = targetHref(item.targetType, item.targetId);
-    const status = getExecutionStatus(item);
+    const status = getBusinessStatus(item);
 
     return (
         <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
             <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-100">
-                        {item.targetType === "SERVICE_REQUEST" ? (
+                        {item.targetType === "SERVICE_REQUEST" || item.targetType === "TECHNICAL_ISSUE" ? (
                             <Wrench className="h-3.5 w-3.5" />
                         ) : (
                             <PackageCheck className="h-3.5 w-3.5" />
@@ -343,7 +389,9 @@ function ExecutionRow({
                             <span
                                 className={cn(
                                     "rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
-                                    statusTone(status),
+                                    item.businessStageTone
+                                        ? businessStageTone(item.businessStageTone)
+                                        : statusTone(status),
                                 )}
                             >
                                 {status}
@@ -359,7 +407,7 @@ function ExecutionRow({
                 {href ? (
                     <Link
                         href={href}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
                         className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
                     >
                         Mở
@@ -379,7 +427,7 @@ function TechnicalIssueChildList({ items }: { items: any[] }) {
     return (
         <div className="space-y-2 border-l border-slate-200 pl-4">
             {items.map((ti) => {
-                const status = getExecutionStatus(ti);
+                const status = getBusinessStatus(ti);
 
                 return (
                     <div
@@ -391,14 +439,15 @@ function TechnicalIssueChildList({ items }: { items: any[] }) {
                                 {getTechnicalIssueTitle(ti)}
                             </div>
                             <div className="mt-0.5 text-xs text-slate-400">
-                                Khu vực: {getTechnicalIssueArea(ti)}
+                                Khu vực: {ti.technicalIssue?.area || "-"}
                             </div>
                         </div>
-
                         <span
                             className={cn(
                                 "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
-                                statusTone(status),
+                                ti.businessStageTone
+                                    ? businessStageTone(ti.businessStageTone)
+                                    : statusTone(status),
                             )}
                         >
                             {status}
@@ -454,17 +503,28 @@ export default function TaskWorkPanel({
     onAddChecklistItem,
     onToggleChecklistItem,
     onDeleteChecklistItem,
+    users = [],
 }: {
     task: any;
     checklistItems?: any[];
     executions?: any[];
-    onAddChecklistItem?: (task: any, title: string) => Promise<void> | void;
+    users?: Array<{ id: string; name?: string | null; email?: string | null }>;
+    onAddChecklistItem?: (input: {
+        taskId: string;
+        title: string;
+        assignedToUserId?: string | null;
+        priority?: string | null;
+        dueAt?: string | null;
+    }) => Promise<void> | void;
     onToggleChecklistItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
     onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
 }) {
     const [title, setTitle] = useState("");
     const [pending, setPending] = useState(false);
     const [localItems, setLocalItems] = useState(checklistItems);
+    const [selectedUserId, setSelectedUserId] = useState("");
+    const [priority, setPriority] = useState("MEDIUM");
+    const [dueAt, setDueAt] = useState("");
     const [activeChecklistItemId, setActiveChecklistItemId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -482,8 +542,19 @@ export default function TaskWorkPanel({
 
         try {
             setPending(true);
-            await onAddChecklistItem?.(task, clean);
+
+            await onAddChecklistItem?.({
+                taskId: task.id,
+                title: clean,
+                assignedToUserId: selectedUserId || null,
+                priority,
+                dueAt: dueAt || null,
+            });
+
             setTitle("");
+            setSelectedUserId("");
+            setPriority("MEDIUM");
+            setDueAt("");
         } finally {
             setPending(false);
         }
@@ -510,17 +581,15 @@ export default function TaskWorkPanel({
     }
 
     function toggleActiveChecklist(item: any) {
-        setActiveChecklistItemId((current) =>
-            current === item.id ? null : item.id,
-        );
+        setActiveChecklistItemId((current) => (current === item.id ? null : item.id));
     }
 
     return (
         <section
             className="border-y border-slate-100 bg-slate-50 px-3 py-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
         >
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_140px_150px_80px]">
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -531,19 +600,50 @@ export default function TaskWorkPanel({
                             submit();
                         }
                     }}
-                    placeholder="Thêm dòng xử lý..."
-                    className="h-10 flex-1 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-slate-400"
+                    placeholder="Thêm subtask..."
+                    className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-slate-400"
+                />
+
+                <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                >
+                    <option value="">Chưa giao</option>
+                    {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {user.name || user.email}
+                        </option>
+                    ))}
+                </select>
+
+                <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                >
+                    <option value="LOW">Thấp</option>
+                    <option value="MEDIUM">Vừa</option>
+                    <option value="HIGH">Cao</option>
+                    <option value="URGENT">Gấp</option>
+                </select>
+
+                <input
+                    type="date"
+                    value={dueAt}
+                    onChange={(e) => setDueAt(e.target.value)}
+                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
                 />
 
                 <button
                     type="button"
                     disabled={pending || !title.trim()}
-                    onClick={async (e) => {
+                    onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        await submit();
+                        submit();
                     }}
-                    className="h-10 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-10 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
                 >
                     Thêm
                 </button>

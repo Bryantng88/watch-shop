@@ -6,8 +6,7 @@ import { NullableDecimalFieldUpdateOperationsInputObjectSchema as NullableDecima
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInput.schema';
-import { TaskActionUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TaskActionUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TaskActionUncheckedUpdateManyWithoutSupplyCatalogNestedInput.schema'
+import { TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -21,8 +20,7 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional()
+  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutSupplyCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const SupplyCatalogUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.SupplyCatalogUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.SupplyCatalogUncheckedUpdateInput>;
 export const SupplyCatalogUncheckedUpdateInputObjectZodSchema = makeSchema();

@@ -9,6 +9,5 @@ export const TechnicalDetailCatalogUpsertResultSchema = z.object({
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  technicalIssues: z.array(z.unknown()),
-  taskAction: z.array(z.unknown())
+  technicalIssues: z.array(z.unknown())
 });

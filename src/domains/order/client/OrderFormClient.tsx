@@ -225,9 +225,11 @@ export default function OrderFormClient({
   }, [notify, productQuery]);
 
   useEffect(() => {
-    const q = values.shipPhone.trim();
+    const name = values.customerName.trim();
+    const phone = values.shipPhone.trim();
+    const q = phone.length >= 3 ? phone : name;
 
-    if (q.length < 3 || values.customerId) {
+    if (q.trim().length < 2 || values.customerId) {
       setCustomerResults([]);
       setSearchingCustomer(false);
       return;
@@ -248,14 +250,8 @@ export default function OrderFormClient({
         if (cancelled) return;
 
         setCustomerResults(Array.isArray(json?.items) ? json.items : []);
-      } catch {
-        if (!cancelled) {
-          setCustomerResults([]);
-        }
       } finally {
-        if (!cancelled) {
-          setSearchingCustomer(false);
-        }
+        if (!cancelled) setSearchingCustomer(false);
       }
     }, 300);
 
@@ -263,7 +259,7 @@ export default function OrderFormClient({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [values.customerId, values.shipPhone]);
+  }, [values.customerId, values.customerName, values.shipPhone]);
   function addProduct(product: ProductSearchItem) {
     if (values.items.some((item) => item.productId === product.id)) {
       notify.warning({

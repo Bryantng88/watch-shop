@@ -1,7 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
-import { TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema as TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInput.schema';
-import { TaskActionCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema as TaskActionCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema } from './TaskActionCreateNestedManyWithoutTechnicalDetailCatalogInput.schema'
+import { TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema as TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema } from './TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -12,8 +11,7 @@ const makeSchema = () => z.object({
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
-  technicalIssues: z.lazy(() => TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema),
-  taskAction: z.lazy(() => TaskActionCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema)
+  technicalIssues: z.lazy(() => TechnicalIssueCreateNestedManyWithoutTechnicalDetailCatalogInputObjectSchema)
 }).strict();
 export const TechnicalDetailCatalogCreateInputObjectSchema: z.ZodType<Prisma.TechnicalDetailCatalogCreateInput> = makeSchema() as unknown as z.ZodType<Prisma.TechnicalDetailCatalogCreateInput>;
 export const TechnicalDetailCatalogCreateInputObjectZodSchema = makeSchema();

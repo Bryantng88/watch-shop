@@ -1,0 +1,50 @@
+import * as z from 'zod';
+import type { Prisma } from '@prisma/client';
+import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
+import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
+import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
+import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { CustomerUpdateOneWithoutUserNestedInputObjectSchema as CustomerUpdateOneWithoutUserNestedInputObjectSchema } from './CustomerUpdateOneWithoutUserNestedInput.schema';
+import { MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema as MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema } from './MaintenanceRecordUpdateManyWithoutUserNestedInput.schema';
+import { NotificationUpdateManyWithoutUserNestedInputObjectSchema as NotificationUpdateManyWithoutUserNestedInputObjectSchema } from './NotificationUpdateManyWithoutUserNestedInput.schema';
+import { ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema as ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema } from './ServiceRequestUpdateManyWithoutUserNestedInput.schema';
+import { TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema as TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema } from './TechnicalIssueUpdateManyWithoutUserNestedInput.schema';
+import { RoleUpdateManyWithoutUsersNestedInputObjectSchema as RoleUpdateManyWithoutUsersNestedInputObjectSchema } from './RoleUpdateManyWithoutUsersNestedInput.schema';
+import { TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCreatedByUserNestedInput.schema';
+import { TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema as TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './TaskUpdateManyWithoutAssignedToUserNestedInput.schema';
+import { TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema as TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCompletedByUserNestedInput.schema';
+import { TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema as TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema } from './TaskUpdateManyWithoutCancelledByUserNestedInput.schema';
+import { WorkCaseUpdateManyWithoutRaisedByUserNestedInputObjectSchema as WorkCaseUpdateManyWithoutRaisedByUserNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutRaisedByUserNestedInput.schema';
+import { WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema as WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema } from './WorkCaseUpdateManyWithoutAssignedToUserNestedInput.schema';
+import { WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema as WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema } from './WorkCaseActivityUpdateManyWithoutActorNestedInput.schema';
+import { TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema as TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema } from './TaskExecutionUpdateManyWithoutCreatedByUserNestedInput.schema';
+import { TaskChecklistItemUpdateManyWithoutUserNestedInputObjectSchema as TaskChecklistItemUpdateManyWithoutUserNestedInputObjectSchema } from './TaskChecklistItemUpdateManyWithoutUserNestedInput.schema'
+
+const makeSchema = () => z.object({
+  id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  email: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
+  passwordHash: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  name: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  avatarUrl: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  isActive: z.union([z.boolean(), z.lazy(() => BoolFieldUpdateOperationsInputObjectSchema)]).optional(),
+  createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
+  roleId: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
+  customer: z.lazy(() => CustomerUpdateOneWithoutUserNestedInputObjectSchema).optional(),
+  maintenanceRecord: z.lazy(() => MaintenanceRecordUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  notification: z.lazy(() => NotificationUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  serviceRequest: z.lazy(() => ServiceRequestUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  technicalIssue: z.lazy(() => TechnicalIssueUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  roles: z.lazy(() => RoleUpdateManyWithoutUsersNestedInputObjectSchema).optional(),
+  createdTasks: z.lazy(() => TaskUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional(),
+  assignedTasks: z.lazy(() => TaskUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
+  completedTasks: z.lazy(() => TaskUpdateManyWithoutCompletedByUserNestedInputObjectSchema).optional(),
+  cancelledTasks: z.lazy(() => TaskUpdateManyWithoutCancelledByUserNestedInputObjectSchema).optional(),
+  raisedWorkCases: z.lazy(() => WorkCaseUpdateManyWithoutRaisedByUserNestedInputObjectSchema).optional(),
+  assignedWorkCases: z.lazy(() => WorkCaseUpdateManyWithoutAssignedToUserNestedInputObjectSchema).optional(),
+  workCaseActivities: z.lazy(() => WorkCaseActivityUpdateManyWithoutActorNestedInputObjectSchema).optional(),
+  taskExecution: z.lazy(() => TaskExecutionUpdateManyWithoutCreatedByUserNestedInputObjectSchema).optional(),
+  taskChecklistItem: z.lazy(() => TaskChecklistItemUpdateManyWithoutUserNestedInputObjectSchema).optional()
+}).strict();
+export const UserUpdateWithoutAssignedChecklistItemsInputObjectSchema: z.ZodType<Prisma.UserUpdateWithoutAssignedChecklistItemsInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUpdateWithoutAssignedChecklistItemsInput>;
+export const UserUpdateWithoutAssignedChecklistItemsInputObjectZodSchema = makeSchema();

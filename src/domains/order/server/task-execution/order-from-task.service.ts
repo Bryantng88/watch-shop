@@ -51,7 +51,7 @@ async function getExecutableTask(db: DB, taskId: string, auth: any) {
   const task = await db.task.findUnique({
     where: { id: taskId },
     include: {
-      taskType: true,
+
       workCase: {
         include: {
           watch: {

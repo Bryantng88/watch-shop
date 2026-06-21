@@ -21,7 +21,6 @@ export const MechanicalPartCatalogFindManySelectSchema: z.ZodType<Prisma.Mechani
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     TechnicalIssue: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.MechanicalPartCatalogSelect>;
 
@@ -37,7 +36,6 @@ export const MechanicalPartCatalogFindManySelectZodSchema = z.object({
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
     TechnicalIssue: z.boolean().optional(),
-    taskAction: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

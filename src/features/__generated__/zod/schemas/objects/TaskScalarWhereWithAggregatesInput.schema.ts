@@ -4,14 +4,12 @@ import { StringWithAggregatesFilterObjectSchema as StringWithAggregatesFilterObj
 import { StringNullableWithAggregatesFilterObjectSchema as StringNullableWithAggregatesFilterObjectSchema } from './StringNullableWithAggregatesFilter.schema';
 import { EnumTaskSourceWithAggregatesFilterObjectSchema as EnumTaskSourceWithAggregatesFilterObjectSchema } from './EnumTaskSourceWithAggregatesFilter.schema';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
-import { EnumTaskDomainWithAggregatesFilterObjectSchema as EnumTaskDomainWithAggregatesFilterObjectSchema } from './EnumTaskDomainWithAggregatesFilter.schema';
-import { TaskDomainSchema } from '../enums/TaskDomain.schema';
-import { EnumTaskModeWithAggregatesFilterObjectSchema as EnumTaskModeWithAggregatesFilterObjectSchema } from './EnumTaskModeWithAggregatesFilter.schema';
-import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { EnumTaskStatusWithAggregatesFilterObjectSchema as EnumTaskStatusWithAggregatesFilterObjectSchema } from './EnumTaskStatusWithAggregatesFilter.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { EnumTaskPriorityWithAggregatesFilterObjectSchema as EnumTaskPriorityWithAggregatesFilterObjectSchema } from './EnumTaskPriorityWithAggregatesFilter.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { EnumTaskKindWithAggregatesFilterObjectSchema as EnumTaskKindWithAggregatesFilterObjectSchema } from './EnumTaskKindWithAggregatesFilter.schema';
+import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { DateTimeNullableWithAggregatesFilterObjectSchema as DateTimeNullableWithAggregatesFilterObjectSchema } from './DateTimeNullableWithAggregatesFilter.schema';
 import { UuidNullableWithAggregatesFilterObjectSchema as UuidNullableWithAggregatesFilterObjectSchema } from './UuidNullableWithAggregatesFilter.schema';
 import { DateTimeWithAggregatesFilterObjectSchema as DateTimeWithAggregatesFilterObjectSchema } from './DateTimeWithAggregatesFilter.schema'
@@ -24,11 +22,10 @@ const taskscalarwherewithaggregatesinputSchema = z.object({
   title: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   description: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
   source: z.union([z.lazy(() => EnumTaskSourceWithAggregatesFilterObjectSchema), TaskSourceSchema]).optional(),
-  domain: z.union([z.lazy(() => EnumTaskDomainWithAggregatesFilterObjectSchema), TaskDomainSchema]).optional(),
   taskTypeId: z.union([z.lazy(() => StringNullableWithAggregatesFilterObjectSchema), z.string()]).optional().nullable(),
-  mode: z.union([z.lazy(() => EnumTaskModeWithAggregatesFilterObjectSchema), TaskModeSchema]).optional(),
   status: z.union([z.lazy(() => EnumTaskStatusWithAggregatesFilterObjectSchema), TaskStatusSchema]).optional(),
   priority: z.union([z.lazy(() => EnumTaskPriorityWithAggregatesFilterObjectSchema), TaskPrioritySchema]).optional(),
+  kind: z.union([z.lazy(() => EnumTaskKindWithAggregatesFilterObjectSchema), TaskKindSchema]).optional(),
   dueAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   startedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   completedAt: z.union([z.lazy(() => DateTimeNullableWithAggregatesFilterObjectSchema), z.coerce.date()]).optional().nullable(),

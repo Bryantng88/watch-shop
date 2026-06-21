@@ -4,11 +4,10 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     title: z.number(),
     description: z.number(),
     source: z.number(),
-    domain: z.number(),
     taskTypeId: z.number(),
-    mode: z.number(),
     status: z.number(),
     priority: z.number(),
+    kind: z.number(),
     dueAt: z.number(),
     startedAt: z.number(),
     completedAt: z.number(),
@@ -40,10 +39,8 @@ export const TaskAggregateResultSchema = z.object({  _count: z.object({
     technicalIssue: z.number(),
     payment: z.number(),
     workCase: z.number(),
-    taskType: z.number(),
     executions: z.number(),
     notifications: z.number(),
-    taskAction: z.number(),
     taskActionId: z.number()
   }).optional(),
   _min: z.object({

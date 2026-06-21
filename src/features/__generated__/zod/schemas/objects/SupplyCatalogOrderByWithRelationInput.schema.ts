@@ -2,8 +2,7 @@ import * as z from 'zod';
 import type { Prisma } from '@prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
-import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIssueOrderByRelationAggregateInputObjectSchema } from './TechnicalIssueOrderByRelationAggregateInput.schema';
-import { TaskActionOrderByRelationAggregateInputObjectSchema as TaskActionOrderByRelationAggregateInputObjectSchema } from './TaskActionOrderByRelationAggregateInput.schema'
+import { TechnicalIssueOrderByRelationAggregateInputObjectSchema as TechnicalIssueOrderByRelationAggregateInputObjectSchema } from './TechnicalIssueOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
@@ -17,8 +16,7 @@ const makeSchema = () => z.object({
   sortOrder: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionOrderByRelationAggregateInputObjectSchema).optional()
+  TechnicalIssue: z.lazy(() => TechnicalIssueOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const SupplyCatalogOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.SupplyCatalogOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.SupplyCatalogOrderByWithRelationInput>;
 export const SupplyCatalogOrderByWithRelationInputObjectZodSchema = makeSchema();

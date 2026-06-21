@@ -2,12 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { TaskPriority, WorkCaseStatus, type WorkCaseCategory } from "@prisma/client";
+import {
+  Plus,
+} from "lucide-react";
+import {
+  TaskPriority,
+  WorkCaseStatus,
+  type WorkCaseCategory,
+} from "@prisma/client";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import type { WorkCaseWithRelations } from "../server/work-case.repo";
 import type { WorkCaseViewKey } from "../server/work-case.types";
-import { WORK_CASE_PRIORITY_LABEL, WORK_CASE_STATUS_LABEL } from "../utils/work-case-labels";
-import WorkCaseListTable from "../ui/WorkCaseListTable";
+import {
+  WORK_CASE_PRIORITY_LABEL,
+  WORK_CASE_STATUS_LABEL,
+} from "../utils/work-case-labels";
+import WorkCaseListTable, {
+  type WorkCaseTaskUserOption,
+} from "../ui/WorkCaseListTable";
+import RaiseWorkCaseModal from "../ui/RaiseWorkCaseModal";
+import { getTaskQuickCreateDataAction } from "@/domains/task/actions/task.actions";
 import {
   ListFilterForm,
   ListSearchInput,
@@ -15,6 +29,7 @@ import {
   ListFilterButton,
   ListClearButton,
 } from "@/domains/shared/ui/list/ListFilters";
+
 type Props = {
   items: WorkCaseWithRelations[];
   total: number;
@@ -56,10 +71,31 @@ export default function WorkCaseListClient(props: Props) {
   const pathname = usePathname();
   const sp = useSearchParams();
   const progress = useAppProgress();
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [users, setUsers] = useState<WorkCaseTaskUserOption[]>([]);
   const [q, setQ] = useState(firstRaw(props.rawSearchParams?.q));
   const [status, setStatus] = useState(firstRaw(props.rawSearchParams?.status, "OPEN"));
   const [priority, setPriority] = useState(firstRaw(props.rawSearchParams?.priority, "ALL"));
+  const [createOpen, setCreateOpen] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    getTaskQuickCreateDataAction()
+      .then((data) => {
+        if (!alive) return;
+        setUsers(data.users ?? []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setUsers([]);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     setQ(sp.get("q") ?? "");
@@ -72,12 +108,11 @@ export default function WorkCaseListClient(props: Props) {
     router.push(buildHref(pathname, sp, patch));
     window.setTimeout(() => progress.hide(), 700);
   }
-  function toggleExpand(item: WorkCaseWithRelations) {
-    const hasTasks = (item.tasks?.length ?? 0) > 0;
-    if (!hasTasks) return;
 
+  function toggleExpand(item: WorkCaseWithRelations) {
     setExpandedId((current) => (current === item.id ? null : item.id));
   }
+
   function openDetail(item: WorkCaseWithRelations) {
     progress.show({ title: "Đang mở phiếu xử lý", message: item.refNo || item.title });
     router.push(`/admin/work-cases/${item.id}`);
@@ -105,8 +140,19 @@ export default function WorkCaseListClient(props: Props) {
           </p>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 px-4 py-2 text-sm text-slate-600">
-          Tổng: <span className="font-semibold text-slate-950">{props.total}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            <Plus className="h-4 w-4" />
+            Tạo phiếu
+          </button>
+
+          <div className="rounded-2xl bg-slate-50 px-4 py-2 text-sm text-slate-600">
+            Tổng: <span className="font-semibold text-slate-950">{props.total}</span>
+          </div>
         </div>
       </div>
 
@@ -167,9 +213,7 @@ export default function WorkCaseListClient(props: Props) {
             ]}
           />
 
-          <ListFilterButton>
-            Lọc
-          </ListFilterButton>
+          <ListFilterButton>Lọc</ListFilterButton>
 
           <ListClearButton
             onClick={() => {
@@ -194,10 +238,24 @@ export default function WorkCaseListClient(props: Props) {
         items={props.items}
         page={props.page}
         totalPages={props.totalPages}
+        users={users}
+        currentUserId={props.currentUserId}
         expandedId={expandedId}
         onToggleExpand={toggleExpand}
         onPage={(page) => navigate({ page: String(page) })}
         onOpen={openDetail}
+        onTaskCreated={() => router.refresh()}
+      />
+
+      <RaiseWorkCaseModal
+        open={createOpen}
+        source={null}
+        categories={props.categories}
+        onClose={() => setCreateOpen(false)}
+        onSaved={() => {
+          setCreateOpen(false);
+          router.refresh();
+        }}
       />
     </div>
   );

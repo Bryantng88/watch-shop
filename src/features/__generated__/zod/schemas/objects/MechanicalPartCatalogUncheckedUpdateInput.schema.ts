@@ -8,8 +8,7 @@ import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringF
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { IntFieldUpdateOperationsInputObjectSchema as IntFieldUpdateOperationsInputObjectSchema } from './IntFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInput.schema';
-import { TaskActionUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema as TaskActionUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema } from './TaskActionUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInput.schema'
+import { TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema as TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema } from './TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -22,8 +21,7 @@ const makeSchema = () => z.object({
   sortOrder: z.union([z.number().int(), z.lazy(() => IntFieldUpdateOperationsInputObjectSchema)]).optional(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema).optional()
+  TechnicalIssue: z.lazy(() => TechnicalIssueUncheckedUpdateManyWithoutMechanicalPartCatalogNestedInputObjectSchema).optional()
 }).strict();
 export const MechanicalPartCatalogUncheckedUpdateInputObjectSchema: z.ZodType<Prisma.MechanicalPartCatalogUncheckedUpdateInput> = makeSchema() as unknown as z.ZodType<Prisma.MechanicalPartCatalogUncheckedUpdateInput>;
 export const MechanicalPartCatalogUncheckedUpdateInputObjectZodSchema = makeSchema();

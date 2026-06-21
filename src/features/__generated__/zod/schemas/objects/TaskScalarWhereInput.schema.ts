@@ -4,14 +4,12 @@ import { StringFilterObjectSchema as StringFilterObjectSchema } from './StringFi
 import { StringNullableFilterObjectSchema as StringNullableFilterObjectSchema } from './StringNullableFilter.schema';
 import { EnumTaskSourceFilterObjectSchema as EnumTaskSourceFilterObjectSchema } from './EnumTaskSourceFilter.schema';
 import { TaskSourceSchema } from '../enums/TaskSource.schema';
-import { EnumTaskDomainFilterObjectSchema as EnumTaskDomainFilterObjectSchema } from './EnumTaskDomainFilter.schema';
-import { TaskDomainSchema } from '../enums/TaskDomain.schema';
-import { EnumTaskModeFilterObjectSchema as EnumTaskModeFilterObjectSchema } from './EnumTaskModeFilter.schema';
-import { TaskModeSchema } from '../enums/TaskMode.schema';
 import { EnumTaskStatusFilterObjectSchema as EnumTaskStatusFilterObjectSchema } from './EnumTaskStatusFilter.schema';
 import { TaskStatusSchema } from '../enums/TaskStatus.schema';
 import { EnumTaskPriorityFilterObjectSchema as EnumTaskPriorityFilterObjectSchema } from './EnumTaskPriorityFilter.schema';
 import { TaskPrioritySchema } from '../enums/TaskPriority.schema';
+import { EnumTaskKindFilterObjectSchema as EnumTaskKindFilterObjectSchema } from './EnumTaskKindFilter.schema';
+import { TaskKindSchema } from '../enums/TaskKind.schema';
 import { DateTimeNullableFilterObjectSchema as DateTimeNullableFilterObjectSchema } from './DateTimeNullableFilter.schema';
 import { UuidNullableFilterObjectSchema as UuidNullableFilterObjectSchema } from './UuidNullableFilter.schema';
 import { DateTimeFilterObjectSchema as DateTimeFilterObjectSchema } from './DateTimeFilter.schema'
@@ -24,11 +22,10 @@ const taskscalarwhereinputSchema = z.object({
   title: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   description: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
   source: z.union([z.lazy(() => EnumTaskSourceFilterObjectSchema), TaskSourceSchema]).optional(),
-  domain: z.union([z.lazy(() => EnumTaskDomainFilterObjectSchema), TaskDomainSchema]).optional(),
   taskTypeId: z.union([z.lazy(() => StringNullableFilterObjectSchema), z.string()]).optional().nullable(),
-  mode: z.union([z.lazy(() => EnumTaskModeFilterObjectSchema), TaskModeSchema]).optional(),
   status: z.union([z.lazy(() => EnumTaskStatusFilterObjectSchema), TaskStatusSchema]).optional(),
   priority: z.union([z.lazy(() => EnumTaskPriorityFilterObjectSchema), TaskPrioritySchema]).optional(),
+  kind: z.union([z.lazy(() => EnumTaskKindFilterObjectSchema), TaskKindSchema]).optional(),
   dueAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   startedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),
   completedAt: z.union([z.lazy(() => DateTimeNullableFilterObjectSchema), z.coerce.date()]).optional().nullable(),

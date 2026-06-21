@@ -4,11 +4,10 @@ export const TaskUpsertResultSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   source: z.unknown(),
-  domain: z.unknown(),
   taskTypeId: z.string().optional(),
-  mode: z.unknown(),
   status: z.unknown(),
   priority: z.unknown(),
+  kind: z.unknown(),
   dueAt: z.date().optional(),
   startedAt: z.date().optional(),
   completedAt: z.date().optional(),
@@ -40,9 +39,7 @@ export const TaskUpsertResultSchema = z.object({
   technicalIssue: z.unknown().optional(),
   payment: z.unknown().optional(),
   workCase: z.unknown().optional(),
-  taskType: z.unknown().optional(),
   executions: z.array(z.unknown()),
   notifications: z.array(z.unknown()),
-  taskAction: z.unknown().optional(),
   taskActionId: z.string().optional()
 });

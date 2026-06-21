@@ -75,4 +75,112 @@ export async function createWorkCaseFromOrderAction(input: {
   revalidatePath("/admin/orders");
 
   return { ok: true, item };
-}     
+}
+
+export async function searchWorkCaseLinkTargetsAction(input: {
+  type: "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
+  q: string;
+}) {
+  const q = input.q.trim();
+  if (!q) return [];
+
+  if (input.type === "WATCH") {
+    const rows = await prisma.watch.findMany({
+      where: {
+        OR: [
+          { id: { contains: q, mode: "insensitive" } },
+          { productId: { contains: q, mode: "insensitive" } },
+          { product: { title: { contains: q, mode: "insensitive" } } },
+          { product: { sku: { contains: q, mode: "insensitive" } } },
+        ],
+      },
+      take: 10,
+      select: {
+        id: true,
+        productId: true,
+        product: {
+          select: {
+            title: true,
+            sku: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.product?.title || row.product?.sku || row.id,
+      sublabel: `SKU: ${row.product?.sku || "-"} · Watch ID: ${row.id}`,
+    }));
+  }
+
+  if (input.type === "ORDER") {
+    const rows = await prisma.order.findMany({
+      where: {
+        OR: [
+          { id: { contains: q, mode: "insensitive" } },
+          { refNo: { contains: q, mode: "insensitive" } },
+          { customerName: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+      select: {
+        id: true,
+        refNo: true,
+        customerName: true,
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.refNo || row.id,
+      sublabel: row.customerName
+        ? `Khách: ${row.customerName}`
+        : `Order ID: ${row.id}`,
+    }));
+  }
+
+  if (input.type === "SHIPMENT") {
+    const rows = await prisma.shipment.findMany({
+      where: {
+        OR: [
+          { id: q },
+          { trackingCode: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+      select: {
+        id: true,
+        trackingCode: true,
+        status: true,
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.trackingCode || row.id,
+      sublabel: `Trạng thái: ${row.status}`,
+    }));
+  }
+
+  const rows = await prisma.serviceRequest.findMany({
+    where: {
+      OR: [
+        { id: { contains: q, mode: "insensitive" } },
+        { refNo: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    take: 10,
+    select: {
+      id: true,
+      refNo: true,
+      status: true,
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.refNo || row.id,
+    sublabel: `Trạng thái: ${row.status}`,
+  }));
+}

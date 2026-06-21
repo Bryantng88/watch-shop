@@ -7,10 +7,18 @@ const makeSchema = () => z.object({
   taskId: SortOrderSchema.optional(),
   title: SortOrderSchema.optional(),
   note: SortOrderSchema.optional(),
+  status: SortOrderSchema.optional(),
+  priority: SortOrderSchema.optional(),
+  dueAt: SortOrderSchema.optional(),
+  assignedToUserId: SortOrderSchema.optional(),
+  startedAt: SortOrderSchema.optional(),
+  completedAt: SortOrderSchema.optional(),
+  cancelledAt: SortOrderSchema.optional(),
   isDone: SortOrderSchema.optional(),
   sortOrder: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional(),
+  userId: SortOrderSchema.optional()
 }).strict();
 export const TaskChecklistItemCountOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TaskChecklistItemCountOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskChecklistItemCountOrderByAggregateInput>;
 export const TaskChecklistItemCountOrderByAggregateInputObjectZodSchema = makeSchema();

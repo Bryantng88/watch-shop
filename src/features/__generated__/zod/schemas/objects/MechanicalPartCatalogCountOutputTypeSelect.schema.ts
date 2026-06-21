@@ -3,8 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 
 const makeSchema = () => z.object({
-  TechnicalIssue: z.boolean().optional(),
-  taskAction: z.boolean().optional()
+  TechnicalIssue: z.boolean().optional()
 }).strict();
 export const MechanicalPartCatalogCountOutputTypeSelectObjectSchema: z.ZodType<Prisma.MechanicalPartCatalogCountOutputTypeSelect> = makeSchema() as unknown as z.ZodType<Prisma.MechanicalPartCatalogCountOutputTypeSelect>;
 export const MechanicalPartCatalogCountOutputTypeSelectObjectZodSchema = makeSchema();

@@ -12,21 +12,18 @@ import { ServiceRequestOrderByWithRelationInputObjectSchema as ServiceRequestOrd
 import { TechnicalIssueOrderByWithRelationInputObjectSchema as TechnicalIssueOrderByWithRelationInputObjectSchema } from './TechnicalIssueOrderByWithRelationInput.schema';
 import { PaymentOrderByWithRelationInputObjectSchema as PaymentOrderByWithRelationInputObjectSchema } from './PaymentOrderByWithRelationInput.schema';
 import { WorkCaseOrderByWithRelationInputObjectSchema as WorkCaseOrderByWithRelationInputObjectSchema } from './WorkCaseOrderByWithRelationInput.schema';
-import { TaskTypeOrderByWithRelationInputObjectSchema as TaskTypeOrderByWithRelationInputObjectSchema } from './TaskTypeOrderByWithRelationInput.schema';
 import { TaskExecutionOrderByRelationAggregateInputObjectSchema as TaskExecutionOrderByRelationAggregateInputObjectSchema } from './TaskExecutionOrderByRelationAggregateInput.schema';
-import { NotificationOrderByRelationAggregateInputObjectSchema as NotificationOrderByRelationAggregateInputObjectSchema } from './NotificationOrderByRelationAggregateInput.schema';
-import { TaskActionOrderByWithRelationInputObjectSchema as TaskActionOrderByWithRelationInputObjectSchema } from './TaskActionOrderByWithRelationInput.schema'
+import { NotificationOrderByRelationAggregateInputObjectSchema as NotificationOrderByRelationAggregateInputObjectSchema } from './NotificationOrderByRelationAggregateInput.schema'
 
 const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   title: SortOrderSchema.optional(),
   description: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   source: SortOrderSchema.optional(),
-  domain: SortOrderSchema.optional(),
   taskTypeId: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
-  mode: SortOrderSchema.optional(),
   status: SortOrderSchema.optional(),
   priority: SortOrderSchema.optional(),
+  kind: SortOrderSchema.optional(),
   dueAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   startedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
   completedAt: z.union([SortOrderSchema, z.lazy(() => SortOrderInputObjectSchema)]).optional(),
@@ -59,10 +56,8 @@ const makeSchema = () => z.object({
   technicalIssue: z.lazy(() => TechnicalIssueOrderByWithRelationInputObjectSchema).optional(),
   payment: z.lazy(() => PaymentOrderByWithRelationInputObjectSchema).optional(),
   workCase: z.lazy(() => WorkCaseOrderByWithRelationInputObjectSchema).optional(),
-  taskType: z.lazy(() => TaskTypeOrderByWithRelationInputObjectSchema).optional(),
   executions: z.lazy(() => TaskExecutionOrderByRelationAggregateInputObjectSchema).optional(),
-  notifications: z.lazy(() => NotificationOrderByRelationAggregateInputObjectSchema).optional(),
-  taskAction: z.lazy(() => TaskActionOrderByWithRelationInputObjectSchema).optional()
+  notifications: z.lazy(() => NotificationOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();
 export const TaskOrderByWithRelationInputObjectSchema: z.ZodType<Prisma.TaskOrderByWithRelationInput> = makeSchema() as unknown as z.ZodType<Prisma.TaskOrderByWithRelationInput>;
 export const TaskOrderByWithRelationInputObjectZodSchema = makeSchema();
