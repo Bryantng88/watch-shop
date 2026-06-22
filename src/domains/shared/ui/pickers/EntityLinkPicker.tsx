@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type EntityLinkType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
 
@@ -14,12 +15,19 @@ export type EntityLinkOption = {
 type Props = {
     type: EntityLinkType;
     label: string;
+
     value?: string | null;
-    onChange: (id: string | null) => void;
+    onChange?: (id: string | null) => void;
+
+    values?: string[];
+    onValuesChange?: (ids: string[]) => void;
+
     search: (input: {
         type: EntityLinkType;
         q: string;
     }) => Promise<EntityLinkOption[]>;
+
+    multiple?: boolean;
 };
 
 export default function EntityLinkPicker({
@@ -27,12 +35,65 @@ export default function EntityLinkPicker({
     label,
     value,
     onChange,
+    values,
+    onValuesChange,
     search,
+    multiple = false,
 }: Props) {
     const [q, setQ] = useState("");
     const [items, setItems] = useState<EntityLinkOption[]>([]);
+    const [selectedOptions, setSelectedOptions] = useState<EntityLinkOption[]>([]);
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
+
+    const selectedIds = useMemo(() => {
+        return multiple ? values ?? [] : value ? [value] : [];
+    }, [multiple, values, value]);
+
+    useEffect(() => {
+        setItems([]);
+        setQ("");
+        setError(null);
+    }, [type]);
+
+    function commitSingle(option: EntityLinkOption) {
+        onChange?.(option.id);
+        setSelectedOptions([option]);
+        setQ("");
+        setItems([]);
+    }
+
+    function commitMulti(option: EntityLinkOption) {
+        const current = values ?? [];
+
+        if (current.includes(option.id)) {
+            setQ("");
+            setItems([]);
+            return;
+        }
+
+        onValuesChange?.([...current, option.id]);
+        setSelectedOptions((prev) => {
+            if (prev.some((item) => item.id === option.id)) return prev;
+            return [...prev, option];
+        });
+
+        setQ("");
+        setItems([]);
+    }
+
+    function removeId(id: string) {
+        if (multiple) {
+            onValuesChange?.((values ?? []).filter((item) => item !== id));
+            setSelectedOptions((prev) => prev.filter((item) => item.id !== id));
+            return;
+        }
+
+        onChange?.(null);
+        setSelectedOptions([]);
+        setQ("");
+        setItems([]);
+    }
 
     function runSearch() {
         const clean = q.trim();
@@ -57,23 +118,55 @@ export default function EntityLinkPicker({
 
     return (
         <div className="mt-3 space-y-2">
-            {value ? (
-                <div className="flex items-center justify-between rounded-2xl bg-slate-950 px-3 py-2 text-sm text-white">
-                    <span className="truncate font-semibold">Đã chọn: {value}</span>
+            {selectedIds.length ? (
+                <div className="space-y-2">
+                    {selectedIds.map((id) => {
+                        const option = selectedOptions.find((item) => item.id === id);
 
-                    <button
-                        type="button"
-                        onClick={() => {
-                            onChange(null);
-                            setQ("");
-                            setItems([]);
-                        }}
-                        className="ml-3 rounded-full p-1 hover:bg-white/10"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
+                        return (
+                            <div
+                                key={id}
+                                className={cn(
+                                    "flex items-center justify-between rounded-2xl px-3 py-2 text-sm",
+                                    multiple
+                                        ? "bg-white text-slate-800 ring-1 ring-slate-200"
+                                        : "bg-slate-950 text-white",
+                                )}
+                            >
+                                <div className="min-w-0">
+                                    <div className="truncate font-semibold">
+                                        {option?.label || id}
+                                    </div>
+
+                                    {option?.sublabel ? (
+                                        <div
+                                            className={cn(
+                                                "mt-0.5 truncate text-xs",
+                                                multiple ? "text-slate-400" : "text-white/60",
+                                            )}
+                                        >
+                                            {option.sublabel}
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => removeId(id)}
+                                    className={cn(
+                                        "ml-3 rounded-full p-1",
+                                        multiple ? "hover:bg-slate-100" : "hover:bg-white/10",
+                                    )}
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
-            ) : (
+            ) : null}
+
+            {multiple || !selectedIds.length ? (
                 <>
                     <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3">
                         <Search className="h-4 w-4 shrink-0 text-slate-400" />
@@ -109,32 +202,41 @@ export default function EntityLinkPicker({
 
                     {items.length ? (
                         <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
-                            {items.map((item) => (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => {
-                                        onChange(item.id);
-                                        setQ("");
-                                        setItems([]);
-                                    }}
-                                    className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
-                                >
-                                    <div className="line-clamp-1 text-sm font-semibold text-slate-900">
-                                        {item.label}
-                                    </div>
+                            {items.map((item) => {
+                                const selected = selectedIds.includes(item.id);
 
-                                    {item.sublabel ? (
-                                        <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                                            {item.sublabel}
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        disabled={selected}
+                                        onClick={() => {
+                                            if (multiple) commitMulti(item);
+                                            else commitSingle(item);
+                                        }}
+                                        className={cn(
+                                            "block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0",
+                                            selected
+                                                ? "cursor-not-allowed bg-slate-50 opacity-50"
+                                                : "hover:bg-slate-50",
+                                        )}
+                                    >
+                                        <div className="line-clamp-1 text-sm font-semibold text-slate-900">
+                                            {item.label}
                                         </div>
-                                    ) : null}
-                                </button>
-                            ))}
+
+                                        {item.sublabel ? (
+                                            <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                                                {item.sublabel}
+                                            </div>
+                                        ) : null}
+                                    </button>
+                                );
+                            })}
                         </div>
                     ) : null}
                 </>
-            )}
+            ) : null}
         </div>
     );
 }

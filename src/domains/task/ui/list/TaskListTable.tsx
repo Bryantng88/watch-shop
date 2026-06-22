@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CirclePlay,
   Link2,
+  Clock3,
   RotateCcw,
   XCircle,
 } from "lucide-react";
@@ -67,37 +68,82 @@ function taskText(row: TaskWithRelations) {
 function canExpand(_row: any) {
   return true;
 }
+function dueTone(dueAt?: Date | string | null) {
+  if (!dueAt) {
+    return {
+      className: "text-slate-400",
+      label: "—",
+    };
+  }
 
+  const due = new Date(dueAt);
+  const now = new Date();
+
+  due.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor(
+    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays < 0) {
+    return {
+      className:
+        "text-rose-600 font-semibold bg-rose-50 ring-1 ring-rose-100",
+      label: formatDate(dueAt),
+    };
+  }
+
+  if (diffDays === 0) {
+    return {
+      className:
+        "text-amber-700 font-semibold bg-amber-50 ring-1 ring-amber-100",
+      label: "Hôm nay",
+    };
+  }
+
+  if (diffDays <= 3) {
+    return {
+      className:
+        "text-sky-700 bg-sky-50 ring-1 ring-sky-100",
+      label: formatDate(dueAt),
+    };
+  }
+
+  return {
+    className:
+      "text-slate-600 bg-slate-50 ring-1 ring-slate-100",
+    label: formatDate(dueAt),
+  };
+}
 function TaskProgressCell({
   progress,
 }: {
   progress: { done: number; total: number; percent: number };
 }) {
-  const segments = progress.total > 0 ? progress.total : 4;
+  const isEmpty = progress.total <= 0;
+  const isDone = progress.total > 0 && progress.done >= progress.total;
 
   return (
-    <div className="w-[100px]">
+    <div className="w-[92px]">
       <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-slate-700">
         <span>{progress.done}</span>
         <span className="text-slate-400">/</span>
         <span>{progress.total}</span>
       </div>
 
-      <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
-        {Array.from({ length: segments }).map((_, index) => {
-          const filled = progress.total > 0 && index < progress.done;
-
-          return (
-            <span
-              key={index}
-              className={cn(
-                "h-full flex-1",
-                filled ? "bg-slate-950" : "bg-slate-200",
-                index > 0 ? "ml-0.5" : "",
-              )}
-            />
-          );
-        })}
+      <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            isEmpty
+              ? "bg-transparent"
+              : isDone
+                ? "bg-emerald-500"
+                : "bg-slate-950",
+          )}
+          style={{ width: `${isEmpty ? 0 : progress.percent}%` }}
+        />
       </div>
     </div>
   );
@@ -304,8 +350,22 @@ export default function TaskListTable({
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-slate-600">
-                        {formatDate(row.dueAt)}
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const due = dueTone(row.dueAt);
+
+                          return (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs",
+                                due.className,
+                              )}
+                            >
+                              <Clock3 className="h-3 w-3" />
+                              {due.label}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       <td

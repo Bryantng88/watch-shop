@@ -7,7 +7,7 @@ import EntityLinkPicker, {
     type EntityLinkType,
 } from "@/domains/shared/ui/pickers/EntityLinkPicker";
 import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
-import TaskDomainActions from "../detail/TaskDomainActions";
+import { linkTaskExecutionsAction } from "../../actions/task-execution.actions";
 
 type LinkMode = "CONTEXT" | "TRACKING";
 type LinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
@@ -28,9 +28,9 @@ function targetLabel(type: LinkTargetType) {
 
 function toDateInput(value?: Date | string | null) {
     if (!value) return "";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0, 10);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
 }
 
 export default function SubtaskManageModal({
@@ -67,7 +67,7 @@ export default function SubtaskManageModal({
 
     const [linkMode, setLinkMode] = useState<LinkMode>("CONTEXT");
     const [linkTargetType, setLinkTargetType] = useState<LinkTargetType>("WATCH");
-    const [linkTargetId, setLinkTargetId] = useState("");
+    const [linkTargetIds, setLinkTargetIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (!open || !item) return;
@@ -76,9 +76,10 @@ export default function SubtaskManageModal({
         setAssignedToUserId(item.assignedToUserId || "");
         setDueAt(toDateInput(item.dueAt));
         setPriority((item.priority as TaskPriority) || TaskPriority.MEDIUM);
+
         setLinkMode("CONTEXT");
         setLinkTargetType("WATCH");
-        setLinkTargetId("");
+        setLinkTargetIds([]);
     }, [open, item]);
 
     const hasExistingLink = useMemo(() => {
@@ -88,8 +89,6 @@ export default function SubtaskManageModal({
     if (!open || !item) return null;
 
     function save() {
-        if (!item) return;
-
         startTransition(async () => {
             await onSave?.({
                 itemId: item.id,
@@ -98,6 +97,27 @@ export default function SubtaskManageModal({
                 dueAt: dueAt || null,
                 priority,
             });
+
+            onClose();
+        });
+    }
+
+    function submitBatchLink() {
+        if (!item || !linkTargetIds.length) return;
+
+        startTransition(async () => {
+            await linkTaskExecutionsAction({
+                taskId: task.id,
+                checklistItemId: item.id,
+                targetType: TARGET_MAP[linkTargetType],
+                targetIds: linkTargetIds,
+                metadataJson: {
+                    linkMode,
+                },
+            });
+
+            setLinkTargetIds([]);
+            onLinked?.();
             onClose();
         });
     }
@@ -117,7 +137,7 @@ export default function SubtaskManageModal({
                             Quản lý subtask
                         </h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Cập nhật người nhận, due date và gán nghiệp vụ cho dòng xử lý này.
+                            Cập nhật người nhận, due date và gán danh sách nghiệp vụ cho dòng xử lý này.
                         </p>
                     </div>
 
@@ -194,7 +214,7 @@ export default function SubtaskManageModal({
                                 Link nghiệp vụ
                             </div>
                             <div className="mt-0.5 text-xs text-slate-500">
-                                Chọn “Chỉ gắn thông tin” nếu chỉ muốn người nhận biết cần xử lý trên đối tượng nào.
+                                Một subtask có thể link nhiều nghiệp vụ, nhưng phải cùng một loại.
                             </div>
                         </div>
 
@@ -218,7 +238,7 @@ export default function SubtaskManageModal({
                                         value={linkTargetType}
                                         onChange={(event) => {
                                             setLinkTargetType(event.target.value as LinkTargetType);
-                                            setLinkTargetId("");
+                                            setLinkTargetIds([]);
                                         }}
                                         className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm"
                                     >
@@ -231,28 +251,28 @@ export default function SubtaskManageModal({
 
                                 <div className="-mt-3">
                                     <EntityLinkPicker
+                                        multiple
                                         type={linkTargetType as EntityLinkType}
                                         label={targetLabel(linkTargetType)}
-                                        value={linkTargetId}
-                                        onChange={(id) => setLinkTargetId(id ?? "")}
+                                        values={linkTargetIds}
+                                        onValuesChange={setLinkTargetIds}
                                         search={searchWorkCaseLinkTargetsAction}
                                     />
                                 </div>
 
-                                {linkTargetId ? (
-                                    <TaskDomainActions
-                                        task={task}
-                                        checklistItemId={item.id}
-                                        mode="LINK_ONLY"
-                                        linkMode={linkMode}
-                                        defaultTargetType={TARGET_MAP[linkTargetType]}
-                                        defaultTargetId={linkTargetId}
-                                        onDone={() => {
-                                            setLinkTargetId("");
-                                            onLinked?.();
-                                            onClose();
-                                        }}
-                                    />
+                                {linkTargetIds.length ? (
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            disabled={pending}
+                                            onClick={submitBatchLink}
+                                            className="inline-flex h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                        >
+                                            {pending
+                                                ? "Đang link..."
+                                                : `Link ${linkTargetIds.length} nghiệp vụ`}
+                                        </button>
+                                    </div>
                                 ) : null}
                             </div>
                         )}
