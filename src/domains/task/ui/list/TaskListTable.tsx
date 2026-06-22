@@ -68,80 +68,22 @@ function canExpand(_row: any) {
   return true;
 }
 
-function compactId(id?: string | null) {
-  const clean = String(id ?? "").trim();
-  if (!clean) return "-";
-  if (clean.length <= 16) return clean;
-  return `${clean.slice(0, 8)}...${clean.slice(-6)}`;
-}
 
-function getBusinessLinksFromOwner(row: TaskWithRelations): BusinessEntityPreview[] {
-  const anyRow = row as any;
-  const owner = anyRow.workCase || anyRow;
+function taskProgress(row: TaskWithRelations) {
+  const items = ((row as any).checklistItems ?? []) as any[];
+  const total = items.length;
 
-  const links: BusinessEntityPreview[] = [];
+  const done = items.filter((item) => {
+    const executions = item.executions ?? [];
+    if (executions.length) {
+      return executions.every((x: any) => Boolean(x.isBusinessDone));
+    }
+    return Boolean(item.isDone);
+  }).length;
 
-  if (owner.watchId || owner.watch) {
-    const watch = owner.watch;
-    const product = watch?.product;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
-    links.push({
-      type: "WATCH",
-      id: owner.watchId || watch?.id,
-      title: product?.title || product?.sku || owner.watchId || "Watch",
-      subtitle: product?.sku ? `SKU: ${product.sku}` : compactId(owner.watchId || watch?.id),
-      status: watch?.saleStage || null,
-      href: owner.watchId ? `/admin/watches/${owner.watchId}` : null,
-    });
-  }
-
-  if (owner.orderId || owner.order) {
-    const order = owner.order;
-
-    links.push({
-      type: "ORDER",
-      id: owner.orderId || order?.id,
-      refNo: order?.refNo || null,
-      title: order?.refNo || owner.orderId || "Order",
-      subtitle: order?.customerName
-        ? `Khách: ${order.customerName}`
-        : compactId(owner.orderId || order?.id),
-      status: order?.status || null,
-      href: owner.orderId ? `/admin/orders/${owner.orderId}` : null,
-    });
-  }
-
-  if (owner.shipmentId || owner.shipment) {
-    const shipment = owner.shipment;
-
-    links.push({
-      type: "SHIPMENT",
-      id: owner.shipmentId || shipment?.id,
-      refNo: shipment?.refNo || shipment?.trackingCode || null,
-      title: shipment?.refNo || shipment?.trackingCode || owner.shipmentId || "Shipment",
-      subtitle: shipment?.status || compactId(owner.shipmentId || shipment?.id),
-      status: shipment?.status || null,
-      href: owner.shipmentId ? `/admin/shipments/${owner.shipmentId}` : null,
-    });
-  }
-
-  if (owner.serviceRequestId || owner.serviceRequest) {
-    const serviceRequest = owner.serviceRequest;
-
-    links.push({
-      type: "SERVICE",
-      id: owner.serviceRequestId || serviceRequest?.id,
-      refNo: serviceRequest?.refNo || null,
-      title: serviceRequest?.refNo || owner.serviceRequestId || "Service",
-      subtitle: serviceRequest?.status || compactId(owner.serviceRequestId || serviceRequest?.id),
-      status: serviceRequest?.status || null,
-      href: owner.serviceRequestId
-        ? `/admin/service/${owner.serviceRequestId}`
-        : null,
-    });
-  }
-
-  return links.filter((item) => Boolean(item.id));
+  return { done, total, percent };
 }
 
 function TaskContextCell({ row }: { row: TaskWithRelations }) {
@@ -209,6 +151,7 @@ export default function TaskListTable({
               <th className="px-4 py-3">Ngữ cảnh</th>
               <th className="px-4 py-3">Loại</th>
               <th className="px-4 py-3 text-center">Trạng thái</th>
+              <th className="px-4 py-3">Tiến độ</th>
               <th className="px-4 py-3 text-center">Ưu tiên</th>
               <th className="px-4 py-3">Người nhận</th>
               <th className="px-4 py-3">Due</th>
@@ -227,7 +170,16 @@ export default function TaskListTable({
               items.map((row) => {
                 const expanded = expandedTaskId === row.id;
                 const expandable = canExpand(row);
+                const progress = taskProgress(row);
+                const rowAccess = String((row as any).rowAccess || "OWNER");
+                const visibleChecklistItemIds = (row as any).visibleChecklistItemIds ?? null;
+                const checklistItems = ((row as any).checklistItems ?? []) as any[];
 
+                const visibleChecklistItems = Array.isArray(visibleChecklistItemIds)
+                  ? checklistItems.filter((item) => visibleChecklistItemIds.includes(item.id))
+                  : checklistItems;
+
+                const isSubtaskAssignee = rowAccess === "SUBTASK_ASSIGNEE";
                 return (
                   <Fragment key={row.id}>
                     <tr
@@ -284,7 +236,19 @@ export default function TaskListTable({
                       <td className="px-4 py-3 text-center">
                         <TaskStatusSignal status={row.status} />
                       </td>
-
+                      <td className="px-4 py-3">
+                        <div className="w-[90px]">
+                          <div className="text-xs font-semibold text-slate-700">
+                            {progress.done}/{progress.total}
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-slate-950"
+                              style={{ width: `${progress.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <PrioritySignal priority={row.priority} />
                       </td>
@@ -370,15 +334,17 @@ export default function TaskListTable({
                     {expanded ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="bg-slate-50 px-4 py-0"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <TaskWorkPanel
                             task={row}
                             users={users}
-                            checklistItems={(row as any).checklistItems ?? []}
+                            checklistItems={visibleChecklistItems}
                             executions={(row as any).executions ?? []}
+                            canAddChecklistItem={!isSubtaskAssignee}
+                            canCancelChecklistItem={!isSubtaskAssignee}
                             onAddChecklistItem={onAddChecklistItem}
                             onToggleChecklistItem={onToggleChecklistItem}
                             onDeleteChecklistItem={onDeleteChecklistItem}

@@ -20,9 +20,15 @@ import type {
   UpdateTaskInput,
 } from "./task.types";
 
+const USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+} satisfies Prisma.UserSelect;
+
 const TASK_EXECUTION_INCLUDE = {
   createdByUser: {
-    select: { id: true, name: true, email: true },
+    select: USER_SELECT,
   },
   serviceRequest: {
     select: {
@@ -43,16 +49,27 @@ const TASK_EXECUTION_INCLUDE = {
   },
 } satisfies Prisma.TaskExecutionInclude;
 
+const CHECKLIST_ITEM_INCLUDE = {
+  assignedToUser: {
+    select: USER_SELECT,
+  },
+  executions: {
+    orderBy: { createdAt: "desc" },
+    include: TASK_EXECUTION_INCLUDE,
+  },
+} satisfies Prisma.TaskChecklistItemInclude;
+
 export const TASK_INCLUDE = {
-  createdByUser: { select: { id: true, name: true, email: true } },
-  assignedToUser: { select: { id: true, name: true, email: true } },
-  completedByUser: { select: { id: true, name: true, email: true } },
-  cancelledByUser: { select: { id: true, name: true, email: true } },
+  createdByUser: { select: USER_SELECT },
+  assignedToUser: { select: USER_SELECT },
+  completedByUser: { select: USER_SELECT },
+  cancelledByUser: { select: USER_SELECT },
 
   watch: {
     select: {
       id: true,
       productId: true,
+      saleStage: true,
       product: {
         select: {
           title: true,
@@ -91,15 +108,7 @@ export const TASK_INCLUDE = {
 
   checklistItems: {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    include: {
-      assignedToUser: {
-        select: { id: true, name: true, email: true },
-      },
-      executions: {
-        orderBy: { createdAt: "desc" },
-        include: TASK_EXECUTION_INCLUDE,
-      },
-    },
+    include: CHECKLIST_ITEM_INCLUDE,
   },
 
   serviceRequest: {
@@ -151,10 +160,15 @@ export const TASK_INCLUDE = {
       id: true,
       refNo: true,
       title: true,
+      description: true,
       status: true,
+      watchId: true,
+      orderId: true,
+      shipmentId: true,
       watch: {
         select: {
           id: true,
+          saleStage: true,
           productId: true,
           product: {
             select: {
@@ -164,6 +178,31 @@ export const TASK_INCLUDE = {
             },
           },
         },
+      },
+      order: {
+        select: {
+          id: true,
+          refNo: true,
+          customerName: true,
+          status: true,
+          paymentStatus: true,
+        },
+      },
+      shipment: {
+        select: {
+          id: true,
+          refNo: true,
+          trackingCode: true,
+          status: true,
+        },
+      },
+      serviceRequests: {
+        select: {
+          id: true,
+          refNo: true,
+          status: true,
+        },
+        take: 3,
       },
     },
   },
@@ -208,6 +247,41 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+}
+
+function assignedSubtaskWhere(userId: string): Prisma.TaskWhereInput {
+  return {
+    checklistItems: {
+      some: {
+        assignedToUserId: userId,
+      },
+    },
+  };
+}
+
+function applyTaskRowAccess(task: any, currentUserId: string, canViewAll = false) {
+  const isOwner =
+    canViewAll ||
+    task.assignedToUserId === currentUserId ||
+    task.createdByUserId === currentUserId;
+
+  if (isOwner) {
+    return {
+      ...task,
+      rowAccess: "OWNER",
+      visibleChecklistItemIds: null,
+    };
+  }
+
+  const visibleChecklistItems = (task.checklistItems ?? []).filter(
+    (item: any) => item.assignedToUserId === currentUserId,
+  );
+
+  return {
+    ...task,
+    rowAccess: "SUBTASK_ASSIGNEE",
+    visibleChecklistItemIds: visibleChecklistItems.map((item: any) => item.id),
+  };
 }
 
 function normalizeBusinessStage(targetType: string, row: any): {
@@ -448,7 +522,7 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
   }
 
   if (type === "SHIPMENT") {
-    const or: any[] = [{ refNo: rawId }];
+    const or: any[] = [{ refNo: rawId }, { trackingCode: rawId }];
 
     if (isUuid(rawId)) {
       or.push({ id: rawId });
@@ -456,7 +530,7 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
 
     const row = await client.shipment.findFirst({
       where: { OR: or },
-      select: { id: true, refNo: true, status: true },
+      select: { id: true, refNo: true, trackingCode: true, status: true },
     });
 
     if (!row) return { ...execution, ...normalizeBusinessStage(type, execution) };
@@ -464,7 +538,7 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
     return {
       ...execution,
       targetId: row.id,
-      targetRefNo: row.refNo,
+      targetRefNo: row.refNo || row.trackingCode,
       targetStatus: row.status,
       ...normalizeBusinessStage(type, row),
     };
@@ -508,11 +582,7 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
   if (type === "WATCH") {
     const row = await client.watch.findFirst({
       where: {
-        OR: [
-          { id: rawId },
-          { productId: rawId },
-          { product: { sku: rawId } },
-        ],
+        OR: [{ id: rawId }, { productId: rawId }, { product: { sku: rawId } }],
       },
       select: {
         id: true,
@@ -526,7 +596,7 @@ async function getExecutionTargetSnapshot(client: any, execution: any) {
 
     return {
       ...execution,
-      targetId: row.productId,
+      targetId: row.id,
       targetRefNo: row.product?.sku,
       targetTitle: row.product?.title,
       targetStatus: row.saleStage,
@@ -595,14 +665,22 @@ function buildAccessWhere(
         { kind: TaskKind.BUSINESS },
         {
           kind: TaskKind.PERSONAL,
-          OR: [{ createdByUserId: userId }, { assignedToUserId: userId }],
+          OR: [
+            { createdByUserId: userId },
+            { assignedToUserId: userId },
+            assignedSubtaskWhere(userId),
+          ],
         },
       ],
     };
   }
 
   return {
-    OR: [{ createdByUserId: userId }, { assignedToUserId: userId }],
+    OR: [
+      { createdByUserId: userId },
+      { assignedToUserId: userId },
+      assignedSubtaskWhere(userId),
+    ],
   };
 }
 
@@ -611,15 +689,22 @@ function buildViewWhere(
   userId: string,
   canViewAll: boolean,
 ): Prisma.TaskWhereInput {
+  const subtaskWhere = assignedSubtaskWhere(userId);
+
   if (view === "all") return buildAccessWhere(userId, canViewAll);
 
   if (view === "mine") {
     return {
-      OR: [{ createdByUserId: userId }, { assignedToUserId: userId }],
+      OR: [{ createdByUserId: userId }, { assignedToUserId: userId }, subtaskWhere],
     };
   }
 
-  if (view === "assigned") return { assignedToUserId: userId };
+  if (view === "assigned") {
+    return {
+      OR: [{ assignedToUserId: userId }, subtaskWhere],
+    };
+  }
+
   if (view === "delegated") return { createdByUserId: userId };
 
   return buildAccessWhere(userId, canViewAll);
@@ -661,6 +746,16 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
       { watch: { product: { sku: { contains: q, mode: "insensitive" } } } },
       { workCase: { refNo: { contains: q, mode: "insensitive" } } },
       { workCase: { title: { contains: q, mode: "insensitive" } } },
+      {
+        checklistItems: {
+          some: {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { note: { contains: q, mode: "insensitive" } },
+            ],
+          },
+        },
+      },
     ];
   }
 
@@ -681,9 +776,7 @@ function buildFilterWhere(filters: TaskListFilters): Prisma.TaskWhereInput {
 
   const dueWhere = buildDueWhere(filters.due);
 
-  return Object.keys(dueWhere).length
-    ? { AND: [where, dueWhere] }
-    : where;
+  return Object.keys(dueWhere).length ? { AND: [where, dueWhere] } : where;
 }
 
 function createLinkData(
@@ -732,7 +825,11 @@ function systemTaskIdentityWhere(input: EnsureSystemTaskInput): Prisma.TaskWhere
 
 function hasAnyLink(
   input: Partial<
-    CreateTaskInput | UpdateTaskInput | EnsureSystemTaskInput | CompleteRelatedTasksInput | FindOpenRelatedTasksInput
+    | CreateTaskInput
+    | UpdateTaskInput
+    | EnsureSystemTaskInput
+    | CompleteRelatedTasksInput
+    | FindOpenRelatedTasksInput
   >,
 ) {
   return Boolean(
@@ -747,7 +844,9 @@ function hasAnyLink(
   );
 }
 
-function relatedTaskWhere(input: CompleteRelatedTasksInput | FindOpenRelatedTasksInput): Prisma.TaskWhereInput {
+function relatedTaskWhere(
+  input: CompleteRelatedTasksInput | FindOpenRelatedTasksInput,
+): Prisma.TaskWhereInput {
   return {
     ...(input.kind ? { kind: input.kind } : {}),
     ...(input.watchId ? { watchId: input.watchId } : {}),
@@ -769,10 +868,11 @@ export async function listTasksRepo(
   const page = Math.max(1, Number(input.filters.page || 1));
   const pageSize = Math.min(100, Math.max(10, Number(input.filters.pageSize || 25)));
   const view = input.filters.view || "mine";
+  const canViewAll = Boolean(input.canViewAll);
 
   const where: Prisma.TaskWhereInput = {
     AND: [
-      buildViewWhere(view, input.userId, Boolean(input.canViewAll)),
+      buildViewWhere(view, input.userId, canViewAll),
       buildFilterWhere(input.filters),
     ],
   };
@@ -797,8 +897,12 @@ export async function listTasksRepo(
     items.map((item) => hydrateTaskBusinessLinks(db, item)),
   );
 
+  const finalItems = hydratedItems.map((item) =>
+    applyTaskRowAccess(item, input.userId, canViewAll),
+  );
+
   return {
-    items: hydratedItems,
+    items: finalItems,
     total,
     page,
     pageSize,
@@ -1056,7 +1160,7 @@ export async function listAssignableUsersRepo(db: DB) {
 
   return client.user.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, email: true },
+    select: USER_SELECT,
     orderBy: [{ name: "asc" }, { email: "asc" }],
   });
 }
@@ -1095,11 +1199,7 @@ export async function findOpenRelatedTasksRepo(
       priority: true,
       dueAt: true,
       assignedToUser: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+        select: USER_SELECT,
       },
     },
     orderBy: [{ createdAt: "desc" }],
@@ -1130,13 +1230,7 @@ export async function createTaskChecklistItemRepo(
       assignedToUserId: input.assignedToUserId || null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
-    include: {
-      assignedToUser: { select: { id: true, name: true, email: true } },
-      executions: {
-        orderBy: { createdAt: "desc" },
-        include: TASK_EXECUTION_INCLUDE,
-      },
-    },
+    include: CHECKLIST_ITEM_INCLUDE,
   });
 }
 
@@ -1159,13 +1253,7 @@ export async function updateTaskChecklistItemRepo(
         ? { assignedToUserId: input.assignedToUserId || null }
         : {}),
     },
-    include: {
-      assignedToUser: { select: { id: true, name: true, email: true } },
-      executions: {
-        orderBy: { createdAt: "desc" },
-        include: TASK_EXECUTION_INCLUDE,
-      },
-    },
+    include: CHECKLIST_ITEM_INCLUDE,
   });
 }
 

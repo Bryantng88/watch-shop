@@ -9,12 +9,13 @@ import {
     PackageCheck,
     Trash2,
     Wrench,
+    AlertTriangle, Ban
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TaskDomainActions from "../detail/TaskDomainActions";
 import EntityLinkPicker from "@/domains/shared/ui/pickers/EntityLinkPicker";
 import { searchWorkCaseLinkTargetsAction } from "@/domains/work-case/actions/work-case.actions";
-
+import { requestSubtaskSupportAction } from "../../actions/task-support.actions";
 type TaskLinkTargetType = "WATCH" | "ORDER" | "SHIPMENT" | "SERVICE";
 
 const TASK_LINK_TARGET_MAP = {
@@ -188,11 +189,61 @@ function splitExecutions(executions: any[]) {
         ),
     };
 }
+function ExecutionMiniInline({ item }: { item: any }) {
+    const href = targetHref(item.targetType, item.targetId);
+    const status = getBusinessStatus(item);
 
+    return (
+        <div className="flex h-11 items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 px-3">
+            <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                    {item.targetType === "SERVICE_REQUEST" || item.targetType === "TECHNICAL_ISSUE" ? (
+                        <Wrench className="h-3.5 w-3.5" />
+                    ) : (
+                        <PackageCheck className="h-3.5 w-3.5" />
+                    )}
+                </span>
+
+                <div className="min-w-0">
+                    <div className="line-clamp-1 text-xs font-semibold text-slate-800">
+                        {getExecutionTitle(item)}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                        Nghiệp vụ · {targetLabel(item.targetType)}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+                <span
+                    className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+                        item.businessStageTone
+                            ? businessStageTone(item.businessStageTone)
+                            : statusTone(status),
+                    )}
+                >
+                    {status}
+                </span>
+
+                {href ? (
+                    <Link
+                        href={href}
+                        onClick={(event) => event.stopPropagation()}
+                        className="text-xs font-semibold text-blue-600 hover:underline"
+                    >
+                        Mở
+                    </Link>
+                ) : null}
+            </div>
+        </div>
+    );
+}
 function ChecklistRow({
     item,
     active,
     task,
+    canCancel = true,
     onToggleActive,
     onToggle,
     onDelete,
@@ -200,20 +251,46 @@ function ChecklistRow({
     item: any;
     active: boolean;
     task: any;
+    canCancel?: boolean;
     onToggleActive: (item: any) => void;
     onToggle: (item: any) => Promise<void>;
     onDelete: (item: any) => Promise<void>;
 }) {
     const [linkTargetType, setLinkTargetType] = useState<TaskLinkTargetType>("ORDER");
     const [linkTargetId, setLinkTargetId] = useState("");
-
+    const [supportOpen, setSupportOpen] = useState(false);
+    const [supportReason, setSupportReason] = useState("");
+    const [supportPending, setSupportPending] = useState(false);
     const itemExecutions = splitExecutions(item.executions ?? []);
     const hasExecutions = itemExecutions.grouped.length > 0;
     const canManualToggle = !hasExecutions;
     const done = hasExecutions
         ? itemExecutions.grouped.every(isBusinessDone)
         : Boolean(item.isDone);
+    const ownerUserId = task.assignedToUserId || task.createdByUserId || null;
+    const assigneeUserId = item.assignedToUserId || null;
 
+    const canRequestSupport =
+        Boolean(assigneeUserId) && Boolean(ownerUserId) && assigneeUserId !== ownerUserId;
+    async function submitSupport() {
+        const clean = supportReason.trim();
+        if (!clean || supportPending) return;
+
+        try {
+            setSupportPending(true);
+
+            await requestSubtaskSupportAction({
+                taskId: task.id,
+                checklistItemId: item.id,
+                reason: clean,
+            });
+
+            setSupportReason("");
+            setSupportOpen(false);
+        } finally {
+            setSupportPending(false);
+        }
+    }
     return (
         <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
             <div className="flex items-center justify-between gap-4">
@@ -244,123 +321,181 @@ function ChecklistRow({
                         {done ? <Check className="h-3.5 w-3.5" /> : null}
                     </button>
 
-                    <div className="min-w-0 flex-1">
-                        <div
-                            className={cn(
-                                "line-clamp-1 text-sm font-semibold",
-                                done ? "text-slate-400 line-through" : "text-slate-950",
-                            )}
-                        >
+                    <div className="min-w-0 w-[280px] shrink-0">
+                        <div className={cn(
+                            "line-clamp-1 text-sm font-semibold",
+                            done ? "text-slate-400 line-through" : "text-slate-950",
+                        )}>
                             {item.title}
                         </div>
 
-                        <div className="mt-0.5 text-[11px] text-slate-400">
-                            {hasExecutions
-                                ? `${itemExecutions.grouped.length} link nghiệp vụ · ${done ? "Đã xong" : "Đang theo dõi"
-                                }`
-                                : item.assignedToUser
-                                    ? `Giao cho ${item.assignedToUser.name || item.assignedToUser.email}`
-                                    : "Dòng xử lý"}
+                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+                            <span>
+                                {hasExecutions
+                                    ? `${itemExecutions.grouped.length} link nghiệp vụ · ${done ? "Đã xong" : "Đang theo dõi"}`
+                                    : item.assignedToUser
+                                        ? `Giao cho ${item.assignedToUser.name || item.assignedToUser.email}`
+                                        : "Dòng xử lý"}
+                            </span>
+
+                            {item.dueAt ? (
+                                <>
+                                    <span>·</span>
+                                    <span>Due {new Date(item.dueAt).toLocaleDateString("vi-VN")}</span>
+                                </>
+                            ) : null}
                         </div>
                     </div>
+
+                    {hasExecutions ? (
+                        <div className="min-w-0 flex-1 border-l border-slate-200 pl-4">
+                            <ExecutionMiniInline item={itemExecutions.grouped[0]} />
+                        </div>
+                    ) : null}
+
                 </div>
 
-                <div className="flex shrink-0 items-center gap-1">
-                    <button
-                        type="button"
-                        onClick={async (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
+                <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1">
+                        {!hasExecutions ? (
+                            <button
+                                type="button"
+                                title="Link nghiệp vụ"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    onToggleActive(item);
+                                }}
+                                className={cn(
+                                    "inline-flex h-8 w-8 items-center justify-center rounded-full",
+                                    active ? "bg-slate-950 text-white" : "text-blue-600 hover:bg-blue-50",
+                                )}
+                            >
+                                <ChevronDown
+                                    className={cn("h-4 w-4 transition-transform", active ? "rotate-180" : "")}
+                                />
+                            </button>
+                        ) : null}
 
-                            if (hasExecutions) {
-                                await onDelete(item);
-                                return;
-                            }
+                        {canRequestSupport ? (
+                            <button
+                                type="button"
+                                title="Cần hỗ trợ"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setSupportOpen((value) => !value);
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-amber-600 hover:bg-amber-50"
+                            >
+                                <AlertTriangle className="h-4 w-4" />
+                            </button>
+                        ) : null}
 
-                            onToggleActive(item);
-                        }}
-                        className={cn(
-                            "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
-                            active ? "bg-slate-950 text-white" : "text-blue-600 hover:bg-blue-50",
-                        )}
-                    >
-                        {hasExecutions ? "Hủy link" : "Link nghiệp vụ"}
-                        <ChevronDown
-                            className={cn(
-                                "h-3.5 w-3.5 transition-transform",
-                                active ? "rotate-180" : "",
-                            )}
-                        />
-                    </button>
+                        {canCancel ? (
+                            <button
+                                type="button"
+                                title="Hủy subtask"
+                                onClick={async (event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    await onDelete(item);
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-rose-600 hover:bg-rose-50"
+                            >
+                                <Ban className="h-4 w-4" />
+                            </button>
+                        ) : null}
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={async (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            await onDelete(item);
-                        }}
-                        className="rounded-full p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-600"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
                 </div>
             </div>
 
-            {active && !hasExecutions ? (
-                <div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                    <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
-                        <select
-                            value={linkTargetType}
-                            onChange={(event) => {
-                                setLinkTargetType(event.target.value as TaskLinkTargetType);
-                                setLinkTargetId("");
-                            }}
-                            className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-                        >
-                            <option value="WATCH">Watch</option>
-                            <option value="ORDER">Đơn hàng</option>
-                            <option value="SHIPMENT">Vận đơn</option>
-                            <option value="SERVICE">Phiếu service</option>
-                        </select>
-
-                        <EntityLinkPicker
-                            type={linkTargetType}
-                            label={taskLinkTargetLabel(linkTargetType)}
-                            value={linkTargetId}
-                            onChange={(id) => setLinkTargetId(id ?? "")}
-                            search={searchWorkCaseLinkTargetsAction}
-                        />
-                    </div>
-
-                    {linkTargetId ? (
-                        <div className="mt-3">
-                            <TaskDomainActions
-                                task={task}
-                                checklistItemId={item.id}
-                                mode="LINK_ONLY"
-                                defaultTargetType={TASK_LINK_TARGET_MAP[linkTargetType]}
-                                defaultTargetId={linkTargetId}
-                                onDone={() => {
+            {
+                active && !hasExecutions ? (
+                    <div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                        <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)]">
+                            <select
+                                value={linkTargetType}
+                                onChange={(event) => {
+                                    setLinkTargetType(event.target.value as TaskLinkTargetType);
                                     setLinkTargetId("");
-                                    onToggleActive(item);
                                 }}
+                                className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                            >
+                                <option value="WATCH">Watch</option>
+                                <option value="ORDER">Đơn hàng</option>
+                                <option value="SHIPMENT">Vận đơn</option>
+                                <option value="SERVICE">Phiếu service</option>
+                            </select>
+
+                            <EntityLinkPicker
+                                type={linkTargetType}
+                                label={taskLinkTargetLabel(linkTargetType)}
+                                value={linkTargetId}
+                                onChange={(id) => setLinkTargetId(id ?? "")}
+                                search={searchWorkCaseLinkTargetsAction}
                             />
                         </div>
-                    ) : null}
-                </div>
-            ) : null}
 
-            {hasExecutions ? (
-                <div className="mt-3 space-y-2">
-                    <ExecutionGroup
-                        serviceRequests={itemExecutions.serviceRequests}
-                        technicalIssues={itemExecutions.technicalIssues}
-                        otherExecutions={itemExecutions.otherExecutions}
+                        {linkTargetId ? (
+                            <div className="mt-3">
+                                <TaskDomainActions
+                                    task={task}
+                                    checklistItemId={item.id}
+                                    mode="LINK_ONLY"
+                                    defaultTargetType={TASK_LINK_TARGET_MAP[linkTargetType]}
+                                    defaultTargetId={linkTargetId}
+                                    onDone={() => {
+                                        setLinkTargetId("");
+                                        onToggleActive(item);
+                                    }}
+                                />
+                            </div>
+                        ) : null}
+                    </div>
+                ) : null
+            }
+            {supportOpen ? (
+                <div className="mt-3 rounded-2xl bg-amber-50/60 p-3 ring-1 ring-amber-100">
+                    <textarea
+                        value={supportReason}
+                        onChange={(event) => setSupportReason(event.target.value)}
+                        rows={3}
+                        placeholder="Mô tả lý do cần hỗ trợ hoặc cần người khác xử lý..."
+                        className="w-full rounded-2xl border border-amber-100 bg-white px-3 py-2 text-sm outline-none focus:border-amber-300"
                     />
+
+                    <div className="mt-2 flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setSupportOpen(false);
+                                setSupportReason("");
+                            }}
+                            className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-white"
+                        >
+                            Đóng
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={supportPending || !supportReason.trim()}
+                            onClick={async (event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                await submitSupport();
+                            }}
+                            className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                            {supportPending ? "Đang gửi..." : "Gửi hỗ trợ"}
+                        </button>
+                    </div>
                 </div>
             ) : null}
-        </div>
+        </div >
     );
 }
 
@@ -504,6 +639,8 @@ export default function TaskWorkPanel({
     onToggleChecklistItem,
     onDeleteChecklistItem,
     users = [],
+    canAddChecklistItem = true,
+    canCancelChecklistItem = true,
 }: {
     task: any;
     checklistItems?: any[];
@@ -518,6 +655,9 @@ export default function TaskWorkPanel({
     }) => Promise<void> | void;
     onToggleChecklistItem?: (itemId: string, isDone: boolean) => Promise<void> | void;
     onDeleteChecklistItem?: (itemId: string) => Promise<void> | void;
+    canAddChecklistItem?: boolean;
+    canCancelChecklistItem?: boolean;
+
 }) {
     const [title, setTitle] = useState("");
     const [pending, setPending] = useState(false);
@@ -546,7 +686,11 @@ export default function TaskWorkPanel({
             await onAddChecklistItem?.({
                 taskId: task.id,
                 title: clean,
-                assignedToUserId: selectedUserId || null,
+                assignedToUserId:
+                    selectedUserId ||
+                    task.assignedToUserId ||
+                    task.createdByUserId ||
+                    null,
                 priority,
                 dueAt: dueAt || null,
             });
@@ -589,65 +733,67 @@ export default function TaskWorkPanel({
             className="border-y border-slate-100 bg-slate-50 px-3 py-4"
             onClick={(event) => event.stopPropagation()}
         >
-            <div className="mb-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_140px_150px_80px]">
-                <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+            {canAddChecklistItem ? (
+                <div className="mb-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_140px_150px_80px]">
+                    <input
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                submit();
+                            }
+                        }}
+                        placeholder="Thêm subtask..."
+                        className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-slate-400"
+                    />
+
+                    <select
+                        value={selectedUserId}
+                        onChange={(e) => setSelectedUserId(e.target.value)}
+                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                    >
+                        <option value="">Tự giao</option>
+                        {users.map((user) => (
+                            <option key={user.id} value={user.id}>
+                                {user.name || user.email}
+                            </option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={priority}
+                        onChange={(e) => setPriority(e.target.value)}
+                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                    >
+                        <option value="LOW">Thấp</option>
+                        <option value="MEDIUM">Vừa</option>
+                        <option value="HIGH">Cao</option>
+                        <option value="URGENT">Gấp</option>
+                    </select>
+
+                    <input
+                        type="date"
+                        value={dueAt}
+                        onChange={(e) => setDueAt(e.target.value)}
+                        className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
+                    />
+
+                    <button
+                        type="button"
+                        disabled={pending || !title.trim()}
+                        onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             submit();
-                        }
-                    }}
-                    placeholder="Thêm subtask..."
-                    className="h-10 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-slate-400"
-                />
-
-                <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-                >
-                    <option value="">Chưa giao</option>
-                    {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                            {user.name || user.email}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-                >
-                    <option value="LOW">Thấp</option>
-                    <option value="MEDIUM">Vừa</option>
-                    <option value="HIGH">Cao</option>
-                    <option value="URGENT">Gấp</option>
-                </select>
-
-                <input
-                    type="date"
-                    value={dueAt}
-                    onChange={(e) => setDueAt(e.target.value)}
-                    className="h-10 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
-                />
-
-                <button
-                    type="button"
-                    disabled={pending || !title.trim()}
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        submit();
-                    }}
-                    className="h-10 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
-                >
-                    Thêm
-                </button>
-            </div>
+                        }}
+                        className="h-10 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
+                    >
+                        Thêm
+                    </button>
+                </div>
+            ) : null}
 
             <div className="space-y-2">
                 {localItems.map((item) => (
@@ -656,6 +802,7 @@ export default function TaskWorkPanel({
                         item={item}
                         task={task}
                         active={activeChecklistItemId === item.id}
+                        canCancel={canCancelChecklistItem}
                         onToggleActive={toggleActiveChecklist}
                         onToggle={toggleItem}
                         onDelete={deleteItem}
